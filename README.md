@@ -27,7 +27,7 @@ BetterMan is an innovative, modern reinterpretation of Linux man pages. This pro
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/BetterMan.git
+   git clone https://github.com/amanthanvi/BetterMan.git
    ```
 2. Change into the project directory:
    ```bash
