@@ -1,7 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from pathlib import Path
 
 from .api.routes import router
+from .db.direct_init import init_db
+
+# Create data directory if it doesn't exist
+data_dir = Path(__file__).parent.parent / "data"
+data_dir.mkdir(exist_ok=True)
+
+# Initialize database with direct SQL
+init_db()
 
 app = FastAPI(
     title="BetterMan API",

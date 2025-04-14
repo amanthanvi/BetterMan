@@ -7,10 +7,9 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - backend_cache:/app/.cache
+      - ./data:/app/data  # Persistent database storage
     environment:
       - ENVIRONMENT=development
-      - DATABASE_URL=sqlite:///./betterman.db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -31,5 +30,4 @@ services:
         condition: service_healthy
 
 volumes:
-  backend_cache:
   frontend_node_modules:

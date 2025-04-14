@@ -4,9 +4,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
+from pathlib import Path
 
 # Get database URL from environment variable, or use a default value
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./betterman.db")
+DATABASE_DIR = Path(__file__).parent.parent.parent / "data"
+DATABASE_DIR.mkdir(exist_ok=True)
+DATABASE_PATH = DATABASE_DIR / "betterman.db"
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_PATH}")
+
+print(f"Using database at: {DATABASE_URL}")
 
 # For SQLite, add check_same_thread=False
 connect_args = {}
@@ -17,6 +23,7 @@ if DATABASE_URL.startswith("sqlite"):
 engine = create_engine(
     DATABASE_URL,
     connect_args=connect_args,
+    echo=True,  # Enable SQL logging for debugging
 )
 
 # Create session factory
