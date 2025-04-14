@@ -162,7 +162,7 @@ const DocumentViewer = () => {
           PreTag="div"
           {...props}
         >
-          {String(children).replace(/\n$/, '')}
+          {String(children).replace(/\n+$/, '')}
         </SyntaxHighlighter>
       ) : (
         <code className={className} {...props}>
@@ -241,7 +241,7 @@ const DocumentViewer = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 bg-white dark:bg-gray-900">
+    <div className="w-full overflow-hidden bg-inherit">
       <div className="flex flex-col md:flex-row">
         {/* Table of Contents - Sidebar */}
         <div className="md:w-64 flex-shrink-0 pb-4 md:pb-0">

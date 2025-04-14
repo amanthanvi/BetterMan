@@ -69,7 +69,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
         {/* Keyboard Shortcuts Handler */}
         <KeyboardShortcuts 
           onSearch={() => {}} 
@@ -78,7 +78,7 @@ function App() {
         
         {/* Navigation */}
         <header className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-150">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex">
                 <div className="flex-shrink-0 flex items-center">
@@ -157,8 +157,8 @@ function App() {
         </header>
         
         {/* Main Content */}
-        <div className="py-10">
-          <main className="max-w-7xl mx-auto sm:px-6 lg:px-8 transition-colors duration-150">
+        <div className="flex-grow py-4">
+          <main className="w-full px-4 sm:px-6 lg:px-8 transition-colors duration-150">
             <Routes>
               {/* Home Page */}
               <Route path="/" element={<HomePage docs={docs} loading={loading} />} />
@@ -169,7 +169,7 @@ function App() {
               
               {/* Documentation List */}
               <Route path="/docs" element={
-                <div className="px-4 py-6 sm:px-0">
+                <div className="w-full">
                   <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Available Documentation</h2>
                   {loading ? (
                     <div className="flex justify-center items-center h-64">
@@ -213,8 +213,8 @@ function App() {
         </div>
         
         {/* Footer */}
-        <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 px-4 sm:px-6 lg:px-8 mt-8 transition-colors duration-150">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
+        <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6 px-4 sm:px-6 lg:px-8 transition-colors duration-150 mt-auto">
+          <div className="w-full flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
               <p className="text-gray-500 dark:text-gray-400 text-sm">
                 &copy; {new Date().getFullYear()} BetterMan Project
