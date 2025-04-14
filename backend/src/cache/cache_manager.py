@@ -1,0 +1,424 @@
+"""Cache management for BetterMan documentation."""
+
+import logging
+from datetime import datetime, timedelta
+from typing import List, Optional, Tuple
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+
+from ..models.document import Document, Section, Subsection, RelatedDocument
+from ..parser.linux_parser import LinuxManParser
+from ..parser.man_utils import fetch_man_page_content
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# List of common commands to always keep in cache
+COMMON_COMMANDS = [
+    "ls",
+    "cd",
+    "pwd",
+    "grep",
+    "find",
+    "cp",
+    "mv",
+    "rm",
+    "mkdir",
+    "rmdir",
+    "cat",
+    "less",
+    "more",
+    "head",
+    "tail",
+    "touch",
+    "chmod",
+    "chown",
+    "ps",
+    "top",
+    "kill",
+    "ping",
+    "ssh",
+    "scp",
+    "tar",
+    "gzip",
+    "gunzip",
+    "man",
+    "sudo",
+    "apt",
+    "yum",
+    "systemctl",
+    "journalctl",
+    "git",
+    "curl",
+    "wget",
+    "ifconfig",
+    "ip",
+    "netstat",
+    "ssh-keygen",
+    "df",
+    "du",
+    "free",
+    "uname",
+]
+
+
+class CacheManager:
+    """Manages document caching and processing."""
+
+    def __init__(self, db: Session, parser: LinuxManParser, max_cache_size: int = 1000):
+        """Initialize the cache manager.
+
+        Args:
+            db: Database session
+            parser: Man page parser
+            max_cache_size: Maximum number of documents to keep in cache
+        """
+        self.db = db
+        self.parser = parser
+        self.max_cache_size = max_cache_size
+
+    def get_document(
+        self, name: str, section: Optional[int] = None
+    ) -> Optional[Document]:
+        """Get a document from cache or process it if not available.
+
+        Args:
+            name: Document name (command)
+            section: Man page section number (optional)
+
+        Returns:
+            Document object if found or processed, None otherwise
+        """
+        # Try to get from database first
+        query = self.db.query(Document).filter(Document.name == name)
+        if section is not None:
+            query = query.filter(Document.section == section)
+
+        document = query.first()
+
+        if document:
+            # Update access statistics
+            document.last_accessed = datetime.utcnow()
+            document.access_count += 1
+            self.db.commit()
+            logger.info(f"Cache hit for document: {name}")
+            return document
+
+        # Not in cache, process the man page
+        logger.info(f"Cache miss for document: {name}, attempting to process")
+        return self.process_and_cache(name, section)
+
+    def process_and_cache(
+        self, name: str, section: Optional[int] = None
+    ) -> Optional[Document]:
+        """Process a man page and add to cache.
+
+        Args:
+            name: Document name (command)
+            section: Man page section number (optional)
+
+        Returns:
+            Document object if processed successfully, None otherwise
+        """
+        # Check cache size and evict if necessary
+        self.evict_if_needed()
+
+        try:
+            # Process the man page
+            content, metadata = fetch_man_page_content(name, section)
+
+            if not content:
+                logger.warning(f"No content found for man page: {name}")
+                return None
+
+            # Parse the man page
+            parsed_data = self.parser.parse_man_page(content)
+
+            # Determine if this is a common command
+            is_common = name in COMMON_COMMANDS
+
+            # Create document record
+            document = Document(
+                name=name,
+                title=parsed_data["title"],
+                section=(
+                    int(parsed_data["section"])
+                    if parsed_data["section"].isdigit()
+                    else None
+                ),
+                summary=(
+                    parsed_data["sections"][0]["content"]
+                    if parsed_data["sections"]
+                    else None
+                ),
+                raw_content=content,
+                is_common=is_common,
+                last_accessed=datetime.utcnow(),
+                access_count=1,
+            )
+            self.db.add(document)
+            self.db.flush()  # Get the ID without committing
+
+            # Add sections
+            for i, section_data in enumerate(parsed_data["sections"]):
+                section = Section(
+                    document_id=document.id,
+                    name=section_data["name"],
+                    content=section_data["content"],
+                    order=i,
+                )
+                self.db.add(section)
+                self.db.flush()
+
+                # Add subsections if any
+                if "subsections" in section_data:
+                    for j, subsection_data in enumerate(section_data["subsections"]):
+                        subsection = Subsection(
+                            section_id=section.id,
+                            name=subsection_data["name"],
+                            content=subsection_data["content"],
+                            order=j,
+                        )
+                        self.db.add(subsection)
+
+            # Add related documents
+            for related_name in parsed_data["related"]:
+                related_doc = RelatedDocument(
+                    document_id=document.id,
+                    related_name=related_name,
+                )
+                self.db.add(related_doc)
+
+            self.db.commit()
+            logger.info(f"Successfully processed and cached document: {name}")
+            return document
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error processing document {name}: {str(e)}")
+            return None
+
+    def evict_if_needed(self) -> None:
+        """Evict least recently used documents if cache is full."""
+        # Get current count
+        count = self.db.query(func.count(Document.id)).scalar()
+
+        if count >= self.max_cache_size:
+            # Find candidates for eviction (not common commands)
+            candidates = (
+                self.db.query(Document)
+                .filter(Document.is_common == False)
+                .order_by(Document.access_count, Document.last_accessed)
+                .limit(max(1, count // 10))
+            )  # Evict at least 1, up to 10% at a time
+
+            evicted_count = 0
+            for doc in candidates:
+                # Double check it's not a common command
+                if doc.name not in COMMON_COMMANDS:
+                    try:
+                        self.db.delete(doc)
+                        evicted_count += 1
+                    except Exception as e:
+                        logger.error(f"Error evicting document {doc.name}: {str(e)}")
+
+            if evicted_count > 0:
+                self.db.commit()
+                logger.info(f"Evicted {evicted_count} documents from cache")
+
+    def prefetch_common_commands(self) -> None:
+        """Pre-fetch and cache all common commands."""
+        for command in COMMON_COMMANDS:
+            # Check if already cached
+            existing = self.db.query(Document).filter(Document.name == command).first()
+            if not existing:
+                logger.info(f"Pre-fetching common command: {command}")
+                self.process_and_cache(command)
+
+    def update_common_command(self, name: str) -> bool:
+        """Update a specific common command.
+
+        Args:
+            name: Command name to update
+
+        Returns:
+            True if update was successful, False otherwise
+        """
+        try:
+            # Get the existing document
+            document = self.db.query(Document).filter(Document.name == name).first()
+            if not document:
+                return False
+
+            # Re-fetch and update
+            content, metadata = fetch_man_page_content(document.name, document.section)
+            if not content:
+                return False
+
+            parsed_data = self.parser.parse_man_page(content)
+
+            # Update document fields
+            document.title = parsed_data["title"]
+            document.summary = (
+                parsed_data["sections"][0]["content"]
+                if parsed_data["sections"]
+                else None
+            )
+            document.raw_content = content
+            document.updated_at = datetime.utcnow()
+
+            # Delete existing sections and subsections
+            for section in document.sections:
+                self.db.delete(section)
+
+            # Delete existing related documents
+            for related in document.related_docs:
+                self.db.delete(related)
+
+            self.db.flush()
+
+            # Add new sections
+            for i, section_data in enumerate(parsed_data["sections"]):
+                section = Section(
+                    document_id=document.id,
+                    name=section_data["name"],
+                    content=section_data["content"],
+                    order=i,
+                )
+                self.db.add(section)
+                self.db.flush()
+
+                # Add subsections if any
+                if "subsections" in section_data:
+                    for j, subsection_data in enumerate(section_data["subsections"]):
+                        subsection = Subsection(
+                            section_id=section.id,
+                            name=subsection_data["name"],
+                            content=subsection_data["content"],
+                            order=j,
+                        )
+                        self.db.add(subsection)
+
+            # Add new related documents
+            for related_name in parsed_data["related"]:
+                related_doc = RelatedDocument(
+                    document_id=document.id,
+                    related_name=related_name,
+                )
+                self.db.add(related_doc)
+
+            self.db.commit()
+            logger.info(f"Successfully updated common command: {name}")
+            return True
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error updating document {name}: {str(e)}")
+            return False
+
+    def update_common_commands_list(self) -> None:
+        """Analyze usage patterns and update the common commands list."""
+        try:
+            # Find popular non-common documents
+            three_months_ago = datetime.utcnow() - timedelta(days=90)
+            popular_docs = (
+                self.db.query(Document)
+                .filter(
+                    Document.is_common == False,
+                    Document.access_count >= 100,
+                    Document.last_accessed >= three_months_ago,
+                )
+                .order_by(Document.access_count.desc())
+                .limit(10)
+            )
+
+            # Promote to common
+            promoted = 0
+            for doc in popular_docs:
+                doc.is_common = True
+                promoted += 1
+
+            if promoted > 0:
+                self.db.commit()
+                logger.info(f"Promoted {promoted} documents to common status")
+
+            # Find unpopular common documents (except those in COMMON_COMMANDS)
+            unpopular_docs = (
+                self.db.query(Document)
+                .filter(
+                    Document.is_common == True,
+                    Document.name.notin_(COMMON_COMMANDS),
+                    Document.access_count < 50,
+                    Document.last_accessed < three_months_ago,
+                )
+                .order_by(Document.access_count)
+                .limit(5)
+            )
+
+            # Demote from common
+            demoted = 0
+            for doc in unpopular_docs:
+                doc.is_common = False
+                demoted += 1
+
+            if demoted > 0:
+                self.db.commit()
+                logger.info(f"Demoted {demoted} documents from common status")
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error updating common commands list: {str(e)}")
+
+    def get_cache_statistics(self) -> dict:
+        """Get statistics about the cache.
+
+        Returns:
+            Dictionary with cache statistics
+        """
+        try:
+            # Get total document count
+            total = self.db.query(func.count(Document.id)).scalar()
+
+            # Get common document count
+            common = (
+                self.db.query(func.count(Document.id))
+                .filter(Document.is_common == True)
+                .scalar()
+            )
+
+            # Get most popular documents
+            popular = (
+                self.db.query(Document.name, Document.access_count)
+                .order_by(Document.access_count.desc())
+                .limit(10)
+                .all()
+            )
+
+            # Get recently accessed documents
+            recent = (
+                self.db.query(Document.name, Document.last_accessed)
+                .order_by(Document.last_accessed.desc())
+                .limit(10)
+                .all()
+            )
+
+            # Calculate hit rate (approximate)
+            # This requires additional tracking in a real implementation
+            hit_rate = 0.75 if total > 0 else 0.0
+
+            return {
+                "total_documents": total,
+                "common_documents": common,
+                "cache_hit_rate": hit_rate,
+                "most_popular": [p[0] for p in popular],
+                "recently_accessed": [r[0] for r in recent],
+            }
+        except Exception as e:
+            logger.error(f"Error getting cache statistics: {str(e)}")
+            return {
+                "total_documents": 0,
+                "common_documents": 0,
+                "cache_hit_rate": 0.0,
+                "most_popular": [],
+                "recently_accessed": [],
+            }

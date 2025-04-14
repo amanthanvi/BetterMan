@@ -28,6 +28,9 @@ def init_db():
         section INTEGER,
         summary TEXT,
         raw_content TEXT,
+        is_common BOOLEAN DEFAULT FALSE,
+        last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        access_count INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
@@ -74,26 +77,26 @@ def init_db():
     # Insert test data
     cursor.execute(
         """
-    INSERT OR IGNORE INTO documents (name, title, section, summary)
-    VALUES (?, ?, ?, ?)
+    INSERT OR IGNORE INTO documents (name, title, section, summary, is_common, access_count)
+    VALUES (?, ?, ?, ?, ?, ?)
     """,
-        ("ls", "ls", 1, "List directory contents"),
+        ("ls", "ls", 1, "List directory contents", True, 0),
     )
 
     cursor.execute(
         """
-    INSERT OR IGNORE INTO documents (name, title, section, summary)
-    VALUES (?, ?, ?, ?)
+    INSERT OR IGNORE INTO documents (name, title, section, summary, is_common, access_count)
+    VALUES (?, ?, ?, ?, ?, ?)
     """,
-        ("grep", "grep", 1, "Search for patterns in files"),
+        ("grep", "grep", 1, "Search for patterns in files", True, 0),
     )
 
     cursor.execute(
         """
-    INSERT OR IGNORE INTO documents (name, title, section, summary)
-    VALUES (?, ?, ?, ?)
+    INSERT OR IGNORE INTO documents (name, title, section, summary, is_common, access_count)
+    VALUES (?, ?, ?, ?, ?, ?)
     """,
-        ("cd", "cd", 1, "Change directory"),
+        ("cd", "cd", 1, "Change directory", True, 0),
     )
 
     # Commit changes

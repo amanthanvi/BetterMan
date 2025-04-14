@@ -1,6 +1,15 @@
 """Data models for BetterMan documents."""
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Index
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    ForeignKey,
+    Index,
+    Boolean,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, Field
@@ -24,6 +33,11 @@ class Document(Base):
     raw_content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Cache management fields
+    is_common = Column(Boolean, default=False)  # Flag for pre-processed common commands
+    last_accessed = Column(DateTime, default=datetime.utcnow)
+    access_count = Column(Integer, default=0)  # Track popularity
 
     sections = relationship(
         "Section", back_populates="document", cascade="all, delete-orphan"
@@ -76,6 +90,13 @@ class RelatedDocument(Base):
     document = relationship("Document", back_populates="related_docs")
 
 
+# Add indexes for efficient cache management
+Index(
+    "idx_document_access", Document.access_count.desc(), Document.last_accessed.desc()
+)
+Index("idx_document_common", Document.is_common)
+
+
 # Pydantic Models for API responses
 class SubsectionResponse(BaseModel):
     """Pydantic model for subsection responses."""
@@ -120,6 +141,19 @@ class SearchResult(BaseModel):
     title: str
     summary: Optional[str] = None
     score: float = Field(..., description="Relevance score for the search result")
+
+    class Config:
+        from_attributes = True
+
+
+class CacheStatistics(BaseModel):
+    """Pydantic model for cache statistics."""
+
+    total_documents: int
+    common_documents: int
+    cache_hit_rate: float
+    most_popular: List[str]
+    recently_accessed: List[str]
 
     class Config:
         from_attributes = True

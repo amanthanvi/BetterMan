@@ -12,6 +12,7 @@ const SearchInterface = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [totalResults, setTotalResults] = useState(0);
   
   // Sections for filtering (these are the standard man page sections)
   const sections = [
@@ -32,6 +33,7 @@ const SearchInterface = () => {
       performSearch();
     } else {
       setResults([]);
+      setTotalResults(0);
     }
   }, [query, section]);
 
@@ -70,11 +72,23 @@ const SearchInterface = () => {
       }
       
       const data = await response.json();
-      setResults(data);
+      console.log("Search response:", data); // Debug log
+      
+      // Correctly extract the results array from the response
+      if (data && data.results) {
+        setResults(data.results);
+        setTotalResults(data.total || data.results.length);
+      } else {
+        // In case the API changes or returns unexpected format
+        setResults([]);
+        setTotalResults(0);
+        console.error('Unexpected API response format:', data);
+      }
     } catch (error) {
       console.error('Error performing search:', error);
       setSearchError(error.message);
       setResults([]);
+      setTotalResults(0);
     } finally {
       setLoading(false);
     }
@@ -188,8 +202,8 @@ const SearchInterface = () => {
         {query && !loading && !searchError && (
           <div className="mb-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {results.length > 0 
-                ? `Found ${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`
+              {totalResults > 0 
+                ? `Found ${totalResults} result${totalResults !== 1 ? 's' : ''} for "${query}"`
                 : `No results found for "${query}"`
               }
             </p>
@@ -197,11 +211,11 @@ const SearchInterface = () => {
         )}
         
         {/* Results List */}
-        {results.length > 0 && (
+        {results && results.length > 0 && (
           <div className="space-y-4">
-            {results.map((result) => (
+            {results.map((result, index) => (
               <div
-                key={result.id}
+                key={result.id || index}
                 className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
               >
                 <div className="px-4 py-5 sm:p-6">
