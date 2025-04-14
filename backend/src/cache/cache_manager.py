@@ -61,6 +61,11 @@ COMMON_COMMANDS = [
     "uname",
 ]
 
+# Cache status constants
+CACHE_STATUS_PERMANENT = "permanent"  # Always keep in cache
+CACHE_STATUS_TEMPORARY = "temporary"  # Keep in cache until eviction needed
+CACHE_STATUS_ON_DEMAND = "on_demand"  # Load only when requested
+
 
 class CacheManager:
     """Manages document caching and processing."""
@@ -76,6 +81,17 @@ class CacheManager:
         self.db = db
         self.parser = parser
         self.max_cache_size = max_cache_size
+        # Try to initialize search engine if available
+        try:
+            from ..search.search_engine import SearchEngine
+
+            self.search_engine = SearchEngine(db)
+            self.has_search_engine = True
+        except (ImportError, ModuleNotFoundError):
+            self.has_search_engine = False
+            logger.warning(
+                "Search engine module not available, search features disabled"
+            )
 
     def get_document(
         self, name: str, section: Optional[int] = None
@@ -134,8 +150,12 @@ class CacheManager:
             # Parse the man page
             parsed_data = self.parser.parse_man_page(content)
 
-            # Determine if this is a common command
+            # Determine cache status and priority
             is_common = name in COMMON_COMMANDS
+            cache_status = (
+                CACHE_STATUS_PERMANENT if is_common else CACHE_STATUS_ON_DEMAND
+            )
+            cache_priority = 10 if is_common else 0
 
             # Create document record
             document = Document(
@@ -153,6 +173,8 @@ class CacheManager:
                 ),
                 raw_content=content,
                 is_common=is_common,
+                cache_status=cache_status,
+                cache_priority=cache_priority,
                 last_accessed=datetime.utcnow(),
                 access_count=1,
             )
@@ -191,6 +213,16 @@ class CacheManager:
 
             self.db.commit()
             logger.info(f"Successfully processed and cached document: {name}")
+
+            # Index in search engine if available
+            if self.has_search_engine:
+                try:
+                    self.search_engine.index_document(document.id)
+                except Exception as e:
+                    logger.error(
+                        f"Error indexing document {name} in search engine: {str(e)}"
+                    )
+
             return document
 
         except Exception as e:
@@ -204,18 +236,22 @@ class CacheManager:
         count = self.db.query(func.count(Document.id)).scalar()
 
         if count >= self.max_cache_size:
-            # Find candidates for eviction (not common commands)
+            # Find candidates for eviction (not permanent cache)
             candidates = (
                 self.db.query(Document)
-                .filter(Document.is_common == False)
-                .order_by(Document.access_count, Document.last_accessed)
+                .filter(Document.cache_status != CACHE_STATUS_PERMANENT)
+                .order_by(
+                    Document.cache_priority.asc(),
+                    Document.access_count.asc(),
+                    Document.last_accessed.asc(),
+                )
                 .limit(max(1, count // 10))
             )  # Evict at least 1, up to 10% at a time
 
             evicted_count = 0
             for doc in candidates:
-                # Double check it's not a common command
-                if doc.name not in COMMON_COMMANDS:
+                # Double check it's not a permanent cache
+                if doc.cache_status != CACHE_STATUS_PERMANENT:
                     try:
                         self.db.delete(doc)
                         evicted_count += 1
@@ -234,6 +270,13 @@ class CacheManager:
             if not existing:
                 logger.info(f"Pre-fetching common command: {command}")
                 self.process_and_cache(command)
+            elif existing.cache_status != CACHE_STATUS_PERMANENT:
+                # Update cache status for common commands
+                existing.is_common = True
+                existing.cache_status = CACHE_STATUS_PERMANENT
+                existing.cache_priority = 10
+                self.db.commit()
+                logger.info(f"Updated cache status for common command: {command}")
 
     def update_common_command(self, name: str) -> bool:
         """Update a specific common command.
@@ -266,6 +309,12 @@ class CacheManager:
             )
             document.raw_content = content
             document.updated_at = datetime.utcnow()
+
+            # Ensure proper cache status for common commands
+            if name in COMMON_COMMANDS:
+                document.is_common = True
+                document.cache_status = CACHE_STATUS_PERMANENT
+                document.cache_priority = 10
 
             # Delete existing sections and subsections
             for section in document.sections:
@@ -308,7 +357,17 @@ class CacheManager:
                 self.db.add(related_doc)
 
             self.db.commit()
-            logger.info(f"Successfully updated common command: {name}")
+            logger.info(f"Successfully updated command: {name}")
+
+            # Re-index in search engine if available
+            if self.has_search_engine:
+                try:
+                    self.search_engine.index_document(document.id)
+                except Exception as e:
+                    logger.error(
+                        f"Error re-indexing document {name} in search engine: {str(e)}"
+                    )
+
             return True
 
         except Exception as e:
@@ -336,6 +395,10 @@ class CacheManager:
             promoted = 0
             for doc in popular_docs:
                 doc.is_common = True
+                doc.cache_status = CACHE_STATUS_PERMANENT
+                doc.cache_priority = (
+                    8  # High but not as high as predefined common commands
+                )
                 promoted += 1
 
             if promoted > 0:
@@ -359,6 +422,8 @@ class CacheManager:
             demoted = 0
             for doc in unpopular_docs:
                 doc.is_common = False
+                doc.cache_status = CACHE_STATUS_TEMPORARY
+                doc.cache_priority = 5  # Medium priority
                 demoted += 1
 
             if demoted > 0:
@@ -386,6 +451,16 @@ class CacheManager:
                 .scalar()
             )
 
+            # Get cache status statistics
+            cache_status_counts = {}
+            status_results = (
+                self.db.query(Document.cache_status, func.count(Document.id))
+                .group_by(Document.cache_status)
+                .all()
+            )
+            for status, count in status_results:
+                cache_status_counts[status] = count
+
             # Get most popular documents
             popular = (
                 self.db.query(Document.name, Document.access_count)
@@ -412,6 +487,7 @@ class CacheManager:
                 "cache_hit_rate": hit_rate,
                 "most_popular": [p[0] for p in popular],
                 "recently_accessed": [r[0] for r in recent],
+                "cache_by_status": cache_status_counts,
             }
         except Exception as e:
             logger.error(f"Error getting cache statistics: {str(e)}")
@@ -421,4 +497,5 @@ class CacheManager:
                 "cache_hit_rate": 0.0,
                 "most_popular": [],
                 "recently_accessed": [],
+                "cache_by_status": {},
             }

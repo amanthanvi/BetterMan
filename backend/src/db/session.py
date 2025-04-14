@@ -1,45 +1,51 @@
 """Database session management for BetterMan."""
 
+import os
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-import os
-from pathlib import Path
+from sqlalchemy.orm import sessionmaker, scoped_session
 
-# Get database URL from environment variable, or use a default value
-DATABASE_DIR = Path(__file__).parent.parent.parent / "data"
-DATABASE_DIR.mkdir(exist_ok=True)
-DATABASE_PATH = DATABASE_DIR / "betterman.db"
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_PATH}")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-print(f"Using database at: {DATABASE_URL}")
-
-# For SQLite, add check_same_thread=False
-connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    connect_args["check_same_thread"] = False
+# Get database URL from environment variable or use default
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./data/betterman.db")
 
 # Create engine
 engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args,
-    echo=True,  # Enable SQL logging for debugging
+    DATABASE_URL, connect_args={"check_same_thread": False}  # Only needed for SQLite
 )
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create base class for models
+# Create base class for SQLAlchemy models
 Base = declarative_base()
 
 
-# Dependency to get DB session
+def init_db():
+    """Initialize the database schema and run migrations."""
+    from ..models.document import Base
+
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created")
+
+    # Run migrations
+    from .migrations import DatabaseMigration
+
+    with SessionLocal() as db:
+        migrations = DatabaseMigration(db)
+        migrations.run_migrations()
+        logger.info("Database migrations completed")
+
+
 def get_db():
-    """
-    Get a database session.
+    """Get a database session.
 
     Yields:
-        Session: A SQLAlchemy session.
+        SQLAlchemy session
     """
     db = SessionLocal()
     try:

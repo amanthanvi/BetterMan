@@ -38,6 +38,8 @@ class Document(Base):
     is_common = Column(Boolean, default=False)  # Flag for pre-processed common commands
     last_accessed = Column(DateTime, default=datetime.utcnow)
     access_count = Column(Integer, default=0)  # Track popularity
+    cache_status = Column(String, default="on_demand")  # Added cache status field
+    cache_priority = Column(Integer, default=0)  # Added priority field for eviction
 
     sections = relationship(
         "Section", back_populates="document", cascade="all, delete-orphan"
@@ -95,6 +97,7 @@ Index(
     "idx_document_access", Document.access_count.desc(), Document.last_accessed.desc()
 )
 Index("idx_document_common", Document.is_common)
+Index("idx_document_cache_status", Document.cache_status)  # Added index
 
 
 # Pydantic Models for API responses
@@ -129,6 +132,7 @@ class DocumentResponse(BaseModel):
     summary: Optional[str] = None
     sections: Optional[List[SectionResponse]] = None
     related: Optional[List[str]] = None
+    cache_status: Optional[str] = None  # Added to response model
 
     class Config:
         from_attributes = True
@@ -154,6 +158,7 @@ class CacheStatistics(BaseModel):
     cache_hit_rate: float
     most_popular: List[str]
     recently_accessed: List[str]
+    cache_by_status: Optional[Dict[str, int]] = None  # Added statistics by cache status
 
     class Config:
         from_attributes = True
