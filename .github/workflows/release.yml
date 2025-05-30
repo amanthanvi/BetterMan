@@ -1,0 +1,74 @@
+name: Release Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Configure Git
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+    
+    - name: Update version in backend
+      run: |
+        cd backend
+        sed -i "s/APP_VERSION = \".*\"/APP_VERSION = \"${{ inputs.version }}\"/" src/config.py
+    
+    - name: Update version in frontend
+      run: |
+        cd frontend
+        npm version ${{ inputs.version }} --no-git-tag-version
+    
+    - name: Update CHANGELOG
+      run: |
+        echo "## Version ${{ inputs.version }} - $(date +%Y-%m-%d)" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        git log --pretty=format:"- %s" $(git describe --tags --abbrev=0)..HEAD >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+    
+    - name: Commit changes
+      run: |
+        git add -A
+        git commit -m "chore: release version ${{ inputs.version }}"
+    
+    - name: Create and push tag
+      run: |
+        git tag -a "v${{ inputs.version }}" -m "Release version ${{ inputs.version }}"
+        git push origin main
+        git push origin "v${{ inputs.version }}"
+    
+    - name: Trigger CD workflow
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'cd.yml',
+            ref: 'main'
+          })

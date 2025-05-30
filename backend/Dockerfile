@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -6,6 +6,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	build-essential \
 	curl \
+	man-db \
+	manpages \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Install Rust for pydantic-core compilation

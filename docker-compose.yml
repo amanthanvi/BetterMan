@@ -10,11 +10,15 @@ services:
       - ./data:/app/data  # Persistent database storage
     environment:
       - ENVIRONMENT=development
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+    depends_on:
+      - redis
 
   frontend:
     build: ./frontend
@@ -29,5 +33,19 @@ services:
       backend:
         condition: service_healthy
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   frontend_node_modules:
+  redis_data:

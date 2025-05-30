@@ -8,6 +8,7 @@ from sqlalchemy import func
 
 from ..models.document import Document, Section, Subsection, RelatedDocument
 from ..parser.linux_parser import LinuxManParser
+from ..parser.formatted_parser import parse_formatted_man_page
 from ..parser.man_utils import fetch_man_page_content
 
 # Configure logging
@@ -141,14 +142,15 @@ class CacheManager:
 
         try:
             # Process the man page
-            content, metadata = fetch_man_page_content(name, section)
+            content, error_msg = fetch_man_page_content(name, str(section) if section else None)
 
             if not content:
-                logger.warning(f"No content found for man page: {name}")
-                return None
+                logger.warning(f"No content found for man page {name}: {error_msg}")
+                raise ValueError(f"Document not found: {name}")
 
-            # Parse the man page
-            parsed_data = self.parser.parse_man_page(content)
+            # Parse the man page using formatted parser
+            # since man command returns formatted output, not raw groff
+            parsed_data = parse_formatted_man_page(content)
 
             # Determine cache status and priority
             is_common = name in COMMON_COMMANDS

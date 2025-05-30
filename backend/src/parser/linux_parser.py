@@ -9,9 +9,14 @@ import re
 import os
 import json
 import hashlib
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 from datetime import datetime
+from .groff_parser import parse_groff_content
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class ManPageCache:
@@ -24,21 +29,28 @@ class ManPageCache:
 
     def get_cache_key(self, content: str) -> str:
         """Generate a cache key based on content hash."""
-        return hashlib.md5(content.encode()).hexdigest()
+        return hashlib.md5(content.encode('utf-8')).hexdigest()
 
     def get_from_cache(self, cache_key: str) -> Optional[Dict]:
         """Retrieve a parsed man page from cache if it exists."""
         cache_file = self.cache_dir / f"{cache_key}.json"
         if cache_file.exists():
-            with open(cache_file, "r") as f:
-                return json.load(f)
+            try:
+                with open(cache_file, "r", encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load cache file {cache_file}: {e}")
+                return None
         return None
 
     def save_to_cache(self, cache_key: str, parsed_data: Dict) -> None:
         """Save a parsed man page to cache."""
         cache_file = self.cache_dir / f"{cache_key}.json"
-        with open(cache_file, "w") as f:
-            json.dump(parsed_data, f)
+        try:
+            with open(cache_file, "w", encoding='utf-8') as f:
+                json.dump(parsed_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save cache file {cache_file}: {e}")
 
 
 class LinuxManParser:
@@ -47,13 +59,26 @@ class LinuxManParser:
     def __init__(self, cache_dir: str = ".cache"):
         """Initialize the parser with necessary patterns."""
         # Common patterns in man pages
-        self.title_pattern = re.compile(r'\.TH\s+"?([^"]+)"?\s+(\d+)')
-        self.section_pattern = re.compile(r'\.SH\s+"?([^"]*)"?')
-        self.subsection_pattern = re.compile(r'\.SS\s+"?([^"]*)"?')
-        self.bold_pattern = re.compile(r"\\fB([^\\]*)\\fR")
-        self.italic_pattern = re.compile(r"\\fI([^\\]*)\\fR")
-        self.paragraph_pattern = re.compile(r"\.PP|\.LP|\.P")
-        self.indented_paragraph_pattern = re.compile(r'\.IP\s+"?([^"]*)"?(?:\s+(\d+))?')
+        self.title_pattern = re.compile(r'\.TH\s+"?([^"\s]+)"?\s+([^"\s]+)(?:\s+"([^"]*)")?(?:\s+"([^"]*)")?(?:\s+"([^"]*)")?')
+        self.section_pattern = re.compile(r'^\.SH\s+"?([^"]*)"?\s*$', re.MULTILINE)
+        self.subsection_pattern = re.compile(r'^\.SS\s+"?([^"]*)"?\s*$', re.MULTILINE)
+        self.paragraph_pattern = re.compile(r'^\.(?:PP|LP|P|br)\s*$', re.MULTILINE)
+        self.indented_paragraph_pattern = re.compile(r'^\.IP\s+"?([^"]*)"?(?:\s+(\d+))?\s*$', re.MULTILINE)
+        self.tagged_paragraph_pattern = re.compile(r'^\.TP(?:\s+(\d+))?\s*$', re.MULTILINE)
+        self.relative_indent_pattern = re.compile(r'^\.RS(?:\s+(\d+))?\s*$', re.MULTILINE)
+        self.relative_dedent_pattern = re.compile(r'^\.RE\s*$', re.MULTILINE)
+        
+        # Macro patterns
+        self.macro_patterns = {
+            'bold': re.compile(r'^\.B\s+(.+)$', re.MULTILINE),
+            'italic': re.compile(r'^\.I\s+(.+)$', re.MULTILINE),
+            'bold_italic': re.compile(r'^\.BI\s+(.+)$', re.MULTILINE),
+            'roman_bold': re.compile(r'^\.RB\s+(.+)$', re.MULTILINE),
+            'bold_roman': re.compile(r'^\.BR\s+(.+)$', re.MULTILINE),
+            'italic_bold': re.compile(r'^\.IB\s+(.+)$', re.MULTILINE),
+            'italic_roman': re.compile(r'^\.IR\s+(.+)$', re.MULTILINE),
+            'roman_italic': re.compile(r'^\.RI\s+(.+)$', re.MULTILINE),
+        }
 
         # Initialize cache
         self.cache = ManPageCache(cache_dir)
@@ -89,6 +114,9 @@ class LinuxManParser:
         parsed_data = {
             "title": title_info["title"],
             "section": title_info["section"],
+            "date": title_info.get("date", ""),
+            "source": title_info.get("source", ""),
+            "manual": title_info.get("manual", ""),
             "sections": sections,
             "related": related,
             "parsed_at": datetime.now().isoformat(),
@@ -105,12 +133,39 @@ class LinuxManParser:
         """Extract the title and section from a man page."""
         title_match = self.title_pattern.search(content)
         if title_match:
-            return {"title": title_match.group(1), "section": title_match.group(2)}
+            title = title_match.group(1)
+            section = title_match.group(2)
+            # Additional metadata if available
+            date = title_match.group(3) if title_match.group(3) else ""
+            source = title_match.group(4) if title_match.group(4) else ""
+            manual = title_match.group(5) if title_match.group(5) else ""
+            
+            return {
+                "title": title,
+                "section": section,
+                "date": date,
+                "source": source,
+                "manual": manual
+            }
+        
         # Fallback to simpler pattern if the above doesn't match
-        simple_match = re.search(r"\.TH\s+([^\s]+)", content)
+        simple_match = re.search(r"\.TH\s+([^\s]+)(?:\s+([^\s]+))?", content)
         if simple_match:
-            return {"title": simple_match.group(1), "section": "Unknown"}
-        return {"title": "Unknown", "section": "Unknown"}
+            return {
+                "title": simple_match.group(1),
+                "section": simple_match.group(2) if simple_match.group(2) else "1",
+                "date": "",
+                "source": "",
+                "manual": ""
+            }
+        
+        return {
+            "title": "Unknown",
+            "section": "1",
+            "date": "",
+            "source": "",
+            "manual": ""
+        }
 
     def _extract_sections(self, content: str) -> List[Dict]:
         """Extract all sections from the man page."""
@@ -183,22 +238,123 @@ class LinuxManParser:
 
     def _process_section_content(self, content: str) -> str:
         """Process section content to replace formatting commands."""
-        # Replace bold formatting
-        content = self.bold_pattern.sub(r"**\1**", content)
-
-        # Replace italic formatting
-        content = self.italic_pattern.sub(r"*\1*", content)
-
-        # Replace paragraph markers
-        content = self.paragraph_pattern.sub("\n\n", content)
-
-        # Replace indented paragraphs
-        content = self.indented_paragraph_pattern.sub(r"\n\n\1:\n    ", content)
-
-        # Remove other common formatting commands
-        content = re.sub(r"\.\w+\s+", "", content)
-
+        # First, handle macro-based formatting
+        content = self._process_macros(content)
+        
+        # Use the groff parser for escape sequences
+        content = parse_groff_content(content)
+        
+        # Handle paragraph and indentation macros
+        content = self._process_paragraph_macros(content)
+        
+        # Clean up any remaining groff commands that aren't content
+        content = self._clean_remaining_macros(content)
+        
+        # Normalize whitespace
+        content = re.sub(r'\n{3,}', '\n\n', content)
+        content = re.sub(r'[ \t]+', ' ', content)
+        
         return content.strip()
+    
+    def _process_macros(self, content: str) -> str:
+        """Process groff macros for formatting."""
+        # Process single-line formatting macros
+        content = self.macro_patterns['bold'].sub(r'**\1**', content)
+        content = self.macro_patterns['italic'].sub(r'*\1*', content)
+        
+        # Process alternating format macros
+        def process_alternating(match, formats):
+            words = match.group(1).split()
+            result = []
+            for i, word in enumerate(words):
+                fmt = formats[i % len(formats)]
+                if fmt == 'B':
+                    result.append(f'**{word}**')
+                elif fmt == 'I':
+                    result.append(f'*{word}*')
+                else:
+                    result.append(word)
+            return ' '.join(result)
+        
+        content = self.macro_patterns['bold_italic'].sub(
+            lambda m: process_alternating(m, ['B', 'I']), content)
+        content = self.macro_patterns['roman_bold'].sub(
+            lambda m: process_alternating(m, ['R', 'B']), content)
+        content = self.macro_patterns['bold_roman'].sub(
+            lambda m: process_alternating(m, ['B', 'R']), content)
+        content = self.macro_patterns['italic_bold'].sub(
+            lambda m: process_alternating(m, ['I', 'B']), content)
+        content = self.macro_patterns['italic_roman'].sub(
+            lambda m: process_alternating(m, ['I', 'R']), content)
+        content = self.macro_patterns['roman_italic'].sub(
+            lambda m: process_alternating(m, ['R', 'I']), content)
+        
+        return content
+    
+    def _process_paragraph_macros(self, content: str) -> str:
+        """Process paragraph and indentation macros."""
+        # Replace paragraph markers
+        content = self.paragraph_pattern.sub('\n\n', content)
+        
+        # Handle indented paragraphs
+        def replace_ip(match):
+            label = match.group(1) if match.group(1) else ""
+            indent = match.group(2) if match.group(2) else "4"
+            if label:
+                return f"\n\n{label}:\n    "
+            else:
+                return "\n\n    "
+        
+        content = self.indented_paragraph_pattern.sub(replace_ip, content)
+        
+        # Handle tagged paragraphs
+        lines = content.split('\n')
+        result = []
+        i = 0
+        while i < len(lines):
+            if self.tagged_paragraph_pattern.match(lines[i]):
+                # Next line is the tag, line after is the content
+                if i + 1 < len(lines):
+                    tag = lines[i + 1].strip()
+                    content_start = i + 2
+                    # Find where this paragraph ends
+                    para_end = content_start
+                    while para_end < len(lines) and not lines[para_end].startswith('.'):
+                        para_end += 1
+                    
+                    if content_start < len(lines):
+                        para_content = ' '.join(lines[content_start:para_end])
+                        result.append(f"\n{tag}:\n    {para_content}")
+                        i = para_end
+                        continue
+            result.append(lines[i])
+            i += 1
+        
+        content = '\n'.join(result)
+        
+        # Handle relative indents
+        content = self.relative_indent_pattern.sub('    ', content)
+        content = self.relative_dedent_pattern.sub('', content)
+        
+        return content
+    
+    def _clean_remaining_macros(self, content: str) -> str:
+        """Remove remaining groff macros that don't affect content."""
+        # List of macros to remove completely
+        remove_macros = [
+            r'^\.(?:ad|ce|de|di|ev|ex|fi|ft|hy|in|it|ll|ls|na|ne|nf|nh|nr|ns|pl|po|ps|so|sp|ta|ti|tm|tr)\b.*$',
+            r'^\.\\".*$',  # Comments
+            r'^\.\\}.*$',  # Conditional end
+            r'^\.ds\s+.*$',  # Define string
+            r'^\.if\s+.*$',  # Conditionals
+            r'^\.ie\s+.*$',  # If-else
+            r'^\.el\s+.*$',  # Else
+        ]
+        
+        for pattern in remove_macros:
+            content = re.sub(pattern, '', content, flags=re.MULTILINE)
+        
+        return content
 
     def _extract_related(self, content: str) -> List[str]:
         """Extract related commands or pages referenced in SEE ALSO section."""
