@@ -2,148 +2,127 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
-
-BetterMan is a modern documentation platform that transforms traditional Linux man pages into a more readable, navigable format with advanced search capabilities. It uses a microservices architecture with Docker Compose orchestration.
-
-## Architecture
-
-### Backend (Python FastAPI)
-- **API Server**: FastAPI on port 8000 with REST endpoints
-- **Database**: SQLite with SQLAlchemy ORM and FTS5 for full-text search
-- **Key Modules**:
-  - `api/`: REST endpoints for documents, search, and cache management
-  - `models/`: SQLAlchemy models (Document, Section, Subsection, RelatedDocument)
-  - `search/`: Dual search implementation (FTS5 with BM25 ranking, fallback LIKE queries)
-  - `parser/`: Man page parsing to structured format with Markdown/HTML output
-  - `cache/`: Smart caching system with three-tier priority (permanent, temporary, on_demand)
-  - `jobs/`: Background tasks with APScheduler
-
-### Frontend (React + Vite)
-- **Stack**: React 19, Vite, Tailwind CSS, React Router
-- **Key Components**:
-  - `SearchInterface`: Advanced search with debouncing, autocomplete, and highlighting
-  - `DocumentViewer`: Man page display with Markdown rendering
-  - **Features**: Dark mode, keyboard shortcuts, responsive design
-
-### Database Schema
-- Main tables: documents, sections, subsections, related_documents
-- FTS5 virtual tables: fts_documents, fts_sections
-- Migration system in `backend/src/db/migrations/`
-
 ## Development Commands
 
-### Docker Development (Recommended)
+### Quick Start
 ```bash
-# Start all services
-docker-compose up
+# Start all services (frontend, backend, Redis)
+docker-compose up -d
 
-# Rebuild and start
-docker-compose up --build
-
-# Stop services
-docker-compose down
-
-# View logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
+# Access points:
+# - Frontend: http://localhost:5173
+# - Backend API: http://localhost:8000
+# - API Documentation: http://localhost:8000/docs
+# - Redis: localhost:6379
 ```
 
-### Local Development
-
-Backend:
+### Backend Development
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+
+# Run development server
+uvicorn src.main:app --reload
+
+# Run tests
+python -m pytest
+python -m pytest --cov=src  # With coverage
+
+# Format code
+python -m black src/
+
+# Database migrations
+python -m alembic upgrade head
 ```
 
-Frontend:
+### Frontend Development
 ```bash
 cd frontend
 npm install
+
+# Run development server
 npm run dev
+
+# Build for production
+npm run build
+
+# Run linting
+npm run lint
+
+# Preview production build
+npm run preview
 ```
 
-### Testing
+### Docker Operations
 ```bash
-# Backend tests
-cd backend
-python -m pytest tests/
+# Development environment
+docker-compose up -d
+docker-compose down
+docker-compose logs -f [service_name]
 
-# Frontend (no tests configured yet)
-cd frontend
-npm test
+# Production deployment
+docker-compose -f docker-compose.production.yml up -d
+
+# Rebuild containers
+docker-compose up --build
 ```
 
-## API Endpoints
+## Architecture Overview
 
-### Documents
-- `GET /api/docs` - List documents (params: section, is_common, limit, offset)
-- `GET /api/docs/{doc_id}` - Get document details
-- `GET /api/docs/{doc_id}/html` - Get document as HTML
-- `GET /api/docs/{doc_id}/markdown` - Get document as Markdown
-- `POST /api/docs/import` - Import new document
-- `DELETE /api/docs/{doc_id}` - Delete document
+BetterMan is a modern documentation platform that transforms Linux man pages into an intuitive web interface with enterprise features.
 
-### Search
-- `GET /api/search` - Basic search (params: q, section, limit, offset)
-- `GET /api/search/search` - Advanced FTS search with highlighting
-- `POST /api/search/reindex` - Rebuild search index
+### Backend Architecture (FastAPI)
 
-### Cache
-- `GET /api/cache/stats` - Cache statistics
-- `POST /api/cache/refresh` - Trigger cache refresh
+**Core Components:**
+- `src/api/` - RESTful API endpoints
+  - `routes.py` - Main application routes
+  - `search_routes.py` - Search-specific endpoints
+- `src/models/` - SQLAlchemy ORM models
+- `src/search/` - Search engine implementation with optimization
+- `src/parser/` - Man page parsing (groff format)
+- `src/cache/` - Multi-layer caching (Redis + in-memory)
+- `src/analytics/` - Usage tracking and metrics
+- `src/jobs/` - Background task scheduler
 
-## Key Implementation Details
+**Key Patterns:**
+- Async/await throughout for maximum performance
+- Dependency injection for database sessions
+- Multi-layer caching strategy (Redis primary, in-memory fallback)
+- Comprehensive error handling with custom exceptions
+- Rate limiting and security middleware
 
-### Search System
-- Uses SQLite FTS5 with BM25 ranking for relevance
-- Automatic fallback to LIKE queries if FTS unavailable
-- Supports phrase search with quotes
-- Returns highlighted snippets
-- Debounced frontend input (300ms) in `useDebounce` hook
+### Frontend Architecture (React + TypeScript)
 
-### Caching Strategy
-- Pre-loads 62 common Linux commands on startup
-- Three cache priorities: permanent (never evicted), temporary (can be evicted), on_demand (fetched as needed)
-- Tracks access counts for popularity-based eviction
-- Background job refreshes cache periodically
+**Core Components:**
+- `src/components/` - Reusable UI components
+  - `CommandPalette.tsx` - Cmd/Ctrl+K navigation
+  - `search/` - Search interface components
+  - `document/` - Document viewer
+  - `ui/` - Base UI components (Button, Input, etc.)
+- `src/pages/` - Route-level page components
+- `src/stores/` - Zustand state management
+- `src/services/` - API client services
 
-### Database Migrations
-- Migration system in `backend/src/db/migrations/`
-- Run automatically on startup
-- Add new migrations as numbered Python files (e.g., `004_your_migration.py`)
+**Key Patterns:**
+- Component composition with TypeScript interfaces
+- Global state management with Zustand
+- Error boundaries for graceful error handling
+- Responsive design with Tailwind CSS
+- Keyboard navigation support throughout
 
-## Common Development Tasks
+### Data Flow
+1. Frontend makes API request to backend
+2. Backend checks Redis cache
+3. If cache miss, queries SQLite/PostgreSQL
+4. Parses man pages using groff parser if needed
+5. Updates cache and returns response
+6. Frontend stores in Zustand and renders
 
-### Adding a New API Endpoint
-1. Add route to `backend/src/api/routes.py` or create new route file
-2. Import in `backend/src/api/__init__.py`
-3. Follow existing patterns for error handling and response models
-
-### Modifying Database Schema
-1. Create migration file in `backend/src/db/migrations/`
-2. Update models in `backend/src/models/`
-3. Migration runs automatically on next startup
-
-### Updating Search Implementation
-- Main logic in `backend/src/search/search_engine.py`
-- Two search methods: `search()` for basic, `search_fts()` for advanced
-- Remember to reindex after schema changes: `POST /api/search/reindex`
-
-### Frontend State Management
-- Currently uses local component state
-- API calls via axios in individual components
-- Consider adding global state management (Context API or Redux) if complexity grows
-
-## Environment Variables
-
-Backend expects:
-- `DATABASE_URL` (defaults to `sqlite:///./data/betterman.db`)
-- `LOG_LEVEL` (defaults to `INFO`)
-
-Frontend expects:
-- `VITE_API_URL` (defaults to `http://localhost:8000`)
+### Production Considerations
+- Nginx reverse proxy with caching headers
+- PostgreSQL for production database
+- Prometheus + Grafana for monitoring
+- Rate limiting and CORS protection
+- Health check endpoints for all services
+- Multi-stage Docker builds for optimization
