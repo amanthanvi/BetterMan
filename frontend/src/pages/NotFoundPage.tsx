@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { 
   HomeIcon, 
   MagnifyingGlassIcon,
-  CommandLineIcon,
+  CodeIcon,
   ArrowLeftIcon 
 } from '@radix-ui/react-icons';
 import { Button } from '@/components/ui/Button';
@@ -40,7 +40,7 @@ export const NotFoundPage: React.FC = () => {
               }}
               className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
             >
-              <CommandLineIcon className="w-16 h-16 text-blue-500" />
+              <CodeIcon className="w-16 h-16 text-blue-500" />
             </motion.div>
           </div>
         </motion.div>

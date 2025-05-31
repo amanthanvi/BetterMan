@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MagnifyingGlassIcon, 
-  AdjustmentsHorizontalIcon,
+  MixerHorizontalIcon,
   ClockIcon,
-  XMarkIcon,
-  CommandLineIcon,
+  Cross2Icon,
+  CodeIcon,
   StarIcon
 } from '@radix-ui/react-icons';
 import { Input } from '@/components/ui/Input';
@@ -286,7 +286,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
                     suggestion={suggestion}
                     selected={selectedSuggestion === index}
                     onClick={() => handleSuggestionClick(suggestion)}
-                    icon={<CommandLineIcon className="w-4 h-4" />}
+                    icon={<CodeIcon className="w-4 h-4" />}
                   />
                 ))}
               </div>
@@ -379,7 +379,7 @@ const RecentDocItem: React.FC<RecentDocItemProps> = ({ doc, onClick, isFavorite 
       className="w-full flex items-start space-x-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
     >
       <div className="text-gray-400 dark:text-gray-500 mt-0.5">
-        <CommandLineIcon className="w-4 h-4" />
+        <CodeIcon className="w-4 h-4" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2">

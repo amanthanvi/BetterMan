@@ -2,14 +2,14 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
-  Cog6ToothIcon,
+  GearIcon,
   SunIcon,
   MoonIcon,
-  ComputerDesktopIcon,
-  EyeIcon,
+  DesktopIcon,
+  EyeOpenIcon,
   KeyboardIcon,
   TrashIcon,
-  UserIcon,
+  PersonIcon,
 } from '@radix-ui/react-icons';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/stores/appStore';
@@ -90,7 +90,7 @@ export const SettingsPage: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-4">
-            <Cog6ToothIcon className="w-8 h-8 text-blue-500" />
+            <GearIcon className="w-8 h-8 text-blue-500" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               Settings
             </h1>
@@ -105,7 +105,7 @@ export const SettingsPage: React.FC = () => {
           <SettingsSection
             title="Appearance"
             description="Customize the look and feel"
-            icon={<EyeIcon className="w-5 h-5" />}
+            icon={<EyeOpenIcon className="w-5 h-5" />}
           >
             {/* Theme */}
             <SettingItem
@@ -131,7 +131,7 @@ export const SettingsPage: React.FC = () => {
                   theme="system"
                   current={preferences.theme}
                   onClick={() => handleThemeChange('system')}
-                  icon={<ComputerDesktopIcon className="w-4 h-4" />}
+                  icon={<DesktopIcon className="w-4 h-4" />}
                   label="System"
                 />
               </div>
@@ -253,7 +253,7 @@ export const SettingsPage: React.FC = () => {
           <SettingsSection
             title="Data & Privacy"
             description="Manage your data and privacy settings"
-            icon={<UserIcon className="w-5 h-5" />}
+            icon={<PersonIcon className="w-5 h-5" />}
           >
             {/* Search History */}
             <SettingItem

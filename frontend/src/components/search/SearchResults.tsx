@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   StarIcon,
   ClockIcon,
-  DocumentTextIcon,
+  FileTextIcon,
   ChevronRightIcon,
   MagnifyingGlassIcon,
   BookmarkIcon,
@@ -137,7 +137,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="max-w-md mx-auto"
         >
-          <DocumentTextIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <FileTextIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
             No Results Found
           </h3>

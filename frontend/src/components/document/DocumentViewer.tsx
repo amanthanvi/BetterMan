@@ -4,13 +4,13 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {
   StarIcon,
-  ShareIcon,
+  Share1Icon,
   PrinterIcon,
-  DocumentDuplicateIcon,
+  CopyIcon,
   ChevronUpIcon,
   ChevronDownIcon,
-  AdjustmentsHorizontalIcon,
-  EyeIcon,
+  MixerHorizontalIcon,
+  EyeOpenIcon,
   BookmarkIcon,
 } from '@radix-ui/react-icons';
 import { Button } from '@/components/ui/Button';
@@ -392,7 +392,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                   size="sm"
                   onClick={() => setShowLineNumbers(!showLineNumbers)}
                 >
-                  <EyeIcon className="w-4 h-4" />
+                  <EyeOpenIcon className="w-4 h-4" />
                 </Button>
                 <Button
                   variant="ghost"

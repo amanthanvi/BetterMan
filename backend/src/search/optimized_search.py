@@ -358,53 +358,58 @@ class OptimizedSearchEngine:
         limit: int,
         offset: int
     ) -> Dict[str, Any]:
-        """Fallback search without FTS."""
+        """Fallback search without FTS using secure SQLAlchemy ORM."""
+        from sqlalchemy import or_, func, and_
+        from ..models.document import Document
         
-        # Build WHERE conditions
-        conditions = []
-        params = {"section": section}
+        # Validate inputs
+        limit = min(max(1, limit), 100)  # Enforce reasonable limits
+        offset = max(0, offset)
         
-        for i, term in enumerate(query_terms):
-            param_name = f"term_{i}"
-            params[param_name] = f"%{term}%"
-            conditions.append(f"""
-                (LOWER(d.name) LIKE LOWER(:{param_name})
-                OR LOWER(d.title) LIKE LOWER(:{param_name})
-                OR LOWER(d.summary) LIKE LOWER(:{param_name})
-                OR LOWER(d.raw_content) LIKE LOWER(:{param_name}))
-            """)
+        # Build query using SQLAlchemy ORM
+        base_query = self.db.query(
+            Document.id,
+            Document.name,
+            Document.title,
+            Document.summary,
+            Document.section,
+            Document.access_count,
+            Document.cache_status,
+            func.length(Document.raw_content).label('content_length')
+        )
         
-        where_clause = " OR ".join(conditions)
+        # Apply section filter if provided
+        if section is not None:
+            base_query = base_query.filter(Document.section == section)
         
-        # Search query
-        search_sql = f"""
-        SELECT 
-            d.id,
-            d.name,
-            d.title,
-            d.summary,
-            d.section,
-            d.access_count,
-            d.cache_status,
-            LENGTH(d.raw_content) as content_length
-        FROM documents d
-        WHERE 
-            (:section IS NULL OR d.section = :section)
-            AND ({where_clause})
-        ORDER BY d.access_count DESC, d.name ASC
-        LIMIT {limit} OFFSET {offset}
-        """
+        # Build search conditions safely using SQLAlchemy
+        if query_terms:
+            search_conditions = []
+            for term in query_terms:
+                # Sanitize term for LIKE pattern
+                safe_term = term.replace('%', '\%').replace('_', '\_')
+                pattern = f"%{safe_term}%"
+                
+                # Create OR condition for each field
+                term_condition = or_(
+                    func.lower(Document.name).like(func.lower(pattern)),
+                    func.lower(Document.title).like(func.lower(pattern)),
+                    func.lower(Document.summary).like(func.lower(pattern)),
+                    func.lower(Document.raw_content).like(func.lower(pattern))
+                )
+                search_conditions.append(term_condition)
+            
+            # Combine all term conditions with OR
+            base_query = base_query.filter(or_(*search_conditions))
         
-        # Execute search
-        results = self.db.execute(text(search_sql), params).fetchall()
+        # Get total count before applying limit/offset
+        total = base_query.count()
         
-        # Count total
-        count_sql = f"""
-        SELECT COUNT(*) FROM documents d
-        WHERE (:section IS NULL OR d.section = :section)
-        AND ({where_clause})
-        """
-        total = self.db.execute(text(count_sql), params).scalar() or 0
+        # Apply ordering, limit and offset
+        results = base_query.order_by(
+            Document.access_count.desc(),
+            Document.name.asc()
+        ).limit(limit).offset(offset).all()
         
         # Format and score results
         formatted_results = []
@@ -501,27 +506,25 @@ class OptimizedSearchEngine:
         if not doc_ids:
             return
         
-        # Query sections for these documents
-        section_sql = """
-        SELECT 
-            s.document_id,
-            s.name as section_name,
-            s.content
-        FROM sections s
-        WHERE s.document_id IN :doc_ids
-        """
+        # Query sections for these documents using SQLAlchemy
+        from ..models.document import Section
         
-        sections = self.db.execute(
-            text(section_sql),
-            {"doc_ids": tuple(doc_ids)}
-        ).fetchall()
+        sections = self.db.query(
+            Section.document_id,
+            Section.name.label('section_name'),
+            Section.content
+        ).filter(
+            Section.document_id.in_(doc_ids)
+        ).all()
         
         # Group sections by document
         doc_sections = defaultdict(list)
         for section in sections:
             content_lower = (section.content or "").lower()
             for term in query_terms:
-                if term in content_lower:
+                # Safely check for term in content
+                safe_term = term.lower()
+                if safe_term in content_lower:
                     doc_sections[section.document_id].append({
                         "section": section.section_name,
                         "term": term
@@ -539,13 +542,14 @@ class OptimizedSearchEngine:
             return
         
         try:
-            self.db.execute(
-                text("""
-                    UPDATE documents 
-                    SET access_count = access_count + 1 
-                    WHERE id IN :doc_ids
-                """),
-                {"doc_ids": tuple(doc_ids)}
+            from ..models.document import Document
+            
+            # Use SQLAlchemy ORM for safe updates
+            self.db.query(Document).filter(
+                Document.id.in_(doc_ids)
+            ).update(
+                {Document.access_count: Document.access_count + 1},
+                synchronize_session=False
             )
             self.db.commit()
         except Exception as e:

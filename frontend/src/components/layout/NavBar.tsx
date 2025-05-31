@@ -5,11 +5,11 @@ import {
   MagnifyingGlassIcon,
   HomeIcon,
   BookmarkIcon,
-  Cog6ToothIcon,
+  GearIcon,
   SunIcon,
   MoonIcon,
-  Bars3Icon,
-  CommandLineIcon,
+  HamburgerMenuIcon,
+  CodeIcon,
 } from '@radix-ui/react-icons';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/stores/appStore';
@@ -33,7 +33,7 @@ export const NavBar: React.FC<NavBarProps> = ({ className }) => {
   const navigation = [
     { name: 'Home', href: '/', icon: HomeIcon },
     { name: 'Favorites', href: '/favorites', icon: BookmarkIcon },
-    { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
+    { name: 'Settings', href: '/settings', icon: GearIcon },
   ];
   
   const isActive = (href: string) => {
@@ -64,13 +64,13 @@ export const NavBar: React.FC<NavBarProps> = ({ className }) => {
               onClick={toggleSidebar}
               className="md:hidden"
             >
-              <Bars3Icon className="w-5 h-5" />
+              <HamburgerMenuIcon className="w-5 h-5" />
             </Button>
             
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <CommandLineIcon className="w-5 h-5 text-white" />
+                <CodeIcon className="w-5 h-5 text-white" />
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">

@@ -4,11 +4,11 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MagnifyingGlassIcon, 
-  DocumentTextIcon, 
+  FileTextIcon, 
   ClockIcon, 
   StarIcon,
-  Cog6ToothIcon,
-  XMarkIcon
+  GearIcon,
+  Cross2Icon
 } from '@radix-ui/react-icons';
 import { useAppStore } from '@/stores/appStore';
 import { useSearchStore } from '@/stores/searchStore';
@@ -137,7 +137,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
                   onClick={() => onOpenChange(false)}
                   className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  <XMarkIcon className="w-4 h-4" />
+                  <Cross2Icon className="w-4 h-4" />
                 </button>
               </div>
               
@@ -159,7 +159,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
                     <CommandItem
                       value=">toggle-sidebar"
                       onSelect={() => handleCommand('toggle-sidebar')}
-                      icon={<DocumentTextIcon className="w-4 h-4" />}
+                      icon={<FileTextIcon className="w-4 h-4" />}
                     >
                       Show Sidebar
                     </CommandItem>
@@ -203,7 +203,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
                         key={doc.id}
                         value={`doc:${doc.id}`}
                         onSelect={() => handleDocumentSelect(doc.id)}
-                        icon={<DocumentTextIcon className="w-4 h-4" />}
+                        icon={<FileTextIcon className="w-4 h-4" />}
                       >
                         <div className="flex items-center justify-between w-full">
                           <div>
@@ -229,7 +229,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onOpenChan
                         key={cmd.id}
                         value={`doc:${cmd.id}`}
                         onSelect={() => handleDocumentSelect(cmd.id)}
-                        icon={<DocumentTextIcon className="w-4 h-4" />}
+                        icon={<FileTextIcon className="w-4 h-4" />}
                       >
                         <div>
                           <div className="font-medium font-mono">{cmd.title}</div>

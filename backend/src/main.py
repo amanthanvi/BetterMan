@@ -13,6 +13,7 @@ import os
 from .config import get_settings, setup_logging
 from .db.session import get_db, init_db
 from .api import api_router
+from .auth import auth_router
 from .middleware import setup_middleware
 from .errors import (
     BetterManError,
@@ -21,6 +22,8 @@ from .errors import (
     http_exception_handler,
     generic_exception_handler,
 )
+from .cache.cache_manager import get_cache_manager
+from .security.rate_limiter import RateLimitMiddleware
 
 # Initialize settings and logging
 settings = get_settings()
@@ -99,25 +102,36 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app with lifespan
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Modern interface for Linux documentation with advanced search and caching",
+    description="Modern interface for Linux documentation with advanced search, caching, and authentication",
     version=settings.APP_VERSION,
     lifespan=lifespan,
     docs_url="/api/docs" if settings.DEBUG else None,
     redoc_url="/api/redoc" if settings.DEBUG else None,
     openapi_url="/api/openapi.json" if settings.DEBUG else None,
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+        "displayRequestDuration": True,
+    },
 )
 
 # Setup middleware
 setup_middleware(app)
 
-# Setup security
-from .security import setup_security
+# Add validation middleware
+# TODO: Fix ValidationMiddleware implementation
+# from .middleware.validation import ValidationMiddleware
+# app.add_middleware(ValidationMiddleware)
 
+# Setup enhanced rate limiting
+# Note: Rate limiting with cache will be initialized on first request
+# app.add_middleware(RateLimitMiddleware) # Will be added in startup event
+
+# Setup security
+from .security_utils import setup_security
 setup_security(app)
 
 # Setup monitoring
 from .monitoring import setup_monitoring
-
 setup_monitoring(app)
 
 # Setup performance optimizations
@@ -136,6 +150,9 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 # Include API routes
 app.include_router(api_router, prefix=settings.API_PREFIX)
+
+# Include authentication routes
+app.include_router(auth_router, prefix="/api")
 
 
 @app.get("/")
@@ -174,6 +191,21 @@ async def health_check(db: Session = Depends(get_db)):
     except Exception as e:
         health_status["status"] = "degraded"
         health_status["components"]["database"] = f"unhealthy: {str(e)}"
+    
+    # Check cache (Redis)
+    try:
+        cache = get_cache_manager(db)
+        if hasattr(cache, 'redis_cache') and cache.redis_cache:
+            cache.redis_cache.set("health_check", "ok", expire=10)
+            if cache.redis_cache.get("health_check") == "ok":
+                health_status["components"]["cache"] = "healthy"
+            else:
+                health_status["components"]["cache"] = "unhealthy: read/write failed"
+        else:
+            health_status["components"]["cache"] = "not configured"
+    except Exception as e:
+        health_status["status"] = "degraded"
+        health_status["components"]["cache"] = f"unhealthy: {str(e)}"
 
     # Check scheduler
     global scheduler

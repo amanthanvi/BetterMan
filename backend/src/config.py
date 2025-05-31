@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     LOG_FILE: Optional[str] = Field(default=None, env="LOG_FILE")
 
     # Security
+    SECRET_KEY: str = Field(
+        default="development-secret-key-change-in-production",
+        env="SECRET_KEY"
+    )
+    JWT_ALGORITHM: str = Field(default="HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7)
+    
+    # CORS
     CORS_ORIGINS: str = Field(
         default="http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000",
         env="CORS_ORIGINS",
@@ -44,6 +53,14 @@ class Settings(BaseSettings):
     CORS_CREDENTIALS: bool = Field(default=True)
     CORS_METHODS: str = Field(default="GET,POST,PUT,DELETE,OPTIONS")
     CORS_HEADERS: str = Field(default="*")
+    
+    # Additional Security
+    ALLOWED_HOSTS: str = Field(default="*", env="ALLOWED_HOSTS")
+    BCRYPT_ROUNDS: int = Field(default=12, ge=10, le=16)
+    PASSWORD_MIN_LENGTH: int = Field(default=8)
+    SESSION_COOKIE_SECURE: bool = Field(default=True)
+    SESSION_COOKIE_HTTPONLY: bool = Field(default=True)
+    SESSION_COOKIE_SAMESITE: str = Field(default="lax")
 
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = Field(default=True)
@@ -55,6 +72,13 @@ class Settings(BaseSettings):
     CACHE_DIR: str = Field(default=".cache", env="CACHE_DIR")
     CACHE_TTL: int = Field(default=3600)  # 1 hour
     CACHE_MAX_SIZE: int = Field(default=1000)
+    
+    # Redis (optional)
+    REDIS_HOST: str = Field(default="redis", env="REDIS_HOST")
+    REDIS_PORT: int = Field(default=6379, env="REDIS_PORT")
+    REDIS_DB: int = Field(default=0, env="REDIS_DB")
+    REDIS_PASSWORD: Optional[str] = Field(default=None, env="REDIS_PASSWORD")
+    REDIS_URL: Optional[str] = Field(default=None, env="REDIS_URL")
 
     # Search
     SEARCH_MIN_LENGTH: int = Field(default=2, ge=1)
@@ -91,6 +115,16 @@ class Settings(BaseSettings):
         valid_envs = ["development", "staging", "production"]
         if v not in valid_envs:
             raise ValueError(f"Invalid environment: {v}")
+        return v
+    
+    @validator("SECRET_KEY")
+    def validate_secret_key(cls, v, values):
+        """Validate secret key."""
+        env = values.get("ENVIRONMENT", "development")
+        if env == "production" and v == "development-secret-key-change-in-production":
+            raise ValueError("Must set SECRET_KEY in production")
+        if len(v) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters")
         return v
 
     class Config:

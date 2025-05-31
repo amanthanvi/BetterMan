@@ -10,9 +10,9 @@ import {
 	MagicWandIcon as SparklesIcon,
 } from "@radix-ui/react-icons";
 
-// Components
-import { SearchInterface } from "@/components/search/SearchInterface";
-import { SearchResults } from "@/components/search/SearchResults";
+// Components - Using the new premium components
+import { AdvancedSearch } from "@/components/search/AdvancedSearch";
+import { PremiumSearchResults } from "@/components/search/PremiumSearchResults";
 import { Button } from "@/components/ui/Button";
 
 // Stores
@@ -90,10 +90,6 @@ export const HomePage: React.FC<HomePageProps> = ({
 		avgResponseTime: "12ms",
 	};
 
-	const handleSearch = async (searchQuery: string) => {
-		await performSearch(searchQuery);
-	};
-
 	const handleDocumentSelect = (doc: Document) => {
 		navigate(`/docs/${doc.id}`);
 	};
@@ -112,7 +108,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 						animate={{ opacity: 1, y: 0 }}
 						className="text-center mb-12"
 					>
-						<div className="max-w-3xl mx-auto">
+						<div className="max-w-4xl mx-auto">
 							{/* Logo and title */}
 							<motion.div
 								initial={{ scale: 0.9 }}
@@ -136,17 +132,14 @@ export const HomePage: React.FC<HomePageProps> = ({
 								</p>
 							</motion.div>
 
-							{/* Search interface */}
+							{/* Premium Search interface */}
 							<motion.div
 								initial={{ opacity: 0, y: 20 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: 0.2 }}
 								className="mb-8"
 							>
-								<SearchInterface
-									onSearch={handleSearch}
-									className="mx-auto"
-								/>
+								<AdvancedSearch />
 							</motion.div>
 
 							{/* Quick actions */}
@@ -215,19 +208,13 @@ export const HomePage: React.FC<HomePageProps> = ({
 					</motion.div>
 				)}
 
-				{/* Search Results */}
+				{/* Premium Search Results */}
 				{hasSearched && (
 					<div className="mb-8">
-						<div className="mb-6">
-							<SearchInterface
-								onSearch={handleSearch}
-								className="mx-auto"
-								compact
-							/>
+						<div className="mb-6 max-w-4xl mx-auto">
+							<AdvancedSearch />
 						</div>
-						<SearchResults
-							onDocumentSelect={handleDocumentSelect}
-						/>
+						<PremiumSearchResults />
 					</div>
 				)}
 

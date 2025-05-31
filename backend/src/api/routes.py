@@ -20,7 +20,8 @@ from ..models.document import (
 from ..parser.linux_parser import LinuxManParser
 from ..cache.cache_manager import CacheManager, COMMON_COMMANDS
 from ..jobs.simple_scheduler import get_scheduler
-from ..security import SecurityUtils, InputValidator, limiter
+from ..security import EnhancedRateLimiter
+from ..security_utils import SecurityUtils, InputValidator, limiter
 from ..errors import NotFoundError, ValidationError, ParseError
 from ..config import get_settings
 

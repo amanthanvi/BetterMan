@@ -501,3 +501,16 @@ class CacheManager:
                 "recently_accessed": [],
                 "cache_by_status": {},
             }
+
+
+# Singleton instance
+_cache_manager_instance = None
+
+
+def get_cache_manager(db: Session) -> CacheManager:
+    """Get cache manager instance (singleton pattern)."""
+    global _cache_manager_instance
+    if _cache_manager_instance is None:
+        parser = LinuxManParser()
+        _cache_manager_instance = CacheManager(db, parser)
+    return _cache_manager_instance

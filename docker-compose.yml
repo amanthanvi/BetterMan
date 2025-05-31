@@ -10,6 +10,7 @@ services:
       - ./data:/app/data  # Persistent database storage
     environment:
       - ENVIRONMENT=development
+      - DEBUG=true
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     healthcheck:

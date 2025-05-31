@@ -17,3 +17,6 @@ alembic==1.13.1
 redis==5.0.1
 bleach==6.1.0
 pyjwt==2.8.0
+bcrypt==4.1.2
+email-validator==2.1.0
+python-jose[cryptography]==3.3.0
