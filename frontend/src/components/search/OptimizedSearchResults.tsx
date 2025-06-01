@@ -38,7 +38,9 @@ const SearchResultItem = memo<{
   
   const handleClick = useCallback(() => {
     onResultClick(result);
-    navigate(`/docs/${result.name}`);
+    // Navigate using name.section format to match backend expectations
+    const docId = result.section ? `${result.name}.${result.section}` : result.name;
+    navigate(`/docs/${docId}`);
   }, [result, onResultClick, navigate]);
 
   // Memoize section color

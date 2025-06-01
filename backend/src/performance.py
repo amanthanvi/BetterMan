@@ -313,8 +313,7 @@ def setup_performance_monitoring():
     )
     logger.info(f"Memory cache size: {memory_cache.max_size}")
 
-    # Schedule cache warmup
-    asyncio.create_task(preload_critical_data())
+    # Cache warmup will be scheduled in the lifespan context
 
 
 class ResponseOptimizer:

@@ -1,6 +1,7 @@
 // Core document types
 export interface Document {
   id: string;
+  name?: string; // Command name (e.g., "ls", "grep")
   title: string;
   summary: string;
   section: number;

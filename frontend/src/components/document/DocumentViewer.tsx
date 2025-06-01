@@ -42,7 +42,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [showToc, setShowToc] = useState(true);
   const [tocItems, setTocItems] = useState<TableOfContentsItem[]>([]);
   const [activeSection, setActiveSection] = useState<string>('');
-  const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg'>('base');
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   
   const contentRef = useRef<HTMLDivElement>(null);

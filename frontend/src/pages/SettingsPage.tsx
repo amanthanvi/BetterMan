@@ -29,16 +29,50 @@ export const SettingsPage: React.FC = () => {
   
   const handleThemeChange = (theme: 'light' | 'dark' | 'system') => {
     updatePreferences({ theme });
+    
+    // Update dark mode based on theme selection
+    const appStore = useAppStore.getState();
+    if (theme === 'dark') {
+      appStore.setDarkMode(true);
+    } else if (theme === 'light') {
+      appStore.setDarkMode(false);
+    } else if (theme === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      appStore.setDarkMode(prefersDark);
+    }
+    
     toast.success(`Theme changed to ${theme}`);
   };
   
   const handleFontSizeChange = (fontSize: 'small' | 'medium' | 'large') => {
     updatePreferences({ fontSize });
+    
+    // Apply font size to root element
+    const root = document.documentElement;
+    if (fontSize === 'small') {
+      root.style.fontSize = '14px';
+    } else if (fontSize === 'large') {
+      root.style.fontSize = '18px';
+    } else {
+      root.style.fontSize = '16px';
+    }
+    
     toast.success(`Font size changed to ${fontSize}`);
   };
   
   const handleFontFamilyChange = (fontFamily: 'system' | 'mono' | 'serif') => {
     updatePreferences({ fontFamily });
+    
+    // Apply font family to body element
+    const body = document.body;
+    if (fontFamily === 'mono') {
+      body.style.fontFamily = 'ui-monospace, monospace';
+    } else if (fontFamily === 'serif') {
+      body.style.fontFamily = 'ui-serif, serif';
+    } else {
+      body.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+    }
+    
     toast.success(`Font family changed to ${fontFamily}`);
   };
   
@@ -207,7 +241,10 @@ export const SettingsPage: React.FC = () => {
               <Button
                 variant={preferences.compactMode ? 'primary' : 'outline'}
                 size="sm"
-                onClick={() => updatePreferences({ compactMode: !preferences.compactMode })}
+                onClick={() => {
+                  updatePreferences({ compactMode: !preferences.compactMode });
+                  toast.success(`Compact mode ${!preferences.compactMode ? 'enabled' : 'disabled'}`);
+                }}
               >
                 {preferences.compactMode ? 'Enabled' : 'Disabled'}
               </Button>
@@ -221,7 +258,10 @@ export const SettingsPage: React.FC = () => {
               <Button
                 variant={preferences.showLineNumbers ? 'primary' : 'outline'}
                 size="sm"
-                onClick={() => updatePreferences({ showLineNumbers: !preferences.showLineNumbers })}
+                onClick={() => {
+                  updatePreferences({ showLineNumbers: !preferences.showLineNumbers });
+                  toast.success(`Line numbers ${!preferences.showLineNumbers ? 'enabled' : 'disabled'}`);
+                }}
               >
                 {preferences.showLineNumbers ? 'Enabled' : 'Disabled'}
               </Button>
@@ -242,7 +282,10 @@ export const SettingsPage: React.FC = () => {
               <Button
                 variant={preferences.enableKeyboardShortcuts ? 'primary' : 'outline'}
                 size="sm"
-                onClick={() => updatePreferences({ enableKeyboardShortcuts: !preferences.enableKeyboardShortcuts })}
+                onClick={() => {
+                  updatePreferences({ enableKeyboardShortcuts: !preferences.enableKeyboardShortcuts });
+                  toast.success(`Keyboard shortcuts ${!preferences.enableKeyboardShortcuts ? 'enabled' : 'disabled'}`);
+                }}
               >
                 {preferences.enableKeyboardShortcuts ? 'Enabled' : 'Disabled'}
               </Button>

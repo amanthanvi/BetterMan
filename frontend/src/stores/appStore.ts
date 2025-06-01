@@ -3,9 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AppState, UserPreferences, Document } from '@/types';
 
 interface AppStore extends AppState {
+  // Theme property
+  theme: 'light' | 'dark' | 'system';
+  
   // Theme actions
   toggleDarkMode: () => void;
   setDarkMode: (darkMode: boolean) => void;
+  setTheme: (theme: 'light' | 'dark') => void;
   
   // UI actions
   toggleSidebar: () => void;
@@ -49,6 +53,7 @@ export const useAppStore = create<AppStore>()(
     (set, get) => ({
       // Initial state
       darkMode: false,
+      theme: 'system' as const,
       sidebarOpen: true,
       commandPaletteOpen: false,
       preferences: defaultPreferences,
@@ -57,8 +62,31 @@ export const useAppStore = create<AppStore>()(
       searchHistory: [],
       
       // Theme actions
-      toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
-      setDarkMode: (darkMode: boolean) => set({ darkMode }),
+      toggleDarkMode: () => set((state) => { 
+        const newDarkMode = !state.darkMode;
+        const newTheme = newDarkMode ? 'dark' : 'light';
+        
+        // Apply to DOM immediately
+        document.documentElement.classList.toggle('dark', newDarkMode);
+        
+        return {
+          darkMode: newDarkMode,
+          theme: newTheme,
+          preferences: { ...state.preferences, theme: newTheme }
+        };
+      }),
+      setDarkMode: (darkMode: boolean) => {
+        document.documentElement.classList.toggle('dark', darkMode);
+        set({ darkMode });
+      },
+      setTheme: (theme: 'light' | 'dark') => {
+        const isDark = theme === 'dark';
+        document.documentElement.classList.toggle('dark', isDark);
+        set({ 
+          theme, 
+          darkMode: isDark 
+        });
+      },
       
       // UI actions
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
@@ -130,6 +158,28 @@ export const useAppStore = create<AppStore>()(
         
         // Apply theme to document
         document.documentElement.classList.toggle('dark', get().darkMode);
+        
+        // Apply font preferences
+        const root = document.documentElement;
+        const body = document.body;
+        
+        // Apply font size
+        if (state.preferences.fontSize === 'small') {
+          root.style.fontSize = '14px';
+        } else if (state.preferences.fontSize === 'large') {
+          root.style.fontSize = '18px';
+        } else {
+          root.style.fontSize = '16px';
+        }
+        
+        // Apply font family
+        if (state.preferences.fontFamily === 'mono') {
+          body.style.fontFamily = 'ui-monospace, monospace';
+        } else if (state.preferences.fontFamily === 'serif') {
+          body.style.fontFamily = 'ui-serif, serif';
+        } else {
+          body.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+        }
       },
     }),
     {
@@ -140,6 +190,8 @@ export const useAppStore = create<AppStore>()(
         favorites: state.favorites,
         searchHistory: state.searchHistory,
         sidebarOpen: state.sidebarOpen,
+        theme: state.theme,
+        darkMode: state.darkMode,
       }),
     }
   )

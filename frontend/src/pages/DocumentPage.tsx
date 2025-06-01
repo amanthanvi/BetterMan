@@ -9,7 +9,7 @@ import { useAppStore } from '@/stores/appStore';
 import type { Document } from '@/types';
 
 export const DocumentPage: React.FC = () => {
-  const { docId } = useParams<{ docId: string }>();
+  const { docId, name: routeName, section: routeSection } = useParams<{ docId?: string; name?: string; section?: string }>();
   const navigate = useNavigate();
   
   const [document, setDocument] = useState<Document | null>(null);
@@ -20,7 +20,26 @@ export const DocumentPage: React.FC = () => {
   
   useEffect(() => {
     const loadDocument = async () => {
-      if (!docId) {
+      let name: string | undefined;
+      let section: string | undefined;
+      
+      // Handle both route formats
+      if (routeName && routeSection) {
+        // Format: /docs/:name/:section
+        name = routeName;
+        section = routeSection;
+      } else if (docId) {
+        // Format: /docs/:docId (e.g., "ls.1")
+        // Parse the docId to extract name and section
+        if (docId.includes('.') && /\.\d+$/.test(docId)) {
+          const parts = docId.split('.');
+          section = parts.pop() || '1';
+          name = parts.join('.');
+        } else {
+          name = docId;
+          section = '1'; // Default to section 1
+        }
+      } else {
         setError('Document ID not provided');
         setLoading(false);
         return;
@@ -30,7 +49,7 @@ export const DocumentPage: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const doc = await documentAPI.getDocument(docId);
+        const doc = await documentAPI.getDocument(name, section);
         setDocument(doc);
         addRecentDoc(doc);
         
@@ -44,7 +63,7 @@ export const DocumentPage: React.FC = () => {
     };
     
     loadDocument();
-  }, [docId, addRecentDoc]);
+  }, [docId, routeName, routeSection, addRecentDoc]);
   
   if (loading) {
     return (

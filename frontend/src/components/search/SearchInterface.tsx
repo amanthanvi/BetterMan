@@ -236,7 +236,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
               }}
               className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
-              <XMarkIcon className="w-4 h-4" />
+              <Cross2Icon className="w-4 h-4" />
             </button>
           )}
           
@@ -247,7 +247,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
               className="w-8 h-8"
               onClick={() => {/* TODO: Open filters */}}
             >
-              <AdjustmentsHorizontalIcon className="w-4 h-4" />
+              <MixerHorizontalIcon className="w-4 h-4" />
             </Button>
           )}
         </div>

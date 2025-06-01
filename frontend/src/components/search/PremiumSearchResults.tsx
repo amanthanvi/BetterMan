@@ -19,18 +19,9 @@ import { useAppStore } from '@/stores/appStore';
 import { searchAPI, documentAPI } from '@/services/api';
 import { cn } from '../../utils/cn';
 import toast from 'react-hot-toast';
+import type { Document } from '@/types';
 
-interface SearchResult {
-  id: number;
-  name: string;
-  title: string;
-  summary: string;
-  section: number;
-  score: number;
-  snippet: string;
-  highlights: Record<string, string[]>;
-  cache_status: string;
-}
+// Using the Document type from types/index.ts instead of custom interface
 
 const SectionBadge: React.FC<{ section: number }> = ({ section }) => {
   const sectionInfo = {
@@ -57,27 +48,21 @@ const SectionBadge: React.FC<{ section: number }> = ({ section }) => {
   );
 };
 
-const ResultCard: React.FC<{ result: SearchResult; index: number }> = ({ result, index }) => {
-  const { user } = useAppStore();
-  const [isFavorited, setIsFavorited] = useState(false);
+const ResultCard: React.FC<{ result: Document; index: number }> = ({ result, index }) => {
+  const { isFavorite, addFavorite, removeFavorite } = useAppStore();
   const [isCopied, setIsCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const isFavorited = isFavorite(result.id);
 
   const handleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast.error('Please login to save favorites');
-      return;
-    }
 
     try {
       if (isFavorited) {
-        // await api.delete(`/favorites/${result.id}`);
-        setIsFavorited(false);
+        removeFavorite(result.id);
         toast.success('Removed from favorites');
       } else {
-        // await api.post('/favorites', { document_id: result.id });
-        setIsFavorited(true);
+        addFavorite(result.id);
         toast.success('Added to favorites');
       }
     } catch (error) {
@@ -87,7 +72,8 @@ const ResultCard: React.FC<{ result: SearchResult; index: number }> = ({ result,
 
   const handleCopyCommand = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigator.clipboard.writeText(`man ${result.section} ${result.name}`);
+    const commandName = result.name || result.id;
+    navigator.clipboard.writeText(`man ${result.section} ${commandName}`);
     setIsCopied(true);
     toast.success('Command copied to clipboard');
     setTimeout(() => setIsCopied(false), 2000);
@@ -95,7 +81,8 @@ const ResultCard: React.FC<{ result: SearchResult; index: number }> = ({ result,
 
   const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
-    const url = `${window.location.origin}/docs/${result.name}/${result.section}`;
+    const docId = result.name || result.id;
+    const url = `${window.location.origin}/docs/${docId}.${result.section}`;
     
     if (navigator.share) {
       try {
@@ -124,7 +111,7 @@ const ResultCard: React.FC<{ result: SearchResult; index: number }> = ({ result,
       className="group relative"
     >
       <Link
-        to={`/docs/${result.name}/${result.section}`}
+        to={`/docs/${result.name || result.id}.${result.section}`}
         className="block bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden"
       >
         {/* Card Header */}
@@ -133,20 +120,20 @@ const ResultCard: React.FC<{ result: SearchResult; index: number }> = ({ result,
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
-                  {result.name}
+                  {result.title || result.id}
                 </h3>
                 <SectionBadge section={result.section} />
-                {result.cache_status === 'cached' && (
+                {result.matches && result.matches.length > 0 && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                    <Zap className="w-3 h-3" />
-                    Cached
+                    <LightningBoltIcon className="w-3 h-3" />
+                    Match
                   </span>
                 )}
               </div>
               
-              {result.title && result.title !== result.name && (
+              {result.summary && (
                 <p className="text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {result.title}
+                  {result.summary}
                 </p>
               )}
             </div>
@@ -162,35 +149,17 @@ const ResultCard: React.FC<{ result: SearchResult; index: number }> = ({ result,
             </motion.div>
           </div>
 
-          {/* Summary with Highlights */}
-          <div className="mt-3">
-            {result.snippet ? (
-              <p 
-                className="text-gray-600 dark:text-gray-400 line-clamp-3"
-                dangerouslySetInnerHTML={{ __html: result.snippet }}
-              />
-            ) : result.summary ? (
-              <p className="text-gray-600 dark:text-gray-400 line-clamp-3">
-                {result.summary}
-              </p>
-            ) : null}
-          </div>
-
-          {/* Highlights */}
-          {result.highlights && Object.keys(result.highlights).length > 0 && (
+          {/* Matches */}
+          {result.matches && result.matches.length > 0 && (
             <div className="mt-3 space-y-1">
-              {Object.entries(result.highlights).slice(0, 2).map(([field, highlights]) => (
-                <div key={field} className="text-sm">
-                  <span className="text-gray-500 dark:text-gray-400 capitalize">{field}:</span>
-                  {highlights.slice(0, 1).map((highlight, idx) => (
-                    <span 
-                      key={idx}
-                      className="ml-2 text-gray-700 dark:text-gray-300"
-                      dangerouslySetInnerHTML={{ __html: highlight }}
-                    />
-                  ))}
-                </div>
-              ))}
+              <div className="text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Matches:</span>
+                {result.matches.slice(0, 2).map((match, idx) => (
+                  <p key={idx} className="mt-1 text-gray-600 dark:text-gray-400 font-mono text-xs">
+                    {match}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -343,60 +312,7 @@ export const PremiumSearchResults: React.FC = () => {
         ))}
       </div>
 
-      {/* Pagination */}
-      {totalResults > resultsPerPage && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center justify-center gap-2 mt-8"
-        >
-          <button
-            onClick={() => searchStore.goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={cn(
-              "px-4 py-2 rounded-lg font-medium transition-colors",
-              currentPage === 1
-                ? "bg-gray-100 text-gray-400 dark:bg-gray-800 cursor-not-allowed"
-                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-md"
-            )}
-          >
-            Previous
-          </button>
-
-          <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(5, Math.ceil(totalResults / resultsPerPage)) }, (_, i) => {
-              const page = i + 1;
-              return (
-                <button
-                  key={page}
-                  onClick={() => searchStore.goToPage(page)}
-                  className={cn(
-                    "w-10 h-10 rounded-lg font-medium transition-all",
-                    currentPage === page
-                      ? "bg-blue-600 text-white shadow-lg"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  )}
-                >
-                  {page}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => searchStore.goToPage(currentPage + 1)}
-            disabled={currentPage >= Math.ceil(totalResults / resultsPerPage)}
-            className={cn(
-              "px-4 py-2 rounded-lg font-medium transition-colors",
-              currentPage >= Math.ceil(totalResults / resultsPerPage)
-                ? "bg-gray-100 text-gray-400 dark:bg-gray-800 cursor-not-allowed"
-                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-md"
-            )}
-          >
-            Next
-          </button>
-        </motion.div>
-      )}
+      {/* Pagination - TODO: Implement when backend supports pagination */}
     </div>
   );
 };

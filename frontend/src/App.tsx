@@ -41,7 +41,12 @@ function App() {
 	const [docs, setDocs] = useState<AppDocument[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-	const { darkMode } = useAppStore();
+	const { darkMode, initialize } = useAppStore();
+
+	// Initialize app store on mount
+	useEffect(() => {
+		initialize();
+	}, [initialize]);
 
 	// Add dark mode class to document root
 	useEffect(() => {
@@ -126,9 +131,13 @@ function App() {
 										}
 									/>
 
-									{/* Document Viewer */}
+									{/* Document Viewer - supports both formats */}
 									<Route
-										path="/docs/:name"
+										path="/docs/:name/:section"
+										element={<DocumentPage />}
+									/>
+									<Route
+										path="/docs/:docId"
 										element={<DocumentPage />}
 									/>
 

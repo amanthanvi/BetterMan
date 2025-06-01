@@ -14,6 +14,7 @@ import {
 import { AdvancedSearch } from "@/components/search/AdvancedSearch";
 import { PremiumSearchResults } from "@/components/search/PremiumSearchResults";
 import { Button } from "@/components/ui/Button";
+import { SearchErrorBoundary } from "@/components/ui/SearchErrorBoundary";
 
 // Stores
 import { useSearchStore } from "@/stores/searchStore";
@@ -55,31 +56,36 @@ export const HomePage: React.FC<HomePageProps> = ({
 			title: "ls",
 			summary: "List directory contents",
 			searches: 1250,
+			section: 1,
 		},
 		{
 			id: "grep",
 			title: "grep",
 			summary: "Search text patterns",
 			searches: 890,
+			section: 1,
 		},
 		{
 			id: "find",
 			title: "find",
 			summary: "Search for files",
 			searches: 756,
+			section: 1,
 		},
 		{
 			id: "cat",
 			title: "cat",
 			summary: "Display file contents",
 			searches: 623,
+			section: 1,
 		},
-		{ id: "vim", title: "vim", summary: "Text editor", searches: 445 },
+		{ id: "vim", title: "vim", summary: "Text editor", searches: 445, section: 1 },
 		{
 			id: "git",
 			title: "git",
 			summary: "Version control system",
 			searches: 398,
+			section: 1,
 		},
 	];
 
@@ -139,7 +145,9 @@ export const HomePage: React.FC<HomePageProps> = ({
 								transition={{ delay: 0.2 }}
 								className="mb-8"
 							>
-								<AdvancedSearch />
+								<SearchErrorBoundary onRetry={() => window.location.reload()}>
+									<AdvancedSearch />
+								</SearchErrorBoundary>
 							</motion.div>
 
 							{/* Quick actions */}
@@ -212,9 +220,13 @@ export const HomePage: React.FC<HomePageProps> = ({
 				{hasSearched && (
 					<div className="mb-8">
 						<div className="mb-6 max-w-4xl mx-auto">
-							<AdvancedSearch />
+							<SearchErrorBoundary onRetry={() => window.location.reload()}>
+								<AdvancedSearch />
+							</SearchErrorBoundary>
 						</div>
-						<PremiumSearchResults />
+						<SearchErrorBoundary onRetry={() => window.location.reload()}>
+							<PremiumSearchResults />
+						</SearchErrorBoundary>
 					</div>
 				)}
 

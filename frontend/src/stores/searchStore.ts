@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { SearchState, Document, SearchFilters, SearchResult } from '@/types';
-import { searchAPI } from '@/services/api';
+import { searchAPI } from '@/utils/apiWrapper';
 
 interface SearchStore extends SearchState {
   // Search actions

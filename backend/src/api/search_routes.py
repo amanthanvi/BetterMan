@@ -107,6 +107,84 @@ async def search_documents_legacy(
     )
 
 
+@router.get("/suggest", response_model=Dict[str, Any])
+async def suggest_search(
+    request: Request,
+    q: str = Query(..., min_length=2, description="Search query for suggestions"),
+    limit: int = Query(10, ge=1, le=20, description="Maximum suggestions"),
+    db: Session = Depends(get_db),
+):
+    """
+    Get search suggestions based on query prefix.
+    
+    Returns:
+    - suggestions: List of suggested search terms
+    """
+    try:
+        request_id = getattr(request.state, "request_id", "unknown")
+        logger.info(
+            f"Suggest request",
+            extra={
+                "request_id": request_id,
+                "query": q,
+                "limit": limit
+            }
+        )
+        
+        # For now, return simple command suggestions based on prefix
+        # In a real implementation, this would use a trie or similar data structure
+        popular_commands = [
+            "ls", "cd", "grep", "find", "cat", "vim", "git", "ssh", "tar", "curl",
+            "chmod", "chown", "cp", "mv", "rm", "mkdir", "rmdir", "touch", "echo",
+            "sed", "awk", "sort", "uniq", "cut", "paste", "join", "split", "head",
+            "tail", "less", "more", "man", "info", "which", "whereis", "locate",
+            "ps", "top", "kill", "killall", "jobs", "fg", "bg", "nohup", "screen",
+            "tmux", "docker", "systemctl", "service", "apt", "yum", "brew", "npm",
+            "pip", "composer", "gem", "cargo", "go", "make", "gcc", "g++", "python",
+            "node", "ruby", "perl", "bash", "sh", "zsh", "fish", "export", "alias",
+            "source", "history", "clear", "exit", "logout", "reboot", "shutdown",
+            "mount", "umount", "df", "du", "free", "uptime", "date", "cal", "who",
+            "whoami", "id", "groups", "passwd", "su", "sudo", "useradd", "usermod",
+            "userdel", "groupadd", "groupmod", "groupdel", "cron", "crontab", "at"
+        ]
+        
+        # Filter commands that start with the query
+        suggestions = [
+            cmd for cmd in popular_commands 
+            if cmd.lower().startswith(q.lower())
+        ][:limit]
+        
+        # Also search in document titles
+        doc_suggestions = db.query(Document.name).filter(
+            Document.name.ilike(f"{q}%")
+        ).distinct().limit(limit - len(suggestions)).all()
+        
+        # Combine and deduplicate
+        all_suggestions = list(set(suggestions + [doc.name for doc in doc_suggestions]))[:limit]
+        
+        logger.info(
+            f"Suggest completed",
+            extra={
+                "request_id": request_id,
+                "query": q,
+                "suggestion_count": len(all_suggestions)
+            }
+        )
+        
+        return {
+            "suggestions": all_suggestions,
+            "query": q
+        }
+        
+    except Exception as e:
+        logger.error(f"Suggest error: {e}")
+        return {
+            "suggestions": [],
+            "query": q,
+            "error": str(e)
+        }
+
+
 @router.post("/reindex")
 async def reindex_documents(
     request: Request,
