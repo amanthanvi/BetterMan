@@ -247,7 +247,6 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 🏆 Recognition
 
--   **GitHub Stars**: 2.5k+ stars and growing
 -   **Production Usage**: Trusted by 100+ organizations
 -   **Community**: Active Discord community with 500+ members
 -   **Awards**: Winner of "Best Developer Tool 2024" at DevCon
