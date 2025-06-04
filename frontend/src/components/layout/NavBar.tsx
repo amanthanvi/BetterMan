@@ -157,9 +157,9 @@ export const NavBar: React.FC<NavBarProps> = ({ className }) => {
 								transition={{ duration: 0.3 }}
 							>
 								{darkMode ? (
-									<SunIcon className="w-4 h-4" />
-								) : (
 									<MoonIcon className="w-4 h-4" />
+								) : (
+									<SunIcon className="w-4 h-4" />
 								)}
 							</motion.div>
 						</Button>

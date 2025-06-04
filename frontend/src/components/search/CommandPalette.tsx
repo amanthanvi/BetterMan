@@ -36,17 +36,34 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 		isFavorite,
 	} = useAppStore();
 
-	const { performSearch, fetchSuggestions, suggestions, clearSuggestions } = useSearchStore();
+	const { performSearch, fetchSuggestions, suggestions, clearSuggestions } =
+		useSearchStore();
+	const { clearSearchHistory, clearRecentDocs } = useAppStore();
 
 	// Recent searches from history
 	const recentSearches = searchHistory.slice(0, 5);
 
 	// Popular commands (these could come from analytics)
 	const popularCommands = [
-		{ id: "ls", title: "ls", summary: "List directory contents", section: 1 },
-		{ id: "grep", title: "grep", summary: "Search text patterns", section: 1 },
+		{
+			id: "ls",
+			title: "ls",
+			summary: "List directory contents",
+			section: 1,
+		},
+		{
+			id: "grep",
+			title: "grep",
+			summary: "Search text patterns",
+			section: 1,
+		},
 		{ id: "find", title: "find", summary: "Search for files", section: 1 },
-		{ id: "cat", title: "cat", summary: "Display file contents", section: 1 },
+		{
+			id: "cat",
+			title: "cat",
+			summary: "Display file contents",
+			section: 1,
+		},
 		{ id: "vim", title: "vim", summary: "Text editor", section: 1 },
 	];
 
@@ -104,10 +121,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 				e.preventDefault();
 				onOpenChange(!open);
 			}
-
-			if (e.key === "Escape" && open) {
-				onOpenChange(false);
-			}
 		};
 
 		document.addEventListener("keydown", handleKeyDown);
@@ -143,6 +156,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 						<Command
 							className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
 							shouldFilter={true}
+							loop={true}
 							filter={(value, search) => {
 								if (
 									value
@@ -159,7 +173,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 									value={inputValue}
 									onValueChange={setInputValue}
 									placeholder="Search documentation, commands, or type '>' for actions..."
-									className="flex-1 bg-transparent border-0 outline-none px-3 py-4 text-gray-900 dark:text-gray-100 placeholder-gray-500"
+									className="flex-1 bg-transparent border-0 outline-none px-3 py-4 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none"
 									autoFocus
 								/>
 								<button
@@ -200,6 +214,19 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 										>
 											Show Sidebar
 										</CommandItem>
+
+										<CommandItem
+											value=">clear-recent-documents"
+											onSelect={() => {
+												clearRecentDocs();
+												onOpenChange(false);
+											}}
+											icon={
+												<Cross2Icon className="w-4 h-4" />
+											}
+										>
+											Clear Recent Documents
+										</CommandItem>
 									</Command.Group>
 								)}
 
@@ -217,20 +244,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 										>
 											Search for "{inputValue}"
 										</CommandItem>
-										{suggestions.map((suggestion, index) => (
-											<CommandItem
-												key={index}
-												value={`suggestion:${suggestion}`}
-												onSelect={() =>
-													handleSearch(suggestion)
-												}
-												icon={
-													<MagnifyingGlassIcon className="w-4 h-4" />
-												}
-											>
-												{suggestion}
-											</CommandItem>
-										))}
+										{suggestions.map(
+											(suggestion, index) => (
+												<CommandItem
+													key={index}
+													value={`suggestion:${suggestion}`}
+													onSelect={() =>
+														handleSearch(suggestion)
+													}
+													icon={
+														<MagnifyingGlassIcon className="w-4 h-4" />
+													}
+												>
+													{suggestion}
+												</CommandItem>
+											)
+										)}
 									</Command.Group>
 								)}
 
@@ -257,59 +286,70 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 								{/* Recent documents */}
 								{!inputValue && recentDocs.length > 0 && (
 									<Command.Group heading="Recent Documents">
-										{recentDocs.slice(0, 5).map((doc) => (
-											<CommandItem
-												key={doc.id}
-												value={`doc:${doc.id}.${doc.section}`}
-												onSelect={() =>
-													handleDocumentSelect(`${doc.id}.${doc.section}`)
-												}
-												icon={
-													<FileTextIcon className="w-4 h-4" />
-												}
-											>
-												<div className="flex items-center justify-between w-full">
-													<div>
-														<div className="font-medium">
-															{doc.title}
+										{recentDocs.slice(0, 5).map((doc) => {
+											const docName = doc.name || doc.id;
+											const docId = `${docName}.${doc.section}`;
+											return (
+												<CommandItem
+													key={doc.id}
+													value={`doc:${docId}`}
+													onSelect={() =>
+														handleDocumentSelect(
+															docId
+														)
+													}
+													icon={
+														<FileTextIcon className="w-4 h-4" />
+													}
+												>
+													<div className="flex items-center justify-between w-full">
+														<div>
+															<div className="font-medium">
+																{doc.title}
+															</div>
+															<div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+																{doc.summary}
+															</div>
 														</div>
-														<div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-															{doc.summary}
-														</div>
+														{isFavorite(doc.id) && (
+															<StarIcon className="w-4 h-4 text-yellow-500" />
+														)}
 													</div>
-													{isFavorite(doc.id) && (
-														<StarIcon className="w-4 h-4 text-yellow-500" />
-													)}
-												</div>
-											</CommandItem>
-										))}
+												</CommandItem>
+											);
+										})}
 									</Command.Group>
 								)}
 
 								{/* Popular commands */}
 								{!inputValue && (
 									<Command.Group heading="Popular Commands">
-										{popularCommands.map((cmd) => (
-											<CommandItem
-												key={cmd.id}
-												value={`doc:${cmd.id}.${cmd.section}`}
-												onSelect={() =>
-													handleDocumentSelect(`${cmd.id}.${cmd.section}`)
-												}
-												icon={
-													<FileTextIcon className="w-4 h-4" />
-												}
-											>
-												<div>
-													<div className="font-medium font-mono">
-														{cmd.title}
+										{popularCommands.map((cmd) => {
+											const cmdId = `${cmd.id}.${cmd.section}`;
+											return (
+												<CommandItem
+													key={cmd.id}
+													value={`doc:${cmdId}`}
+													onSelect={() =>
+														handleDocumentSelect(
+															cmdId
+														)
+													}
+													icon={
+														<FileTextIcon className="w-4 h-4" />
+													}
+												>
+													<div>
+														<div className="font-medium font-mono">
+															{cmd.title}
+														</div>
+														<div className="text-sm text-gray-500 dark:text-gray-400">
+															{cmd.summary}
+														</div>
 													</div>
-													<div className="text-sm text-gray-500 dark:text-gray-400">
-														{cmd.summary}
-													</div>
-												</div>
-											</CommandItem>
-										))}
+												</CommandItem>
+											);
+										})}
 									</Command.Group>
 								)}
 							</Command.List>
@@ -359,8 +399,8 @@ const CommandItem: React.FC<CommandItemProps> = ({
 				"flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer",
 				"text-gray-700 dark:text-gray-300",
 				"hover:bg-gray-100 dark:hover:bg-gray-800",
-				"data-[selected]:bg-blue-50 data-[selected]:text-blue-700",
-				"dark:data-[selected]:bg-blue-900/20 dark:data-[selected]:text-blue-300",
+				"aria-selected:bg-blue-50 aria-selected:text-blue-700",
+				"dark:aria-selected:bg-blue-900/20 dark:aria-selected:text-blue-300",
 				className
 			)}
 		>
