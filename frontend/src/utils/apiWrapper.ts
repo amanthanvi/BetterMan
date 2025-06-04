@@ -1,9 +1,8 @@
 /**
- * API wrapper to handle browser extension interference gracefully
+ * API wrapper to handle search requests
  */
 
 import { searchAPI as originalSearchAPI } from '@/services/api';
-import { proxyAPI } from '@/utils/proxyApi';
 import type { SearchResult } from '@/types';
 
 // In-memory cache for search results
@@ -32,8 +31,8 @@ export const searchAPI = {
     }
     
     try {
-      // Try proxy API first (which bypasses browser extension issues)
-      const result = await proxyAPI.search(query, options);
+      // Use original API directly - no proxy needed
+      const result = await originalSearchAPI.search(query, options);
       
       // Cache successful results
       searchCache.set(cacheKey, { result, timestamp: Date.now() });
@@ -46,47 +45,25 @@ export const searchAPI = {
       }
       
       return result;
-    } catch (proxyError) {
-      console.warn('Proxy API failed, trying direct API:', proxyError);
+    } catch (error) {
+      console.error('Search API error:', error);
       
-      try {
-        // Fallback to original API
-        const result = await originalSearchAPI.search(query, options);
-        searchCache.set(cacheKey, { result, timestamp: Date.now() });
-        return result;
-      } catch (error) {
-        console.error('Search API error:', error);
-        
-        // If we have a cached result, return it even if it's stale
-        if (cached) {
-          console.warn('Returning stale cached results due to error');
-          return cached.result;
-        }
-        
-        // Return empty results as last resort
-        return {
-          results: [],
-          total: 0,
-          page: options.page || 1,
-          per_page: options.per_page || 20,
-          has_more: false,
-          query: query
-        };
+      // If we have a cached result, return it even if it's stale
+      if (cached) {
+        console.warn('Returning stale cached results due to error');
+        return cached.result;
       }
+      
+      throw error;
     }
   },
   
   suggest: async (query: string): Promise<string[]> => {
     try {
-      // Try proxy API first
-      return await proxyAPI.suggest(query);
+      return await originalSearchAPI.suggest(query);
     } catch (error) {
-      console.warn('Proxy suggest failed, trying direct API:', error);
-      try {
-        return await originalSearchAPI.suggest(query);
-      } catch {
-        return [];
-      }
+      console.error('Suggest API error:', error);
+      return [];
     }
   }
 };

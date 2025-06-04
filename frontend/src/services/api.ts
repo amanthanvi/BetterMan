@@ -5,7 +5,6 @@ import type {
 	ApiResponse,
 	SearchFilters,
 } from "@/types";
-import { safeFetch } from "@/utils/safeFetch";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -22,76 +21,39 @@ class ApiClient {
 		options: RequestInit = {}
 	): Promise<T> {
 		const url = `${this.baseURL}${endpoint}`;
-		let lastError: Error | null = null;
 
-		// Try up to 3 times to handle browser extension interference
-		for (let attempt = 1; attempt <= 3; attempt++) {
-			try {
-				const response = await safeFetch(url, {
-					method: options.method || "GET",
-					headers: {
-						Accept: "application/json",
-						...(options.body
-							? { "Content-Type": "application/json" }
-							: {}),
-						...options.headers,
-					},
-					body: options.body,
-				});
+		const response = await fetch(url, {
+			method: options.method || "GET",
+			headers: {
+				Accept: "application/json",
+				"Accept-Encoding": "identity", // Disable compression
+				...(options.body ? { "Content-Type": "application/json" } : {}),
+				...options.headers,
+			},
+			body: options.body,
+		});
 
-				if (!response.ok) {
-					const errorText = await response
-						.text()
-						.catch(() => "Unknown error");
-					throw new Error(
-						`HTTP ${response.status}: ${response.statusText} - ${errorText}`
-					);
-				}
-
-				const text = await response.text();
-
-				if (!text || text.length === 0) {
-					return {} as T;
-				}
-
-				try {
-					return JSON.parse(text);
-				} catch (e) {
-					console.error("Failed to parse JSON:", text);
-					throw new Error("Invalid JSON response");
-				}
-			} catch (error) {
-				lastError = error as Error;
-
-				// Check if this is a decoding error from a browser extension
-				if (
-					error instanceof TypeError &&
-					error.message === "Decoding failed."
-				) {
-					console.warn(
-						`Browser extension interference detected (attempt ${attempt}/3)`
-					);
-
-					// Wait a bit before retrying
-					if (attempt < 3) {
-						await new Promise((resolve) =>
-							setTimeout(resolve, 100 * attempt)
-						);
-						continue;
-					}
-				}
-
-				// For other errors, don't retry
-				break;
-			}
+		if (!response.ok) {
+			const errorText = await response
+				.text()
+				.catch(() => "Unknown error");
+			throw new Error(
+				`HTTP ${response.status}: ${response.statusText} - ${errorText}`
+			);
 		}
 
-		// If we got here, all attempts failed
-		console.error(
-			`API request failed after all attempts: ${endpoint}`,
-			lastError
-		);
-		throw lastError || new Error("Request failed");
+		const text = await response.text();
+
+		if (!text || text.length === 0) {
+			return {} as T;
+		}
+
+		try {
+			return JSON.parse(text);
+		} catch (e) {
+			console.error("Failed to parse JSON:", text);
+			throw new Error("Invalid JSON response");
+		}
 	}
 
 	get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
@@ -147,28 +109,8 @@ export const searchAPI = {
 			params.doc_set = options.doc_set.join(",");
 		}
 
-		try {
-			return await apiClient.get<SearchResult>("/api/search", params);
-		} catch (error) {
-			// If we get a decoding error, return a mock result to prevent the app from breaking
-			if (
-				error instanceof TypeError &&
-				error.message === "Decoding failed."
-			) {
-				console.warn(
-					"Search request affected by browser extension, returning empty results"
-				);
-				return {
-					results: [],
-					total: 0,
-					page: 1,
-					per_page: 20,
-					query: query,
-					has_more: false,
-				};
-			}
-			throw error;
-		}
+		const result = await apiClient.get<SearchResult>("/api/search", params);
+		return result;
 	},
 
 	suggest: async (query: string): Promise<string[]> => {
@@ -211,7 +153,7 @@ export const documentAPI = {
 		// Backend expects doc_id in format "name.section"
 		const docId = `${name}.${section}`;
 		const url = `${API_BASE_URL}/api/docs/${docId}/download`;
-		return safeFetch(url, options);
+		return fetch(url, options);
 	},
 
 	getDocument: async (
@@ -225,14 +167,7 @@ export const documentAPI = {
 		return apiClient.get<Document>(`/api/docs/${docId}`);
 	},
 
-	getDocumentContent: async (
-		name: string,
-		section: string
-	): Promise<{ content: string }> => {
-		// Backend expects doc_id in format "name.section"
-		const docId = `${name}.${section}`;
-		return apiClient.get<{ content: string }>(`/api/docs/${docId}/content`);
-	},
+	// Removed getDocumentContent as content is included in getDocument response
 
 	getRelatedDocuments: async (docId: string): Promise<Document[]> => {
 		const result = await apiClient.get<{ documents: Document[] }>(
@@ -272,6 +207,14 @@ export const analyticsAPI = {
 			document_id: docId,
 			timestamp: new Date().toISOString(),
 		});
+	},
+
+	getOverview: (days: number = 7): Promise<any> => {
+		return apiClient.get(`/api/analytics/overview?days=${days}`);
+	},
+
+	getPopularCommands: (limit: number = 10, days: number = 7): Promise<any> => {
+		return apiClient.get(`/api/analytics/popular-commands?limit=${limit}&days=${days}`);
 	},
 };
 

@@ -10,21 +10,38 @@ import { CommandPalette } from "@/components/search/CommandPalette";
 import { useAppStore } from "@/stores/appStore";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
 import type { Document } from "@/types";
 
 // Import test page directly for debugging
 import { TestPage } from "@/pages/TestPage";
 
 // Lazy load pages for code splitting
-const HomePage = lazy(() => import("@/pages/HomePage").then(m => ({ default: m.HomePage })));
-const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage").then(m => ({ default: m.AnalyticsPage })));
-const NotFoundPage = lazy(() => import("@/pages/NotFoundPage").then(m => ({ default: m.NotFoundPage })));
-const DocumentPage = lazy(() => import("@/pages/DocumentPage").then(m => ({ default: m.DocumentPage })));
-const SettingsPage = lazy(() => import("@/pages/SettingsPage").then(m => ({ default: m.SettingsPage })));
-const FavoritesPage = lazy(() => import("@/pages/FavoritesPage").then(m => ({ default: m.FavoritesPage })));
+const HomePage = lazy(() =>
+	import("@/pages/HomePage").then((m) => ({ default: m.HomePage }))
+);
+const AnalyticsPage = lazy(() =>
+	import("@/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage }))
+);
+const NotFoundPage = lazy(() =>
+	import("@/pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage }))
+);
+const DocumentPage = lazy(() =>
+	import("@/pages/DocumentPage").then((m) => ({ default: m.DocumentPage }))
+);
+const SettingsPage = lazy(() =>
+	import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage }))
+);
+const FavoritesPage = lazy(() =>
+	import("@/pages/FavoritesPage").then((m) => ({ default: m.FavoritesPage }))
+);
 
 // Lazy load heavy components
-const SearchInterface = lazy(() => import("@/components/search/SearchInterface").then(m => ({ default: m.SearchInterface })));
+const SearchInterface = lazy(() =>
+	import("@/components/search/SearchInterface").then((m) => ({
+		default: m.SearchInterface,
+	}))
+);
 
 interface AppDocument extends Document {
 	name: string;
@@ -40,21 +57,20 @@ const PageLoader = () => (
 function App() {
 	const [docs, setDocs] = useState<AppDocument[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-	const { darkMode, initialize } = useAppStore();
+	const { darkMode, initialize, commandPaletteOpen, setCommandPaletteOpen } =
+		useAppStore();
 
 	// Initialize app store on mount
 	useEffect(() => {
 		initialize();
 	}, [initialize]);
 
-	// Add dark mode class to document root
+	// Ensure dark mode class is always in sync
 	useEffect(() => {
-		const root = window.document.documentElement;
 		if (darkMode) {
-			root.classList.add("dark");
+			document.documentElement.classList.add('dark');
 		} else {
-			root.classList.remove("dark");
+			document.documentElement.classList.remove('dark');
 		}
 	}, [darkMode]);
 
@@ -127,7 +143,10 @@ function App() {
 									<Route
 										path="/docs"
 										element={
-											<DocumentList docs={docs} loading={loading} />
+											<DocumentList
+												docs={docs}
+												loading={loading}
+											/>
 										}
 									/>
 
@@ -148,7 +167,10 @@ function App() {
 									/>
 
 									{/* 404 - Not Found */}
-									<Route path="*" element={<NotFoundPage />} />
+									<Route
+										path="*"
+										element={<NotFoundPage />}
+									/>
 								</Routes>
 							</Suspense>
 						</main>
@@ -171,6 +193,9 @@ function App() {
 							},
 						}}
 					/>
+
+					{/* Performance Monitor (dev only) */}
+					<PerformanceMonitor />
 				</div>
 			</Router>
 		</ErrorBoundary>
@@ -178,7 +203,10 @@ function App() {
 }
 
 // Document List Component (kept in App for now, can be moved later)
-const DocumentList: React.FC<{ docs: AppDocument[]; loading: boolean }> = ({ docs, loading }) => {
+const DocumentList: React.FC<{ docs: AppDocument[]; loading: boolean }> = ({
+	docs,
+	loading,
+}) => {
 	if (loading) {
 		return <LoadingSpinner />;
 	}

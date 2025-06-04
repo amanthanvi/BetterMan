@@ -112,7 +112,8 @@ export const KeyboardShortcuts: React.FC = () => {
 
 const showKeyboardShortcutsHelp = () => {
   // You could implement a modal or tooltip showing available shortcuts
-  console.log('Keyboard shortcuts:', {
+  // TODO: Implement keyboard shortcuts help modal
+  const shortcuts = {
     'Command Palette': '⌘K or /',
     'Toggle Dark Mode': '⌘⇧L',
     'Home': '⌘H',
@@ -121,5 +122,6 @@ const showKeyboardShortcutsHelp = () => {
     'Toggle Sidebar': '⌘B',
     'Clear Search': 'Esc',
     'Show Help': '?',
-  });
+  };
+  // TODO: Show modal with shortcuts
 };

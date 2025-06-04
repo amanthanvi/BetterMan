@@ -24,6 +24,9 @@ import { useAppStore } from "@/stores/appStore";
 import { cn } from "@/utils/cn";
 import type { Document } from "@/types";
 
+// API
+import { analyticsAPI } from "@/services/api";
+
 interface HomePageProps {
 	docs?: any[];
 	loading?: boolean;
@@ -35,6 +38,15 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
 	const navigate = useNavigate();
 	const [showWelcome, setShowWelcome] = useState(true);
+	const [popularCommands, setPopularCommands] = useState<any[]>([]);
+	const [stats, setStats] = useState({
+		totalDocs: 0,
+		totalSearches: 0,
+		avgResponseTime: "0ms",
+		totalPageViews: 0,
+		activeUsers: 0,
+	});
+	const [loadingAnalytics, setLoadingAnalytics] = useState(true);
 
 	const {
 		query,
@@ -49,52 +61,76 @@ export const HomePage: React.FC<HomePageProps> = ({
 	const hasSearched = query.length > 0;
 	const hasResults = results.length > 0;
 
-	// Popular commands (could come from analytics)
-	const popularCommands = [
-		{
-			id: "ls",
-			title: "ls",
-			summary: "List directory contents",
-			searches: 1250,
-			section: 1,
-		},
-		{
-			id: "grep",
-			title: "grep",
-			summary: "Search text patterns",
-			searches: 890,
-			section: 1,
-		},
-		{
-			id: "find",
-			title: "find",
-			summary: "Search for files",
-			searches: 756,
-			section: 1,
-		},
-		{
-			id: "cat",
-			title: "cat",
-			summary: "Display file contents",
-			searches: 623,
-			section: 1,
-		},
-		{ id: "vim", title: "vim", summary: "Text editor", searches: 445, section: 1 },
-		{
-			id: "git",
-			title: "git",
-			summary: "Version control system",
-			searches: 398,
-			section: 1,
-		},
-	];
+	// Fetch analytics data on mount
+	useEffect(() => {
+		const fetchAnalytics = async () => {
+			try {
+				setLoadingAnalytics(true);
+				
+				// Fetch popular commands
+				const popularData = await analyticsAPI.getPopularCommands(6, 7);
+				if (popularData.commands && popularData.commands.length > 0) {
+					setPopularCommands(popularData.commands.map((cmd: any) => ({
+						id: cmd.id,
+						title: cmd.name,
+						name: cmd.name,
+						summary: cmd.summary || "No description available",
+						searches: cmd.view_count,
+						section: cmd.section || 1,
+						trend: cmd.trend,
+						uniqueUsers: cmd.unique_users,
+					})));
+				}
 
-	// Stats (could come from API)
-	const stats = {
-		totalDocs: 2847,
-		totalSearches: 45623,
-		avgResponseTime: "12ms",
-	};
+				// Fetch overview stats
+				const overview = await analyticsAPI.getOverview(7);
+				setStats({
+					totalDocs: overview.total_documents || 0,
+					totalSearches: overview.total_searches || 0,
+					avgResponseTime: `${overview.avg_response_time || 0}ms`,
+					totalPageViews: overview.total_page_views || 0,
+					activeUsers: overview.active_users || 0,
+				});
+			} catch (error) {
+				console.error("Failed to fetch analytics:", error);
+				// Use fallback data on error
+				setPopularCommands([
+					{
+						id: "ls",
+						title: "ls",
+						name: "ls",
+						summary: "List directory contents",
+						searches: 0,
+						section: 1,
+					},
+					{
+						id: "grep",
+						title: "grep",
+						name: "grep",
+						summary: "Search text patterns",
+						searches: 0,
+						section: 1,
+					},
+					{
+						id: "find",
+						title: "find",
+						name: "find",
+						summary: "Search for files",
+						searches: 0,
+						section: 1,
+					},
+				]);
+			} finally {
+				setLoadingAnalytics(false);
+			}
+		};
+
+		fetchAnalytics();
+		// Refresh analytics every 5 minutes
+		const interval = setInterval(fetchAnalytics, 5 * 60 * 1000);
+		
+		return () => clearInterval(interval);
+	}, []);
 
 	const handleDocumentSelect = (doc: Document) => {
 		navigate(`/docs/${doc.id}`);
@@ -189,7 +225,11 @@ export const HomePage: React.FC<HomePageProps> = ({
 							>
 								<div className="text-center">
 									<div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-										{stats.totalDocs.toLocaleString()}
+										{loadingAnalytics ? (
+										<span className="animate-pulse">...</span>
+									) : (
+										stats.totalDocs.toLocaleString()
+									)}
 									</div>
 									<div className="text-sm text-gray-600 dark:text-gray-400">
 										Documentation Pages
@@ -197,15 +237,23 @@ export const HomePage: React.FC<HomePageProps> = ({
 								</div>
 								<div className="text-center">
 									<div className="text-2xl font-bold text-green-600 dark:text-green-400">
-										{stats.totalSearches.toLocaleString()}
+										{loadingAnalytics ? (
+										<span className="animate-pulse">...</span>
+									) : (
+										stats.totalPageViews.toLocaleString()
+									)}
 									</div>
 									<div className="text-sm text-gray-600 dark:text-gray-400">
-										Searches Performed
+										Page Views (7 days)
 									</div>
 								</div>
 								<div className="text-center">
 									<div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-										{stats.avgResponseTime}
+										{loadingAnalytics ? (
+										<span className="animate-pulse">...</span>
+									) : (
+										stats.avgResponseTime
+									)}
 									</div>
 									<div className="text-sm text-gray-600 dark:text-gray-400">
 										Average Response Time
@@ -248,7 +296,19 @@ export const HomePage: React.FC<HomePageProps> = ({
 									</h2>
 								</div>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									{popularCommands.map((command, index) => (
+									{loadingAnalytics ? (
+										// Loading skeleton
+										Array.from({ length: 6 }).map((_, index) => (
+											<div
+												key={index}
+												className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"
+											>
+												<div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-2"></div>
+												<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+											</div>
+										))
+									) : popularCommands.length > 0 ? (
+										popularCommands.map((command, index) => (
 										<motion.button
 											key={command.id}
 											initial={{ opacity: 0, x: -20 }}
@@ -257,23 +317,28 @@ export const HomePage: React.FC<HomePageProps> = ({
 												delay: 0.6 + index * 0.1,
 											}}
 											onClick={() =>
-												handleQuickSearch(command.title)
+												handleQuickSearch(command.name || command.title)
 											}
 											className="text-left p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200 group"
 										>
 											<div className="flex items-center justify-between mb-2">
 												<h3 className="font-mono font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-													{command.title}
+													{command.name || command.title}
 												</h3>
 												<span className="text-xs text-gray-500 dark:text-gray-400">
-													{command.searches} searches
+													{command.searches} views
 												</span>
 											</div>
 											<p className="text-sm text-gray-600 dark:text-gray-400">
 												{command.summary}
 											</p>
 										</motion.button>
-									))}
+									))
+									) : (
+										<p className="text-gray-500 dark:text-gray-400 text-center py-8">
+											No analytics data available yet. Start searching!
+										</p>
+									)}
 								</div>
 							</div>
 						</motion.section>

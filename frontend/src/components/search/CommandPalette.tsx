@@ -36,7 +36,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 		isFavorite,
 	} = useAppStore();
 
-	const { performSearch } = useSearchStore();
+	const { performSearch, fetchSuggestions, suggestions, clearSuggestions } = useSearchStore();
 
 	// Recent searches from history
 	const recentSearches = searchHistory.slice(0, 5);
@@ -87,6 +87,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 		}
 		onOpenChange(false);
 	};
+
+	// Fetch suggestions when input changes
+	useEffect(() => {
+		if (inputValue && !inputValue.startsWith(">")) {
+			fetchSuggestions(inputValue);
+		} else {
+			clearSuggestions();
+		}
+	}, [inputValue, fetchSuggestions, clearSuggestions]);
 
 	// Keyboard shortcuts
 	useEffect(() => {
@@ -208,6 +217,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 										>
 											Search for "{inputValue}"
 										</CommandItem>
+										{suggestions.map((suggestion, index) => (
+											<CommandItem
+												key={index}
+												value={`suggestion:${suggestion}`}
+												onSelect={() =>
+													handleSearch(suggestion)
+												}
+												icon={
+													<MagnifyingGlassIcon className="w-4 h-4" />
+												}
+											>
+												{suggestion}
+											</CommandItem>
+										))}
 									</Command.Group>
 								)}
 

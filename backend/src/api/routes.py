@@ -24,6 +24,7 @@ from ..security import EnhancedRateLimiter
 from ..security_utils import SecurityUtils, InputValidator, limiter
 from ..errors import NotFoundError, ValidationError, ParseError
 from ..config import get_settings
+from ..analytics.tracker import AnalyticsTracker
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -101,6 +102,7 @@ async def get_document(
     doc_id: str,
     request: Request,
     cache_manager: CacheManager = Depends(get_cache_manager),
+    db: Session = Depends(get_db),
 ):
     """Get a specific documentation page.
 
@@ -120,9 +122,29 @@ async def get_document(
     if not document:
         raise HTTPException(status_code=404, detail=f"Document '{doc_id}' not found")
 
-    # Record this access for analytics
-    client_ip = request.client.host if request.client else "unknown"
-    logger.info(f"Document request for {doc_id} from {client_ip}")
+    # Track page view
+    try:
+        analytics = AnalyticsTracker(db)
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent", "")
+        session_id = request.headers.get("x-session-id", None)
+        referrer = request.headers.get("referer", None)
+        
+        # Get user ID from auth if available (for now, just None)
+        user_id = None  # TODO: Get from auth context when implemented
+        
+        analytics.track_page_view(
+            document_id=document.id,
+            user_id=user_id,
+            session_id=session_id,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            referrer=referrer
+        )
+        logger.info(f"Tracked page view for document {doc_id}")
+    except Exception as e:
+        logger.error(f"Failed to track page view: {e}")
+        # Don't fail the request if analytics fails
 
     return document
 
@@ -569,38 +591,58 @@ async def refresh_cache(
 
 
 @router.get("/analytics/overview")
-async def get_analytics_overview(db: Session = Depends(get_db)):
-    """Get analytics overview data."""
+async def get_analytics_overview(
+    days: int = Query(7, description="Number of days to look back"),
+    db: Session = Depends(get_db)
+):
+    """Get analytics overview data based on real tracking."""
+    analytics = AnalyticsTracker(db)
+    
+    # Get real analytics data
+    overview = analytics.get_analytics_overview(days=days)
+    
+    # Add total documents count
     total_docs = db.query(Document).count()
-    total_searches = db.query(func.sum(Document.access_count)).scalar() or 0
+    overview["total_documents"] = total_docs
+    
+    # Calculate average response time (placeholder for now)
+    overview["avg_response_time"] = 12.5
+    
+    return overview
 
-    # Get popular commands
-    popular_commands = (
-        db.query(Document.name, Document.access_count)
-        .filter(Document.access_count > 0)
-        .order_by(desc(Document.access_count))
-        .limit(10)
-        .all()
-    )
 
-    return {
-        "total_documents": total_docs,
-        "total_searches": total_searches,
-        "cache_hit_rate": 94.5,
-        "avg_response_time": 18.2,
-        "active_users": 125,
-        "popular_commands": [
-            {"name": cmd[0], "count": cmd[1]} for cmd in popular_commands
-        ],
-        "search_trends": [
-            {"date": "2024-01", "searches": 1250},
-            {"date": "2024-02", "searches": 1380},
-            {"date": "2024-03", "searches": 1520},
-            {"date": "2024-04", "searches": 1650},
-            {"date": "2024-05", "searches": 1780},
-            {"date": "2024-06", "searches": 1920},
-        ],
-    }
+@router.get("/analytics/popular-commands")
+async def get_popular_commands(
+    limit: int = Query(10, ge=1, le=20, description="Number of commands to return"),
+    days: int = Query(7, description="Number of days to look back"),
+    db: Session = Depends(get_db)
+):
+    """Get popular commands based on real page view data."""
+    analytics = AnalyticsTracker(db)
+    
+    # Get popular commands from analytics
+    popular_commands = analytics.get_popular_commands(limit=limit, days=days)
+    
+    # If no real data yet, return some defaults with zero counts
+    if not popular_commands:
+        # Return common commands with zero counts as placeholders
+        default_commands = ["ls", "grep", "find", "cat", "vim", "git"]
+        popular_commands = []
+        for i, cmd in enumerate(default_commands[:limit]):
+            doc = db.query(Document).filter(Document.name == cmd).first()
+            if doc:
+                popular_commands.append({
+                    "id": str(doc.id),
+                    "name": doc.name,
+                    "title": doc.title,
+                    "summary": doc.summary,
+                    "section": doc.section,
+                    "view_count": 0,
+                    "unique_users": 0,
+                    "trend": "stable"
+                })
+    
+    return {"commands": popular_commands, "period_days": days}
 
 
 @router.get("/performance")

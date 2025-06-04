@@ -40,6 +40,7 @@ class Document(Base):
     access_count = Column(Integer, default=0)  # Track popularity
     cache_status = Column(String, default="on_demand")  # Added cache status field
     cache_priority = Column(Integer, default=0)  # Added priority field for eviction
+    view_count = Column(Integer, default=0)  # Track page views for analytics
 
     sections = relationship(
         "Section", back_populates="document", cascade="all, delete-orphan"
@@ -130,6 +131,7 @@ class DocumentResponse(BaseModel):
     title: str
     section: Optional[int] = None
     summary: Optional[str] = None
+    raw_content: Optional[str] = None
     sections: Optional[List[SectionResponse]] = None
     related: Optional[List[str]] = None
     cache_status: Optional[str] = None  # Added to response model

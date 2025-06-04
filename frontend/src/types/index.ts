@@ -8,6 +8,16 @@ export interface Document {
   score: number;
   doc_set: string;
   content?: string;
+  raw_content?: string;
+  sections?: Array<{
+    name: string;
+    content: string;
+    subsections?: Array<{
+      name: string;
+      content: string;
+    }>;
+  }>;
+  related?: string[];
   matches?: string[];
   last_updated?: string;
   tags?: string[];

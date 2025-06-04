@@ -62,26 +62,40 @@ export const useAppStore = create<AppStore>()(
       searchHistory: [],
       
       // Theme actions
-      toggleDarkMode: () => set((state) => { 
+      toggleDarkMode: () => {
+        const state = get();
         const newDarkMode = !state.darkMode;
         const newTheme = newDarkMode ? 'dark' : 'light';
         
         // Apply to DOM immediately
-        document.documentElement.classList.toggle('dark', newDarkMode);
+        if (newDarkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
         
-        return {
+        // Update state
+        set({
           darkMode: newDarkMode,
           theme: newTheme,
           preferences: { ...state.preferences, theme: newTheme }
-        };
-      }),
+        });
+      },
       setDarkMode: (darkMode: boolean) => {
-        document.documentElement.classList.toggle('dark', darkMode);
+        if (darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
         set({ darkMode });
       },
       setTheme: (theme: 'light' | 'dark') => {
         const isDark = theme === 'dark';
-        document.documentElement.classList.toggle('dark', isDark);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
         set({ 
           theme, 
           darkMode: isDark 
@@ -137,27 +151,46 @@ export const useAppStore = create<AppStore>()(
       // Initialization
       initialize: () => {
         const state = get();
+        let shouldBeDark = false;
         
-        // Set dark mode based on system preference if theme is 'system'
-        if (state.preferences.theme === 'system') {
-          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          set({ darkMode: prefersDark });
-        } else {
-          set({ darkMode: state.preferences.theme === 'dark' });
+        // Determine if dark mode should be enabled
+        if (state.theme === 'dark' || (state.theme === 'system' && state.preferences.theme === 'dark')) {
+          shouldBeDark = true;
+        } else if (state.theme === 'system' || state.preferences.theme === 'system') {
+          shouldBeDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        } else if (state.preferences.theme === 'dark') {
+          shouldBeDark = true;
         }
+        
+        // Apply theme to document
+        if (shouldBeDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        
+        // Update state to match
+        set({ 
+          darkMode: shouldBeDark,
+          theme: shouldBeDark ? 'dark' : 'light'
+        });
         
         // Listen for system theme changes
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         const handleChange = (e: MediaQueryListEvent) => {
-          if (state.preferences.theme === 'system') {
-            set({ darkMode: e.matches });
+          const currentState = get();
+          if (currentState.theme === 'system' || currentState.preferences.theme === 'system') {
+            const newDarkMode = e.matches;
+            if (newDarkMode) {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+            set({ darkMode: newDarkMode });
           }
         };
         
         mediaQuery.addEventListener('change', handleChange);
-        
-        // Apply theme to document
-        document.documentElement.classList.toggle('dark', get().darkMode);
         
         // Apply font preferences
         const root = document.documentElement;
@@ -193,6 +226,14 @@ export const useAppStore = create<AppStore>()(
         theme: state.theme,
         darkMode: state.darkMode,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Apply dark mode immediately after rehydration
+        if (state?.darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      },
     }
   )
 );
@@ -201,6 +242,10 @@ export const useAppStore = create<AppStore>()(
 useAppStore.subscribe(
   (state) => state.darkMode,
   (darkMode) => {
-    document.documentElement.classList.toggle('dark', darkMode);
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }
 );

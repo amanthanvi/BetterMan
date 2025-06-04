@@ -94,7 +94,22 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
     }
     
     try {
-      // For now, use search history and popular commands as suggestions
+      // Try to fetch suggestions from API
+      const apiSuggestions = await searchAPI.suggest(query);
+      
+      // Merge with search history
+      const history = get().history;
+      const historySuggestions = history
+        .filter(h => h.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 3);
+      
+      // Combine and deduplicate
+      const allSuggestions = [...new Set([...apiSuggestions, ...historySuggestions])].slice(0, 10);
+      set({ suggestions: allSuggestions });
+    } catch (error) {
+      console.error('Failed to fetch suggestions:', error);
+      
+      // Fallback to local suggestions
       const history = get().history;
       const suggestions = history
         .filter(h => h.toLowerCase().includes(query.toLowerCase()))
@@ -108,9 +123,6 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
       
       const allSuggestions = [...new Set([...suggestions, ...commandSuggestions])];
       set({ suggestions: allSuggestions });
-    } catch (error) {
-      console.error('Failed to fetch suggestions:', error);
-      set({ suggestions: [] });
     }
   },
   

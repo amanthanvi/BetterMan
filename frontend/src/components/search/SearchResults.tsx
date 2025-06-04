@@ -237,7 +237,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
 }) => {
   return (
     <Link
-      to={`/docs/${document.name || document.id}.${document.section}`}
+      to={`/docs/${document.id}.${document.section}`}
       onClick={onClick}
       className="block group"
     >

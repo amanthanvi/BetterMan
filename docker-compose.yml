@@ -34,6 +34,18 @@ services:
       backend:
         condition: service_healthy
 
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: always
+
   redis:
     image: redis:7-alpine
     ports:
