@@ -265,7 +265,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					>
 						{section.name}
 					</h2>
-					<div className="prose dark:prose-invert max-w-none">
+					<div className="prose prose-gray dark:prose-invert max-w-none">
 						{renderContentSection(section.content)}
 					</div>
 					
@@ -279,7 +279,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								>
 									{subsection.name}
 								</h3>
-								<div className="prose dark:prose-invert max-w-none">
+								<div className="prose prose-gray dark:prose-invert max-w-none">
 									{renderContentSection(subsection.content)}
 								</div>
 							</div>
@@ -314,7 +314,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 						>
 							{header}
 						</h2>
-						<div className="prose dark:prose-invert max-w-none">
+						<div className="prose prose-gray dark:prose-invert max-w-none">
 							{renderContentSection(body)}
 						</div>
 					</div>
@@ -376,7 +376,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 						<p
 							key={`text-${i}`}
 							className={cn(
-								"my-2 leading-relaxed",
+								"my-2 leading-relaxed text-gray-700 dark:text-gray-300",
 								fontSize === "sm" && "text-sm",
 								fontSize === "lg" && "text-lg"
 							)}
@@ -453,7 +453,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	}
 
 	return (
-		<div className={cn("flex min-h-screen", className)}>
+		<div className={cn("flex min-h-screen bg-white dark:bg-gray-900", className)}>
 			{/* Table of Contents */}
 			{showToc && tocItems.length > 0 && (
 				<motion.aside
@@ -471,6 +471,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								onClick={() => scrollToSection(item.id)}
 								className={cn(
 									"block w-full text-left text-sm py-1 px-2 rounded transition-colors",
+									"text-gray-700 dark:text-gray-300",
 									"hover:bg-gray-200 dark:hover:bg-gray-800",
 									item.id === activeSection &&
 										"bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
@@ -486,9 +487,9 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			)}
 
 			{/* Main Content */}
-			<div className="flex-1 max-w-none">
+			<div className="flex-1 max-w-none bg-white dark:bg-gray-900">
 				{/* Document Header */}
-				<header className="document-header border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+				<header className="document-header bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm">
 					<div className="flex items-center justify-between">
 						<div className="flex-1 min-w-0">
 							<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 font-mono">
@@ -549,11 +550,11 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								variant="ghost"
 								size="sm"
 								onClick={toggleFavorite}
-								className={
+								className={cn(
 									document.name && isFavorite(`${document.name}.${document.section}`)
-										? "text-blue-500"
-										: ""
-								}
+										? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+										: "text-gray-600 dark:text-gray-400"
+								)}
 							>
 								<BookmarkIcon
 									className={cn(
