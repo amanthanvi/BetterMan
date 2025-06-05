@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+/* Ensure body has proper background */
+body {
+  background-color: white;
+  color: rgb(17 24 39);
+  transition-property: background-color, color;
+  transition-duration: 200ms;
+}
+
+/* Dark mode styles disabled - feature flag is off */

@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AppState, UserPreferences, Document } from '@/types';
 
+// Feature flag for dark mode - set to true to enable dark mode functionality
+const DARK_MODE_ENABLED = false;
+
 interface AppStore extends AppState {
   // Theme property
   theme: 'light' | 'dark' | 'system';
@@ -69,6 +72,8 @@ export const useAppStore = create<AppStore>()(
       
       // Theme actions
       toggleDarkMode: () => {
+        if (!DARK_MODE_ENABLED) return; // Feature flag check
+        
         const state = get();
         const newDarkMode = !state.darkMode;
         const newTheme = newDarkMode ? 'dark' : 'light';
@@ -76,8 +81,10 @@ export const useAppStore = create<AppStore>()(
         // Apply to DOM immediately
         if (newDarkMode) {
           document.documentElement.classList.add('dark');
+          document.body.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
+          document.body.classList.remove('dark');
         }
         
         // Update state
@@ -88,19 +95,27 @@ export const useAppStore = create<AppStore>()(
         });
       },
       setDarkMode: (darkMode: boolean) => {
+        if (!DARK_MODE_ENABLED) return; // Feature flag check
+        
         if (darkMode) {
           document.documentElement.classList.add('dark');
+          document.body.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
+          document.body.classList.remove('dark');
         }
         set({ darkMode });
       },
       setTheme: (theme: 'light' | 'dark') => {
+        if (!DARK_MODE_ENABLED) return; // Feature flag check
+        
         const isDark = theme === 'dark';
         if (isDark) {
           document.documentElement.classList.add('dark');
+          document.body.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
+          document.body.classList.remove('dark');
         }
         set({ 
           theme, 
@@ -167,6 +182,17 @@ export const useAppStore = create<AppStore>()(
       
       // Initialization
       initialize: () => {
+        if (!DARK_MODE_ENABLED) {
+          // When dark mode is disabled, always use light mode
+          document.documentElement.classList.remove('dark');
+          document.body.classList.remove('dark');
+          set({ 
+            darkMode: false,
+            theme: 'light'
+          });
+          return;
+        }
+        
         const state = get();
         let shouldBeDark = false;
         
@@ -244,11 +270,20 @@ export const useAppStore = create<AppStore>()(
         darkMode: state.darkMode,
       }),
       onRehydrateStorage: () => (state) => {
+        if (!DARK_MODE_ENABLED) {
+          // When dark mode is disabled, always ensure light mode
+          document.documentElement.classList.remove('dark');
+          document.body.classList.remove('dark');
+          return;
+        }
+        
         // Apply dark mode immediately after rehydration
         if (state?.darkMode) {
           document.documentElement.classList.add('dark');
+          document.body.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
+          document.body.classList.remove('dark');
         }
       },
     }
@@ -256,13 +291,15 @@ export const useAppStore = create<AppStore>()(
 );
 
 // Subscribe to dark mode changes to update document class
-useAppStore.subscribe(
-  (state) => state.darkMode,
-  (darkMode) => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+if (DARK_MODE_ENABLED) {
+  useAppStore.subscribe(
+    (state) => state.darkMode,
+    (darkMode) => {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
-  }
-);
+  );
+}

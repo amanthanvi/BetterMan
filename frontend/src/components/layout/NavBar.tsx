@@ -13,6 +13,9 @@ import {
 } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
+
+// Feature flag for dark mode - must match the one in appStore.ts
+const DARK_MODE_ENABLED = false;
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/utils/cn";
 
@@ -25,12 +28,9 @@ export const NavBar: React.FC<NavBarProps> = ({ className }) => {
 	const {
 		darkMode,
 		toggleDarkMode,
-		setTheme,
-		theme,
 		sidebarOpen,
 		toggleSidebar,
 		setCommandPaletteOpen,
-		preferences,
 	} = useAppStore();
 
 	const { clearResults } = useSearchStore();
@@ -143,26 +143,28 @@ export const NavBar: React.FC<NavBarProps> = ({ className }) => {
 							})}
 						</div>
 
-						{/* Theme toggle */}
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={handleThemeToggle}
-							className="w-9 h-9"
-						>
-							<motion.div
-								initial={false}
-								animate={{ scale: 1 }}
-								whileTap={{ scale: 0.9 }}
-								transition={{ duration: 0.2 }}
+						{/* Theme toggle - only show when dark mode is enabled */}
+						{DARK_MODE_ENABLED && (
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={handleThemeToggle}
+								className="w-9 h-9"
 							>
-								{darkMode ? (
-									<MoonIcon className="w-4 h-4" />
-								) : (
-									<SunIcon className="w-4 h-4" />
-								)}
-							</motion.div>
-						</Button>
+								<motion.div
+									initial={false}
+									animate={{ scale: 1 }}
+									whileTap={{ scale: 0.9 }}
+									transition={{ duration: 0.2 }}
+								>
+									{darkMode ? (
+										<MoonIcon className="w-4 h-4" />
+									) : (
+										<SunIcon className="w-4 h-4" />
+									)}
+								</motion.div>
+							</Button>
+						)}
 					</div>
 				</div>
 			</div>

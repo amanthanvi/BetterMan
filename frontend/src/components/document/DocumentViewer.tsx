@@ -9,17 +9,12 @@ import {
 	BookmarkIcon,
 	Share1Icon,
 	DownloadIcon,
-	CopyIcon,
-	ChevronUpIcon,
-	ChevronDownIcon,
-	MixerHorizontalIcon,
 	EyeOpenIcon,
 	HamburgerMenuIcon,
 	CopyIcon as DocumentDuplicateIcon,
 } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
-import { documentAPI } from "@/services/api";
 import { cn } from "@/utils/cn";
 import type { Document } from "@/types";
 
@@ -39,7 +34,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	document: initialDocument,
 	className,
 }) => {
-	const [document, setDocument] = useState(initialDocument);
+	const [document] = useState(initialDocument);
 	const [content, setContent] = useState<string>("");
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -489,7 +484,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Main Content */}
 			<div className="flex-1 max-w-none bg-white dark:bg-gray-900">
 				{/* Document Header */}
-				<header className="document-header bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+				<header className="document-header bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm">
 					<div className="flex items-center justify-between">
 						<div className="flex-1 min-w-0">
 							<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 font-mono">
