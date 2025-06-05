@@ -6,7 +6,7 @@ import {
 	vs,
 } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
-	StarIcon,
+	BookmarkIcon,
 	Share1Icon,
 	DownloadIcon,
 	CopyIcon,
@@ -14,7 +14,7 @@ import {
 	ChevronDownIcon,
 	MixerHorizontalIcon,
 	EyeOpenIcon,
-	BookmarkIcon,
+	HamburgerMenuIcon,
 	CopyIcon as DocumentDuplicateIcon,
 } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/Button";
@@ -58,6 +58,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		addFavorite,
 		removeFavorite,
 		addRecentDoc,
+		addToast,
 		preferences,
 	} = useAppStore();
 
@@ -101,29 +102,55 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		loadContent();
 	}, [document, addRecentDoc]);
 
-	// Generate table of contents
+	// Generate table of contents from sections
 	useEffect(() => {
-		if (!content || !contentRef.current) return;
+		if (!document.sections || document.sections.length === 0) {
+			// Fallback to DOM-based TOC generation
+			if (!content || !contentRef.current) return;
 
-		const headings = Array.from(
-			contentRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6")
-		);
-		const items: TableOfContentsItem[] = headings.map((heading, index) => {
-			const id = heading.id || `heading-${index}`;
-			if (!heading.id) {
-				heading.id = id;
-			}
+			const headings = Array.from(
+				contentRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6")
+			);
+			const items: TableOfContentsItem[] = headings.map((heading, index) => {
+				const id = heading.id || `heading-${index}`;
+				if (!heading.id) {
+					heading.id = id;
+				}
 
-			return {
-				id,
-				title: heading.textContent || "",
-				level: parseInt(heading.tagName.charAt(1)),
-				element: heading as HTMLElement,
-			};
-		});
+				return {
+					id,
+					title: heading.textContent || "",
+					level: parseInt(heading.tagName.charAt(1)),
+					element: heading as HTMLElement,
+				};
+			});
 
-		setTocItems(items);
-	}, [content]);
+			setTocItems(items);
+		} else {
+			// Generate TOC from sections structure
+			const items: TableOfContentsItem[] = [];
+			document.sections.forEach((section, sectionIndex) => {
+				const sectionId = `section-${section.name.toLowerCase().replace(/\s+/g, "-")}`;
+				items.push({
+					id: sectionId,
+					title: section.name,
+					level: 2,
+				});
+
+				if (section.subsections) {
+					section.subsections.forEach((sub, subIndex) => {
+						const subId = `${sectionId}-sub-${subIndex}`;
+						items.push({
+							id: subId,
+							title: sub.name,
+							level: 3,
+						});
+					});
+				}
+			});
+			setTocItems(items);
+		}
+	}, [content, document.sections]);
 
 	// Intersection observer for active section
 	useEffect(() => {
@@ -174,10 +201,17 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 	// Toggle favorite
 	const toggleFavorite = () => {
-		if (isFavorite(document.id)) {
-			removeFavorite(document.id);
+		if (!document.name) {
+			addToast('Cannot favorite this document - missing name', 'error');
+			return;
+		}
+		const docKey = `${document.name}.${document.section}`;
+		if (isFavorite(docKey)) {
+			removeFavorite(docKey);
+			addToast(`Removed ${document.name} from favorites`, 'info');
 		} else {
-			addFavorite(document.id);
+			addFavorite(docKey);
+			addToast(`Added ${document.name} to favorites`, 'success');
 		}
 	};
 
@@ -212,6 +246,48 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			// Fallback: copy URL
 			await navigator.clipboard.writeText(window.location.href);
 		}
+	};
+
+	// Render structured sections
+	const renderStructuredSections = () => {
+		if (!document.sections || document.sections.length === 0) {
+			return processContent(content);
+		}
+
+		return document.sections.map((section, sectionIndex) => {
+			const sectionId = `section-${section.name.toLowerCase().replace(/\s+/g, "-")}`;
+			
+			return (
+				<div key={sectionIndex} className="mb-8">
+					<h2
+						id={sectionId}
+						className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 border-b border-gray-200 dark:border-gray-700 pb-2"
+					>
+						{section.name}
+					</h2>
+					<div className="prose dark:prose-invert max-w-none">
+						{renderContentSection(section.content)}
+					</div>
+					
+					{section.subsections && section.subsections.map((subsection, subIndex) => {
+						const subId = `${sectionId}-sub-${subIndex}`;
+						return (
+							<div key={subIndex} className="ml-4 mt-4">
+								<h3
+									id={subId}
+									className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2"
+								>
+									{subsection.name}
+								</h3>
+								<div className="prose dark:prose-invert max-w-none">
+									{renderContentSection(subsection.content)}
+								</div>
+							</div>
+						);
+					})}
+				</div>
+			);
+		});
 	};
 
 	// Process content for rendering
@@ -383,7 +459,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				<motion.aside
 					initial={{ x: -250, opacity: 0 }}
 					animate={{ x: 0, opacity: 1 }}
-					className="w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4 sticky top-0 h-screen overflow-y-auto"
+					className="document-toc w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4"
 				>
 					<h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
 						Table of Contents
@@ -412,7 +488,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Main Content */}
 			<div className="flex-1 max-w-none">
 				{/* Document Header */}
-				<header className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 z-10">
+				<header className="document-header border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm">
 					<div className="flex items-center justify-between">
 						<div className="flex-1 min-w-0">
 							<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 font-mono">
@@ -464,7 +540,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 									size="sm"
 									onClick={() => setShowToc(!showToc)}
 								>
-									<BookmarkIcon className="w-4 h-4" />
+									<HamburgerMenuIcon className="w-4 h-4" />
 								</Button>
 							</div>
 
@@ -474,15 +550,15 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								size="sm"
 								onClick={toggleFavorite}
 								className={
-									isFavorite(document.id)
-										? "text-yellow-500"
+									document.name && isFavorite(`${document.name}.${document.section}`)
+										? "text-blue-500"
 										: ""
 								}
 							>
-								<StarIcon
+								<BookmarkIcon
 									className={cn(
 										"w-4 h-4",
-										isFavorite(document.id) &&
+										document.name && isFavorite(`${document.name}.${document.section}`) &&
 											"fill-current"
 									)}
 								/>
@@ -523,8 +599,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 						animate={{ opacity: 1, y: 0 }}
 						className="max-w-4xl mx-auto"
 					>
-						{content ? (
-							processContent(content)
+						{content || document.sections ? (
+							renderStructuredSections()
 						) : (
 							<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 								No content available

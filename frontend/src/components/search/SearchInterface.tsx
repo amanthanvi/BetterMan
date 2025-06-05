@@ -6,7 +6,7 @@ import {
   ClockIcon,
   Cross2Icon,
   CodeIcon,
-  StarIcon
+  BookmarkIcon
 } from '@radix-ui/react-icons';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -385,7 +385,7 @@ const RecentDocItem: React.FC<RecentDocItemProps> = ({ doc, onClick, isFavorite 
         <div className="flex items-center space-x-2">
           <span className="font-medium font-mono text-sm">{doc.title}</span>
           {isFavorite && (
-            <StarIcon className="w-3 h-3 text-yellow-500" />
+            <BookmarkIcon className="w-3 h-3 text-blue-500" />
           )}
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">

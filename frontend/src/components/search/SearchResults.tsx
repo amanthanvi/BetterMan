@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-  StarIcon,
+  BookmarkIcon,
   ClockIcon,
   FileTextIcon,
   ChevronRightIcon,
   MagnifyingGlassIcon,
-  BookmarkIcon,
   HashtagIcon,
 } from '@radix-ui/react-icons';
 import { Button } from '@/components/ui/Button';
@@ -197,8 +196,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             >
               <SearchResultCard
                 document={doc}
-                isFavorite={isFavorite(doc.id)}
-                onToggleFavorite={(e) => toggleFavorite(e, doc.id)}
+                isFavorite={doc.name ? isFavorite(`${doc.name}.${doc.section}`) : false}
+                onToggleFavorite={(e) => doc.name && toggleFavorite(e, `${doc.name}.${doc.section}`)}
                 onClick={() => handleDocumentClick(doc)}
               />
             </motion.div>
@@ -237,7 +236,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
 }) => {
   return (
     <Link
-      to={`/docs/${document.id}.${document.section}`}
+      to={`/docs/${document.name || document.id}.${document.section}`}
       onClick={onClick}
       className="block group"
     >
@@ -322,10 +321,10 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
               onClick={onToggleFavorite}
               className={cn(
                 'w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity',
-                isFavorite && 'opacity-100 text-yellow-500'
+                isFavorite && 'opacity-100 text-blue-500'
               )}
             >
-              <StarIcon className={cn('w-4 h-4', isFavorite && 'fill-current')} />
+              <BookmarkIcon className={cn('w-4 h-4', isFavorite && 'fill-current')} />
             </Button>
             
             <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />

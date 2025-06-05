@@ -38,10 +38,7 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
   setQuery: (query: string) => set({ query }),
   
   performSearch: async (query: string, filters = {}) => {
-    if (!query.trim()) {
-      set({ results: [], query: '' });
-      return;
-    }
+    // Allow empty queries to browse all documents
     
     set({ loading: true, error: null, query });
     

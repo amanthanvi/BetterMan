@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
 	MagnifyingGlassIcon,
-	StarIcon,
+	BookmarkIcon,
 	ReaderIcon,
 	HomeIcon,
 	GearIcon,
@@ -78,7 +78,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 			id: "favorites",
 			title: "View Favorites",
 			subtitle: "See your bookmarked documentation",
-			icon: <StarIcon className="w-4 h-4" />,
+			icon: <BookmarkIcon className="w-4 h-4" />,
 			action: () => {
 				navigate("/favorites");
 				onClose();

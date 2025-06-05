@@ -100,17 +100,23 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 	const { isFavorite, addFavorite, removeFavorite } = useAppStore();
 	const [isCopied, setIsCopied] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
-	const isFavorited = isFavorite(result.id);
+	const favoriteKey = result.name ? `${result.name}.${result.section}` : result.id;
+	const isFavorited = isFavorite(favoriteKey);
 
 	const handleFavorite = async (e: React.MouseEvent) => {
 		e.preventDefault();
 
+		if (!result.name) {
+			toast.error("Cannot favorite this document");
+			return;
+		}
+
 		try {
 			if (isFavorited) {
-				removeFavorite(result.id);
+				removeFavorite(favoriteKey);
 				toast.success("Removed from favorites");
 			} else {
-				addFavorite(result.id);
+				addFavorite(favoriteKey);
 				toast.success("Added to favorites");
 			}
 		} catch (error) {
@@ -120,7 +126,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 
 	const handleCopyCommand = (e: React.MouseEvent) => {
 		e.preventDefault();
-		const commandName = result.id;
+		const commandName = result.name || result.id;
 		navigator.clipboard.writeText(`man ${result.section} ${commandName}`);
 		setIsCopied(true);
 		toast.success("Command copied to clipboard");
@@ -129,8 +135,8 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 
 	const handleShare = async (e: React.MouseEvent) => {
 		e.preventDefault();
-		const docId = result.id;
-		const url = `${window.location.origin}/docs/${docId}.${result.section}`;
+		const commandName = result.name || result.id;
+		const url = `${window.location.origin}/docs/${commandName}.${result.section}`;
 
 		if (navigator.share) {
 			try {
@@ -161,7 +167,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 			className="group relative"
 		>
 			<Link
-				to={`/docs/${result.id}.${result.section}`}
+				to={`/docs/${result.name || result.id}.${result.section}`}
 				className="block bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden"
 			>
 				{/* Card Header */}
@@ -245,7 +251,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 							className={cn(
 								"p-2 rounded-lg transition-colors",
 								isFavorited
-									? "text-yellow-500 bg-yellow-100 dark:bg-yellow-900/50"
+									? "text-blue-500 bg-blue-100 dark:bg-blue-900/50"
 									: "text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
 							)}
 							title="Add to favorites"

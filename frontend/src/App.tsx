@@ -1,6 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
 import { ErrorBoundary } from "react-error-boundary";
 import "./App.css";
 
@@ -11,6 +10,9 @@ import { useAppStore } from "@/stores/appStore";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
+import { ToastContainer } from "@/components/ui/Toast";
+import { clearOldFavorites } from "@/utils/clearOldFavorites";
+import { clearNumericFavorites } from "@/utils/clearNumericFavorites";
 import type { Document } from "@/types";
 
 // Import test page directly for debugging
@@ -35,6 +37,9 @@ const SettingsPage = lazy(() =>
 const FavoritesPage = lazy(() =>
 	import("@/pages/FavoritesPage").then((m) => ({ default: m.FavoritesPage }))
 );
+const DocsListPage = lazy(() =>
+	import("@/pages/DocsListPage").then((m) => ({ default: m.DocsListPage }))
+);
 
 // Lazy load heavy components
 const SearchInterface = lazy(() =>
@@ -57,11 +62,13 @@ const PageLoader = () => (
 function App() {
 	const [docs, setDocs] = useState<AppDocument[]>([]);
 	const [loading, setLoading] = useState(true);
-	const { darkMode, initialize, commandPaletteOpen, setCommandPaletteOpen } =
+	const { darkMode, initialize, commandPaletteOpen, setCommandPaletteOpen, toasts, removeToast } =
 		useAppStore();
 
 	// Initialize app store on mount
 	useEffect(() => {
+		// Clean up old favorites before initializing
+		clearOldFavorites();
 		initialize();
 	}, [initialize]);
 
@@ -88,9 +95,23 @@ function App() {
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, []);
 
-	// Skip fetching docs on startup - will be loaded via search
+	// Fetch documentation list on startup
 	useEffect(() => {
-		setLoading(false);
+		const fetchDocs = async () => {
+			try {
+				const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/docs?limit=100`);
+				if (response.ok) {
+					const data = await response.json();
+					setDocs(data);
+				}
+			} catch (error) {
+				console.error('Failed to fetch docs:', error);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchDocs();
 	}, []);
 
 	return (
@@ -142,12 +163,7 @@ function App() {
 									{/* Documentation Routes */}
 									<Route
 										path="/docs"
-										element={
-											<DocumentList
-												docs={docs}
-												loading={loading}
-											/>
-										}
+										element={<DocsListPage />}
 									/>
 
 									{/* Document Viewer - supports both formats */}
@@ -183,16 +199,7 @@ function App() {
 					/>
 
 					{/* Toast Notifications */}
-					<Toaster
-						position="bottom-right"
-						toastOptions={{
-							className: "",
-							style: {
-								background: darkMode ? "#1f2937" : "#fff",
-								color: darkMode ? "#f3f4f6" : "#111827",
-							},
-						}}
-					/>
+					<ToastContainer toasts={toasts} removeToast={removeToast} />
 
 					{/* Performance Monitor (dev only) */}
 					<PerformanceMonitor />
@@ -202,52 +209,5 @@ function App() {
 	);
 }
 
-// Document List Component (kept in App for now, can be moved later)
-const DocumentList: React.FC<{ docs: AppDocument[]; loading: boolean }> = ({
-	docs,
-	loading,
-}) => {
-	if (loading) {
-		return <LoadingSpinner />;
-	}
-
-	return (
-		<div className="w-full">
-			<h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-				Available Documentation
-			</h2>
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{docs.map((doc) => (
-					<div
-						key={doc.id}
-						className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
-					>
-						<div className="px-4 py-5 sm:p-6">
-							<h3 className="text-lg font-medium text-gray-900 dark:text-white">
-								{doc.title}
-							</h3>
-							{doc.section && (
-								<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-									Section: {doc.section}
-								</p>
-							)}
-							<p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-								{doc.summary || "No description available."}
-							</p>
-							<div className="mt-4">
-								<Link
-									to={`/docs/${doc.name}`}
-									className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-5 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 dark:text-indigo-200 dark:bg-indigo-900 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-								>
-									View Documentation
-								</Link>
-							</div>
-						</div>
-					</div>
-				))}
-			</div>
-		</div>
-	);
-};
 
 export default App;

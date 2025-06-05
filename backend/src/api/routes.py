@@ -16,6 +16,8 @@ from ..models.document import (
     CacheStatistics,
     Section,
     Subsection,
+    LoadingSession,
+    ManPageStats,
 )
 from ..parser.linux_parser import LinuxManParser
 from ..cache.cache_manager import CacheManager, COMMON_COMMANDS
@@ -35,6 +37,104 @@ router = APIRouter()
 # Initialize parser
 parser = LinuxManParser()
 
+# Health check endpoint
+@router.get("/health")
+async def health_check(db: Session = Depends(get_db)):
+    """Health check endpoint for monitoring."""
+    try:
+        # Check database connection
+        db_status = "healthy"
+        try:
+            doc_count = db.query(func.count(Document.id)).scalar()
+        except Exception as e:
+            db_status = f"unhealthy: {str(e)}"
+            doc_count = 0
+        
+        # Check Redis if available
+        redis_status = "unknown"
+        try:
+            cache_manager = CacheManager(db, parser)
+            if hasattr(cache_manager, 'redis_client') and cache_manager.redis_client:
+                cache_manager.redis_client.ping()
+                redis_status = "healthy"
+        except Exception:
+            redis_status = "unavailable"
+        
+        # Overall health
+        is_healthy = db_status == "healthy"
+        
+        return {
+            "status": "healthy" if is_healthy else "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": {
+                "status": db_status,
+                "document_count": doc_count
+            },
+            "redis": {
+                "status": redis_status
+            },
+            "version": "1.0.0"
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
+
+
+@router.get("/loading-status")
+async def loading_status(db: Session = Depends(get_db)):
+    """Get the status of man page loading sessions."""
+    try:
+        # Get recent loading sessions
+        recent_sessions = db.query(LoadingSession).order_by(
+            LoadingSession.start_time.desc()
+        ).limit(5).all()
+        
+        # Get current statistics
+        total_docs = db.query(func.count(Document.id)).scalar()
+        sections_count = db.query(
+            Document.section,
+            func.count(Document.id).label('count')
+        ).group_by(Document.section).all()
+        
+        categories_count = db.query(
+            Document.category,
+            func.count(Document.id).label('count')
+        ).group_by(Document.category).limit(10).all()
+        
+        # Format response
+        return {
+            "total_documents": total_docs,
+            "sections": {sec: cnt for sec, cnt in sections_count},
+            "top_categories": {cat: cnt for cat, cnt in categories_count if cat},
+            "recent_sessions": [
+                {
+                    "session_id": s.session_id,
+                    "status": s.status,
+                    "start_time": s.start_time.isoformat() if s.start_time else None,
+                    "end_time": s.end_time.isoformat() if s.end_time else None,
+                    "pages_processed": s.pages_processed,
+                    "pages_success": s.pages_success,
+                    "pages_error": s.pages_error,
+                    "current_section": s.current_section,
+                }
+                for s in recent_sessions
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error getting loading status: {e}")
+        return {
+            "error": str(e),
+            "total_documents": 0,
+            "sections": {},
+            "recent_sessions": []
+        }
+
 
 def get_cache_manager(db: Session = Depends(get_db)) -> CacheManager:
     """Dependency to get a CacheManager instance."""
@@ -45,8 +145,10 @@ def get_cache_manager(db: Session = Depends(get_db)) -> CacheManager:
 async def list_documents(
     request: Request,
     category: Optional[str] = None,
-    section: Optional[int] = None,
+    section: Optional[str] = None,  # Changed to str to support subsections
     is_common: Optional[bool] = None,
+    priority: Optional[int] = None,
+    search: Optional[str] = None,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -56,9 +158,11 @@ async def list_documents(
     List available documentation pages with optional filtering.
 
     Args:
-        category: Filter by category/keyword in title
-        section: Filter by man page section
+        category: Filter by category (e.g., user-commands, system-calls)
+        section: Filter by man page section (e.g., "1", "2", "3pm")
         is_common: Filter by common document status
+        priority: Filter by priority level (1-8)
+        search: Search term to filter documents
         limit: Maximum number of results
         offset: Pagination offset
     """
@@ -67,16 +171,39 @@ async def list_documents(
 
     # Apply filters
     if category:
-        query = query.filter(Document.title.ilike(f"%{category}%"))
+        query = query.filter(Document.category == category)
 
     if section:
         query = query.filter(Document.section == section)
 
     if is_common is not None:
         query = query.filter(Document.is_common == is_common)
+    
+    if priority is not None:
+        query = query.filter(Document.priority == priority)
+    
+    if search:
+        # Search in name, title, and summary
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Document.name.ilike(search_pattern),
+                Document.title.ilike(search_pattern),
+                Document.summary.ilike(search_pattern)
+            )
+        )
 
-    # Order by name and apply pagination
-    documents = query.order_by(Document.name).offset(offset).limit(limit).all()
+    # Get total count for pagination
+    total_count = query.count()
+
+    # Order by priority first (if available), then by name
+    query = query.order_by(
+        Document.priority.asc().nullsfirst(),
+        Document.name.asc()
+    )
+    
+    # Apply pagination
+    documents = query.offset(offset).limit(limit).all()
 
     # If no documents and this is the first request, trigger prefetch
     first_request = not db.query(Document).first()
@@ -88,13 +215,22 @@ async def list_documents(
         # Return empty list for now
         return []
 
+    # Add metadata to response
+    response_headers = {
+        "X-Total-Count": str(total_count),
+        "X-Offset": str(offset),
+        "X-Limit": str(limit)
+    }
+    
     # Record this access for analytics
     client_ip = request.client.host if request.client else "unknown"
     logger.info(
-        f"Document list request from {client_ip}, filters: category={category}, section={section}"
+        f"Document list request from {client_ip}, filters: category={category}, section={section}, search={search}"
     )
 
-    return documents
+    # Convert to DocumentResponse with sections
+    response_documents = [DocumentResponse.from_orm(doc) for doc in documents]
+    return response_documents
 
 
 @router.get("/docs/{doc_id}", response_model=DocumentResponse)
@@ -146,7 +282,8 @@ async def get_document(
         logger.error(f"Failed to track page view: {e}")
         # Don't fail the request if analytics fails
 
-    return document
+    # Use custom from_orm method to include sections
+    return DocumentResponse.from_orm(document)
 
 
 @router.get("/docs/{doc_id}/toc")

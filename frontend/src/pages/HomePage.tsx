@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
 	ClockIcon,
-	StarIcon,
+	BookmarkIcon,
 	ActivityLogIcon as TrendingUpIcon,
 	FileTextIcon as DocumentTextIcon,
 	CodeIcon as CommandLineIcon,
@@ -133,7 +133,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 	}, []);
 
 	const handleDocumentSelect = (doc: Document) => {
-		navigate(`/docs/${doc.id}`);
+		navigate(`/docs/${doc.name}.${doc.section}`);
 	};
 
 	const handleQuickSearch = (command: string) => {
@@ -381,16 +381,19 @@ export const HomePage: React.FC<HomePageProps> = ({
 							)}
 
 							{/* Favorites */}
-							{favorites.length > 0 && (
+							{favorites.filter(docId => !(/^\d+$/.test(docId)) && docId.includes('.')).length > 0 && (
 								<div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
 									<div className="flex items-center space-x-2 mb-4">
-										<StarIcon className="w-5 h-5 text-yellow-500" />
+										<BookmarkIcon className="w-5 h-5 text-blue-500" />
 										<h3 className="font-semibold text-gray-900 dark:text-gray-100">
 											Favorites
 										</h3>
 									</div>
 									<div className="space-y-2">
-										{favorites.slice(0, 5).map((docId) => (
+										{favorites
+											.filter(docId => !(/^\d+$/.test(docId)) && docId.includes('.'))
+											.slice(0, 5)
+											.map((docId) => (
 											<button
 												key={docId}
 												onClick={() =>
@@ -404,14 +407,20 @@ export const HomePage: React.FC<HomePageProps> = ({
 											</button>
 										))}
 									</div>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => navigate("/favorites")}
-										className="w-full mt-3"
-									>
-										View All
-									</Button>
+									{favorites.length === 0 ? (
+										<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
+											No valid favorites yet
+										</p>
+									) : (
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => navigate("/favorites")}
+											className="w-full mt-3"
+										>
+											View All
+										</Button>
+									)}
 								</div>
 							)}
 

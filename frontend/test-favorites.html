@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Favorites</title>
+</head>
+<body>
+    <h1>Test Favorites System</h1>
+    <button onclick="addTestFavorite()">Add Test Favorite</button>
+    <button onclick="checkStorage()">Check Storage</button>
+    <button onclick="clearFavorites()">Clear Favorites</button>
+    <pre id="output"></pre>
+    
+    <script>
+        function addTestFavorite() {
+            const storage = localStorage.getItem('betterman-storage');
+            let data = storage ? JSON.parse(storage) : { state: {} };
+            
+            if (!data.state.favorites) {
+                data.state.favorites = [];
+            }
+            
+            data.state.favorites.push('grep.1');
+            localStorage.setItem('betterman-storage', JSON.stringify(data));
+            
+            document.getElementById('output').textContent = 'Added grep.1 to favorites';
+            checkStorage();
+        }
+        
+        function checkStorage() {
+            const storage = localStorage.getItem('betterman-storage');
+            const data = storage ? JSON.parse(storage) : null;
+            document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+        }
+        
+        function clearFavorites() {
+            const storage = localStorage.getItem('betterman-storage');
+            let data = storage ? JSON.parse(storage) : { state: {} };
+            data.state.favorites = [];
+            localStorage.setItem('betterman-storage', JSON.stringify(data));
+            document.getElementById('output').textContent = 'Cleared favorites';
+            checkStorage();
+        }
+        
+        // Check on load
+        checkStorage();
+    </script>
+</body>
+</html>

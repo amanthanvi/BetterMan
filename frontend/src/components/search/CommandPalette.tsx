@@ -6,7 +6,7 @@ import {
 	MagnifyingGlassIcon,
 	FileTextIcon,
 	ClockIcon,
-	StarIcon,
+	BookmarkIcon,
 	GearIcon,
 	Cross2Icon,
 } from "@radix-ui/react-icons";
@@ -68,10 +68,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 	];
 
 	const handleSearch = async (query: string) => {
+		onOpenChange(false);
 		if (query.trim()) {
-			onOpenChange(false);
 			await performSearch(query);
 			navigate("/");
+		} else {
+			// Empty search - navigate to docs page
+			navigate("/docs");
 		}
 	};
 
@@ -231,19 +234,31 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 								)}
 
 								{/* Search suggestions */}
-								{!inputValue.startsWith(">") && inputValue && (
+								{!inputValue.startsWith(">") && (
 									<Command.Group heading="Search">
-										<CommandItem
-											value={`search:${inputValue}`}
-											onSelect={() =>
-												handleSearch(inputValue)
-											}
-											icon={
-												<MagnifyingGlassIcon className="w-4 h-4" />
-											}
-										>
-											Search for "{inputValue}"
-										</CommandItem>
+										{inputValue ? (
+											<CommandItem
+												value={`search:${inputValue}`}
+												onSelect={() =>
+													handleSearch(inputValue)
+												}
+												icon={
+													<MagnifyingGlassIcon className="w-4 h-4" />
+												}
+											>
+												Search for "{inputValue}"
+											</CommandItem>
+										) : (
+											<CommandItem
+												value="browse-all"
+												onSelect={() => handleSearch("")}
+												icon={
+													<FileTextIcon className="w-4 h-4" />
+												}
+											>
+												Browse All Documentation
+											</CommandItem>
+										)}
 										{suggestions.map(
 											(suggestion, index) => (
 												<CommandItem
@@ -311,8 +326,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 																{doc.summary}
 															</div>
 														</div>
-														{isFavorite(doc.id) && (
-															<StarIcon className="w-4 h-4 text-yellow-500" />
+														{doc.name && isFavorite(`${doc.name}.${doc.section}`) && (
+															<BookmarkIcon className="w-4 h-4 text-blue-500" />
 														)}
 													</div>
 												</CommandItem>

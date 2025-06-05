@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
-  StarIcon, 
+  BookmarkIcon, 
   TrashIcon,
   MagnifyingGlassIcon,
   HeartIcon 
@@ -31,12 +31,29 @@ export const FavoritesPage: React.FC = () => {
       
       try {
         setLoading(true);
+        console.log('Loading favorites:', favorites);
         
         // Load all favorite documents
         const docs = await Promise.all(
           favorites.map(async (docId) => {
             try {
-              return await documentAPI.getDocument(docId);
+              // Skip old numeric IDs
+              if (/^\d+$/.test(docId)) {
+                console.warn(`Skipping old numeric favorite ID: ${docId}`);
+                return null;
+              }
+              
+              // Validate format (should be name.section)
+              if (!docId.includes('.')) {
+                console.warn(`Invalid favorite ID format: ${docId}`);
+                return null;
+              }
+              
+              // Split docId into name and section
+              const lastDotIndex = docId.lastIndexOf('.');
+              const name = docId.substring(0, lastDotIndex);
+              const section = docId.substring(lastDotIndex + 1);
+              return await documentAPI.getDocument(name, section);
             } catch (error) {
               console.error(`Failed to load document ${docId}:`, error);
               return null;
@@ -44,9 +61,17 @@ export const FavoritesPage: React.FC = () => {
           })
         );
         
-        // Filter out failed loads
+        // Filter out failed loads and nulls
         const validDocs = docs.filter((doc): doc is Document => doc !== null);
+        console.log('Loaded documents:', validDocs);
         setFavoriteDocuments(validDocs);
+        
+        // Clean up old numeric favorites
+        const validFavorites = favorites.filter(id => !(/^\d+$/.test(id)) && id.includes('.'));
+        if (validFavorites.length !== favorites.length) {
+          // Update the store to remove invalid favorites
+          useAppStore.getState().setFavorites(validFavorites);
+        }
       } catch (error) {
         console.error('Failed to load favorites:', error);
       } finally {
@@ -63,9 +88,9 @@ export const FavoritesPage: React.FC = () => {
     doc.summary.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const handleRemoveFavorite = (docId: string) => {
-    removeFavorite(docId);
-    setFavoriteDocuments(prev => prev.filter(doc => doc.id !== docId));
+  const handleRemoveFavorite = (docKey: string) => {
+    removeFavorite(docKey);
+    setFavoriteDocuments(prev => prev.filter(doc => `${doc.name || doc.id}.${doc.section}` !== docKey));
   };
   
   if (loading) {
@@ -102,7 +127,7 @@ export const FavoritesPage: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-4">
-            <StarIcon className="w-8 h-8 text-yellow-500" />
+            <BookmarkIcon className="w-8 h-8 text-blue-500" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               Favorites
             </h1>
@@ -136,7 +161,7 @@ export const FavoritesPage: React.FC = () => {
               No Favorites Yet
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
-              Start adding documentation to your favorites by clicking the star icon 
+              Start adding documentation to your favorites by clicking the bookmark icon 
               on any document page.
             </p>
             <Link to="/">
@@ -178,7 +203,7 @@ export const FavoritesPage: React.FC = () => {
             <motion.div layout className="space-y-3">
               {filteredDocuments.map((doc, index) => (
                 <motion.div
-                  key={doc.id}
+                  key={`${doc.name || doc.id}.${doc.section}`}
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -186,7 +211,7 @@ export const FavoritesPage: React.FC = () => {
                 >
                   <FavoriteCard
                     document={doc}
-                    onRemove={() => handleRemoveFavorite(doc.id)}
+                    onRemove={() => handleRemoveFavorite(`${doc.name || doc.id}.${doc.section}`)}
                   />
                 </motion.div>
               ))}
@@ -208,7 +233,7 @@ const FavoriteCard: React.FC<FavoriteCardProps> = ({ document, onRemove }) => {
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow duration-200">
       <div className="flex items-start justify-between">
         <Link
-          to={`/docs/${document.id}`}
+          to={`/docs/${document.name || document.id}.${document.section}`}
           className="flex-1 min-w-0 group"
         >
           <div className="flex items-center space-x-3 mb-3">
@@ -244,7 +269,7 @@ const FavoriteCard: React.FC<FavoriteCardProps> = ({ document, onRemove }) => {
         </Link>
         
         <div className="flex items-center space-x-2 ml-4">
-          <StarIcon className="w-5 h-5 text-yellow-500 fill-current" />
+          <BookmarkIcon className="w-5 h-5 text-blue-500 fill-current" />
           <Button
             variant="ghost"
             size="icon"

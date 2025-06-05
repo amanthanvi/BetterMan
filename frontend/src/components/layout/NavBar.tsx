@@ -36,7 +36,6 @@ export const NavBar: React.FC<NavBarProps> = ({ className }) => {
 	const { clearResults } = useSearchStore();
 
 	const navigation = [
-		{ name: "Home", href: "/", icon: HomeIcon },
 		{ name: "Favorites", href: "/favorites", icon: BookmarkIcon },
 		{ name: "Settings", href: "/settings", icon: GearIcon },
 	];
@@ -153,8 +152,9 @@ export const NavBar: React.FC<NavBarProps> = ({ className }) => {
 						>
 							<motion.div
 								initial={false}
-								animate={{ rotate: darkMode ? 180 : 0 }}
-								transition={{ duration: 0.3 }}
+								animate={{ scale: 1 }}
+								whileTap={{ scale: 0.9 }}
+								transition={{ duration: 0.2 }}
 							>
 								{darkMode ? (
 									<MoonIcon className="w-4 h-4" />

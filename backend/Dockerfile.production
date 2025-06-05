@@ -22,13 +22,40 @@ RUN pip install --upgrade pip wheel setuptools && \
 # Stage 2: Runtime
 FROM python:3.12-slim
 
-# Install runtime dependencies
+# Install comprehensive runtime dependencies and man pages
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Runtime essentials
     curl \
+    libpq5 \
+    # Core man pages and tools
     man-db \
     groff \
     less \
+    manpages \
+    manpages-dev \
+    manpages-posix \
+    manpages-posix-dev \
+    # System utilities
+    util-linux \
+    coreutils \
+    findutils \
+    grep \
+    sed \
+    gawk \
+    tar \
+    gzip \
+    bzip2 \
+    xz-utils \
+    # Additional documentation
+    linux-doc \
+    glibc-doc \
+    # Compression tools for various man page formats
+    lzma \
+    zstd \
     && rm -rf /var/lib/apt/lists/*
+
+# Update man database to include all pages
+RUN mandb -c
 
 # Create non-root user
 RUN groupadd -r betterman && \

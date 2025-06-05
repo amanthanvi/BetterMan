@@ -29,11 +29,12 @@ def get_search_engine(db: Session = Depends(get_db)) -> OptimizedSearchEngine:
 @router.get("/", response_model=Dict[str, Any])
 async def search_documents(
     request: Request,
-    q: str = Query(..., min_length=2, description="Search query"),
+    q: str = Query("", description="Search query"),
     section: Optional[int] = Query(None, ge=1, le=8, description="Filter by section number"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Result offset"),
     search_engine: OptimizedSearchEngine = Depends(get_search_engine),
+    db: Session = Depends(get_db),
 ):
     """
     Search documentation with optimized relevance ranking.
@@ -59,14 +60,53 @@ async def search_documents(
             }
         )
         
-        # Perform search
-        results = search_engine.search(
-            query=q,
-            section=section,
-            limit=limit,
-            offset=offset,
-            search_sections=True
-        )
+        # Handle empty query - return filtered documents
+        if not q or not q.strip():
+            # Build query for all documents with optional section filter
+            query = db.query(Document)
+            
+            if section:
+                query = query.filter(Document.section == str(section))
+            
+            # Get total count
+            total = query.count()
+            
+            # Apply pagination and ordering
+            documents = query.order_by(
+                Document.priority.asc().nullsfirst(),
+                Document.name.asc()
+            ).offset(offset).limit(limit).all()
+            
+            # Format results similar to search results
+            results = {
+                "query": "",
+                "results": [
+                    {
+                        "id": doc.id,
+                        "name": doc.name,
+                        "title": doc.title or doc.name,
+                        "section": doc.section,
+                        "summary": doc.summary or "",
+                        "category": doc.category,
+                        "score": 1.0,  # Default score for browse mode
+                        "matches": []
+                    }
+                    for doc in documents
+                ],
+                "total": total,
+                "took": 0,
+                "page": (offset // limit) + 1,
+                "per_page": limit
+            }
+        else:
+            # Perform normal search
+            results = search_engine.search(
+                query=q,
+                section=section,
+                limit=limit,
+                offset=offset,
+                search_sections=True
+            )
         
         logger.info(
             f"Search completed",

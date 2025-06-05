@@ -25,6 +25,7 @@ interface AppStore extends AppState {
   addFavorite: (docId: string) => void;
   removeFavorite: (docId: string) => void;
   isFavorite: (docId: string) => boolean;
+  setFavorites: (favorites: string[]) => void;
   
   // Recent documents actions
   addRecentDoc: (doc: Document) => void;
@@ -33,6 +34,10 @@ interface AppStore extends AppState {
   // Search history actions
   addSearchHistory: (query: string) => void;
   clearSearchHistory: () => void;
+  
+  // Toast actions
+  addToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
+  removeToast: (id: string) => void;
   
   // Initialization
   initialize: () => void;
@@ -60,6 +65,7 @@ export const useAppStore = create<AppStore>()(
       favorites: [],
       recentDocs: [],
       searchHistory: [],
+      toasts: [],
       
       // Theme actions
       toggleDarkMode: () => {
@@ -127,6 +133,7 @@ export const useAppStore = create<AppStore>()(
           favorites: state.favorites.filter(id => id !== docId),
         })),
       isFavorite: (docId: string) => get().favorites.includes(docId),
+      setFavorites: (favorites: string[]) => set({ favorites }),
       
       // Recent documents actions
       addRecentDoc: (doc: Document) =>
@@ -147,6 +154,16 @@ export const useAppStore = create<AppStore>()(
           };
         }),
       clearSearchHistory: () => set({ searchHistory: [] }),
+      
+      // Toast actions
+      addToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => 
+        set((state) => ({
+          toasts: [...state.toasts, { id: Date.now().toString(), message, type }],
+        })),
+      removeToast: (id: string) =>
+        set((state) => ({
+          toasts: state.toasts.filter(t => t.id !== id),
+        })),
       
       // Initialization
       initialize: () => {

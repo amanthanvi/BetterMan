@@ -109,7 +109,7 @@ export const searchAPI = {
 			params.doc_set = options.doc_set.join(",");
 		}
 
-		const result = await apiClient.get<SearchResult>("/api/search", params);
+		const result = await apiClient.get<SearchResult>("/api/search/", params);
 		return result;
 	},
 
@@ -131,6 +131,16 @@ export const searchAPI = {
 
 // Document API
 export const documentAPI = {
+	getAll: async (params?: {
+		category?: string;
+		section?: string;
+		search?: string;
+		limit?: number;
+		offset?: number;
+	}): Promise<Document[]> => {
+		return apiClient.get<Document[]>("/api/docs", params);
+	},
+
 	getFavorites: async (): Promise<any[]> => {
 		return apiClient.get<any[]>("/api/favorites");
 	},

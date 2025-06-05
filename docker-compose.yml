@@ -2,17 +2,21 @@ name: betterman
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.comprehensive
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
       - ./data:/app/data  # Persistent database storage
+      - man_cache:/app/.cache  # Cache for processed man pages
     environment:
       - ENVIRONMENT=development
       - DEBUG=true
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - DATABASE_URL=sqlite:////app/data/betterman.db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -59,6 +63,25 @@ services:
       timeout: 10s
       retries: 3
 
+  # Management service for loading man pages
+  man-loader:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.comprehensive
+    environment:
+      - DATABASE_URL=sqlite:////app/data/betterman.db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+      - man_cache:/app/.cache
+    depends_on:
+      - redis
+    profiles: ["tools"]
+    command: ["python", "-m", "src.management.comprehensive_cli"]
+
 volumes:
   frontend_node_modules:
   redis_data:
+  man_cache:

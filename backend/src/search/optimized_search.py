@@ -122,12 +122,16 @@ class OptimizedSearchEngine:
     
     def _init_search_metadata(self):
         """Initialize search metadata like document statistics."""
-        try:
-            # Check if FTS is available
-            result = self.db.execute(text("SELECT sqlite_compileoption_used('ENABLE_FTS5')"))
-            self.has_fts = bool(result.scalar())
-        except:
-            self.has_fts = False
+        # For now, disable FTS until tables are created
+        self.has_fts = False
+        
+        # Original FTS detection (disabled for now)
+        # try:
+        #     # Check if FTS is available
+        #     result = self.db.execute(text("SELECT sqlite_compileoption_used('ENABLE_FTS5')"))
+        #     self.has_fts = bool(result.scalar())
+        # except:
+        #     self.has_fts = False
         
         # Cache document statistics
         self._update_doc_stats()
@@ -169,14 +173,12 @@ class OptimizedSearchEngine:
             Search results with metadata
         """
         try:
-            # Validate input
-            if not query or len(query.strip()) < settings.SEARCH_MIN_LENGTH:
-                raise SearchError(f"Query must be at least {settings.SEARCH_MIN_LENGTH} characters", query)
+            # Allow empty queries to browse all documents
+            if not query:
+                query = ""
             
             # Clean and parse query
-            query_terms = self._parse_query(query)
-            if not query_terms:
-                return self._empty_results(limit, offset)
+            query_terms = self._parse_query(query) if query else []
             
             # Choose search method based on FTS availability
             if self.has_fts:

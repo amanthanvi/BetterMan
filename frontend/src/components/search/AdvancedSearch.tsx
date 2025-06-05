@@ -14,6 +14,7 @@ import { useDebounce } from "@/utils/useDebounce";
 import { useSearchStore } from "@/stores/searchStore";
 import { searchAPI } from "@/services/api";
 import { cn } from "../../utils/cn";
+import { useNavigate } from "react-router-dom";
 
 interface SearchSuggestion {
 	value: string;
@@ -33,6 +34,7 @@ interface SearchFilter {
 
 export const AdvancedSearch: React.FC = () => {
 	const { performSearch, history } = useSearchStore();
+	const navigate = useNavigate();
 	const [query, setQuery] = useState("");
 	const [isSearching, setIsSearching] = useState(false);
 	const [isFocused, setIsFocused] = useState(false);
@@ -123,7 +125,41 @@ export const AdvancedSearch: React.FC = () => {
 	// Handle search
 	const handleSearch = useCallback(
 		async (searchQuery: string) => {
-			if (!searchQuery.trim()) return;
+			// Handle empty search
+			if (!searchQuery.trim()) {
+				// Check if any filters are active
+				const hasActiveFilters = filters.some(f => f.active);
+				
+				if (hasActiveFilters) {
+					// Perform empty search with filters to show filtered documents
+					setIsSearching(true);
+					setShowSuggestions(false);
+
+					// Build filters
+					const activeFilters: any = {};
+					const sections = filters
+						.filter((f) => f.type === "section" && f.active)
+						.map((f) => f.value);
+					if (sections.length > 0) activeFilters.sections = sections;
+					if (filters.find((f) => f.id === "cached")?.active)
+						activeFilters.cached_only = true;
+					if (filters.find((f) => f.id === "popular")?.active)
+						activeFilters.min_popularity = 10;
+
+					try {
+						// Perform search with empty query and filters
+						await performSearch("", activeFilters);
+					} catch (error) {
+						console.error("Search failed:", error);
+					} finally {
+						setIsSearching(false);
+					}
+				} else {
+					// Navigate to docs page to show all documentation
+					navigate("/docs");
+				}
+				return;
+			}
 
 			setIsSearching(true);
 			setShowSuggestions(false);
@@ -147,7 +183,7 @@ export const AdvancedSearch: React.FC = () => {
 				setIsSearching(false);
 			}
 		},
-		[filters, performSearch]
+		[filters, performSearch, navigate]
 	);
 
 	// Handle keyboard navigation
@@ -252,15 +288,15 @@ export const AdvancedSearch: React.FC = () => {
 
 						<button
 							onClick={() => handleSearch(query)}
-							disabled={!query.trim() || isSearching}
+							disabled={isSearching}
 							className={cn(
 								"px-4 py-2 rounded-lg font-medium transition-all",
-								query.trim() && !isSearching
+								!isSearching
 									? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl"
 									: "bg-gray-100 text-gray-400 dark:bg-gray-700 cursor-not-allowed"
 							)}
 						>
-							Search
+							{query.trim() ? "Search" : "Browse All"}
 						</button>
 					</div>
 				</div>

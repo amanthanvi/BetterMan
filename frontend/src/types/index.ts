@@ -4,7 +4,7 @@ export interface Document {
   name?: string; // Command name (e.g., "ls", "grep")
   title: string;
   summary: string;
-  section: number;
+  section: string | number;
   score: number;
   doc_set: string;
   content?: string;
@@ -66,6 +66,13 @@ export interface UserPreferences {
   language: string;
 }
 
+// Toast notification
+export interface Toast {
+  id: string;
+  message: string;
+  type?: 'success' | 'error' | 'info' | 'warning';
+}
+
 // Application state
 export interface AppState {
   darkMode: boolean;
@@ -75,6 +82,7 @@ export interface AppState {
   favorites: string[];
   recentDocs: Document[];
   searchHistory: string[];
+  toasts: Toast[];
 }
 
 // API response types
