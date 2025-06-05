@@ -178,7 +178,7 @@ cache_manager = CacheManager()
 def cache_key(*args, **kwargs) -> str:
     """Generate cache key from arguments."""
     key_data = f"{args}:{sorted(kwargs.items())}"
-    return hashlib.md5(key_data.encode()).hexdigest()
+    return hashlib.sha256(key_data.encode()).hexdigest()[:16]  # Use first 16 chars for shorter keys
 
 
 def cached(ttl: Optional[int] = None, key_prefix: str = ""):
@@ -322,7 +322,7 @@ class ResponseOptimizer:
     @staticmethod
     def create_etag(content: str) -> str:
         """Create ETag for content."""
-        return hashlib.md5(content.encode()).hexdigest()
+        return hashlib.sha256(content.encode()).hexdigest()[:16]  # Use first 16 chars for ETag
 
     @staticmethod
     def check_not_modified(request: Request, etag: str) -> bool:

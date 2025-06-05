@@ -411,7 +411,7 @@ def cache_key_wrapper(
                 # Default key generation
                 key_parts = [str(arg) for arg in args]
                 key_parts.extend(f"{k}={v}" for k, v in sorted(kwargs.items()))
-                key_hash = hashlib.md5(":".join(key_parts).encode()).hexdigest()
+                key_hash = hashlib.sha256(":".join(key_parts).encode()).hexdigest()[:16]  # Use first 16 chars for shorter keys
                 cache_key = f"{prefix}:{key_hash}"
             
             # Try to get from cache
@@ -440,7 +440,7 @@ def cache_key_wrapper(
                 # Default key generation
                 key_parts = [str(arg) for arg in args]
                 key_parts.extend(f"{k}={v}" for k, v in sorted(kwargs.items()))
-                key_hash = hashlib.md5(":".join(key_parts).encode()).hexdigest()
+                key_hash = hashlib.sha256(":".join(key_parts).encode()).hexdigest()[:16]  # Use first 16 chars for shorter keys
                 cache_key = f"{prefix}:{key_hash}"
             
             # Try to get from cache
@@ -482,7 +482,7 @@ class CacheKeys:
         parts.append(f"page:{page}")
         if filters:
             filter_str = ":".join(f"{k}={v}" for k, v in sorted(filters.items()))
-            parts.append(f"filters:{hashlib.md5(filter_str.encode()).hexdigest()[:8]}")
+            parts.append(f"filters:{hashlib.sha256(filter_str.encode()).hexdigest()[:8]}")
         return ":".join(parts)
     
     @staticmethod

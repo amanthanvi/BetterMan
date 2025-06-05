@@ -126,10 +126,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 		};
 
 		fetchAnalytics();
-		// Refresh analytics every 5 minutes
-		const interval = setInterval(fetchAnalytics, 5 * 60 * 1000);
+		// Don't refresh analytics automatically to prevent UI cycling
+		// Users can refresh the page to get updated analytics
 		
-		return () => clearInterval(interval);
+		return () => {};
 	}, []);
 
 	const handleDocumentSelect = (doc: Document) => {

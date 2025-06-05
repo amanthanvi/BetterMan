@@ -250,6 +250,7 @@ class OptimizedSearchEngine:
                 d.section,
                 d.access_count,
                 d.cache_status,
+                d.updated_at,
                 -- Field matching scores
                 CASE WHEN LOWER(d.name) = LOWER(:exact_query) THEN 1 ELSE 0 END as name_exact,
                 CASE WHEN LOWER(d.name) LIKE LOWER(:prefix_pattern) THEN 1 ELSE 0 END as name_prefix,
@@ -335,6 +336,8 @@ class OptimizedSearchEngine:
                 "score": float(row.relevance_score),
                 "snippet": row.snippet,
                 "cache_status": row.cache_status,
+                "access_count": row.access_count,
+                "last_updated": row.updated_at.isoformat() if hasattr(row, 'updated_at') and row.updated_at else None,
                 "matches": self._extract_matches(row, query_terms)
             }
             formatted_results.append(result)
@@ -377,6 +380,7 @@ class OptimizedSearchEngine:
             Document.section,
             Document.access_count,
             Document.cache_status,
+            Document.updated_at,
             func.length(Document.raw_content).label('content_length')
         )
         
@@ -438,6 +442,8 @@ class OptimizedSearchEngine:
                 "section": row.section,
                 "score": score,
                 "cache_status": row.cache_status,
+                "access_count": row.access_count,
+                "last_updated": row.updated_at.isoformat() if row.updated_at else None,
                 "matches": []
             }
             formatted_results.append(result)

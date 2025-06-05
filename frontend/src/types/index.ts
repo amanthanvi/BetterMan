@@ -21,6 +21,7 @@ export interface Document {
   matches?: string[];
   last_updated?: string;
   tags?: string[];
+  access_count?: number;
 }
 
 // Search types

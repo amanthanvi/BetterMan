@@ -768,24 +768,22 @@ async def get_popular_commands(
     # Get popular commands from analytics
     popular_commands = analytics.get_popular_commands(limit=limit, days=days)
     
-    # If no real data yet, return some defaults with zero counts
+    # If no real data yet, return actual documents from the database
     if not popular_commands:
-        # Return common commands with zero counts as placeholders
-        default_commands = ["ls", "grep", "find", "cat", "vim", "git"]
+        # Get some actual documents as placeholders
+        docs = db.query(Document).limit(limit).all()
         popular_commands = []
-        for i, cmd in enumerate(default_commands[:limit]):
-            doc = db.query(Document).filter(Document.name == cmd).first()
-            if doc:
-                popular_commands.append({
-                    "id": str(doc.id),
-                    "name": doc.name,
-                    "title": doc.title,
-                    "summary": doc.summary,
-                    "section": doc.section,
-                    "view_count": 0,
-                    "unique_users": 0,
-                    "trend": "stable"
-                })
+        for doc in docs:
+            popular_commands.append({
+                "id": str(doc.id),
+                "name": doc.name,
+                "title": doc.title or doc.name,
+                "summary": doc.summary or "",
+                "section": doc.section,
+                "view_count": doc.access_count or 0,
+                "unique_users": 0,
+                "trend": "stable"
+            })
     
     return {"commands": popular_commands, "period_days": days}
 

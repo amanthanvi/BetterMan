@@ -235,11 +235,11 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 					<div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
 						<span className="flex items-center gap-1">
 							<EyeOpenIcon className="w-4 h-4" />
-							{Math.floor(Math.random() * 1000) + 100} views
+							{result.access_count || 0} views
 						</span>
 						<span className="flex items-center gap-1">
 							<ClockIcon className="w-4 h-4" />
-							Updated {Math.floor(Math.random() * 30) + 1}d ago
+							Updated {result.last_updated ? new Date(result.last_updated).toLocaleDateString() : 'Recently'}
 						</span>
 					</div>
 
