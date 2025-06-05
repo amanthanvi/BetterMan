@@ -12,6 +12,7 @@ from ..models.document import Document
 from ..search.optimized_search import OptimizedSearchEngine
 from ..errors import SearchError, ValidationError
 from ..config import get_settings
+from ..auth.dependencies import SuperUser
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -229,6 +230,7 @@ async def suggest_search(
 async def reindex_documents(
     request: Request,
     db: Session = Depends(get_db),
+    current_user: SuperUser = None,  # Require superuser for reindexing
 ):
     """
     Trigger reindexing of all documents.

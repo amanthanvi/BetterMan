@@ -172,6 +172,7 @@ class SearchHistory(Base):
     query = Column(String(500), nullable=False)
     section = Column(Integer)
     results_count = Column(Integer)
+    clicked_result_id = Column(Integer)  # ID of the result the user clicked
     
     # Timestamps
     created_at = Column(DateTime, server_default=func.now(), nullable=False)

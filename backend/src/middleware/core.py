@@ -298,8 +298,14 @@ def setup_middleware(app: ASGIApp) -> None:
         app: FastAPI application instance
     """
     settings = get_settings()
+    
+    # Import error handler here to avoid circular imports
+    from .error_handler import ErrorHandlerMiddleware
 
     # Add middleware in order (applied in reverse)
+    
+    # Error handler (outermost - catches all errors)
+    app.add_middleware(ErrorHandlerMiddleware)
 
     # Compression
     app.add_middleware(CompressionMiddleware)

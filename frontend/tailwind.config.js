@@ -4,6 +4,19 @@ export default {
 	darkMode: "class", // Enable dark mode with class strategy
 	theme: {
 		extend: {
+			animation: {
+				shimmer: 'shimmer 2s infinite linear',
+			},
+			keyframes: {
+				shimmer: {
+					'0%': {
+						backgroundPosition: '-1000px 0',
+					},
+					'100%': {
+						backgroundPosition: '1000px 0',
+					},
+				},
+			},
 			typography: {
 				DEFAULT: {
 					css: {

@@ -100,6 +100,40 @@ class RateLimitError(BetterManError):
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             details=details
         )
+        self.retry_after = retry_after
+        self.rate_limit = limit
+
+
+class AuthenticationError(BetterManError):
+    """Authentication error."""
+    
+    def __init__(self, message: str = "Authentication required"):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_401_UNAUTHORIZED
+        )
+
+
+class AuthorizationError(BetterManError):
+    """Authorization error."""
+    
+    def __init__(self, message: str = "Insufficient permissions"):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_403_FORBIDDEN
+        )
+
+
+class CacheError(BetterManError):
+    """Cache operation error."""
+    
+    def __init__(self, message: str, operation: Optional[str] = None):
+        details = {"operation": operation} if operation else {}
+        super().__init__(
+            message=f"Cache error: {message}",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            details=details
+        )
 
 
 def create_error_response(

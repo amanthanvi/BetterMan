@@ -27,6 +27,7 @@ from ..security_utils import SecurityUtils, InputValidator, limiter
 from ..errors import NotFoundError, ValidationError, ParseError
 from ..config import get_settings
 from ..analytics.tracker import AnalyticsTracker
+from ..auth.dependencies import CurrentUser, SuperUser, OptionalUser
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -615,6 +616,7 @@ async def import_document(
     section: Optional[int] = Query(None, ge=1, le=8),
     force: bool = Query(False),
     cache_manager: CacheManager = Depends(get_cache_manager),
+    current_user: SuperUser = None,  # Require superuser for importing documents
 ):
     """
     Import a specific document on demand with security validation.
@@ -679,7 +681,11 @@ async def import_document(
 
 
 @router.delete("/docs/{doc_id}")
-async def delete_document(doc_id: str, db: Session = Depends(get_db)):
+async def delete_document(
+    doc_id: str, 
+    db: Session = Depends(get_db),
+    current_user: SuperUser = None,  # Require superuser for deleting documents
+):
     """Delete a document from the cache.
 
     Args:
@@ -718,6 +724,7 @@ async def get_cache_stats(cache_manager: CacheManager = Depends(get_cache_manage
 @router.post("/cache/refresh")
 async def refresh_cache(
     background_tasks: BackgroundTasks,
+    current_user: CurrentUser = None,  # Require authentication for cache operations
 ):
     """Trigger a cache refresh in the background."""
     # Get the scheduler and run the prefetch job
@@ -730,7 +737,8 @@ async def refresh_cache(
 @router.get("/analytics/overview")
 async def get_analytics_overview(
     days: int = Query(7, description="Number of days to look back"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: OptionalUser = None,  # Optional auth for basic analytics
 ):
     """Get analytics overview data based on real tracking."""
     analytics = AnalyticsTracker(db)
@@ -786,6 +794,7 @@ async def get_popular_commands(
 async def get_performance_metrics(
     cache_manager: CacheManager = Depends(get_cache_manager),
     db: Session = Depends(get_db),
+    current_user: SuperUser = None,  # Require superuser for system metrics
 ):
     """Get system performance metrics."""
     import random
