@@ -2,10 +2,27 @@
 
 /* Ensure body has proper background */
 body {
-  background-color: white;
-  color: rgb(17 24 39);
+  background-color: rgb(17 24 39);
+  color: rgb(243 244 246);
   transition-property: background-color, color;
   transition-duration: 200ms;
 }
 
-/* Dark mode styles disabled - feature flag is off */
+/* Light mode body styles */
+.light body {
+  background-color: white;
+  color: rgb(17 24 39);
+}
+
+/* Dark mode body styles */
+.dark body {
+  background-color: rgb(17 24 39);
+  color: rgb(243 244 246);
+}
+
+/* Ensure html element also transitions */
+html {
+  transition-property: background-color, color;
+  transition-duration: 200ms;
+  background-color: rgb(17 24 39);
+}

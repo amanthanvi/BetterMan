@@ -17,8 +17,6 @@ import { useAppStore } from "@/stores/appStore";
 import { cn } from "@/utils/cn";
 import { clearAllCaches } from "@/utils/clearCache";
 
-// Feature flag for dark mode - must match the one in appStore.ts
-const DARK_MODE_ENABLED = false;
 
 export const SettingsPage: React.FC = () => {
 	const {
@@ -32,24 +30,6 @@ export const SettingsPage: React.FC = () => {
 		clearRecentDocs,
 	} = useAppStore();
 
-	const handleThemeChange = (theme: "light" | "dark" | "system") => {
-		updatePreferences({ theme });
-
-		// Update dark mode based on theme selection
-		const appStore = useAppStore.getState();
-		if (theme === "dark") {
-			appStore.setDarkMode(true);
-		} else if (theme === "light") {
-			appStore.setDarkMode(false);
-		} else if (theme === "system") {
-			const prefersDark = window.matchMedia(
-				"(prefers-color-scheme: dark)"
-			).matches;
-			appStore.setDarkMode(prefersDark);
-		}
-
-		toast.success(`Theme changed to ${theme}`);
-	};
 
 	const handleFontSizeChange = (fontSize: "small" | "medium" | "large") => {
 		updatePreferences({ fontSize });
@@ -152,37 +132,7 @@ export const SettingsPage: React.FC = () => {
 						description="Customize the look and feel"
 						icon={<EyeOpenIcon className="w-5 h-5" />}
 					>
-						{/* Theme - only show when dark mode is enabled */}
-						{DARK_MODE_ENABLED && (
-							<SettingItem
-								label="Theme"
-								description="Choose your preferred color scheme"
-							>
-								<div className="flex space-x-2">
-									<ThemeButton
-										theme="light"
-										current={preferences.theme}
-										onClick={() => handleThemeChange("light")}
-										icon={<SunIcon className="w-4 h-4" />}
-										label="Light"
-									/>
-									<ThemeButton
-										theme="dark"
-										current={preferences.theme}
-										onClick={() => handleThemeChange("dark")}
-										icon={<MoonIcon className="w-4 h-4" />}
-										label="Dark"
-									/>
-									<ThemeButton
-										theme="system"
-										current={preferences.theme}
-										onClick={() => handleThemeChange("system")}
-										icon={<DesktopIcon className="w-4 h-4" />}
-										label="System"
-									/>
-								</div>
-							</SettingItem>
-						)}
+						{/* Theme settings hidden - dark mode is always on */}
 
 						{/* Font Size */}
 						<SettingItem

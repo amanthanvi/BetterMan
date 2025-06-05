@@ -41,7 +41,72 @@
 	color: #888;
 }
 
-/* Dark mode styles disabled - feature flag is off */
+/* Dark mode improvements */
+.dark .prose {
+	color: #e2e8f0;
+}
+
+.dark .prose p {
+	color: #e2e8f0;
+}
+
+.dark .prose strong {
+	color: #f1f5f9;
+}
+
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+	color: #f1f5f9;
+}
+
+.dark .prose pre {
+	background-color: #1e293b;
+	border-color: #334155;
+}
+
+.dark .prose code {
+	background-color: #334155;
+	color: #e2e8f0;
+}
+
+.dark .prose pre code {
+	background-color: transparent;
+	color: #e2e8f0;
+}
+
+/* Fix for non-prose text in dark mode */
+.dark .text-gray-600 {
+	color: #9ca3af;
+}
+
+.dark .text-gray-700 {
+	color: #e5e7eb;
+}
+
+.dark .text-gray-800 {
+	color: #f3f4f6;
+}
+
+.dark .text-gray-900 {
+	color: #f9fafb;
+}
+
+/* Better scrollbar in dark mode */
+.dark ::-webkit-scrollbar {
+	background-color: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+	background-color: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+	background-color: #64748b;
+}
 
 /* Smooth transitions for theme switching */
 body,
@@ -80,4 +145,6 @@ body,
 	border-radius: 3px;
 }
 
-/* Dark mode scrollbar disabled */
+.dark .document-toc::-webkit-scrollbar-thumb {
+	background-color: rgba(75, 85, 99, 0.5);
+}

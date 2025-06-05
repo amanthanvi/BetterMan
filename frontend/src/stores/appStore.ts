@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AppState, UserPreferences, Document } from '@/types';
 
 // Feature flag for dark mode - set to true to enable dark mode functionality
-const DARK_MODE_ENABLED = false;
+const DARK_MODE_ENABLED = true;
 
 interface AppStore extends AppState {
   // Theme property
@@ -47,7 +47,7 @@ interface AppStore extends AppState {
 }
 
 const defaultPreferences: UserPreferences = {
-  theme: 'system',
+  theme: 'dark',
   fontSize: 'medium',
   fontFamily: 'system',
   compactMode: false,
@@ -60,8 +60,8 @@ export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       // Initial state
-      darkMode: false,
-      theme: 'system' as const,
+      darkMode: true,
+      theme: 'dark' as const,
       sidebarOpen: true,
       commandPaletteOpen: false,
       preferences: defaultPreferences,
@@ -193,6 +193,10 @@ export const useAppStore = create<AppStore>()(
           return;
         }
         
+        // Apply dark mode immediately on initialization
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+        
         const state = get();
         let shouldBeDark = false;
         
@@ -212,10 +216,10 @@ export const useAppStore = create<AppStore>()(
           document.documentElement.classList.remove('dark');
         }
         
-        // Update state to match
+        // Always set dark mode to true on initialization
         set({ 
-          darkMode: shouldBeDark,
-          theme: shouldBeDark ? 'dark' : 'light'
+          darkMode: true,
+          theme: 'dark'
         });
         
         // Listen for system theme changes
@@ -277,13 +281,14 @@ export const useAppStore = create<AppStore>()(
           return;
         }
         
-        // Apply dark mode immediately after rehydration
-        if (state?.darkMode) {
-          document.documentElement.classList.add('dark');
-          document.body.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-          document.body.classList.remove('dark');
+        // Always apply dark mode immediately after rehydration
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+        
+        // Ensure state is set to dark mode
+        if (state) {
+          state.darkMode = true;
+          state.theme = 'dark';
         }
       },
     }
