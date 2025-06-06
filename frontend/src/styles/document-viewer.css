@@ -1,0 +1,126 @@
+/* Enhanced Document Viewer Styles */
+
+/* Print styles */
+@media print {
+  /* Hide navigation and controls */
+  .document-toc,
+  .document-header,
+  header,
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  /* Reset margins for print */
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Ensure content takes full width */
+  main {
+    margin: 0 !important;
+    padding: 1cm !important;
+    max-width: none !important;
+  }
+
+  /* Better page breaks */
+  h2, h3 {
+    page-break-after: avoid;
+  }
+
+  section {
+    page-break-inside: avoid;
+  }
+
+  /* Black text for print */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Show links */
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  /* Full-width TOC on mobile */
+  aside.fixed {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Adjust content margin on mobile */
+  .ml-72 {
+    margin-left: 0 !important;
+  }
+
+  /* Stack header elements on mobile */
+  header .flex {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Smaller font controls on mobile */
+  header button {
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Smooth scrolling for the entire page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for TOC */
+.document-toc::-webkit-scrollbar {
+  width: 6px;
+}
+
+.document-toc::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.document-toc::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+.document-toc::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+/* Dark mode scrollbar */
+.dark .document-toc::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+}
+
+.dark .document-toc::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.7);
+}
+
+/* Code block enhancements */
+pre {
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+/* Option blocks hover effect */
+.bg-gray-50:hover,
+.dark .bg-gray-800:hover {
+  transform: translateX(2px);
+  transition: transform 0.2s ease;
+}
+
+/* Section headers anchor links */
+h2[id]:hover::before,
+h3[id]:hover::before {
+  content: "#";
+  position: absolute;
+  left: -1.5rem;
+  color: #3b82f6;
+  opacity: 0.5;
+}

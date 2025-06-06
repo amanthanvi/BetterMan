@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/Button";
-import { DocumentViewer } from "@/components/document/DocumentViewer";
+import { EnhancedDocumentViewer } from "@/components/document/EnhancedDocumentViewer";
 import { documentAPI } from "@/services/api";
 import { useAppStore } from "@/stores/appStore";
 import type { Document } from "@/types";
@@ -119,7 +119,7 @@ export const DocumentPage: React.FC = () => {
 			exit={{ opacity: 0 }}
 			className="min-h-screen bg-gray-50 dark:bg-gray-900"
 		>
-			<DocumentViewer document={document} />
+			<EnhancedDocumentViewer document={document} />
 		</motion.div>
 	);
 };
