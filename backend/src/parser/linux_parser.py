@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 from datetime import datetime
-from .groff_parser import parse_groff_content
+from .enhanced_groff_parser import clean_groff_content, EnhancedGroffParser
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -175,6 +175,8 @@ class LinuxManParser:
 
         for i, match in enumerate(section_matches):
             section_name = match.group(1)
+            # Clean the section name with enhanced parser
+            section_name = clean_groff_content(section_name).strip()
             section_start = match.end()
 
             # Determine the end of the section
@@ -211,6 +213,8 @@ class LinuxManParser:
 
         for i, match in enumerate(subsection_matches):
             subsection_name = match.group(1)
+            # Clean the subsection name with enhanced parser
+            subsection_name = clean_groff_content(subsection_name).strip()
             subsection_start = match.end()
 
             # Determine the end of the subsection
@@ -238,17 +242,8 @@ class LinuxManParser:
 
     def _process_section_content(self, content: str) -> str:
         """Process section content to replace formatting commands."""
-        # First, handle macro-based formatting
-        content = self._process_macros(content)
-        
-        # Use the groff parser for escape sequences
-        content = parse_groff_content(content)
-        
-        # Handle paragraph and indentation macros
-        content = self._process_paragraph_macros(content)
-        
-        # Clean up any remaining groff commands that aren't content
-        content = self._clean_remaining_macros(content)
+        # Use the enhanced groff parser to clean all formatting
+        content = clean_groff_content(content)
         
         # Normalize whitespace
         content = re.sub(r'\n{3,}', '\n\n', content)

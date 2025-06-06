@@ -198,6 +198,8 @@ class DocumentResponse(BaseModel):
     @classmethod
     def from_orm(cls, obj):
         """Convert SQLAlchemy model to Pydantic model with sections."""
+        import json
+        
         data = {
             'id': obj.id,
             'name': obj.name,
@@ -206,13 +208,30 @@ class DocumentResponse(BaseModel):
             'summary': obj.summary,
             'raw_content': obj.raw_content,
             'cache_status': obj.cache_status,
-            'doc_set': 'Linux' if obj.section in ['1', '8'] else 'System',
+            'doc_set': 'linux',  # Frontend expects lowercase
             'sections': [],
             'related': []
         }
         
-        # Add sections if they exist
-        if hasattr(obj, 'sections') and obj.sections:
+        # Extract sections from JSON content
+        if obj.content:
+            try:
+                content_data = json.loads(obj.content)
+                if 'sections' in content_data and isinstance(content_data['sections'], list):
+                    data['sections'] = [
+                        {
+                            'name': section.get('name', ''),
+                            'content': section.get('content', ''),
+                            'subsections': section.get('subsections', [])
+                        }
+                        for section in content_data['sections']
+                    ]
+            except (json.JSONDecodeError, KeyError) as e:
+                # If parsing fails, fall back to using raw_content
+                pass
+        
+        # Add sections from relationship if they exist (for backward compatibility)
+        if not data['sections'] and hasattr(obj, 'sections') and obj.sections:
             data['sections'] = [
                 {
                     'name': section.name,

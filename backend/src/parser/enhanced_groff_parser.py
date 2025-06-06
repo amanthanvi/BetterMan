@@ -1,486 +1,291 @@
 """
-Enhanced groff parser with comprehensive man page macro support.
+Enhanced groff parser for complete removal of groff/troff formatting.
+
+This module provides comprehensive parsing and cleaning of groff/troff
+formatting commands commonly found in man pages.
 """
 
 import re
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass, field
-from enum import Enum
+from typing import Dict, List, Optional, Tuple
 import logging
-
 
 logger = logging.getLogger(__name__)
 
 
-class MacroType(Enum):
-    """Man page macro types."""
-    TH = "TH"  # Title header
-    SH = "SH"  # Section header
-    SS = "SS"  # Subsection header
-    TP = "TP"  # Tagged paragraph
-    PP = "PP"  # Plain paragraph
-    LP = "LP"  # Left paragraph
-    IP = "IP"  # Indented paragraph
-    HP = "HP"  # Hanging paragraph
-    RS = "RS"  # Relative indent start
-    RE = "RE"  # Relative indent end
-    BR = "BR"  # Bold/Roman alternating
-    RB = "RB"  # Roman/Bold alternating
-    IR = "IR"  # Italic/Roman alternating
-    RI = "RI"  # Roman/Italic alternating
-    BI = "BI"  # Bold/Italic alternating
-    IB = "IB"  # Italic/Bold alternating
-    B = "B"    # Bold
-    I = "I"    # Italic
-    R = "R"    # Roman
-    SM = "SM"  # Small
-    SB = "SB"  # Small bold
-    P = "P"    # Paragraph
-    OP = "OP"  # Option
-    EE = "EE"  # Example end
-    EX = "EX"  # Example start
-    fi = "fi"  # Fill mode
-    nf = "nf"  # No fill mode
-    ad = "ad"  # Adjust
-    na = "na"  # No adjust
-    sp = "sp"  # Vertical space
-    br = "br"  # Break
-    bp = "bp"  # Break page
-
-
-@dataclass
-class ParsedSection:
-    """Represents a parsed section of a man page."""
-    name: str
-    content: List[str] = field(default_factory=list)
-    subsections: List['ParsedSection'] = field(default_factory=list)
-    level: int = 1
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class ManPageInfo:
-    """Man page metadata from TH macro."""
-    title: str = ""
-    section: str = ""
-    date: str = ""
-    source: str = ""
-    manual: str = ""
-
-
 class EnhancedGroffParser:
-    """
-    Enhanced groff parser with full macro support.
+    """Enhanced parser for complete groff/troff formatting removal."""
     
-    Features:
-    - Complete man page macro handling
-    - Proper text formatting and escaping
-    - Section hierarchy preservation
-    - Cross-reference detection
-    - Code block identification
-    """
+    # Common escape sequences
+    ESCAPE_SEQUENCES = {
+        r'\-': '-',      # Hyphen
+        r'\ ': ' ',      # Non-breaking space  
+        r'\e': '\\',     # Backslash
+        r'\&': '',       # Zero-width space
+        r'\(aq': "'",    # Apostrophe
+        r'\(cq': "'",    # Closing quote
+        r'\(oq': "'",    # Opening quote
+        r'\(dq': '"',    # Double quote
+        r'\(em': '—',    # Em dash
+        r'\(en': '–',    # En dash
+        r'\(bu': '•',    # Bullet
+        r'\(co': '©',    # Copyright
+        r'\(rg': '®',    # Registered
+        r'\(tm': '™',    # Trademark
+        r'\*(': '',      # String interpolation start (we'll handle these specially)
+        r'\[char46]': '.', # Period
+        r'\~': ' ',      # Non-breaking space
+        r'\0': ' ',      # Digit-width space
+        r'\|': '',       # Sixth-em space
+        r'\^': '',       # Half-em space
+        r'\\\\': '\\',   # Escaped backslash
+        r'\,': '',       # Thin space (often used in man pages)
+        r'\/': '',       # Italic correction
+    }
     
-    def __init__(self):
-        """Initialize the enhanced parser."""
-        self.reset()
-        
-    def reset(self):
-        """Reset parser state."""
-        self.info = ManPageInfo()
-        self.sections: List[ParsedSection] = []
-        self.current_section: Optional[ParsedSection] = None
-        self.current_subsection: Optional[ParsedSection] = None
-        self.indent_level = 0
-        self.fill_mode = True
-        self.in_example = False
-        self.pending_tag = None
-        self.font_stack = ['R']
-        
-    def parse(self, content: str) -> Dict[str, Any]:
+    # Special groff strings (common in man pages)
+    GROFF_STRINGS = {
+        r'\*(PX': 'POSIX',
+        r'\*(GN': 'GNU',
+        r'\*(AK': 'AWK',
+        r'\*(UX': 'UNIX',
+        r'\*(TX': 'TeX',
+        r'\*(EP': 'The GAWK Manual',
+        r'\*(lq': '"',  # Left quote
+        r'\*(rq': '"',  # Right quote
+    }
+    
+    def parse(self, content: str) -> str:
         """
-        Parse man page content with full macro support.
+        Parse and clean groff content completely.
         
         Args:
-            content: Raw man page content
+            content: Raw groff content
             
         Returns:
-            Parsed document structure
+            Clean text without groff formatting
         """
-        self.reset()
-        lines = content.split('\n')
+        # Remove comments
+        content = self._remove_comments(content)
         
+        # Handle special groff strings first
+        content = self._replace_groff_strings(content)
+        
+        # Remove all groff macros (lines starting with .)
+        content = self._remove_groff_macros(content)
+        
+        # Handle font formatting
+        content = self._handle_font_formatting(content)
+        
+        # Apply escape sequences
+        content = self._apply_escape_sequences(content)
+        
+        # Clean up spacing and formatting
+        content = self._cleanup_formatting(content)
+        
+        return content
+    
+    def _remove_comments(self, content: str) -> str:
+        """Remove groff comments."""
+        # Remove \" comments
+        content = re.sub(r'\\".*$', '', content, flags=re.MULTILINE)
+        # Remove .\\" comments
+        content = re.sub(r'^\.\\".*$', '', content, flags=re.MULTILINE)
+        return content
+    
+    def _replace_groff_strings(self, content: str) -> str:
+        """Replace groff string interpolations."""
+        for groff_str, replacement in self.GROFF_STRINGS.items():
+            content = content.replace(groff_str, replacement)
+        return content
+    
+    def _remove_groff_macros(self, content: str) -> str:
+        """Remove all groff macro lines while preserving content."""
+        lines = content.split('\n')
+        result = []
         i = 0
+        
         while i < len(lines):
             line = lines[i].rstrip()
             
-            # Skip empty lines in no-fill mode
-            if not line and not self.fill_mode:
-                self._add_content("")
+            # Skip empty lines
+            if not line:
+                result.append('')
                 i += 1
                 continue
             
-            # Handle macro lines
-            if line.startswith('.'):
-                i = self._handle_macro(lines, i)
-            else:
-                # Handle text lines
-                self._handle_text_line(line)
+            # Handle .TP (tagged paragraph) - next line is the tag
+            if line.startswith('.TP'):
+                i += 1  # Skip the .TP line
+                if i < len(lines):
+                    # Next line is the tag
+                    tag = lines[i].strip()
+                    tag = self._clean_line_content(tag)
+                    if tag:
+                        result.append(f"\n{tag}")
+                    i += 1
+                continue
+            
+            # Handle .IP (indented paragraph) with inline label
+            if line.startswith('.IP'):
+                match = re.match(r'^\.IP\s+"?([^"]*)"?\s*(?:\d+)?\s*$', line)
+                if match and match.group(1):
+                    label = match.group(1).strip()
+                    label = self._clean_line_content(label)
+                    if label:
+                        result.append(f"\n{label}")
                 i += 1
+                continue
+            
+            # Handle .B (bold) with inline text
+            if line.startswith('.B '):
+                text = line[3:].strip()
+                text = self._clean_line_content(text)
+                if text:
+                    result.append(text)
+                i += 1
+                continue
+            
+            # Handle .I (italic) with inline text
+            if line.startswith('.I '):
+                text = line[3:].strip()
+                text = self._clean_line_content(text)
+                if text:
+                    result.append(text)
+                i += 1
+                continue
+            
+            # Handle section headers
+            if line.startswith('.SH'):
+                # Could be .SH "NAME" or .SH followed by NAME on next line
+                match = re.match(r'^\.SH\s+"?([^"]*)"?\s*$', line)
+                if match and match.group(1):
+                    # Inline section name
+                    section = match.group(1).strip()
+                    # Don't add section headers to content, they're handled separately
+                else:
+                    # Section name on next line
+                    i += 1
+                    if i < len(lines):
+                        section = lines[i].strip().strip('"')
+                        # Don't add section headers to content
+                i += 1
+                continue
+            
+            # Handle subsection headers
+            if line.startswith('.SS'):
+                match = re.match(r'^\.SS\s+"?([^"]*)"?\s*$', line)
+                if match and match.group(1):
+                    # Inline subsection name
+                    pass
+                else:
+                    # Subsection name on next line
+                    i += 1
+                i += 1
+                continue
+            
+            # Skip other groff commands
+            if line.startswith('.'):
+                # List of groff commands to skip entirely
+                skip_commands = [
+                    '.TH', '.PP', '.LP', '.P', '.br', '.sp', '.nf', '.fi',
+                    '.RS', '.RE', '.PD', '.TP', '.HP', '.ad', '.na', '.nh',
+                    '.hy', '.de', '.ds', '.so', '.ie', '.el', '.if', '.ig',
+                    '.ft', '.ps', '.vs', '.ll', '.in', '.ti', '.ce', '.po',
+                    '.BI', '.BR', '.IB', '.IR', '.RB', '.RI', '.SM', '.SB'
+                ]
+                
+                # Skip any line that starts with a dot (groff command)
+                if any(line.startswith(cmd) for cmd in skip_commands) or line == '.':
+                    i += 1
+                    continue
+            
+            # Regular content line
+            cleaned = self._clean_line_content(line)
+            if cleaned:
+                result.append(cleaned)
+            i += 1
         
-        # Finalize any pending content
-        self._finalize_sections()
-        
-        return self._build_output()
+        return '\n'.join(result)
     
-    def _handle_macro(self, lines: List[str], index: int) -> int:
-        """Handle macro commands."""
-        line = lines[index]
+    def _handle_font_formatting(self, content: str) -> str:
+        """Handle font formatting commands."""
+        # Remove font changes: \fB, \fI, \fR, \fP, etc.
+        content = re.sub(r'\\f[BIPRSCW]', '', content)
+        content = re.sub(r'\\f\([A-Z]{2}', '', content)
+        content = re.sub(r'\\f\[[^\]]+\]', '', content)
         
-        # Extract macro and arguments
-        parts = line.split(None, 1)
-        if not parts:
-            return index + 1
+        # Remove font size changes
+        content = re.sub(r'\\s[+-]?\d+', '', content)
+        content = re.sub(r'\\s\([+-]?\d+', '', content)
         
-        macro = parts[0][1:]  # Remove leading dot
-        args = parts[1] if len(parts) > 1 else ""
-        
-        # Get macro handler
-        handler = getattr(self, f'_handle_{macro}', None)
-        if handler:
-            return handler(lines, index, args)
-        else:
-            # Unknown macro - try generic handling
-            return self._handle_generic_macro(lines, index, macro, args)
+        return content
     
-    def _handle_TH(self, lines: List[str], index: int, args: str) -> int:
-        """Handle title header macro."""
-        parts = self._parse_args(args)
-        self.info.title = parts[0] if parts else ""
-        self.info.section = parts[1] if len(parts) > 1 else ""
-        self.info.date = parts[2] if len(parts) > 2 else ""
-        self.info.source = parts[3] if len(parts) > 3 else ""
-        self.info.manual = parts[4] if len(parts) > 4 else ""
-        return index + 1
-    
-    def _handle_SH(self, lines: List[str], index: int, args: str) -> int:
-        """Handle section header macro."""
-        # Finalize previous section
-        self._finalize_subsection()
+    def _apply_escape_sequences(self, content: str) -> str:
+        """Apply escape sequence replacements."""
+        # First handle special groff strings that might contain other escapes
+        for escape, replacement in self.ESCAPE_SEQUENCES.items():
+            content = content.replace(escape, replacement)
         
-        # Get section name
-        if args:
-            section_name = args.strip('"')
-        else:
-            # Next line contains section name
-            index += 1
-            if index < len(lines):
-                section_name = lines[index].strip('"')
-            else:
-                section_name = "UNKNOWN"
-        
-        # Create new section
-        self.current_section = ParsedSection(
-            name=section_name.upper(),
-            level=1
+        # Handle numeric character references \N'xxx'
+        content = re.sub(
+            r"\\N'(\d+)'",
+            lambda m: chr(int(m.group(1))) if int(m.group(1)) < 0x110000 else '?',
+            content
         )
-        self.sections.append(self.current_section)
-        self.current_subsection = None
         
-        return index + 1
-    
-    def _handle_SS(self, lines: List[str], index: int, args: str) -> int:
-        """Handle subsection header macro."""
-        # Finalize previous subsection
-        self._finalize_subsection()
+        # Remove any remaining backslash sequences we don't handle
+        content = re.sub(r'\\[a-zA-Z]', '', content)
         
-        # Get subsection name
-        if args:
-            subsection_name = args.strip('"')
-        else:
-            # Next line contains subsection name
-            index += 1
-            if index < len(lines):
-                subsection_name = lines[index].strip('"')
-            else:
-                subsection_name = "UNKNOWN"
+        return content
+    
+    def _clean_line_content(self, line: str) -> str:
+        """Clean a single line of content."""
+        # Remove font formatting
+        line = re.sub(r'\\f[BIPRSCW]', '', line)
+        line = re.sub(r'\\f\([A-Z]{2}', '', line)
+        line = re.sub(r'\\f\[[^\]]+\]', '', line)
         
-        # Create new subsection
-        if self.current_section:
-            self.current_subsection = ParsedSection(
-                name=subsection_name,
-                level=2
-            )
-            self.current_section.subsections.append(self.current_subsection)
+        # Apply escape sequences
+        for escape, replacement in self.ESCAPE_SEQUENCES.items():
+            line = line.replace(escape, replacement)
         
-        return index + 1
-    
-    def _handle_TP(self, lines: List[str], index: int, args: str) -> int:
-        """Handle tagged paragraph macro."""
-        # Next line is the tag
-        index += 1
-        if index < len(lines):
-            self.pending_tag = self._format_text(lines[index])
-        return index + 1
-    
-    def _handle_IP(self, lines: List[str], index: int, args: str) -> int:
-        """Handle indented paragraph macro."""
-        tag = self._parse_args(args)[0] if args else "•"
-        self._add_content(f"{tag} ", indent=True)
-        return index + 1
-    
-    def _handle_PP(self, lines: List[str], index: int, args: str) -> int:
-        """Handle plain paragraph macro."""
-        self._add_content("")  # Add blank line
-        return index + 1
-    
-    def _handle_BR(self, lines: List[str], index: int, args: str) -> int:
-        """Handle bold/roman alternating macro."""
-        parts = self._parse_args(args)
-        formatted = []
-        for i, part in enumerate(parts):
-            if i % 2 == 0:
-                formatted.append(f"**{part}**")
-            else:
-                formatted.append(part)
-        self._add_content(" ".join(formatted))
-        return index + 1
-    
-    def _handle_B(self, lines: List[str], index: int, args: str) -> int:
-        """Handle bold macro."""
-        if args:
-            self._add_content(f"**{args}**")
-        else:
-            self.font_stack.append('B')
-        return index + 1
-    
-    def _handle_I(self, lines: List[str], index: int, args: str) -> int:
-        """Handle italic macro."""
-        if args:
-            self._add_content(f"*{args}*")
-        else:
-            self.font_stack.append('I')
-        return index + 1
-    
-    def _handle_EX(self, lines: List[str], index: int, args: str) -> int:
-        """Handle example start macro."""
-        self.in_example = True
-        self.fill_mode = False
-        self._add_content("```")
-        return index + 1
-    
-    def _handle_EE(self, lines: List[str], index: int, args: str) -> int:
-        """Handle example end macro."""
-        self.in_example = False
-        self.fill_mode = True
-        self._add_content("```")
-        return index + 1
-    
-    def _handle_nf(self, lines: List[str], index: int, args: str) -> int:
-        """Handle no-fill mode macro."""
-        self.fill_mode = False
-        if not self.in_example:
-            self._add_content("```")
-        return index + 1
-    
-    def _handle_fi(self, lines: List[str], index: int, args: str) -> int:
-        """Handle fill mode macro."""
-        if not self.fill_mode and not self.in_example:
-            self._add_content("```")
-        self.fill_mode = True
-        return index + 1
-    
-    def _handle_RS(self, lines: List[str], index: int, args: str) -> int:
-        """Handle relative indent start."""
-        self.indent_level += 1
-        return index + 1
-    
-    def _handle_RE(self, lines: List[str], index: int, args: str) -> int:
-        """Handle relative indent end."""
-        self.indent_level = max(0, self.indent_level - 1)
-        return index + 1
-    
-    def _handle_sp(self, lines: List[str], index: int, args: str) -> int:
-        """Handle vertical space."""
-        self._add_content("")
-        return index + 1
-    
-    def _handle_br(self, lines: List[str], index: int, args: str) -> int:
-        """Handle line break."""
-        self._add_content("  ")  # Markdown line break
-        return index + 1
-    
-    def _handle_generic_macro(self, lines: List[str], index: int, macro: str, args: str) -> int:
-        """Handle unknown macros generically."""
-        # Log unknown macro for debugging
-        logger.debug(f"Unknown macro: .{macro} {args}")
-        return index + 1
-    
-    def _handle_text_line(self, line: str):
-        """Handle regular text line."""
-        if self.pending_tag:
-            # This is the content for a tagged paragraph
-            self._add_content(f"{self.pending_tag}\n    {self._format_text(line)}")
-            self.pending_tag = None
-        else:
-            formatted = self._format_text(line)
-            if formatted or not self.fill_mode:
-                self._add_content(formatted)
-    
-    def _format_text(self, text: str) -> str:
-        """Format text with escape sequences and font changes."""
-        # Handle common escape sequences
-        text = self._process_escapes(text)
+        # Apply groff strings
+        for groff_str, replacement in self.GROFF_STRINGS.items():
+            line = line.replace(groff_str, replacement)
         
-        # Handle inline font changes
-        text = self._process_inline_fonts(text)
+        # Remove quotes that were used for groff string delimiting
+        line = re.sub(r'^"(.+)"$', r'\1', line.strip())
         
-        # Handle cross-references
-        text = self._process_references(text)
-        
-        return text
+        return line.strip()
     
-    def _process_escapes(self, text: str) -> str:
-        """Process groff escape sequences."""
-        # Common escape sequences
-        replacements = {
-            r'\-': '-',
-            r'\ ': ' ',
-            r'\e': '\\',
-            r'\&': '',
-            r'\~': ' ',
-            r'\(aq': "'",
-            r'\(cq': "'",
-            r'\(oq': "'",
-            r'\(dq': '"',
-            r'\(em': '—',
-            r'\(en': '–',
-            r'\(bu': '•',
-            r'\(co': '©',
-            r'\(rg': '®',
-            r'\(tm': '™',
-            r'\*(': '',  # String variable (simplified)
-            r'\fB': '**',  # Bold start
-            r'\fI': '*',   # Italic start
-            r'\fR': '',    # Roman (reset)
-            r'\fP': '',    # Previous font
-        }
+    def _cleanup_formatting(self, content: str) -> str:
+        """Clean up spacing and formatting."""
+        # Remove multiple blank lines
+        content = re.sub(r'\n{3,}', '\n\n', content)
         
-        for escape, replacement in replacements.items():
-            text = text.replace(escape, replacement)
+        # Remove leading/trailing whitespace from lines
+        lines = content.split('\n')
+        lines = [line.strip() for line in lines]
+        content = '\n'.join(lines)
         
-        # Handle \f[BIPR] font changes
-        text = re.sub(r'\\f\[([BIPR])\]', self._font_to_markdown, text)
+        # Remove blank lines at start/end
+        content = content.strip()
         
-        # Remove other escape sequences
-        text = re.sub(r'\\[a-zA-Z]\(..', '', text)
-        text = re.sub(r'\\[a-zA-Z].', '', text)
-        text = re.sub(r'\\[a-zA-Z]', '', text)
+        # Fix spacing issues
+        content = re.sub(r'[ \t]+', ' ', content)
         
-        return text
+        return content
+
+
+def clean_groff_content(content: str) -> str:
+    """
+    Convenience function to clean groff content.
     
-    def _font_to_markdown(self, match):
-        """Convert font codes to markdown."""
-        font = match.group(1)
-        if font == 'B':
-            return '**'
-        elif font == 'I':
-            return '*'
-        else:
-            return ''
-    
-    def _process_inline_fonts(self, text: str) -> str:
-        """Process inline font changes."""
-        # Handle \fBtext\fR patterns
-        text = re.sub(r'\\fB([^\\]+)\\fR', r'**\1**', text)
-        text = re.sub(r'\\fI([^\\]+)\\fR', r'*\1*', text)
+    Args:
+        content: Raw groff content
         
-        # Handle alternating fonts
-        text = re.sub(r'\\fB([^\\]+)\\fI([^\\]+)\\fR', r'**\1***\2*', text)
-        
-        return text
-    
-    def _process_references(self, text: str) -> str:
-        """Process man page cross-references."""
-        # Match patterns like command(section)
-        def make_ref(match):
-            cmd = match.group(1)
-            section = match.group(2)
-            return f"[{cmd}({section})]({cmd})"
-        
-        text = re.sub(r'\b([a-zA-Z][\w\-\.]*)\((\d+)\)', make_ref, text)
-        return text
-    
-    def _parse_args(self, args: str) -> List[str]:
-        """Parse macro arguments respecting quotes."""
-        if not args:
-            return []
-        
-        # Simple quote-aware splitting
-        parts = []
-        current = []
-        in_quotes = False
-        
-        for char in args:
-            if char == '"' and not in_quotes:
-                in_quotes = True
-            elif char == '"' and in_quotes:
-                in_quotes = False
-                parts.append(''.join(current))
-                current = []
-            elif char == ' ' and not in_quotes:
-                if current:
-                    parts.append(''.join(current))
-                    current = []
-            else:
-                current.append(char)
-        
-        if current:
-            parts.append(''.join(current))
-        
-        return parts
-    
-    def _add_content(self, text: str, indent: bool = False):
-        """Add content to current section."""
-        if indent and self.indent_level > 0:
-            text = "    " * self.indent_level + text
-        
-        if self.current_subsection:
-            self.current_subsection.content.append(text)
-        elif self.current_section:
-            self.current_section.content.append(text)
-    
-    def _finalize_subsection(self):
-        """Finalize current subsection."""
-        # Clean up trailing empty lines
-        if self.current_subsection and self.current_subsection.content:
-            while self.current_subsection.content and not self.current_subsection.content[-1]:
-                self.current_subsection.content.pop()
-    
-    def _finalize_sections(self):
-        """Finalize all sections."""
-        self._finalize_subsection()
-        
-        # Clean up section content
-        for section in self.sections:
-            if section.content:
-                while section.content and not section.content[-1]:
-                    section.content.pop()
-    
-    def _build_output(self) -> Dict[str, Any]:
-        """Build final output structure."""
-        return {
-            'title': self.info.title,
-            'section': self.info.section,
-            'date': self.info.date,
-            'source': self.info.source,
-            'manual': self.info.manual,
-            'sections': [self._section_to_dict(s) for s in self.sections]
-        }
-    
-    def _section_to_dict(self, section: ParsedSection) -> Dict[str, Any]:
-        """Convert section to dictionary."""
-        return {
-            'name': section.name,
-            'content': '\n'.join(section.content),
-            'subsections': [self._section_to_dict(s) for s in section.subsections]
-        }
+    Returns:
+        Clean text without groff formatting
+    """
+    parser = EnhancedGroffParser()
+    return parser.parse(content)
