@@ -1,0 +1,41 @@
+COLRM(1)                         User Commands                        COLRM(1)
+
+NAME
+       colrm - remove columns from a file
+
+SYNOPSIS
+       colrm [first [last]]
+
+DESCRIPTION
+       colrm removes selected columns from a file. Input is taken from
+       standard input. Output is sent to standard output.
+
+       If called with one parameter the columns of each line will be removed
+       starting with the specified first column. If called with two parameters
+       the columns from the first column to the last column will be removed.
+
+       Column numbering starts with column 1.
+
+OPTIONS
+       -h, --help
+           Display help text and exit.
+
+       -V, --version
+           Print version and exit.
+
+HISTORY
+       The colrm command appeared in 3.0BSD.
+
+SEE ALSO
+       awk(1p), column(1), expand(1), paste(1)
+
+REPORTING BUGS
+       For bug reports, use the issue tracker at
+       https://github.com/util-linux/util-linux/issues.
+
+AVAILABILITY
+       The colrm command is part of the util-linux package which can be
+       downloaded from Linux Kernel Archive
+       <https://www.kernel.org/pub/linux/utils/util-linux/>.
+
+util-linux 2.39.3                 2023-10-23                          COLRM(1)

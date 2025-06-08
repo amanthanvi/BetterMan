@@ -189,6 +189,7 @@ class DocumentResponse(BaseModel):
     title: str
     section: Optional[str] = None  # Changed to str to support subsections
     summary: Optional[str] = None
+    content: Optional[str] = None  # Added content field
     raw_content: Optional[str] = None
     sections: Optional[List[SectionResponse]] = None
     related: Optional[List[str]] = None
@@ -206,6 +207,7 @@ class DocumentResponse(BaseModel):
             'title': obj.title,
             'section': str(obj.section) if obj.section else None,
             'summary': obj.summary,
+            'content': obj.content,  # Add content field
             'raw_content': obj.raw_content,
             'cache_status': obj.cache_status,
             'doc_set': 'linux',  # Frontend expects lowercase

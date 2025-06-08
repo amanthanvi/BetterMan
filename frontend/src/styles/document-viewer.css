@@ -2,12 +2,13 @@
 
 /* Prevent layout shifts and flickering */
 .document-toc {
-  will-change: transform, opacity;
+  will-change: transform;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   -webkit-font-smoothing: antialiased;
+  contain: layout style paint;
 }
 
 /* Ensure sticky header doesn't get cut off */
@@ -21,6 +22,60 @@
 .document-toc,
 .document-header {
   transition: background-color 200ms, border-color 200ms;
+}
+
+/* Fix TOC positioning - ensure it's always in the right place */
+aside.fixed {
+  position: fixed !important;
+  top: 64px !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  height: calc(100vh - 64px) !important;
+  transform-origin: left center;
+}
+
+/* Ensure TOC doesn't shift on hover */
+aside.fixed:hover {
+  transform: none !important;
+}
+
+/* Prevent TOC flicker */
+.document-page aside {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
+  contain: layout style paint;
+}
+
+/* Smooth TOC transitions */
+.document-page aside.transition-transform {
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Force GPU acceleration for TOC */
+aside.fixed {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+}
+
+/* Ensure content area has proper spacing when TOC is visible */
+.pl-80 {
+  padding-left: 20rem !important;
+}
+
+/* Smooth transition for content area */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Fix TOC scroll behavior */
+.document-page .overflow-y-auto {
+  height: calc(100vh - 128px); /* Account for navbar and TOC header */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Print styles */
@@ -123,6 +178,23 @@ html {
 
 .dark .document-toc::-webkit-scrollbar-thumb:hover {
   background: rgba(75, 85, 99, 0.7);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+  opacity: 0;
 }
 
 /* Code block enhancements */

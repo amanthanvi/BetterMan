@@ -17,9 +17,10 @@ import { cn } from "@/utils/cn";
 
 interface NavBarProps {
 	className?: string;
+	onSearchClick?: () => void;
 }
 
-export const NavBar: React.FC<NavBarProps> = ({ className }) => {
+export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 	const location = useLocation();
 	const {
 		sidebarOpen,
@@ -90,7 +91,7 @@ export const NavBar: React.FC<NavBarProps> = ({ className }) => {
 					<div className="flex-1 max-w-2xl mx-8">
 						<Button
 							variant="outline"
-							onClick={() => setCommandPaletteOpen(true)}
+							onClick={() => onSearchClick ? onSearchClick() : setCommandPaletteOpen(true)}
 							className="w-full justify-start text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
 						>
 							<MagnifyingGlassIcon className="w-4 h-4 mr-3" />

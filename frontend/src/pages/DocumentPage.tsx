@@ -117,7 +117,7 @@ export const DocumentPage: React.FC = () => {
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-			className="min-h-screen bg-gray-50 dark:bg-gray-900"
+			className="document-page min-h-screen bg-gray-50 dark:bg-gray-900"
 		>
 			<EnhancedDocumentViewer document={document} />
 		</motion.div>

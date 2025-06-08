@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
 import { cn } from "@/utils/cn";
 import type { Document } from "@/types";
+import { parseGroffContent, parseGroffSections, parseSectionName } from "@/utils/groffParser";
 
 interface DocumentViewerProps {
 	document: Document;
@@ -123,9 +124,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 			setTocItems(items);
 		} else {
-			// Generate TOC from sections structure
+			// Generate TOC from sections structure with groff parsing
 			const items: TableOfContentsItem[] = [];
-			document.sections.forEach((section, sectionIndex) => {
+			const parsedSections = parseGroffSections(document.sections);
+			parsedSections.forEach((section, sectionIndex) => {
 				const sectionId = `section-${section.name.toLowerCase().replace(/\s+/g, "-")}`;
 				items.push({
 					id: sectionId,
@@ -134,7 +136,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				});
 
 				if (section.subsections) {
-					section.subsections.forEach((sub, subIndex) => {
+					section.subsections.forEach((sub: any, subIndex: number) => {
 						const subId = `${sectionId}-sub-${subIndex}`;
 						items.push({
 							id: subId,
@@ -187,8 +189,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	// Track scroll progress
 	useEffect(() => {
 		const handleScroll = () => {
-			const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-			const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+			const scrollTop = window.pageYOffset || window.document.documentElement.scrollTop;
+			const scrollHeight = window.document.documentElement.scrollHeight - window.document.documentElement.clientHeight;
 			const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
 			setScrollProgress(progress);
 		};
@@ -271,7 +273,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			return processContent(content);
 		}
 
-		return document.sections.map((section, sectionIndex) => {
+		// Parse sections with groff parser
+		const parsedSections = parseGroffSections(document.sections);
+
+		return parsedSections.map((section, sectionIndex) => {
 			const sectionId = `section-${section.name.toLowerCase().replace(/\s+/g, "-")}`;
 			
 			return (
@@ -535,8 +540,12 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								{document.summary}
 							</p>
 							<div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
-								<span>Section {document.section}</span>
-								<span>•</span>
+								{document.section && document.section !== "json" && (
+									<>
+										<span>Section {document.section}</span>
+										<span>•</span>
+									</>
+								)}
 								<span>{document.doc_set}</span>
 							</div>
 						</div>

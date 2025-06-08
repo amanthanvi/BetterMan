@@ -1,18 +1,20 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import "./App.css";
 
 // Import components
 import { NavBar } from "@/components/layout/NavBar";
-import { CommandPalette } from "@/components/search/CommandPalette";
+import { PremiumSearch } from "@/components/search/PremiumSearch";
+import { KeyboardShortcutsModal } from "@/components/ui/KeyboardShortcutsModal";
 import { useAppStore } from "@/stores/appStore";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
 import { ToastContainer } from "@/components/ui/Toast";
 import { clearOldFavorites } from "@/utils/clearOldFavorites";
-import { clearNumericFavorites } from "@/utils/clearNumericFavorites";
+import { useKeyboardShortcuts, defaultShortcuts } from "@/utils/keyboardShortcuts";
+import { applyTheme } from "@/design-system/theme";
 import type { Document } from "@/types";
 
 // Import test page directly for debugging
@@ -62,8 +64,18 @@ const PageLoader = () => (
 function App() {
 	const [docs, setDocs] = useState<AppDocument[]>([]);
 	const [loading, setLoading] = useState(true);
-	const { darkMode, initialize, commandPaletteOpen, setCommandPaletteOpen, toasts, removeToast } =
-		useAppStore();
+	const [showSearch, setShowSearch] = useState(false);
+	const [showShortcuts, setShowShortcuts] = useState(false);
+	
+	const { 
+		darkMode, 
+		initialize, 
+		commandPaletteOpen, 
+		setCommandPaletteOpen, 
+		toasts, 
+		removeToast,
+		toggleDarkMode,
+	} = useAppStore();
 
 	// Initialize app store on mount
 	useEffect(() => {
@@ -72,8 +84,9 @@ function App() {
 		initialize();
 	}, [initialize]);
 
-	// Ensure dark mode class is always in sync
+	// Apply theme on dark mode change
 	useEffect(() => {
+		applyTheme(darkMode ? 'dark' : 'light');
 		if (darkMode) {
 			document.documentElement.classList.add('dark');
 		} else {
@@ -81,19 +94,50 @@ function App() {
 		}
 	}, [darkMode]);
 
-	// Global keyboard shortcuts
+	// Custom event listeners for keyboard shortcuts
 	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			// Command palette: Cmd/Ctrl + K
-			if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-				e.preventDefault();
-				setCommandPaletteOpen(true);
-			}
+		const handleOpenCommandPalette = () => setShowSearch(true);
+		const handleToggleDarkMode = () => toggleDarkMode();
+		const handleShowKeyboardShortcuts = () => setShowShortcuts(true);
+		const handleToggleToc = () => {
+			// This will be handled by the document viewer
+			const event = new CustomEvent('toggleTocEvent');
+			window.dispatchEvent(event);
+		};
+		const handleToggleBookmark = () => {
+			// This will be handled by the document viewer
+			const event = new CustomEvent('toggleBookmarkEvent');
+			window.dispatchEvent(event);
 		};
 
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, []);
+		window.addEventListener('openCommandPalette', handleOpenCommandPalette);
+		window.addEventListener('toggleDarkMode', handleToggleDarkMode);
+		window.addEventListener('showKeyboardShortcuts', handleShowKeyboardShortcuts);
+		window.addEventListener('toggleToc', handleToggleToc);
+		window.addEventListener('toggleBookmark', handleToggleBookmark);
+
+		return () => {
+			window.removeEventListener('openCommandPalette', handleOpenCommandPalette);
+			window.removeEventListener('toggleDarkMode', handleToggleDarkMode);
+			window.removeEventListener('showKeyboardShortcuts', handleShowKeyboardShortcuts);
+			window.removeEventListener('toggleToc', handleToggleToc);
+			window.removeEventListener('toggleBookmark', handleToggleBookmark);
+		};
+	}, [toggleDarkMode]);
+
+	// Additional keyboard shortcuts
+	useKeyboardShortcuts([
+		{
+			key: 'Escape',
+			description: 'Close modals',
+			action: () => {
+				if (showSearch) setShowSearch(false);
+				if (showShortcuts) setShowShortcuts(false);
+				if (commandPaletteOpen) setCommandPaletteOpen(false);
+			},
+			enabled: showSearch || showShortcuts || commandPaletteOpen,
+		},
+	], [showSearch, showShortcuts, commandPaletteOpen]);
 
 	// Fetch documentation list on startup
 	useEffect(() => {
@@ -124,7 +168,7 @@ function App() {
 			<Router>
 				<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
 					{/* Navigation */}
-					<NavBar />
+					<NavBar onSearchClick={() => setShowSearch(true)} />
 
 					{/* Main Content */}
 					<div className="flex-grow py-4">
@@ -182,6 +226,12 @@ function App() {
 										element={<SearchInterface />}
 									/>
 
+									{/* Test Page */}
+									<Route
+										path="/test"
+										element={<TestPage />}
+									/>
+
 									{/* 404 - Not Found */}
 									<Route
 										path="*"
@@ -192,22 +242,27 @@ function App() {
 						</main>
 					</div>
 
-					{/* Command Palette */}
-					<CommandPalette
-						open={commandPaletteOpen}
-						onOpenChange={setCommandPaletteOpen}
+					{/* Premium Search Modal */}
+					<PremiumSearch
+						isOpen={showSearch}
+						onClose={() => setShowSearch(false)}
+					/>
+
+					{/* Keyboard Shortcuts Modal */}
+					<KeyboardShortcutsModal
+						isOpen={showShortcuts}
+						onClose={() => setShowShortcuts(false)}
 					/>
 
 					{/* Toast Notifications */}
 					<ToastContainer toasts={toasts} removeToast={removeToast} />
 
 					{/* Performance Monitor (dev only) */}
-					<PerformanceMonitor />
+					{process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
 				</div>
 			</Router>
 		</ErrorBoundary>
 	);
 }
-
 
 export default App;

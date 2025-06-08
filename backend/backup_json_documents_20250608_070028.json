@@ -1,0 +1,714 @@
+[
+  {
+    "id": 28,
+    "name": "code",
+    "title": "code - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"code\",\n  \"section\": \"1\",\n  \"priority\": 7,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143061"
+  },
+  {
+    "id": 29,
+    "name": "cd",
+    "title": "cd - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"cd\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143069"
+  },
+  {
+    "id": 30,
+    "name": "curl",
+    "title": "curl - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"curl\",\n  \"section\": \"1\",\n  \"priority\": 4,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143071"
+  },
+  {
+    "id": 31,
+    "name": "sed",
+    "title": "sed - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"sed\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143073"
+  },
+  {
+    "id": 32,
+    "name": "echo",
+    "title": "echo - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"echo\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143076"
+  },
+  {
+    "id": 33,
+    "name": "pwd",
+    "title": "pwd - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"pwd\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143078"
+  },
+  {
+    "id": 34,
+    "name": "python",
+    "title": "python - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"python\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\":...",
+    "created_at": "2025-06-08T04:30:59.143080"
+  },
+  {
+    "id": 36,
+    "name": "chmod",
+    "title": "chmod - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"chmod\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143084"
+  },
+  {
+    "id": 38,
+    "name": "firefox",
+    "title": "firefox - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"firefox\",\n  \"section\": \"1\",\n  \"priority\": 7,\n  \"category\": \"user-commands\",\n  \"tags\"...",
+    "created_at": "2025-06-08T04:30:59.143088"
+  },
+  {
+    "id": 39,
+    "name": "pip",
+    "title": "pip - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"pip\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143090"
+  },
+  {
+    "id": 42,
+    "name": "less",
+    "title": "less - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"less\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143096"
+  },
+  {
+    "id": 45,
+    "name": "vim",
+    "title": "vim - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"vim\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143102"
+  },
+  {
+    "id": 47,
+    "name": "konsole",
+    "title": "konsole - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"konsole\",\n  \"section\": \"1\",\n  \"priority\": 7,\n  \"category\": \"user-commands\",\n  \"tags\"...",
+    "created_at": "2025-06-08T04:30:59.143106"
+  },
+  {
+    "id": 48,
+    "name": "git",
+    "title": "git - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"git\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143108"
+  },
+  {
+    "id": 49,
+    "name": "tar",
+    "title": "tar - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"tar\",\n  \"section\": \"1\",\n  \"priority\": 4,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143110"
+  },
+  {
+    "id": 51,
+    "name": "ps",
+    "title": "ps - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"ps\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143114"
+  },
+  {
+    "id": 52,
+    "name": "more",
+    "title": "more - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"more\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143116"
+  },
+  {
+    "id": 54,
+    "name": "gnome-terminal",
+    "title": "gnome-terminal - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"gnome-terminal\",\n  \"section\": \"1\",\n  \"priority\": 7,\n  \"category\": \"user-commands\",\n ...",
+    "created_at": "2025-06-08T04:30:59.143120"
+  },
+  {
+    "id": 55,
+    "name": "touch",
+    "title": "touch - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"touch\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143122"
+  },
+  {
+    "id": 58,
+    "name": "kate",
+    "title": "kate - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"kate\",\n  \"section\": \"1\",\n  \"priority\": 7,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143128"
+  },
+  {
+    "id": 59,
+    "name": "date",
+    "title": "date - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"date\",\n  \"section\": \"1\",\n  \"priority\": 8,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143130"
+  },
+  {
+    "id": 60,
+    "name": "cat",
+    "title": "cat - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"cat\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143132"
+  },
+  {
+    "id": 62,
+    "name": "rm",
+    "title": "rm - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"rm\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143136"
+  },
+  {
+    "id": 64,
+    "name": "cal",
+    "title": "cal - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"cal\",\n  \"section\": \"1\",\n  \"priority\": 8,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143140"
+  },
+  {
+    "id": 65,
+    "name": "head",
+    "title": "head - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"head\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143142"
+  },
+  {
+    "id": 67,
+    "name": "rsync",
+    "title": "rsync - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"rsync\",\n  \"section\": \"1\",\n  \"priority\": 4,\n  \"category\": \"user-commands\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143146"
+  },
+  {
+    "id": 68,
+    "name": "kill",
+    "title": "kill - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"kill\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143148"
+  },
+  {
+    "id": 69,
+    "name": "wget",
+    "title": "wget - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"wget\",\n  \"section\": \"1\",\n  \"priority\": 4,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143150"
+  },
+  {
+    "id": 70,
+    "name": "ssh",
+    "title": "ssh - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"ssh\",\n  \"section\": \"1\",\n  \"priority\": 4,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143152"
+  },
+  {
+    "id": 71,
+    "name": "scp",
+    "title": "scp - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"scp\",\n  \"section\": \"1\",\n  \"priority\": 4,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143154"
+  },
+  {
+    "id": 75,
+    "name": "docker",
+    "title": "docker - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"docker\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\":...",
+    "created_at": "2025-06-08T04:30:59.143162"
+  },
+  {
+    "id": 76,
+    "name": "mkdir",
+    "title": "mkdir - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"mkdir\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143164"
+  },
+  {
+    "id": 79,
+    "name": "npm",
+    "title": "npm - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"npm\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143170"
+  },
+  {
+    "id": 80,
+    "name": "make",
+    "title": "make - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"make\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143172"
+  },
+  {
+    "id": 81,
+    "name": "dig",
+    "title": "dig - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"dig\",\n  \"section\": \"1\",\n  \"priority\": 6,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143174"
+  },
+  {
+    "id": 82,
+    "name": "zip",
+    "title": "zip - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"zip\",\n  \"section\": \"1\",\n  \"priority\": 4,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143176"
+  },
+  {
+    "id": 85,
+    "name": "mv",
+    "title": "mv - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"mv\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143182"
+  },
+  {
+    "id": 87,
+    "name": "libreoffice",
+    "title": "libreoffice - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"libreoffice\",\n  \"section\": \"1\",\n  \"priority\": 7,\n  \"category\": \"user-commands\",\n  \"t...",
+    "created_at": "2025-06-08T04:30:59.143186"
+  },
+  {
+    "id": 88,
+    "name": "top",
+    "title": "top - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"top\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143188"
+  },
+  {
+    "id": 89,
+    "name": "vlc",
+    "title": "vlc - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"vlc\",\n  \"section\": \"1\",\n  \"priority\": 7,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143189"
+  },
+  {
+    "id": 90,
+    "name": "gdb",
+    "title": "gdb - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"gdb\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143191"
+  },
+  {
+    "id": 91,
+    "name": "du",
+    "title": "du - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"du\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143193"
+  },
+  {
+    "id": 93,
+    "name": "units",
+    "title": "units - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"units\",\n  \"section\": \"1\",\n  \"priority\": 8,\n  \"category\": \"user-commands\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143200"
+  },
+  {
+    "id": 96,
+    "name": "awk",
+    "title": "awk - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"awk\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143208"
+  },
+  {
+    "id": 98,
+    "name": "tail",
+    "title": "tail - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"tail\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143215"
+  },
+  {
+    "id": 102,
+    "name": "cp",
+    "title": "cp - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"cp\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143226"
+  },
+  {
+    "id": 103,
+    "name": "gcc",
+    "title": "gcc - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"gcc\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143229"
+  },
+  {
+    "id": 106,
+    "name": "xorg",
+    "title": "xorg - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"xorg\",\n  \"section\": \"1\",\n  \"priority\": 7,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143236"
+  },
+  {
+    "id": 109,
+    "name": "grep",
+    "title": "grep - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"grep\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143242"
+  },
+  {
+    "id": 110,
+    "name": "uniq",
+    "title": "uniq - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"uniq\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143244"
+  },
+  {
+    "id": 115,
+    "name": "systemctl",
+    "title": "systemctl - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"systemctl\",\n  \"section\": \"1\",\n  \"priority\": 6,\n  \"category\": \"user-commands\",\n  \"tag...",
+    "created_at": "2025-06-08T04:30:59.143254"
+  },
+  {
+    "id": 117,
+    "name": "bc",
+    "title": "bc - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"bc\",\n  \"section\": \"1\",\n  \"priority\": 8,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143258"
+  },
+  {
+    "id": 120,
+    "name": "chown",
+    "title": "chown - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"chown\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143264"
+  },
+  {
+    "id": 123,
+    "name": "df",
+    "title": "df - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"df\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143270"
+  },
+  {
+    "id": 124,
+    "name": "find",
+    "title": "find - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"find\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143272"
+  },
+  {
+    "id": 126,
+    "name": "journalctl",
+    "title": "journalctl - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"journalctl\",\n  \"section\": \"1\",\n  \"priority\": 6,\n  \"category\": \"user-commands\",\n  \"ta...",
+    "created_at": "2025-06-08T04:30:59.143276"
+  },
+  {
+    "id": 127,
+    "name": "sort",
+    "title": "sort - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"sort\",\n  \"section\": \"1\",\n  \"priority\": 2,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143278"
+  },
+  {
+    "id": 131,
+    "name": "emacs",
+    "title": "emacs - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"emacs\",\n  \"section\": \"1\",\n  \"priority\": 5,\n  \"category\": \"user-commands\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143286"
+  },
+  {
+    "id": 133,
+    "name": "rmdir",
+    "title": "rmdir - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"rmdir\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143290"
+  },
+  {
+    "id": 134,
+    "name": "ls",
+    "title": "ls - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"ls\",\n  \"section\": \"1\",\n  \"priority\": 1,\n  \"category\": \"user-commands\",\n  \"tags\": \"se...",
+    "created_at": "2025-06-08T04:30:59.143292"
+  },
+  {
+    "id": 136,
+    "name": "gzip",
+    "title": "gzip - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"gzip\",\n  \"section\": \"1\",\n  \"priority\": 4,\n  \"category\": \"user-commands\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143296"
+  },
+  {
+    "id": 138,
+    "name": "open",
+    "title": "open - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"open\",\n  \"section\": \"2\",\n  \"priority\": 3,\n  \"category\": \"system-calls\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143300"
+  },
+  {
+    "id": 139,
+    "name": "bind",
+    "title": "bind - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"bind\",\n  \"section\": \"2\",\n  \"priority\": 3,\n  \"category\": \"system-calls\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143302"
+  },
+  {
+    "id": 140,
+    "name": "write",
+    "title": "write - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"write\",\n  \"section\": \"2\",\n  \"priority\": 3,\n  \"category\": \"system-calls\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143303"
+  },
+  {
+    "id": 141,
+    "name": "exec",
+    "title": "exec - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"exec\",\n  \"section\": \"2\",\n  \"priority\": 3,\n  \"category\": \"system-calls\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143305"
+  },
+  {
+    "id": 142,
+    "name": "socket",
+    "title": "socket - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"socket\",\n  \"section\": \"2\",\n  \"priority\": 3,\n  \"category\": \"system-calls\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143307"
+  },
+  {
+    "id": 143,
+    "name": "fork",
+    "title": "fork - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"fork\",\n  \"section\": \"2\",\n  \"priority\": 3,\n  \"category\": \"system-calls\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143309"
+  },
+  {
+    "id": 144,
+    "name": "read",
+    "title": "read - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"read\",\n  \"section\": \"2\",\n  \"priority\": 3,\n  \"category\": \"system-calls\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143311"
+  },
+  {
+    "id": 145,
+    "name": "close",
+    "title": "close - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"close\",\n  \"section\": \"2\",\n  \"priority\": 3,\n  \"category\": \"system-calls\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143313"
+  },
+  {
+    "id": 146,
+    "name": "printf",
+    "title": "printf - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"printf\",\n  \"section\": \"3\",\n  \"priority\": 3,\n  \"category\": \"library-functions\",\n  \"ta...",
+    "created_at": "2025-06-08T04:30:59.143315"
+  },
+  {
+    "id": 147,
+    "name": "malloc",
+    "title": "malloc - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"malloc\",\n  \"section\": \"3\",\n  \"priority\": 3,\n  \"category\": \"library-functions\",\n  \"ta...",
+    "created_at": "2025-06-08T04:30:59.143317"
+  },
+  {
+    "id": 148,
+    "name": "free",
+    "title": "free - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"free\",\n  \"section\": \"3\",\n  \"priority\": 3,\n  \"category\": \"library-functions\",\n  \"tags...",
+    "created_at": "2025-06-08T04:30:59.143319"
+  },
+  {
+    "id": 149,
+    "name": "exit",
+    "title": "exit - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"exit\",\n  \"section\": \"3\",\n  \"priority\": 3,\n  \"category\": \"library-functions\",\n  \"tags...",
+    "created_at": "2025-06-08T04:30:59.143321"
+  },
+  {
+    "id": 150,
+    "name": "fstab",
+    "title": "fstab - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"fstab\",\n  \"section\": \"5\",\n  \"priority\": 4,\n  \"category\": \"file-formats\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143323"
+  },
+  {
+    "id": 151,
+    "name": "hosts",
+    "title": "hosts - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"hosts\",\n  \"section\": \"5\",\n  \"priority\": 4,\n  \"category\": \"file-formats\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143325"
+  },
+  {
+    "id": 152,
+    "name": "passwd",
+    "title": "passwd - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"passwd\",\n  \"section\": \"5\",\n  \"priority\": 4,\n  \"category\": \"file-formats\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143327"
+  },
+  {
+    "id": 154,
+    "name": "sl",
+    "title": "sl - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"sl\",\n  \"section\": \"6\",\n  \"priority\": 8,\n  \"category\": \"games\",\n  \"tags\": \"section-6,...",
+    "created_at": "2025-06-08T04:30:59.143331"
+  },
+  {
+    "id": 156,
+    "name": "figlet",
+    "title": "figlet - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"figlet\",\n  \"section\": \"6\",\n  \"priority\": 8,\n  \"category\": \"games\",\n  \"tags\": \"sectio...",
+    "created_at": "2025-06-08T04:30:59.143335"
+  },
+  {
+    "id": 158,
+    "name": "fortune",
+    "title": "fortune - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"fortune\",\n  \"section\": \"6\",\n  \"priority\": 8,\n  \"category\": \"games\",\n  \"tags\": \"secti...",
+    "created_at": "2025-06-08T04:30:59.143339"
+  },
+  {
+    "id": 159,
+    "name": "cowsay",
+    "title": "cowsay - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"cowsay\",\n  \"section\": \"6\",\n  \"priority\": 8,\n  \"category\": \"games\",\n  \"tags\": \"sectio...",
+    "created_at": "2025-06-08T04:30:59.143341"
+  },
+  {
+    "id": 164,
+    "name": "iptables",
+    "title": "iptables - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"iptables\",\n  \"section\": \"8\",\n  \"priority\": 6,\n  \"category\": \"system-admin\",\n  \"tags\"...",
+    "created_at": "2025-06-08T04:30:59.143351"
+  },
+  {
+    "id": 165,
+    "name": "ip",
+    "title": "ip - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"ip\",\n  \"section\": \"8\",\n  \"priority\": 6,\n  \"category\": \"system-admin\",\n  \"tags\": \"sec...",
+    "created_at": "2025-06-08T04:30:59.143353"
+  },
+  {
+    "id": 167,
+    "name": "umount",
+    "title": "umount - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"umount\",\n  \"section\": \"8\",\n  \"priority\": 2,\n  \"category\": \"system-admin\",\n  \"tags\": ...",
+    "created_at": "2025-06-08T04:30:59.143357"
+  },
+  {
+    "id": 168,
+    "name": "traceroute",
+    "title": "traceroute - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"traceroute\",\n  \"section\": \"8\",\n  \"priority\": 6,\n  \"category\": \"system-admin\",\n  \"tag...",
+    "created_at": "2025-06-08T04:30:59.143359"
+  },
+  {
+    "id": 169,
+    "name": "mount",
+    "title": "mount - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"mount\",\n  \"section\": \"8\",\n  \"priority\": 2,\n  \"category\": \"system-admin\",\n  \"tags\": \"...",
+    "created_at": "2025-06-08T04:30:59.143361"
+  },
+  {
+    "id": 171,
+    "name": "ifconfig",
+    "title": "ifconfig - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"ifconfig\",\n  \"section\": \"8\",\n  \"priority\": 6,\n  \"category\": \"system-admin\",\n  \"tags\"...",
+    "created_at": "2025-06-08T04:30:59.143365"
+  },
+  {
+    "id": 172,
+    "name": "ping",
+    "title": "ping - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"ping\",\n  \"section\": \"8\",\n  \"priority\": 6,\n  \"category\": \"system-admin\",\n  \"tags\": \"s...",
+    "created_at": "2025-06-08T04:30:59.143367"
+  },
+  {
+    "id": 173,
+    "name": "netstat",
+    "title": "netstat - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"netstat\",\n  \"section\": \"8\",\n  \"priority\": 6,\n  \"category\": \"system-admin\",\n  \"tags\":...",
+    "created_at": "2025-06-08T04:30:59.143368"
+  },
+  {
+    "id": 174,
+    "name": "ss",
+    "title": "ss - manual page",
+    "section": "json",
+    "content": "{\n  \"command\": \"ss\",\n  \"section\": \"8\",\n  \"priority\": 6,\n  \"category\": \"system-admin\",\n  \"tags\": \"sec...",
+    "created_at": "2025-06-08T04:30:59.143370"
+  }
+]
