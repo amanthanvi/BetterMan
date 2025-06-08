@@ -159,19 +159,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 			category: "Commands",
 		},
 		{
-			id: "toggle-dark-mode",
-			title: "Toggle Dark Mode",
-			subtitle: "Switch between light and dark themes",
-			icon: <GearIcon className="w-4 h-4" />,
-			action: () => {
-				// This would toggle dark mode
-				document.documentElement.classList.toggle("dark");
-				onClose();
-			},
-			keywords: ["dark", "light", "theme", "mode"],
-			category: "Settings",
-		},
-		{
 			id: "close-palette",
 			title: "Close Command Palette",
 			subtitle: "Exit this dialog",

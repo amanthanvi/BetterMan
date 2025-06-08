@@ -1,5 +1,28 @@
 /* Enhanced Document Viewer Styles */
 
+/* Prevent layout shifts and flickering */
+.document-toc {
+  will-change: transform, opacity;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure sticky header doesn't get cut off */
+.document-header {
+  isolation: isolate;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Smooth transitions for dark mode */
+.document-toc,
+.document-header {
+  transition: background-color 200ms, border-color 200ms;
+}
+
 /* Print styles */
 @media print {
   /* Hide navigation and controls */

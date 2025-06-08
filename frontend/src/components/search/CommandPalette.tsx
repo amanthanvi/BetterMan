@@ -196,17 +196,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 								{inputValue.startsWith(">") && (
 									<Command.Group heading="Actions">
 										<CommandItem
-											value=">toggle-theme"
-											onSelect={() =>
-												handleCommand("toggle-theme")
-											}
-											icon={
-												<GearIcon className="w-4 h-4" />
-											}
-										>
-											Toggle Dark Mode
-										</CommandItem>
-										<CommandItem
 											value=">toggle-sidebar"
 											onSelect={() =>
 												handleCommand("toggle-sidebar")
@@ -251,7 +240,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 										) : (
 											<CommandItem
 												value="browse-all"
-												onSelect={() => handleSearch("")}
+												onSelect={() =>
+													handleSearch("")
+												}
 												icon={
 													<FileTextIcon className="w-4 h-4" />
 												}
@@ -326,9 +317,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 																{doc.summary}
 															</div>
 														</div>
-														{doc.name && isFavorite(`${doc.name}.${doc.section}`) && (
-															<BookmarkIcon className="w-4 h-4 text-blue-500" />
-														)}
+														{doc.name &&
+															isFavorite(
+																`${doc.name}.${doc.section}`
+															) && (
+																<BookmarkIcon className="w-4 h-4 text-blue-500" />
+															)}
 													</div>
 												</CommandItem>
 											);

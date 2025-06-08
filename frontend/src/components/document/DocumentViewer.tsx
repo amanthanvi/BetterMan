@@ -43,6 +43,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	const [activeSection, setActiveSection] = useState<string>("");
 	const [showLineNumbers, setShowLineNumbers] = useState(true);
 	const [fontSize, setFontSize] = useState<"sm" | "base" | "lg">("base");
+	const [scrollProgress, setScrollProgress] = useState(0);
 
 	const contentRef = useRef<HTMLDivElement>(null);
 	const observerRef = useRef<IntersectionObserver | null>(null);
@@ -183,13 +184,34 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		};
 	}, [tocItems]);
 
-	// Scroll to section
+	// Track scroll progress
+	useEffect(() => {
+		const handleScroll = () => {
+			const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+			const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+			const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+			setScrollProgress(progress);
+		};
+
+		window.addEventListener('scroll', handleScroll);
+		handleScroll(); // Initial calculation
+
+		return () => {
+			window.removeEventListener('scroll', handleScroll);
+		};
+	}, []);
+
+	// Scroll to section with offset for sticky header
 	const scrollToSection = (id: string) => {
 		const element = window.document.getElementById(id);
 		if (element) {
-			element.scrollIntoView({
-				behavior: "smooth",
-				block: "start",
+			const headerOffset = 140; // Height of sticky header plus progress bar
+			const elementPosition = element.getBoundingClientRect().top;
+			const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+			window.scrollTo({
+				top: offsetPosition,
+				behavior: "smooth"
 			});
 		}
 	};
@@ -448,30 +470,37 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	}
 
 	return (
-		<div className={cn("flex min-h-screen bg-white dark:bg-gray-900", className)}>
-			{/* Table of Contents */}
-			{showToc && tocItems.length > 0 && (
+		<div className={cn("relative bg-white dark:bg-gray-900", className)}>
+			{/* Table of Contents - Fixed Sidebar */}
+			{tocItems.length > 0 && (
 				<motion.aside
-					initial={{ x: -250, opacity: 0 }}
-					animate={{ x: 0, opacity: 1 }}
-					className="document-toc w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4"
+					initial={false}
+					animate={{ 
+						x: showToc ? 0 : -256,
+						opacity: showToc ? 1 : 0
+					}}
+					transition={{ duration: 0.2, ease: "easeOut" }}
+					className="document-toc fixed left-0 top-24 h-[calc(100vh-6rem)] w-64 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto z-20"
+					style={{ pointerEvents: showToc ? 'auto' : 'none' }}
 				>
-					<h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
-						Table of Contents
-					</h3>
-					<nav className="space-y-1">
+					<div className="sticky top-0 bg-gray-50 dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700">
+						<h3 className="font-semibold text-gray-900 dark:text-gray-100">
+							Table of Contents
+						</h3>
+					</div>
+					<nav className="p-4 space-y-1">
 						{tocItems.map((item) => (
 							<button
 								key={item.id}
 								onClick={() => scrollToSection(item.id)}
 								className={cn(
-									"block w-full text-left text-sm py-1 px-2 rounded transition-colors",
+									"block w-full text-left text-sm py-2 px-3 rounded transition-all duration-200",
 									"text-gray-700 dark:text-gray-300",
-									"hover:bg-gray-200 dark:hover:bg-gray-800",
+									"hover:bg-gray-200 dark:hover:bg-gray-700",
 									item.id === activeSection &&
-										"bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
-									item.level > 1 && "ml-4",
-									item.level > 2 && "ml-8"
+										"bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium",
+									item.level > 2 && "ml-4 text-xs",
+									item.level > 3 && "ml-8"
 								)}
 							>
 								{item.title}
@@ -481,10 +510,22 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				</motion.aside>
 			)}
 
-			{/* Main Content */}
-			<div className="flex-1 max-w-none bg-white dark:bg-gray-900">
-				{/* Document Header */}
-				<header className="document-header bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+			{/* Main Content - Adjust margin based on TOC visibility */}
+			<div className={cn("flex-1 bg-white dark:bg-gray-900 transition-all duration-300", showToc && tocItems.length > 0 && "ml-64")}>
+				{/* Progress Bar */}
+				<div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800 z-40">
+					<motion.div
+						className="h-full bg-blue-500"
+						style={{ 
+							transformOrigin: "0%",
+							scaleX: scrollProgress
+						}}
+						transition={{ duration: 0.1 }}
+					/>
+				</div>
+				
+				{/* Document Header - Sticky with proper offset */}
+				<header className="document-header sticky top-1 z-30 bg-white/98 dark:bg-gray-900/98 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 p-6 shadow-lg">
 					<div className="flex items-center justify-between">
 						<div className="flex-1 min-w-0">
 							<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 font-mono">
@@ -587,8 +628,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					</div>
 				</header>
 
-				{/* Document Content */}
-				<main className="p-6">
+				{/* Document Content with top padding for sticky header */}
+				<main className="p-6 pt-32">
 					<motion.div
 						ref={contentRef}
 						initial={{ opacity: 0, y: 20 }}
