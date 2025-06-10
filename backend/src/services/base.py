@@ -12,7 +12,7 @@ T = TypeVar('T')
 class BaseService(Generic[T]):
     """Base service class with common functionality."""
     
-    def __init__(self, db: Session, logger: Optional[logging.Logger] = None):
+    def __init__(self, db, logger=None):
         """
         Initialize base service.
         

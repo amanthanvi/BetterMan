@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class SearchEngine:
     """Implements advanced search functionality for documentation."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db):
         """Initialize the search engine.
 
         Args:

@@ -114,7 +114,7 @@ class SearchScorer:
 class OptimizedSearchEngine:
     """Optimized search engine with improved performance."""
     
-    def __init__(self, db: Session):
+    def __init__(self, db):
         """Initialize the search engine."""
         self.db = db
         self.scorer = SearchScorer()

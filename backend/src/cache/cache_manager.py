@@ -10,6 +10,7 @@ from ..models.document import Document, Section, Subsection, RelatedDocument
 from ..parser.linux_parser import LinuxManParser
 from ..parser.formatted_parser import parse_formatted_man_page
 from ..parser.man_utils import fetch_man_page_content
+from ..parser.system_man_loader import get_complete_man_page, parse_man_page_structure
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ CACHE_STATUS_ON_DEMAND = "on_demand"  # Load only when requested
 class CacheManager:
     """Manages document caching and processing."""
 
-    def __init__(self, db: Session, parser: LinuxManParser, max_cache_size: int = 1000):
+    def __init__(self, db, parser, max_cache_size=1000):
         """Initialize the cache manager.
 
         Args:
@@ -115,10 +116,14 @@ class CacheManager:
 
         if document:
             # Update access statistics
-            document.last_accessed = datetime.utcnow()
-            document.access_count += 1
-            self.db.commit()
-            logger.info(f"Cache hit for document: {name}")
+            try:
+                document.last_accessed = datetime.utcnow()
+                document.access_count += 1
+                self.db.commit()
+                logger.info(f"Cache hit for document: {name}")
+            except Exception as e:
+                logger.warning(f"Failed to update access statistics: {e}")
+                self.db.rollback()
             return document
 
         # Not in cache, process the man page
@@ -141,16 +146,19 @@ class CacheManager:
         self.evict_if_needed()
 
         try:
-            # Process the man page
-            content, error_msg = fetch_man_page_content(name, str(section) if section else None)
+            # Use the new system man loader to get complete man page
+            content, error_msg = get_complete_man_page(name, str(section) if section else None)
 
+            if not content:
+                # Fallback to old method
+                content, error_msg = fetch_man_page_content(name, str(section) if section else None)
+                
             if not content:
                 logger.warning(f"No content found for man page {name}: {error_msg}")
                 raise ValueError(f"Document not found: {name}")
 
-            # Parse the man page using formatted parser
-            # since man command returns formatted output, not raw groff
-            parsed_data = parse_formatted_man_page(content)
+            # Parse the man page structure using new parser
+            parsed_data = parse_man_page_structure(content)
 
             # Determine cache status and priority
             is_common = name in COMMON_COMMANDS
@@ -159,19 +167,25 @@ class CacheManager:
             )
             cache_priority = 10 if is_common else 0
 
+            # Extract section number from metadata if available
+            section_num = None
+            if parsed_data.get("metadata", {}).get("section"):
+                try:
+                    section_num = int(parsed_data["metadata"]["section"])
+                except (ValueError, TypeError):
+                    section_num = None
+
             # Create document record
             document = Document(
                 name=name,
                 title=parsed_data["title"],
-                section=(
-                    int(parsed_data["section"])
-                    if parsed_data["section"].isdigit()
-                    else None
-                ),
+                section=section_num or section,
                 summary=(
-                    parsed_data["sections"][0]["content"]
+                    parsed_data["sections"][0]["content"][:200] + "..."
+                    if parsed_data["sections"] and len(parsed_data["sections"][0]["content"]) > 200
+                    else parsed_data["sections"][0]["content"]
                     if parsed_data["sections"]
-                    else None
+                    else "No summary available"
                 ),
                 raw_content=content,
                 is_common=is_common,
@@ -205,13 +219,14 @@ class CacheManager:
                         )
                         self.db.add(subsection)
 
-            # Add related documents
-            for related_name in parsed_data["related"]:
-                related_doc = RelatedDocument(
-                    document_id=document.id,
-                    related_name=related_name,
-                )
-                self.db.add(related_doc)
+            # Add related documents if available
+            if "related" in parsed_data:
+                for related_name in parsed_data["related"]:
+                    related_doc = RelatedDocument(
+                        document_id=document.id,
+                        related_name=related_name,
+                    )
+                    self.db.add(related_doc)
 
             self.db.commit()
             logger.info(f"Successfully processed and cached document: {name}")
@@ -507,7 +522,7 @@ class CacheManager:
 _cache_manager_instance = None
 
 
-def get_cache_manager(db: Session) -> CacheManager:
+def get_cache_manager(db) -> CacheManager:
     """Get cache manager instance (singleton pattern)."""
     global _cache_manager_instance
     if _cache_manager_instance is None:

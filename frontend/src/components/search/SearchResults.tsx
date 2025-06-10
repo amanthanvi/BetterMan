@@ -77,7 +77,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse"
           >
             <div className="animate-pulse">
               <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />

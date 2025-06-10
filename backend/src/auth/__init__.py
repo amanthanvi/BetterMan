@@ -2,6 +2,7 @@
 Authentication module for BetterMan.
 """
 
+from fastapi import APIRouter
 from .auth_service import AuthService, UserCreate, UserLogin, TokenResponse
 from .dependencies import (
     CurrentUser,
@@ -16,7 +17,15 @@ from .dependencies import (
     require_api_key,
     RequireScope
 )
-from .routes import router as auth_router
+from .routes import router as base_auth_router
+from .oauth_routes import router as oauth_router
+
+# Create parent auth router
+auth_router = APIRouter()
+
+# Include both auth routes and oauth routes
+auth_router.include_router(base_auth_router)
+auth_router.include_router(oauth_router)
 
 __all__ = [
     "AuthService",

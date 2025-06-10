@@ -13,7 +13,6 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 from datetime import datetime
-from .enhanced_groff_parser import clean_groff_content, EnhancedGroffParser
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -82,6 +81,25 @@ class LinuxManParser:
 
         # Initialize cache
         self.cache = ManPageCache(cache_dir)
+        # Initialize loaders lazily to avoid circular imports
+        self._loader = None
+        self._groff_parser = None
+    
+    @property
+    def loader(self):
+        """Lazy load ManPageLoader to avoid circular imports."""
+        if self._loader is None:
+            from .man_loader import ManPageLoader
+            self._loader = ManPageLoader()
+        return self._loader
+    
+    @property
+    def groff_parser(self):
+        """Lazy load EnhancedGroffParser to avoid circular imports."""
+        if self._groff_parser is None:
+            from .enhanced_groff_parser import EnhancedGroffParser
+            self._groff_parser = EnhancedGroffParser()
+        return self._groff_parser
 
     def parse_man_page(self, content: str, use_cache: bool = True) -> Dict:
         """
@@ -175,8 +193,8 @@ class LinuxManParser:
 
         for i, match in enumerate(section_matches):
             section_name = match.group(1)
-            # Clean the section name with enhanced parser
-            section_name = clean_groff_content(section_name).strip()
+            # Clean the section name
+            section_name = self._clean_text(section_name).strip()
             section_start = match.end()
 
             # Determine the end of the section
@@ -213,8 +231,8 @@ class LinuxManParser:
 
         for i, match in enumerate(subsection_matches):
             subsection_name = match.group(1)
-            # Clean the subsection name with enhanced parser
-            subsection_name = clean_groff_content(subsection_name).strip()
+            # Clean the subsection name
+            subsection_name = self._clean_text(subsection_name).strip()
             subsection_start = match.end()
 
             # Determine the end of the subsection
@@ -242,14 +260,31 @@ class LinuxManParser:
 
     def _process_section_content(self, content: str) -> str:
         """Process section content to replace formatting commands."""
-        # Use the enhanced groff parser to clean all formatting
-        content = clean_groff_content(content)
+        # Clean all formatting
+        content = self._clean_text(content)
+        
+        # Process macros
+        content = self._process_macros(content)
+        content = self._process_paragraph_macros(content)
+        content = self._clean_remaining_macros(content)
         
         # Normalize whitespace
         content = re.sub(r'\n{3,}', '\n\n', content)
         content = re.sub(r'[ \t]+', ' ', content)
         
         return content.strip()
+    
+    def _clean_text(self, text: str) -> str:
+        """Clean groff formatting from text."""
+        # Remove backslash escapes
+        text = re.sub(r'\\f[BIRP]', '', text)  # Font changes
+        text = re.sub(r'\\s[+-]?\d+', '', text)  # Size changes
+        text = re.sub(r'\\&', '', text)  # Zero-width space
+        text = re.sub(r'\\\((..)', '', text)  # Special characters
+        text = re.sub(r'\\-', '-', text)  # Hyphen
+        text = re.sub(r'\\".*$', '', text, flags=re.MULTILINE)  # Comments
+        
+        return text
     
     def _process_macros(self, content: str) -> str:
         """Process groff macros for formatting."""
@@ -455,3 +490,30 @@ class LinuxManParser:
 </html>"""
 
         return html
+    
+    def parse(self, command: str, section: Optional[int] = None) -> Dict:
+        """
+        Parse a man page for the given command.
+        
+        Args:
+            command: The command name to parse
+            section: Optional manual section number
+            
+        Returns:
+            Parsed man page data
+        """
+        # Try to get raw groff content first
+        raw_groff = self.loader.get_raw_groff(command, str(section) if section else None)
+        
+        if raw_groff:
+            # Parse groff format
+            return self.groff_parser.parse(raw_groff)
+        else:
+            # Fall back to loading formatted output
+            content, error = self.loader.load_man_page(command, str(section) if section else None)
+            
+            if error or not content:
+                raise ValueError(f"Failed to load man page for {command}: {error or 'No content'}")
+                
+            # Parse the formatted output
+            return self.parse_man_page(content)

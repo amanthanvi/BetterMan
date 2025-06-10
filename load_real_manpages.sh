@@ -39,39 +39,96 @@ echo "Exporting man pages from host system..."
 EXPORTED=0
 FAILED=0
 
-for cmd in "${COMMANDS[@]}"; do
+# Function to export a man page
+export_manpage() {
+    local cmd=$1
+    local section=${2:-""}
+    
+    # Build man command with optional section
+    local man_cmd="man"
+    if [[ -n "$section" ]]; then
+        man_cmd="man $section"
+    fi
+    
     # Try to find the man page file
-    MAN_PATH=$(man -w "$cmd" 2>/dev/null || true)
+    MAN_PATH=$($man_cmd -w "$cmd" 2>/dev/null || true)
     
     if [[ -n "$MAN_PATH" && -f "$MAN_PATH" ]]; then
-        DEST_FILE="$TEMP_DIR/${cmd}.man"
+        # Determine output filename
+        if [[ -n "$section" ]]; then
+            DEST_FILE="$TEMP_DIR/${cmd}.${section}.man"
+        else
+            DEST_FILE="$TEMP_DIR/${cmd}.man"
+        fi
         
         # Handle compressed files
         if [[ "$MAN_PATH" == *.gz ]]; then
-            gunzip -c "$MAN_PATH" > "$DEST_FILE" 2>/dev/null || continue
+            gunzip -c "$MAN_PATH" > "$DEST_FILE" 2>/dev/null || return 1
         elif [[ "$MAN_PATH" == *.bz2 ]]; then
-            bunzip2 -c "$MAN_PATH" > "$DEST_FILE" 2>/dev/null || continue
+            bunzip2 -c "$MAN_PATH" > "$DEST_FILE" 2>/dev/null || return 1
+        elif [[ "$MAN_PATH" == *.xz ]]; then
+            xzcat "$MAN_PATH" > "$DEST_FILE" 2>/dev/null || return 1
         else
-            cp "$MAN_PATH" "$DEST_FILE" 2>/dev/null || continue
+            cp "$MAN_PATH" "$DEST_FILE" 2>/dev/null || return 1
         fi
         
         if [[ -f "$DEST_FILE" && -s "$DEST_FILE" ]]; then
-            echo "✓ Exported: $cmd"
-            ((EXPORTED++))
+            return 0
         else
-            echo "✗ Failed to export: $cmd (empty file)"
             rm -f "$DEST_FILE"
-            ((FAILED++))
+            return 1
         fi
     else
         # Try to get formatted man page as fallback
-        if man "$cmd" > "$TEMP_DIR/${cmd}.txt" 2>/dev/null; then
-            echo "✓ Exported (formatted): $cmd"
-            ((EXPORTED++))
+        local fallback_file
+        if [[ -n "$section" ]]; then
+            fallback_file="$TEMP_DIR/${cmd}.${section}.txt"
         else
-            echo "✗ Not found: $cmd"
-            ((FAILED++))
+            fallback_file="$TEMP_DIR/${cmd}.txt"
         fi
+        
+        if $man_cmd "$cmd" > "$fallback_file" 2>/dev/null; then
+            if [[ -s "$fallback_file" ]]; then
+                return 0
+            else
+                rm -f "$fallback_file"
+                return 1
+            fi
+        fi
+    fi
+    return 1
+}
+
+# Export regular commands
+for cmd in "${COMMANDS[@]}"; do
+    if export_manpage "$cmd"; then
+        echo "✓ Exported: $cmd"
+        ((EXPORTED++))
+    else
+        echo "✗ Not found: $cmd"
+        ((FAILED++))
+    fi
+done
+
+# Also export some important library functions (section 3)
+LIBRARY_FUNCS=("printf" "malloc" "free" "open" "close" "read" "write" "socket" "pthread_create")
+echo ""
+echo "Exporting library functions..."
+for func in "${LIBRARY_FUNCS[@]}"; do
+    if export_manpage "$func" "3"; then
+        echo "✓ Exported: $func(3)"
+        ((EXPORTED++))
+    fi
+done
+
+# Export some config files (section 5)
+CONFIG_FILES=("passwd" "fstab" "hosts" "resolv.conf" "sudoers" "crontab")
+echo ""
+echo "Exporting configuration files..."
+for conf in "${CONFIG_FILES[@]}"; do
+    if export_manpage "$conf" "5"; then
+        echo "✓ Exported: $conf(5)"
+        ((EXPORTED++))
     fi
 done
 
@@ -81,125 +138,19 @@ echo "Export complete: $EXPORTED successful, $FAILED failed"
 # Copy to Docker container
 echo ""
 echo "Copying man pages to container..."
-docker cp $TEMP_DIR betterman-backend-1:/tmp/real_manpages
+# Create directory in container
+docker exec betterman-backend-1 mkdir -p /app/data/real_manpages
+# Copy files
+docker cp $TEMP_DIR/. betterman-backend-1:/app/data/real_manpages/
 
 # Load into database
 echo ""
 echo "Loading man pages into database..."
-docker-compose exec backend python -c "
-import os
-import json
-import logging
-from pathlib import Path
-from src.db.session import get_db
-from src.models.document import Document
-from src.parser.linux_parser import LinuxManParser
-from datetime import datetime
+docker exec betterman-backend-1 python -m src.parser.load_real_manpages /app/data/real_manpages
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-parser = LinuxManParser()
-loaded = 0
-updated = 0
-errors = 0
-
-with next(get_db()) as db:
-    manpage_dir = Path('/tmp/real_manpages')
-    if not manpage_dir.exists():
-        logger.error('Man page directory not found')
-        exit(1)
-    
-    for filepath in manpage_dir.iterdir():
-        if not filepath.is_file():
-            continue
-            
-        # Extract command name
-        if filepath.suffix == '.man':
-            command = filepath.stem
-            is_raw = True
-        elif filepath.suffix == '.txt':
-            command = filepath.stem
-            is_raw = False
-        else:
-            continue
-        
-        try:
-            # Read content
-            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
-            
-            if not content.strip():
-                logger.warning(f'Empty file: {command}')
-                continue
-            
-            # Parse the man page
-            if is_raw:
-                # Raw groff content
-                parsed = parser.parse_man_page(content)
-            else:
-                # Pre-formatted content - create basic structure
-                parsed = {
-                    'title': command.upper(),
-                    'section': '1',
-                    'sections': [
-                        {
-                            'name': 'DESCRIPTION',
-                            'content': content
-                        }
-                    ],
-                    'related': []
-                }
-            
-            # Check if document exists
-            existing = db.query(Document).filter(
-                Document.name == command
-            ).first()
-            
-            if existing:
-                # Update existing
-                existing.content = json.dumps(parsed)
-                existing.raw_content = content[:1000000]  # Limit size
-                existing.title = parsed.get('title', command)
-                existing.updated_at = datetime.utcnow()
-                updated += 1
-                logger.info(f'Updated: {command}')
-            else:
-                # Create new
-                doc = Document(
-                    name=command,
-                    section=parsed.get('section', '1'),
-                    title=parsed.get('title', command),
-                    content=json.dumps(parsed),
-                    raw_content=content[:1000000],
-                    category='user-commands' if parsed.get('section', '1') == '1' else 'other',
-                    tags='real,system',
-                    meta_info={
-                        'source': 'system',
-                        'loaded_at': datetime.utcnow().isoformat()
-                    }
-                )
-                db.add(doc)
-                loaded += 1
-                logger.info(f'Loaded: {command}')
-                
-        except Exception as e:
-            logger.error(f'Error processing {command}: {e}')
-            errors += 1
-            continue
-    
-    db.commit()
-    
-print(f'')
-print(f'Loading complete!')
-print(f'  New documents: {loaded}')
-print(f'  Updated documents: {updated}')
-print(f'  Errors: {errors}')
-print(f'  Total in database: {db.query(Document).count()}')
-"
-
-# Cleanup
-rm -rf $TEMP_DIR
+# Cleanup - commented out for debugging
+# rm -rf $TEMP_DIR
+echo "Temporary files kept at: $TEMP_DIR"
 
 echo ""
 echo "✅ Real man pages loaded successfully!"

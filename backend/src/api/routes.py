@@ -234,6 +234,22 @@ async def list_documents(
     return response_documents
 
 
+@router.get("/docs/popular", response_model=List[DocumentResponse])
+async def get_popular_documents(
+    limit: int = Query(10, ge=1, le=50), db: Session = Depends(get_db)
+):
+    """Get the most popular documents based on access count.
+
+    Args:
+        limit: Maximum number of results
+    """
+    documents = (
+        db.query(Document).order_by(Document.access_count.desc()).limit(limit).all()
+    )
+
+    return documents
+
+
 @router.get("/docs/{doc_id}", response_model=DocumentResponse)
 async def get_document(
     doc_id: str,
@@ -313,7 +329,7 @@ async def get_document_toc(
 
     # Fetch sections
     sections = (
-        db.query("Section")
+        db.query(Section)
         .filter(Section.document_id == document.id)
         .order_by(Section.order)
         .all()
@@ -331,7 +347,7 @@ async def get_document_toc(
 
         # Add subsections
         subsections = (
-            db.query("Subsection")
+            db.query(Subsection)
             .filter(Subsection.section_id == section.id)
             .order_by(Subsection.order)
             .all()
@@ -592,20 +608,6 @@ async def search_documents(
         }
 
 
-@router.get("/docs/popular", response_model=List[DocumentResponse])
-async def get_popular_documents(
-    limit: int = Query(10, ge=1, le=50), db: Session = Depends(get_db)
-):
-    """Get the most popular documents based on access count.
-
-    Args:
-        limit: Maximum number of results
-    """
-    documents = (
-        db.query(Document).order_by(Document.access_count.desc()).limit(limit).all()
-    )
-
-    return documents
 
 
 @router.post("/docs/import")
@@ -879,7 +881,4 @@ async def get_performance_metrics(
     }
 
 
-@router.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+# Health check endpoint removed - defined in main.py instead

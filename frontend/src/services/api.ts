@@ -127,6 +127,93 @@ export const searchAPI = {
 			return [];
 		}
 	},
+
+	instantSearch: async (
+		query: string,
+		limit: number = 10
+	): Promise<{
+		query: string;
+		results: any[];
+		suggestions: string[];
+		shortcuts: any[];
+		natural_language: string[];
+		categories: string[];
+		did_you_mean?: string;
+		instant: boolean;
+		timestamp: string;
+	}> => {
+		try {
+			return await apiClient.get("/api/search/instant", { q: query, limit });
+		} catch (error) {
+			console.error("Instant search failed:", error);
+			return {
+				query,
+				results: [],
+				suggestions: [],
+				shortcuts: [],
+				natural_language: [],
+				categories: [],
+				instant: true,
+				timestamp: new Date().toISOString(),
+			};
+		}
+	},
+
+	autocomplete: async (
+		prefix: string,
+		limit: number = 10,
+		context?: {
+			recent_commands?: string[];
+			current_command?: string;
+		}
+	): Promise<
+		Array<{
+			value: string;
+			type: "command" | "abbreviation" | "correction" | "fuzzy";
+			display: string;
+			description?: string;
+			score?: number;
+		}>
+	> => {
+		try {
+			const params: any = { prefix, limit };
+			if (context) {
+				params.context = JSON.stringify(context);
+			}
+			return await apiClient.get("/api/search/autocomplete", params);
+		} catch (error) {
+			console.error("Autocomplete failed:", error);
+			return [];
+		}
+	},
+
+	fuzzySearch: async (
+		query: string,
+		options: {
+			section?: number;
+			limit?: number;
+			offset?: number;
+			threshold?: number;
+		} = {}
+	): Promise<{
+		results: any[];
+		total: number;
+		query: string;
+		suggestions?: Array<{ command: string; title: string; score: number }>;
+		did_you_mean?: string;
+		fuzzy_matched: boolean;
+	}> => {
+		try {
+			const params = {
+				q: query,
+				...options,
+			};
+			return await apiClient.get("/api/search/fuzzy", params);
+		} catch (error) {
+			console.error("Fuzzy search failed:", error);
+			throw error;
+		}
+	},
 };
 
 // Document API
@@ -286,5 +373,8 @@ export const cachedSearchAPI = {
 		return result;
 	},
 };
+
+// Export api as named export for backward compatibility
+export const api = apiClient;
 
 export default apiClient;

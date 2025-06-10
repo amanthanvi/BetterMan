@@ -43,17 +43,49 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
     set({ loading: true, error: null, query });
     
     try {
-      const result = await searchAPI.search(query, {
-        page: 1,
-        per_page: 20,
-        ...filters,
-      });
-      
-      set({ 
-        results: result.results,
-        loading: false,
-        error: null,
-      });
+      // Check if this is a shortcut (starts with !)
+      if (query.startsWith('!') && query.length > 1) {
+        // Use instant search API for shortcuts
+        const instantResult = await searchAPI.instantSearch(query, 10);
+        
+        if (instantResult.shortcuts && instantResult.shortcuts.length > 0) {
+          // Handle shortcut navigation
+          const shortcut = instantResult.shortcuts[0];
+          if (shortcut.document) {
+            // Navigate directly to the document
+            window.location.href = `/docs/${shortcut.document.name}`;
+            return;
+          }
+        }
+        
+        // If no shortcut found, treat as regular search for the command without !
+        const commandQuery = query.substring(1);
+        const result = await searchAPI.search(commandQuery, {
+          page: 1,
+          per_page: 20,
+          ...filters,
+        });
+        
+        set({ 
+          results: result.results,
+          loading: false,
+          error: null,
+          query: commandQuery, // Update query without the !
+        });
+      } else {
+        // Regular search
+        const result = await searchAPI.search(query, {
+          page: 1,
+          per_page: 20,
+          ...filters,
+        });
+        
+        set({ 
+          results: result.results,
+          loading: false,
+          error: null,
+        });
+      }
       
       // Add to search history
       const currentHistory = get().history;

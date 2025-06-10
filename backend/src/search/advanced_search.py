@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class AdvancedSearchEngine:
     """Enhanced search engine with advanced features."""
     
-    def __init__(self, db: Session):
+    def __init__(self, db):
         self.db = db
         self.cache = get_redis_cache()
         self.analytics = AnalyticsTracker(db)

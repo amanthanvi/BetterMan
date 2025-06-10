@@ -5,7 +5,7 @@ import "./App.css";
 
 // Import components
 import { NavBar } from "@/components/layout/NavBar";
-import { PremiumSearch } from "@/components/search/PremiumSearch";
+import { MagicalSearchModal } from "@/components/search/MagicalSearchModal";
 import { KeyboardShortcutsModal } from "@/components/ui/KeyboardShortcutsModal";
 import { useAppStore } from "@/stores/appStore";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
@@ -16,6 +16,10 @@ import { clearOldFavorites } from "@/utils/clearOldFavorites";
 import { useKeyboardShortcuts, defaultShortcuts } from "@/utils/keyboardShortcuts";
 import { applyTheme } from "@/design-system/theme";
 import type { Document } from "@/types";
+
+// Import authentication
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Import test page directly for debugging
 import { TestPage } from "@/pages/TestPage";
@@ -41,6 +45,22 @@ const FavoritesPage = lazy(() =>
 );
 const DocsListPage = lazy(() =>
 	import("@/pages/DocsListPage").then((m) => ({ default: m.DocsListPage }))
+);
+const TerminalPage = lazy(() => import("@/pages/TerminalPage"));
+const TutorialMode = lazy(() => import("@/components/terminal/TutorialMode"));
+
+// Auth pages
+const LoginPage = lazy(() =>
+	import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage }))
+);
+const SignupPage = lazy(() =>
+	import("@/pages/SignupPage").then((m) => ({ default: m.SignupPage }))
+);
+const ProfilePage = lazy(() =>
+	import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage }))
+);
+const OAuthCallbackPage = lazy(() =>
+	import("@/pages/OAuthCallbackPage").then((m) => ({ default: m.OAuthCallbackPage }))
 );
 
 // Lazy load heavy components
@@ -166,7 +186,8 @@ function App() {
 			}}
 		>
 			<Router>
-				<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
+				<AuthProvider>
+					<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
 					{/* Navigation */}
 					<NavBar onSearchClick={() => setShowSearch(true)} />
 
@@ -232,6 +253,38 @@ function App() {
 										element={<TestPage />}
 									/>
 
+									{/* Terminal Playground */}
+									<Route
+										path="/terminal"
+										element={<TerminalPage />}
+									/>
+									<Route
+										path="/terminal/tutorial/:tutorialId"
+										element={<TutorialMode />}
+									/>
+
+									{/* Auth Routes */}
+									<Route
+										path="/auth/login"
+										element={<LoginPage />}
+									/>
+									<Route
+										path="/auth/signup"
+										element={<SignupPage />}
+									/>
+									<Route
+										path="/auth/callback/:provider"
+										element={<OAuthCallbackPage />}
+									/>
+									<Route
+										path="/profile"
+										element={
+											<ProtectedRoute>
+												<ProfilePage />
+											</ProtectedRoute>
+										}
+									/>
+
 									{/* 404 - Not Found */}
 									<Route
 										path="*"
@@ -242,8 +295,8 @@ function App() {
 						</main>
 					</div>
 
-					{/* Premium Search Modal */}
-					<PremiumSearch
+					{/* Magical Search Modal */}
+					<MagicalSearchModal
 						isOpen={showSearch}
 						onClose={() => setShowSearch(false)}
 					/>
@@ -257,9 +310,10 @@ function App() {
 					{/* Toast Notifications */}
 					<ToastContainer toasts={toasts} removeToast={removeToast} />
 
-					{/* Performance Monitor (dev only) */}
-					{process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
+					{/* Performance Monitor (dev only) - Temporarily disabled to debug CORS issues */}
+					{/* {process.env.NODE_ENV === 'development' && <PerformanceMonitor />} */}
 				</div>
+				</AuthProvider>
 			</Router>
 		</ErrorBoundary>
 	);

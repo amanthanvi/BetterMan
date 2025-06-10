@@ -65,7 +65,7 @@ class SearchBackend:
 class SQLiteFullTextSearchBackend(SearchBackend):
     """SQLite FTS5 search backend."""
     
-    def __init__(self, db: Session):
+    def __init__(self, db):
         self.db = db
         self.available = self._check_fts_availability()
     
@@ -193,7 +193,7 @@ class SQLiteFullTextSearchBackend(SearchBackend):
 class PostgreSQLFullTextSearchBackend(SearchBackend):
     """PostgreSQL full-text search backend."""
     
-    def __init__(self, db: Session):
+    def __init__(self, db):
         self.db = db
         self.available = self._check_pg_availability()
     
@@ -306,7 +306,7 @@ class PostgreSQLFullTextSearchBackend(SearchBackend):
 class SemanticSearchBackend(SearchBackend):
     """AI-powered semantic search backend using embeddings."""
     
-    def __init__(self, db: Session, cache_manager: CacheManager):
+    def __init__(self, db, cache_manager):
         self.db = db
         self.cache = cache_manager
         self.available = bool(settings.OPENAI_API_KEY and settings.AI_SEARCH_ENABLED)
@@ -461,7 +461,7 @@ class SemanticSearchBackend(SearchBackend):
 class UnifiedSearchEngine:
     """Unified search engine that combines multiple backends."""
     
-    def __init__(self, db: Session, cache_manager: CacheManager = None):
+    def __init__(self, db, cache_manager=None):
         self.db = db
         self.cache = cache_manager
         

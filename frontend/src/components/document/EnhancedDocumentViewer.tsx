@@ -40,7 +40,6 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	const [document] = useState(initialDocument);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [showToc, setShowToc] = useState(typeof window !== 'undefined' ? window.innerWidth > 1024 : true);
 	const [tocCollapsed, setTocCollapsed] = useState(false);
 	const [tocItems, setTocItems] = useState<TableOfContentsItem[]>([]);
 	const [activeSection, setActiveSection] = useState<string>("");
@@ -61,6 +60,8 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 		removeFavorite,
 		addRecentDoc,
 		addToast,
+		documentTocOpen: showToc,
+		setDocumentTocOpen: setShowToc,
 	} = useAppStore();
 
 	// Load document content
@@ -294,7 +295,7 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 
 	// Handle keyboard shortcut events - must be after function definitions
 	useEffect(() => {
-		const handleToggleToc = () => setShowToc(prev => !prev);
+		const handleToggleToc = () => setShowToc(!showToc);
 		const handleToggleBookmark = () => toggleFavorite();
 
 		window.addEventListener('toggleTocEvent', handleToggleToc);
@@ -304,7 +305,7 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			window.removeEventListener('toggleTocEvent', handleToggleToc);
 			window.removeEventListener('toggleBookmarkEvent', handleToggleBookmark);
 		};
-	}, []);
+	}, [showToc, toggleFavorite]);
 
 	// Filter TOC items based on search
 	const filterTocItems = (items: TableOfContentsItem[], search: string): TableOfContentsItem[] => {
@@ -587,13 +588,14 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 					"fixed left-0 z-40 flex flex-col",
 					"w-80 bg-white dark:bg-gray-900",
 					"border-r border-gray-200 dark:border-gray-800",
-					"shadow-xl transition-transform duration-300 ease-in-out",
-					showToc ? "translate-x-0" : "-translate-x-full"
+					"shadow-xl"
 				)}
 				style={{ 
 					top: "64px", 
 					bottom: 0,
-					height: "calc(100vh - 64px)"
+					height: "calc(100vh - 64px)",
+					transform: showToc ? "translateX(0)" : "translateX(-100%)",
+					transition: "transform 300ms cubic-bezier(0.4, 0, 0.2, 1)"
 				}}
 			>
 						{/* TOC Header */}
@@ -650,9 +652,12 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Main Content Area */}
 			<div 
 				className={cn(
-					"flex-1 w-full transition-all duration-300",
+					"flex-1 w-full",
 					showToc ? "pl-80" : "pl-0"
 				)}
+				style={{
+					transition: "padding-left 300ms cubic-bezier(0.4, 0, 0.2, 1)"
+				}}
 			>
 				{/* Document Header */}
 				<header className="sticky top-16 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-sm">

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class AnalyticsTracker:
     """Handle analytics tracking operations."""
     
-    def __init__(self, db: Session):
+    def __init__(self, db):
         self.db = db
     
     def track_page_view(

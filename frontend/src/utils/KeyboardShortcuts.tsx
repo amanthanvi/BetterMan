@@ -39,8 +39,9 @@ export const KeyboardShortcuts: React.FC = () => {
 
 			// Global shortcuts
 			switch (true) {
-				// Command palette
+				// Command palette - use Cmd/Ctrl+P instead of K to avoid browser conflicts
 				case modifier && key === "k":
+				case modifier && key === "p":
 					event.preventDefault();
 					setCommandPaletteOpen(true);
 					break;

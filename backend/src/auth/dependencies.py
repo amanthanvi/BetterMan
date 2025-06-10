@@ -22,7 +22,9 @@ async def get_auth_service(
     db: Session = Depends(get_db)
 ) -> AuthService:
     """Get authentication service instance."""
-    cache = get_cache_manager(db)
+    from ..cache.cache_manager import CacheManager
+    from ..parser.groff_parser import GroffParser
+    cache = CacheManager(db, GroffParser())
     return AuthService(db, cache)
 
 

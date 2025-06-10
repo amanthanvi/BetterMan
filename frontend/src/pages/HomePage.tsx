@@ -10,11 +10,13 @@ import {
 	MagicWandIcon as SparklesIcon,
 } from "@radix-ui/react-icons";
 
-// Components - Using the new premium components
+// Components - Using the optimized components
+import { OptimizedSearchInterface } from "@/components/search/OptimizedSearchInterface";
+import { VirtualSearchResults } from "@/components/search/VirtualSearchResults";
 import { AdvancedSearch } from "@/components/search/AdvancedSearch";
-import { PremiumSearchResults } from "@/components/search/PremiumSearchResults";
 import { Button } from "@/components/ui/Button";
 import { SearchErrorBoundary } from "@/components/ui/SearchErrorBoundary";
+import { PerformanceMonitor } from "@/components/monitoring/PerformanceMonitor";
 
 // Stores
 import { useSearchStore } from "@/stores/searchStore";
@@ -132,8 +134,13 @@ export const HomePage: React.FC<HomePageProps> = ({
 		return () => {};
 	}, []);
 
-	const handleDocumentSelect = (doc: Document) => {
-		navigate(`/docs/${doc.name}.${doc.section}`);
+	const handleDocumentSelect = (doc: Document | { name: string; title?: string; section?: string | number }) => {
+		// Navigate directly to the document
+		if ('section' in doc && doc.section) {
+			navigate(`/docs/${doc.name}.${doc.section}`);
+		} else {
+			navigate(`/docs/${doc.name}`);
+		}
 	};
 
 	const handleQuickSearch = (command: string) => {
@@ -142,6 +149,9 @@ export const HomePage: React.FC<HomePageProps> = ({
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950">
+			{/* Performance Monitor - Only in development */}
+			{import.meta.env.DEV && <PerformanceMonitor />}
+			
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 				{/* Hero Section */}
 				{!hasSearched && (
@@ -264,16 +274,20 @@ export const HomePage: React.FC<HomePageProps> = ({
 					</motion.div>
 				)}
 
-				{/* Premium Search Results */}
+				{/* Optimized Search Results */}
 				{hasSearched && (
 					<div className="mb-8">
 						<div className="mb-6 max-w-4xl mx-auto">
 							<SearchErrorBoundary onRetry={() => window.location.reload()}>
-								<AdvancedSearch />
+								<OptimizedSearchInterface autoFocus />
 							</SearchErrorBoundary>
 						</div>
 						<SearchErrorBoundary onRetry={() => window.location.reload()}>
-							<PremiumSearchResults />
+							<VirtualSearchResults 
+								results={results}
+								loading={searchLoading}
+								query={query}
+							/>
 						</SearchErrorBoundary>
 					</div>
 				)}
@@ -317,7 +331,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 												delay: 0.6 + index * 0.1,
 											}}
 											onClick={() =>
-												handleQuickSearch(command.name || command.title)
+												handleDocumentSelect(command)
 											}
 											className="text-left p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200 group"
 										>

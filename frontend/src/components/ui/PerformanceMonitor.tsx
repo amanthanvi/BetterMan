@@ -41,12 +41,15 @@ export const PerformanceMonitor: React.FC = () => {
 
 	// Monitor API performance
 	useEffect(() => {
+		// Skip in production
+		if (process.env.NODE_ENV === "production") return;
+		
 		const originalFetch = window.fetch;
 		let requestCount = 0;
 		let errorCount = 0;
 		const latencies: number[] = [];
 
-		window.fetch = async (...args) => {
+		window.fetch = async function(...args) {
 			const startTime = performance.now();
 			requestCount++;
 			setMetrics((prev) => ({
@@ -55,7 +58,8 @@ export const PerformanceMonitor: React.FC = () => {
 			}));
 
 			try {
-				const response = await originalFetch(...args);
+				// Call original fetch with proper context
+				const response = await originalFetch.apply(this, args);
 				const endTime = performance.now();
 				const latency = endTime - startTime;
 				latencies.push(latency);

@@ -20,6 +20,13 @@ interface AppStore extends AppState {
   toggleCommandPalette: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
   
+  // Document viewer state
+  documentTocOpen: boolean;
+  setDocumentTocOpen: (open: boolean) => void;
+  toggleDocumentToc: () => void;
+  currentDocument?: Document;
+  setCurrentDocument: (doc: Document | undefined) => void;
+  
   // Preferences actions
   updatePreferences: (preferences: Partial<UserPreferences>) => void;
   resetPreferences: () => void;
@@ -30,13 +37,19 @@ interface AppStore extends AppState {
   isFavorite: (docId: string) => boolean;
   setFavorites: (favorites: string[]) => void;
   
-  // Recent documents actions
+  // Recent documents actions (with alias)
   addRecentDoc: (doc: Document) => void;
+  addRecentDocument: (doc: Document) => void; // Alias for addRecentDoc
+  recentDocuments: Document[]; // Alias for recentDocs
   clearRecentDocs: () => void;
   
   // Search history actions
   addSearchHistory: (query: string) => void;
   clearSearchHistory: () => void;
+  
+  // User state
+  user?: any;
+  setUser: (user: any) => void;
   
   // Toast actions
   addToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
@@ -69,6 +82,14 @@ export const useAppStore = create<AppStore>()(
       recentDocs: [],
       searchHistory: [],
       toasts: [],
+      documentTocOpen: typeof window !== 'undefined' ? window.innerWidth > 1024 : true,
+      currentDocument: undefined,
+      user: undefined,
+      
+      // Alias getters
+      get recentDocuments() {
+        return get().recentDocs;
+      },
       
       // Theme actions
       toggleDarkMode: () => {
@@ -129,6 +150,11 @@ export const useAppStore = create<AppStore>()(
       toggleCommandPalette: () => set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
       setCommandPaletteOpen: (open: boolean) => set({ commandPaletteOpen: open }),
       
+      // Document TOC actions
+      setDocumentTocOpen: (open: boolean) => set({ documentTocOpen: open }),
+      toggleDocumentToc: () => set((state) => ({ documentTocOpen: !state.documentTocOpen })),
+      setCurrentDocument: (doc: Document | undefined) => set({ currentDocument: doc }),
+      
       // Preferences actions
       updatePreferences: (newPreferences: Partial<UserPreferences>) =>
         set((state) => ({
@@ -158,7 +184,11 @@ export const useAppStore = create<AppStore>()(
             recentDocs: [doc, ...filtered].slice(0, 10), // Keep last 10
           };
         }),
+      addRecentDocument: (doc: Document) => get().addRecentDoc(doc), // Alias
       clearRecentDocs: () => set({ recentDocs: [] }),
+      
+      // User actions
+      setUser: (user: any) => set({ user }),
       
       // Search history actions
       addSearchHistory: (query: string) =>
@@ -272,6 +302,7 @@ export const useAppStore = create<AppStore>()(
         sidebarOpen: state.sidebarOpen,
         theme: state.theme,
         darkMode: state.darkMode,
+        documentTocOpen: state.documentTocOpen,
       }),
       onRehydrateStorage: () => (state) => {
         if (!DARK_MODE_ENABLED) {

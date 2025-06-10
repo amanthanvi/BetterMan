@@ -66,7 +66,7 @@ class TokenResponse(BaseModel):
 
 
 class AuthService:
-    def __init__(self, db: Session, cache: Optional[CacheManager] = None):
+    def __init__(self, db, cache=None):
         self.db = db
         self.cache = cache
         self.secret_key = settings.SECRET_KEY

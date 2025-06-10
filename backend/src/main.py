@@ -25,6 +25,12 @@ from .errors import (
 from .cache.cache_manager import get_cache_manager
 from .security.rate_limiter import RateLimitMiddleware
 
+# Import performance optimizations
+from .db.query_performance import setup_query_monitoring, performance_monitor
+from .middleware.compression import CompressionMiddleware
+from .monitoring_metrics.metrics import system_monitor, update_app_info, RequestTracker
+from .search.fts_search import FullTextSearchEngine
+
 # Initialize settings and logging
 settings = get_settings()
 setup_logging(settings)
@@ -50,9 +56,14 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Starting BetterMan API...")
 
-        # Initialize database
+        # Initialize database with query monitoring
         logger.info("Initializing database...")
         init_db()
+        
+        # Setup query performance monitoring
+        from .db.session import engine
+        setup_query_monitoring(engine)
+        logger.info("Query monitoring enabled")
 
         # Initialize scheduler
         logger.info("Initializing scheduler...")
@@ -61,15 +72,24 @@ async def lifespan(app: FastAPI):
             scheduler.start()
         logger.info("Scheduler initialized successfully")
 
-        # Initialize search engine
+        # Initialize full-text search engine
         try:
-            from .search.search_engine import SearchEngine
-
             db = next(get_db())
-            search_engine = SearchEngine(db)
-            logger.info("Search engine initialized")
+            search_engine = FullTextSearchEngine(db)
+            logger.info("Full-text search engine initialized")
         except Exception as e:
             logger.error(f"Error initializing search engine: {e}")
+            # Fallback to regular search
+            from .search.search_engine import SearchEngine
+            search_engine = SearchEngine(db)
+            logger.info("Fallback search engine initialized")
+
+        # Start system monitoring
+        await system_monitor.start()
+        logger.info("System monitoring started")
+        
+        # Update app info metrics
+        update_app_info(settings.APP_VERSION, settings.ENVIRONMENT)
 
         logger.info(f"BetterMan API started in {settings.ENVIRONMENT} mode")
 
@@ -83,6 +103,10 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Shutting down BetterMan API...")
 
+        # Stop system monitoring
+        await system_monitor.stop()
+        logger.info("System monitoring stopped")
+
         # Shutdown scheduler
         if scheduler and scheduler.running:
             scheduler.stop()
@@ -92,6 +116,10 @@ async def lifespan(app: FastAPI):
         if search_engine:
             # Add any cleanup if needed
             pass
+
+        # Log performance stats
+        stats = performance_monitor.get_stats()
+        logger.info(f"Performance stats: {stats}")
 
         logger.info("BetterMan API stopped")
 
@@ -117,30 +145,39 @@ app = FastAPI(
 # Setup middleware
 setup_middleware(app)
 
-# Add validation middleware
-# TODO: Fix ValidationMiddleware implementation
-# from .middleware.validation import ValidationMiddleware
-# app.add_middleware(ValidationMiddleware)
+# Add compression middleware with optimized settings
+app.add_middleware(
+    CompressionMiddleware,
+    minimum_size=1024,  # Only compress responses > 1KB
+    gzip_level=6,       # Balanced compression
+    brotli_quality=4,   # Fast brotli compression
+    exclude_paths=["/health", "/metrics"],  # Don't compress health checks
+)
 
-# Setup enhanced rate limiting
-# Note: Rate limiting with cache will be initialized on first request
-# app.add_middleware(RateLimitMiddleware) # Will be added in startup event
+# Add request tracking middleware
+@app.middleware("http")
+async def track_requests(request: Request, call_next):
+    """Track request performance metrics."""
+    # Skip tracking for health checks
+    if request.url.path in ["/health", "/metrics"]:
+        return await call_next(request)
+    
+    with RequestTracker(request.method, request.url.path):
+        response = await call_next(request)
+        return response
 
 # Setup security
 from .security_utils import setup_security
 setup_security(app)
 
 # Setup monitoring
-from .monitoring import setup_monitoring
-setup_monitoring(app)
+from . import monitoring
+monitoring.setup_monitoring(app)
 
 # Setup performance optimizations
-from .performance import setup_performance_monitoring, CompressionMiddleware
+from .performance import setup_performance_monitoring
 
 setup_performance_monitoring()
-
-# Add compression middleware
-app.add_middleware(CompressionMiddleware)
 
 # Add exception handlers
 app.add_exception_handler(BetterManError, betterman_error_handler)
@@ -220,7 +257,7 @@ async def health_check(db: Session = Depends(get_db)):
     if search_engine:
         try:
             # Verify FTS is available
-            if hasattr(search_engine, "has_fts") and search_engine.has_fts:
+            if isinstance(search_engine, FullTextSearchEngine):
                 health_status["components"]["search"] = "healthy (FTS enabled)"
             else:
                 health_status["components"]["search"] = "healthy (fallback mode)"
@@ -239,3 +276,45 @@ async def health_check(db: Session = Depends(get_db)):
     )
 
     return JSONResponse(content=health_status, status_code=status_code)
+
+
+@app.get("/metrics")
+async def performance_metrics():
+    """
+    Get performance metrics and statistics.
+    
+    Returns:
+        Performance metrics including request stats, query stats, and system resources
+    """
+    from .monitoring.metrics import collect_metrics
+    
+    metrics = await collect_metrics()
+    return JSONResponse(content=metrics)
+
+
+@app.get("/api/performance")
+async def performance_dashboard():
+    """
+    Get detailed performance dashboard data.
+    
+    Returns:
+        Detailed performance statistics for monitoring
+    """
+    stats = performance_monitor.get_stats()
+    
+    # Add current system metrics
+    import psutil
+    stats['current_system'] = {
+        'cpu_percent': psutil.cpu_percent(interval=0.1),
+        'memory': dict(psutil.virtual_memory()._asdict()),
+        'disk': dict(psutil.disk_usage('/')._asdict()),
+        'network': dict(psutil.net_io_counters()._asdict()) if psutil.net_io_counters() else None,
+    }
+    
+    # Add database query suggestions
+    stats['optimization_suggestions'] = {
+        'slow_queries': performance_monitor.get_slow_queries(5),
+        'frequent_queries': performance_monitor.get_frequent_queries(5),
+    }
+    
+    return JSONResponse(content=stats)

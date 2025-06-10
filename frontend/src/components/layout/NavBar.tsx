@@ -9,9 +9,10 @@ import {
 	HamburgerMenuIcon,
 	CodeIcon,
 } from "@radix-ui/react-icons";
+import { Terminal, User, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
-
+import { useAuth } from "@/contexts/AuthContext";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/utils/cn";
 
@@ -29,8 +30,10 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 	} = useAppStore();
 
 	const { clearResults } = useSearchStore();
+	const { user, isAuthenticated, logout } = useAuth();
 
 	const navigation = [
+		{ name: "Terminal", href: "/terminal", icon: Terminal },
 		{ name: "Favorites", href: "/favorites", icon: BookmarkIcon },
 		{ name: "Settings", href: "/settings", icon: GearIcon },
 	];
@@ -42,6 +45,10 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 		return location.pathname.startsWith(href);
 	};
 
+	const handleLogout = async () => {
+		await logout();
+		clearResults();
+	};
 
 	return (
 		<motion.nav
@@ -133,7 +140,55 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 							})}
 						</div>
 
-						{/* Theme toggle hidden - dark mode is always on */}
+						{/* User menu */}
+						{isAuthenticated ? (
+							<div className="flex items-center space-x-2">
+								<Link
+									to="/profile"
+									className={cn(
+										"flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+										isActive("/profile")
+											? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+											: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+									)}
+								>
+									{user?.avatar_url ? (
+										<img
+											src={user.avatar_url}
+											alt={user.username}
+											className="w-8 h-8 rounded-full"
+										/>
+									) : (
+										<div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
+											{user?.username?.charAt(0).toUpperCase()}
+										</div>
+									)}
+									<span className="hidden sm:inline">{user?.username}</span>
+								</Link>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={handleLogout}
+									className="hidden sm:flex"
+								>
+									Sign Out
+								</Button>
+							</div>
+						) : (
+							<div className="flex items-center space-x-2">
+								<Link to="/auth/login">
+									<Button variant="ghost" size="sm">
+										<LogIn className="w-4 h-4 mr-2" />
+										Sign In
+									</Button>
+								</Link>
+								<Link to="/auth/signup" className="hidden sm:block">
+									<Button variant="primary" size="sm">
+										Get Started
+									</Button>
+								</Link>
+							</div>
+						)}
 					</div>
 				</div>
 			</div>
@@ -169,6 +224,57 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 								</Link>
 							);
 						})}
+						
+						{/* Mobile auth buttons */}
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+							{isAuthenticated ? (
+								<>
+									<Link
+										to="/profile"
+										onClick={toggleSidebar}
+										className={cn(
+											"flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+											isActive("/profile")
+												? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+												: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+										)}
+									>
+										<User className="w-4 h-4" />
+										<span>Profile</span>
+									</Link>
+									<button
+										onClick={() => {
+											toggleSidebar();
+											handleLogout();
+										}}
+										className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+									>
+										<LogIn className="w-4 h-4" />
+										<span>Sign Out</span>
+									</button>
+								</>
+							) : (
+								<>
+									<Link
+										to="/auth/login"
+										onClick={toggleSidebar}
+										className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+									>
+										<LogIn className="w-4 h-4" />
+										<span>Sign In</span>
+									</Link>
+									<Link
+										to="/auth/signup"
+										onClick={toggleSidebar}
+										className="mt-2 block"
+									>
+										<Button variant="primary" className="w-full">
+											Get Started
+										</Button>
+									</Link>
+								</>
+							)}
+						</div>
 					</div>
 				</motion.div>
 			)}

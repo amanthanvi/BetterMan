@@ -1,14 +1,18 @@
 /* Enhanced Document Viewer Styles */
 
-/* Prevent layout shifts and flickering */
-.document-toc {
-  will-change: transform;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  -webkit-font-smoothing: antialiased;
-  contain: layout style paint;
+/* Simplified TOC sidebar styling */
+.document-page aside.fixed {
+  position: fixed !important;
+  top: 64px !important;
+  left: 0 !important;
+  width: 16rem !important;
+  height: calc(100vh - 64px) !important;
+  z-index: 20;
+}
+
+/* TOC slide transition */
+.document-page aside.fixed {
+  transition: transform 300ms ease-out;
 }
 
 /* Ensure sticky header doesn't get cut off */
@@ -18,45 +22,15 @@
   -webkit-transform: translateZ(0);
 }
 
-/* Smooth transitions for dark mode */
-.document-toc,
+/* Smooth transitions for dark mode - only colors */
+.document-page aside,
 .document-header {
   transition: background-color 200ms, border-color 200ms;
 }
 
-/* Fix TOC positioning - ensure it's always in the right place */
-aside.fixed {
-  position: fixed !important;
-  top: 64px !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  height: calc(100vh - 64px) !important;
-  transform-origin: left center;
-}
-
-/* Ensure TOC doesn't shift on hover */
-aside.fixed:hover {
-  transform: none !important;
-}
-
-/* Prevent TOC flicker */
-.document-page aside {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  will-change: transform;
-  contain: layout style paint;
-}
-
-/* Smooth TOC transitions */
-.document-page aside.transition-transform {
-  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Force GPU acceleration for TOC */
-aside.fixed {
-  -webkit-transform: translate3d(0, 0, 0);
-  transform: translate3d(0, 0, 0);
+/* Content area transition - only padding to prevent layout jumps */
+.document-page main {
+  transition: padding-left 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Ensure content area has proper spacing when TOC is visible */
@@ -64,9 +38,9 @@ aside.fixed {
   padding-left: 20rem !important;
 }
 
-/* Smooth transition for content area */
-.transition-all {
-  transition-property: all;
+/* Override any conflicting transition-all classes in the document viewer */
+.document-page .transition-all {
+  transition-property: padding, margin;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
 }
@@ -76,6 +50,35 @@ aside.fixed {
   height: calc(100vh - 128px); /* Account for navbar and TOC header */
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain; /* Prevent scroll chaining */
+}
+
+/* Prevent FOUC (Flash of Unstyled Content) for TOC */
+@media (prefers-reduced-motion: no-preference) {
+  /* Hide TOC initially until JS loads */
+  .document-page aside.fixed {
+    visibility: visible !important;
+  }
+}
+
+/* Ensure TOC state persists during route changes */
+.document-page {
+  isolation: isolate;
+}
+
+/* Optimize repaints for TOC toggle */
+.document-page aside.fixed,
+.document-page main {
+  will-change: auto;
+}
+
+/* Immediately apply transform on load to prevent flicker */
+.document-page aside.fixed[data-toc-hidden="true"] {
+  transform: translateX(-100%) !important;
+}
+
+.document-page aside.fixed[data-toc-visible="true"] {
+  transform: translateX(0) !important;
 }
 
 /* Print styles */

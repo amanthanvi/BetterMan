@@ -84,3 +84,31 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, removeTo
     </div>
   );
 };
+
+// Helper function for showing toasts
+export const toast = {
+  success: (message: string) => {
+    const store = (window as any).__appStore;
+    if (store) {
+      store.addToast(message, 'success');
+    }
+  },
+  error: (message: string) => {
+    const store = (window as any).__appStore;
+    if (store) {
+      store.addToast(message, 'error');
+    }
+  },
+  info: (message: string) => {
+    const store = (window as any).__appStore;
+    if (store) {
+      store.addToast(message, 'info');
+    }
+  },
+  warning: (message: string) => {
+    const store = (window as any).__appStore;
+    if (store) {
+      store.addToast(message, 'warning');
+    }
+  }
+};

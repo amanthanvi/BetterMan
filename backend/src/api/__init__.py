@@ -6,6 +6,9 @@ from .routes import router as main_router
 from .search_routes import router as search_router
 from .proxy_routes import router as proxy_router
 from .user_routes import router as user_router
+from .error_routes import router as error_router
+from .terminal_routes import router as terminal_router
+from .personalization_routes import router as personalization_router
 
 # Create a main API router that includes all other routers
 api_router = APIRouter()
@@ -15,3 +18,6 @@ api_router.include_router(main_router, tags=["documents"])
 api_router.include_router(search_router, prefix="/search", tags=["search"])
 api_router.include_router(proxy_router, tags=["proxy"])
 api_router.include_router(user_router, tags=["user"])
+api_router.include_router(error_router, tags=["errors"])
+api_router.include_router(terminal_router, tags=["terminal"])
+api_router.include_router(personalization_router, tags=["personalization"])

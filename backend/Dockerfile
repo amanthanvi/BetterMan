@@ -8,7 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	curl \
 	man-db \
 	manpages \
-	&& rm -rf /var/lib/apt/lists/*
+	manpages-posix \
+	manpages-dev \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& mandb
 
 # Install Rust for pydantic-core compilation
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y

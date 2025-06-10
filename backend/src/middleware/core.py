@@ -157,16 +157,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Enhanced CSP with nonce
         csp_directives = [
             "default-src 'self'",
-            f"script-src 'self' 'nonce-{csp_nonce}'",
+            f"script-src 'self' 'nonce-{csp_nonce}' 'unsafe-inline'",  # Allow inline scripts for Vite in dev
             "style-src 'self' 'unsafe-inline'",  # Allow inline styles for now
             "img-src 'self' data: https:",
             "font-src 'self' data:",
-            "connect-src 'self'",
+            "connect-src 'self' http://localhost:* ws://localhost:*",  # Allow localhost connections
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
-            "upgrade-insecure-requests",
         ]
+        
+        # Don't use upgrade-insecure-requests in development
+        if settings.ENVIRONMENT == "production":
+            csp_directives.append("upgrade-insecure-requests")
 
         response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
 

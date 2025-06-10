@@ -11,6 +11,7 @@ services:
       - ./backend:/app
       - ./data:/app/data  # Persistent database storage
       - man_cache:/app/.cache  # Cache for processed man pages
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for terminal
     environment:
       - ENVIRONMENT=development
       - DEBUG=true
@@ -80,6 +81,15 @@ services:
       - redis
     profiles: ["tools"]
     command: ["python", "-m", "src.management.comprehensive_cli"]
+
+  # Sandbox image for terminal
+  sandbox:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.sandbox
+    image: betterman-sandbox:latest
+    profiles: ["sandbox-build"]
+    command: echo "Sandbox image built successfully"
 
 volumes:
   frontend_node_modules:

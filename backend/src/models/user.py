@@ -50,6 +50,17 @@ class User(Base):
     favorites = relationship("UserFavorite", back_populates="user", cascade="all, delete-orphan")
     search_history = relationship("SearchHistory", back_populates="user", cascade="all, delete-orphan")
     
+    # OAuth and authentication
+    oauth_accounts = relationship("OAuthAccount", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+    two_factor_auth = relationship("TwoFactorAuth", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    
+    # Personalization
+    preferences = relationship("UserPreferences", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    collections = relationship("UserCollection", back_populates="user", cascade="all, delete-orphan")
+    learning_progress = relationship("LearningProgress", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    snippets = relationship("CommandSnippet", back_populates="user", cascade="all, delete-orphan")
+    
     def verify_password(self, password: str) -> bool:
         """Verify a password against the hash."""
         return bcrypt.checkpw(password.encode('utf-8'), self.hashed_password.encode('utf-8'))
@@ -169,13 +180,15 @@ class SearchHistory(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     # Search details
-    query = Column(String(500), nullable=False)
+    query = Column(String(500), nullable=False, index=True)
     section = Column(Integer)
     results_count = Column(Integer)
     clicked_result_id = Column(Integer)  # ID of the result the user clicked
+    selected_result = Column(String(255))  # Name of the selected result
     
     # Timestamps
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    searched_at = Column(DateTime, server_default=func.now(), nullable=False)  # Alias for created_at
     
     # Relationships
     user = relationship("User", back_populates="search_history")

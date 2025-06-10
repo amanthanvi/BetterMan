@@ -129,3 +129,57 @@ class UserAnalytics(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class ErrorReport(Base):
+    """Track application errors for monitoring and debugging."""
+    __tablename__ = "error_reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    error_id = Column(String(128), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, nullable=True)  # TODO: Add ForeignKey when User model is ready
+    error_type = Column(String(100), nullable=False, index=True)
+    error_message = Column(Text, nullable=False)
+    stack_trace = Column(Text)
+    severity = Column(String(20), nullable=False, index=True)  # low, medium, high, critical
+    source = Column(String(50), nullable=False)  # frontend, backend
+    endpoint = Column(String(255))
+    user_agent = Column(Text)
+    context_data = Column(JSON)  # Additional context as JSON
+    environment_data = Column(JSON)  # Environment info as JSON
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    resolved_at = Column(DateTime, nullable=True)
+    resolution_notes = Column(Text)
+    
+    # Relationships
+    # user = relationship("User", backref="error_reports")  # TODO: Enable when User model is implemented
+
+
+class ErrorFeedback(Base):
+    """User feedback on errors they encountered."""
+    __tablename__ = "error_feedback"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    error_id = Column(String(128), ForeignKey("error_reports.error_id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, nullable=True)  # TODO: Add ForeignKey when User model is ready
+    feedback = Column(Text, nullable=False)
+    contact_allowed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    error_report = relationship("ErrorReport", backref="feedback")
+    # user = relationship("User", backref="error_feedback")  # TODO: Enable when User model is implemented
+
+
+class SystemHealth(Base):
+    """Track system health metrics."""
+    __tablename__ = "system_health"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    metric_name = Column(String(100), nullable=False, index=True)
+    metric_value = Column(Float, nullable=False)
+    metric_unit = Column(String(50))
+    threshold_warning = Column(Float)
+    threshold_critical = Column(Float)
+    status = Column(String(20))  # healthy, warning, critical
+    recorded_at = Column(DateTime, default=datetime.utcnow, index=True)

@@ -341,7 +341,7 @@ class RedisCache:
             logger.error(f"Redis set TTL error for key {key}: {e}")
             return False
     
-    def pipeline(self) -> Optional[redis.Pipeline]:
+    def pipeline(self):
         """Get Redis pipeline for batch operations."""
         if not self.client:
             return None
