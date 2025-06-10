@@ -332,12 +332,11 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 				<button
 					onClick={() => scrollToSection(item.id)}
 					className={cn(
-						"relative block w-full text-left py-2 px-4 rounded-lg transition-all duration-200",
+						"toc-item relative block w-full text-left py-2 px-4 rounded-lg transition-all duration-200",
 						"hover:bg-gray-100 dark:hover:bg-gray-800",
-						isChild && "text-sm",
-						isActive
-							? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium"
-							: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+						isChild && "text-sm ml-4",
+						isActive && "active",
+						!isActive && "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
 					)}
 				>
 					<span className={cn("flex items-center gap-2")}>
@@ -411,9 +410,8 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 				>
 					<h2
 						id={sectionId}
-						className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 pb-3 border-b-2 border-blue-500 dark:border-blue-400 scroll-mt-28 flex items-center gap-3"
+						className="section-header text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 pb-3 border-b-2 border-blue-500 dark:border-blue-400 scroll-mt-28"
 					>
-						<span className="text-blue-500 dark:text-blue-400">#</span>
 						{section.name}
 					</h2>
 					<div className="space-y-4">
@@ -469,11 +467,11 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 		}
 		
 		return (
-			<div className="grid gap-3">
+			<div className="grid gap-4">
 				{optionGroups.map((option, idx) => (
 					<div 
 						key={idx}
-						className="group p-4 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 border border-transparent hover:border-blue-500 dark:hover:border-blue-400"
+						className="option-card group p-5 rounded-xl"
 					>
 						<div className="flex flex-col sm:flex-row sm:items-start gap-3">
 							<code className="inline-flex items-center px-3 py-1 rounded-md bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-mono text-sm whitespace-nowrap">
@@ -523,16 +521,18 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 		return (
 			<div className="space-y-6">
 				{examples.map((example, idx) => (
-					<div key={idx} className="space-y-2">
+					<div key={idx} className="example-block">
 						{example.description && (
-							<p className="text-gray-700 dark:text-gray-300 text-sm">
+							<p className="text-gray-700 dark:text-gray-100 text-sm font-medium mb-3">
 								{example.description}
 							</p>
 						)}
 						{example.code && (
-							<pre className="p-4 rounded-lg bg-gray-900 dark:bg-black text-gray-100 overflow-x-auto">
-								<code className="text-sm font-mono">{example.code.trim()}</code>
-							</pre>
+							<div className="code-block-wrapper">
+								<pre className="p-4 bg-gray-900 dark:bg-black text-gray-100 overflow-x-auto">
+									<code className="text-sm font-mono">{example.code.trim()}</code>
+								</pre>
+							</div>
 						)}
 					</div>
 				))}
@@ -543,8 +543,8 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	// Render SYNOPSIS section with special formatting
 	const renderSynopsisSection = (content: string) => {
 		return (
-			<div className="p-6 rounded-lg bg-gray-900 dark:bg-black border border-gray-700 dark:border-gray-600">
-				<pre className="text-gray-100 overflow-x-auto">
+			<div className="synopsis-block">
+				<pre className="text-gray-100 overflow-x-auto relative z-10">
 					<code className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
 						{content.trim()}
 					</code>
@@ -580,22 +580,22 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	}
 
 	return (
-		<div className={cn("relative flex min-h-screen bg-gray-50 dark:bg-gray-950", className)}>
+		<div className={cn("document-viewer relative flex min-h-screen bg-gray-50 dark:bg-gray-950", className)}>
 
 			{/* Table of Contents - Modern Sidebar */}
 			<aside
 				className={cn(
-					"fixed left-0 z-40 flex flex-col",
+					"document-toc fixed left-0 z-40 flex flex-col",
 					"w-80 bg-white dark:bg-gray-900",
 					"border-r border-gray-200 dark:border-gray-800",
-					"shadow-xl"
+					"shadow-xl",
+					"transition-transform duration-300 ease-out",
+					showToc ? "translate-x-0" : "-translate-x-full"
 				)}
 				style={{ 
 					top: "64px", 
 					bottom: 0,
-					height: "calc(100vh - 64px)",
-					transform: showToc ? "translateX(0)" : "translateX(-100%)",
-					transition: "transform 300ms cubic-bezier(0.4, 0, 0.2, 1)"
+					height: "calc(100vh - 64px)"
 				}}
 			>
 						{/* TOC Header */}
@@ -652,15 +652,12 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Main Content Area */}
 			<div 
 				className={cn(
-					"flex-1 w-full",
+					"flex-1 w-full transition-[padding-left] duration-300 ease-out",
 					showToc ? "pl-80" : "pl-0"
 				)}
-				style={{
-					transition: "padding-left 300ms cubic-bezier(0.4, 0, 0.2, 1)"
-				}}
 			>
 				{/* Document Header */}
-				<header className="sticky top-16 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-sm">
+				<header className="document-header sticky top-16 z-30 shadow-sm">
 					<div className="px-6 py-4">
 						<div className="flex items-center justify-between">
 							<div className="flex-1 min-w-0 pr-4">
@@ -731,7 +728,7 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 									size="sm"
 									onClick={toggleFavorite}
 									className={cn(
-										"transition-colors",
+										"action-button transition-colors",
 										document.name && isFavorite(`${document.name}.${document.section}`)
 											? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
 											: "text-gray-600 dark:text-gray-400"
@@ -779,18 +776,12 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 					
 					{/* Progress bar */}
 					<motion.div 
-						className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ delay: 0.2 }}
-					>
-						<motion.div 
-							className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-							initial={{ width: "0%" }}
-							animate={{ width: `${scrollProgress}%` }}
-							transition={{ duration: 0.1 }}
-						/>
-					</motion.div>
+						className="scroll-progress-bar absolute bottom-0 left-0 right-0"
+						initial={{ scaleX: 0 }}
+						animate={{ scaleX: scrollProgress / 100 }}
+						transition={{ duration: 0.1 }}
+						style={{ transformOrigin: "left" }}
+					/>
 				</header>
 
 				{/* Document Content */}

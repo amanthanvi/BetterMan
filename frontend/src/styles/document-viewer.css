@@ -1,5 +1,49 @@
 /* Enhanced Document Viewer Styles */
 
+/* Beautiful typography and spacing */
+.document-viewer {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Document content typography */
+.document-content {
+  line-height: 1.75;
+  color: #374151;
+}
+
+.dark .document-content {
+  color: #e5e7eb;
+}
+
+/* Beautiful section headers */
+.section-header {
+  position: relative;
+  padding-left: 1rem;
+  margin-left: -1rem;
+  transition: all 0.2s ease;
+}
+
+.section-header:hover {
+  padding-left: 1.5rem;
+  color: #3b82f6;
+}
+
+.section-header::before {
+  content: '#';
+  position: absolute;
+  left: 0;
+  opacity: 0;
+  color: #3b82f6;
+  font-weight: 400;
+  transition: opacity 0.2s ease;
+}
+
+.section-header:hover::before {
+  opacity: 0.5;
+}
+
 /* Simplified TOC sidebar styling */
 .document-page aside.fixed {
   position: fixed !important;
@@ -206,6 +250,122 @@ pre {
   -moz-tab-size: 2;
 }
 
+/* Beautiful Option Cards */
+.option-card {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.dark .option-card {
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  border: 1px solid rgba(75, 85, 99, 0.5);
+}
+
+.option-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.option-card:hover::before {
+  transform: translateX(0);
+}
+
+.option-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.dark .option-card:hover {
+  box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.5);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Code blocks with syntax highlighting */
+.code-block-wrapper {
+  position: relative;
+  margin: 1.5rem 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.code-block-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%);
+}
+
+/* Beautiful examples section */
+.example-block {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-left: 4px solid #3b82f6;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+  position: relative;
+}
+
+.dark .example-block {
+  background: linear-gradient(135deg, #1e3a8a20 0%, #1e40af20 100%);
+  border-left-color: #60a5fa;
+}
+
+.example-block::before {
+  content: 'EXAMPLE';
+  position: absolute;
+  top: -0.5rem;
+  left: 1rem;
+  background: #3b82f6;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+}
+
+/* Synopsis section styling */
+.synopsis-block {
+  background: linear-gradient(135deg, #111827 0%, #000000 100%);
+  color: #e5e7eb;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  position: relative;
+  overflow: hidden;
+}
+
+.synopsis-block::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 0.3; }
+}
+
 /* Option blocks hover effect */
 .bg-gray-50:hover,
 .dark .bg-gray-800:hover {
@@ -221,4 +381,109 @@ h3[id]:hover::before {
   left: -1.5rem;
   color: #3b82f6;
   opacity: 0.5;
+}
+
+/* Smooth scroll indicator */
+.scroll-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  transform-origin: left;
+  z-index: 50;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+/* Interactive TOC items */
+.toc-item {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.toc-item::before {
+  content: '';
+  position: absolute;
+  left: -1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 0;
+  background: #3b82f6;
+  transition: height 0.2s ease;
+  border-radius: 2px;
+}
+
+.toc-item:hover::before {
+  height: 100%;
+}
+
+.toc-item.active {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.dark .toc-item.active {
+  color: #60a5fa;
+}
+
+.toc-item.active::before {
+  height: 100%;
+  background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
+}
+
+/* Enhanced header with glassmorphism */
+.document-header {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.dark .document-header {
+  background: rgba(17, 24, 39, 0.8);
+  border-bottom: 1px solid rgba(75, 85, 99, 0.5);
+}
+
+/* Action buttons with modern styling */
+.action-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.action-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.5s ease, height 0.5s ease;
+}
+
+.action-button:hover::before {
+  width: 100px;
+  height: 100px;
+}
+
+/* Beautiful loading states */
+.skeleton-loader {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.dark .skeleton-loader {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

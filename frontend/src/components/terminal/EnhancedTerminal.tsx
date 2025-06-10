@@ -691,7 +691,7 @@ export const EnhancedTerminal: React.FC<EnhancedTerminalProps> = ({
         <div className="w-1/2 bg-gray-50 dark:bg-gray-800 p-4 overflow-auto">
           <h3 className="text-lg font-semibold mb-4">Documentation</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Run "man <command>" to view documentation here
+            Run "man &lt;command&gt;" to view documentation here
           </p>
         </div>
       )}
