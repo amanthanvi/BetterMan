@@ -3,6 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Install system dependencies including curl and build tools for Python packages
+# Also install sqlite3 with FTS5 support
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	build-essential \
 	curl \
@@ -10,6 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	manpages \
 	manpages-posix \
 	manpages-dev \
+	sqlite3 \
+	libsqlite3-dev \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& mandb
 

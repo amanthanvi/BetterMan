@@ -13,9 +13,17 @@ const STATIC_ASSETS = [
 
 // API routes to cache
 const API_ROUTES_TO_CACHE = [
-  '/api/documents/recent',
-  '/api/documents/popular',
+  '/api/docs/recent',
+  '/api/docs/popular',
+  '/api/analytics/popular',
   '/api/search/suggestions',
+];
+
+// API patterns for intelligent caching
+const API_CACHE_PATTERNS = [
+  /\/api\/docs\/[^/]+$/,  // Individual documents
+  /\/api\/search\?/,       // Search results
+  /\/api\/analytics\//,    // Analytics data
 ];
 
 // Cache strategies
@@ -25,13 +33,33 @@ const CACHE_STRATEGIES = {
   STALE_WHILE_REVALIDATE: 'stale-while-revalidate',
 };
 
-// Install event - cache static assets
+// Install event - cache static assets and popular content
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Caching static assets');
-      return cache.addAll(STATIC_ASSETS);
-    })
+    Promise.all([
+      // Cache static assets
+      caches.open(CACHE_NAME).then((cache) => {
+        console.log('Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
+      }),
+      // Pre-cache popular API endpoints
+      caches.open(API_CACHE_NAME).then((cache) => {
+        console.log('Pre-caching popular API endpoints');
+        return Promise.all(
+          API_ROUTES_TO_CACHE.map(url => 
+            fetch(url)
+              .then(response => {
+                if (response.ok) {
+                  return cache.put(url, response);
+                }
+              })
+              .catch(() => {
+                console.log(`Failed to pre-cache ${url}`);
+              })
+          )
+        );
+      })
+    ])
   );
   self.skipWaiting();
 });
@@ -84,36 +112,104 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Handle API requests with network-first strategy
+// Handle API requests with intelligent caching strategies
 async function handleApiRequest(request) {
   const cache = await caches.open(API_CACHE_NAME);
+  const url = new URL(request.url);
+  
+  // Determine caching strategy based on endpoint
+  let strategy = CACHE_STRATEGIES.NETWORK_FIRST;
+  
+  // Document endpoints - use cache-first for better offline experience
+  if (url.pathname.match(/\/api\/docs\/[^/]+$/)) {
+    strategy = CACHE_STRATEGIES.CACHE_FIRST;
+  }
+  // Search results - use stale-while-revalidate
+  else if (url.pathname.startsWith('/api/search')) {
+    strategy = CACHE_STRATEGIES.STALE_WHILE_REVALIDATE;
+  }
+  // Analytics - cache for 5 minutes
+  else if (url.pathname.startsWith('/api/analytics')) {
+    strategy = CACHE_STRATEGIES.STALE_WHILE_REVALIDATE;
+  }
+  
+  switch (strategy) {
+    case CACHE_STRATEGIES.CACHE_FIRST:
+      return cacheFirst(request, cache);
+    case CACHE_STRATEGIES.STALE_WHILE_REVALIDATE:
+      return staleWhileRevalidate(request, cache);
+    default:
+      return networkFirst(request, cache);
+  }
+}
+
+// Cache-first strategy
+async function cacheFirst(request, cache) {
+  const cached = await cache.match(request);
+  if (cached) {
+    // Update cache in background
+    fetch(request).then(response => {
+      if (response.ok) {
+        cache.put(request, response.clone());
+      }
+    });
+    return cached;
+  }
   
   try {
-    // Try network first
-    const networkResponse = await fetch(request);
-    
-    // Cache successful responses
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
+    const response = await fetch(request);
+    if (response.ok) {
+      cache.put(request, response.clone());
     }
-    
-    return networkResponse;
+    return response;
   } catch (error) {
-    // Fall back to cache
-    const cachedResponse = await cache.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // Return offline response
     return new Response(
-      JSON.stringify({ error: 'Offline', message: 'No cached data available' }),
-      {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ error: 'Offline', message: 'Content not available offline' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
+}
+
+// Network-first strategy
+async function networkFirst(request, cache) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+    return new Response(
+      JSON.stringify({ error: 'Offline', message: 'No cached data available' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// Stale-while-revalidate strategy
+async function staleWhileRevalidate(request, cache) {
+  const cached = await cache.match(request);
+  
+  const fetchPromise = fetch(request).then(response => {
+    if (response.ok) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  }).catch(() => {
+    // Return error response if no cache available
+    if (!cached) {
+      return new Response(
+        JSON.stringify({ error: 'Offline', message: 'No cached data available' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  });
+  
+  return cached || fetchPromise;
 }
 
 // Handle static assets with cache-first strategy

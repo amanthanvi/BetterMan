@@ -11,6 +11,7 @@ import time
 import logging
 from datetime import datetime
 import re
+import os
 
 from ..db.session import get_db
 from ..auth.dependencies import get_current_user_optional
@@ -25,9 +26,14 @@ router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 
 # Docker client
 try:
-    docker_client = docker.from_env()
+    # Try different connection methods
+    if os.path.exists('/var/run/docker.sock'):
+        docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+    else:
+        # Try default connection
+        docker_client = docker.from_env()
 except Exception as e:
-    logger.error(f"Failed to initialize Docker client: {e}")
+    logger.warning(f"Docker client initialization failed: {e}. Terminal features will be disabled.")
     docker_client = None
 
 # Safe command whitelist

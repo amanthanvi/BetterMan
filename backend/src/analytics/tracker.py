@@ -47,11 +47,13 @@ class AnalyticsTracker:
             self.db.add(page_view)
             
             # Update document view count and last accessed
-            document = self.db.query(Document).filter(Document.id == document_id).first()
-            if document:
-                document.view_count = (document.view_count or 0) + 1
-                document.last_accessed = datetime.utcnow()
-                document.access_count = (document.access_count or 0) + 1
+            # Use explicit SQL to avoid SQLAlchemy ORM issues
+            self.db.execute(
+                "UPDATE documents SET view_count = COALESCE(view_count, 0) + 1, "
+                "last_accessed = ?, access_count = COALESCE(access_count, 0) + 1 "
+                "WHERE id = ?",
+                (datetime.utcnow(), document_id)
+            )
             
             self.db.commit()
             logger.info(f"Tracked page view for document {document_id}")

@@ -117,8 +117,11 @@ class CacheManager:
         if document:
             # Update access statistics
             try:
-                document.last_accessed = datetime.utcnow()
-                document.access_count += 1
+                # Use explicit query to avoid SQLAlchemy ORM issues
+                self.db.execute(
+                    "UPDATE documents SET last_accessed = ?, access_count = access_count + 1 WHERE id = ?",
+                    (datetime.utcnow(), document.id)
+                )
                 self.db.commit()
                 logger.info(f"Cache hit for document: {name}")
             except Exception as e:

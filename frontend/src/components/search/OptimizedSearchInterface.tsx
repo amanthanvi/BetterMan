@@ -11,6 +11,8 @@ import { useAppStore } from "@/stores/appStore";
 import { cn } from "@/utils/cn";
 import type { SearchFilters } from "@/types";
 import { searchDocuments } from "@/services/api";
+import { VirtualizedDocumentList } from "@/components/ui/VirtualizedList";
+import { OptimizedLoader } from "@/components/ui/OptimizedLoader";
 
 interface OptimizedSearchInterfaceProps {
   className?: string;
@@ -249,6 +251,15 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
     }
   }, [debouncedQuery, filters, performSearch]);
 
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   return (
     <div className={cn("relative", className)}>
       <form onSubmit={handleSearch} className="space-y-4">
@@ -274,7 +285,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
               }}
               onKeyDown={handleKeyDown}
               placeholder="Search man pages... (e.g., ls, grep, docker)"
-              className="pl-10 pr-10 py-3 text-lg"
+              className="pl-10 pr-10 py-3 text-lg transition-all duration-200 focus:ring-2 focus:ring-primary-500/50"
               aria-label="Search man pages"
               aria-autocomplete="list"
               aria-controls="search-suggestions"
@@ -310,9 +321,9 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
                     onClick={() => handleSuggestionClick(suggestion)}
                     onMouseEnter={() => setSelectedSuggestionIndex(index)}
                     className={cn(
-                      "w-full px-4 py-2 text-left text-sm transition-colors",
-                      "hover:bg-gray-100 dark:hover:bg-gray-700",
-                      selectedSuggestionIndex === index && "bg-gray-100 dark:bg-gray-700"
+                      "w-full px-4 py-2 text-left text-sm transition-all duration-150",
+                      "hover:bg-gray-100 dark:hover:bg-gray-700 hover:pl-5",
+                      selectedSuggestionIndex === index && "bg-gray-100 dark:bg-gray-700 pl-5"
                     )}
                     role="option"
                     aria-selected={selectedSuggestionIndex === index}
@@ -333,20 +344,22 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
           </AnimatePresence>
         </div>
 
-        {/* Section Filters */}
+        {/* Section Filters with improved performance */}
         <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-hide">
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex-shrink-0">
             Section:
           </span>
-          {sections.map((section) => (
-            <FilterChip
-              key={section.value}
-              label={section.label}
-              value={section.value}
-              isActive={filters.section === section.value}
-              onClick={() => handleFilterChange('section', section.value)}
-            />
-          ))}
+          <div className="flex space-x-2">
+            {sections.map((section) => (
+              <FilterChip
+                key={section.value}
+                label={section.label}
+                value={section.value}
+                isActive={filters.section === section.value}
+                onClick={() => handleFilterChange('section', section.value)}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Search Button (for mobile) */}

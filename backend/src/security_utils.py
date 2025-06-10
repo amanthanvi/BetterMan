@@ -15,7 +15,17 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from .config import get_settings
-from .errors import RateLimitError, ValidationError
+# Import from errors.py directly to avoid circular imports
+try:
+    from . import errors
+    RateLimitError = errors.RateLimitError
+    ValidationError = errors.ValidationError
+except ImportError:
+    # Fallback if errors module has issues
+    class RateLimitError(Exception):
+        pass
+    class ValidationError(Exception):
+        pass
 
 settings = get_settings()
 

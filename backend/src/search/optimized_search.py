@@ -393,7 +393,7 @@ class OptimizedSearchEngine:
             search_conditions = []
             for term in query_terms:
                 # Sanitize term for LIKE pattern
-                safe_term = term.replace('%', '\%').replace('_', '\_')
+                safe_term = term.replace('%', r'\%').replace('_', r'\_')
                 pattern = f"%{safe_term}%"
                 
                 # Create OR condition for each field
