@@ -19,6 +19,12 @@ import { useAppStore } from "@/stores/appStore";
 import { cn } from "@/utils/cn";
 import type { Document } from "@/types";
 import { parseGroffSections, parseSectionName, groffToMarkdown } from "@/utils/groffParser";
+import { 
+	parseOptionsSection, 
+	parseExamplesSection, 
+	detectCodeBlocks,
+	parseSynopsisSection 
+} from "@/utils/documentParser";
 
 interface DocumentViewerProps {
 	document: Document;
@@ -97,8 +103,8 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	useEffect(() => {
 		if (!document.sections || document.sections.length === 0) return;
 
-		// Parse sections with groff parser
-		const parsedSections = parseGroffSections(document.sections);
+		// Parse sections with groff parser and preserve formatting for code sections
+		const parsedSections = parseGroffSections(document.sections, { preserveFormatting: true });
 
 		const items: TableOfContentsItem[] = [];
 		parsedSections.forEach((section, sectionIndex) => {
@@ -206,11 +212,14 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			setScrollProgress(progress);
 		};
 
-		// Initial call
-		handleScroll();
+		// Initial call after a delay to ensure DOM is ready
+		const timer = setTimeout(handleScroll, 100);
 
 		window.addEventListener("scroll", handleScroll);
-		return () => window.removeEventListener("scroll", handleScroll);
+		return () => {
+			clearTimeout(timer);
+			window.removeEventListener("scroll", handleScroll);
+		};
 	}, []);
 
 	// Scroll to section
@@ -368,7 +377,10 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 		}
 
 		// Parse sections with groff parser and convert to markdown
-		const parsedSections = parseGroffSections(document.sections, { convertToMarkdown: true });
+		const parsedSections = parseGroffSections(document.sections, { 
+			convertToMarkdown: true,
+			preserveFormatting: true 
+		});
 		
 		// Special handling for different section types
 		const renderSectionContent = (section: any, sectionName: string) => {
@@ -389,14 +401,8 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 				return renderSynopsisSection(section.content);
 			}
 			
-			// Default markdown rendering
-			return (
-				<MarkdownRenderer 
-					content={section.content}
-					darkMode={darkMode}
-					fontSize={fontSize}
-				/>
-			);
+			// Default rendering with code block detection
+			return renderGenericSection(section.content);
 		};
 		
 		return parsedSections.map((section, sectionIndex) => {
@@ -441,41 +447,20 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 
 	// Render OPTIONS section as cards
 	const renderOptionsSection = (content: string) => {
-		const options = content.split('\n').filter(line => line.trim());
-		const optionGroups: Array<{ flag: string; description: string }> = [];
-		
-		let currentOption = { flag: '', description: '' };
-		
-		options.forEach((line) => {
-			// Check if this line starts with a dash (new option)
-			if (line.match(/^\s*-/)) {
-				if (currentOption.flag) {
-					optionGroups.push(currentOption);
-				}
-				const match = line.match(/^(\s*-[\w-]+(?:,\s*--[\w-]+)?)\s*(.*)$/);
-				if (match) {
-					currentOption = { flag: match[1].trim(), description: match[2] };
-				}
-			} else if (currentOption.flag) {
-				// Continuation of description
-				currentOption.description += ' ' + line.trim();
-			}
-		});
-		
-		if (currentOption.flag) {
-			optionGroups.push(currentOption);
-		}
+		const options = parseOptionsSection(content);
 		
 		return (
 			<div className="grid gap-4">
-				{optionGroups.map((option, idx) => (
-					<div 
-						key={idx}
-						className="option-card group p-5 rounded-xl"
-					>
+				{options.map((option, idx) => (
+					<div key={idx} className="option-card group p-5 rounded-xl">
 						<div className="flex flex-col sm:flex-row sm:items-start gap-3">
 							<code className="inline-flex items-center px-3 py-1 rounded-md bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-mono text-sm whitespace-nowrap">
 								{option.flag}
+								{option.argument && (
+									<span className="ml-2 text-gray-600 dark:text-gray-400">
+										{option.argument}
+									</span>
+								)}
 							</code>
 							<p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed flex-1">
 								{option.description || 'No description available'}
@@ -489,64 +474,76 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	
 	// Render EXAMPLES section with syntax highlighting
 	const renderExamplesSection = (content: string) => {
-		const lines = content.split('\n');
-		const examples: Array<{ description: string; code: string }> = [];
-		let currentExample = { description: '', code: '' };
-		let inCodeBlock = false;
-		
-		lines.forEach((line) => {
-			// Detect code lines (usually start with $ or are indented)
-			if (line.match(/^\s*\$/) || (line.match(/^\s{4,}/) && line.trim())) {
-				inCodeBlock = true;
-				currentExample.code += line + '\n';
-			} else if (inCodeBlock && line.trim() === '') {
-				// Empty line might end code block
-				currentExample.code += line + '\n';
-			} else {
-				// Description line
-				if (inCodeBlock && currentExample.code) {
-					examples.push({ ...currentExample });
-					currentExample = { description: line.trim(), code: '' };
-					inCodeBlock = false;
-				} else {
-					currentExample.description += (currentExample.description ? ' ' : '') + line.trim();
-				}
-			}
-		});
-		
-		if (currentExample.code || currentExample.description) {
-			examples.push(currentExample);
-		}
+		const examples = parseExamplesSection(content);
 		
 		return (
 			<div className="space-y-6">
-				{examples.map((example, idx) => (
-					<div key={idx} className="example-block">
-						{example.description && (
-							<p className="text-gray-700 dark:text-gray-100 text-sm font-medium mb-3">
-								{example.description}
-							</p>
-						)}
-						{example.code && (
-							<div className="code-block-wrapper">
-								<pre className="p-4 bg-gray-900 dark:bg-black text-gray-100 overflow-x-auto">
-									<code className="text-sm font-mono">{example.code.trim()}</code>
-								</pre>
-							</div>
-						)}
+				{examples.length > 0 ? (
+					examples.map((example, idx) => (
+						<div key={idx} className="example-block">
+							{example.description && (
+								<p className="text-gray-700 dark:text-gray-100 text-sm font-medium mb-3">
+									{example.description}
+								</p>
+							)}
+							{example.code && (
+								<div className="code-block-wrapper">
+									<pre className="p-4 bg-gray-900 dark:bg-black text-gray-100 overflow-x-auto rounded-lg">
+										<code className="text-sm font-mono leading-relaxed">{example.code}</code>
+									</pre>
+								</div>
+							)}
+						</div>
+					))
+				) : (
+					// Fallback if no examples detected
+					<div className="prose dark:prose-invert max-w-none">
+						<pre className="text-sm bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
+							<code>{content}</code>
+						</pre>
 					</div>
-				))}
+				)}
 			</div>
+		);
+	};
+	
+	// Render generic section with code block detection
+	const renderGenericSection = (content: string) => {
+		const processedContent = detectCodeBlocks(content);
+		
+		return (
+			<MarkdownRenderer 
+				content={processedContent}
+				darkMode={darkMode}
+				fontSize={fontSize}
+			/>
 		);
 	};
 	
 	// Render SYNOPSIS section with special formatting
 	const renderSynopsisSection = (content: string) => {
+		const parsed = parseSynopsisSection(content);
+		
 		return (
 			<div className="synopsis-block">
 				<pre className="text-gray-100 overflow-x-auto relative z-10">
-					<code className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
-						{content.trim()}
+					<code className="font-mono text-sm leading-relaxed">
+						{parsed.map((item, idx) => {
+							if (item.text) {
+								return <div key={idx}>{item.text}</div>;
+							}
+							return (
+								<div key={idx} className="mb-2">
+									<span className="text-blue-400 font-semibold">{item.command}</span>
+									{item.flags?.map((flag, fidx) => (
+										<span key={fidx} className="text-green-400"> {flag}</span>
+									))}
+									{item.args?.map((arg, aidx) => (
+										<span key={aidx} className={arg.startsWith('[') ? "text-gray-400" : "text-yellow-400"}> {arg}</span>
+									))}
+								</div>
+							);
+						})}
 					</code>
 				</pre>
 			</div>
@@ -583,21 +580,10 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 		<div className={cn("document-viewer relative flex min-h-screen bg-gray-50 dark:bg-gray-950", className)}>
 
 			{/* Table of Contents - Modern Sidebar */}
-			<aside
-				className={cn(
-					"document-toc fixed left-0 z-40 flex flex-col",
-					"w-80 bg-white dark:bg-gray-900",
-					"border-r border-gray-200 dark:border-gray-800",
-					"shadow-xl",
-					"transition-transform duration-300 ease-out",
-					showToc ? "translate-x-0" : "-translate-x-full"
-				)}
-				style={{ 
-					top: "64px", 
-					bottom: 0,
-					height: "calc(100vh - 64px)"
-				}}
-			>
+			{showToc && (
+				<aside
+					className="document-toc flex flex-col border-r border-gray-200 dark:border-gray-800 shadow-xl"
+				>
 						{/* TOC Header */}
 						<div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-800">
 							<div className="flex items-center justify-between mb-4">
@@ -648,6 +634,7 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 							</nav>
 						</div>
 				</aside>
+			)}
 			
 			{/* Main Content Area */}
 			<div 
@@ -788,7 +775,12 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 				<main className="px-6 py-8">
 					<div
 						ref={contentRef}
-						className="max-w-4xl mx-auto"
+						className={cn(
+							"max-w-4xl mx-auto document-content",
+							fontSize === "sm" && "text-sm",
+							fontSize === "base" && "text-base",
+							fontSize === "lg" && "text-lg"
+						)}
 					>
 						{renderStructuredSections()}
 					</div>

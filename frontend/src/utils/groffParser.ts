@@ -14,10 +14,43 @@ interface ParseOptions {
 export function parseGroffContent(content: string, options: ParseOptions = {}): string {
   if (!content) return '';
   
-  const { convertToMarkdown = false } = options;
+  const { convertToMarkdown = false, preserveFormatting = false } = options;
   
   // First clean any ANSI sequences if present
   let result = cleanAnsiSequences(content);
+  
+  // Detect and preserve code blocks before processing
+  const codeBlockMarker = '<<<CODE_BLOCK_';
+  const codeBlocks: string[] = [];
+  let codeBlockIndex = 0;
+  
+  // Preserve .nf/.fi blocks (no-fill/fill - often used for code)
+  result = result.replace(/^\.nf\s*\n([\s\S]*?)\n\.fi\s*$/gm, (match, codeContent) => {
+    const marker = `${codeBlockMarker}${codeBlockIndex}>>>`;
+    codeBlocks[codeBlockIndex] = codeContent;
+    codeBlockIndex++;
+    return marker;
+  });
+  
+  // Preserve .EX/.EE blocks (example blocks)
+  result = result.replace(/^\.EX\s*\n([\s\S]*?)\n\.EE\s*$/gm, (match, codeContent) => {
+    const marker = `${codeBlockMarker}${codeBlockIndex}>>>`;
+    codeBlocks[codeBlockIndex] = codeContent;
+    codeBlockIndex++;
+    return marker;
+  });
+  
+  // Preserve indented blocks that look like code (but not indented options)
+  result = result.replace(/^((?:\s{7,}|\t+).+\n(?:(?:\s{7,}|\t+).+\n|\s*\n)*)/gm, (match) => {
+    // Don't treat option descriptions as code blocks
+    if (match.match(/^\s+(-\w|--\w)/m)) {
+      return match;
+    }
+    const marker = `${codeBlockMarker}${codeBlockIndex}>>>`;
+    codeBlocks[codeBlockIndex] = match;
+    codeBlockIndex++;
+    return marker;
+  });
   
   // Step 1: Pre-process section names that might contain groff commands
   result = result.replace(/^\.B\s+(.+)$/gm, '$1'); // Remove .B from section names
@@ -35,12 +68,12 @@ export function parseGroffContent(content: string, options: ParseOptions = {}): 
     { pattern: /^\.LP$/gm, replacement: '' },
     { pattern: /^\.P$/gm, replacement: '' },
     { pattern: /^\.sp\s*\d*$/gm, replacement: '' },
-    { pattern: /^\.br$/gm, replacement: '' },
+    { pattern: /^\.br$/gm, replacement: preserveFormatting ? '\n' : '' },
     
     // Lists and indentation
     { pattern: /^\.TP\s*\d*$/gm, replacement: '' },
     { pattern: /^\.IP\s+"?([^"]*)"?\s*\d*$/gm, replacement: convertToMarkdown ? '• $1' : '• $1' },
-    { pattern: /^\.RS\s*\d*$/gm, replacement: '' },
+    { pattern: /^\.RS\s*\d*$/gm, replacement: preserveFormatting ? '  ' : '' },
     { pattern: /^\.RE\s*\d*$/gm, replacement: '' },
     
     // Font and formatting (when on their own line)
@@ -68,21 +101,27 @@ export function parseGroffContent(content: string, options: ParseOptions = {}): 
     result = result.replace(pattern, replacement);
   });
   
-  // Step 3: Handle inline font changes
+  // Step 3: Handle inline font changes with improved patterns
   if (convertToMarkdown) {
     // Convert to markdown formatting
-    result = result.replace(/\\fB([^\\]+?)\\f[RP]/g, '**$1**'); // Bold
-    result = result.replace(/\\fI([^\\]+?)\\f[RP]/g, '*$1*'); // Italic
-    result = result.replace(/\\f\(BI([^\\]+?)\\f[RP]/g, '***$1***'); // Bold-italic
+    result = result.replace(/\\fB([^\\]+?)\\f[RPB]/g, '**$1**'); // Bold
+    result = result.replace(/\\fI([^\\]+?)\\f[RPB]/g, '*$1*'); // Italic
+    result = result.replace(/\\f\(BI([^\\]+?)\\f[RPB]/g, '***$1***'); // Bold-italic
+    
+    // Handle nested font changes
+    result = result.replace(/\\fB([^\\]*(?:\\f[IR][^\\]*\\f[PB])*[^\\]*)\\f[RPB]/g, '**$1**');
   } else {
     // Just remove font codes
     result = result.replace(/\\f[BIRP]/g, ''); // Remove font codes
     result = result.replace(/\\f\([A-Z]{2}/g, ''); // Remove two-letter font codes
   }
   
-  // Step 4: Handle parameter syntax
+  // Step 4: Handle parameter syntax with improved patterns
   result = result.replace(/\[\\fI([^\\]+?)\\fR\]/g, '[$1]'); // Optional parameters
   result = result.replace(/\\fI([^\\]+?)\\fR/g, convertToMarkdown ? '*$1*' : '$1'); // Parameters
+  
+  // Handle more complex font patterns
+  result = result.replace(/\\f\(CW([^\\]+?)\\fR/g, convertToMarkdown ? '`$1`' : '$1'); // Constant width
   
   // Step 5: Handle special character escapes
   const specialChars = [
@@ -105,31 +144,60 @@ export function parseGroffContent(content: string, options: ParseOptions = {}): 
     { pattern: /\\\(de/g, replacement: '°' },
     { pattern: /\\\(mu/g, replacement: '×' },
     { pattern: /\\\(di/g, replacement: '÷' },
+    { pattern: /\\\(lq/g, replacement: '"' },
+    { pattern: /\\\(rq/g, replacement: '"' },
+    { pattern: /\\\(ga/g, replacement: '`' },
   ];
   
   specialChars.forEach(({ pattern, replacement }) => {
     result = result.replace(pattern, replacement);
   });
   
-  // Step 6: Clean up artifacts
+  // Step 6: Restore code blocks
+  for (let i = 0; i < codeBlocks.length; i++) {
+    const marker = `${codeBlockMarker}${i}>>>`;
+    const codeContent = codeBlocks[i];
+    
+    if (convertToMarkdown) {
+      result = result.replace(marker, '```\n' + codeContent.trimEnd() + '\n```');
+    } else {
+      result = result.replace(marker, codeContent);
+    }
+  }
+  
+  // Step 7: Clean up artifacts
   result = result.replace(/^\\&/gm, ''); // Remove leading \&
   result = result.replace(/^\s*\n/gm, '\n'); // Remove lines with only whitespace
   result = result.replace(/\n{3,}/g, '\n\n'); // Collapse multiple blank lines
   
-  // Step 7: Process each line for final cleanup
-  result = result
-    .split('\n')
-    .map(line => {
-      // Remove any remaining groff commands we might have missed
-      if (line.match(/^\.[A-Z]/)) {
-        return '';
-      }
-      return line.trim();
-    })
-    .filter(line => line.length > 0 || result.indexOf('\n\n') > -1) // Preserve paragraph breaks
-    .join('\n');
+  // Step 8: Process each line for final cleanup
+  const lines = result.split('\n');
+  const processedLines: string[] = [];
+  let previousWasEmpty = false;
   
-  // Step 8: Final formatting
+  for (const line of lines) {
+    // Remove any remaining groff commands we might have missed
+    if (line.match(/^\.[A-Z]/) && !line.startsWith('```')) {
+      continue;
+    }
+    
+    const trimmedLine = preserveFormatting ? line : line.trim();
+    
+    // Preserve paragraph breaks but avoid excessive blank lines
+    if (trimmedLine.length === 0) {
+      if (!previousWasEmpty) {
+        processedLines.push('');
+        previousWasEmpty = true;
+      }
+    } else {
+      processedLines.push(trimmedLine);
+      previousWasEmpty = false;
+    }
+  }
+  
+  result = processedLines.join('\n');
+  
+  // Step 9: Final formatting
   result = result.replace(/\n{3,}/g, '\n\n'); // Ensure max 2 newlines
   result = result.trim();
   

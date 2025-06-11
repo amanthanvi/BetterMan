@@ -44,14 +44,26 @@
   opacity: 0.5;
 }
 
-/* Simplified TOC sidebar styling */
-.document-page aside.fixed {
+/* Fixed TOC sidebar styling */
+.document-toc {
   position: fixed !important;
   top: 64px !important;
   left: 0 !important;
-  width: 16rem !important;
+  width: 20rem !important;
   height: calc(100vh - 64px) !important;
-  z-index: 20;
+  z-index: 40 !important;
+  background: white;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateX(0);
+  transition: none !important;
+}
+
+.dark .document-toc {
+  background: rgb(17 24 39);
+  border-right-color: rgb(55 65 81);
 }
 
 /* TOC slide transition */
