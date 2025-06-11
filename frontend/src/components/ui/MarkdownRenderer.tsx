@@ -1,8 +1,9 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+// import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'; // No longer primary
+// import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Theme handled by EnhancedCodeBlock
+import { EnhancedCodeBlock } from '@/components/document/EnhancedCodeBlock'; // Import EnhancedCodeBlock
 import { cn } from '@/utils/cn';
 
 interface MarkdownRendererProps {
@@ -53,18 +54,32 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         components={{
           code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
-            return !inline && match ? (
-              <SyntaxHighlighter
-                style={darkMode ? vscDarkPlus : vs}
-                language={match[1]}
-                PreTag="div"
-                className="rounded-lg overflow-hidden"
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
-            ) : (
-              <code className={className} {...props}>
+            if (!inline) {
+              if (match) {
+                // It's a fenced code block with a language
+                return (
+                  <EnhancedCodeBlock
+                    code={String(children).replace(/\n$/, '')}
+                    language={match[1]}
+                    showTryIt={true} // You might want to make this prop configurable
+                    className="my-4" // Add some margin for spacing
+                  />
+                );
+              } else {
+                // It's a fenced code block without a language (e.g., ``` text ```)
+                // EnhancedCodeBlock can handle language defaulting to 'text'
+                return (
+                  <EnhancedCodeBlock
+                    code={String(children).replace(/\n$/, '')}
+                    showTryIt={false} // Probably no "Try It" for plain text blocks
+                    className="my-4"
+                  />
+                );
+              }
+            }
+            // It's an inline code snippet
+            return (
+              <code className={cn('text-sm', className)} {...props}> {/* Ensure inline code also gets some base styling */}
                 {children}
               </code>
             );

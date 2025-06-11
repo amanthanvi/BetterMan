@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
 	BookmarkIcon,
 	Share1Icon,
@@ -258,10 +258,10 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 		try {
 			const contentText = document.sections
 				?.map(section => {
-					let text = `${section.name}\n\n${section.content}`;
-					if (section.subsections) {
+					let text = `${section.name || ''}\n\n${section.content || ''}`;
+					if (section.subsections && section.subsections.length > 0) {
 						text += "\n\n" + section.subsections
-							.map(sub => `${sub.name}\n\n${sub.content}`)
+							.map(sub => `${sub.name || ''}\n\n${sub.content || ''}`)
 							.join("\n\n");
 					}
 					return text;
@@ -383,26 +383,26 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 		});
 		
 		// Special handling for different section types
-		const renderSectionContent = (section: any, sectionName: string) => {
+		const renderSectionContent = (section: any, sectionName: string, content: string) => {
 			const upperName = sectionName.toUpperCase();
 			
 			// OPTIONS section - render as cards
 			if (upperName === 'OPTIONS' || upperName === 'FLAGS') {
-				return renderOptionsSection(section.content);
+				return renderOptionsSection(content);
 			}
 			
 			// EXAMPLES section - render as code blocks
 			if (upperName === 'EXAMPLES' || upperName === 'EXAMPLE') {
-				return renderExamplesSection(section.content);
+				return renderExamplesSection(content);
 			}
 			
 			// SYNOPSIS section - special formatting
 			if (upperName === 'SYNOPSIS') {
-				return renderSynopsisSection(section.content);
+				return renderSynopsisSection(content);
 			}
 			
 			// Default rendering with code block detection
-			return renderGenericSection(section.content);
+			return renderGenericSection(content);
 		};
 		
 		return parsedSections.map((section, sectionIndex) => {
@@ -418,10 +418,10 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 						id={sectionId}
 						className="section-header text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 pb-3 border-b-2 border-blue-500 dark:border-blue-400 scroll-mt-28"
 					>
-						{section.name}
+						{section.name || ''}
 					</h2>
 					<div className="space-y-4">
-						{renderSectionContent(section, section.name)}
+						{renderSectionContent(section, section.name || '', section.content || '')}
 					</div>
 					
 					{section.subsections && section.subsections.map((subsection, subIndex) => {
@@ -432,10 +432,10 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 									id={subId}
 									className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4 scroll-mt-28"
 								>
-									{subsection.name}
+									{subsection.name || ''}
 								</h3>
 								<div className="space-y-4">
-									{renderSectionContent(subsection, subsection.name)}
+									{renderSectionContent(subsection, subsection.name || '', subsection.content || '')}
 								</div>
 							</div>
 						);
@@ -474,37 +474,32 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	
 	// Render EXAMPLES section with syntax highlighting
 	const renderExamplesSection = (content: string) => {
-		const examples = parseExamplesSection(content);
+		const examples = parseExamplesSection(content); // This returns { description, code, language }
 		
-		return (
-			<div className="space-y-6">
-				{examples.length > 0 ? (
-					examples.map((example, idx) => (
-						<div key={idx} className="example-block">
-							{example.description && (
-								<p className="text-gray-700 dark:text-gray-100 text-sm font-medium mb-3">
-									{example.description}
-								</p>
-							)}
-							{example.code && (
-								<div className="code-block-wrapper">
-									<pre className="p-4 bg-gray-900 dark:bg-black text-gray-100 overflow-x-auto rounded-lg">
-										<code className="text-sm font-mono leading-relaxed">{example.code}</code>
-									</pre>
-								</div>
-							)}
-						</div>
-					))
-				) : (
-					// Fallback if no examples detected
-					<div className="prose dark:prose-invert max-w-none">
-						<pre className="text-sm bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
-							<code>{content}</code>
-						</pre>
-					</div>
-				)}
-			</div>
-		);
+		if (examples.length > 0) {
+			const markdownContent = examples.map(example => {
+				let md = '';
+				if (example.description) {
+					md += `${example.description}\n\n`;
+				}
+				if (example.code) {
+					const lang = example.language || 'bash'; // Default to bash if language not specified
+					md += `\`\`\`${lang}\n${example.code}\n\`\`\`\n\n`;
+				}
+				return md;
+			}).join('');
+
+			return <MarkdownRenderer content={markdownContent.trim()} darkMode={darkMode} fontSize={fontSize} />;
+		}
+
+		// Fallback if no examples detected by parseExamplesSection, but content exists
+		// Try to render the raw content using detectCodeBlocks and MarkdownRenderer
+		if (content) {
+			const processedContent = detectCodeBlocks(content);
+			return <MarkdownRenderer content={processedContent} darkMode={darkMode} fontSize={fontSize} />;
+		}
+
+		return null; // Or some placeholder like <p>No examples available.</p>
 	};
 	
 	// Render generic section with code block detection
@@ -580,10 +575,16 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 		<div className={cn("document-viewer relative flex min-h-screen bg-gray-50 dark:bg-gray-950", className)}>
 
 			{/* Table of Contents - Modern Sidebar */}
-			{showToc && (
-				<aside
-					className="document-toc flex flex-col border-r border-gray-200 dark:border-gray-800 shadow-xl"
-				>
+			<AnimatePresence>
+				{showToc && (
+					<motion.aside
+						key="toc-sidebar"
+						initial={{ x: "-100%" }}
+						animate={{ x: 0 }}
+						exit={{ x: "-100%" }}
+						transition={{ type: "ease-out", duration: 0.3 }}
+						className="document-toc flex flex-col border-r border-gray-200 dark:border-gray-800 shadow-xl"
+					>
 						{/* TOC Header */}
 						<div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-800">
 							<div className="flex items-center justify-between mb-4">
@@ -633,11 +634,12 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 								{filterTocItems(tocItems, tocSearch).map(item => renderTocItem(item))}
 							</nav>
 						</div>
-				</aside>
-			)}
+					</motion.aside>
+				)}
+			</AnimatePresence>
 			
 			{/* Main Content Area */}
-			<div 
+			<div
 				className={cn(
 					"flex-1 w-full transition-[padding-left] duration-300 ease-out",
 					showToc ? "pl-80" : "pl-0"
@@ -649,7 +651,7 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 						<div className="flex items-center justify-between">
 							<div className="flex-1 min-w-0 pr-4">
 								<h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 font-mono truncate">
-									{document.title}
+									{document.title || ''}
 								</h1>
 								{document.summary && (
 									<p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base line-clamp-2">
@@ -657,15 +659,15 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 									</p>
 								)}
 								<div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-500">
-									{document.section && document.section !== "json" && (
+									{(document.section && document.section !== "json") && (
 										<span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">
 											Section {document.section}
 										</span>
 									)}
 									{document.doc_set && (
 										<>
-											{document.section && document.section !== "json" && <span>•</span>}
-											<span className="capitalize">{document.doc_set}</span>
+											{(document.section && document.section !== "json") && <span>•</span>}
+											<span className="capitalize">{document.doc_set || ''}</span>
 										</>
 									)}
 								</div>

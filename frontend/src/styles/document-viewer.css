@@ -58,17 +58,11 @@
   border-right: 1px solid #e5e7eb;
   box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.1);
   transform: translateX(0);
-  transition: none !important;
 }
 
 .dark .document-toc {
   background: rgb(17 24 39);
   border-right-color: rgb(55 65 81);
-}
-
-/* TOC slide transition */
-.document-page aside.fixed {
-  transition: transform 300ms ease-out;
 }
 
 /* Ensure sticky header doesn't get cut off */
@@ -129,14 +123,6 @@
 }
 
 /* Immediately apply transform on load to prevent flicker */
-.document-page aside.fixed[data-toc-hidden="true"] {
-  transform: translateX(-100%) !important;
-}
-
-.document-page aside.fixed[data-toc-visible="true"] {
-  transform: translateX(0) !important;
-}
-
 /* Print styles */
 @media print {
   /* Hide navigation and controls */
