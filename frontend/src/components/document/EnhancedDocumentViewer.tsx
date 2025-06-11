@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { EnhancedCodeBlock } from "./EnhancedCodeBlock";
 import { useAppStore } from "@/stores/appStore";
 import { cn } from "@/utils/cn";
 import type { Document } from "@/types";
@@ -473,52 +474,53 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	};
 	
 	// Render EXAMPLES section with syntax highlighting
-	const renderExamplesSection = (content: string) => {
-		const examples = parseExamplesSection(content);
-		
-		return (
-			<div className="space-y-6">
-				{examples.length > 0 ? (
-					examples.map((example, idx) => (
-						<div key={idx} className="example-block">
-							{example.description && (
-								<p className="text-gray-700 dark:text-gray-100 text-sm font-medium mb-3">
-									{example.description}
-								</p>
-							)}
-							{example.code && (
-								<div className="code-block-wrapper">
-									<pre className="p-4 bg-gray-900 dark:bg-black text-gray-100 overflow-x-auto rounded-lg">
-										<code className="text-sm font-mono leading-relaxed">{example.code}</code>
-									</pre>
-								</div>
-							)}
-						</div>
-					))
-				) : (
-					// Fallback if no examples detected
-					<div className="prose dark:prose-invert max-w-none">
-						<pre className="text-sm bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
-							<code>{content}</code>
-						</pre>
-					</div>
-				)}
-			</div>
-		);
-	};
+        const renderExamplesSection = (content: string) => {
+                const examples = parseExamplesSection(content);
+
+                return (
+                        <div className="space-y-6">
+                                {examples.length > 0 ? (
+                                        examples.map((example, idx) => (
+                                                <div key={idx} className="example-block">
+                                                        {example.description && (
+                                                                <p className="text-gray-700 dark:text-gray-100 text-sm font-medium mb-3">
+                                                                        {example.description}
+                                                                </p>
+                                                        )}
+                                                        {example.code && (
+                                                                <EnhancedCodeBlock
+                                                                        code={example.code}
+                                                                        language={example.language || 'bash'}
+                                                                        showLineNumbers={showLineNumbers}
+                                                                />
+                                                        )}
+                                                </div>
+                                        ))
+                                ) : (
+                                        // Fallback if no examples detected
+                                        <EnhancedCodeBlock
+                                                code={content}
+                                                language="bash"
+                                                showLineNumbers={showLineNumbers}
+                                        />
+                                )}
+                        </div>
+                );
+        };
 	
 	// Render generic section with code block detection
-	const renderGenericSection = (content: string) => {
-		const processedContent = detectCodeBlocks(content);
-		
-		return (
-			<MarkdownRenderer 
-				content={processedContent}
-				darkMode={darkMode}
-				fontSize={fontSize}
-			/>
-		);
-	};
+        const renderGenericSection = (content: string) => {
+                const processedContent = detectCodeBlocks(content);
+
+                return (
+                        <MarkdownRenderer
+                                content={processedContent}
+                                darkMode={darkMode}
+                                fontSize={fontSize}
+                                showLineNumbers={showLineNumbers}
+                        />
+                );
+        };
 	
 	// Render SYNOPSIS section with special formatting
 	const renderSynopsisSection = (content: string) => {
@@ -697,16 +699,23 @@ export const EnhancedDocumentViewer: React.FC<DocumentViewerProps> = ({
 											A
 										</span>
 									</Button>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => setShowToc(!showToc)}
-										className={cn(
-											showToc && "bg-gray-200 dark:bg-gray-700"
-										)}
-									>
-										<HamburgerMenuIcon className="w-4 h-4" />
-									</Button>
+                                                                        <Button
+                                                                               variant="ghost"
+                                                                               size="sm"
+                                                                               onClick={() => setShowLineNumbers(!showLineNumbers)}
+                                                                        >
+                                                                               <EyeOpenIcon className="w-4 h-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                               variant="ghost"
+                                                                               size="sm"
+                                                                               onClick={() => setShowToc(!showToc)}
+                                                                               className={cn(
+                                                                               showToc && "bg-gray-200 dark:bg-gray-700"
+                                                                               )}
+                                                                        >
+                                                                               <HamburgerMenuIcon className="w-4 h-4" />
+                                                                        </Button>
 								</div>
 
 								{/* Actions */}

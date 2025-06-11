@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { EnhancedCodeBlock } from '../document/EnhancedCodeBlock';
 import { cn } from '@/utils/cn';
 
 interface MarkdownRendererProps {
@@ -10,13 +11,15 @@ interface MarkdownRendererProps {
   className?: string;
   darkMode?: boolean;
   fontSize?: 'sm' | 'base' | 'lg';
+  showLineNumbers?: boolean;
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   className,
   darkMode = false,
-  fontSize = 'base'
+  fontSize = 'base',
+  showLineNumbers = false
 }) => {
   const fontSizeClasses = {
     sm: 'prose-sm',
@@ -53,20 +56,16 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         components={{
           code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
-            return !inline && match ? (
-              <SyntaxHighlighter
-                style={darkMode ? vscDarkPlus : vs}
-                language={match[1]}
-                PreTag="div"
-                className="rounded-lg overflow-hidden"
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
+            const language = match ? match[1] : undefined;
+            const codeString = String(children).replace(/\n$/, '');
+            return !inline ? (
+              <EnhancedCodeBlock
+                code={codeString}
+                language={language}
+                showLineNumbers={showLineNumbers}
+              />
             ) : (
-              <code className={className} {...props}>
-                {children}
-              </code>
+              <code className={className} {...props}>{children}</code>
             );
           },
           // Custom rendering for definition lists (common in man pages)
