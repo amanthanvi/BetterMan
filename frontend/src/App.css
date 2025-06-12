@@ -123,28 +123,3 @@ body,
 	z-index: 20;
 	backdrop-filter: blur(8px);
 }
-
-.document-toc {
-	position: sticky;
-	top: 0;
-	height: 100vh;
-	overflow-y: auto;
-	scrollbar-width: thin;
-}
-
-.document-toc::-webkit-scrollbar {
-	width: 6px;
-}
-
-.document-toc::-webkit-scrollbar-track {
-	background: transparent;
-}
-
-.document-toc::-webkit-scrollbar-thumb {
-	background-color: rgba(156, 163, 175, 0.5);
-	border-radius: 3px;
-}
-
-.dark .document-toc::-webkit-scrollbar-thumb {
-	background-color: rgba(75, 85, 99, 0.5);
-}
