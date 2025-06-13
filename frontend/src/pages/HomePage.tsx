@@ -16,7 +16,7 @@ import { VirtualSearchResults } from "@/components/search/VirtualSearchResults";
 import { AdvancedSearch } from "@/components/search/AdvancedSearch";
 import { Button } from "@/components/ui/Button";
 import { SearchErrorBoundary } from "@/components/ui/SearchErrorBoundary";
-import { PerformanceMonitor } from "@/components/monitoring/PerformanceMonitor";
+import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
 
 // Stores
 import { useSearchStore } from "@/stores/searchStore";

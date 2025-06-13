@@ -1,4 +1,4 @@
-/* Enhanced Document Viewer Styles */
+/* Enhanced Document Viewer Styles - Legacy Support */
 
 /* Beautiful typography and spacing */
 .document-viewer {
@@ -44,458 +44,46 @@
   opacity: 0.5;
 }
 
-/* Fixed TOC sidebar styling */
-.document-toc {
-  position: fixed !important;
-  top: 64px !important;
-  left: 0 !important;
-  width: 20rem !important;
-  height: calc(100vh - 64px) !important;
-  z-index: 40 !important;
-  background: white;
-  overflow-y: auto;
-  overflow-x: hidden;
-  border-right: 1px solid #e5e7eb;
-  box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.1);
-  transform: translateX(0);
-  transition: none !important;
+/* Legacy styles for older components */
+.section-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 2rem 0;
 }
 
-.dark .document-toc {
-  background: rgb(17 24 39);
-  border-right-color: rgb(55 65 81);
+.dark .section-divider {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-/* TOC slide transition */
-.document-page aside.fixed {
-  transition: transform 300ms ease-out;
+/* Code blocks for legacy viewer */
+.document-viewer pre {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
 }
 
-/* Ensure sticky header doesn't get cut off */
-.document-header {
-  isolation: isolate;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
+.dark .document-viewer pre {
+  background: #1f2937;
+  border-color: #374151;
 }
 
-/* Smooth transitions for dark mode - only colors */
-.document-page aside,
-.document-header {
-  transition: background-color 200ms, border-color 200ms;
-}
-
-/* Content area transition - only padding to prevent layout jumps */
-.document-page main {
-  transition: padding-left 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Ensure content area has proper spacing when TOC is visible */
-.pl-80 {
-  padding-left: 20rem !important;
-}
-
-/* Override any conflicting transition-all classes in the document viewer */
-.document-page .transition-all {
-  transition-property: padding, margin;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
-}
-
-/* Fix TOC scroll behavior */
-.document-page .overflow-y-auto {
-  height: calc(100vh - 128px); /* Account for navbar and TOC header */
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain; /* Prevent scroll chaining */
-}
-
-/* Prevent FOUC (Flash of Unstyled Content) for TOC */
-@media (prefers-reduced-motion: no-preference) {
-  /* Hide TOC initially until JS loads */
-  .document-page aside.fixed {
-    visibility: visible !important;
-  }
-}
-
-/* Ensure TOC state persists during route changes */
-.document-page {
-  isolation: isolate;
-}
-
-/* Optimize repaints for TOC toggle */
-.document-page aside.fixed,
-.document-page main {
-  will-change: auto;
-}
-
-/* Immediately apply transform on load to prevent flicker */
-.document-page aside.fixed[data-toc-hidden="true"] {
-  transform: translateX(-100%) !important;
-}
-
-.document-page aside.fixed[data-toc-visible="true"] {
-  transform: translateX(0) !important;
-}
-
-/* Print styles */
-@media print {
-  /* Hide navigation and controls */
-  .document-toc,
-  .document-header,
-  header,
-  nav,
-  aside {
-    display: none !important;
-  }
-
-  /* Reset margins for print */
-  body {
-    margin: 0;
-    padding: 0;
-  }
-
-  /* Ensure content takes full width */
-  main {
-    margin: 0 !important;
-    padding: 1cm !important;
-    max-width: none !important;
-  }
-
-  /* Better page breaks */
-  h2, h3 {
-    page-break-after: avoid;
-  }
-
-  section {
-    page-break-inside: avoid;
-  }
-
-  /* Black text for print */
-  * {
-    color: black !important;
-    background: white !important;
-  }
-
-  /* Show links */
-  a[href]:after {
-    content: " (" attr(href) ")";
-  }
-}
-
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
-  /* Full-width TOC on mobile */
-  aside.fixed {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* Adjust content margin on mobile */
-  .ml-72 {
-    margin-left: 0 !important;
-  }
-
-  /* Stack header elements on mobile */
-  header .flex {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  /* Smaller font controls on mobile */
-  header button {
-    padding: 0.25rem 0.5rem;
-  }
-}
-
-/* Smooth scrolling for the entire page */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Custom scrollbar for TOC */
-.document-toc::-webkit-scrollbar {
-  width: 6px;
-}
-
-.document-toc::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.document-toc::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
-  border-radius: 3px;
-}
-
-.document-toc::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
-}
-
-/* Dark mode scrollbar */
-.dark .document-toc::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.5);
-}
-
-.dark .document-toc::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.7);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
-  opacity: 0;
-}
-
-/* Code block enhancements */
-pre {
-  tab-size: 2;
-  -moz-tab-size: 2;
-}
-
-/* Beautiful Option Cards */
-.option-card {
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-  border: 1px solid rgba(229, 231, 235, 0.8);
-  backdrop-filter: blur(8px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.dark .option-card {
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  border: 1px solid rgba(75, 85, 99, 0.5);
-}
-
-.option-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
-}
-
-.option-card:hover::before {
-  transform: translateX(0);
-}
-
-.option-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.3);
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-.dark .option-card:hover {
-  box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.5);
-  border-color: rgba(59, 130, 246, 0.5);
-}
-
-/* Code blocks with syntax highlighting */
-.code-block-wrapper {
-  position: relative;
-  margin: 1.5rem 0;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.code-block-wrapper::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%);
-}
-
-/* Beautiful examples section */
-.example-block {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-  border-left: 4px solid #3b82f6;
-  padding: 1.5rem;
-  margin: 1.5rem 0;
-  border-radius: 0 0.5rem 0.5rem 0;
-  position: relative;
-}
-
-.dark .example-block {
-  background: linear-gradient(135deg, #1e3a8a20 0%, #1e40af20 100%);
-  border-left-color: #60a5fa;
-}
-
-.example-block::before {
-  content: 'EXAMPLE';
-  position: absolute;
-  top: -0.5rem;
-  left: 1rem;
-  background: #3b82f6;
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.25rem;
-}
-
-/* Synopsis section styling */
-.synopsis-block {
-  background: linear-gradient(135deg, #111827 0%, #000000 100%);
-  color: #e5e7eb;
-  padding: 2rem;
-  border-radius: 0.75rem;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
-  position: relative;
-  overflow: hidden;
-}
-
-.synopsis-block::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-  animation: pulse 4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.1); opacity: 0.3; }
-}
-
-/* Option blocks hover effect */
-.bg-gray-50:hover,
-.dark .bg-gray-800:hover {
-  transform: translateX(2px);
-  transition: transform 0.2s ease;
-}
-
-/* Section headers anchor links */
-h2[id]:hover::before,
-h3[id]:hover::before {
-  content: "#";
-  position: absolute;
-  left: -1.5rem;
+/* Link styling */
+.document-viewer a {
   color: #3b82f6;
-  opacity: 0.5;
+  text-decoration: underline;
+  transition: color 0.2s ease;
 }
 
-/* Smooth scroll indicator */
-.scroll-progress-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
-  transform-origin: left;
-  z-index: 50;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+.document-viewer a:hover {
+  color: #2563eb;
 }
 
-/* Interactive TOC items */
-.toc-item {
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.toc-item::before {
-  content: '';
-  position: absolute;
-  left: -1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 0;
-  background: #3b82f6;
-  transition: height 0.2s ease;
-  border-radius: 2px;
-}
-
-.toc-item:hover::before {
-  height: 100%;
-}
-
-.toc-item.active {
-  color: #3b82f6;
-  font-weight: 600;
-}
-
-.dark .toc-item.active {
+.dark .document-viewer a {
   color: #60a5fa;
 }
 
-.toc-item.active::before {
-  height: 100%;
-  background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
-}
-
-/* Enhanced header with glassmorphism */
-.document-header {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
-}
-
-.dark .document-header {
-  background: rgba(17, 24, 39, 0.8);
-  border-bottom: 1px solid rgba(75, 85, 99, 0.5);
-}
-
-/* Action buttons with modern styling */
-.action-button {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.action-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(59, 130, 246, 0.2);
-  transform: translate(-50%, -50%);
-  transition: width 0.5s ease, height 0.5s ease;
-}
-
-.action-button:hover::before {
-  width: 100px;
-  height: 100px;
-}
-
-/* Beautiful loading states */
-.skeleton-loader {
-  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-}
-
-.dark .skeleton-loader {
-  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
-  background-size: 200% 100%;
-}
-
-@keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+.dark .document-viewer a:hover {
+  color: #93bbfc;
 }

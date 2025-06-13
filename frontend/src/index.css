@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import './styles/document-viewer.css';
+@import './styles/ultimate-document-viewer.css';
 
 /* Ensure body has proper background */
 body {

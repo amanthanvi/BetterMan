@@ -1,4 +1,4 @@
-/* Ultimate Document Viewer Styles - Perfect positioning and animations */
+/* Ultimate Document Viewer Styles - Enhanced and Fixed */
 
 /* Root styling for the ultimate document viewer */
 .ultimate-document-viewer {
@@ -10,81 +10,25 @@
 	isolation: isolate;
 }
 
-/* Fixed TOC Sidebar - Bulletproof positioning */
-.ultimate-toc {
-	position: fixed !important;
-	top: 0 !important;
-	left: 0 !important;
-	bottom: 0 !important;
-	width: 20rem !important;
-	z-index: 40 !important;
-	transform: translateZ(0);
-	/* Force hardware acceleration */
-	will-change: transform, opacity;
-	pointer-events: auto !important;
-
-	/* Prevent any layout shifts */
-	contain: layout style paint;
-	overflow: hidden;
-
-	/* Beautiful backdrop blur */
-	backdrop-filter: blur(20px) saturate(180%);
-	-webkit-backdrop-filter: blur(20px) saturate(180%);
-
-	/* Smooth shadow */
-	box-shadow:
-		0 0 0 1px rgba(255, 255, 255, 0.05),
-		0 10px 25px -5px rgba(0, 0, 0, 0.1),
-		0 20px 40px -10px rgba(0, 0, 0, 0.1);
+/* Smooth scrolling */
+html {
+	scroll-behavior: smooth;
 }
 
-/* Dark mode TOC adjustments */
-.dark .ultimate-toc {
-	box-shadow:
-		0 0 0 1px rgba(255, 255, 255, 0.1),
-		0 10px 25px -5px rgba(0, 0, 0, 0.3),
-		0 20px 40px -10px rgba(0, 0, 0, 0.2);
-}
-
-/* Main content area - smooth responsive margin */
-.ultimate-content {
-	min-height: 100vh;
-	transition: margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1);
-	transform: translateZ(0);
-	/* Hardware acceleration */
-	contain: layout style;
-}
-
-/* Header styling - perfect backdrop blur */
-.ultimate-header {
-	backdrop-filter: blur(20px) saturate(180%);
-	-webkit-backdrop-filter: blur(20px) saturate(180%);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-	transform: translateZ(0);
-	contain: layout style paint;
-}
-
-.dark .ultimate-header {
-	border-bottom-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Main content area */
-.ultimate-main {
-	transform: translateZ(0);
-	contain: layout style;
-}
-
-/* Section styling with smooth animations */
-.ultimate-section {
-	scroll-margin-top: 8rem;
-	position: relative;
-	isolation: isolate;
-}
-
-/* Section content with beautiful borders */
-.ultimate-section-content {
-	transition: border-color 300ms ease;
-	position: relative;
+/* Beautiful gradient backgrounds */
+.ultimate-document-viewer::before {
+	content: '';
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background:
+		radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.03) 0%, transparent 50%),
+		radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.03) 0%, transparent 50%),
+		radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.03) 0%, transparent 50%);
+	pointer-events: none;
+	z-index: -1;
 }
 
 /* Custom scrollbar for TOC */
@@ -114,24 +58,8 @@
 	background: rgba(75, 85, 99, 0.5);
 }
 
-/* Beautiful hover effects for interactive elements */
-.ultimate-toc button:hover {
-	transform: translateX(2px);
-}
-
-.ultimate-section:hover .ultimate-section-content {
-	transform: translateX(1px);
-}
-
-/* Smooth focus outlines */
-.ultimate-document-viewer button:focus-visible {
-	outline: 2px solid rgb(59 130 246);
-	outline-offset: 2px;
-	border-radius: 0.5rem;
-}
-
 /* Code block enhancements */
-.ultimate-section-content pre {
+.ultimate-document-viewer pre {
 	position: relative;
 	overflow: hidden;
 	border-radius: 0.75rem !important;
@@ -140,7 +68,7 @@
 		0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-.ultimate-section-content pre::before {
+.ultimate-document-viewer pre::before {
 	content: '';
 	position: absolute;
 	top: 0;
@@ -152,18 +80,27 @@
 }
 
 /* Prose styling enhancements */
-.ultimate-section-content .prose {
+.ultimate-document-viewer .prose {
 	max-width: none;
 }
 
-.ultimate-section-content .prose p {
+.ultimate-document-viewer .prose p {
 	color: rgb(75 85 99);
 	line-height: 1.75;
 	margin-bottom: 1rem;
 }
 
-.dark .ultimate-section-content .prose p {
+.dark .ultimate-document-viewer .prose p {
 	color: rgb(209 213 219);
+}
+
+/* Enhanced focus indicators for accessibility */
+.ultimate-document-viewer [role="button"]:focus-visible,
+.ultimate-document-viewer button:focus-visible {
+	outline: 3px solid rgb(59 130 246);
+	outline-offset: 2px;
+	border-radius: 0.5rem;
+	box-shadow: 0 0 0 1px rgb(59 130 246 / 0.2);
 }
 
 /* Animation for section indicators */
@@ -172,58 +109,36 @@
 		opacity: 0;
 		transform: scaleX(0);
 	}
-
 	100% {
 		opacity: 1;
 		transform: scaleX(1);
 	}
 }
 
-.ultimate-section-content.active::before {
-	content: '';
-	position: absolute;
-	left: -2px;
-	top: 0;
-	bottom: 0;
-	width: 4px;
-	background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
-	border-radius: 2px;
-	animation: section-indicator 0.3s ease;
-}
-
 /* Responsive design */
 @media (max-width: 1024px) {
-	.ultimate-toc {
+	.ultimate-document-viewer .ultimate-toc {
 		width: 100% !important;
-		transform: translateX(-100%);
-	}
-
-	.ultimate-toc[data-visible="true"] {
-		transform: translateX(0) !important;
-	}
-
-	.ultimate-content {
-		margin-left: 0 !important;
+		max-width: 20rem;
 	}
 }
 
 @media (max-width: 768px) {
-	.ultimate-header {
+	.ultimate-document-viewer .ultimate-header {
 		padding: 1rem !important;
 	}
 
-	.ultimate-main {
+	.ultimate-document-viewer .ultimate-main {
 		padding: 1rem !important;
 	}
 
-	.ultimate-section {
+	.ultimate-document-viewer .ultimate-section {
 		margin-bottom: 2rem !important;
 	}
 }
 
 /* Print optimizations */
 @media print {
-
 	.ultimate-toc,
 	.ultimate-header,
 	.scroll-to-top {
@@ -273,7 +188,6 @@
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-
 	.ultimate-toc,
 	.ultimate-content,
 	.ultimate-section,
@@ -289,60 +203,4 @@
 	.ultimate-section:hover .ultimate-section-content {
 		transform: none;
 	}
-}
-
-/* Force hardware acceleration for smooth performance */
-.ultimate-document-viewer * {
-	transform: translateZ(0);
-}
-
-/* Prevent layout shifts during load */
-.ultimate-document-viewer {
-	contain: layout style;
-}
-
-/* Optimize repaints */
-.ultimate-toc,
-.ultimate-content,
-.ultimate-header {
-	will-change: auto;
-}
-
-/* Ensure smooth scrolling */
-html {
-	scroll-behavior: smooth;
-}
-
-/* Beautiful gradient backgrounds */
-.ultimate-document-viewer::before {
-	content: '';
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background:
-		radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.03) 0%, transparent 50%),
-		radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.03) 0%, transparent 50%),
-		radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.03) 0%, transparent 50%);
-	pointer-events: none;
-	z-index: -1;
-}
-
-/* Enhanced focus indicators for accessibility */
-.ultimate-document-viewer [role="button"]:focus-visible,
-.ultimate-document-viewer button:focus-visible {
-	outline: 3px solid rgb(59 130 246);
-	outline-offset: 2px;
-	border-radius: 0.5rem;
-	box-shadow: 0 0 0 1px rgb(59 130 246 / 0.2);
-}
-
-/* Smooth state transitions */
-.ultimate-toc *,
-.ultimate-header *,
-.ultimate-section * {
-	transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-	transition-duration: 150ms;
 }

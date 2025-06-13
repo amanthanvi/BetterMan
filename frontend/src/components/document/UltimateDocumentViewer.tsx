@@ -119,6 +119,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 
 	// Refs for better performance and DOM manipulation
 	const contentRef = useRef<HTMLDivElement>(null);
+	const observerRef = useRef<IntersectionObserver | null>(null);
 	const tocRef = useRef<HTMLElement>(null);
 
 	// App store integration
@@ -267,29 +268,54 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 		initializeDocument();
 	}, [document, parseDocumentContent, generateTOC, addRecentDoc]);
 
-	// Simplified section tracking without complex intersection observer
+	// Enhanced intersection observer for section tracking
 	useEffect(() => {
-		if (!sections.length) {
+		if (!sections.length || typeof window === "undefined") {
 			return;
 		}
 
-		// Simple scroll-based active section detection
-		const handleScroll = () => {
-			const scrollTop = window.pageYOffset + 150; // Header offset
-
-			for (let i = sections.length - 1; i >= 0; i--) {
-				const element = window.document.getElementById(sections[i].id);
-				if (element && element.offsetTop <= scrollTop) {
-					setActiveSection(sections[i].id);
-					break;
-				}
-			}
+		const observerOptions: IntersectionObserverInit = {
+			root: null,
+			rootMargin: "-20% 0px -60% 0px",
+			threshold: [0, 0.25, 0.5, 0.75, 1],
 		};
 
-		window.addEventListener("scroll", handleScroll, { passive: true });
-		handleScroll(); // Initial check
+		const observer = new IntersectionObserver(
+			(entries: IntersectionObserverEntry[]) => {
+				let maxVisibleEntry: IntersectionObserverEntry | null = null;
+				let maxRatio = 0;
 
-		return () => window.removeEventListener("scroll", handleScroll);
+				entries.forEach((entry) => {
+					if (
+						entry.isIntersecting &&
+						entry.intersectionRatio > maxRatio
+					) {
+						maxRatio = entry.intersectionRatio;
+						maxVisibleEntry = entry;
+					}
+				});
+
+				if (maxVisibleEntry !== null) {
+					const target = maxVisibleEntry.target as HTMLElement;
+					if (target && target.id) {
+						setActiveSection(target.id);
+					}
+				}
+			},
+			observerOptions
+		);
+
+		// Observe all section elements
+		sections.forEach((section) => {
+			const element = window.document.getElementById(section.id);
+			if (element) {
+				observer.observe(element);
+			}
+		});
+
+		observerRef.current = observer;
+
+		return () => observer.disconnect();
 	}, [sections]);
 
 	// Scroll progress and scroll-to-top visibility
@@ -589,7 +615,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 	return (
 		<div
 			className={cn(
-				"ultimate-document-viewer min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950 relative",
+				"min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950 relative",
 				isFullscreen && "fixed inset-0 z-50",
 				className
 			)}
@@ -628,10 +654,11 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 							damping: 25,
 							stiffness: 250,
 						}}
-						className="ultimate-toc fixed left-0 top-0 bottom-0 w-80 bg-white/98 dark:bg-gray-900/98 backdrop-blur-xl border-r border-gray-200/60 dark:border-gray-700/60 shadow-2xl z-40 flex flex-col"
+						className="fixed left-0 top-0 bottom-0 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl border-r border-gray-200/60 dark:border-gray-700/60 shadow-2xl z-40 flex flex-col overflow-hidden"
 						style={{
-							backdropFilter: "blur(24px) saturate(180%)",
-							WebkitBackdropFilter: "blur(24px) saturate(180%)",
+							contain: "layout style paint",
+							transform: "translateZ(0)",
+							willChange: "transform",
 						}}
 					>
 						{/* TOC Header */}
@@ -801,7 +828,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Main Content Area - Improved responsive behavior */}
 			<div
 				className={cn(
-					"ultimate-content min-h-screen transition-all duration-300 ease-out",
+					"min-h-screen transition-all duration-300 ease-out",
 					showToc ? "lg:ml-80" : "ml-0"
 				)}
 			>
@@ -809,10 +836,11 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				<motion.header
 					initial={{ opacity: 0, y: -20 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="ultimate-header sticky top-1 z-30 bg-white/85 dark:bg-gray-900/85 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-700/60 shadow-lg"
+					className="sticky top-0 z-20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-700/60 shadow-lg"
 					style={{
-						backdropFilter: "blur(24px) saturate(180%)",
-						WebkitBackdropFilter: "blur(24px) saturate(180%)",
+						backdropFilter: "blur(20px) saturate(180%)",
+						WebkitBackdropFilter: "blur(20px) saturate(180%)",
+						contain: "layout style paint",
 					}}
 				>
 					<div className="max-w-6xl mx-auto px-6 py-4">
@@ -991,7 +1019,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				</motion.header>
 
 				{/* Document Content */}
-				<main className="ultimate-main">
+				<main className="relative">
 					<div
 						ref={contentRef}
 						className={cn(
@@ -1013,7 +1041,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 										transition={{ delay: index * 0.05 }}
 										id={section.id}
 										className={cn(
-											"ultimate-section group scroll-mt-32",
+											"group scroll-mt-32",
 											viewMode === "compact" && "mb-6",
 											viewMode === "comfortable" &&
 												"mb-8",
@@ -1071,9 +1099,13 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 										{/* Section content */}
 										<div
 											className={cn(
-												"ultimate-section-content pl-4 border-l-2 border-gray-200 dark:border-gray-700 transition-colors duration-200",
-												section.id === activeSection &&
-													"border-blue-500 dark:border-blue-400"
+												"pl-12 pr-4 py-4 rounded-xl border transition-all duration-200",
+												section.id === activeSection
+													? "border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10"
+													: "border-gray-200/60 dark:border-gray-700/60 hover:border-gray-300 dark:hover:border-gray-600",
+												viewMode === "compact" &&
+													"py-3",
+												viewMode === "spacious" && "py-6"
 											)}
 										>
 											{renderSectionContent(
@@ -1084,14 +1116,10 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								))}
 							</AnimatePresence>
 						) : (
-							<div className="text-center py-16">
-								<ReaderIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-								<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-									No Content Available
-								</h3>
-								<p className="text-gray-500 dark:text-gray-400">
-									This document doesn't have any readable
-									content.
+							<div className="text-center py-12 text-gray-500 dark:text-gray-400">
+								<InfoCircledIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+								<p className="text-lg">
+									No content available for this document.
 								</p>
 							</div>
 						)}
@@ -1099,18 +1127,18 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				</main>
 			</div>
 
-			{/* Scroll to top button */}
+			{/* Scroll to Top Button */}
 			<AnimatePresence>
 				{showScrollTop && (
 					<motion.button
-						initial={{ opacity: 0, scale: 0.8, y: 20 }}
-						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.8, y: 20 }}
+						initial={{ opacity: 0, scale: 0.8 }}
+						animate={{ opacity: 1, scale: 1 }}
+						exit={{ opacity: 0, scale: 0.8 }}
 						onClick={scrollToTop}
-						className="fixed bottom-8 right-8 p-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-200 z-30 group hover:scale-110"
+						className="fixed bottom-8 right-8 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 z-30"
 						title="Scroll to top"
 					>
-						<ArrowUpIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+						<ArrowUpIcon className="w-5 h-5" />
 					</motion.button>
 				)}
 			</AnimatePresence>
