@@ -375,10 +375,9 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 	const handleSectionClick = useCallback((sectionId: string) => {
 		const element = window.document.getElementById(sectionId);
 		if (element) {
-			const headerOffset = 120;
 			const elementPosition = element.getBoundingClientRect().top;
 			const offsetPosition =
-				elementPosition + window.pageYOffset - headerOffset;
+				elementPosition + window.pageYOffset - 100;
 
 			window.scrollTo({
 				top: offsetPosition,
@@ -615,7 +614,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 	return (
 		<div
 			className={cn(
-				"min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950 relative",
+				"ultimate-document-viewer min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950 relative",
 				isFullscreen && "fixed inset-0 z-50",
 				className
 			)}
@@ -641,7 +640,184 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				)}
 			</AnimatePresence>
 
-			{/* Table of Contents Sidebar - Fixed positioning */}
+			{/* Fixed Header - Always on top */}
+			<header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-700/60 shadow-lg">
+				<div className="max-w-6xl mx-auto px-6 py-4">
+					<div className="flex items-center justify-between">
+						{/* Document info */}
+						<div className="flex items-center gap-4 flex-1 min-w-0">
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => setShowToc(!showToc)}
+								className={cn(
+									"shrink-0 p-2 rounded-xl transition-all duration-200 hover:scale-105",
+									showToc
+										? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 shadow-md"
+										: "hover:bg-gray-100 dark:hover:bg-gray-800"
+								)}
+							>
+								<HamburgerMenuIcon className="w-5 h-5" />
+							</Button>
+
+							<div className="min-w-0">
+								<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 truncate font-mono">
+									{document.title}
+								</h1>
+								{document.summary && (
+									<p className="text-gray-600 dark:text-gray-400 text-sm truncate">
+										{document.summary}
+									</p>
+								)}
+								<div className="flex items-center gap-3 mt-1">
+									{document.section &&
+										document.section !== "json" && (
+											<Badge
+												variant="default"
+												className="text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+											>
+												Section {document.section}
+											</Badge>
+										)}
+									{document.doc_set && (
+										<Badge
+											variant="default"
+											className="text-xs bg-gray-50 dark:bg-gray-800 capitalize border border-gray-200 dark:border-gray-700"
+										>
+											{document.doc_set}
+										</Badge>
+									)}
+								</div>
+							</div>
+						</div>
+
+						{/* Action buttons */}
+						<div className="flex items-center gap-1 shrink-0">
+							{/* View mode controls */}
+							<div className="flex items-center gap-1 mr-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() =>
+										setFontSize(
+											fontSize === "sm"
+												? "base"
+												: fontSize === "base"
+												? "lg"
+												: "sm"
+										)
+									}
+									className="relative text-xs px-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
+									title="Font size"
+								>
+									<span
+										className={cn(
+											"font-bold transition-all",
+											fontSize === "sm" && "text-xs",
+											fontSize === "base" &&
+												"text-sm",
+											fontSize === "lg" && "text-base"
+										)}
+									>
+										A
+									</span>
+								</Button>
+
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() =>
+										setShowLineNumbers(!showLineNumbers)
+									}
+									className={cn(
+										"px-2 rounded-lg transition-all",
+										showLineNumbers &&
+											"bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+									)}
+									title="Toggle line numbers"
+								>
+									<EyeOpenIcon className="w-4 h-4" />
+								</Button>
+
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() =>
+										setViewMode(
+											viewMode === "compact"
+												? "comfortable"
+												: viewMode === "comfortable"
+												? "spacious"
+												: "compact"
+										)
+									}
+									className="px-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
+									title="View mode"
+								>
+									<MixerHorizontalIcon className="w-4 h-4" />
+								</Button>
+							</div>
+
+							{/* Main actions */}
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={handleFavoriteToggle}
+								className={cn(
+									"p-2 rounded-xl transition-all duration-200 hover:scale-105",
+									isDocFavorite
+										? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 shadow-md"
+										: "hover:bg-gray-100 dark:hover:bg-gray-800"
+								)}
+								title="Toggle favorite"
+							>
+								<BookmarkIcon
+									className={cn(
+										"w-5 h-5",
+										isDocFavorite && "fill-current"
+									)}
+								/>
+							</Button>
+
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={handleCopyContent}
+								className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 transition-all"
+								title="Copy content"
+							>
+								{copied ? (
+									<CheckIcon className="w-5 h-5 text-green-600" />
+								) : (
+									<CopyIcon className="w-5 h-5" />
+								)}
+							</Button>
+
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={handleShare}
+								className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 transition-all"
+								title="Share document"
+							>
+								<Share1Icon className="w-5 h-5" />
+							</Button>
+
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={handleDownload}
+								className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 transition-all"
+								title="Download document"
+							>
+								<DownloadIcon className="w-5 h-5" />
+							</Button>
+						</div>
+					</div>
+				</div>
+			</header>
+
+			{/* Table of Contents Sidebar */}
 			<AnimatePresence mode="wait">
 				{showToc && (
 					<motion.aside
@@ -654,7 +830,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 							damping: 25,
 							stiffness: 250,
 						}}
-						className="fixed left-0 top-0 bottom-0 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl border-r border-gray-200/60 dark:border-gray-700/60 shadow-2xl z-40 flex flex-col overflow-hidden"
+						className="fixed left-0 top-[80px] bottom-0 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl border-r border-gray-200/60 dark:border-gray-700/60 shadow-2xl z-40 flex flex-col overflow-hidden"
 						style={{
 							contain: "layout style paint",
 							transform: "translateZ(0)",
@@ -825,198 +1001,13 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				)}
 			</AnimatePresence>
 
-			{/* Main Content Area - Improved responsive behavior */}
+			{/* Main Content Area */}
 			<div
 				className={cn(
-					"min-h-screen transition-all duration-300 ease-out",
+					"min-h-screen pt-20 transition-all duration-300 ease-out",
 					showToc ? "lg:ml-80" : "ml-0"
 				)}
 			>
-				{/* Document Header */}
-				<motion.header
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					className="sticky top-0 z-20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-700/60 shadow-lg"
-					style={{
-						backdropFilter: "blur(20px) saturate(180%)",
-						WebkitBackdropFilter: "blur(20px) saturate(180%)",
-						contain: "layout style paint",
-					}}
-				>
-					<div className="max-w-6xl mx-auto px-6 py-4">
-						<div className="flex items-center justify-between">
-							{/* Document info */}
-							<div className="flex items-center gap-4 flex-1 min-w-0">
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => setShowToc(!showToc)}
-									className={cn(
-										"shrink-0 p-2 rounded-xl transition-all duration-200 hover:scale-105",
-										showToc
-											? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 shadow-md"
-											: "hover:bg-gray-100 dark:hover:bg-gray-800"
-									)}
-								>
-									<HamburgerMenuIcon className="w-5 h-5" />
-								</Button>
-
-								<div className="min-w-0">
-									<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 truncate font-mono">
-										{document.title}
-									</h1>
-									{document.summary && (
-										<p className="text-gray-600 dark:text-gray-400 text-sm truncate">
-											{document.summary}
-										</p>
-									)}
-									<div className="flex items-center gap-3 mt-1">
-										{document.section &&
-											document.section !== "json" && (
-												<Badge
-													variant="default"
-													className="text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-												>
-													Section {document.section}
-												</Badge>
-											)}
-										{document.doc_set && (
-											<Badge
-												variant="default"
-												className="text-xs bg-gray-50 dark:bg-gray-800 capitalize border border-gray-200 dark:border-gray-700"
-											>
-												{document.doc_set}
-											</Badge>
-										)}
-									</div>
-								</div>
-							</div>
-
-							{/* Action buttons */}
-							<div className="flex items-center gap-1 shrink-0">
-								{/* View mode controls */}
-								<div className="flex items-center gap-1 mr-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() =>
-											setFontSize(
-												fontSize === "sm"
-													? "base"
-													: fontSize === "base"
-													? "lg"
-													: "sm"
-											)
-										}
-										className="relative text-xs px-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
-										title="Font size"
-									>
-										<span
-											className={cn(
-												"font-bold transition-all",
-												fontSize === "sm" && "text-xs",
-												fontSize === "base" &&
-													"text-sm",
-												fontSize === "lg" && "text-base"
-											)}
-										>
-											A
-										</span>
-									</Button>
-
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() =>
-											setShowLineNumbers(!showLineNumbers)
-										}
-										className={cn(
-											"px-2 rounded-lg transition-all",
-											showLineNumbers &&
-												"bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
-										)}
-										title="Toggle line numbers"
-									>
-										<EyeOpenIcon className="w-4 h-4" />
-									</Button>
-
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() =>
-											setViewMode(
-												viewMode === "compact"
-													? "comfortable"
-													: viewMode === "comfortable"
-													? "spacious"
-													: "compact"
-											)
-										}
-										className="px-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
-										title="View mode"
-									>
-										<MixerHorizontalIcon className="w-4 h-4" />
-									</Button>
-								</div>
-
-								{/* Main actions */}
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={handleFavoriteToggle}
-									className={cn(
-										"p-2 rounded-xl transition-all duration-200 hover:scale-105",
-										isDocFavorite
-											? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 shadow-md"
-											: "hover:bg-gray-100 dark:hover:bg-gray-800"
-									)}
-									title="Toggle favorite"
-								>
-									<BookmarkIcon
-										className={cn(
-											"w-5 h-5",
-											isDocFavorite && "fill-current"
-										)}
-									/>
-								</Button>
-
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={handleCopyContent}
-									className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 transition-all"
-									title="Copy content"
-								>
-									{copied ? (
-										<CheckIcon className="w-5 h-5 text-green-600" />
-									) : (
-										<CopyIcon className="w-5 h-5" />
-									)}
-								</Button>
-
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={handleShare}
-									className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 transition-all"
-									title="Share document"
-								>
-									<Share1Icon className="w-5 h-5" />
-								</Button>
-
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={handleDownload}
-									className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 transition-all"
-									title="Download document"
-								>
-									<DownloadIcon className="w-5 h-5" />
-								</Button>
-							</div>
-						</div>
-					</div>
-				</motion.header>
 
 				{/* Document Content */}
 				<main className="relative">
@@ -1041,7 +1032,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 										transition={{ delay: index * 0.05 }}
 										id={section.id}
 										className={cn(
-											"group scroll-mt-32",
+											"group scroll-mt-24",
 											viewMode === "compact" && "mb-6",
 											viewMode === "comfortable" &&
 												"mb-8",

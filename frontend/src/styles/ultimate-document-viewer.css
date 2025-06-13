@@ -31,6 +31,38 @@ html {
 	z-index: -1;
 }
 
+/* Fix header positioning and ensure it stays on top */
+.ultimate-document-viewer header {
+	position: fixed !important;
+	top: 0 !important;
+	left: 0 !important;
+	right: 0 !important;
+	z-index: 50 !important;
+	/* Prevent header from being cut off */
+	transform: translateZ(0);
+	will-change: transform;
+}
+
+/* Ensure TOC starts below header without gap */
+.ultimate-document-viewer aside {
+	/* TOC should start right after header (80px = 20 * 0.25rem) */
+	top: 80px !important;
+	/* Prevent z-index conflicts */
+	z-index: 40 !important;
+}
+
+/* Main content area adjustments */
+.ultimate-document-viewer main {
+	/* Ensure proper spacing from header */
+	position: relative;
+	z-index: 1;
+}
+
+/* Ensure content area has proper padding for fixed header */
+.ultimate-document-viewer .pt-20 {
+	padding-top: 80px !important; /* 20 * 0.25rem = 5rem = 80px */
+}
+
 /* Custom scrollbar for TOC */
 .ultimate-toc::-webkit-scrollbar {
 	width: 6px;
@@ -120,6 +152,12 @@ html {
 	.ultimate-document-viewer .ultimate-toc {
 		width: 100% !important;
 		max-width: 20rem;
+	}
+	
+	/* Header is already fixed, no need to change on mobile */
+	/* TOC should cover full width on mobile */
+	.ultimate-document-viewer aside {
+		top: 80px !important;
 	}
 }
 
