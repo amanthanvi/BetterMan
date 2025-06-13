@@ -34,7 +34,7 @@ html {
 /* Fix header positioning and ensure it stays on top */
 .ultimate-document-viewer header {
 	position: fixed !important;
-	top: 0 !important;
+	top: 60px !important;
 	left: 0 !important;
 	right: 0 !important;
 	z-index: 50 !important;
@@ -46,7 +46,7 @@ html {
 /* Ensure TOC starts below header without gap */
 .ultimate-document-viewer aside {
 	/* TOC should start right after header (80px = 20 * 0.25rem) */
-	top: 80px !important;
+	top: 175px !important;
 	/* Prevent z-index conflicts */
 	z-index: 40 !important;
 }
@@ -60,7 +60,8 @@ html {
 
 /* Ensure content area has proper padding for fixed header */
 .ultimate-document-viewer .pt-20 {
-	padding-top: 80px !important; /* 20 * 0.25rem = 5rem = 80px */
+	padding-top: 80px !important;
+	/* 20 * 0.25rem = 5rem = 80px */
 }
 
 /* Custom scrollbar for TOC */
@@ -141,6 +142,7 @@ html {
 		opacity: 0;
 		transform: scaleX(0);
 	}
+
 	100% {
 		opacity: 1;
 		transform: scaleX(1);
@@ -153,7 +155,7 @@ html {
 		width: 100% !important;
 		max-width: 20rem;
 	}
-	
+
 	/* Header is already fixed, no need to change on mobile */
 	/* TOC should cover full width on mobile */
 	.ultimate-document-viewer aside {
@@ -177,6 +179,7 @@ html {
 
 /* Print optimizations */
 @media print {
+
 	.ultimate-toc,
 	.ultimate-header,
 	.scroll-to-top {
@@ -226,6 +229,7 @@ html {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
 	.ultimate-toc,
 	.ultimate-content,
 	.ultimate-section,
