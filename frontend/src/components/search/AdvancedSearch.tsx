@@ -140,7 +140,7 @@ export const AdvancedSearch: React.FC = () => {
 					const sections = filters
 						.filter((f) => f.type === "section" && f.active)
 						.map((f) => f.value);
-					if (sections.length > 0) activeFilters.sections = sections;
+					if (sections.length > 0) activeFilters.section = sections;
 					if (filters.find((f) => f.id === "cached")?.active)
 						activeFilters.cached_only = true;
 					if (filters.find((f) => f.id === "popular")?.active)
@@ -169,7 +169,7 @@ export const AdvancedSearch: React.FC = () => {
 			const sections = filters
 				.filter((f) => f.type === "section" && f.active)
 				.map((f) => f.value);
-			if (sections.length > 0) activeFilters.sections = sections;
+			if (sections.length > 0) activeFilters.section = sections;
 			if (filters.find((f) => f.id === "cached")?.active)
 				activeFilters.cached_only = true;
 			if (filters.find((f) => f.id === "popular")?.active)

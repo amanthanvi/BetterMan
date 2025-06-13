@@ -12,7 +12,7 @@ import { cn } from "@/utils/cn";
 import type { Document, SearchResult } from "@/types";
 
 interface VirtualSearchResultsProps {
-  results: SearchResult[];
+  results: Document[];
   loading?: boolean;
   query?: string;
   className?: string;
@@ -20,7 +20,7 @@ interface VirtualSearchResultsProps {
 
 // Memoized result card component
 const ResultCard = React.memo<{
-  result: SearchResult;
+  result: Document;
   query?: string;
   isFavorite: boolean;
   onFavoriteToggle: () => void;
@@ -78,10 +78,10 @@ const ResultCard = React.memo<{
             <div className="flex items-center space-x-2">
               <FileTextIcon className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {highlightQuery(result.document.name, query)}
-                {result.document.section && (
+                {highlightQuery(result.name || result.title, query)}
+                {result.section && (
                   <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
-                    ({result.document.section})
+                    ({result.section})
                   </span>
                 )}
               </h3>
@@ -115,31 +115,26 @@ const ResultCard = React.memo<{
           </div>
 
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-            {highlightQuery(result.document.summary, query)}
+            {highlightQuery(result.summary, query)}
           </p>
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              {result.document.section && (
+              {result.section && (
                 <Badge variant="secondary" className="text-xs">
-                  {formatSection(result.document.section)}
-                </Badge>
-              )}
-              {result.highlight && (
-                <Badge variant="outline" className="text-xs">
-                  Match in {result.highlight.field}
+                  {formatSection(String(result.section))}
                 </Badge>
               )}
             </div>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {result.document.doc_set}
+              {result.doc_set}
             </span>
           </div>
 
-          {result.highlight?.snippet && (
+          {result.matches && result.matches.length > 0 && (
             <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800/50 rounded text-xs font-mono overflow-hidden">
               <div className="line-clamp-2">
-                {highlightQuery(result.highlight.snippet, query)}
+                {highlightQuery(result.matches[0], query)}
               </div>
             </div>
           )}
@@ -193,8 +188,9 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
   );
 
   // Handle result click
-  const handleResultClick = useCallback((result: SearchResult) => {
-    const { name, section } = result.document;
+  const handleResultClick = useCallback((result: Document) => {
+    const name = result.name || result.title;
+    const { section } = result;
     navigate(`/docs/${name}/${section}`);
   }, [navigate]);
 
@@ -299,15 +295,16 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
             <AnimatePresence mode="popLayout">
               {visibleItems.map((result, index) => {
                 const globalIndex = results.indexOf(result);
-                const docKey = result.document.name ? `${result.document.name}.${result.document.section}` : '';
+                const docName = result.name || result.title;
+                const docKey = docName ? `${docName}.${result.section}` : '';
                 
                 return (
                   <div
-                    key={`${result.document.name}-${result.document.section}`}
+                    key={`${docName}-${result.section}-${result.id}`}
                     data-result-index={globalIndex}
                     tabIndex={0}
                     role="listitem"
-                    aria-label={`${result.document.name} - ${result.document.summary}`}
+                    aria-label={`${docName} - ${result.summary}`}
                     className={cn(
                       "focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg",
                       selectedIndex === globalIndex && "ring-2 ring-blue-500"
@@ -317,7 +314,7 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
                       result={result}
                       query={query}
                       isFavorite={isFavorite(docKey)}
-                      onFavoriteToggle={() => handleFavoriteToggle(result.document)}
+                      onFavoriteToggle={() => handleFavoriteToggle(result)}
                       onClick={() => handleResultClick(result)}
                       index={index}
                     />

@@ -12,9 +12,12 @@ import { ErrorFallback } from "@/components/ui/ErrorFallback";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
 import { ToastContainer } from "@/components/ui/Toast";
+import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { clearOldFavorites } from "@/utils/clearOldFavorites";
 import { useKeyboardShortcuts, defaultShortcuts } from "@/utils/keyboardShortcuts";
 import { applyTheme } from "@/design-system/theme";
+import { preloadCriticalRoutes, addResourceHints, setupHoverPrefetching } from "@/utils/preload";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 import type { Document } from "@/types";
 
 // Import authentication
@@ -96,12 +99,20 @@ function App() {
 		removeToast,
 		toggleDarkMode,
 	} = useAppStore();
+	
+	// Initialize service worker for offline support
+	const { isOnline, offlineReady } = useServiceWorker();
 
 	// Initialize app store on mount
 	useEffect(() => {
 		// Clean up old favorites before initializing
 		clearOldFavorites();
 		initialize();
+		
+		// Performance optimizations
+		addResourceHints();
+		preloadCriticalRoutes();
+		setupHoverPrefetching();
 	}, [initialize]);
 
 	// Apply theme on dark mode change
@@ -190,6 +201,9 @@ function App() {
 					<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
 					{/* Navigation */}
 					<NavBar onSearchClick={() => setShowSearch(true)} />
+					
+					{/* Offline Indicator */}
+					<OfflineIndicator isOnline={isOnline} />
 
 					{/* Main Content */}
 					<div className="flex-grow py-4">

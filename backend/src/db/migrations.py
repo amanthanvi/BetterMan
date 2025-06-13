@@ -51,6 +51,11 @@ class DatabaseMigration:
                     "description": "Add full-text search tables",
                     "run": self._migration_004_add_fts_tables,
                 },
+                {
+                    "id": "005_add_performance_indexes",
+                    "description": "Add performance optimization indexes",
+                    "run": self._migration_005_add_performance_indexes,
+                },
             ]
 
             # Run pending migrations
@@ -389,4 +394,170 @@ class DatabaseMigration:
         except Exception as e:
             self.db.rollback()
             logger.error(f"Error creating FTS tables: {str(e)}")
+            raise
+
+    def _migration_005_add_performance_indexes(self):
+        """Add performance optimization indexes for faster queries."""
+        try:
+            logger.info("Adding performance optimization indexes")
+            
+            # Index for document name lookups (most common query)
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_name 
+                    ON documents(name)
+                """
+                )
+            )
+            
+            # Index for section filtering
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_section 
+                    ON documents(section)
+                """
+                )
+            )
+            
+            # Index for title searches
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_title 
+                    ON documents(title)
+                """
+                )
+            )
+            
+            # Composite index for name + section (common query pattern)
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_name_section_unique 
+                    ON documents(name, section)
+                """
+                )
+            )
+            
+            # Index for category filtering
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_category 
+                    ON documents(category)
+                """
+                )
+            )
+            
+            # Index for popularity-based sorting
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_popularity 
+                    ON documents(access_count DESC, last_accessed DESC)
+                """
+                )
+            )
+            
+            # Index for cache management queries
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_cache_management 
+                    ON documents(cache_status, cache_priority DESC, last_accessed DESC)
+                """
+                )
+            )
+            
+            # Index for common documents lookup
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_is_common 
+                    ON documents(is_common)
+                """
+                )
+            )
+            
+            # Index for priority ordering
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_document_priority 
+                    ON documents(priority)
+                """
+                )
+            )
+            
+            # Index for sections by document_id
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_section_document_id 
+                    ON sections(document_id)
+                """
+                )
+            )
+            
+            # Index for sections by name
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_section_name 
+                    ON sections(name)
+                """
+                )
+            )
+            
+            # Index for related documents
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_related_document_id 
+                    ON related_documents(document_id)
+                """
+                )
+            )
+            
+            # Index for related document names
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_related_name 
+                    ON related_documents(related_name)
+                """
+                )
+            )
+            
+            # Index for loading sessions
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_loading_session_id 
+                    ON loading_sessions(session_id)
+                """
+                )
+            )
+            
+            # Index for loading session status
+            self.db.execute(
+                text(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_loading_session_status 
+                    ON loading_sessions(status)
+                """
+                )
+            )
+            
+            # Analyze tables to update statistics
+            self.db.execute(text("ANALYZE"))
+            
+            self.db.commit()
+            logger.info("Successfully added performance optimization indexes")
+            
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error adding performance indexes: {str(e)}")
             raise

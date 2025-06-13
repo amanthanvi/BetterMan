@@ -54,34 +54,82 @@ export default defineConfig(async () => {
     // Optimize chunk size
     chunkSizeWarningLimit: 1000,
     
+    // Target modern browsers for smaller bundles
+    target: 'es2020',
+    
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    
     // Rollup options for code splitting
     rollupOptions: {
       output: {
         // Manual chunks for better caching
-        manualChunks: {
-          // React and related libraries
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        manualChunks: (id) => {
+          // Node modules chunking
+          if (id.includes('node_modules')) {
+            // React ecosystem
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor';
+            }
+            
+            // UI component libraries
+            if (id.includes('@radix-ui') || id.includes('@headlessui')) {
+              return 'ui-vendor';
+            }
+            
+            // Syntax highlighting (large library)
+            if (id.includes('react-syntax-highlighter') || id.includes('highlight.js') || id.includes('prismjs')) {
+              return 'syntax';
+            }
+            
+            // Animation libraries
+            if (id.includes('framer-motion') || id.includes('react-spring')) {
+              return 'animation';
+            }
+            
+            // State management
+            if (id.includes('zustand') || id.includes('immer')) {
+              return 'state';
+            }
+            
+            // Utilities
+            if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority')) {
+              return 'utils';
+            }
+            
+            // Date utilities
+            if (id.includes('date-fns') || id.includes('dayjs')) {
+              return 'date-utils';
+            }
+            
+            // Icons
+            if (id.includes('lucide-react') || id.includes('react-icons')) {
+              return 'icons';
+            }
+            
+            // Markdown/Rich text
+            if (id.includes('marked') || id.includes('remark') || id.includes('rehype')) {
+              return 'markdown';
+            }
+            
+            // Default vendor chunk for other dependencies
+            return 'vendor';
+          }
           
-          // UI libraries
-          'ui-vendor': [
-            '@radix-ui/react-icons',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-toast'
-          ],
+          // Application code chunking by feature
+          if (id.includes('src/pages/')) {
+            const pageName = id.split('src/pages/')[1].split('/')[0];
+            return `page-${pageName}`;
+          }
           
-          // Syntax highlighting (large library)
-          'syntax': ['react-syntax-highlighter'],
-          
-          // Animation libraries
-          'animation': ['framer-motion'],
-          
-          // State management
-          'state': ['zustand'],
-          
-          // Utilities
-          'utils': ['clsx', 'tailwind-merge']
+          if (id.includes('src/components/')) {
+            const componentPath = id.split('src/components/')[1];
+            if (componentPath.startsWith('search/')) return 'comp-search';
+            if (componentPath.startsWith('document/')) return 'comp-document';
+            if (componentPath.startsWith('terminal/')) return 'comp-terminal';
+            if (componentPath.startsWith('ui/')) return 'comp-ui';
+            if (componentPath.startsWith('auth/')) return 'comp-auth';
+          }
         },
         
         // Asset file naming
@@ -107,6 +155,14 @@ export default defineConfig(async () => {
       compress: {
         drop_console: true,
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info'],
+        passes: 2,
+      },
+      mangle: {
+        safari10: true,
+      },
+      format: {
+        comments: false,
       },
     },
   },

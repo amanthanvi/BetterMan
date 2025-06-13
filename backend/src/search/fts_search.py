@@ -44,6 +44,7 @@ class FullTextSearchEngine:
         # Check if we're using SQLite
         if self.session.bind.dialect.name == 'sqlite':
             # Create FTS5 virtual table for SQLite
+            # Using a safe DDL statement
             self.session.execute(text("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
                     document_id UNINDEXED,
@@ -124,9 +125,14 @@ class FullTextSearchEngine:
             return results, total
     
     def _clean_query(self, query: str) -> str:
-        """Clean and normalize search query."""
-        # Remove special characters except spaces and alphanumeric
-        cleaned = re.sub(r'[^\w\s-]', ' ', query)
+        """Clean and normalize search query to prevent injection."""
+        # Remove all non-alphanumeric characters except spaces and hyphens
+        cleaned = re.sub(r'[^\w\s\-]', ' ', query)
+        # Remove any SQL keywords that could be dangerous
+        sql_keywords = ['union', 'select', 'insert', 'update', 'delete', 'drop', 'create', 'alter', 'exec', 'execute']
+        words = cleaned.lower().split()
+        filtered_words = [w for w in words if w not in sql_keywords]
+        cleaned = ' '.join(filtered_words)
         # Normalize whitespace
         cleaned = ' '.join(cleaned.split())
         return cleaned.strip()
@@ -158,8 +164,11 @@ class FullTextSearchEngine:
             WHERE documents_fts MATCH :query
         """
         
-        # Add section filter if specified
+        # Add section filter if specified with validation
         if section and section != 'all':
+            # Validate section parameter
+            if not re.match(r'^[\w\-]+$', section):
+                raise ValueError("Invalid section parameter")
             base_sql += " AND d.section = :section"
         
         # Add ordering and pagination
@@ -376,9 +385,13 @@ class FullTextSearchEngine:
         return results, total
     
     def _build_fts_query(self, query: str) -> str:
-        """Build FTS query string."""
-        # Split into words
-        words = query.split()
+        """Build FTS query string safely."""
+        # Split into words and sanitize each
+        words = [re.sub(r'[^\w\-]', '', word) for word in query.split()]
+        words = [w for w in words if w]  # Remove empty strings
+        
+        if not words:
+            return ""
         
         # Handle special operators
         if len(words) == 1:
@@ -388,8 +401,9 @@ class FullTextSearchEngine:
             # Multiple words - use phrase matching with OR
             parts = []
             
-            # Add exact phrase
-            parts.append(f'"{query}"')
+            # Add exact phrase (sanitized)
+            safe_phrase = ' '.join(words)
+            parts.append(f'"{safe_phrase}"')
             
             # Add individual words with prefix matching
             for word in words:
@@ -408,11 +422,13 @@ class FullTextSearchEngine:
             sql = """
                 SELECT DISTINCT name
                 FROM documents_fts
-                WHERE name MATCH :prefix
+                WHERE documents_fts MATCH :prefix
                 ORDER BY rank
                 LIMIT :limit
             """
-            params = {'prefix': f"{prefix}*", 'limit': limit}
+            # Sanitize prefix to prevent injection
+            safe_prefix = re.sub(r'[^\w\-]', '', prefix)
+            params = {'prefix': f"{safe_prefix}*", 'limit': limit}
         else:
             # Fallback to LIKE
             sql = """
@@ -422,7 +438,9 @@ class FullTextSearchEngine:
                 ORDER BY name
                 LIMIT :limit
             """
-            params = {'prefix': f"{prefix}%", 'limit': limit}
+            # Escape LIKE special characters
+            escaped_prefix = prefix.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+            params = {'prefix': f"{escaped_prefix}%", 'limit': limit}
         
         result = self.session.execute(text(sql), params)
         return [row[0] for row in result]

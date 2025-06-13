@@ -15,6 +15,7 @@ from sqlalchemy.dialects import sqlite
 from ..models.document import Document, Section
 from ..config import get_settings
 from ..errors import SearchError
+from ..cache.search_cache import get_search_cache
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -119,6 +120,10 @@ class OptimizedSearchEngine:
         self.db = db
         self.scorer = SearchScorer()
         self._init_search_metadata()
+        
+        # Initialize search cache
+        redis_url = getattr(settings, 'REDIS_URL', None)
+        self.cache = get_search_cache(redis_url)
     
     def _init_search_metadata(self):
         """Initialize search metadata like document statistics."""
@@ -177,6 +182,19 @@ class OptimizedSearchEngine:
             if not query:
                 query = ""
             
+            # Check cache first
+            cached_results = self.cache.get(
+                query=query,
+                section=section,
+                offset=offset,
+                limit=limit,
+                search_sections=search_sections
+            )
+            
+            if cached_results is not None:
+                logger.debug(f"Cache hit for query: '{query}'")
+                return cached_results
+            
             # Clean and parse query
             query_terms = self._parse_query(query) if query else []
             
@@ -188,6 +206,16 @@ class OptimizedSearchEngine:
             
             # Update access counts for top results
             self._update_access_counts([r["id"] for r in results["results"][:5]])
+            
+            # Cache the results
+            self.cache.set(
+                query=query,
+                section=section,
+                offset=offset,
+                limit=limit,
+                results=results,
+                search_sections=search_sections
+            )
             
             return results
             
@@ -574,3 +602,21 @@ class OptimizedSearchEngine:
             "query": "",
             "terms": []
         }
+    
+    def invalidate_cache(self, pattern: Optional[str] = None):
+        """Invalidate search cache.
+        
+        Args:
+            pattern: Optional pattern to match (e.g., specific query)
+                    If None, clears all cache entries
+        """
+        if pattern:
+            count = self.cache.invalidate_pattern(f"search:v2:*{pattern}*")
+            logger.info(f"Invalidated {count} cache entries matching pattern: {pattern}")
+        else:
+            self.cache.invalidate_all()
+            logger.info("Invalidated all search cache entries")
+    
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get search cache statistics."""
+        return self.cache.get_statistics()

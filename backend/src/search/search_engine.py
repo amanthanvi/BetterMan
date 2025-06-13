@@ -31,7 +31,7 @@ class SearchEngine:
         try:
             # Check if FTS5 is available
             result = self.db.execute(text("SELECT sqlite_source_id()")).scalar()
-            if "fts5" not in result.lower():
+            if result and "fts5" not in str(result).lower():
                 logger.warning(
                     "SQLite FTS5 extension not available, falling back to basic search"
                 )
@@ -161,35 +161,47 @@ class SearchEngine:
         Returns:
             Optimized FTS query
         """
-        # Strip special characters but keep quotes for phrase searches
-        clean_query = re.sub(r'[^\w\s"]', " ", query)
+        # Sanitize input - remove any SQL metacharacters
+        # Allow only alphanumeric, spaces, quotes, and hyphens
+        clean_query = re.sub(r'[^\w\s"\-]', " ", query)
+        
+        # Additional safety: escape any remaining special FTS characters
+        clean_query = clean_query.replace('"', '""')  # Escape quotes for FTS
 
         # Check for quoted phrases
-        phrases = re.findall(r'"([^"]+)"', clean_query)
-        remaining = re.sub(r'"[^"]+"', "", clean_query)
+        phrases = re.findall(r'""([^"]+)""', clean_query)
+        remaining = re.sub(r'""[^"]+""', "", clean_query)
 
         # Split remaining terms
-        terms = [term for term in remaining.split() if term]
+        terms = [term.strip() for term in remaining.split() if term.strip()]
 
         if not terms and not phrases:
             return ""
 
-        # Build FTS query
+        # Build FTS query safely
         fts_parts = []
 
         # Add phrases with exact match
         for phrase in phrases:
-            fts_parts.append(f'"{phrase}"')
+            # Double-check phrase content
+            safe_phrase = re.sub(r'[^\w\s\-]', '', phrase)
+            if safe_phrase:
+                fts_parts.append(f'"{safe_phrase}"')
 
         # Add individual terms with various forms
         for term in terms:
-            if len(term) <= 2:
+            # Sanitize each term
+            safe_term = re.sub(r'[^\w\-]', '', term)
+            if not safe_term:
+                continue
+                
+            if len(safe_term) <= 2:
                 # For very short terms, just use exact match
-                fts_parts.append(f"{term}")
+                fts_parts.append(f"{safe_term}")
             else:
                 # For normal terms, add both exact and prefix match
-                fts_parts.append(f"{term}")
-                fts_parts.append(f"{term}*")  # Prefix matching
+                fts_parts.append(f"{safe_term}")
+                fts_parts.append(f"{safe_term}*")  # Prefix matching
 
         # Join with OR for any match
         return " OR ".join(fts_parts)
@@ -278,7 +290,7 @@ class SearchEngine:
         Returns:
             Search results dictionary
         """
-        # Base query using FTS
+        # Base query using FTS with parameterized queries for safety
         raw_sql = """
         WITH ranked_docs AS (
             SELECT
@@ -294,7 +306,7 @@ class SearchEngine:
                     WHEN LOWER(d.name) LIKE LOWER(:name_match) THEN 5.0
                     WHEN LOWER(d.title) LIKE LOWER(:title_match) THEN 3.0
                     ELSE 1.0
-                END * fts.rank * (0.5 + (d.access_count / 50.0)) as final_score,
+                END * fts.rank * (0.5 + (CAST(d.access_count AS REAL) / 50.0)) as final_score,
                 highlight(fts_documents, 0, '<mark>', '</mark>') as name_highlight,
                 highlight(fts_documents, 1, '<mark>', '</mark>') as title_highlight,
                 highlight(fts_documents, 2, '<mark>', '</mark>') as summary_highlight,
@@ -321,14 +333,17 @@ class SearchEngine:
         AND (:section IS NULL OR d.section = :section)
         """
 
-        # Execute search query
+        # Sanitize LIKE patterns to prevent SQL injection
+        safe_original = re.sub(r'[%_\[\]\\]', r'\\\g<0>', original_query.lower())
+        
+        # Execute search query with properly escaped parameters
         result_rows = self.db.execute(
             text(raw_sql),
             {
                 "query": fts_query,
-                "exact_match": original_query.lower(),
-                "name_match": f"%{original_query.lower()}%",
-                "title_match": f"%{original_query.lower()}%",
+                "exact_match": safe_original,
+                "name_match": f"%{safe_original}%",
+                "title_match": f"%{safe_original}%",
                 "section": section,
                 "limit": per_page,
                 "offset": offset,
@@ -402,8 +417,10 @@ class SearchEngine:
         """
         from sqlalchemy import or_
 
-        # Create search pattern
-        search_pattern = f"%{query}%"
+        # Create search pattern with proper escaping
+        # Escape SQL LIKE special characters
+        escaped_query = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        search_pattern = f"%{escaped_query}%"
 
         # Basic query using SQLite's LIKE operator
         base_query = self.db.query(Document).filter(

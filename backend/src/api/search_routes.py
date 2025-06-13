@@ -429,6 +429,10 @@ async def reindex_documents(
         # Reindex all documents
         indexed_count = search_engine.reindex_all_documents()
         
+        # Clear search cache after reindexing
+        optimized_engine = get_search_engine(db)
+        optimized_engine.invalidate_cache()
+        
         logger.info(
             f"Reindex completed",
             extra={
@@ -446,3 +450,72 @@ async def reindex_documents(
     except Exception as e:
         logger.error(f"Reindex error: {e}")
         raise SearchError(f"Reindex failed: {str(e)}")
+
+
+@router.get("/cache/stats", response_model=Dict[str, Any])
+async def get_cache_statistics(
+    request: Request,
+    search_engine: OptimizedSearchEngine = Depends(get_search_engine),
+):
+    """
+    Get search cache statistics.
+    
+    Returns information about cache performance including:
+    - Hit rate
+    - Cache size
+    - Memory usage
+    - Redis connection status
+    """
+    try:
+        request_id = getattr(request.state, "request_id", "unknown")
+        logger.info(f"Cache stats request", extra={"request_id": request_id})
+        
+        stats = search_engine.get_cache_stats()
+        
+        return {
+            "cache_stats": stats,
+            "status": "success"
+        }
+        
+    except Exception as e:
+        logger.error(f"Cache stats error: {e}")
+        return {
+            "cache_stats": {},
+            "status": "error",
+            "message": str(e)
+        }
+
+
+@router.post("/cache/clear")
+async def clear_search_cache(
+    request: Request,
+    pattern: Optional[str] = Query(None, description="Optional pattern to match for selective clearing"),
+    search_engine: OptimizedSearchEngine = Depends(get_search_engine),
+    current_user: SuperUser = None,  # Require superuser
+):
+    """
+    Clear search cache entries.
+    
+    Args:
+        pattern: Optional pattern to match. If not provided, clears all cache.
+    """
+    try:
+        request_id = getattr(request.state, "request_id", "unknown")
+        logger.info(
+            f"Cache clear request",
+            extra={
+                "request_id": request_id,
+                "pattern": pattern
+            }
+        )
+        
+        search_engine.invalidate_cache(pattern)
+        
+        return {
+            "message": f"Successfully cleared cache{' matching pattern: ' + pattern if pattern else ''}",
+            "status": "success"
+        }
+        
+    except Exception as e:
+        logger.error(f"Cache clear error: {e}")
+        raise SearchError(f"Cache clear failed: {str(e)}")

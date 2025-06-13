@@ -91,7 +91,7 @@ export const searchAPI = {
 		options: {
 			page?: number;
 			per_page?: number;
-			section?: number[];
+			section?: number | number[];
 			doc_set?: string[];
 		} = {}
 	): Promise<SearchResult> => {
@@ -101,8 +101,17 @@ export const searchAPI = {
 			per_page: String(options.per_page || 20),
 		};
 
-		if (options.section?.length) {
-			params.section = options.section.join(",");
+		// Handle section - can be single number or array
+		if (options.section !== undefined && options.section !== null) {
+			if (Array.isArray(options.section)) {
+				// If array, use the first value (backend only supports single section)
+				if (options.section.length > 0) {
+					params.section = String(options.section[0]);
+				}
+			} else {
+				// Single number
+				params.section = String(options.section);
+			}
 		}
 
 		if (options.doc_set?.length) {

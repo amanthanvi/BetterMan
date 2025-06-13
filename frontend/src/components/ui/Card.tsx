@@ -24,24 +24,39 @@ const paddingVariants = {
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', interactive = false, padding = 'md', children, ...props }, ref) => {
-    const Component = interactive ? motion.div : 'div';
+    if (interactive) {
+      return (
+        <motion.div
+          ref={ref}
+          className={cn(
+            'rounded-xl transition-all duration-200',
+            cardVariants[variant],
+            paddingVariants[padding],
+            'cursor-pointer hover:shadow-xl dark:hover:shadow-gray-900/50',
+            className
+          )}
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          {...props}
+        >
+          {children}
+        </motion.div>
+      );
+    }
     
     return (
-      <Component
+      <div
         ref={ref}
         className={cn(
           'rounded-xl transition-all duration-200',
           cardVariants[variant],
           paddingVariants[padding],
-          interactive && 'cursor-pointer hover:shadow-xl dark:hover:shadow-gray-900/50',
           className
         )}
-        whileHover={interactive ? { y: -2 } : undefined}
-        whileTap={interactive ? { scale: 0.98 } : undefined}
         {...props}
       >
         {children}
-      </Component>
+      </div>
     );
   }
 );
