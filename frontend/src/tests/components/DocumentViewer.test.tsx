@@ -159,24 +159,6 @@ describe('DocumentViewer', () => {
     expect(screen.getByText('Copied!')).toBeInTheDocument()
   })
 
-  it('opens terminal with command', async () => {
-    vi.mocked(api.getDocument).mockResolvedValue(mockDocument)
-    vi.mocked(api.createTerminalSession).mockResolvedValue({
-      session_id: 'test-session',
-      websocket_url: 'ws://localhost/terminal',
-    })
-
-    renderWithRouter()
-
-    await waitFor(() => {
-      expect(screen.getByText('ls -la')).toBeInTheDocument()
-    })
-
-    const tryButton = screen.getAllByText('Try it')[0]
-    await user.click(tryButton)
-
-    expect(api.createTerminalSession).toHaveBeenCalledWith('ls -la')
-  })
 
   it('switches between content views', async () => {
     vi.mocked(api.getDocument).mockResolvedValue(mockDocument)

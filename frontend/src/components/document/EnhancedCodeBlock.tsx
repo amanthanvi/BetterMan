@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { TryItButton } from './TryItButton';
 import { Copy, Check } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../utils/cn';
@@ -10,61 +9,18 @@ interface EnhancedCodeBlockProps {
   code: string;
   language?: string;
   showLineNumbers?: boolean;
-  showTryIt?: boolean;
   className?: string;
 }
 
-// Pattern to detect if code is a shell command
-const isShellCommand = (code: string, language?: string): boolean => {
-  // Check language hint
-  if (language && ['bash', 'sh', 'shell', 'terminal'].includes(language)) {
-    return true;
-  }
-  
-  // Check for common command patterns
-  const trimmedCode = code.trim();
-  const shellPatterns = [
-    /^[$#]\s+/,           // Starts with $ or # prompt
-    /^(ls|cd|pwd|echo|cat|grep|find|man|sudo|apt|yum|docker|git|npm|yarn)\s/,  // Common commands
-    /\s\|\s/,             // Contains pipes
-    /\s>[>\s]/,           // Contains redirects
-  ];
-  
-  return shellPatterns.some(pattern => pattern.test(trimmedCode));
-};
-
-// Extract the actual command from a code block (removing prompts)
-const extractCommand = (code: string): string => {
-  const lines = code.trim().split('\n');
-  const commands: string[] = [];
-  
-  for (const line of lines) {
-    // Remove common shell prompts
-    const cleanedLine = line
-      .replace(/^[$#]\s+/, '')           // Remove $ or # prompt
-      .replace(/^(.*?)[>#]\s+/, '')      // Remove custom prompts
-      .trim();
-    
-    // Skip empty lines and output lines (heuristic)
-    if (cleanedLine && !cleanedLine.startsWith('   ')) {
-      commands.push(cleanedLine);
-    }
-  }
-  
-  return commands.join(' && ');
-};
 
 export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
   code,
   language = 'text',
   showLineNumbers = false,
-  showTryIt = true,
   className
 }) => {
   const [copied, setCopied] = useState(false);
   
-  const isExecutable = showTryIt && isShellCommand(code, language);
-  const command = isExecutable ? extractCommand(code) : '';
 
   const handleCopy = async () => {
     try {
@@ -97,10 +53,6 @@ export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
             </>
           )}
         </Button>
-        
-        {isExecutable && command && (
-          <TryItButton command={command} variant="inline" />
-        )}
       </div>
       
       <SyntaxHighlighter

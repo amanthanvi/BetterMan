@@ -9,7 +9,7 @@ import {
 	HamburgerMenuIcon,
 	CodeIcon,
 } from "@radix-ui/react-icons";
-import { Terminal, User, LogIn } from "lucide-react";
+import { User, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,7 +33,6 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 	const { user, isAuthenticated, logout } = useAuth();
 
 	const navigation = [
-		{ name: "Terminal", href: "/terminal", icon: Terminal },
 		{ name: "Favorites", href: "/favorites", icon: BookmarkIcon },
 		{ name: "Settings", href: "/settings", icon: GearIcon },
 	];

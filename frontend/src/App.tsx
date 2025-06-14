@@ -49,8 +49,6 @@ const FavoritesPage = lazy(() =>
 const DocsListPage = lazy(() =>
 	import("@/pages/DocsListPage").then((m) => ({ default: m.DocsListPage }))
 );
-const TerminalPage = lazy(() => import("@/pages/TerminalPage"));
-const TutorialMode = lazy(() => import("@/components/terminal/TutorialMode"));
 
 // Auth pages
 const LoginPage = lazy(() =>
@@ -267,15 +265,6 @@ function App() {
 										element={<TestPage />}
 									/>
 
-									{/* Terminal Playground */}
-									<Route
-										path="/terminal"
-										element={<TerminalPage />}
-									/>
-									<Route
-										path="/terminal/tutorial/:tutorialId"
-										element={<TutorialMode />}
-									/>
 
 									{/* Auth Routes */}
 									<Route
