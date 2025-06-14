@@ -99,7 +99,7 @@
 	font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
 	position: relative;
 	isolation: isolate;
-	top: 50px;
+	top: 0px;
 	color: rgb(var(--color-gray-900));
 	background-color: rgb(var(--color-gray-50));
 	transition: background-color var(--transition-base) ease;
@@ -155,7 +155,7 @@
 /* Fixed header with glassmorphism effect */
 .ultimate-document-viewer header {
 	position: fixed !important;
-	top: 60px !important;
+	top: 0px !important;
 	left: 0 !important;
 	right: 0 !important;
 	z-index: 100 !important;
@@ -181,8 +181,8 @@
 
 /* TOC sidebar with enhanced styling */
 .ultimate-document-viewer aside {
-	position: fixed !important;
-	top: 225px !important;
+	position: absolute !important;
+	top: 170px !important;
 	bottom: 0 !important;
 	left: 0 !important;
 	z-index: 90 !important;
@@ -287,7 +287,7 @@
 /* Main content area with better spacing */
 .ultimate-content {
 	min-height: 100vh;
-	padding-top: 80px;
+	padding-top: 160px;
 	transition: all var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
 }
 

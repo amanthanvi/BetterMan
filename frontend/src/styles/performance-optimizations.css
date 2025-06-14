@@ -1,0 +1,210 @@
+/* Performance Optimizations for Document Viewer */
+
+/* Use GPU acceleration for frequently transformed elements */
+.ultimate-document-viewer,
+.ultimate-toc,
+.ultimate-header,
+.ultimate-section,
+.toc-item,
+.scroll-to-top {
+	will-change: auto;
+	transform: translateZ(0);
+	-webkit-transform: translateZ(0);
+	backface-visibility: hidden;
+	-webkit-backface-visibility: hidden;
+}
+
+/* Optimize animations */
+.ultimate-document-viewer * {
+	/* Disable expensive filters during animations */
+	transition-property: transform, opacity, background-color, border-color;
+	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reduce paint areas */
+.ultimate-section-content {
+	contain: layout style paint;
+}
+
+.ultimate-code-block {
+	contain: layout style paint;
+}
+
+/* Optimize scrolling performance */
+.ultimate-content {
+	overflow-scrolling: touch;
+	-webkit-overflow-scrolling: touch;
+}
+
+.ultimate-toc {
+	overflow-scrolling: touch;
+	-webkit-overflow-scrolling: touch;
+}
+
+/* Reduce reflows during hover states */
+.toc-item::before,
+.ultimate-button::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	pointer-events: none;
+}
+
+/* Use CSS containment for better performance */
+.ultimate-document-viewer {
+	contain: layout style;
+}
+
+.ultimate-header {
+	contain: layout style paint;
+}
+
+.ultimate-toc {
+	contain: layout style paint;
+}
+
+/* Optimize text rendering */
+.ultimate-section-content {
+	text-rendering: optimizeSpeed;
+}
+
+/* Reduce backdrop filter cost */
+@media (prefers-reduced-motion: reduce) {
+	.ultimate-header,
+	.ultimate-toc {
+		backdrop-filter: none !important;
+		-webkit-backdrop-filter: none !important;
+		background: rgba(255, 255, 255, 0.95) !important;
+	}
+
+	.dark .ultimate-header,
+	.dark .ultimate-toc {
+		background: rgba(17, 24, 39, 0.95) !important;
+	}
+}
+
+/* Optimize large lists */
+.ultimate-toc-items {
+	contain: strict;
+	overflow: hidden;
+}
+
+/* Reduce animation overhead */
+.ultimate-section {
+	animation-fill-mode: both;
+	animation-duration: 0.3s;
+}
+
+/* Use transform for frequently changed properties */
+.toc-item.active {
+	transform: translateX(4px);
+}
+
+.toc-item:hover {
+	transform: translateX(2px);
+}
+
+/* Optimize shadow rendering */
+.ultimate-header.scrolled {
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Use will-change sparingly for interactive elements */
+.ultimate-button:hover,
+.toc-item:hover {
+	will-change: transform;
+}
+
+/* Remove will-change after animation */
+.ultimate-button:not(:hover),
+.toc-item:not(:hover) {
+	will-change: auto;
+}
+
+/* Optimize virtual scrolling containers */
+[data-virtualized="true"] {
+	contain: strict;
+	overflow: hidden;
+}
+
+/* Reduce composite layers */
+.ultimate-progress-bar {
+	will-change: transform;
+	transform: translateZ(0);
+}
+
+/* Optimize code blocks */
+.ultimate-code-content {
+	contain: paint;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+/* Use passive event listeners hint */
+.ultimate-content,
+.ultimate-toc {
+	touch-action: pan-y;
+}
+
+/* Optimize search highlights */
+mark {
+	background-color: rgba(254, 240, 138, 0.5);
+	padding: 0 2px;
+	border-radius: 2px;
+}
+
+/* Reduce paint during scroll */
+.ultimate-header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 100;
+}
+
+/* Hardware accelerate scroll-triggered elements */
+.scroll-to-top {
+	transform: translateZ(0);
+	will-change: transform, opacity;
+}
+
+/* Optimize TOC rendering */
+.toc-item {
+	contain: layout;
+	isolation: isolate;
+}
+
+/* Batch DOM reads/writes */
+.ultimate-document-viewer [data-measure] {
+	contain: size layout;
+}
+
+/* Optimize intersection observer targets */
+.ultimate-section[data-observed] {
+	contain: layout;
+}
+
+/* Reduce style calculations */
+.ultimate-document-viewer [data-static] {
+	contain: strict;
+}
+
+/* Performance mode for extremely large documents */
+.performance-mode .ultimate-section-content {
+	contain: strict;
+	overflow: hidden;
+}
+
+.performance-mode .ultimate-code-block {
+	contain: strict;
+}
+
+.performance-mode * {
+	animation: none !important;
+	transition: none !important;
+}

@@ -1,0 +1,142 @@
+/* Document Viewer Font Size Utilities */
+
+/* Small font size */
+.ultimate-document-viewer.font-size-sm .ultimate-section-content {
+	font-size: 0.875rem; /* 14px */
+}
+
+.ultimate-document-viewer.font-size-sm .ultimate-section-content p {
+	font-size: 0.875rem;
+	line-height: 1.6;
+}
+
+.ultimate-document-viewer.font-size-sm .ultimate-section-content li {
+	font-size: 0.875rem;
+}
+
+.ultimate-document-viewer.font-size-sm .ultimate-section-content code {
+	font-size: 0.75rem;
+}
+
+.ultimate-document-viewer.font-size-sm .ultimate-section-title {
+	font-size: 1.5rem;
+}
+
+.ultimate-document-viewer.font-size-sm h3.ultimate-section-title {
+	font-size: 1.25rem;
+}
+
+/* Base font size (default) */
+.ultimate-document-viewer.font-size-base .ultimate-section-content {
+	font-size: 1rem; /* 16px */
+}
+
+.ultimate-document-viewer.font-size-base .ultimate-section-content p {
+	font-size: 1rem;
+	line-height: 1.8;
+}
+
+.ultimate-document-viewer.font-size-base .ultimate-section-content li {
+	font-size: 1rem;
+}
+
+.ultimate-document-viewer.font-size-base .ultimate-section-content code {
+	font-size: 0.875rem;
+}
+
+.ultimate-document-viewer.font-size-base .ultimate-section-title {
+	font-size: 1.875rem;
+}
+
+.ultimate-document-viewer.font-size-base h3.ultimate-section-title {
+	font-size: 1.5rem;
+}
+
+/* Large font size */
+.ultimate-document-viewer.font-size-lg .ultimate-section-content {
+	font-size: 1.125rem; /* 18px */
+}
+
+.ultimate-document-viewer.font-size-lg .ultimate-section-content p {
+	font-size: 1.125rem;
+	line-height: 1.9;
+}
+
+.ultimate-document-viewer.font-size-lg .ultimate-section-content li {
+	font-size: 1.125rem;
+}
+
+.ultimate-document-viewer.font-size-lg .ultimate-section-content code {
+	font-size: 1rem;
+}
+
+.ultimate-document-viewer.font-size-lg .ultimate-section-title {
+	font-size: 2.25rem;
+}
+
+.ultimate-document-viewer.font-size-lg h3.ultimate-section-title {
+	font-size: 1.875rem;
+}
+
+/* View mode spacing */
+.ultimate-document-viewer.view-mode-compact .ultimate-section {
+	margin-bottom: 1.5rem;
+}
+
+.ultimate-document-viewer.view-mode-compact .ultimate-section-content {
+	padding: 1rem;
+}
+
+.ultimate-document-viewer.view-mode-compact .ultimate-section-header {
+	margin-bottom: 0.75rem;
+	padding: 0.75rem;
+}
+
+.ultimate-document-viewer.view-mode-comfortable .ultimate-section {
+	margin-bottom: 2rem;
+}
+
+.ultimate-document-viewer.view-mode-comfortable .ultimate-section-content {
+	padding: 1.5rem;
+}
+
+.ultimate-document-viewer.view-mode-comfortable .ultimate-section-header {
+	margin-bottom: 1rem;
+	padding: 1rem;
+}
+
+.ultimate-document-viewer.view-mode-spacious .ultimate-section {
+	margin-bottom: 3rem;
+}
+
+.ultimate-document-viewer.view-mode-spacious .ultimate-section-content {
+	padding: 2rem;
+}
+
+.ultimate-document-viewer.view-mode-spacious .ultimate-section-header {
+	margin-bottom: 1.5rem;
+	padding: 1.25rem;
+}
+
+/* Line numbers visibility */
+.ultimate-code-content .line-numbers {
+	display: flex;
+}
+
+.ultimate-code-content.hide-line-numbers .line-numbers {
+	display: none;
+}
+
+/* Override any conflicting styles */
+.ultimate-document-viewer .ultimate-section-content * {
+	font-size: inherit;
+}
+
+.ultimate-document-viewer .ultimate-section-content h1,
+.ultimate-document-viewer .ultimate-section-content h2,
+.ultimate-document-viewer .ultimate-section-content h3,
+.ultimate-document-viewer .ultimate-section-content h4,
+.ultimate-document-viewer .ultimate-section-content h5,
+.ultimate-document-viewer .ultimate-section-content h6 {
+	font-size: revert;
+}

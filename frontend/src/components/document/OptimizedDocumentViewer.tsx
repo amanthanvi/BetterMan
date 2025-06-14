@@ -4,6 +4,7 @@ import React, {
 	useRef,
 	useCallback,
 	useMemo,
+	memo,
 	Fragment,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -55,6 +56,7 @@ import { cn } from "@/utils/cn";
 import type { Document } from "@/types";
 import { parseGroffSections, parseGroffContent } from "@/utils/groffParser";
 import { EnhancedCodeBlock } from "./EnhancedCodeBlock";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { isBrowser, isDocumentReady } from "@/utils/browser";
 
 interface DocumentViewerProps {
@@ -91,14 +93,7 @@ interface DocumentSection {
 	isCollapsed?: boolean;
 }
 
-interface CodeBlock {
-	id: string;
-	code: string;
-	language: string;
-	lineNumbers?: number;
-}
-
-// Enhanced section icons mapping
+// Memoized section icons mapping
 const sectionIcons: Record<string, React.ReactNode> = {
 	header: <LayersIcon className="w-5 h-5" />,
 	name: <TargetIcon className="w-5 h-5" />,
@@ -118,9 +113,8 @@ const sectionIcons: Record<string, React.ReactNode> = {
 	history: <CounterClockwiseClockIcon className="w-5 h-5" />,
 };
 
-// Language detection for code blocks
+// Memoized language detection
 const detectLanguage = (code: string): string => {
-	// Check for shebang
 	if (code.startsWith("#!/")) {
 		if (code.includes("bash") || code.includes("sh")) return "bash";
 		if (code.includes("python")) return "python";
@@ -129,7 +123,6 @@ const detectLanguage = (code: string): string => {
 		if (code.includes("perl")) return "perl";
 	}
 
-	// Check for common patterns
 	const patterns: Record<string, RegExp[]> = {
 		bash: [/^\s*\$\s+/, /^\s*#\s+/, /\b(echo|cd|ls|grep|find|sed|awk)\b/],
 		c: [/#include\s*<.*>/, /int\s+main\s*\(/, /printf\s*\(/],
@@ -150,11 +143,188 @@ const detectLanguage = (code: string): string => {
 	return "text";
 };
 
-export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
+// Memoized Copy Button Component
+const CopyButton = memo<{ text: string }>(({ text }) => {
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = useCallback(async () => {
+		try {
+			await navigator.clipboard.writeText(text);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch (err) {
+			console.error("Failed to copy:", err);
+		}
+	}, [text]);
+
+	return (
+		<Button
+			variant="ghost"
+			size="sm"
+			onClick={handleCopy}
+			className="ultimate-button ultimate-button-ghost h-7 px-2 text-xs"
+		>
+			{copied ? (
+				<>
+					<CheckIcon className="w-3 h-3 mr-1" />
+					Copied
+				</>
+			) : (
+				<>
+					<CopyIcon className="w-3 h-3 mr-1" />
+					Copy
+				</>
+			)}
+		</Button>
+	);
+});
+
+CopyButton.displayName = "CopyButton";
+
+// Memoized TOC Item Component
+const TocItem = memo<{
+	item: TableOfContentsItem;
+	isActive: boolean;
+	isSearchResult: boolean;
+	onClick: (id: string) => void;
+	level: number;
+}>(({ item, isActive, isSearchResult, onClick, level }) => {
+	const handleClick = useCallback(() => {
+		onClick(item.id);
+	}, [item.id, onClick]);
+
+	return (
+		<motion.button
+			initial={{ opacity: 0, x: -20 }}
+			animate={{ opacity: 1, x: 0 }}
+			exit={{ opacity: 0, x: -20 }}
+			onClick={handleClick}
+			className={cn(
+				"toc-item group flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 relative overflow-hidden",
+				"hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-md hover:scale-[1.02]",
+				isActive && "active",
+				isSearchResult && "ring-2 ring-yellow-400 dark:ring-yellow-600",
+				level > 0 && "ml-6 text-sm"
+			)}
+		>
+			{isActive && (
+				<motion.div
+					layoutId="active-toc-indicator"
+					className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r"
+					transition={{
+						type: "spring",
+						damping: 25,
+						stiffness: 350,
+					}}
+				/>
+			)}
+
+			<div
+				className={cn(
+					"flex-shrink-0 p-1.5 rounded-lg transition-all duration-200",
+					isActive
+						? "bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 scale-110"
+						: "bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/60 group-hover:scale-105"
+				)}
+			>
+				{item.icon}
+			</div>
+
+			<span className={cn("flex-1 truncate leading-tight", isActive && "font-semibold")}>
+				{item.title}
+			</span>
+
+			<ChevronRightIcon
+				className={cn(
+					"w-4 h-4 opacity-0 group-hover:opacity-100 transition-all duration-200 transform",
+					"group-hover:translate-x-1",
+					isActive && "opacity-100 text-blue-600 dark:text-blue-400"
+				)}
+			/>
+		</motion.button>
+	);
+});
+
+TocItem.displayName = "TocItem";
+
+// Memoized Section Component
+const DocumentSectionComponent = memo<{
+	section: DocumentSection;
+	isCollapsed: boolean;
+	isSearchResult: boolean;
+	onToggleCollapse: (id: string) => void;
+	renderContent: (content: string, sectionId: string) => React.ReactNode;
+}>(({ section, isCollapsed, isSearchResult, onToggleCollapse, renderContent }) => {
+	const handleToggle = useCallback(() => {
+		onToggleCollapse(section.id);
+	}, [section.id, onToggleCollapse]);
+
+	return (
+		<motion.section
+			initial={{ opacity: 0, y: 20 }}
+			animate={{ opacity: 1, y: 0 }}
+			id={section.id}
+			className={cn(
+				"ultimate-section scroll-mt-32",
+				isSearchResult && "ring-2 ring-yellow-400 dark:ring-yellow-600 rounded-xl"
+			)}
+		>
+			<div
+				className={cn(
+					"ultimate-section-header cursor-pointer",
+					section.level === 3 && "ml-8"
+				)}
+				onClick={handleToggle}
+			>
+				<div className="ultimate-section-icon">
+					{sectionIcons[section.type || ""] ||
+						sectionIcons[section.title.toLowerCase()] || (
+							<TextIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+						)}
+				</div>
+
+				<h2
+					className={cn(
+						"ultimate-section-title flex-1",
+						section.level === 2 && "text-2xl",
+						section.level === 3 && "text-xl"
+					)}
+				>
+					{section.title}
+				</h2>
+
+				<motion.div animate={{ rotate: isCollapsed ? -90 : 0 }} transition={{ duration: 0.2 }}>
+					<ChevronDownIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+				</motion.div>
+			</div>
+
+			<AnimatePresence>
+				{!isCollapsed && (
+					<motion.div
+						initial={{ height: 0, opacity: 0 }}
+						animate={{ height: "auto", opacity: 1 }}
+						exit={{ height: 0, opacity: 0 }}
+						transition={{ duration: 0.3 }}
+						className={cn(
+							"ultimate-section-content overflow-hidden",
+							section.level === 3 && "ml-8"
+						)}
+					>
+						{renderContent(section.content, section.id)}
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</motion.section>
+	);
+});
+
+DocumentSectionComponent.displayName = "DocumentSectionComponent";
+
+export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	document,
 	className,
 }) => {
-	// Enhanced state management
+	// State management with reduced re-renders
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [sections, setSections] = useState<DocumentSection[]>([]);
@@ -162,28 +332,23 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 	const [activeSection, setActiveSection] = useState<string>("");
 	const [tocSearch, setTocSearch] = useState("");
 	const [contentSearch, setContentSearch] = useState("");
-	const [searchResults, setSearchResults] = useState<string[]>([]);
 	const [fontSize, setFontSize] = useState<"sm" | "base" | "lg">("base");
 	const [copied, setCopied] = useState(false);
 	const [scrollProgress, setScrollProgress] = useState(0);
 	const [showScrollTop, setShowScrollTop] = useState(false);
-	const [viewMode, setViewMode] = useState<
-		"comfortable" | "compact" | "spacious"
-	>("comfortable");
+	const [viewMode, setViewMode] = useState<"comfortable" | "compact" | "spacious">("comfortable");
 	const [showLineNumbers, setShowLineNumbers] = useState(true);
-	const [isFullscreen, setIsFullscreen] = useState(false);
-	const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
-		new Set()
-	);
+	const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 	const [headerScrolled, setHeaderScrolled] = useState(false);
 
-	// Refs for better performance
+	// Refs
 	const contentRef = useRef<HTMLDivElement>(null);
-	const observerRef = useRef<IntersectionObserver | null>(null);
 	const tocRef = useRef<HTMLElement>(null);
 	const searchInputRef = useRef<HTMLInputElement>(null);
+	const scrollTimeoutRef = useRef<NodeJS.Timeout>();
+	const intersectionTimeoutRef = useRef<NodeJS.Timeout>();
 
-	// App store integration
+	// App store
 	const {
 		darkMode,
 		isFavorite,
@@ -198,116 +363,97 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 	const docKey = `${document.name}.${document.section}`;
 	const isDocFavorite = isFavorite(docKey);
 
-	// Enhanced content parsing with better code block detection
-	const parseDocumentContent = useCallback(
-		(doc: Document): DocumentSection[] => {
-			const sections: DocumentSection[] = [];
+	// Memoized document parsing
+	const parsedSections = useMemo(() => {
+		const sections: DocumentSection[] = [];
 
-			if (doc.sections && doc.sections.length > 0) {
-				// Parse structured sections
-				const parsedSections = parseGroffSections(doc.sections, {
-					preserveFormatting: true,
-					convertToMarkdown: true,
+		if (document.sections && document.sections.length > 0) {
+			const parsed = parseGroffSections(document.sections, {
+				preserveFormatting: true,
+				convertToMarkdown: true,
+			});
+
+			parsed.forEach((section) => {
+				const sectionId = `section-${section.name.toLowerCase().replace(/\s+/g, "-")}`;
+				const sectionType = section.name.toLowerCase() as DocumentSection["type"];
+
+				sections.push({
+					id: sectionId,
+					title: section.name,
+					content: section.content || "",
+					level: 2,
+					type: sectionType,
+					isCollapsed: false,
 				});
 
-				parsedSections.forEach((section) => {
-					const sectionId = `section-${section.name
-						.toLowerCase()
-						.replace(/\s+/g, "-")}`;
-					const sectionType =
-						section.name.toLowerCase() as DocumentSection["type"];
-
-					sections.push({
-						id: sectionId,
-						title: section.name,
-						content: section.content || "",
-						level: 2,
-						type: sectionType,
-						isCollapsed: false,
+				if (section.subsections) {
+					section.subsections.forEach((sub: any, subIndex: number) => {
+						const subId = `${sectionId}-sub-${subIndex}`;
+						sections.push({
+							id: subId,
+							title: sub.name,
+							content: sub.content || "",
+							level: 3,
+							type: sectionType,
+							isCollapsed: false,
+						});
 					});
+				}
+			});
+		} else if (document.raw_content) {
+			const cleanContent = parseGroffContent(document.raw_content, {
+				preserveFormatting: true,
+				convertToMarkdown: true,
+			});
 
-					// Process subsections
-					if (section.subsections) {
-						section.subsections.forEach(
-							(sub: any, subIndex: number) => {
-								const subId = `${sectionId}-sub-${subIndex}`;
-								sections.push({
-									id: subId,
-									title: sub.name,
-									content: sub.content || "",
-									level: 3,
-									type: sectionType,
-									isCollapsed: false,
-								});
-							}
-						);
+			const sectionRegex = /^#+\s+(.+)$/gm;
+			let match;
+			let lastIndex = 0;
+			const tempSections: Array<{ title: string; content: string }> = [];
+
+			while ((match = sectionRegex.exec(cleanContent)) !== null) {
+				if (lastIndex < match.index) {
+					const content = cleanContent.slice(lastIndex, match.index).trim();
+					if (tempSections.length > 0 && content) {
+						tempSections[tempSections.length - 1].content = content;
 					}
-				});
-			} else if (doc.raw_content) {
-				// Enhanced raw content parsing
-				const cleanContent = parseGroffContent(doc.raw_content, {
-					preserveFormatting: true,
-					convertToMarkdown: true,
-				});
-
-				// Split by common section headers
-				const sectionRegex = /^#+\s+(.+)$/gm;
-				let match;
-				let lastIndex = 0;
-				const tempSections: Array<{ title: string; content: string }> = [];
-
-				while ((match = sectionRegex.exec(cleanContent)) !== null) {
-					if (lastIndex < match.index) {
-						const content = cleanContent.slice(lastIndex, match.index).trim();
-						if (tempSections.length > 0 && content) {
-							tempSections[tempSections.length - 1].content = content;
-						}
-					}
-					tempSections.push({ title: match[1], content: "" });
-					lastIndex = match.index + match[0].length;
 				}
-
-				// Add remaining content
-				if (lastIndex < cleanContent.length && tempSections.length > 0) {
-					tempSections[tempSections.length - 1].content = cleanContent
-						.slice(lastIndex)
-						.trim();
-				}
-
-				// Convert to sections
-				tempSections.forEach((section) => {
-					const sectionId = `section-${section.title
-						.toLowerCase()
-						.replace(/\s+/g, "-")}`;
-					sections.push({
-						id: sectionId,
-						title: section.title,
-						content: section.content,
-						level: 2,
-						type: section.title.toLowerCase() as DocumentSection["type"],
-						isCollapsed: false,
-					});
-				});
-
-				// If no sections found, create a single section
-				if (sections.length === 0) {
-					sections.push({
-						id: "section-content",
-						title: "Content",
-						content: cleanContent,
-						level: 2,
-						type: "description",
-						isCollapsed: false,
-					});
-				}
+				tempSections.push({ title: match[1], content: "" });
+				lastIndex = match.index + match[0].length;
 			}
 
-			return sections;
-		},
-		[]
-	);
+			if (lastIndex < cleanContent.length && tempSections.length > 0) {
+				tempSections[tempSections.length - 1].content = cleanContent.slice(lastIndex).trim();
+			}
 
-	// Generate enhanced TOC
+			tempSections.forEach((section) => {
+				const sectionId = `section-${section.title.toLowerCase().replace(/\s+/g, "-")}`;
+				sections.push({
+					id: sectionId,
+					title: section.title,
+					content: section.content,
+					level: 2,
+					type: section.title.toLowerCase() as DocumentSection["type"],
+					isCollapsed: false,
+				});
+			});
+
+			if (sections.length === 0) {
+				sections.push({
+					id: "section-content",
+					title: "Content",
+					content: cleanContent,
+					level: 2,
+					type: "description",
+					isCollapsed: false,
+				});
+			}
+		}
+
+		return sections;
+	}, [document]);
+
+	// Generate TOC with memoization
 	const generateTOC = useCallback(
 		(sections: DocumentSection[]): TableOfContentsItem[] => {
 			const tocItems: TableOfContentsItem[] = [];
@@ -318,7 +464,8 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					id: section.id,
 					title: section.title,
 					level: section.level,
-					icon: sectionIcons[section.type || ""] ||
+					icon:
+						sectionIcons[section.type || ""] ||
 						sectionIcons[section.title.toLowerCase()] || (
 							<TextIcon className="w-4 h-4" />
 						),
@@ -327,7 +474,6 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					isExpanded: true,
 				};
 
-				// Build hierarchy
 				while (
 					levelStack.length > 0 &&
 					levelStack[levelStack.length - 1].level >= item.level
@@ -363,100 +509,94 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					return;
 				}
 
-				// Parse document content
-				const parsedSections = parseDocumentContent(document);
 				setSections(parsedSections);
-
-				// Generate TOC
 				const tocItems = generateTOC(parsedSections);
 				setTocItems(tocItems);
 
-				// Add to recent documents
 				addRecentDoc(document);
 			} catch (err) {
 				console.error("Error initializing document:", err);
-				setError(
-					err instanceof Error
-						? err.message
-						: "Failed to load document"
-				);
+				setError(err instanceof Error ? err.message : "Failed to load document");
 			} finally {
 				setLoading(false);
 			}
 		};
 
 		initializeDocument();
-	}, [document, parseDocumentContent, generateTOC, addRecentDoc]);
+	}, [document, parsedSections, generateTOC, addRecentDoc]);
 
-	// Enhanced intersection observer
+	// Optimized intersection observer with debouncing
 	useEffect(() => {
-		if (!sections.length || typeof window === "undefined") {
-			return;
-		}
+		if (!sections.length || typeof window === "undefined") return;
 
 		const observerOptions: IntersectionObserverInit = {
 			root: null,
 			rootMargin: "-20% 0px -60% 0px",
-			threshold: [0, 0.25, 0.5, 0.75, 1],
+			threshold: [0.1],
 		};
 
-		const observer = new IntersectionObserver(
-			(entries: IntersectionObserverEntry[]) => {
+		const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+			if (intersectionTimeoutRef.current) {
+				clearTimeout(intersectionTimeoutRef.current);
+			}
+
+			intersectionTimeoutRef.current = setTimeout(() => {
 				let maxVisibleEntry: IntersectionObserverEntry | null = null;
 				let maxRatio = 0;
 
 				entries.forEach((entry) => {
-					if (
-						entry.isIntersecting &&
-						entry.intersectionRatio > maxRatio
-					) {
+					if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
 						maxRatio = entry.intersectionRatio;
 						maxVisibleEntry = entry;
 					}
 				});
 
-				if (maxVisibleEntry !== null) {
-					const target = maxVisibleEntry.target as HTMLElement;
-					if (target && target.id) {
-						setActiveSection(target.id);
-					}
+				if (maxVisibleEntry?.target?.id) {
+					setActiveSection(maxVisibleEntry.target.id);
 				}
-			},
-			observerOptions
-		);
+			}, 100);
+		};
 
-		// Observe all section elements
+		const observer = new IntersectionObserver(handleIntersection, observerOptions);
+
 		sections.forEach((section) => {
 			const element = window.document.getElementById(section.id);
-			if (element) {
-				observer.observe(element);
-			}
+			if (element) observer.observe(element);
 		});
 
-		observerRef.current = observer;
-
-		return () => observer.disconnect();
+		return () => {
+			observer.disconnect();
+			if (intersectionTimeoutRef.current) {
+				clearTimeout(intersectionTimeoutRef.current);
+			}
+		};
 	}, [sections]);
 
-	// Scroll handlers
+	// Optimized scroll handler with throttling
 	useEffect(() => {
 		const handleScroll = () => {
-			if (!isBrowser() || !isDocumentReady()) return;
-			
-			const scrollTop = window.pageYOffset || window.scrollY || 0;
-			const documentElement = window.document.documentElement;
-			
-			if (!documentElement) return;
-			
-			const docHeight = Math.max(
-				documentElement.scrollHeight - window.innerHeight,
-				0
-			);
-			const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+			if (scrollTimeoutRef.current) {
+				clearTimeout(scrollTimeoutRef.current);
+			}
 
-			setScrollProgress(progress);
-			setShowScrollTop(scrollTop > 800);
-			setHeaderScrolled(scrollTop > 50);
+			scrollTimeoutRef.current = setTimeout(() => {
+				if (!isBrowser() || !isDocumentReady()) return;
+				
+				const scrollTop = window.pageYOffset || window.scrollY || 0;
+				const documentElement = window.document.documentElement;
+				
+				if (!documentElement) return;
+				
+				const docHeight = Math.max(
+					documentElement.scrollHeight - window.innerHeight,
+					0
+				);
+				const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+
+				setScrollProgress(progress);
+				setShowScrollTop(scrollTop > 800);
+				setHeaderScrolled(scrollTop > 50);
+			}, 16); // ~60fps
 		};
 
 		// Only add listener if in browser
@@ -474,21 +614,23 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 		}
 
 		return () => {
+			if (scrollTimeoutRef.current) {
+				clearTimeout(scrollTimeoutRef.current);
+			}
 			if (isBrowser()) {
 				window.removeEventListener("scroll", handleScroll);
 			}
 		};
 	}, []);
 
-	// Enhanced keyboard shortcuts
-	useEffect(() => {
-		const handleKeyPress = (e: KeyboardEvent) => {
-			// Global shortcuts
+	// Memoized keyboard handler
+	const handleKeyPress = useCallback(
+		(e: KeyboardEvent) => {
 			if (e.ctrlKey || e.metaKey) {
 				switch (e.key) {
 					case "k":
 						e.preventDefault();
-						setShowToc(!showToc);
+						setShowToc((prev) => !prev);
 						break;
 					case "b":
 						e.preventDefault();
@@ -505,15 +647,11 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					case "+":
 					case "=":
 						e.preventDefault();
-						setFontSize(
-							fontSize === "sm" ? "base" : fontSize === "base" ? "lg" : "lg"
-						);
+						setFontSize((prev) => (prev === "sm" ? "base" : prev === "base" ? "lg" : "lg"));
 						break;
 					case "-":
 						e.preventDefault();
-						setFontSize(
-							fontSize === "lg" ? "base" : fontSize === "base" ? "sm" : "sm"
-						);
+						setFontSize((prev) => (prev === "lg" ? "base" : prev === "base" ? "sm" : "sm"));
 						break;
 					case "0":
 						e.preventDefault();
@@ -522,12 +660,10 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				}
 			}
 
-			// Navigation shortcuts
 			if (!e.ctrlKey && !e.metaKey && !e.altKey) {
 				switch (e.key) {
 					case "g":
 						if (e.shiftKey) {
-							// Shift+G - go to bottom
 							const documentElement = window.document.documentElement;
 							if (documentElement) {
 								window.scrollTo({
@@ -536,11 +672,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								});
 							}
 						} else {
-							// Double 'g' - go to top
-							if (
-								(window as any).lastGPress &&
-								Date.now() - (window as any).lastGPress < 300
-							) {
+							if ((window as any).lastGPress && Date.now() - (window as any).lastGPress < 300) {
 								window.scrollTo({ top: 0, behavior: "smooth" });
 							}
 							(window as any).lastGPress = Date.now();
@@ -557,18 +689,18 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 						break;
 				}
 			}
-		};
+		},
+		[contentSearch, setShowToc]
+	);
 
+	useEffect(() => {
 		window.addEventListener("keydown", handleKeyPress);
 		return () => window.removeEventListener("keydown", handleKeyPress);
-	}, [showToc, fontSize, contentSearch]);
+	}, [handleKeyPress]);
 
-	// Search functionality
-	useEffect(() => {
-		if (!contentSearch) {
-			setSearchResults([]);
-			return;
-		}
+	// Memoized search results
+	const searchResults = useMemo(() => {
+		if (!contentSearch) return [];
 
 		const results: string[] = [];
 		const searchLower = contentSearch.toLowerCase();
@@ -582,10 +714,10 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			}
 		});
 
-		setSearchResults(results);
+		return results;
 	}, [contentSearch, sections]);
 
-	// Section collapse handler
+	// Memoized handlers
 	const toggleSectionCollapse = useCallback((sectionId: string) => {
 		setCollapsedSections((prev) => {
 			const next = new Set(prev);
@@ -598,13 +730,11 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 		});
 	}, []);
 
-	// Handler functions
 	const handleSectionClick = useCallback((sectionId: string) => {
 		const element = window.document.getElementById(sectionId);
 		if (element) {
 			const elementPosition = element.getBoundingClientRect().top;
-			const offsetPosition =
-				elementPosition + window.pageYOffset - 100;
+			const offsetPosition = elementPosition + window.pageYOffset - 100;
 
 			window.scrollTo({
 				top: offsetPosition,
@@ -626,20 +756,11 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			addFavorite(docKey);
 			addToast(`Added ${document.name} to favorites`, "success");
 		}
-	}, [
-		document.name,
-		isDocFavorite,
-		docKey,
-		addFavorite,
-		removeFavorite,
-		addToast,
-	]);
+	}, [document.name, isDocFavorite, docKey, addFavorite, removeFavorite, addToast]);
 
 	const handleCopyContent = useCallback(async () => {
 		try {
-			const textContent = sections
-				.map((s) => `${s.title}\n${s.content}`)
-				.join("\n\n");
+			const textContent = sections.map((s) => `${s.title}\n${s.content}`).join("\n\n");
 			await navigator.clipboard.writeText(textContent);
 			setCopied(true);
 			addToast("Content copied to clipboard", "success");
@@ -668,10 +789,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 
 	const handleDownload = useCallback(() => {
 		const textContent = sections
-			.map(
-				(s) =>
-					`${s.title}\n${"=".repeat(s.title.length)}\n\n${s.content}`
-			)
+			.map((s) => `${s.title}\n${"=".repeat(s.title.length)}\n\n${s.content}`)
 			.join("\n\n");
 		const blob = new Blob([textContent], { type: "text/plain" });
 		const url = URL.createObjectURL(blob);
@@ -689,7 +807,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 		window.scrollTo({ top: 0, behavior: "smooth" });
 	}, []);
 
-	// Filter TOC items based on search
+	// Memoized TOC filtering
 	const filterTocItems = useCallback(
 		(items: TableOfContentsItem[], search: string): TableOfContentsItem[] => {
 			if (!search) return items;
@@ -697,9 +815,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			const searchLower = search.toLowerCase();
 			return items.reduce((acc: TableOfContentsItem[], item) => {
 				const matches = item.title.toLowerCase().includes(searchLower);
-				const childMatches = item.children
-					? filterTocItems(item.children, search)
-					: [];
+				const childMatches = item.children ? filterTocItems(item.children, search) : [];
 
 				if (matches || childMatches.length > 0) {
 					acc.push({
@@ -719,16 +835,14 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 		[tocItems, tocSearch, filterTocItems]
 	);
 
-	// Calculate read time
+	// Memoized read time calculation
 	const readTime = useMemo(() => {
 		const text = sections.map((s) => s.content).join(" ");
-		const words = text
-			.split(/\s+/)
-			.filter((word) => word.length > 0).length;
+		const words = text.split(/\s+/).filter((word) => word.length > 0).length;
 		return Math.ceil(words / 200);
 	}, [sections]);
 
-	// Enhanced content rendering with better code block detection
+	// Memoized content renderer
 	const renderSectionContent = useCallback(
 		(content: string, sectionId: string) => {
 			if (!content.trim()) {
@@ -739,17 +853,12 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				);
 			}
 
-			// Enhanced code block detection
 			const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
-			const inlineCodeRegex = /`([^`]+)`/g;
 			const parts: React.ReactNode[] = [];
 			let lastIndex = 0;
-			let codeBlockCount = 0;
 
-			// Process code blocks
 			let match;
 			while ((match = codeBlockRegex.exec(content)) !== null) {
-				// Add text before code block
 				if (match.index > lastIndex) {
 					const textBefore = content.slice(lastIndex, match.index);
 					parts.push(
@@ -759,21 +868,14 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					);
 				}
 
-				// Detect language if not specified
 				const specifiedLang = match[1];
 				const code = match[2].trim();
 				const language = specifiedLang || detectLanguage(code);
 
-				// Add enhanced code block
 				parts.push(
-					<div
-						key={`code-${match.index}`}
-						className="ultimate-code-block my-6"
-					>
+					<div key={`code-${match.index}`} className="ultimate-code-block my-6">
 						<div className="ultimate-code-header">
-							<span className="ultimate-code-language">
-								{language}
-							</span>
+							<span className="ultimate-code-language">{language}</span>
 							<div className="ultimate-code-actions">
 								<CopyButton text={code} />
 							</div>
@@ -789,10 +891,8 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				);
 
 				lastIndex = match.index + match[0].length;
-				codeBlockCount++;
 			}
 
-			// Add remaining text
 			if (lastIndex < content.length) {
 				const remainingText = content.slice(lastIndex);
 				parts.push(
@@ -802,27 +902,21 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				);
 			}
 
-			// If no code blocks found, render as formatted text
 			if (parts.length === 0) {
-				return (
-					<div className="space-y-4">
-						{renderTextWithHighlight(content, sectionId)}
-					</div>
-				);
+				return <div className="space-y-4">{renderTextWithHighlight(content, sectionId)}</div>;
 			}
 
 			return <div className="space-y-6">{parts}</div>;
 		},
-		[showLineNumbers, contentSearch, searchResults]
+		[showLineNumbers, searchResults]
 	);
 
-	// Render text with search highlighting
+	// Memoized text highlighter
 	const renderTextWithHighlight = useCallback(
 		(text: string, sectionId: string) => {
 			const paragraphs = text.split("\n\n").filter((p) => p.trim());
 
 			return paragraphs.map((paragraph, i) => {
-				// Check for lists
 				const isListItem = /^[\s]*[-*+•]\s+/.test(paragraph);
 				const isNumberedList = /^[\s]*\d+\.\s+/.test(paragraph);
 
@@ -850,7 +944,6 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					);
 				}
 
-				// Check for options/flags (common in man pages)
 				const isOption = /^\s*-\w/.test(paragraph);
 				if (isOption) {
 					const lines = paragraph.split("\n");
@@ -876,11 +969,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								}
 								return (
 									<p key={j} className="text-gray-700 dark:text-gray-300">
-										{highlightText(
-											line,
-											contentSearch,
-											searchResults.includes(sectionId)
-										)}
+										{highlightText(line, contentSearch, searchResults.includes(sectionId))}
 									</p>
 								);
 							})}
@@ -888,14 +977,9 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					);
 				}
 
-				// Regular paragraph
 				return (
 					<p key={`p-${i}`} className="text-gray-700 dark:text-gray-300 leading-relaxed">
-						{highlightText(
-							paragraph,
-							contentSearch,
-							searchResults.includes(sectionId)
-						)}
+						{highlightText(paragraph, contentSearch, searchResults.includes(sectionId))}
 					</p>
 				);
 			});
@@ -903,7 +987,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 		[contentSearch, searchResults]
 	);
 
-	// Highlight search terms
+	// Memoized text highlighter function
 	const highlightText = useCallback(
 		(text: string, search: string, isInResult: boolean) => {
 			if (!search || !isInResult) return text;
@@ -924,42 +1008,6 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 		},
 		[]
 	);
-
-	// Copy button component
-	const CopyButton: React.FC<{ text: string }> = ({ text }) => {
-		const [copied, setCopied] = useState(false);
-
-		const handleCopy = async () => {
-			try {
-				await navigator.clipboard.writeText(text);
-				setCopied(true);
-				setTimeout(() => setCopied(false), 2000);
-			} catch (err) {
-				console.error("Failed to copy:", err);
-			}
-		};
-
-		return (
-			<Button
-				variant="ghost"
-				size="sm"
-				onClick={handleCopy}
-				className="ultimate-button ultimate-button-ghost h-7 px-2 text-xs"
-			>
-				{copied ? (
-					<>
-						<CheckIcon className="w-3 h-3 mr-1" />
-						Copied
-					</>
-				) : (
-					<>
-						<CopyIcon className="w-3 h-3 mr-1" />
-						Copy
-					</>
-				)}
-			</Button>
-		);
-	};
 
 	// Loading state
 	if (loading) {
@@ -982,12 +1030,11 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 	}
 
 	return (
-		<div
+		<div 
 			className={cn(
 				"ultimate-document-viewer min-h-screen",
 				`font-size-${fontSize}`,
 				`view-mode-${viewMode}`,
-				isFullscreen && "fixed inset-0 z-50",
 				className
 			)}
 		>
@@ -1012,7 +1059,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				)}
 			</AnimatePresence>
 
-			{/* Enhanced Fixed Header */}
+			{/* Header */}
 			<header className={cn("ultimate-header", headerScrolled && "scrolled")}>
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 					<div className="flex items-center justify-between">
@@ -1033,7 +1080,6 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 							</Button>
 
 							<div className="min-w-0 flex-1">
-								{/* Breadcrumbs */}
 								<div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
 									<HomeIcon className="w-3 h-3" />
 									<ChevronRightIcon className="w-3 h-3" />
@@ -1044,12 +1090,10 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 									</span>
 								</div>
 
-								{/* Title */}
 								<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 truncate font-mono mt-1">
 									{document.title}
 								</h1>
 
-								{/* Summary and badges */}
 								<div className="flex items-center gap-3 mt-2">
 									{document.summary && (
 										<p className="text-gray-600 dark:text-gray-400 text-sm truncate flex-1">
@@ -1057,15 +1101,14 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 										</p>
 									)}
 									<div className="flex items-center gap-2 shrink-0">
-										{document.section &&
-											document.section !== "json" && (
-												<Badge
-													variant="default"
-													className="ultimate-badge ultimate-badge-primary text-xs"
-												>
-													Section {document.section}
-												</Badge>
-											)}
+										{document.section && document.section !== "json" && (
+											<Badge
+												variant="default"
+												className="ultimate-badge ultimate-badge-primary text-xs"
+											>
+												Section {document.section}
+											</Badge>
+										)}
 										{document.doc_set && (
 											<Badge
 												variant="default"
@@ -1081,18 +1124,13 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 
 						{/* Right side - Actions */}
 						<div className="flex items-center gap-2 shrink-0 ml-4">
-							{/* View controls */}
 							<div className="hidden sm:flex items-center gap-1 mr-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
 								<Button
 									variant="ghost"
 									size="sm"
 									onClick={() =>
 										setFontSize(
-											fontSize === "sm"
-												? "base"
-												: fontSize === "base"
-												? "lg"
-												: "sm"
+											fontSize === "sm" ? "base" : fontSize === "base" ? "lg" : "sm"
 										)
 									}
 									className="relative text-xs px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
@@ -1102,8 +1140,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 										className={cn(
 											"font-bold transition-all",
 											fontSize === "sm" && "text-xs",
-											fontSize === "base" &&
-												"text-sm",
+											fontSize === "base" && "text-sm",
 											fontSize === "lg" && "text-base"
 										)}
 									>
@@ -1116,9 +1153,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								<Button
 									variant="ghost"
 									size="sm"
-									onClick={() =>
-										setShowLineNumbers(!showLineNumbers)
-									}
+									onClick={() => setShowLineNumbers(!showLineNumbers)}
 									className={cn(
 										"px-2 py-1 rounded-lg transition-all",
 										showLineNumbers &&
@@ -1148,7 +1183,6 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								</Button>
 							</div>
 
-							{/* Main actions */}
 							<Button
 								variant="ghost"
 								size="sm"
@@ -1161,12 +1195,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								)}
 								title="Toggle favorite"
 							>
-								<BookmarkIcon
-									className={cn(
-										"w-5 h-5",
-										isDocFavorite && "fill-current"
-									)}
-								/>
+								<BookmarkIcon className={cn("w-5 h-5", isDocFavorite && "fill-current")} />
 							</Button>
 
 							<Button
@@ -1235,7 +1264,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				</div>
 			</header>
 
-			{/* Enhanced Table of Contents */}
+			{/* Table of Contents */}
 			<AnimatePresence mode="wait">
 				{showToc && (
 					<motion.aside
@@ -1271,16 +1300,13 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								</Button>
 							</div>
 
-							{/* TOC Search */}
 							<div className="relative">
 								<MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
 								<Input
 									type="text"
 									placeholder="Search sections..."
 									value={tocSearch}
-									onChange={(e) =>
-										setTocSearch(e.target.value)
-									}
+									onChange={(e) => setTocSearch(e.target.value)}
 									className="pl-10 pr-4 py-2 w-full text-sm bg-white/70 dark:bg-gray-800/70 border-gray-200/60 dark:border-gray-700/60 rounded-xl focus:bg-white dark:focus:bg-gray-800 transition-colors"
 								/>
 								{tocSearch && (
@@ -1295,7 +1321,6 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								)}
 							</div>
 
-							{/* Document stats */}
 							<div className="flex items-center gap-2 mt-4">
 								<Badge
 									variant="info"
@@ -1326,12 +1351,27 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 							<div className="p-4 space-y-1">
 								<AnimatePresence>
 									{filteredTocItems.length > 0 ? (
-										<TocItemList
-											items={filteredTocItems}
-											activeSection={activeSection}
-											onItemClick={handleSectionClick}
-											searchResults={searchResults}
-										/>
+										filteredTocItems.map((item) => (
+											<Fragment key={item.id}>
+												<TocItem
+													item={item}
+													isActive={item.id === activeSection}
+													isSearchResult={searchResults.includes(item.id)}
+													onClick={handleSectionClick}
+													level={0}
+												/>
+												{item.children?.map((child) => (
+													<TocItem
+														key={child.id}
+														item={child}
+														isActive={child.id === activeSection}
+														isSearchResult={searchResults.includes(child.id)}
+														onClick={handleSectionClick}
+														level={1}
+													/>
+												))}
+											</Fragment>
+										))
 									) : (
 										<motion.div
 											initial={{ opacity: 0 }}
@@ -1339,16 +1379,14 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 											className="text-center py-8 text-gray-500 dark:text-gray-400"
 										>
 											<MagnifyingGlassIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-											<p className="text-sm">
-												No sections found
-											</p>
+											<p className="text-sm">No sections found</p>
 										</motion.div>
 									)}
 								</AnimatePresence>
 							</div>
 						</div>
 
-						{/* TOC Footer with shortcuts */}
+						{/* TOC Footer */}
 						<div className="flex-shrink-0 p-4 border-t border-gray-200/60 dark:border-gray-700/60 bg-gray-50/80 dark:bg-gray-800/80">
 							<div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400">
 								<div className="flex items-center gap-1">
@@ -1388,7 +1426,6 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					showToc && "toc-open"
 				)}
 			>
-				{/* Document Content */}
 				<main className="relative">
 					<div
 						ref={contentRef}
@@ -1403,94 +1440,21 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 					>
 						{sections.length > 0 ? (
 							<AnimatePresence>
-								{sections.map((section, index) => {
-									const isCollapsed = collapsedSections.has(section.id);
-									const isSearchResult = searchResults.includes(section.id);
-
-									return (
-										<motion.section
-											key={section.id}
-											initial={{ opacity: 0, y: 20 }}
-											animate={{ opacity: 1, y: 0 }}
-											transition={{ delay: index * 0.05 }}
-											id={section.id}
-											className={cn(
-												"ultimate-section scroll-mt-32",
-												isSearchResult && "ring-2 ring-yellow-400 dark:ring-yellow-600 rounded-xl"
-											)}
-										>
-											{/* Section header */}
-											<div
-												className={cn(
-													"ultimate-section-header cursor-pointer",
-													section.level === 3 && "ml-8"
-												)}
-												onClick={() => toggleSectionCollapse(section.id)}
-											>
-												{/* Section icon */}
-												<div className="ultimate-section-icon">
-													{sectionIcons[
-														section.type || ""
-													] ||
-														sectionIcons[
-															section.title.toLowerCase()
-														] || (
-															<TextIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-														)}
-												</div>
-
-												{/* Section title */}
-												<h2
-													className={cn(
-														"ultimate-section-title flex-1",
-														section.level === 2 &&
-															"text-2xl",
-														section.level === 3 &&
-															"text-xl"
-													)}
-												>
-													{section.title}
-												</h2>
-
-												{/* Collapse indicator */}
-												<motion.div
-													animate={{ rotate: isCollapsed ? -90 : 0 }}
-													transition={{ duration: 0.2 }}
-												>
-													<ChevronDownIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-												</motion.div>
-											</div>
-
-											{/* Section content */}
-											<AnimatePresence>
-												{!isCollapsed && (
-													<motion.div
-														initial={{ height: 0, opacity: 0 }}
-														animate={{ height: "auto", opacity: 1 }}
-														exit={{ height: 0, opacity: 0 }}
-														transition={{ duration: 0.3 }}
-														className={cn(
-															"ultimate-section-content overflow-hidden",
-															section.level === 3 && "ml-8"
-														)}
-													>
-														{renderSectionContent(
-															section.content,
-															section.id
-														)}
-													</motion.div>
-												)}
-											</AnimatePresence>
-										</motion.section>
-									);
-								})}
+								{sections.map((section) => (
+									<DocumentSectionComponent
+										key={section.id}
+										section={section}
+										isCollapsed={collapsedSections.has(section.id)}
+										isSearchResult={searchResults.includes(section.id)}
+										onToggleCollapse={toggleSectionCollapse}
+										renderContent={renderSectionContent}
+									/>
+								))}
 							</AnimatePresence>
 						) : (
 							<div className="text-center py-12 text-gray-500 dark:text-gray-400">
 								<InfoCircledIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-								<p className="text-lg">
-									No content available for this document.
-								</p>
+								<p className="text-lg">No content available for this document.</p>
 							</div>
 						)}
 					</div>
@@ -1513,98 +1477,5 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 				)}
 			</AnimatePresence>
 		</div>
-	);
-};
-
-// TOC Item List Component
-const TocItemList: React.FC<{
-	items: TableOfContentsItem[];
-	activeSection: string;
-	onItemClick: (id: string) => void;
-	searchResults: string[];
-	level?: number;
-}> = ({ items, activeSection, onItemClick, searchResults, level = 0 }) => {
-	return (
-		<>
-			{items.map((item, index) => {
-				const isActive = item.id === activeSection;
-				const isSearchResult = searchResults.includes(item.id);
-
-				return (
-					<Fragment key={item.id}>
-						<motion.button
-							initial={{ opacity: 0, x: -20 }}
-							animate={{ opacity: 1, x: 0 }}
-							exit={{ opacity: 0, x: -20 }}
-							transition={{
-								delay: index * 0.02,
-							}}
-							onClick={() => onItemClick(item.id)}
-							className={cn(
-								"toc-item group flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 relative overflow-hidden",
-								"hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-md hover:scale-[1.02]",
-								isActive && "active",
-								isSearchResult && "ring-2 ring-yellow-400 dark:ring-yellow-600",
-								level > 0 && "ml-6 text-sm"
-							)}
-						>
-							{/* Active indicator */}
-							{isActive && (
-								<motion.div
-									layoutId="active-toc-indicator"
-									className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r"
-									transition={{
-										type: "spring",
-										damping: 25,
-										stiffness: 350,
-									}}
-								/>
-							)}
-
-							{/* Icon */}
-							<div
-								className={cn(
-									"flex-shrink-0 p-1.5 rounded-lg transition-all duration-200",
-									isActive
-										? "bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 scale-110"
-										: "bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/60 group-hover:scale-105"
-								)}
-							>
-								{item.icon}
-							</div>
-
-							{/* Title */}
-							<span className={cn(
-								"flex-1 truncate leading-tight",
-								isActive && "font-semibold"
-							)}>
-								{item.title}
-							</span>
-
-							{/* Chevron for interactive feedback */}
-							<ChevronRightIcon
-								className={cn(
-									"w-4 h-4 opacity-0 group-hover:opacity-100 transition-all duration-200 transform",
-									"group-hover:translate-x-1",
-									isActive &&
-										"opacity-100 text-blue-600 dark:text-blue-400"
-								)}
-							/>
-						</motion.button>
-
-						{/* Render children */}
-						{item.children && item.children.length > 0 && (
-							<TocItemList
-								items={item.children}
-								activeSection={activeSection}
-								onItemClick={onItemClick}
-								searchResults={searchResults}
-								level={level + 1}
-							/>
-						)}
-					</Fragment>
-				);
-			})}
-		</>
 	);
 };
