@@ -13,10 +13,10 @@ body {
 }
 
 /* Light mode body styles */
-.light body {
+/*.light body {
   background-color: white;
   color: rgb(17 24 39);
-}
+}*/
 
 /* Dark mode body styles */
 .dark body {

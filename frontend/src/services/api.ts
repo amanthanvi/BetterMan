@@ -102,15 +102,18 @@ export const searchAPI = {
 		};
 
 		// Handle section - can be single number or array
-		if (options.section !== undefined && options.section !== null) {
+		if (options.section !== undefined && options.section !== null && options.section !== 'all') {
 			if (Array.isArray(options.section)) {
 				// If array, use the first value (backend only supports single section)
-				if (options.section.length > 0) {
+				if (options.section.length > 0 && options.section[0] !== 'all') {
 					params.section = String(options.section[0]);
 				}
 			} else {
-				// Single number
-				params.section = String(options.section);
+				// Single number or string - only add if it's a valid number
+				const sectionValue = String(options.section);
+				if (sectionValue !== 'all' && !isNaN(Number(sectionValue))) {
+					params.section = sectionValue;
+				}
 			}
 		}
 

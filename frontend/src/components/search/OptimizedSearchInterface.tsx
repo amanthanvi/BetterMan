@@ -156,7 +156,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
         // Default navigation
         const params = new URLSearchParams({
           q: searchQuery,
-          section: searchFilters.section || 'all',
+          ...(searchFilters.section && searchFilters.section !== 'all' ? { section: searchFilters.section } : {}),
           limit: searchFilters.limit?.toString() || '20',
         });
         navigate(`/search?${params.toString()}`);
@@ -355,7 +355,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
                 key={section.value}
                 label={section.label}
                 value={section.value}
-                isActive={filters.section === section.value}
+                isActive={(filters.section || 'all') === section.value}
                 onClick={() => handleFilterChange('section', section.value)}
               />
             ))}

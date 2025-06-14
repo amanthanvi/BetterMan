@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import {
 	MagnifyingGlassIcon,
-	HomeIcon,
 	BookmarkIcon,
 	GearIcon,
 	HamburgerMenuIcon,
