@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
+import { VersionCheck } from "./components/VersionCheck";
 import "./App.css";
 
 // Import components
@@ -201,6 +202,7 @@ function App() {
 			<Router>
 				<SupabaseProvider>
 					<AuthProvider>
+						<VersionCheck />
 						<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
 					{/* Navigation */}
 					<NavBar onSearchClick={() => setShowSearch(true)} />
