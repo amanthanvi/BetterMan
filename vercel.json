@@ -11,11 +11,5 @@
     "app/api/docs/[slug]/route.ts": {
       "maxDuration": 10
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/refresh-cache",
-      "schedule": "0 */6 * * *"
-    }
-  ]
+  }
 }
