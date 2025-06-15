@@ -1,0 +1,26 @@
+{
+  "name": "cd",
+  "section": 1,
+  "title": "change directory",
+  "description": "Change the current directory to DIR. The default DIR is the value of the HOME shell variable.",
+  "synopsis": "cd [DIRECTORY]",
+  "sections": [
+    {
+      "id": "description",
+      "title": "DESCRIPTION",
+      "content": "Change the shell working directory. Change the current directory to DIR. The default DIR is the value of the HOME shell variable.",
+      "level": 1
+    },
+    {
+      "id": "options",
+      "title": "OPTIONS",
+      "content": "-L\n    force symbolic links to be followed\n\n-P\n    use the physical directory structure without following symbolic links",
+      "level": 1
+    }
+  ],
+  "searchContent": "cd change directory navigation folder path home",
+  "relatedCommands": ["pwd", "pushd", "popd", "dirs"],
+  "examples": ["$ cd /home/user", "$ cd ..", "$ cd ~"],
+  "category": "User Commands",
+  "isCommon": true
+}

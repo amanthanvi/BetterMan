@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ls.1",
+    "name": "ls",
+    "section": 1,
+    "title": "list directory contents",
+    "description": "List information about the FILEs (the current directory by default).",
+    "category": "User Commands",
+    "keywords": ["ls", "list", "directory", "files", "folders"],
+    "content": "ls list directory contents files folders options all long format human readable",
+    "isCommon": true,
+    "examples": ["$ ls -la", "$ ls -lh /usr/bin"]
+  }
+]

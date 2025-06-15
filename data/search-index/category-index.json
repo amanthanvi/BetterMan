@@ -1,0 +1,10 @@
+{
+  "User Commands": [
+    {
+      "id": "ls.1",
+      "name": "ls",
+      "title": "list directory contents",
+      "description": "List information about the FILEs (the current directory by default)."
+    }
+  ]
+}

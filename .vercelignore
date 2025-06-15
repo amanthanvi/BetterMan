@@ -1,0 +1,26 @@
+# Ignore old application folders
+frontend/
+backend/
+api/index.js
+docker-compose.yml
+docker-compose.production.yml
+nginx/
+monitoring/
+*.sh
+*.py
+Dockerfile*
+fly.toml
+railway.json
+render.yaml
+
+# Keep only Next.js app
+!app/
+!components/
+!lib/
+!public/
+!scripts/
+!package.json
+!package-lock.json
+!next.config.mjs
+!tsconfig.json
+!tailwind.config.ts

@@ -1,0 +1,26 @@
+{
+  "name": "grep",
+  "section": 1,
+  "title": "print lines matching a pattern",
+  "description": "grep searches for PATTERNS in each FILE. PATTERNS is one or more patterns separated by newlines.",
+  "synopsis": "grep [OPTION]... PATTERNS [FILE]...",
+  "sections": [
+    {
+      "id": "description",
+      "title": "DESCRIPTION",
+      "content": "grep searches the named input FILEs for lines containing a match to the given PATTERN. If no files are specified, or if the file '-' is given, grep searches standard input.",
+      "level": 1
+    },
+    {
+      "id": "options",
+      "title": "OPTIONS",
+      "content": "-i, --ignore-case\n    Ignore case distinctions in patterns and input data\n\n-r, --recursive\n    Read all files under each directory, recursively\n\n-n, --line-number\n    Prefix each line of output with the line number",
+      "level": 1
+    }
+  ],
+  "searchContent": "grep search find pattern match regular expression regex text",
+  "relatedCommands": ["egrep", "fgrep", "sed", "awk"],
+  "examples": ["$ grep 'error' logfile.txt", "$ grep -r 'TODO' .", "$ grep -i 'warning' *.log"],
+  "category": "User Commands",
+  "isCommon": true
+}

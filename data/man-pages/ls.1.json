@@ -1,0 +1,26 @@
+{
+  "name": "ls",
+  "section": 1,
+  "title": "list directory contents",
+  "description": "List information about the FILEs (the current directory by default).",
+  "synopsis": "ls [OPTION]... [FILE]...",
+  "sections": [
+    {
+      "id": "description",
+      "title": "DESCRIPTION",
+      "content": "List information about the FILEs (the current directory by default). Sort entries alphabetically if none of -cftuvSUX nor --sort is specified.",
+      "level": 1
+    },
+    {
+      "id": "options",
+      "title": "OPTIONS",
+      "content": "-a, --all\n    do not ignore entries starting with .\n\n-l\n    use a long listing format\n\n-h, --human-readable\n    with -l and -s, print sizes like 1K 234M 2G etc.",
+      "level": 1
+    }
+  ],
+  "searchContent": "ls list directory contents files folders options all long format human readable",
+  "relatedCommands": ["dir", "vdir", "tree", "find"],
+  "examples": ["$ ls -la", "$ ls -lh /usr/bin"],
+  "category": "User Commands",
+  "isCommon": true
+}
