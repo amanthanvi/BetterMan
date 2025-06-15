@@ -149,7 +149,7 @@ export default defineConfig(async () => {
       },
     },
     
-    // Disable minification to avoid Zustand issues
+    // Disable minification temporarily to debug React import issues
     minify: false,
   },
   

@@ -1,20 +1,20 @@
-import React, { Suspense, lazy, Component, ReactNode } from "react";
+import React, { Suspense, Component, ReactNode } from "react";
 import type { Document } from "@/types";
 
 // Lazy load the viewers for better initial load performance
-const VirtualizedDocumentViewer = lazy(() =>
+const VirtualizedDocumentViewer = React.lazy(() =>
 	import("./VirtualizedDocumentViewer").then((mod) => ({
 		default: mod.VirtualizedDocumentViewer,
 	}))
 );
 
-const OptimizedDocumentViewer = lazy(() =>
+const OptimizedDocumentViewer = React.lazy(() =>
 	import("./OptimizedDocumentViewer").then((mod) => ({
 		default: mod.OptimizedDocumentViewer,
 	}))
 );
 
-const UltimateDocumentViewer = lazy(() =>
+const UltimateDocumentViewer = React.lazy(() =>
 	import("./UltimateDocumentViewer").then((mod) => ({
 		default: mod.UltimateDocumentViewer,
 	}))

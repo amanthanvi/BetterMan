@@ -7,7 +7,6 @@ import React, {
 	memo,
 	Fragment,
 	Suspense,
-	lazy,
 } from "react";
 import {
 	BookmarkIcon,
@@ -54,7 +53,7 @@ import { parseGroffSections, parseGroffContent } from "@/utils/groffParser";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 // Lazy load heavy components
-const EnhancedCodeBlock = lazy(() =>
+const EnhancedCodeBlock = React.lazy(() =>
 	import("./EnhancedCodeBlock").then((mod) => ({ default: mod.EnhancedCodeBlock }))
 );
 
