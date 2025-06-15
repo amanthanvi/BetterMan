@@ -79,16 +79,20 @@ class SearchClient {
     let results = staticSearch(query, { limit: limit * 2, section })
     
     // Post-process results
-    results = results.map(r => ({
+    results = results.map((r: any) => ({
       ...r,
       highlights: this.generateHighlights(r, query)
     }))
     
     // Sort by relevance
-    results.sort((a, b) => {
+    results.sort((a: any, b: any) => {
       // Exact name match gets highest priority
-      if (a.name === query && b.name !== query) return -1
-      if (b.name === query && a.name !== query) return 1
+      if (a.name === query && b.name !== query) {
+        return -1
+      }
+      if (b.name === query && a.name !== query) {
+        return 1
+      }
       
       // Then by score
       const scoreA = a.score || 1

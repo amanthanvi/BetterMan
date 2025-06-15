@@ -1,0 +1,9 @@
+fix: resolve TypeScript errors in search client
+
+- Add type annotations to map and sort functions in lib/search/client.ts
+- Add braces to if statements per linting rules
+- Fix implicit any type errors
+
+🤖 Generated with Claude Code (https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
