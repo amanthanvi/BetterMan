@@ -1,10 +1,10 @@
 {
-  "buildCommand": "cd frontend && rm -rf node_modules package-lock.json && npm cache clean --force && npm install --legacy-peer-deps && npm run build",
+  "buildCommand": "cd frontend && rm -rf node_modules package-lock.json .next .vercel/output && npm cache clean --force && npm install --force --legacy-peer-deps && npm run build",
   "outputDirectory": "frontend/dist", 
   "installCommand": "cd frontend && npm install",
   "framework": null,
   "env": {
-    "FORCE_REBUILD": "2024-01-15-v2"
+    "FORCE_REBUILD": "2025-01-15-react18-fix"
   },
   "headers": [
     {

@@ -5,9 +5,10 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build",
+		"build": "node scripts/verify-react.js && vite build",
 		"lint": "eslint .",
 		"preview": "vite preview",
+		"postinstall": "node scripts/verify-react.js",
 		"test": "vitest",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest --coverage",

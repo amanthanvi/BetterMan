@@ -177,5 +177,10 @@ export default defineConfig(async () => {
       'framer-motion'
     ],
   },
+  
+  // SSR configuration
+  ssr: {
+    noExternal: ['framer-motion']
+  },
   };
 });

@@ -2,6 +2,7 @@ import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { VersionCheck } from "./components/VersionCheck";
+import { ClientOnly } from "./components/ClientOnly";
 import "./App.css";
 
 // Import components
@@ -92,6 +93,7 @@ function App() {
 	const [loading, setLoading] = useState(true);
 	const [showSearch, setShowSearch] = useState(false);
 	const [showShortcuts, setShowShortcuts] = useState(false);
+	const [isHydrated, setIsHydrated] = useState(false);
 	
 	const { 
 		darkMode, 
@@ -108,6 +110,9 @@ function App() {
 
 	// Initialize app store on mount
 	useEffect(() => {
+		// Mark as hydrated
+		setIsHydrated(true);
+		
 		// Clean up old favorites before initializing
 		clearOldFavorites();
 		initialize();
@@ -313,17 +318,21 @@ function App() {
 						</main>
 					</div>
 
-					{/* Magical Search Modal */}
-					<MagicalSearchModal
-						isOpen={showSearch}
-						onClose={() => setShowSearch(false)}
-					/>
+					{/* Magical Search Modal - Client Only */}
+					<ClientOnly>
+						<MagicalSearchModal
+							isOpen={showSearch}
+							onClose={() => setShowSearch(false)}
+						/>
+					</ClientOnly>
 
-					{/* Keyboard Shortcuts Modal */}
-					<KeyboardShortcutsModal
-						isOpen={showShortcuts}
-						onClose={() => setShowShortcuts(false)}
-					/>
+					{/* Keyboard Shortcuts Modal - Client Only */}
+					<ClientOnly>
+						<KeyboardShortcutsModal
+							isOpen={showShortcuts}
+							onClose={() => setShowShortcuts(false)}
+						/>
+					</ClientOnly>
 
 					{/* Toast Notifications */}
 					<ToastContainer toasts={toasts} removeToast={removeToast} />
