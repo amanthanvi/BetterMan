@@ -40,12 +40,12 @@ export async function RecentlyViewed({ userId }: RecentlyViewedProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {history.map((item, index) => {
-        const doc = item.documents
+        const doc = item.documents as any
         if (!doc) return null
         
         return (
           <Link
-            key={`${doc.id}-${index}`}
+            key={`${doc.id || index}-${index}`}
             href={`/docs/${doc.name}.${doc.section}`}
             className="group relative overflow-hidden rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
           >
