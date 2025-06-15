@@ -1,87 +1,106 @@
 """
-Search endpoint for Vercel
+Search endpoint for Vercel - using real man page data
 """
-from http.server import BaseHTTPRequestHandler
 import json
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs
+from manpage_loader import search_manpages
 
-# Import sample documents from documents module
-SAMPLE_DOCUMENTS = [
-    {
-        "id": "ls",
-        "command": "ls",
-        "title": "ls - list directory contents",
-        "description": "List information about the FILEs (the current directory by default).",
-        "section": "1",
-        "category": "file-management",
-        "tags": ["file", "directory", "list"],
-        "popularity_score": 95
-    },
-    {
-        "id": "grep",
-        "command": "grep",
-        "title": "grep - print lines that match patterns",
-        "description": "Search for PATTERNS in each FILE.",
-        "section": "1",
-        "category": "text-processing",
-        "tags": ["search", "text", "pattern"],
-        "popularity_score": 90
-    },
-    {
-        "id": "cd",
-        "command": "cd",
-        "title": "cd - change directory",
-        "description": "Change the shell working directory.",
-        "section": "1",
-        "category": "navigation",
-        "tags": ["directory", "navigation"],
-        "popularity_score": 98
+def handler(request, context):
+    """Vercel serverless function handler"""
+    
+    # CORS headers
+    headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     }
-]
-
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        parsed_url = urlparse(self.path)
-        query_params = parse_qs(parsed_url.query)
-        
-        # Get search query
-        query = query_params.get('q', [''])[0].lower()
-        
-        # Set CORS headers
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        self.end_headers()
-        
-        # Filter documents based on query
+    
+    # Handle OPTIONS request
+    if request.get('method', 'GET') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': ''
+        }
+    
+    # Get query parameters
+    query_string = request.get('queryStringParameters', {})
+    query = query_string.get('q', '') if query_string else ''
+    
+    try:
+        # Search using real data
         if query:
-            results = [
-                doc for doc in SAMPLE_DOCUMENTS
-                if query in doc['command'].lower() or
-                   query in doc['title'].lower() or
-                   query in doc['description'].lower() or
-                   any(query in tag for tag in doc['tags'])
-            ]
+            results = search_manpages(query)
+            
+            # Convert to API format
+            formatted_results = []
+            for result in results:
+                formatted_results.append({
+                    'id': f"{result.get('command')}.{result.get('section', '1')}",
+                    'command': result.get('command', ''),
+                    'title': f"{result.get('command')} - {result.get('brief', '')}",
+                    'description': result.get('brief', ''),
+                    'section': result.get('section', '1'),
+                    'category': result.get('category', 'general'),
+                    'tags': result.get('tags', '').split(',') if result.get('tags') else [],
+                    'popularity_score': result.get('score', 0)
+                })
         else:
-            results = SAMPLE_DOCUMENTS
-        
-        # Sort by popularity
-        results.sort(key=lambda x: x['popularity_score'], reverse=True)
+            # Return popular commands when no query
+            from manpage_loader import load_manpage_metadata
+            all_pages = load_manpage_metadata()
+            # Sort by priority and take top 10
+            all_pages.sort(key=lambda x: x.get('priority', 0), reverse=True)
+            
+            formatted_results = []
+            for page in all_pages[:10]:
+                formatted_results.append({
+                    'id': f"{page.get('command')}.{page.get('section', '1')}",
+                    'command': page.get('command', ''),
+                    'title': f"{page.get('command')} - {page.get('brief', '')}",
+                    'description': page.get('brief', ''),
+                    'section': page.get('section', '1'),
+                    'category': page.get('category', 'general'),
+                    'tags': page.get('tags', '').split(',') if page.get('tags') else [],
+                    'popularity_score': page.get('priority', 0) * 10
+                })
         
         response = {
-            'results': results,
+            'results': formatted_results,
             'query': query,
-            'total': len(results),
+            'total': len(formatted_results),
             'suggestions': []
         }
         
-        self.wfile.write(json.dumps(response).encode())
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps(response)
+        }
     
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        self.end_headers()
+    except Exception as e:
+        # Fallback to mock data on error
+        mock_response = {
+            'results': [
+                {
+                    'id': 'ls',
+                    'command': 'ls',
+                    'title': 'ls - list directory contents',
+                    'description': 'List information about the FILEs',
+                    'section': '1',
+                    'category': 'file-management',
+                    'tags': ['file', 'directory', 'list'],
+                    'popularity_score': 95
+                }
+            ],
+            'query': query,
+            'total': 1,
+            'error': str(e)
+        }
+        
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps(mock_response)
+        }

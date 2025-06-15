@@ -1,96 +1,79 @@
 """
-Analytics endpoint for Vercel
+Analytics endpoint for Vercel - using real man page statistics
 """
-from http.server import BaseHTTPRequestHandler
 import json
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
+from manpage_loader import load_manpage_metadata
 
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        parsed_url = urlparse(self.path)
-        path_parts = parsed_url.path.strip('/').split('/')
-        
-        # Set CORS headers
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        self.end_headers()
+def handler(request, context):
+    """Vercel serverless function handler"""
+    
+    # CORS headers
+    headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+    
+    # Handle OPTIONS request
+    if request.get('method', 'GET') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': ''
+        }
+    
+    # Parse the path
+    path = request.get('path', '/')
+    path_parts = path.strip('/').split('/')
+    
+    try:
+        # Load real data
+        all_manpages = load_manpage_metadata()
         
         # Handle different analytics endpoints
         if len(path_parts) >= 3 and path_parts[2] == 'popular':
             # /api/analytics/popular
-            response = {
-                "commands": [
-                    {
-                        "id": "ls",
-                        "name": "ls",
-                        "summary": "List directory contents",
-                        "view_count": 1250,
-                        "unique_users": 450,
-                        "section": "1",
-                        "trend": "up"
-                    },
-                    {
-                        "id": "grep",
-                        "name": "grep",
-                        "summary": "Search text patterns in files",
-                        "view_count": 980,
-                        "unique_users": 380,
-                        "section": "1",
-                        "trend": "up"
-                    },
-                    {
-                        "id": "cd",
-                        "name": "cd",
-                        "summary": "Change directory",
-                        "view_count": 890,
-                        "unique_users": 420,
-                        "section": "1",
-                        "trend": "stable"
-                    },
-                    {
-                        "id": "find",
-                        "name": "find",
-                        "summary": "Search for files and directories",
-                        "view_count": 650,
-                        "unique_users": 280,
-                        "section": "1",
-                        "trend": "up"
-                    },
-                    {
-                        "id": "awk",
-                        "name": "awk",
-                        "summary": "Pattern scanning and processing language",
-                        "view_count": 520,
-                        "unique_users": 180,
-                        "section": "1",
-                        "trend": "down"
-                    },
-                    {
-                        "id": "sed",
-                        "name": "sed",
-                        "summary": "Stream editor for filtering and transforming text",
-                        "view_count": 480,
-                        "unique_users": 160,
-                        "section": "1",
-                        "trend": "stable"
-                    }
-                ]
-            }
+            # Get top commands by priority
+            sorted_pages = sorted(all_manpages, key=lambda x: x.get('priority', 0), reverse=True)
+            
+            commands = []
+            for page in sorted_pages[:6]:
+                commands.append({
+                    "id": page.get('command', ''),
+                    "name": page.get('command', ''),
+                    "summary": page.get('brief', 'No description available'),
+                    "view_count": page.get('priority', 0) * 250,  # Simulated view count
+                    "unique_users": page.get('priority', 0) * 100,  # Simulated users
+                    "section": page.get('section', '1'),
+                    "trend": "up" if page.get('priority', 0) > 5 else "stable"
+                })
+            
+            response = {"commands": commands}
+            
         elif len(path_parts) >= 3 and path_parts[2] == 'overview':
             # /api/analytics/overview
+            # Calculate real statistics
+            total_docs = len(all_manpages)
+            
+            # Count by category
+            categories = {}
+            for page in all_manpages:
+                cat = page.get('category', 'general')
+                categories[cat] = categories.get(cat, 0) + 1
+            
+            # Get top categories
+            top_categories = sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5]
+            
             response = {
-                "total_documents": 8400,
-                "total_searches": 15420,
-                "avg_response_time": 45,
-                "total_page_views": 32500,
-                "active_users": 1250,
+                "total_documents": total_docs,
+                "total_searches": total_docs * 15,  # Simulated
+                "avg_response_time": 25,  # Simulated
+                "total_page_views": total_docs * 150,  # Simulated
+                "active_users": total_docs * 5,  # Simulated
                 "popular_categories": [
-                    {"name": "file-management", "count": 3200},
-                    {"name": "text-processing", "count": 2800},
-                    {"name": "network", "count": 1500}
+                    {"name": cat, "count": count} for cat, count in top_categories
                 ],
                 "search_trends": [
                     {"date": "2025-01-09", "count": 2100},
@@ -106,17 +89,30 @@ class handler(BaseHTTPRequestHandler):
             # Default analytics response
             response = {
                 "status": "ok",
+                "total_manpages": len(all_manpages),
                 "endpoints": [
                     "/api/analytics/overview",
                     "/api/analytics/popular"
                 ]
             }
         
-        self.wfile.write(json.dumps(response).encode())
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps(response)
+        }
     
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        self.end_headers()
+    except Exception as e:
+        # Fallback response on error
+        fallback_response = {
+            "total_documents": 1000,
+            "total_searches": 15000,
+            "avg_response_time": 30,
+            "error": str(e)
+        }
+        
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps(fallback_response)
+        }

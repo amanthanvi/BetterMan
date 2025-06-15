@@ -1,123 +1,141 @@
 """
-Documents endpoint for Vercel
+Documents endpoint for Vercel - using real man page data
 """
-from http.server import BaseHTTPRequestHandler
 import json
-from urllib.parse import urlparse, parse_qs
-import re
+from urllib.parse import urlparse
+from manpage_loader import load_manpage_metadata, load_manpage_content
 
-# Sample man pages data
-SAMPLE_DOCUMENTS = [
-    {
-        "id": "ls",
-        "command": "ls",
-        "title": "ls - list directory contents",
-        "description": "List information about the FILEs (the current directory by default).",
-        "section": "1",
-        "category": "file-management",
-        "tags": ["file", "directory", "list"],
-        "popularity_score": 95,
-        "content": """NAME
-       ls - list directory contents
+# Cache for performance
+_manpages_cache = None
 
-SYNOPSIS
-       ls [OPTION]... [FILE]...
+def get_all_manpages():
+    """Get all man pages with caching"""
+    global _manpages_cache
+    if _manpages_cache is None:
+        _manpages_cache = load_manpage_metadata()
+    return _manpages_cache
 
-DESCRIPTION
-       List information about the FILEs (the current directory by default).
-       Sort entries alphabetically if none of -cftuvSUX nor --sort is specified.
-
-       Mandatory arguments to long options are mandatory for short options too.
-
-       -a, --all
-              do not ignore entries starting with .
-
-       -l     use a long listing format
-
-       -h, --human-readable
-              with -l and -s, print sizes like 1K 234M 2G etc."""
-    },
-    {
-        "id": "grep",
-        "command": "grep",
-        "title": "grep - print lines that match patterns",
-        "description": "Search for PATTERNS in each FILE.",
-        "section": "1",
-        "category": "text-processing",
-        "tags": ["search", "text", "pattern"],
-        "popularity_score": 90,
-        "content": """NAME
-       grep - print lines that match patterns
-
-SYNOPSIS
-       grep [OPTION]... PATTERNS [FILE]...
-
-DESCRIPTION
-       grep searches for PATTERNS in each FILE.
-       PATTERNS is one or more patterns separated by newline characters, and grep prints each line that matches a pattern.
-
-       -i, --ignore-case
-              Ignore case distinctions in patterns and input data.
-
-       -r, --recursive
-              Read all files under each directory, recursively."""
-    },
-    {
-        "id": "cd",
-        "command": "cd",
-        "title": "cd - change directory",
-        "description": "Change the shell working directory.",
-        "section": "1",
-        "category": "navigation",
-        "tags": ["directory", "navigation"],
-        "popularity_score": 98,
-        "content": """NAME
-       cd - change directory
-
-SYNOPSIS
-       cd [DIRECTORY]
-
-DESCRIPTION
-       Change the current directory to DIRECTORY.
-       If DIRECTORY is not supplied, the value of the HOME environment variable is used."""
+def handler(request, context):
+    """Vercel serverless function handler"""
+    
+    # CORS headers
+    headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     }
-]
-
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        parsed_path = urlparse(self.path)
-        path_parts = parsed_path.path.strip('/').split('/')
-        
-        # Set CORS headers
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        self.end_headers()
-        
+    
+    # Handle OPTIONS request
+    if request.get('method', 'GET') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': ''
+        }
+    
+    # Parse the path
+    path = request.get('path', '/')
+    path_parts = path.strip('/').split('/')
+    
+    try:
         # Handle /api/documents/:id
         if len(path_parts) >= 3 and path_parts[0] == 'api' and path_parts[1] == 'documents':
             doc_id = path_parts[2]
-            doc = next((d for d in SAMPLE_DOCUMENTS if d['id'] == doc_id), None)
-            if doc:
-                self.wfile.write(json.dumps(doc).encode())
+            
+            # Try to parse command and section from ID (e.g., "ls.1" or just "ls")
+            if '.' in doc_id:
+                command, section = doc_id.rsplit('.', 1)
             else:
-                self.send_response(404)
-                self.wfile.write(json.dumps({'error': 'Document not found'}).encode())
+                command, section = doc_id, "1"
+            
+            # Load metadata
+            manpages = get_all_manpages()
+            doc_meta = next((p for p in manpages if p.get('command') == command and p.get('section') == section), None)
+            
+            if not doc_meta:
+                # Try without section
+                doc_meta = next((p for p in manpages if p.get('command') == command), None)
+                if doc_meta:
+                    section = doc_meta.get('section', '1')
+            
+            if doc_meta:
+                # Load content
+                content = load_manpage_content(command, section)
+                
+                response = {
+                    'id': doc_id,
+                    'command': command,
+                    'title': f"{command} - {doc_meta.get('brief', 'manual page')}",
+                    'description': doc_meta.get('brief', ''),
+                    'section': section,
+                    'category': doc_meta.get('category', 'general'),
+                    'tags': doc_meta.get('tags', '').split(',') if doc_meta.get('tags') else [],
+                    'content': content or f"Content not available for {command}({section})",
+                    'priority': doc_meta.get('priority', 0),
+                    'package_hint': doc_meta.get('package_hint', '')
+                }
+            else:
+                return {
+                    'statusCode': 404,
+                    'headers': headers,
+                    'body': json.dumps({'error': 'Document not found'})
+                }
         else:
             # List all documents
+            manpages = get_all_manpages()
+            
+            # Convert to API format
+            documents = []
+            for page in manpages[:100]:  # Limit to 100 for performance
+                documents.append({
+                    'id': f"{page.get('command')}.{page.get('section', '1')}",
+                    'command': page.get('command', ''),
+                    'title': f"{page.get('command')} - {page.get('brief', '')}",
+                    'description': page.get('brief', ''),
+                    'section': page.get('section', '1'),
+                    'category': page.get('category', 'general'),
+                    'tags': page.get('tags', '').split(',') if page.get('tags') else [],
+                    'popularity_score': page.get('priority', 0) * 10
+                })
+            
+            # Sort by popularity/priority
+            documents.sort(key=lambda x: x['popularity_score'], reverse=True)
+            
             response = {
-                'documents': SAMPLE_DOCUMENTS,
-                'total': len(SAMPLE_DOCUMENTS),
+                'documents': documents,
+                'total': len(manpages),
                 'page': 1,
-                'per_page': 20
+                'per_page': 100
             }
-            self.wfile.write(json.dumps(response).encode())
+        
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps(response)
+        }
     
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        self.end_headers()
+    except Exception as e:
+        # Fall back to mock data on error
+        mock_response = {
+            'documents': [
+                {
+                    'id': 'ls',
+                    'command': 'ls',
+                    'title': 'ls - list directory contents',
+                    'description': 'List information about the FILEs',
+                    'section': '1',
+                    'category': 'file-management',
+                    'tags': ['file', 'directory', 'list'],
+                    'popularity_score': 95
+                }
+            ],
+            'total': 1,
+            'error': str(e)
+        }
+        
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps(mock_response)
+        }

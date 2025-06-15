@@ -1,15 +1,2 @@
-# Core requirements for Vercel serverless
-fastapi==0.115.5
-mangum==0.19.0
-pydantic==2.10.3
-sqlalchemy==2.0.36
-redis==5.2.1
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-email-validator==2.2.0
-python-multipart==0.0.12
-orjson==3.10.12
-aiosmtplib==3.0.2
-jinja2==3.1.4
-python-dotenv==1.0.1
-httpx==0.28.1
+# Minimal requirements for Vercel serverless functions
+# No heavy dependencies needed for simple endpoints

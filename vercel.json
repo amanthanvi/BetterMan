@@ -58,7 +58,8 @@
   ],
   "functions": {
     "api/*.py": {
-      "runtime": "python3.9"
+      "runtime": "python3.12",
+      "includeFiles": "backend/generated_manpages/**,backend/extracted_manpages/**"
     }
   }
 }
