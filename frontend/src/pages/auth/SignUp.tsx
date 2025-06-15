@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { EyeOpenIcon, EyeClosedIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { Mail, Lock, User, Github, Chrome, Command } from 'lucide-react';
@@ -66,9 +65,7 @@ export const SignUp: React.FC = () => {
   if (success) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
+        <div}}
           className="text-center"
         >
           <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -83,17 +80,14 @@ export const SignUp: React.FC = () => {
               Go to Sign In
             </Button>
           </Link>
-        </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+      <div}}}
         className="w-full max-w-md"
       >
         {/* Logo */}
@@ -280,7 +274,7 @@ export const SignUp: React.FC = () => {
             </Link>
           </p>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

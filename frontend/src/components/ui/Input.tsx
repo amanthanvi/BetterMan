@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -44,7 +43,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </div>
           )}
           
-          <motion.input
+          <input
             ref={ref}
             id={inputId}
             type={type}
@@ -83,13 +82,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         
         {error && (
-          <motion.p
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
+          <p}}
             className="text-xs text-red-600 dark:text-red-400"
           >
             {error}
-          </motion.p>
+          </p>
         )}
       </div>
     );

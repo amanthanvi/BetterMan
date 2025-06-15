@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlassIcon,
   BookmarkIcon,
@@ -312,24 +311,17 @@ export const EnhancedCommandPalette: React.FC<EnhancedCommandPaletteProps> = ({
   }, {} as Record<string, Command[]>);
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
           {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div}}}
             onClick={onClose}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
           />
 
           {/* Command Palette */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
+          <div}}}}
             className="fixed inset-x-0 top-[10%] mx-auto max-w-3xl z-50 px-4"
           >
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
@@ -446,9 +438,9 @@ export const EnhancedCommandPalette: React.FC<EnhancedCommandPaletteProps> = ({
                 </>
               )}
             </div>
-          </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 };

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ActivityIcon,
   LightningBoltIcon,
@@ -214,12 +213,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
   return (
     <div className={cn('fixed z-50', positionClasses[position])}>
-      <AnimatePresence>
+      <>
         {!isExpanded ? (
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
+          <button}}}
             onClick={() => setIsExpanded(true)}
             className={cn(
               'p-3 rounded-full shadow-lg',
@@ -231,12 +227,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
           >
             <ActivityIcon className={cn('w-5 h-5', scoreColor)} />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-          </motion.button>
+          </button>
         ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+          <div}}}
             className={cn(
               'w-96 bg-white dark:bg-gray-800',
               'border border-gray-200 dark:border-gray-700',
@@ -332,12 +325,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
                 {showDetails ? <ChevronDownIcon /> : <ChevronRightIcon />}
               </button>
               
-              <AnimatePresence>
+              <>
                 {showDetails && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: 'auto' }}
-                    exit={{ height: 0 }}
+                  <div}}}
                     className="overflow-hidden"
                   >
                     <div className="max-h-48 overflow-y-auto">
@@ -351,9 +341,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
                         ))
                       )}
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
+              </>
             </div>
 
             {/* Slowest API Call */}
@@ -364,9 +354,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
                 </p>
               </div>
             )}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 };

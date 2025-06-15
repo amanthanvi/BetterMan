@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import { Mail, Lock, Github, Chrome, Command } from 'lucide-react';
@@ -48,10 +47,7 @@ export const SignIn: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+      <div}}}
         className="w-full max-w-md"
       >
         {/* Logo */}
@@ -203,7 +199,7 @@ export const SignIn: React.FC = () => {
             </Link>
           </p>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

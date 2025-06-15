@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSupabase } from '@/providers/SupabaseProvider';
-import { motion } from 'framer-motion';
 import QRCode from 'qrcode';
 import {
   CheckCircledIcon,
@@ -114,9 +113,7 @@ export const Setup2FA: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+      <div}}
         className="w-full max-w-2xl"
       >
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
@@ -140,9 +137,7 @@ export const Setup2FA: React.FC = () => {
           {/* Content */}
           <div className="p-6">
             {step === 'intro' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+              <div}}
                 className="space-y-6"
               >
                 <div className="text-center py-8">
@@ -173,13 +168,11 @@ export const Setup2FA: React.FC = () => {
                   <span>Continue</span>
                   <ArrowRightIcon className="w-4 h-4" />
                 </button>
-              </motion.div>
+              </div>
             )}
 
             {step === 'qr' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+              <div}}
                 className="space-y-6"
               >
                 <div className="text-center">
@@ -229,13 +222,11 @@ export const Setup2FA: React.FC = () => {
                 >
                   I've Added the Account
                 </button>
-              </motion.div>
+              </div>
             )}
 
             {step === 'verify' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+              <div}}
                 className="space-y-6"
               >
                 <div className="text-center">
@@ -293,13 +284,11 @@ export const Setup2FA: React.FC = () => {
                     'Verify and Enable 2FA'
                   )}
                 </button>
-              </motion.div>
+              </div>
             )}
 
             {step === 'complete' && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+              <div}}
                 className="text-center py-8"
               >
                 <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -327,11 +316,11 @@ export const Setup2FA: React.FC = () => {
                 >
                   Continue to Dashboard
                 </button>
-              </motion.div>
+              </div>
             )}
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

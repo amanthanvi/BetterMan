@@ -1,6 +1,5 @@
 import React from 'react';
 import { Slot } from '@radix-ui/react-slot';
-import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -52,9 +51,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           buttonSizes[size],
           className
         )}
-        disabled={disabled || loading}
-        whileHover={!disabled && !loading ? { scale: 1.02 } : undefined}
-        whileTap={!disabled && !loading ? { scale: 0.98 } : undefined}
+        disabled={disabled || loading} : undefined} : undefined}
         {...props}
       >
         {loading && (

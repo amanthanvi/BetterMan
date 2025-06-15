@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
   HomeIcon, 
@@ -12,44 +11,27 @@ import { Button } from '@/components/ui/Button';
 export const NotFoundPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950 flex items-center justify-center">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+      <div}}
         className="text-center max-w-md mx-auto px-4"
       >
         {/* 404 illustration */}
-        <motion.div
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.5 }}
+        <div}}}
           className="mb-8"
         >
           <div className="relative">
             <div className="text-8xl font-bold text-gray-200 dark:text-gray-800 select-none">
               404
             </div>
-            <motion.div
-              animate={{ 
-                rotate: [0, 10, -10, 0],
-                scale: [1, 1.1, 1]
-              }}
-              transition={{ 
-                duration: 2,
-                repeat: Infinity,
-                repeatType: "reverse"
-              }}
+            <div}}
               className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
             >
               <CodeIcon className="w-16 h-16 text-blue-500" />
-            </motion.div>
+            </div>
           </div>
-        </motion.div>
+        </div>
         
         {/* Error message */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+        <div}}}
           className="mb-8"
         >
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
@@ -59,13 +41,10 @@ export const NotFoundPage: React.FC = () => {
             Sorry, we couldn't find the page you're looking for. The documentation 
             you requested might have been moved or doesn't exist.
           </p>
-        </motion.div>
+        </div>
         
         {/* Suggestions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+        <div}}}
           className="mb-8"
         >
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -89,13 +68,10 @@ export const NotFoundPage: React.FC = () => {
               <span>Go back to the homepage</span>
             </div>
           </div>
-        </motion.div>
+        </div>
         
         {/* Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+        <div}}}
           className="flex flex-col sm:flex-row gap-3 justify-center"
         >
           <Link to="/">
@@ -113,13 +89,10 @@ export const NotFoundPage: React.FC = () => {
             <ArrowLeftIcon className="w-4 h-4 mr-2" />
             Go Back
           </Button>
-        </motion.div>
+        </div>
         
         {/* Quick search */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+        <div}}}
           className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700"
         >
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
@@ -132,8 +105,8 @@ export const NotFoundPage: React.FC = () => {
             </kbd>
             <span>to search</span>
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 };

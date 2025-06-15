@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -35,10 +34,7 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
           badgeVariants[variant],
           badgeSizes[size],
           className
-        )}
-        initial={animate ? { scale: 0 } : undefined}
-        animate={animate ? { scale: 1 } : undefined}
-        transition={animate ? { type: 'spring', stiffness: 500, damping: 25 } : undefined}
+        )} : undefined} : undefined} : undefined}
         {...props}
       >
         {children}

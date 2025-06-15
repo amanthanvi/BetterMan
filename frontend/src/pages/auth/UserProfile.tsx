@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useSupabase } from '@/providers/SupabaseProvider';
 import { useAuth } from '@/providers/AuthProvider';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircledIcon,
@@ -74,9 +73,7 @@ export const UserProfile: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div}}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden"
         >
           {/* Header */}
@@ -313,7 +310,7 @@ export const UserProfile: React.FC = () => {
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

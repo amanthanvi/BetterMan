@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { CheckIcon, Cross1Icon, InfoCircledIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { cn } from '@/utils/cn';
 
@@ -41,10 +40,7 @@ export const Toast: React.FC<ToastProps> = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -50 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -50 }}
+    <div}}}
       className={cn(
         'flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg',
         colors[type]
@@ -58,7 +54,7 @@ export const Toast: React.FC<ToastProps> = ({
       >
         <Cross1Icon className="w-4 h-4" />
       </button>
-    </motion.div>
+    </div>
   );
 };
 
@@ -70,7 +66,7 @@ interface ToastContainerProps {
 export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, removeToast }) => {
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">
-      <AnimatePresence>
+      <>
         {toasts.map((toast) => (
           <Toast
             key={toast.id}
@@ -80,7 +76,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, removeTo
             onClose={removeToast}
           />
         ))}
-      </AnimatePresence>
+      </>
     </div>
   );
 };

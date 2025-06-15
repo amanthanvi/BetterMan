@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/Button";
 import { DocumentViewerWrapper } from "@/components/document/DocumentViewerWrapper";
@@ -76,13 +75,7 @@ export const DocumentPage: React.FC = () => {
 	if (loading) {
 		return (
 			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-				<motion.div
-					animate={{ rotate: 360 }}
-					transition={{
-						duration: 1,
-						repeat: Infinity,
-						ease: "linear",
-					}}
+				<div}}
 					className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
 				/>
 			</div>
@@ -92,9 +85,7 @@ export const DocumentPage: React.FC = () => {
 	if (error || !document) {
 		return (
 			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
+				<div}}
 					className="text-center max-w-md mx-auto p-6"
 				>
 					<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
@@ -107,19 +98,16 @@ export const DocumentPage: React.FC = () => {
 						<ArrowLeftIcon className="w-4 h-4 mr-2" />
 						Back to Home
 					</Button>
-				</motion.div>
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<motion.div
-			initial={{ opacity: 0 }}
-			animate={{ opacity: 1 }}
-			exit={{ opacity: 0 }}
+		<div}}}
 			className="document-page"
 		>
                         <DocumentViewerWrapper document={document} />
-                </motion.div>
+                </div>
         );
 };

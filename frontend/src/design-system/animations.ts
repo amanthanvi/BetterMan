@@ -5,7 +5,6 @@
  * consistent, performant animations throughout the app.
  */
 
-import { Variants, Transition, AnimationProps } from 'framer-motion';
 
 // Animation durations
 export const duration = {

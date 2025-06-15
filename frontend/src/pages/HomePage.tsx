@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
 	ClockIcon,
@@ -158,17 +157,12 @@ export const HomePage: React.FC<HomePageProps> = ({
 				<AuthSetupNotice />
 				{/* Hero Section */}
 				{!hasSearched && (
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
+					<div}}
 						className="text-center mb-12"
 					>
 						<div className="max-w-4xl mx-auto">
 							{/* Logo and title */}
-							<motion.div
-								initial={{ scale: 0.9 }}
-								animate={{ scale: 1 }}
-								transition={{ duration: 0.5 }}
+							<div}}}
 								className="mb-8"
 							>
 								<div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -185,25 +179,19 @@ export const HomePage: React.FC<HomePageProps> = ({
 									and explore documentation. Find exactly what
 									you need in seconds.
 								</p>
-							</motion.div>
+							</div>
 
 							{/* Premium Search interface */}
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.2 }}
+							<div}}}
 								className="mb-8"
 							>
 								<SearchErrorBoundary onRetry={() => window.location.reload()}>
 									<AdvancedSearch />
 								</SearchErrorBoundary>
-							</motion.div>
+							</div>
 
 							{/* Quick actions */}
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.3 }}
+							<div}}}
 								className="flex flex-wrap justify-center gap-2 mb-8"
 							>
 								<Button
@@ -227,13 +215,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 										{query}
 									</Button>
 								))}
-							</motion.div>
+							</div>
 
 							{/* Stats */}
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.4 }}
+							<div}}}
 								className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto"
 							>
 								<div className="text-center">
@@ -272,9 +257,9 @@ export const HomePage: React.FC<HomePageProps> = ({
 										Average Response Time
 									</div>
 								</div>
-							</motion.div>
+							</div>
 						</div>
-					</motion.div>
+					</div>
 				)}
 
 				{/* Optimized Search Results */}
@@ -299,10 +284,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 				{!hasSearched && (
 					<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 						{/* Popular Commands */}
-						<motion.section
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.5 }}
+						<section}}}
 							className="lg:col-span-2"
 						>
 							<div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -326,13 +308,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 										))
 									) : popularCommands.length > 0 ? (
 										popularCommands.map((command, index) => (
-										<motion.button
-											key={command.id}
-											initial={{ opacity: 0, x: -20 }}
-											animate={{ opacity: 1, x: 0 }}
-											transition={{
-												delay: 0.6 + index * 0.1,
-											}}
+										<button
+											key={command.id}}}}
 											onClick={() =>
 												handleDocumentSelect(command)
 											}
@@ -349,7 +326,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 											<p className="text-sm text-gray-600 dark:text-gray-400">
 												{command.summary}
 											</p>
-										</motion.button>
+										</button>
 									))
 									) : (
 										<p className="text-gray-500 dark:text-gray-400 text-center py-8">
@@ -358,13 +335,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 									)}
 								</div>
 							</div>
-						</motion.section>
+						</section>
 
 						{/* Sidebar */}
-						<motion.aside
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.7 }}
+						<aside}}}
 							className="space-y-6"
 						>
 							{/* Recent Documents */}
@@ -491,7 +465,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 									</div>
 								</div>
 							</div>
-						</motion.aside>
+						</aside>
 					</div>
 				)}
 			</div>

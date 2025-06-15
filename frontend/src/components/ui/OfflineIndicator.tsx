@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, WifiIcon } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
@@ -13,13 +12,9 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
   className 
 }) => {
   return (
-    <AnimatePresence>
+    <>
       {!isOnline && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.2 }}
+        <div}}}}
           className={cn(
             'fixed top-16 left-1/2 transform -translate-x-1/2 z-50',
             'bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg',
@@ -29,9 +24,9 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
         >
           <WifiOff className="w-4 h-4" />
           <span className="text-sm font-medium">You're offline</span>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { FileTextIcon, MagnifyingGlassIcon as SearchIcon } from "@radix-ui/react-icons";
 import { documentAPI } from "@/services/api";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -82,9 +81,7 @@ export const DocsListPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div}}
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
@@ -93,13 +90,10 @@ export const DocsListPage: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400">
             Browse {documents.length} available manual pages
           </p>
-        </motion.div>
+        </div>
 
         {/* Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+        <div}}}
           className="mb-8 space-y-4"
         >
           <div className="flex flex-col sm:flex-row gap-4">
@@ -131,18 +125,15 @@ export const DocsListPage: React.FC = () => {
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Showing {filteredDocs.length} of {documents.length} documents
           </div>
-        </motion.div>
+        </div>
 
         {/* Document List */}
         <div className="space-y-8">
           {Object.entries(groupedDocs)
             .sort(([a], [b]) => Number(a) - Number(b))
             .map(([section, docs], sectionIndex) => (
-              <motion.div
-                key={section}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 + sectionIndex * 0.1 }}
+              <div
+                key={section}}}}
               >
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <FileTextIcon className="w-5 h-5" />
@@ -155,11 +146,8 @@ export const DocsListPage: React.FC = () => {
                   {docs
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((doc, index) => (
-                      <motion.div
-                        key={doc.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.3 + index * 0.02 }}
+                      <div
+                        key={doc.id}}}}
                       >
                         <Link
                           to={`/docs/${doc.name}.${doc.section}`}
@@ -172,24 +160,22 @@ export const DocsListPage: React.FC = () => {
                             {doc.summary || doc.title || "No description available"}
                           </p>
                         </Link>
-                      </motion.div>
+                      </div>
                     ))}
                 </div>
-              </motion.div>
+              </div>
             ))}
         </div>
 
         {filteredDocs.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <div}}
             className="text-center py-12"
           >
             <FileTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 dark:text-gray-400">
               No documentation found matching your filters.
             </p>
-          </motion.div>
+          </div>
         )}
       </div>
     </div>

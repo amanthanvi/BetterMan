@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import type { HTMLMotionProps, AnimatePresenceProps } from 'framer-motion';
 
 interface SafeMotionProps extends Omit<HTMLMotionProps<"div">, 'children'> {
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
 
-interface SafeAnimatePresenceProps extends Omit<AnimatePresenceProps, 'children'> {
+interface SafeAnimatePresenceProps extends Omit<> {
   children: React.ReactNode;
 }
 
@@ -52,7 +51,7 @@ export const SafeAnimatePresence: React.FC<SafeAnimatePresenceProps> = ({
     return <>{children}</>;
   }
 
-  return <AnimatePresence {...props}>{children}</AnimatePresence>;
+  return <>{children}</>;
 };
 
 // Export a hook for using motion programmatically

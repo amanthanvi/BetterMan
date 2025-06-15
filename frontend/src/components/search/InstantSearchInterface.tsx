@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MagnifyingGlassIcon, 
   Cross2Icon,
@@ -227,12 +226,10 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
           {loading ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            <div}}
             >
               <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
-            </motion.div>
+            </div>
           ) : (
             <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
           )}
@@ -275,14 +272,10 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
       </div>
       
       {/* Results Dropdown */}
-      <AnimatePresence>
+      <>
         {showResults && (results || !query) && (
-          <motion.div
-            ref={resultsRef}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15 }}
+          <div
+            ref={resultsRef}}}}}
             className={cn(
               'absolute top-full left-0 right-0 mt-2',
               'bg-white dark:bg-gray-800',
@@ -461,9 +454,9 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 };

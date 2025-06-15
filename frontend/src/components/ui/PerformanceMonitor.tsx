@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
 	ActivityLogIcon,
 	Cross2Icon,
@@ -189,9 +188,7 @@ export const PerformanceMonitor: React.FC = () => {
 	return (
 		<>
 			{/* Floating Button */}
-			<motion.button
-				whileHover={{ scale: 1.05 }}
-				whileTap={{ scale: 0.95 }}
+			<button}}
 				onClick={() => setIsOpen(!isOpen)}
 				className={cn(
 					"fixed bottom-4 right-4 z-50 p-3 rounded-full shadow-lg",
@@ -203,15 +200,12 @@ export const PerformanceMonitor: React.FC = () => {
 				)}
 			>
 				<ActivityLogIcon className="w-5 h-5" />
-			</motion.button>
+			</button>
 
 			{/* Monitor Panel */}
-			<AnimatePresence>
+			<>
 				{isOpen && (
-					<motion.div
-						initial={{ opacity: 0, y: 20, scale: 0.95 }}
-						animate={{ opacity: 1, y: 0, scale: 1 }}
-						exit={{ opacity: 0, y: 20, scale: 0.95 }}
+					<div}}}
 						className="fixed bottom-20 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]"
 					>
 						<div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700">
@@ -336,9 +330,9 @@ export const PerformanceMonitor: React.FC = () => {
 								</div>
 							</div>
 						</div>
-					</motion.div>
+					</div>
 				)}
-			</AnimatePresence>
+			</>
 		</>
 	);
 };

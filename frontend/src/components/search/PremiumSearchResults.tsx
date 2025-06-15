@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
 	FileTextIcon,
 	StarIcon,
@@ -157,11 +156,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 	};
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.3, delay: index * 0.05 }}
-			whileHover={{ y: -4 }}
+		<div}}}}
 			onHoverStart={() => setIsHovered(true)}
 			onHoverEnd={() => setIsHovered(false)}
 			className="group relative"
@@ -196,16 +191,14 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 						</div>
 
 						{/* Score Badge */}
-						<motion.div
-							initial={false}
-							animate={{ scale: isHovered ? 1.1 : 1 }}
+						<div}
 							className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md"
 						>
 							<StarIcon className="w-4 h-4 text-white fill-white" />
 							<span className="text-sm font-bold text-white">
 								{result.score.toFixed(1)}
 							</span>
-						</motion.div>
+						</div>
 					</div>
 
 					{/* Matches */}
@@ -244,9 +237,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 					</div>
 
 					<div className="flex items-center gap-2">
-						<motion.button
-							whileHover={{ scale: 1.1 }}
-							whileTap={{ scale: 0.9 }}
+						<button}}
 							onClick={handleFavorite}
 							className={cn(
 								"p-2 rounded-lg transition-colors",
@@ -262,11 +253,9 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 									isFavorited && "fill-current"
 								)}
 							/>
-						</motion.button>
+						</button>
 
-						<motion.button
-							whileHover={{ scale: 1.1 }}
-							whileTap={{ scale: 0.9 }}
+						<button}}
 							onClick={handleCopyCommand}
 							className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
 							title="Copy command"
@@ -276,33 +265,28 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 							) : (
 								<CopyIcon className="w-4 h-4" />
 							)}
-						</motion.button>
+						</button>
 
-						<motion.button
-							whileHover={{ scale: 1.1 }}
-							whileTap={{ scale: 0.9 }}
+						<button}}
 							onClick={handleShare}
 							className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
 							title="Share"
 						>
 							<Share1Icon className="w-4 h-4" />
-						</motion.button>
+						</button>
 					</div>
 				</div>
 			</Link>
 
 			{/* Hover Effect - Glow */}
-			<AnimatePresence>
+			<>
 				{isHovered && (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
+					<div}}}
 						className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-400/20 to-purple-400/20 blur-xl"
 					/>
 				)}
-			</AnimatePresence>
-		</motion.div>
+			</>
+		</div>
 	);
 };
 
@@ -316,13 +300,7 @@ export const PremiumSearchResults: React.FC = () => {
 	if (isSearching) {
 		return (
 			<div className="flex flex-col items-center justify-center py-20">
-				<motion.div
-					animate={{ rotate: 360 }}
-					transition={{
-						duration: 1,
-						repeat: Infinity,
-						ease: "linear",
-					}}
+				<div}}
 					className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full"
 				/>
 				<p className="mt-4 text-gray-600 dark:text-gray-400">
@@ -334,9 +312,7 @@ export const PremiumSearchResults: React.FC = () => {
 
 	if (!results.length && searchQuery) {
 		return (
-			<motion.div
-				initial={{ opacity: 0, y: 20 }}
-				animate={{ opacity: 1, y: 0 }}
+			<div}}
 				className="text-center py-20"
 			>
 				<div className="w-24 h-24 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
@@ -356,7 +332,7 @@ export const PremiumSearchResults: React.FC = () => {
 						<li>Remove some filters</li>
 					</ul>
 				</div>
-			</motion.div>
+			</div>
 		);
 	}
 

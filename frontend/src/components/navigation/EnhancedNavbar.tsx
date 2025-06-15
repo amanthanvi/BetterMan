@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   HamburgerMenuIcon,
   Cross2Icon,
@@ -127,9 +126,7 @@ export const EnhancedNavbar: React.FC = () => {
                 to="/"
                 className="flex items-center space-x-3 group"
               >
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <div}}
                   className="relative"
                 >
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -138,7 +135,7 @@ export const EnhancedNavbar: React.FC = () => {
                   {isOffline && (
                     <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full border-2 border-white dark:border-gray-900" />
                   )}
-                </motion.div>
+                </div>
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   BetterMan
                 </span>
@@ -155,9 +152,7 @@ export const EnhancedNavbar: React.FC = () => {
             {/* Right Side Actions */}
             <div className="flex items-center space-x-2">
               {/* Search Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button}}
                 onClick={() => setCommandPaletteOpen(true)}
                 className={cn(
                   'hidden sm:flex items-center space-x-2 px-4 py-2',
@@ -171,7 +166,7 @@ export const EnhancedNavbar: React.FC = () => {
                 <kbd className="hidden lg:inline-flex items-center px-2 py-0.5 text-xs bg-white dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600">
                   ⌘K
                 </kbd>
-              </motion.button>
+              </button>
 
               {/* Notifications */}
               {isAuthenticated && (
@@ -179,9 +174,7 @@ export const EnhancedNavbar: React.FC = () => {
               )}
 
               {/* Theme Toggle */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button}}
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Toggle theme"
@@ -191,7 +184,7 @@ export const EnhancedNavbar: React.FC = () => {
                 ) : (
                   <MoonIcon className="w-5 h-5" />
                 )}
-              </motion.button>
+              </button>
 
               {/* User Menu */}
               {isAuthenticated ? (
@@ -226,13 +219,9 @@ export const EnhancedNavbar: React.FC = () => {
         </div>
 
         {/* Mobile Menu */}
-        <AnimatePresence>
+        <>
           {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
+            <div}}}}
               className="md:hidden border-t border-gray-200 dark:border-gray-700"
             >
               <div className="px-4 py-4 space-y-2 bg-white dark:bg-gray-900">
@@ -260,9 +249,9 @@ export const EnhancedNavbar: React.FC = () => {
                   </Link>
                 )}
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
+        </>
       </nav>
 
       {/* Spacer */}
@@ -322,9 +311,7 @@ const MobileNavLink: React.FC<{
 
 // Notification Button
 const NotificationButton: React.FC<{ count: number }> = ({ count }) => (
-  <motion.button
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
+  <button}}
     className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
   >
     <BellIcon className="w-5 h-5" />
@@ -333,7 +320,7 @@ const NotificationButton: React.FC<{ count: number }> = ({ count }) => (
         {count > 9 ? '9+' : count}
       </span>
     )}
-  </motion.button>
+  </button>
 );
 
 // User Menu
@@ -363,9 +350,7 @@ const UserMenu: React.FC<{
 
   return (
     <div className="relative" ref={menuRef}>
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+      <button}}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           'flex items-center space-x-2 p-2 rounded-lg',
@@ -377,15 +362,11 @@ const UserMenu: React.FC<{
             {user?.name?.charAt(0) || 'U'}
           </span>
         </div>
-      </motion.button>
+      </button>
 
-      <AnimatePresence>
+      <>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.1 }}
+          <div}}}}
             className={cn(
               'absolute right-0 mt-2 w-64',
               'bg-white dark:bg-gray-800 rounded-xl shadow-lg',
@@ -435,9 +416,9 @@ const UserMenu: React.FC<{
                 <span className="text-sm">Sign Out</span>
               </button>
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 };

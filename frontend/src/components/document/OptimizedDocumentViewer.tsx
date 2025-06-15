@@ -7,7 +7,6 @@ import React, {
 	memo,
 	Fragment,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
 	BookmarkIcon,
 	Share1Icon,
@@ -194,10 +193,7 @@ const TocItem = memo<{
 	}, [item.id, onClick]);
 
 	return (
-		<motion.button
-			initial={{ opacity: 0, x: -20 }}
-			animate={{ opacity: 1, x: 0 }}
-			exit={{ opacity: 0, x: -20 }}
+		<button}}}
 			onClick={handleClick}
 			className={cn(
 				"toc-item group flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 relative overflow-hidden",
@@ -208,14 +204,8 @@ const TocItem = memo<{
 			)}
 		>
 			{isActive && (
-				<motion.div
-					layoutId="active-toc-indicator"
-					className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r"
-					transition={{
-						type: "spring",
-						damping: 25,
-						stiffness: 350,
-					}}
+				<div
+					className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r"}
 				/>
 			)}
 
@@ -241,7 +231,7 @@ const TocItem = memo<{
 					isActive && "opacity-100 text-blue-600 dark:text-blue-400"
 				)}
 			/>
-		</motion.button>
+		</button>
 	);
 });
 
@@ -260,9 +250,7 @@ const DocumentSectionComponent = memo<{
 	}, [section.id, onToggleCollapse]);
 
 	return (
-		<motion.section
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
+		<section}}
 			id={section.id}
 			className={cn(
 				"ultimate-section scroll-mt-32",
@@ -293,28 +281,24 @@ const DocumentSectionComponent = memo<{
 					{section.title}
 				</h2>
 
-				<motion.div animate={{ rotate: isCollapsed ? -90 : 0 }} transition={{ duration: 0.2 }}>
+				<div}}>
 					<ChevronDownIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-				</motion.div>
+				</div>
 			</div>
 
-			<AnimatePresence>
+			<>
 				{!isCollapsed && (
-					<motion.div
-						initial={{ height: 0, opacity: 0 }}
-						animate={{ height: "auto", opacity: 1 }}
-						exit={{ height: 0, opacity: 0 }}
-						transition={{ duration: 0.3 }}
+					<div}}}}
 						className={cn(
 							"ultimate-section-content overflow-hidden",
 							section.level === 3 && "ml-8"
 						)}
 					>
 						{renderContent(section.content, section.id)}
-					</motion.div>
+					</div>
 				)}
-			</AnimatePresence>
-		</motion.section>
+			</>
+		</section>
 	);
 });
 
@@ -1039,25 +1023,20 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			)}
 		>
 			{/* Progress Bar */}
-			<motion.div
+			<div
 				className="ultimate-progress-bar"
-				style={{ scaleX: scrollProgress / 100 }}
-				transition={{ duration: 0.1 }}
+				style={{ scaleX: scrollProgress / 100 }}}
 			/>
 
 			{/* Mobile TOC Overlay */}
-			<AnimatePresence>
+			<>
 				{showToc && (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.3 }}
+					<div}}}}
 						className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
 						onClick={() => setShowToc(false)}
 					/>
 				)}
-			</AnimatePresence>
+			</>
 
 			{/* Header */}
 			<header className={cn("ultimate-header", headerScrolled && "scrolled")}>
@@ -1265,18 +1244,10 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			</header>
 
 			{/* Table of Contents */}
-			<AnimatePresence mode="wait">
+			<>
 				{showToc && (
-					<motion.aside
-						ref={tocRef}
-						initial={{ x: -400, opacity: 0 }}
-						animate={{ x: 0, opacity: 1 }}
-						exit={{ x: -400, opacity: 0 }}
-						transition={{
-							type: "spring",
-							damping: 25,
-							stiffness: 250,
-						}}
+					<aside
+						ref={tocRef}}}}}
 						className={cn(
 							"ultimate-toc",
 							"fixed left-0 top-[120px] bottom-0 w-80 flex flex-col overflow-hidden",
@@ -1349,7 +1320,7 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 						{/* TOC Items */}
 						<div className="flex-1 overflow-y-auto overscroll-contain">
 							<div className="p-4 space-y-1">
-								<AnimatePresence>
+								<>
 									{filteredTocItems.length > 0 ? (
 										filteredTocItems.map((item) => (
 											<Fragment key={item.id}>
@@ -1373,16 +1344,14 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 											</Fragment>
 										))
 									) : (
-										<motion.div
-											initial={{ opacity: 0 }}
-											animate={{ opacity: 1 }}
+										<div}}
 											className="text-center py-8 text-gray-500 dark:text-gray-400"
 										>
 											<MagnifyingGlassIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
 											<p className="text-sm">No sections found</p>
-										</motion.div>
+										</div>
 									)}
-								</AnimatePresence>
+								</>
 							</div>
 						</div>
 
@@ -1415,9 +1384,9 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 								</div>
 							</div>
 						</div>
-					</motion.aside>
+					</aside>
 				)}
-			</AnimatePresence>
+			</>
 
 			{/* Main Content Area */}
 			<div
@@ -1439,7 +1408,7 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 						)}
 					>
 						{sections.length > 0 ? (
-							<AnimatePresence>
+							<>
 								{sections.map((section) => (
 									<DocumentSectionComponent
 										key={section.id}
@@ -1450,7 +1419,7 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 										renderContent={renderSectionContent}
 									/>
 								))}
-							</AnimatePresence>
+							</>
 						) : (
 							<div className="text-center py-12 text-gray-500 dark:text-gray-400">
 								<InfoCircledIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -1462,20 +1431,17 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			</div>
 
 			{/* Scroll to Top Button */}
-			<AnimatePresence>
+			<>
 				{showScrollTop && (
-					<motion.button
-						initial={{ opacity: 0, scale: 0.8 }}
-						animate={{ opacity: 1, scale: 1 }}
-						exit={{ opacity: 0, scale: 0.8 }}
+					<button}}}
 						onClick={scrollToTop}
 						className="scroll-to-top"
 						title="Scroll to top"
 					>
 						<ArrowUpIcon className="w-5 h-5" />
-					</motion.button>
+					</button>
 				)}
-			</AnimatePresence>
+			</>
 		</div>
 	);
 };

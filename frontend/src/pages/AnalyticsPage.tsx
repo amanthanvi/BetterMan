@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import {
 	BarChartIcon,
 	PersonIcon,
@@ -136,13 +135,7 @@ export const AnalyticsPage: React.FC = () => {
 	if (loading || !analytics) {
 		return (
 			<div className="flex items-center justify-center min-h-screen">
-				<motion.div
-					animate={{ rotate: 360 }}
-					transition={{
-						duration: 1,
-						repeat: Infinity,
-						ease: "linear",
-					}}
+				<div}}
 					className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
 				/>
 			</div>
@@ -216,10 +209,7 @@ export const AnalyticsPage: React.FC = () => {
 			{/* Charts Row */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* Popular Commands */}
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.3 }}
+				<div}}}
 					className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 				>
 					<div className="flex items-center justify-between mb-4">
@@ -261,13 +251,10 @@ export const AnalyticsPage: React.FC = () => {
 							</div>
 						))}
 					</div>
-				</motion.div>
+				</div>
 
 				{/* System Health */}
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.4 }}
+				<div}}}
 					className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 				>
 					<div className="flex items-center justify-between mb-4">
@@ -306,14 +293,11 @@ export const AnalyticsPage: React.FC = () => {
 							</div>
 						</div>
 					</div>
-				</motion.div>
+				</div>
 			</div>
 
 			{/* Recent Activity */}
-			<motion.div
-				initial={{ opacity: 0, y: 20 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ delay: 0.5 }}
+			<div}}}
 				className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 			>
 				<div className="flex items-center justify-between mb-4">
@@ -327,7 +311,7 @@ export const AnalyticsPage: React.FC = () => {
 						<ActivityItem key={activity.id} activity={activity} />
 					))}
 				</div>
-			</motion.div>
+			</div>
 		</div>
 	);
 };
@@ -349,10 +333,7 @@ const MetricCardComponent: React.FC<MetricCardComponentProps> = ({
 	};
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ delay: index * 0.1 }}
+		<div}}}
 			className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 		>
 			<div className="flex items-center justify-between">
@@ -397,7 +378,7 @@ const MetricCardComponent: React.FC<MetricCardComponentProps> = ({
 					{metric.icon}
 				</div>
 			</div>
-		</motion.div>
+		</div>
 	);
 };
 
@@ -432,10 +413,7 @@ const HealthMetric: React.FC<HealthMetricProps> = ({
 				</span>
 			</div>
 			<div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-				<motion.div
-					initial={{ width: 0 }}
-					animate={{ width: `${percentage}%` }}
-					transition={{ duration: 1, ease: "easeOut" }}
+				<div}%` }}}
 					className={`h-full rounded-full ${
 						colorClasses[color as keyof typeof colorClasses]
 					}`}

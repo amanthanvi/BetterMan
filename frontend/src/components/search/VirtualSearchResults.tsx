@@ -1,6 +1,5 @@
 import React, { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { FileTextIcon, BookmarkIcon, StarIcon } from "@radix-ui/react-icons";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -60,10 +59,7 @@ const ResultCard = React.memo<{
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.3) }}
+    <div}}}
     >
       <Card
         className={cn(
@@ -140,7 +136,7 @@ const ResultCard = React.memo<{
           )}
         </div>
       </Card>
-    </motion.div>
+    </div>
   );
 });
 
@@ -256,9 +252,7 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
   // Show empty state
   if (!loading && results.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <div}}
         className={cn("text-center py-12", className)}
       >
         <FileTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -268,7 +262,7 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
         <p className="text-gray-600 dark:text-gray-400">
           {query ? `No man pages found for "${query}"` : "Try searching for a command"}
         </p>
-      </motion.div>
+      </div>
     );
   }
 
@@ -292,7 +286,7 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
             style={{ transform: `translateY(${offsetY}px)` }}
             className="space-y-4"
           >
-            <AnimatePresence mode="popLayout">
+            <>
               {visibleItems.map((result, index) => {
                 const globalIndex = results.indexOf(result);
                 const docName = result.name || result.title;
@@ -321,7 +315,7 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
                   </div>
                 );
               })}
-            </AnimatePresence>
+            </>
           </div>
         </div>
       </div>

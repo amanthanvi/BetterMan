@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, History, TrendingUp, Filter, Sparkles } from 'lucide-react';
 import { useSearchStore } from '@/stores/searchStore';
 import { useAppStore } from '@/stores/appStore';
@@ -208,13 +207,9 @@ export const EnhancedSearchInterface: React.FC = () => {
           </div>
           
           {/* Filter Section */}
-          <AnimatePresence>
+          <>
             {showFilters && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
+              <div}}}}
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700">
@@ -242,21 +237,17 @@ export const EnhancedSearchInterface: React.FC = () => {
                     ))}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
+          </>
         </div>
       </Card>
       
       {/* Search Suggestions */}
-      <AnimatePresence>
+      <>
         {isFocused && suggestions.length > 0 && (
-          <motion.div
-            id="search-suggestions"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15 }}
+          <div
+            id="search-suggestions"}}}}
             className="absolute top-full left-0 right-0 mt-2 z-50"
           >
             <Card variant="elevated" padding="none" className="overflow-hidden">
@@ -302,9 +293,9 @@ export const EnhancedSearchInterface: React.FC = () => {
                 ))}
               </ul>
             </Card>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 };

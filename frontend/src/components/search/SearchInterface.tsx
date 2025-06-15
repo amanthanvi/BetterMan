@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MagnifyingGlassIcon, 
   MixerHorizontalIcon,
@@ -193,12 +192,10 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           {loading ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            <div}}
             >
               <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
-            </motion.div>
+            </div>
           ) : (
             <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
           )}
@@ -255,23 +252,18 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
       
       {/* Error State */}
       {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div}}
           className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
         >
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-        </motion.div>
+        </div>
       )}
       
       {/* Suggestions Dropdown */}
-      <AnimatePresence>
+      <>
         {showDropdown && (
-          <motion.div
-            ref={suggestionsRef}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+          <div
+            ref={suggestionsRef}}}}
             className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
           >
             {/* Search Suggestions */}
@@ -331,9 +323,9 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
             <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
               Press ↑↓ to navigate, ↵ to select, ⌘K for command palette
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 };

@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -26,7 +25,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', interactive = false, padding = 'md', children, ...props }, ref) => {
     if (interactive) {
       return (
-        <motion.div
+        <div
           ref={ref}
           className={cn(
             'rounded-xl transition-all duration-200',
@@ -34,13 +33,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
             paddingVariants[padding],
             'cursor-pointer hover:shadow-xl dark:hover:shadow-gray-900/50',
             className
-          )}
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.98 }}
+          )}}}
           {...props}
         >
           {children}
-        </motion.div>
+        </div>
       );
     }
     

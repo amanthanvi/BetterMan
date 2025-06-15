@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { MagnifyingGlassIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -304,13 +303,9 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
           </div>
 
           {/* Search Suggestions */}
-          <AnimatePresence>
+          <>
             {showSuggestions && suggestions.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
+              <div}}}}
                 id="search-suggestions"
                 className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
               >
@@ -339,9 +334,9 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
                     </div>
                   </button>
                 ))}
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
+          </>
         </div>
 
         {/* Section Filters with improved performance */}
@@ -369,9 +364,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
           disabled={!query.trim() || isSearching}
         >
           {isSearching ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            <div}}
               className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
             />
           ) : (
@@ -385,9 +378,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
 
       {/* Recent Searches (when input is empty) */}
       {!query && recentSearches.length > 0 && showSuggestions && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div}}
           className="absolute top-full left-0 right-0 mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
         >
           <div className="flex items-center justify-between mb-2">
@@ -413,7 +404,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
               </Badge>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   );

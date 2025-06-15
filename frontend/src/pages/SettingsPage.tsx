@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import {
 	GearIcon,
@@ -102,9 +101,7 @@ export const SettingsPage: React.FC = () => {
 	};
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
+		<div}}
 			className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-8"
 		>
 			<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -429,7 +426,7 @@ export const SettingsPage: React.FC = () => {
 					</SettingsSection>
 				</div>
 			</div>
-		</motion.div>
+		</div>
 	);
 };
 

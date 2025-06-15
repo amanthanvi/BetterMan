@@ -1,5 +1,4 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { motion } from 'framer-motion';
 import {
   ExclamationTriangleIcon,
   ReloadIcon,
@@ -165,9 +164,7 @@ Time: ${new Date().toISOString()}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+      <div}}
         className="max-w-2xl w-full"
       >
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
@@ -215,10 +212,7 @@ Time: ${new Date().toISOString()}
               </p>
 
               {showDetails && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
+                <div}}}
                   className="mt-4 space-y-4"
                 >
                   {/* Stack Trace */}
@@ -244,7 +238,7 @@ Time: ${new Date().toISOString()}
                       </pre>
                     </div>
                   )}
-                </motion.div>
+                </div>
               )}
             </div>
           </div>
@@ -319,7 +313,7 @@ Time: ${new Date().toISOString()}
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
 	vscDarkPlus,
@@ -453,13 +452,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-12">
-				<motion.div
-					animate={{ rotate: 360 }}
-					transition={{
-						duration: 1,
-						repeat: Infinity,
-						ease: "linear",
-					}}
+				<div}}
 					className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
 				/>
 			</div>
@@ -478,13 +471,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		<div className={cn("relative bg-white dark:bg-gray-900", className)}>
 			{/* Table of Contents - Fixed Sidebar */}
 			{tocItems.length > 0 && (
-				<motion.aside
-					initial={false}
-					animate={{ 
-						x: showToc ? 0 : -256,
-						opacity: showToc ? 1 : 0
-					}}
-					transition={{ duration: 0.2, ease: "easeOut" }}
+				<aside}}
 					className="document-toc fixed left-0 top-24 h-[calc(100vh-6rem)] w-64 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto z-20"
 					style={{ pointerEvents: showToc ? 'auto' : 'none' }}
 				>
@@ -512,20 +499,19 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 							</button>
 						))}
 					</nav>
-				</motion.aside>
+				</aside>
 			)}
 
 			{/* Main Content - Adjust margin based on TOC visibility */}
 			<div className={cn("flex-1 bg-white dark:bg-gray-900 transition-all duration-300", showToc && tocItems.length > 0 && "ml-64")}>
 				{/* Progress Bar */}
 				<div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800 z-40">
-					<motion.div
+					<div
 						className="h-full bg-blue-500"
 						style={{ 
 							transformOrigin: "0%",
 							scaleX: scrollProgress
-						}}
-						transition={{ duration: 0.1 }}
+						}}}
 					/>
 				</div>
 				
@@ -639,10 +625,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 				{/* Document Content with top padding for sticky header */}
 				<main className="p-6 pt-32">
-					<motion.div
-						ref={contentRef}
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
+					<div
+						ref={contentRef}}}
 						className="max-w-4xl mx-auto"
 					>
 						{content || document.sections ? (
@@ -652,7 +636,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								No content available
 							</div>
 						)}
-					</motion.div>
+					</div>
 				</main>
 			</div>
 		</div>

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
   BookmarkIcon, 
@@ -118,9 +117,7 @@ export const FavoritesPage: React.FC = () => {
   }
   
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div}}
       className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-8"
     >
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -151,9 +148,7 @@ export const FavoritesPage: React.FC = () => {
         
         {/* Empty state */}
         {favoriteDocuments.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+          <div}}
             className="text-center py-16"
           >
             <HeartIcon className="w-16 h-16 text-gray-400 mx-auto mb-6" />
@@ -170,14 +165,12 @@ export const FavoritesPage: React.FC = () => {
                 Search Documentation
               </Button>
             </Link>
-          </motion.div>
+          </div>
         )}
         
         {/* No search results */}
         {favoriteDocuments.length > 0 && filteredDocuments.length === 0 && searchQuery && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <div}}
             className="text-center py-12"
           >
             <MagnifyingGlassIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -187,7 +180,7 @@ export const FavoritesPage: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400">
               No favorites match "{searchQuery}"
             </p>
-          </motion.div>
+          </div>
         )}
         
         {/* Favorites list */}
@@ -200,26 +193,23 @@ export const FavoritesPage: React.FC = () => {
               </h2>
             </div>
             
-            <motion.div layout className="space-y-3">
+            <div layout className="space-y-3">
               {filteredDocuments.map((doc, index) => (
-                <motion.div
+                <div
                   key={`${doc.name || doc.id}.${doc.section}`}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  layout}}}
                 >
                   <FavoriteCard
                     document={doc}
                     onRemove={() => handleRemoveFavorite(`${doc.name || doc.id}.${doc.section}`)}
                   />
-                </motion.div>
+                </div>
               ))}
-            </motion.div>
+            </div>
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 

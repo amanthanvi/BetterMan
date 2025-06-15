@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import {
 	MagnifyingGlassIcon,
@@ -49,9 +48,7 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 	};
 
 	return (
-		<motion.nav
-			initial={{ y: -100 }}
-			animate={{ y: 0 }}
+		<nav}}
 			className={cn(
 				"sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg",
 				"border-b border-gray-200 dark:border-gray-700",
@@ -196,10 +193,7 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 
 			{/* Mobile navigation */}
 			{sidebarOpen && (
-				<motion.div
-					initial={{ height: 0, opacity: 0 }}
-					animate={{ height: "auto", opacity: 1 }}
-					exit={{ height: 0, opacity: 0 }}
+				<div}}}
 					className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
 				>
 					<div className="px-4 py-3 space-y-1">
@@ -277,8 +271,8 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 							)}
 						</div>
 					</div>
-				</motion.div>
+				</div>
 			)}
-		</motion.nav>
+		</nav>
 	);
 };

@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, HTMLMotionProps } from 'framer-motion';
 import { cn } from '@/utils/cn';
 
 export interface PremiumButtonProps extends HTMLMotionProps<"button"> {
@@ -94,7 +93,7 @@ export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonPr
     };
 
     return (
-      <motion.button
+      <button
         ref={ref}
         className={cn(
           baseStyles,
@@ -102,19 +101,13 @@ export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonPr
           variantStyles[variant],
           className
         )}
-        disabled={disabled || isLoading}
-        whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
-        whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
-        transition={{ duration: 0.15 }}
+        disabled={disabled || isLoading}}}}
         {...props}
       >
         {/* Loading spinner */}
         {isLoading && (
-          <motion.span
-            className="absolute inset-0 flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <span
+            className="absolute inset-0 flex items-center justify-center"}}}
           >
             <svg
               className="animate-spin h-5 w-5"
@@ -136,7 +129,7 @@ export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonPr
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-          </motion.span>
+          </span>
         )}
 
         {/* Button content */}
@@ -153,14 +146,12 @@ export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonPr
 
         {/* Hover effect for gradient variant */}
         {variant === 'gradient' && (
-          <motion.div
-            className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0"
-            whileHover={{ opacity: 1, x: ['-100%', '100%'] }}
-            transition={{ duration: 0.6, ease: 'linear' }}
+          <div
+            className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0"}}
             style={{ mixBlendMode: 'overlay' }}
           />
         )}
-      </motion.button>
+      </button>
     );
   }
 );

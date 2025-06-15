@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   BookmarkIcon,
@@ -93,9 +92,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   if (error) {
     return (
       <div className={cn('text-center py-12', className)}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div}}
           className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md mx-auto"
         >
           <MagnifyingGlassIcon className="w-12 h-12 text-red-400 mx-auto mb-4" />
@@ -103,7 +100,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             Search Error
           </h3>
           <p className="text-red-600 dark:text-red-400">{error}</p>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -111,9 +108,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   if (!query) {
     return (
       <div className={cn('text-center py-12', className)}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div}}
           className="max-w-md mx-auto"
         >
           <MagnifyingGlassIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -123,7 +118,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           <p className="text-gray-600 dark:text-gray-400">
             Start typing to search through thousands of man pages and documentation.
           </p>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -131,9 +126,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   if (results.length === 0) {
     return (
       <div className={cn('text-center py-12', className)}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div}}
           className="max-w-md mx-auto"
         >
           <FileTextIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -151,7 +144,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               <li>Check for typos</li>
             </ul>
           </div>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -183,16 +176,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       </div>
       
       {/* Results list */}
-      <motion.div layout className="space-y-3">
-        <AnimatePresence mode="popLayout">
+      <div layout className="space-y-3">
+        <>
           {sortedResults.map((doc, index) => (
-            <motion.div
+            <div
               key={doc.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ delay: index * 0.05 }}
+              layout}}}}
             >
               <SearchResultCard
                 document={doc}
@@ -200,10 +189,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 onToggleFavorite={(e) => doc.name && toggleFavorite(e, `${doc.name}.${doc.section}`)}
                 onClick={() => handleDocumentClick(doc)}
               />
-            </motion.div>
+            </div>
           ))}
-        </AnimatePresence>
-      </motion.div>
+        </>
+      </div>
       
       {/* Load more */}
       {has_more && (
@@ -240,8 +229,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
       onClick={onClick}
       className="block group"
     >
-      <motion.div
-        whileHover={{ y: -2 }}
+      <div}
         className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
       >
         <div className="flex items-start justify-between">
@@ -330,7 +318,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
             <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
           </div>
         </div>
-      </motion.div>
+      </div>
     </Link>
   );
 };

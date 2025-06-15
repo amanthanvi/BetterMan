@@ -9,7 +9,6 @@ import {
 	ClockIcon,
 	CodeIcon,
 } from "@radix-ui/react-icons";
-import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "@/utils/useDebounce";
 import { useSearchStore } from "@/stores/searchStore";
 import { searchAPI } from "@/services/api";
@@ -228,15 +227,7 @@ export const AdvancedSearch: React.FC = () => {
 	return (
 		<div className="relative w-full max-w-4xl mx-auto">
 			{/* Search Input Container */}
-			<motion.div
-				initial={false}
-				animate={{
-					scale: isFocused ? 1.02 : 1,
-					boxShadow: isFocused
-						? "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
-						: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-				}}
-				transition={{ duration: 0.2 }}
+			<div}}
 				className="relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden"
 			>
 				{/* Search Input */}
@@ -308,10 +299,8 @@ export const AdvancedSearch: React.FC = () => {
 					</span>
 
 					{filters.map((filter) => (
-						<motion.button
-							key={filter.id}
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
+						<button
+							key={filter.id}}}
 							onClick={() => toggleFilter(filter.id)}
 							className={cn(
 								"px-3 py-1.5 rounded-full text-sm font-medium transition-all",
@@ -321,7 +310,7 @@ export const AdvancedSearch: React.FC = () => {
 							)}
 						>
 							{filter.label}
-						</motion.button>
+						</button>
 					))}
 
 					{activeFilterCount > 0 && (
@@ -333,26 +322,19 @@ export const AdvancedSearch: React.FC = () => {
 						</button>
 					)}
 				</div>
-			</motion.div>
+			</div>
 
 			{/* Suggestions Dropdown */}
-			<AnimatePresence>
+			<>
 				{showSuggestions && suggestions.length > 0 && (
-					<motion.div
-						ref={suggestionsRef}
-						initial={{ opacity: 0, y: -10 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, y: -10 }}
-						transition={{ duration: 0.2 }}
+					<div
+						ref={suggestionsRef}}}}}
 						className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden z-50"
 					>
 						<div className="py-2">
 							{suggestions.map((suggestion, index) => (
-								<motion.button
-									key={`${suggestion.type}-${suggestion.value}-${index}`}
-									whileHover={{
-										backgroundColor: "rgba(0, 0, 0, 0.03)",
-									}}
+								<button
+									key={`${suggestion.type}-${suggestion.value}-${index}`}}
 									onClick={() => {
 										setQuery(suggestion.value);
 										handleSearch(suggestion.value);
@@ -390,19 +372,16 @@ export const AdvancedSearch: React.FC = () => {
 									{suggestion.type === "trending" && (
 										<ActivityLogIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
 									)}
-								</motion.button>
+								</button>
 							))}
 						</div>
-					</motion.div>
+					</div>
 				)}
-			</AnimatePresence>
+			</>
 
 			{/* Quick Tips */}
 			{!query && isFocused && (
-				<motion.div
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
+				<div}}}
 					className="absolute top-full left-0 right-0 mt-4 flex items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400"
 				>
 					<div className="flex items-center gap-2">
@@ -427,7 +406,7 @@ export const AdvancedSearch: React.FC = () => {
 						</kbd>
 						<span>Close</span>
 					</div>
-				</motion.div>
+				</div>
 			)}
 		</div>
 	);

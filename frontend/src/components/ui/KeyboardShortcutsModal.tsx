@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Cross2Icon, KeyboardIcon } from '@radix-ui/react-icons';
 import { cn } from '@/utils/cn';
 import { getShortcutGroups, formatShortcut, ShortcutGroup } from '@/utils/keyboardShortcuts';
@@ -34,24 +33,17 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
   }, [isOpen, onClose]);
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
           {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div}}}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
             onClick={onClose}
           />
 
           {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            transition={{ duration: 0.2 }}
+          <div}}}}
             className={cn(
               "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
               "w-full max-w-2xl max-h-[80vh]",
@@ -93,11 +85,8 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                   </h3>
                   <div className="space-y-3">
                     {group.shortcuts.map((shortcut, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.02 }}
+                      <div
+                        key={index}}}}
                         className="flex items-center justify-between"
                       >
                         <span className="text-gray-700 dark:text-gray-300">
@@ -112,7 +101,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                         )}>
                           {formatShortcut(shortcut)}
                         </kbd>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -127,9 +116,9 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                 </p>
               </div>
             </div>
-          </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 };

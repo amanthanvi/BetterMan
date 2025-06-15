@@ -9,7 +9,6 @@ import React, {
 	Suspense,
 	lazy,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
 	BookmarkIcon,
 	Share1Icon,
@@ -706,12 +705,9 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 			</header>
 
 			{/* TOC Sidebar */}
-			<AnimatePresence>
+			<>
 				{showToc && (
-					<motion.aside
-						initial={{ x: -320 }}
-						animate={{ x: 0 }}
-						exit={{ x: -320 }}
+					<aside}}}
 						className="ultimate-toc fixed left-0 top-[120px] bottom-0 w-80 flex flex-col"
 					>
 						<div className="p-6 border-b">
@@ -766,9 +762,9 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 								})}
 							</div>
 						</div>
-					</motion.aside>
+					</aside>
 				)}
-			</AnimatePresence>
+			</>
 
 			{/* Main Content */}
 			<div className={cn("ultimate-content", showToc && "toc-open")}>
@@ -864,21 +860,18 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 			</div>
 
 			{/* Scroll to Top */}
-			<AnimatePresence>
+			<>
 				{showScrollTop && (
-					<motion.button
-						initial={{ opacity: 0, scale: 0.8 }}
-						animate={{ opacity: 1, scale: 1 }}
-						exit={{ opacity: 0, scale: 0.8 }}
+					<button}}}
 						onClick={() => {
 							parentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 						}}
 						className="scroll-to-top"
 					>
 						<ArrowUpIcon className="w-5 h-5" />
-					</motion.button>
+					</button>
 				)}
-			</AnimatePresence>
+			</>
 		</div>
 	);
 };

@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/utils/cn';
 
 interface OptimizedLoaderProps {
@@ -34,43 +33,34 @@ export const OptimizedLoader: React.FC<OptimizedLoaderProps> = ({
 
   if (error) {
     return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
+      <>
+        <div}}}
           className={cn("error-container", className)}
         >
           {errorComponent || <DefaultError error={error} />}
-        </motion.div>
-      </AnimatePresence>
+        </div>
+      </>
     );
   }
 
   return (
-    <AnimatePresence mode="wait">
+    <>
       {showLoader && isLoading ? (
-        <motion.div
-          key="loader"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+        <div
+          key="loader"}}}
           className={cn("loader-container", className)}
         >
           {loadingComponent || <DefaultLoader />}
-        </motion.div>
+        </div>
       ) : (
-        <motion.div
-          key="content"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+        <div
+          key="content"}}}
           className={cn("content-container", className)}
         >
           {children}
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 
