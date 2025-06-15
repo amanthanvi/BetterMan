@@ -87,8 +87,8 @@ export default defineConfig(async () => {
               return 'animation';
             }
             
-            // State management - keep in vendor to avoid initialization issues
-            if (id.includes('zustand') || id.includes('immer')) {
+            // State management and related utilities
+            if (id.includes('immer')) {
               return 'vendor';
             }
             
@@ -158,8 +158,7 @@ export default defineConfig(async () => {
     include: [
       'react',
       'react-dom',
-      'react-router-dom',
-      'zustand'
+      'react-router-dom'
     ],
     force: true,
     esbuildOptions: {
