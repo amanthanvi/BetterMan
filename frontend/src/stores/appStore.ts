@@ -112,274 +112,203 @@ const defaultPreferences: UserPreferences = {
   language: 'en',
 };
 
-// Create the store with persist middleware
-export const useAppStore = create<AppStore>()(
-  persist(
-    (set, get) => ({
-      // Initial state
-      darkMode: true,
-      theme: 'dark' as const,
-      sidebarOpen: true,
-      commandPaletteOpen: false,
-      preferences: defaultPreferences,
-      favorites: [],
-      recentDocs: [],
-      searchHistory: [],
-      toasts: [],
-      documentTocOpen: typeof window !== 'undefined' ? window.innerWidth > 1024 : true,
-      currentDocument: undefined,
-      user: undefined,
-      
-      // Alias property (will be kept in sync with recentDocs)
-      recentDocuments: [] as Document[],
-      
-      // Theme actions
-      toggleDarkMode: () => {
-        if (!DARK_MODE_ENABLED) return; // Feature flag check
-        
-        const state = get();
-        const newDarkMode = !state.darkMode;
-        const newTheme = newDarkMode ? 'dark' : 'light';
-        
-        // Apply to DOM immediately
-        if (newDarkMode) {
-          document.documentElement.classList.add('dark');
-          document.body.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-          document.body.classList.remove('dark');
-        }
-        
-        // Update state
-        set({
-          darkMode: newDarkMode,
-          theme: newTheme,
-          preferences: { ...state.preferences, theme: newTheme }
-        });
-      },
-      setDarkMode: (darkMode: boolean) => {
-        if (!DARK_MODE_ENABLED) return; // Feature flag check
-        
-        if (darkMode) {
-          document.documentElement.classList.add('dark');
-          document.body.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-          document.body.classList.remove('dark');
-        }
-        set({ darkMode });
-      },
-      setTheme: (theme: 'light' | 'dark') => {
-        if (!DARK_MODE_ENABLED) return; // Feature flag check
-        
-        const isDark = theme === 'dark';
-        if (isDark) {
-          document.documentElement.classList.add('dark');
-          document.body.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-          document.body.classList.remove('dark');
-        }
-        set({ 
-          theme, 
-          darkMode: isDark 
-        });
-      },
-      
-      // UI actions
-      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      setSidebarOpen: (open: boolean) => set({ sidebarOpen: open }),
-      toggleCommandPalette: () => set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
-      setCommandPaletteOpen: (open: boolean) => set({ commandPaletteOpen: open }),
-      
-      // Document TOC actions
-      setDocumentTocOpen: (open: boolean) => set({ documentTocOpen: open }),
-      toggleDocumentToc: () => set((state) => ({ documentTocOpen: !state.documentTocOpen })),
-      setCurrentDocument: (doc: Document | undefined) => set({ currentDocument: doc }),
-      
-      // Preferences actions
-      updatePreferences: (newPreferences: Partial<UserPreferences>) =>
-        set((state) => ({
-          preferences: { ...state.preferences, ...newPreferences },
-        })),
-      resetPreferences: () => set({ preferences: defaultPreferences }),
-      
-      // Favorites actions
-      addFavorite: (docId: string) =>
-        set((state) => ({
-          favorites: state.favorites.includes(docId) 
-            ? state.favorites 
-            : [...state.favorites, docId],
-        })),
-      removeFavorite: (docId: string) =>
-        set((state) => ({
-          favorites: state.favorites.filter(id => id !== docId),
-        })),
-      isFavorite: (docId: string) => get().favorites.includes(docId),
-      setFavorites: (favorites: string[]) => set({ favorites }),
-      
-      // Recent documents actions
-      addRecentDoc: (doc: Document) =>
-        set((state) => {
-          const filtered = state.recentDocs.filter(d => d.id !== doc.id);
-          const newRecentDocs = [doc, ...filtered].slice(0, 10); // Keep last 10
-          return {
-            recentDocs: newRecentDocs,
-            recentDocuments: newRecentDocs, // Keep alias in sync
-          };
-        }),
-      addRecentDocument: (doc: Document) => get().addRecentDoc(doc), // Alias
-      clearRecentDocs: () => set({ recentDocs: [], recentDocuments: [] }),
-      
-      // User actions
-      setUser: (user: any) => set({ user }),
-      
-      // Search history actions
-      addSearchHistory: (query: string) =>
-        set((state) => {
-          if (!query.trim() || state.searchHistory.includes(query)) return state;
-          return {
-            searchHistory: [query, ...state.searchHistory.filter(q => q !== query)].slice(0, 20),
-          };
-        }),
-      clearSearchHistory: () => set({ searchHistory: [] }),
-      
-      // Toast actions
-      addToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => 
-        set((state) => ({
-          toasts: [...state.toasts, { id: Date.now().toString(), message, type }],
-        })),
-      removeToast: (id: string) =>
-        set((state) => ({
-          toasts: state.toasts.filter(t => t.id !== id),
-        })),
-      
-      // Initialization
-      initialize: () => {
-        if (!DARK_MODE_ENABLED) {
-          // When dark mode is disabled, always use light mode
-          document.documentElement.classList.remove('dark');
-          document.body.classList.remove('dark');
-          set({ 
-            darkMode: false,
-            theme: 'light'
-          });
-          return;
-        }
-        
-        // Apply dark mode immediately on initialization
-        document.documentElement.classList.add('dark');
-        document.body.classList.add('dark');
-        
-        const state = get();
-        let shouldBeDark = false;
-        
-        // Determine if dark mode should be enabled
-        if (state.theme === 'dark' || (state.theme === 'system' && state.preferences.theme === 'dark')) {
-          shouldBeDark = true;
-        } else if (state.theme === 'system' || state.preferences.theme === 'system') {
-          shouldBeDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        } else if (state.preferences.theme === 'dark') {
-          shouldBeDark = true;
-        }
-        
-        // Apply theme to document
-        if (shouldBeDark) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-        
-        // Always set dark mode to true on initialization
-        set({ 
-          darkMode: true,
-          theme: 'dark'
-        });
-        
-        // Listen for system theme changes
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        const handleChange = (e: MediaQueryListEvent) => {
-          const currentState = get();
-          if (currentState.theme === 'system' || currentState.preferences.theme === 'system') {
-            const newDarkMode = e.matches;
-            if (newDarkMode) {
-              document.documentElement.classList.add('dark');
-            } else {
-              document.documentElement.classList.remove('dark');
-            }
-            set({ darkMode: newDarkMode });
-          }
-        };
-        
-        mediaQuery.addEventListener('change', handleChange);
-        
-        // Apply font preferences
-        const root = document.documentElement;
-        const body = document.body;
-        
-        // Apply font size
-        if (state.preferences.fontSize === 'small') {
-          root.style.fontSize = '14px';
-        } else if (state.preferences.fontSize === 'large') {
-          root.style.fontSize = '18px';
-        } else {
-          root.style.fontSize = '16px';
-        }
-        
-        // Apply font family
-        if (state.preferences.fontFamily === 'mono') {
-          body.style.fontFamily = 'ui-monospace, monospace';
-        } else if (state.preferences.fontFamily === 'serif') {
-          body.style.fontFamily = 'ui-serif, serif';
-        } else {
-          body.style.fontFamily = 'system-ui, -apple-system, sans-serif';
-        }
-      },
-    }),
-    {
-      name: 'betterman-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        preferences: state.preferences,
-        favorites: state.favorites,
-        searchHistory: state.searchHistory,
-        sidebarOpen: state.sidebarOpen,
-        theme: state.theme,
-        darkMode: state.darkMode,
-        documentTocOpen: state.documentTocOpen,
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (!DARK_MODE_ENABLED) {
-          // When dark mode is disabled, always ensure light mode
-          document.documentElement.classList.remove('dark');
-          document.body.classList.remove('dark');
-          return;
-        }
-        
-        // Always apply dark mode immediately after rehydration
-        document.documentElement.classList.add('dark');
-        document.body.classList.add('dark');
-        
-        // Ensure state is set to dark mode
-        if (state) {
-          state.darkMode = true;
-          state.theme = 'dark';
-        }
-      },
-    }
-  )
-);
+// Initial state object
+const initialState = {
+  darkMode: true,
+  theme: 'dark' as const,
+  sidebarOpen: true,
+  commandPaletteOpen: false,
+  preferences: defaultPreferences,
+  favorites: [] as string[],
+  recentDocs: [] as Document[],
+  searchHistory: [] as string[],
+  toasts: [] as Toast[],
+  documentTocOpen: typeof window !== 'undefined' ? window.innerWidth > 1024 : true,
+  currentDocument: undefined as Document | undefined,
+  user: undefined,
+  recentDocuments: [] as Document[],
+};
 
-// Subscribe to dark mode changes to update document class
-if (DARK_MODE_ENABLED && typeof window !== 'undefined') {
-  useAppStore.subscribe(
-    (state) => state.darkMode,
-    (darkMode) => {
-      if (darkMode) {
+// Create the store without persist first to test
+const useAppStoreBase = create<AppStore>()((set, get) => ({
+  ...initialState,
+  
+  // Theme actions
+  toggleDarkMode: () => {
+    if (!DARK_MODE_ENABLED) return;
+    
+    const state = get();
+    const newDarkMode = !state.darkMode;
+    const newTheme = newDarkMode ? 'dark' : 'light';
+    
+    // Apply to DOM immediately
+    if (typeof document !== 'undefined') {
+      if (newDarkMode) {
         document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
       }
     }
-  );
+    
+    // Update state
+    set({
+      darkMode: newDarkMode,
+      theme: newTheme,
+      preferences: { ...state.preferences, theme: newTheme }
+    });
+  },
+  
+  setDarkMode: (darkMode: boolean) => {
+    if (!DARK_MODE_ENABLED) return;
+    
+    if (typeof document !== 'undefined') {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
+      }
+    }
+    set({ darkMode });
+  },
+  
+  setTheme: (theme: 'light' | 'dark') => {
+    if (!DARK_MODE_ENABLED) return;
+    
+    const isDark = theme === 'dark';
+    if (typeof document !== 'undefined') {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
+      }
+    }
+    set({ 
+      theme, 
+      darkMode: isDark 
+    });
+  },
+  
+  // UI actions
+  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+  setSidebarOpen: (open: boolean) => set({ sidebarOpen: open }),
+  toggleCommandPalette: () => set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
+  setCommandPaletteOpen: (open: boolean) => set({ commandPaletteOpen: open }),
+  
+  // Document TOC actions
+  setDocumentTocOpen: (open: boolean) => set({ documentTocOpen: open }),
+  toggleDocumentToc: () => set((state) => ({ documentTocOpen: !state.documentTocOpen })),
+  setCurrentDocument: (doc: Document | undefined) => set({ currentDocument: doc }),
+  
+  // Preferences actions
+  updatePreferences: (newPreferences: Partial<UserPreferences>) =>
+    set((state) => ({
+      preferences: { ...state.preferences, ...newPreferences },
+    })),
+  resetPreferences: () => set({ preferences: defaultPreferences }),
+  
+  // Favorites actions
+  addFavorite: (docId: string) =>
+    set((state) => ({
+      favorites: state.favorites.includes(docId) 
+        ? state.favorites 
+        : [...state.favorites, docId],
+    })),
+  removeFavorite: (docId: string) =>
+    set((state) => ({
+      favorites: state.favorites.filter(id => id !== docId),
+    })),
+  isFavorite: (docId: string) => get().favorites.includes(docId),
+  setFavorites: (favorites: string[]) => set({ favorites }),
+  
+  // Recent documents actions
+  addRecentDoc: (doc: Document) =>
+    set((state) => {
+      const filtered = state.recentDocs.filter(d => d.id !== doc.id);
+      const newRecentDocs = [doc, ...filtered].slice(0, 10); // Keep last 10
+      return {
+        recentDocs: newRecentDocs,
+        recentDocuments: newRecentDocs, // Keep alias in sync
+      };
+    }),
+  addRecentDocument: (doc: Document) => get().addRecentDoc(doc), // Alias
+  clearRecentDocs: () => set({ recentDocs: [], recentDocuments: [] }),
+  
+  // User actions
+  setUser: (user: any) => set({ user }),
+  
+  // Search history actions
+  addSearchHistory: (query: string) =>
+    set((state) => {
+      if (!query.trim() || state.searchHistory.includes(query)) return state;
+      return {
+        searchHistory: [query, ...state.searchHistory.filter(q => q !== query)].slice(0, 20),
+      };
+    }),
+  clearSearchHistory: () => set({ searchHistory: [] }),
+  
+  // Toast actions
+  addToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => 
+    set((state) => ({
+      toasts: [...state.toasts, { id: Date.now().toString(), message, type }],
+    })),
+  removeToast: (id: string) =>
+    set((state) => ({
+      toasts: state.toasts.filter(t => t.id !== id),
+    })),
+  
+  // Initialization
+  initialize: () => {
+    if (typeof document === 'undefined') return;
+    
+    if (!DARK_MODE_ENABLED) {
+      // When dark mode is disabled, always use light mode
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+      set({ 
+        darkMode: false,
+        theme: 'light'
+      });
+      return;
+    }
+    
+    // Apply dark mode immediately on initialization
+    document.documentElement.classList.add('dark');
+    document.body.classList.add('dark');
+    
+    // Always set dark mode to true on initialization
+    set({ 
+      darkMode: true,
+      theme: 'dark'
+    });
+  },
+}));
+
+// Export with persist middleware
+export const useAppStore = persist(
+  useAppStoreBase,
+  {
+    name: 'betterman-storage',
+    storage: createJSONStorage(() => localStorage),
+    partialize: (state) => ({
+      preferences: state.preferences,
+      favorites: state.favorites,
+      searchHistory: state.searchHistory,
+      sidebarOpen: state.sidebarOpen,
+      theme: state.theme,
+      darkMode: state.darkMode,
+      documentTocOpen: state.documentTocOpen,
+    }),
+  }
+);
+
+// Apply dark mode on initialization
+if (typeof window !== 'undefined' && DARK_MODE_ENABLED) {
+  document.documentElement.classList.add('dark');
+  document.body.classList.add('dark');
 }

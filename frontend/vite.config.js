@@ -87,9 +87,9 @@ export default defineConfig(async () => {
               return 'animation';
             }
             
-            // State management
+            // State management - keep in vendor to avoid initialization issues
             if (id.includes('zustand') || id.includes('immer')) {
-              return 'state';
+              return 'vendor';
             }
             
             // Utilities
