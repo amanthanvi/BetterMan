@@ -1,0 +1,9 @@
+fix: downgrade Tailwind CSS to v3 for compatibility
+
+- Downgrade tailwindcss from v4.1.10 to v3.4.0 to fix PostCSS plugin error
+- Update postcss.config.js with proper type annotations
+- This resolves the build error with PostCSS
+
+🤖 Generated with Claude Code (https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
