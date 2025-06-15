@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd frontend && rm -rf node_modules package-lock.json && npm install && npm run build",
+  "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm install",
   "framework": null,
@@ -57,7 +57,7 @@
       "destination": "/backend/api/index"
     },
     {
-      "source": "/((?!api|.*\\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff|woff2|mp4|webm)).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
