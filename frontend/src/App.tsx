@@ -22,7 +22,7 @@ import { useServiceWorker } from "@/hooks/useServiceWorker";
 import type { Document } from "@/types";
 
 // Import authentication
-import { SupabaseProvider } from "@/providers/SupabaseProvider";
+// import { SupabaseProvider } from "@/providers/SupabaseProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
@@ -201,8 +201,7 @@ function App() {
 			}}
 		>
 			<Router>
-				<SupabaseProvider>
-					<AuthProvider>
+				<AuthProvider>
 						<VersionCheck />
 						<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
 					{/* Navigation */}
@@ -325,8 +324,7 @@ function App() {
 					{/* Performance Monitor (dev only) - Temporarily disabled to debug CORS issues */}
 					{/* {process.env.NODE_ENV === 'development' && <PerformanceMonitor />} */}
 						</div>
-					</AuthProvider>
-				</SupabaseProvider>
+				</AuthProvider>
 			</Router>
 		</ErrorBoundary>
 	);

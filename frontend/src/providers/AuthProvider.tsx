@@ -1,5 +1,4 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useSupabase } from './SupabaseProvider';
 
 interface User {
   id: string;
@@ -38,47 +37,28 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const { user: supabaseUser, loading, signIn, signUp, signOut, updateUser } = useSupabase();
-
-  // Transform Supabase user to our User interface
-  const user: User | null = supabaseUser ? {
-    id: supabaseUser.id,
-    username: supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || 'user',
-    email: supabaseUser.email || '',
-    full_name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name,
-    avatar_url: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
-    is_premium: false,
-    created_at: supabaseUser.created_at,
-  } : null;
+  // For now, just provide a mock auth context
+  const user: User | null = null;
+  const loading = false;
 
   const login = async (username: string, password: string) => {
-    // For now, we'll use email as username
-    const email = username.includes('@') ? username : `${username}@example.com`;
-    const { error } = await signIn(email, password);
-    if (error) throw error;
+    // Mock implementation
+    console.log('Login called with:', username);
   };
 
   const signup = async (username: string, email: string, password: string, full_name?: string) => {
-    const { error } = await signUp(email, password, {
-      username,
-      full_name,
-    });
-    if (error) throw error;
+    // Mock implementation
+    console.log('Signup called with:', username, email);
   };
 
   const logout = async () => {
-    const { error } = await signOut();
-    if (error) throw error;
+    // Mock implementation
+    console.log('Logout called');
   };
 
   const updateProfile = async (data: Partial<User>) => {
-    const updates: any = {};
-    if (data.full_name) updates.full_name = data.full_name;
-    if (data.username) updates.username = data.username;
-    if (data.avatar_url) updates.avatar_url = data.avatar_url;
-    
-    const { error } = await updateUser({ data: updates });
-    if (error) throw error;
+    // Mock implementation
+    console.log('Update profile called with:', data);
   };
 
   const refreshToken = async () => {
@@ -92,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     isLoading: loading,
-    isAuthenticated: !!supabaseUser,
+    isAuthenticated: false,
     login,
     signup,
     logout,

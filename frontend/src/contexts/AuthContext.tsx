@@ -3,9 +3,16 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI, tokenManager, User } from '../services/authApi';
-import { analyticsAPI } from '../services/api';
-import { useAppStore } from '../stores/appStore';
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  full_name?: string;
+  avatar_url?: string;
+  is_premium?: boolean;
+  created_at?: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -36,7 +43,6 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const isAuthenticated = !!user;
 
@@ -49,46 +55,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       
-      // Try to get user info if we have a token
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        const refreshToken = localStorage.getItem('refresh_token') || '';
-        tokenManager.setTokens(token, refreshToken);
-        const user = await authAPI.getMe();
-        setUser(user);
+      // For now, just check localStorage for a mock user
+      const savedUser = localStorage.getItem('betterman-user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
       }
     } catch (error) {
-      // Not authenticated
-      tokenManager.clearTokens();
-      localStorage.removeItem('access_token');
+      console.error('Auth check failed:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const login = async (username: string, password: string) => {
-    try {
-      setError(null);
-      const response = await authAPI.login(username, password);
-      
-      const { access_token, refresh_token } = response;
-      
-      // Store tokens
-      tokenManager.setTokens(access_token, refresh_token);
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
-      
-      // Get user info
-      const user = await authAPI.getMe();
-      setUser(user);
-      
-      // Track login
-      await analyticsAPI.trackSearch('user_login', 1).catch(() => {}); // Don't fail login if analytics fails
-      
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'Login failed');
-      throw error;
-    }
+    // Mock login - in production, this would call your API
+    const mockUser: User = {
+      id: '1',
+      username,
+      email: `${username}@example.com`,
+      full_name: username,
+      created_at: new Date().toISOString(),
+    };
+    
+    setUser(mockUser);
+    localStorage.setItem('betterman-user', JSON.stringify(mockUser));
   };
 
   const signup = async (
@@ -97,79 +87,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     password: string, 
     full_name?: string
   ) => {
-    try {
-      setError(null);
-      
-      // Register user
-      await authAPI.register({
-        username,
-        email,
-        password,
-        full_name
-      });
-      
-      // Auto-login after registration
-      await login(username, password);
-      
-      // Track signup
-      await analyticsAPI.trackSearch('user_signup', 1).catch(() => {});
-      
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'Signup failed');
-      throw error;
-    }
+    // Mock signup - in production, this would call your API
+    const mockUser: User = {
+      id: '1',
+      username,
+      email,
+      full_name: full_name || username,
+      created_at: new Date().toISOString(),
+    };
+    
+    setUser(mockUser);
+    localStorage.setItem('betterman-user', JSON.stringify(mockUser));
   };
 
   const logout = async () => {
-    try {
-      // Call logout endpoint
-      await authAPI.logout();
-    } catch (error) {
-      // Continue with logout even if API call fails
-    } finally {
-      // Clear local state
-      setUser(null);
-      tokenManager.clearTokens();
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      
-      // Clear any cached data
-      localStorage.removeItem('favorites');
-      localStorage.removeItem('preferences');
-      sessionStorage.clear();
-    }
+    setUser(null);
+    localStorage.removeItem('betterman-user');
+    
+    // Clear any cached data
+    localStorage.removeItem('favorites');
+    localStorage.removeItem('preferences');
+    sessionStorage.clear();
   };
 
   const updateProfile = async (data: Partial<User>) => {
-    try {
-      setError(null);
-      const updatedUser = await authAPI.updateMe(data);
-      setUser(updatedUser);
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'Profile update failed');
-      throw error;
-    }
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...data };
+    setUser(updatedUser);
+    localStorage.setItem('betterman-user', JSON.stringify(updatedUser));
   };
 
   const refreshToken = async () => {
-    try {
-      const refresh = tokenManager.getRefreshToken();
-      if (!refresh) throw new Error('No refresh token');
-      
-      const response = await authAPI.refreshToken(refresh);
-      
-      const { access_token, refresh_token: new_refresh } = response;
-      tokenManager.setTokens(access_token, new_refresh || refresh);
-      localStorage.setItem('access_token', access_token);
-      if (new_refresh) {
-        localStorage.setItem('refresh_token', new_refresh);
-      }
-      
-    } catch (error) {
-      // Refresh failed
-      await logout();
-      throw error;
-    }
+    // No-op for mock auth
   };
 
   const value: AuthContextType = {
