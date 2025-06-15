@@ -1,38 +1,60 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
+	CommandLineIcon,
 	MagnifyingGlassIcon,
-	BookmarkIcon,
-	GearIcon,
 	HamburgerMenuIcon,
-	CodeIcon,
+	Cross1Icon,
+	SunIcon,
+	MoonIcon,
+	PersonIcon,
+	ExitIcon,
+	GearIcon,
+	BookmarkIcon,
 } from "@radix-ui/react-icons";
-import { User, LogIn } from "lucide-react";
+
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
-import { useAuth } from "@/providers/AuthProvider";
-import { useSearchStore } from "@/stores/searchStore";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/utils/cn";
 
 interface NavBarProps {
-	className?: string;
-	onSearchClick?: () => void;
+	onSearchClick: () => void;
 }
 
-export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
+export const NavBar: React.FC<NavBarProps> = ({ onSearchClick }) => {
+	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const [userMenuOpen, setUserMenuOpen] = useState(false);
 	const location = useLocation();
-	const {
-		sidebarOpen,
-		toggleSidebar,
-		setCommandPaletteOpen,
-	} = useAppStore();
+	const { darkMode, toggleDarkMode } = useAppStore();
+	const { user, signOut, loading } = useAuth();
+	const userMenuRef = useRef<HTMLDivElement>(null);
 
-	const { clearResults } = useSearchStore();
-	const { user, isAuthenticated, logout } = useAuth();
+	const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
+	// Close user menu when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+				setUserMenuOpen(false);
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, []);
+
+	// Close sidebar on route change
+	useEffect(() => {
+		setSidebarOpen(false);
+	}, [location]);
 
 	const navigation = [
-		{ name: "Favorites", href: "/favorites", icon: BookmarkIcon },
-		{ name: "Settings", href: "/settings", icon: GearIcon },
+		{ name: "Home", href: "/" },
+		{ name: "Documentation", href: "/docs" },
+		{ name: "Favorites", href: "/favorites" },
+		{ name: "Analytics", href: "/analytics" },
+		{ name: "Settings", href: "/settings" },
 	];
 
 	const isActive = (href: string) => {
@@ -42,146 +64,150 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 		return location.pathname.startsWith(href);
 	};
 
-	const handleLogout = async () => {
-		await logout();
-		clearResults();
-	};
-
 	return (
-		<nav}}
+		<nav
 			className={cn(
 				"sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg",
 				"border-b border-gray-200 dark:border-gray-700",
-				className
+				"transition-all duration-200"
 			)}
 		>
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div className="flex items-center justify-between h-16">
-					{/* Left section */}
+				<div className="flex justify-between items-center h-16">
+					{/* Left side */}
 					<div className="flex items-center space-x-4">
 						{/* Mobile menu button */}
-						<Button
-							variant="ghost"
-							size="icon"
+						<button
 							onClick={toggleSidebar}
-							className="md:hidden"
+							className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors lg:hidden"
 						>
 							<HamburgerMenuIcon className="w-5 h-5" />
-						</Button>
+						</button>
 
 						{/* Logo */}
-						<Link
-							to="/"
-							onClick={clearResults}
-							className="flex items-center space-x-3"
-						>
+						<Link to="/" className="flex items-center space-x-2">
 							<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-								<CodeIcon className="w-5 h-5 text-white" />
+								<CommandLineIcon className="w-5 h-5 text-white" />
 							</div>
-							<div className="hidden sm:block">
-								<h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-									BetterMan
-								</h1>
-								<p className="text-xs text-gray-500 dark:text-gray-400 -mt-1">
-									Documentation Platform
-								</p>
-							</div>
+							<span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+								BetterMan
+							</span>
 						</Link>
+
+						{/* Desktop navigation */}
+						<div className="hidden lg:flex items-center space-x-1">
+							{navigation.map((item) => (
+								<Link
+									key={item.name}
+									to={item.href}
+									className={cn(
+										"px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+										isActive(item.href)
+											? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+											: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+									)}
+								>
+									{item.name}
+								</Link>
+							))}
+						</div>
 					</div>
 
-					{/* Center section - Search trigger */}
-					<div className="flex-1 max-w-2xl mx-8">
+					{/* Center - Search */}
+					<div className="flex-1 max-w-lg mx-4">
 						<Button
-							variant="outline"
-							onClick={() => onSearchClick ? onSearchClick() : setCommandPaletteOpen(true)}
+							variant="ghost"
+							onClick={onSearchClick}
 							className="w-full justify-start text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
 						>
-							<MagnifyingGlassIcon className="w-4 h-4 mr-3" />
-							<span className="flex-1 text-left">
-								Search documentation...
-							</span>
-							<kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-1.5 font-mono text-xs text-gray-500 dark:text-gray-400">
-								⌘K
-							</kbd>
+							<MagnifyingGlassIcon className="w-4 h-4 mr-2" />
+							Search documentation...
+							<span className="ml-auto text-xs">⌘K</span>
 						</Button>
 					</div>
 
-					{/* Right section */}
+					{/* Right side */}
 					<div className="flex items-center space-x-2">
-						{/* Navigation links - hidden on mobile */}
-						<div className="hidden md:flex items-center space-x-1">
-							{navigation.map((item) => {
-								const Icon = item.icon;
-								return (
-									<Link
-										key={item.name}
-										to={item.href}
-										onClick={
-											item.href === "/"
-												? clearResults
-												: undefined
-										}
-										className={cn(
-											"flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-											isActive(item.href)
-												? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-												: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-										)}
-									>
-										<Icon className="w-4 h-4" />
-										<span>{item.name}</span>
-									</Link>
-								);
-							})}
-						</div>
+						{/* Theme toggle */}
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={toggleDarkMode}
+							className="p-2"
+						>
+							{darkMode ? (
+								<SunIcon className="w-4 h-4" />
+							) : (
+								<MoonIcon className="w-4 h-4" />
+							)}
+						</Button>
 
 						{/* User menu */}
-						{isAuthenticated ? (
-							<div className="flex items-center space-x-2">
-								<Link
-									to="/profile"
-									className={cn(
-										"flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-										isActive("/profile")
-											? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-											: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-									)}
+						{loading ? (
+							<div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+						) : user ? (
+							<div className="relative" ref={userMenuRef}>
+								<button
+									onClick={() => setUserMenuOpen(!userMenuOpen)}
+									className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium hover:shadow-lg transition-shadow"
 								>
-									{user?.avatar_url ? (
-										<img
-											src={user.avatar_url}
-											alt={user.full_name || user.username || 'User'}
-											className="w-8 h-8 rounded-full"
-										/>
-									) : (
-										<div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
-											{(user?.username?.charAt(0) || user?.email?.charAt(0) || 'U').toUpperCase()}
+									{user.email?.charAt(0).toUpperCase() || "U"}
+								</button>
+
+								{/* User dropdown */}
+								{userMenuOpen && (
+									<div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+										<div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+												{user.email}
+											</p>
 										</div>
-									)}
-									<span className="hidden sm:inline">{user?.full_name || user?.username}</span>
-								</Link>
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={handleLogout}
-									className="hidden sm:flex"
-								>
-									Sign Out
-								</Button>
+										<Link
+											to="/auth/profile"
+											onClick={() => setUserMenuOpen(false)}
+											className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+										>
+											<PersonIcon className="w-4 h-4 mr-2" />
+											Profile
+										</Link>
+										<Link
+											to="/favorites"
+											onClick={() => setUserMenuOpen(false)}
+											className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+										>
+											<BookmarkIcon className="w-4 h-4 mr-2" />
+											Favorites
+										</Link>
+										<Link
+											to="/settings"
+											onClick={() => setUserMenuOpen(false)}
+											className="flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+										>
+											<GearIcon className="w-4 h-4 mr-2" />
+											Settings
+										</Link>
+										<button
+											onClick={() => {
+												signOut();
+												setUserMenuOpen(false);
+											}}
+											className="flex items-center w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+										>
+											<ExitIcon className="w-4 h-4 mr-2" />
+											Sign Out
+										</button>
+									</div>
+								)}
 							</div>
 						) : (
 							<div className="flex items-center space-x-2">
-								<Link to="/sign-in">
-									<Button 
-										variant="ghost" 
-										size="sm"
-									>
-										<LogIn className="w-4 h-4 mr-2" />
+								<Link to="/auth/signin">
+									<Button variant="ghost" size="sm">
 										Sign In
 									</Button>
 								</Link>
-								<Link to="/sign-up" className="hidden sm:block">
-									<Button variant="primary" size="sm">
+								<Link to="/auth/signup">
+									<Button size="sm">
 										Get Started
 									</Button>
 								</Link>
@@ -191,71 +217,97 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 				</div>
 			</div>
 
-			{/* Mobile navigation */}
+			{/* Mobile sidebar */}
 			{sidebarOpen && (
-				<div}}}
-					className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
-				>
-					<div className="px-4 py-3 space-y-1">
-						{navigation.map((item) => {
-							const Icon = item.icon;
-							return (
+				<div className="fixed inset-0 z-50 lg:hidden">
+					{/* Backdrop */}
+					<div
+						className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+						onClick={toggleSidebar}
+					/>
+
+					{/* Sidebar */}
+					<div className="relative flex w-full max-w-xs flex-col bg-white dark:bg-gray-900 shadow-xl">
+						{/* Header */}
+						<div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+							<Link to="/" className="flex items-center space-x-2" onClick={toggleSidebar}>
+								<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+									<CommandLineIcon className="w-5 h-5 text-white" />
+								</div>
+								<span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+									BetterMan
+								</span>
+							</Link>
+							<button
+								onClick={toggleSidebar}
+								className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+							>
+								<Cross1Icon className="w-5 h-5" />
+							</button>
+						</div>
+
+						{/* Navigation */}
+						<div className="flex-1 px-4 py-6 space-y-2">
+							{navigation.map((item) => (
 								<Link
 									key={item.name}
 									to={item.href}
-									onClick={() => {
-										toggleSidebar();
-										if (item.href === "/") clearResults();
-									}}
+									onClick={toggleSidebar}
 									className={cn(
-										"flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+										"flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
 										isActive(item.href)
-											? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-											: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+											? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+											: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
 									)}
 								>
-									<Icon className="w-4 h-4" />
-									<span>{item.name}</span>
+									{item.name}
 								</Link>
-							);
-						})}
-						
-						{/* Mobile auth buttons */}
-						<div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-							{isAuthenticated ? (
+							))}
+						</div>
+
+						{/* User section */}
+						<div className="border-t border-gray-200 dark:border-gray-700 p-4">
+							{user ? (
 								<>
-									<Link
-										to="/profile"
-										onClick={toggleSidebar}
-										className={cn(
-											"flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-											isActive("/profile")
-												? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-												: "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-										)}
-									>
-										<User className="w-4 h-4" />
-										<span>Profile</span>
-									</Link>
-									<button
-										onClick={() => {
-											toggleSidebar();
-											handleLogout();
-										}}
-										className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-									>
-										<LogIn className="w-4 h-4" />
-										<span>Sign Out</span>
-									</button>
+									<div className="flex items-center space-x-3 mb-4">
+										<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+											{user.email?.charAt(0).toUpperCase() || "U"}
+										</div>
+										<div className="flex-1 min-w-0">
+											<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+												{user.email}
+											</p>
+										</div>
+									</div>
+									<div className="space-y-2">
+										<Link
+											to="/auth/profile"
+											onClick={toggleSidebar}
+											className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+										>
+											<PersonIcon className="w-4 h-4" />
+											<span>Profile</span>
+										</Link>
+										<button
+											onClick={() => {
+												signOut();
+												toggleSidebar();
+											}}
+											className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full text-left"
+										>
+											<ExitIcon className="w-4 h-4" />
+											<span>Sign Out</span>
+										</button>
+									</div>
 								</>
 							) : (
 								<>
 									<Link
-										to="/auth/login"
+										to="/auth/signin"
 										onClick={toggleSidebar}
 										className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 									>
-										<LogIn className="w-4 h-4" />
+										<PersonIcon className="w-4 h-4" />
 										<span>Sign In</span>
 									</Link>
 									<Link
