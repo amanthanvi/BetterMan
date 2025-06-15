@@ -4,7 +4,7 @@
   "installCommand": "cd frontend && npm install",
   "framework": null,
   "env": {
-    "FORCE_REBUILD": "2025-01-15-no-motion-fix"
+    "FORCE_REBUILD": "2025-01-15-no-motion-fix-v2"
   },
   "headers": [
     {
