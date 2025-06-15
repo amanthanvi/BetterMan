@@ -36,7 +36,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { setError, clearError } = useAppStore();
+  const [error, setError] = useState<string | null>(null);
 
   const isAuthenticated = !!user;
 
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (username: string, password: string) => {
     try {
-      clearError();
+      setError(null);
       const response = await authAPI.login(username, password);
       
       const { access_token, refresh_token } = response;
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     full_name?: string
   ) => {
     try {
-      clearError();
+      setError(null);
       
       // Register user
       await authAPI.register({
@@ -142,7 +142,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfile = async (data: Partial<User>) => {
     try {
-      clearError();
+      setError(null);
       const updatedUser = await authAPI.updateMe(data);
       setUser(updatedUser);
     } catch (error: any) {

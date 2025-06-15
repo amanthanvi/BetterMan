@@ -62,6 +62,7 @@ export default defineConfig(async () => {
     
     // Rollup options for code splitting
     rollupOptions: {
+      external: [],
       output: {
         // Manual chunks for better caching
         manualChunks: (id) => {
@@ -175,7 +176,10 @@ export default defineConfig(async () => {
       'react-router-dom',
       'zustand'
     ],
-    force: true
+    force: true,
+    esbuildOptions: {
+      target: 'es2020'
+    }
   },
   
   // SSR configuration
