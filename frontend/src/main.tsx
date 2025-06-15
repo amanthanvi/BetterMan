@@ -1,4 +1,5 @@
-import { StrictMode } from 'react'
+import './react-polyfill'
+import React from 'react'
 import { createRoot } from 'react-dom/client' // v18.3.1
 import './index.css'
 import App from './App'
@@ -20,9 +21,9 @@ if (import.meta.env.DEV) {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  <React.StrictMode>
     <App />
-  </StrictMode>,
+  </React.StrictMode>,
 )
 
 // Unregister any existing service workers to fix CORS issues
