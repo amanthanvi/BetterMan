@@ -1,26 +1,20 @@
 # Ignore old application folders
 frontend/
 backend/
-api/index.js
+.old-app/
 docker-compose.yml
 docker-compose.production.yml
 nginx/
 monitoring/
+docs/
+supabase/migrations/
 *.sh
 *.py
 Dockerfile*
 fly.toml
 railway.json
 render.yaml
+venv/
 
-# Keep only Next.js app
-!app/
-!components/
-!lib/
-!public/
-!scripts/
-!package.json
-!package-lock.json
-!next.config.mjs
-!tsconfig.json
-!tailwind.config.ts
+# Keep the betterman-next folder if it exists
+!betterman-next/
