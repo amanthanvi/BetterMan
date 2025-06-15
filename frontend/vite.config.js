@@ -83,7 +83,7 @@ export default defineConfig(async () => {
             }
             
             // Animation libraries
-            if (id.includes('framer-motion') || id.includes('react-spring')) {
+            if (id.includes('react-spring')) {
               return 'animation';
             }
             
@@ -153,13 +153,13 @@ export default defineConfig(async () => {
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: false,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info'],
-        passes: 2,
+        passes: 1,
       },
       mangle: {
         safari10: true,
+        reserved: ['Button', 'forwardRef', 'React']
       },
       format: {
         comments: false,
@@ -174,8 +174,7 @@ export default defineConfig(async () => {
       'react-dom',
       'react-router-dom',
       'zustand'
-    ],
-    exclude: ['framer-motion']
+    ]
   },
   
   // SSR configuration
