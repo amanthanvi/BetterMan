@@ -2,7 +2,6 @@ import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { VersionCheck } from "./components/VersionCheck";
-import { ClientOnly } from "./components/ClientOnly";
 import "./App.css";
 
 // Import components
@@ -93,7 +92,6 @@ function App() {
 	const [loading, setLoading] = useState(true);
 	const [showSearch, setShowSearch] = useState(false);
 	const [showShortcuts, setShowShortcuts] = useState(false);
-	const [isHydrated, setIsHydrated] = useState(false);
 	
 	const { 
 		darkMode, 
@@ -110,11 +108,6 @@ function App() {
 
 	// Initialize app store on mount
 	useEffect(() => {
-		// Mark as hydrated - wait a tick to ensure React is ready
-		const timer = setTimeout(() => {
-			setIsHydrated(true);
-		}, 0);
-		
 		// Clean up old favorites before initializing
 		clearOldFavorites();
 		initialize();
@@ -123,8 +116,6 @@ function App() {
 		addResourceHints();
 		preloadCriticalRoutes();
 		setupHoverPrefetching();
-		
-		return () => clearTimeout(timer);
 	}, [initialize]);
 
 	// Apply theme on dark mode change
@@ -201,17 +192,6 @@ function App() {
 		fetchDocs();
 	}, []);
 
-	// Show loading screen until hydrated
-	if (!isHydrated) {
-		return (
-			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-				<div className="text-center">
-					<div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-					<p className="text-gray-600 dark:text-gray-400">Loading BetterMan...</p>
-				</div>
-			</div>
-		);
-	}
 
 	return (
 		<ErrorBoundary
@@ -332,21 +312,17 @@ function App() {
 						</main>
 					</div>
 
-					{/* Magical Search Modal - Client Only */}
-					<ClientOnly>
-						<MagicalSearchModal
-							isOpen={showSearch}
-							onClose={() => setShowSearch(false)}
-						/>
-					</ClientOnly>
+					{/* Magical Search Modal */}
+					<MagicalSearchModal
+						isOpen={showSearch}
+						onClose={() => setShowSearch(false)}
+					/>
 
-					{/* Keyboard Shortcuts Modal - Client Only */}
-					<ClientOnly>
-						<KeyboardShortcutsModal
-							isOpen={showShortcuts}
-							onClose={() => setShowShortcuts(false)}
-						/>
-					</ClientOnly>
+					{/* Keyboard Shortcuts Modal */}
+					<KeyboardShortcutsModal
+						isOpen={showShortcuts}
+						onClose={() => setShowShortcuts(false)}
+					/>
 
 					{/* Toast Notifications */}
 					<ToastContainer toasts={toasts} removeToast={removeToast} />

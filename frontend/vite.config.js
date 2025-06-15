@@ -40,7 +40,9 @@ export default defineConfig(async () => {
       "@/types": path.resolve(__dirname, "./src/types"),
       "@/stores": path.resolve(__dirname, "./src/stores"),
       "@/services": path.resolve(__dirname, "./src/services"),
-      "@/pages": path.resolve(__dirname, "./src/pages")
+      "@/pages": path.resolve(__dirname, "./src/pages"),
+      // CRITICAL: Replace framer-motion with our no-motion fallback
+      "framer-motion": path.resolve(__dirname, "./src/components/ui/NoMotion.tsx")
     }
   },
   
