@@ -6,7 +6,6 @@ import React, {
 	useMemo,
 	memo,
 	Fragment,
-	Suspense,
 } from "react";
 import {
 	BookmarkIcon,
@@ -52,10 +51,8 @@ import type { Document } from "@/types";
 import { parseGroffSections, parseGroffContent } from "@/utils/groffParser";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-// Lazy load heavy components
-const EnhancedCodeBlock = React.lazy(() =>
-	import("./EnhancedCodeBlock").then((mod) => ({ default: mod.EnhancedCodeBlock }))
-);
+// Import directly to avoid lazy loading issues
+import { EnhancedCodeBlock } from "./EnhancedCodeBlock";
 
 interface DocumentViewerProps {
 	document: Document;
@@ -547,20 +544,12 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 										<span className="ultimate-code-language">{language}</span>
 										<CopyButton text={code} />
 									</div>
-									<Suspense
-										fallback={
-											<div className="ultimate-code-content p-4">
-												<pre>{code}</pre>
-											</div>
-										}
-									>
-										<EnhancedCodeBlock
-											code={code}
-											language={language}
-											showLineNumbers={showLineNumbers}
-											className="ultimate-code-content"
-										/>
-									</Suspense>
+									<EnhancedCodeBlock
+										code={code}
+										language={language}
+										showLineNumbers={showLineNumbers}
+										className="ultimate-code-content"
+									/>
 								</div>
 							);
 						}

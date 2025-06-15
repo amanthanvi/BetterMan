@@ -1,37 +1,13 @@
-import React, { Suspense, Component, ReactNode } from "react";
+import React, { Component, ReactNode } from "react";
 import type { Document } from "@/types";
-
-// Lazy load the viewers for better initial load performance
-const VirtualizedDocumentViewer = React.lazy(() =>
-	import("./VirtualizedDocumentViewer").then((mod) => ({
-		default: mod.VirtualizedDocumentViewer,
-	}))
-);
-
-const OptimizedDocumentViewer = React.lazy(() =>
-	import("./OptimizedDocumentViewer").then((mod) => ({
-		default: mod.OptimizedDocumentViewer,
-	}))
-);
-
-const UltimateDocumentViewer = React.lazy(() =>
-	import("./UltimateDocumentViewer").then((mod) => ({
-		default: mod.UltimateDocumentViewer,
-	}))
-);
+// Import the main viewer directly - no lazy loading to avoid initialization issues
+import { VirtualizedDocumentViewer } from "./VirtualizedDocumentViewer";
 
 interface DocumentViewerWrapperProps {
 	document: Document;
 	enhanced?: boolean;
 	className?: string;
 }
-
-// Loading component
-const DocumentViewerSkeleton = () => (
-	<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-		<div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-	</div>
-);
 
 // Error fallback component
 const DocumentViewerError = ({ error }: { error: Error }) => (
@@ -81,34 +57,16 @@ class DocumentViewerErrorBoundary extends Component<
 }
 
 /**
- * Wrapper component that renders the appropriate document viewer.
- * Uses VirtualizedDocumentViewer for best performance with large documents.
+ * Wrapper component that renders the virtualized document viewer.
+ * Simplified to avoid lazy loading issues in production.
  */
 export const DocumentViewerWrapper: React.FC<DocumentViewerWrapperProps> = ({
 	document,
 	className,
 }) => {
-	// Determine which viewer to use based on document size
-	const estimatedSize = (document.raw_content?.length || 0) + 
-		(document.sections?.reduce((acc, s) => acc + (s.content?.length || 0), 0) || 0);
-	
-	// Use virtualized viewer for large documents (> 100KB)
-	const useVirtualized = estimatedSize > 100000;
-	
-	// Use optimized viewer for medium documents (> 50KB)
-	const useOptimized = estimatedSize > 50000;
-
 	return (
 		<DocumentViewerErrorBoundary>
-			<Suspense fallback={<DocumentViewerSkeleton />}>
-				{useVirtualized ? (
-					<VirtualizedDocumentViewer document={document} className={className} />
-				) : useOptimized ? (
-					<OptimizedDocumentViewer document={document} className={className} />
-				) : (
-					<UltimateDocumentViewer document={document} className={className} />
-				)}
-			</Suspense>
+			<VirtualizedDocumentViewer document={document} className={className} />
 		</DocumentViewerErrorBoundary>
 	);
 };

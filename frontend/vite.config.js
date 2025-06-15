@@ -149,8 +149,11 @@ export default defineConfig(async () => {
       },
     },
     
-    // Disable minification temporarily to debug React import issues
-    minify: false,
+    // Enable minification with safe settings
+    minify: 'esbuild',
+    esbuildOptions: {
+      keepNames: true,
+    },
   },
   
   // Optimize dependencies
