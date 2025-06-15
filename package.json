@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node prebuild.js && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "parse-man-pages": "tsx scripts/parse-man-pages.ts",

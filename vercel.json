@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pwd && ls -la && npm run build",
+  "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "installCommand": "npm install",

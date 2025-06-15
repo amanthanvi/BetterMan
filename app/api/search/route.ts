@@ -40,11 +40,11 @@ export async function GET(request: NextRequest) {
 
     // Track search analytics (non-blocking)
     const supabase = await createClient()
-    supabase.from('analytics').insert({
+    void supabase.from('analytics').insert({
       event_type: 'search',
       search_query: query,
       metadata: { section, results_count: results.length }
-    }).then(console.log).catch(console.error)
+    })
 
     return NextResponse.json({
       results,
