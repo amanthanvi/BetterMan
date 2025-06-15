@@ -1,0 +1,9 @@
+fix: add missing public assets and PostCSS config
+
+- Add public/favicon.ico, favicon-16x16.png, and manifest.json
+- Add postcss.config.js for Tailwind CSS processing
+- Fixes missing assets and CSS not loading in production
+
+🤖 Generated with Claude Code (https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
