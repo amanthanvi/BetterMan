@@ -38,7 +38,7 @@ export function getByCategory(category: string) {
 export function search(query: string, options?: { limit?: number; section?: number }) {
   const { limit = 50, section } = options || {}
   
-  let results = fuse.search(query)
+  let results = fuse.search(query) as any[]
   
   if (section) {
     results = results.filter(r => r.item.section === section)
@@ -57,10 +57,18 @@ export function getSuggestions(prefix: string, limit = 10) {
     .filter(d => d.name.toLowerCase().startsWith(p))
     .sort((a, b) => {
       // Prioritize exact matches and common commands
-      if (a.name === prefix && b.name !== prefix) return -1
-      if (b.name === prefix && a.name !== prefix) return 1
-      if (a.isCommon && !b.isCommon) return -1
-      if (!a.isCommon && b.isCommon) return 1
+      if (a.name === prefix && b.name !== prefix) {
+        return -1
+      }
+      if (b.name === prefix && a.name !== prefix) {
+        return 1
+      }
+      if (a.isCommon && !b.isCommon) {
+        return -1
+      }
+      if (!a.isCommon && b.isCommon) {
+        return 1
+      }
       return a.name.localeCompare(b.name)
     })
     .slice(0, limit)
