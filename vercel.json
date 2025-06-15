@@ -1,11 +1,9 @@
 {
-  "version": 2,
-  "buildCommand": "cd frontend && rm -rf node_modules package-lock.json .next .vercel/output && npm cache clean --force && npm install --force --legacy-peer-deps && npm run build",
-  "outputDirectory": "frontend/dist", 
-  "installCommand": "cd frontend && npm install",
+  "buildCommand": "cd frontend && npm install --force --legacy-peer-deps && npm run build",
+  "outputDirectory": "frontend/dist",
   "framework": null,
   "env": {
-    "FORCE_REBUILD": "2025-01-15-removed-framer-motion"
+    "FORCE_REBUILD": "2025-01-15-node-api"
   },
   "headers": [
     {
@@ -33,24 +31,8 @@
   ],
   "rewrites": [
     {
-      "source": "/api/health",
-      "destination": "/api/health.py"
-    },
-    {
-      "source": "/api/documents",
-      "destination": "/api/documents.py"
-    },
-    {
-      "source": "/api/documents/:id",
-      "destination": "/api/documents.py"
-    },
-    {
-      "source": "/api/search",
-      "destination": "/api/search.py"
-    },
-    {
-      "source": "/api/analytics/:path*",
-      "destination": "/api/analytics.py"
+      "source": "/api/(.*)",
+      "destination": "/api"
     },
     {
       "source": "/(.*)",
@@ -58,8 +40,7 @@
     }
   ],
   "functions": {
-    "api/*.py": {
-      "runtime": "@vercel/python@3.1.0",
+    "api/index.js": {
       "includeFiles": "backend/generated_manpages/**,backend/extracted_manpages/**"
     }
   }
