@@ -1,0 +1,2 @@
+# Minimal requirements for Vercel
+# No dependencies needed for basic HTTP handler
