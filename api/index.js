@@ -37,6 +37,57 @@ function loadManpages() {
     console.error('Error loading manpages:', e);
   }
   
+  // If no manpages loaded, provide some mock data
+  if (manpages.length === 0) {
+    manpages.push(
+      {
+        id: 'ls',
+        command: 'ls',
+        brief: 'list directory contents',
+        section: '1',
+        category: 'file-management',
+        tags: 'files,directories,listing',
+        priority: 10
+      },
+      {
+        id: 'cd',
+        command: 'cd',
+        brief: 'change directory',
+        section: '1',
+        category: 'navigation',
+        tags: 'directories,navigation',
+        priority: 10
+      },
+      {
+        id: 'grep',
+        command: 'grep',
+        brief: 'print lines matching a pattern',
+        section: '1',
+        category: 'text-processing',
+        tags: 'search,text,pattern',
+        priority: 9
+      },
+      {
+        id: 'find',
+        command: 'find',
+        brief: 'search for files in a directory hierarchy',
+        section: '1',
+        category: 'file-management',
+        tags: 'search,files,directories',
+        priority: 8
+      },
+      {
+        id: 'cat',
+        command: 'cat',
+        brief: 'concatenate files and print on the standard output',
+        section: '1',
+        category: 'file-management',
+        tags: 'files,output,concatenate',
+        priority: 7
+      }
+    );
+  }
+  
   manpagesCache = manpages;
   return manpages;
 }

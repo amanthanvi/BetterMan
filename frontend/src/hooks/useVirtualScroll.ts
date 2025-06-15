@@ -78,7 +78,7 @@ export function useVirtualScroll<T>(
       
       // Apply overscan
       start = Math.max(0, start - overscan);
-      end = Math.min(items.length - 1, end + overscan);
+      end = Math.min(safeItems.length - 1, end + overscan);
       
       return {
         startIndex: start,
@@ -90,7 +90,7 @@ export function useVirtualScroll<T>(
       // Fixed heights
       const start = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
       const end = Math.min(
-        items.length - 1,
+        safeItems.length - 1,
         Math.ceil((scrollTop + containerHeight) / itemHeight) + overscan
       );
       
@@ -98,15 +98,15 @@ export function useVirtualScroll<T>(
         startIndex: start,
         endIndex: end,
         offsetY: start * itemHeight,
-        totalHeight: items.length * itemHeight,
+        totalHeight: safeItems.length * itemHeight,
       };
     }
-  }, [scrollTop, containerHeight, itemHeight, items.length, overscan, itemPositions]);
+  }, [scrollTop, containerHeight, itemHeight, safeItems.length, overscan, itemPositions]);
 
   // Get visible items
   const visibleItems = useMemo(() => {
-    return items.slice(startIndex, endIndex + 1);
-  }, [items, startIndex, endIndex]);
+    return safeItems.slice(startIndex, endIndex + 1);
+  }, [safeItems, startIndex, endIndex]);
 
   // Handle scroll
   const handleScroll = useCallback(() => {
