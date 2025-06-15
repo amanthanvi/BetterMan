@@ -65,13 +65,13 @@ export const MagicalSearchModal: React.FC<MagicalSearchModalProps> = ({
 			{isOpen && (
 				<>
 					{/* Backdrop */}
-					<div}}}
+					<div
 						onClick={onClose}
 						className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
 					/>
 
 					{/* Modal */}
-					<div}}}}
+					<div}
 						className="fixed inset-x-0 top-[8%] mx-auto max-w-4xl z-50 px-4"
 					>
 						<div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">

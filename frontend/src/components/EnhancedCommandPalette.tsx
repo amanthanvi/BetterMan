@@ -315,13 +315,13 @@ export const EnhancedCommandPalette: React.FC<EnhancedCommandPaletteProps> = ({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div}}}
+          <div
             onClick={onClose}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
           />
 
           {/* Command Palette */}
-          <div}}}}
+          <div}
             className="fixed inset-x-0 top-[10%] mx-auto max-w-3xl z-50 px-4"
           >
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">

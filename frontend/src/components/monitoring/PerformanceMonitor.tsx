@@ -215,7 +215,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
     <div className={cn('fixed z-50', positionClasses[position])}>
       <>
         {!isExpanded ? (
-          <button}}}
+          <button
             onClick={() => setIsExpanded(true)}
             className={cn(
               'p-3 rounded-full shadow-lg',
@@ -229,7 +229,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
           </button>
         ) : (
-          <div}}}
+          <div
             className={cn(
               'w-96 bg-white dark:bg-gray-800',
               'border border-gray-200 dark:border-gray-700',
@@ -327,7 +327,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
               
               <>
                 {showDetails && (
-                  <div}}}
+                  <div
                     className="overflow-hidden"
                   >
                     <div className="max-h-48 overflow-y-auto">

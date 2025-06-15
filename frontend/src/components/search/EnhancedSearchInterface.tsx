@@ -209,7 +209,7 @@ export const EnhancedSearchInterface: React.FC = () => {
           {/* Filter Section */}
           <>
             {showFilters && (
-              <div}}}}
+              <div}
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700">
@@ -247,7 +247,7 @@ export const EnhancedSearchInterface: React.FC = () => {
       <>
         {isFocused && suggestions.length > 0 && (
           <div
-            id="search-suggestions"}}}}
+            id="search-suggestions"}
             className="absolute top-full left-0 right-0 mt-2 z-50"
           >
             <Card variant="elevated" padding="none" className="overflow-hidden">

@@ -707,7 +707,7 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 			{/* TOC Sidebar */}
 			<>
 				{showToc && (
-					<aside}}}
+					<aside
 						className="ultimate-toc fixed left-0 top-[120px] bottom-0 w-80 flex flex-col"
 					>
 						<div className="p-6 border-b">
@@ -862,7 +862,7 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 			{/* Scroll to Top */}
 			<>
 				{showScrollTop && (
-					<button}}}
+					<button
 						onClick={() => {
 							parentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 						}}

@@ -221,7 +221,7 @@ export const EnhancedNavbar: React.FC = () => {
         {/* Mobile Menu */}
         <>
           {isMobileMenuOpen && (
-            <div}}}}
+            <div}
               className="md:hidden border-t border-gray-200 dark:border-gray-700"
             >
               <div className="px-4 py-4 space-y-2 bg-white dark:bg-gray-900">
@@ -366,7 +366,7 @@ const UserMenu: React.FC<{
 
       <>
         {isOpen && (
-          <div}}}}
+          <div}
             className={cn(
               'absolute right-0 mt-2 w-64',
               'bg-white dark:bg-gray-800 rounded-xl shadow-lg',

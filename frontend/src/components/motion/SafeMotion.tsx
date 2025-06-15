@@ -1,68 +1,38 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
-interface SafeMotionProps extends Omit<HTMLMotionProps<"div">, 'children'> {
+interface SafeMotionProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-interface SafeAnimatePresenceProps extends Omit<> {
+interface SafeAnimatePresenceProps {
   children: React.ReactNode;
 }
 
-// Create a safe wrapper that only loads framer-motion on the client
+// Create a safe wrapper that just renders children without motion
 export const SafeMotion: React.FC<SafeMotionProps> = ({ 
   children, 
   fallback,
+  className,
+  style,
   ...props 
 }) => {
-  const [Motion, setMotion] = useState<any>(null);
-
-  useEffect(() => {
-    // Dynamically import framer-motion only on client side
-    import('framer-motion').then((mod) => {
-      setMotion(() => mod.motion);
-    });
-  }, []);
-
-  if (!Motion) {
-    if (fallback) {
-      return <>{fallback}</>;
-    }
-    return <div {...(props as any)}>{children}</div>;
-  }
-
-  return <Motion.div {...props}>{children}</Motion.div>;
+  return (
+    <div className={className} style={style} {...props}>
+      {children}
+    </div>
+  );
 };
 
 export const SafeAnimatePresence: React.FC<SafeAnimatePresenceProps> = ({ 
   children,
-  ...props 
 }) => {
-  const [AnimatePresence, setAnimatePresence] = useState<any>(null);
-
-  useEffect(() => {
-    // Dynamically import framer-motion only on client side
-    import('framer-motion').then((mod) => {
-      setAnimatePresence(() => mod.AnimatePresence);
-    });
-  }, []);
-
-  if (!AnimatePresence) {
-    return <>{children}</>;
-  }
-
   return <>{children}</>;
 };
 
-// Export a hook for using motion programmatically
+// Export a hook that returns null (no motion)
 export const useMotion = () => {
-  const [motion, setMotion] = useState<any>(null);
-
-  useEffect(() => {
-    import('framer-motion').then((mod) => {
-      setMotion(mod.motion);
-    });
-  }, []);
-
-  return motion;
+  return null;
 };

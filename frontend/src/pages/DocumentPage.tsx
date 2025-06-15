@@ -104,7 +104,7 @@ export const DocumentPage: React.FC = () => {
 	}
 
 	return (
-		<div}}}
+		<div
 			className="document-page"
 		>
                         <DocumentViewerWrapper document={document} />

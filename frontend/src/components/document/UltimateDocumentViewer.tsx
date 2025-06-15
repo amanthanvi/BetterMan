@@ -993,13 +993,13 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Progress Bar */}
 			<div
 				className="ultimate-progress-bar"
-				style={{ scaleX: scrollProgress / 100 }}}
+				style={{ scaleX: scrollProgress / 100 
 			/>
 
 			{/* Mobile TOC Overlay */}
 			<>
 				{showToc && (
-					<div}}}}
+					<div}
 						className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
 						onClick={() => setShowToc(false)}
 					/>
@@ -1233,7 +1233,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			<>
 				{showToc && (
 					<aside
-						ref={tocRef}}}}}
+						ref={tocRef}}
 						className={cn(
 							"ultimate-toc",
 							"fixed left-0 top-[120px] bottom-0 w-80 flex flex-col overflow-hidden",
@@ -1393,7 +1393,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 
 									return (
 										<section
-											key={section.id}}}}
+											key={section.id}
 											id={section.id}
 											className={cn(
 												"ultimate-section scroll-mt-32",
@@ -1443,7 +1443,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 											{/* Section content */}
 											<>
 												{!isCollapsed && (
-													<div}}}}
+													<div}
 														className={cn(
 															"ultimate-section-content overflow-hidden",
 															section.level === 3 && "ml-8"
@@ -1475,7 +1475,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Scroll to Top Button */}
 			<>
 				{showScrollTop && (
-					<button}}}
+					<button
 						onClick={scrollToTop}
 						className="scroll-to-top"
 						title="Scroll to top"
@@ -1504,7 +1504,7 @@ const TocItemList: React.FC<{
 
 				return (
 					<Fragment key={item.id}>
-						<button}}}}
+						<button}
 							onClick={() => onItemClick(item.id)}
 							className={cn(
 								"toc-item group flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 relative overflow-hidden",

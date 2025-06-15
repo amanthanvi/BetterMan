@@ -40,7 +40,7 @@ export const Toast: React.FC<ToastProps> = ({
   };
 
   return (
-    <div}}}
+    <div
       className={cn(
         'flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg',
         colors[type]

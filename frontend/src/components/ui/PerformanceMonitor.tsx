@@ -205,7 +205,7 @@ export const PerformanceMonitor: React.FC = () => {
 			{/* Monitor Panel */}
 			<>
 				{isOpen && (
-					<div}}}
+					<div
 						className="fixed bottom-20 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]"
 					>
 						<div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700">

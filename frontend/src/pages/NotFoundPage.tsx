@@ -15,7 +15,7 @@ export const NotFoundPage: React.FC = () => {
         className="text-center max-w-md mx-auto px-4"
       >
         {/* 404 illustration */}
-        <div}}}
+        <div
           className="mb-8"
         >
           <div className="relative">
@@ -31,7 +31,7 @@ export const NotFoundPage: React.FC = () => {
         </div>
         
         {/* Error message */}
-        <div}}}
+        <div
           className="mb-8"
         >
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
@@ -44,7 +44,7 @@ export const NotFoundPage: React.FC = () => {
         </div>
         
         {/* Suggestions */}
-        <div}}}
+        <div
           className="mb-8"
         >
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -71,7 +71,7 @@ export const NotFoundPage: React.FC = () => {
         </div>
         
         {/* Actions */}
-        <div}}}
+        <div
           className="flex flex-col sm:flex-row gap-3 justify-center"
         >
           <Link to="/">
@@ -92,7 +92,7 @@ export const NotFoundPage: React.FC = () => {
         </div>
         
         {/* Quick search */}
-        <div}}}
+        <div
           className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700"
         >
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">

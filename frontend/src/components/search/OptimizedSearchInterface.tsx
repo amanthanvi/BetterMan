@@ -305,7 +305,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
           {/* Search Suggestions */}
           <>
             {showSuggestions && suggestions.length > 0 && (
-              <div}}}}
+              <div}
                 id="search-suggestions"
                 className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
               >

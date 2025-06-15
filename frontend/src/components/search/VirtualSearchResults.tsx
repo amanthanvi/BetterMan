@@ -59,7 +59,7 @@ const ResultCard = React.memo<{
   }, []);
 
   return (
-    <div}}}
+    <div
     >
       <Card
         className={cn(

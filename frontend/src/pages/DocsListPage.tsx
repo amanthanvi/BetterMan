@@ -93,7 +93,7 @@ export const DocsListPage: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div}}}
+        <div
           className="mb-8 space-y-4"
         >
           <div className="flex flex-col sm:flex-row gap-4">
@@ -133,7 +133,7 @@ export const DocsListPage: React.FC = () => {
             .sort(([a], [b]) => Number(a) - Number(b))
             .map(([section, docs], sectionIndex) => (
               <div
-                key={section}}}}
+                key={section}
               >
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <FileTextIcon className="w-5 h-5" />
@@ -147,7 +147,7 @@ export const DocsListPage: React.FC = () => {
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((doc, index) => (
                       <div
-                        key={doc.id}}}}
+                        key={doc.id}
                       >
                         <Link
                           to={`/docs/${doc.name}.${doc.section}`}

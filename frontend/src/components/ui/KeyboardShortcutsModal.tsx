@@ -37,13 +37,13 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div}}}
+          <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
             onClick={onClose}
           />
 
           {/* Modal */}
-          <div}}}}
+          <div}
             className={cn(
               "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
               "w-full max-w-2xl max-h-[80vh]",
@@ -86,7 +86,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                   <div className="space-y-3">
                     {group.shortcuts.map((shortcut, index) => (
                       <div
-                        key={index}}}}
+                        key={index}
                         className="flex items-center justify-between"
                       >
                         <span className="text-gray-700 dark:text-gray-300">

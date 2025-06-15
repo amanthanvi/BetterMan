@@ -209,7 +209,7 @@ export const AnalyticsPage: React.FC = () => {
 			{/* Charts Row */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* Popular Commands */}
-				<div}}}
+				<div
 					className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 				>
 					<div className="flex items-center justify-between mb-4">
@@ -254,7 +254,7 @@ export const AnalyticsPage: React.FC = () => {
 				</div>
 
 				{/* System Health */}
-				<div}}}
+				<div
 					className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 				>
 					<div className="flex items-center justify-between mb-4">
@@ -297,7 +297,7 @@ export const AnalyticsPage: React.FC = () => {
 			</div>
 
 			{/* Recent Activity */}
-			<div}}}
+			<div
 				className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 			>
 				<div className="flex items-center justify-between mb-4">
@@ -333,7 +333,7 @@ const MetricCardComponent: React.FC<MetricCardComponentProps> = ({
 	};
 
 	return (
-		<div}}}
+		<div
 			className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 		>
 			<div className="flex items-center justify-between">
@@ -413,7 +413,7 @@ const HealthMetric: React.FC<HealthMetricProps> = ({
 				</span>
 			</div>
 			<div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-				<div}%` }}}
+				<div}%` 
 					className={`h-full rounded-full ${
 						colorClasses[color as keyof typeof colorClasses]
 					}`}

@@ -162,7 +162,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 					>
 						<div className="max-w-4xl mx-auto">
 							{/* Logo and title */}
-							<div}}}
+							<div
 								className="mb-8"
 							>
 								<div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -182,7 +182,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 							</div>
 
 							{/* Premium Search interface */}
-							<div}}}
+							<div
 								className="mb-8"
 							>
 								<SearchErrorBoundary onRetry={() => window.location.reload()}>
@@ -191,7 +191,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 							</div>
 
 							{/* Quick actions */}
-							<div}}}
+							<div
 								className="flex flex-wrap justify-center gap-2 mb-8"
 							>
 								<Button
@@ -218,7 +218,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 							</div>
 
 							{/* Stats */}
-							<div}}}
+							<div
 								className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto"
 							>
 								<div className="text-center">
@@ -284,7 +284,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 				{!hasSearched && (
 					<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 						{/* Popular Commands */}
-						<section}}}
+						<section
 							className="lg:col-span-2"
 						>
 							<div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -309,7 +309,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 									) : popularCommands.length > 0 ? (
 										popularCommands.map((command, index) => (
 										<button
-											key={command.id}}}}
+											key={command.id}
 											onClick={() =>
 												handleDocumentSelect(command)
 											}
@@ -338,7 +338,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 						</section>
 
 						{/* Sidebar */}
-						<aside}}}
+						<aside
 							className="space-y-6"
 						>
 							{/* Recent Documents */}

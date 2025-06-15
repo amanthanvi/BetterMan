@@ -34,7 +34,7 @@ export const OptimizedLoader: React.FC<OptimizedLoaderProps> = ({
   if (error) {
     return (
       <>
-        <div}}}
+        <div
           className={cn("error-container", className)}
         >
           {errorComponent || <DefaultError error={error} />}
@@ -47,14 +47,14 @@ export const OptimizedLoader: React.FC<OptimizedLoaderProps> = ({
     <>
       {showLoader && isLoading ? (
         <div
-          key="loader"}}}
+          key="loader"
           className={cn("loader-container", className)}
         >
           {loadingComponent || <DefaultLoader />}
         </div>
       ) : (
         <div
-          key="content"}}}
+          key="content"
           className={cn("content-container", className)}
         >
           {children}

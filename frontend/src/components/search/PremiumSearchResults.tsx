@@ -156,7 +156,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 	};
 
 	return (
-		<div}}}}
+		<div}
 			onHoverStart={() => setIsHovered(true)}
 			onHoverEnd={() => setIsHovered(false)}
 			className="group relative"
@@ -281,7 +281,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 			{/* Hover Effect - Glow */}
 			<>
 				{isHovered && (
-					<div}}}
+					<div
 						className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-400/20 to-purple-400/20 blur-xl"
 					/>
 				)}

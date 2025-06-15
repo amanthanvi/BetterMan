@@ -133,13 +133,13 @@ export const PremiumSearch: React.FC<PremiumSearchProps> = ({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div}}}
+          <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
             onClick={onClose}
           />
 
           {/* Search modal */}
-          <div}}}}
+          <div}
             className={cn(
               "fixed top-[10%] left-1/2 -translate-x-1/2 z-50",
               "w-full max-w-3xl max-h-[80vh]",
@@ -194,7 +194,7 @@ export const PremiumSearch: React.FC<PremiumSearchProps> = ({
                 
                 <>
                   {showFilters && (
-                    <div}}}
+                    <div
                       className="flex items-center gap-1"
                     >
                       {sections.map((section) => (
@@ -309,7 +309,7 @@ export const PremiumSearch: React.FC<PremiumSearchProps> = ({
                 <div className="py-2">
                   {results.map((result, index) => (
                     <button
-                      key={result.id}}}}
+                      key={result.id}
                       onClick={() => handleSelectResult(result)}
                       onMouseEnter={() => setSelectedIndex(index)}
                       className={cn(
