@@ -124,12 +124,8 @@ module.exports = (req, res) => {
     
     documents.sort((a, b) => b.popularity_score - a.popularity_score);
     
-    res.json({
-      documents: documents,
-      total: manpages.length,
-      page: 1,
-      per_page: 100
-    });
+    // Return array directly for /api/docs endpoint
+    res.json(documents);
   }
   else if (url.startsWith('/api/search')) {
     const query = new URL(url, `http://${req.headers.host}`).searchParams.get('q') || '';

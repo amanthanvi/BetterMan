@@ -60,8 +60,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 	const { recentDocs, favorites, searchHistory, setCommandPaletteOpen } =
 		useAppStore();
 
-	const hasSearched = query.length > 0;
-	const hasResults = results.length > 0;
+	const hasSearched = query && query.length > 0;
+	const hasResults = results && results.length > 0;
 
 	// Fetch analytics data on mount
 	useEffect(() => {

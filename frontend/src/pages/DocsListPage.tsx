@@ -19,7 +19,14 @@ export const DocsListPage: React.FC = () => {
       try {
         setLoading(true);
         const response = await documentAPI.getAll({ limit: 100 });
-        setDocuments(response);
+        // Handle both array response and object with documents property
+        if (Array.isArray(response)) {
+          setDocuments(response);
+        } else if (response && typeof response === 'object' && 'documents' in response) {
+          setDocuments((response as any).documents || []);
+        } else {
+          setDocuments([]);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load documents");
       } finally {
