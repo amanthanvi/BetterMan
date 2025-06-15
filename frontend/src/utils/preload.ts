@@ -80,6 +80,7 @@ export function addResourceHints() {
   } catch (error) {
     console.warn('Failed to add resource hints:', error);
   }
+}
 
 // Intersection Observer for lazy loading images
 export function setupLazyLoading() {
