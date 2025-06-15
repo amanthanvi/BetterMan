@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "parse-man-pages": "tsx scripts/parse-man-pages.ts",
-    "build-search-index": "tsx scripts/build-search-index.ts",
-    "prebuild": "npm run parse-man-pages && npm run build-search-index"
+    "build-search-index": "tsx scripts/build-search-index.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
