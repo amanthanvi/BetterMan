@@ -158,8 +158,6 @@ describe('DocumentViewer', () => {
     expect(mockWriteText).toHaveBeenCalledWith('ls -la')
     expect(screen.getByText('Copied!')).toBeInTheDocument()
   })
-
-
   it('switches between content views', async () => {
     vi.mocked(api.getDocument).mockResolvedValue(mockDocument)
 

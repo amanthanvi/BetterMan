@@ -173,14 +173,14 @@ export default defineConfig(async () => {
       'react',
       'react-dom',
       'react-router-dom',
-      'zustand',
-      'framer-motion'
+      'zustand'
     ],
+    exclude: ['framer-motion']
   },
   
   // SSR configuration
   ssr: {
-    noExternal: ['framer-motion']
+    noExternal: []
   },
   };
 });

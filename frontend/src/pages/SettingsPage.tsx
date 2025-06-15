@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -18,8 +16,6 @@ import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
 import { cn } from "@/utils/cn";
 import { clearAllCaches } from "@/utils/clearCache";
-
-
 export const SettingsPage: React.FC = () => {
 	const {
 		preferences,
@@ -31,8 +27,6 @@ export const SettingsPage: React.FC = () => {
 		recentDocs,
 		clearRecentDocs,
 	} = useAppStore();
-
-
 	const handleFontSizeChange = (fontSize: "small" | "medium" | "large") => {
 		updatePreferences({ fontSize });
 

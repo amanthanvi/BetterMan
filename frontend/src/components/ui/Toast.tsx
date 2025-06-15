@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckIcon, Cross1Icon, InfoCircledIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';

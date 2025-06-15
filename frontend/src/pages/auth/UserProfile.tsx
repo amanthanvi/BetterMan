@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from 'react';
 import { useSupabase } from '@/providers/SupabaseProvider';
 import { useAuth } from '@/providers/AuthProvider';

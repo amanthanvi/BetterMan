@@ -11,8 +11,6 @@ interface EnhancedCodeBlockProps {
   showLineNumbers?: boolean;
   className?: string;
 }
-
-
 export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
   code,
   language = 'text',
