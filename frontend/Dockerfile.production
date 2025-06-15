@@ -4,8 +4,9 @@ FROM node:23-alpine as builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and scripts
 COPY package*.json ./
+COPY scripts ./scripts
 
 # Install dependencies
 RUN npm ci --only=production

@@ -42,7 +42,7 @@ prometheus-client==0.21.1
 sentry-sdk[fastapi]==2.19.2
 
 # AI/ML (Optional)
-openai==1.59.0
+openai==1.59.2
 numpy==2.2.0
 
 # Testing

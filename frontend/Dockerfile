@@ -2,8 +2,9 @@ FROM node:23-alpine
 
 WORKDIR /app
 
-# Copy package files first for better layer caching
+# Copy package files and scripts first for better layer caching
 COPY package*.json ./
+COPY scripts ./scripts
 
 # Install dependencies with legacy peer deps to handle React 19 conflicts
 RUN npm install --legacy-peer-deps
