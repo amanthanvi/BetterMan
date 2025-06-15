@@ -3,7 +3,7 @@
   "outputDirectory": "frontend/dist",
   "framework": null,
   "env": {
-    "FORCE_REBUILD": "2025-01-15-zustand-fix"
+    "FORCE_REBUILD": "2025-01-15-disable-minify"
   },
   "headers": [
     {

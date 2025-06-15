@@ -149,22 +149,8 @@ export default defineConfig(async () => {
       },
     },
     
-    // Minification options
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: false,
-        drop_debugger: true,
-        passes: 1,
-      },
-      mangle: {
-        safari10: true,
-        reserved: ['Button', 'forwardRef', 'React']
-      },
-      format: {
-        comments: false,
-      },
-    },
+    // Disable minification to avoid Zustand issues
+    minify: false,
   },
   
   // Optimize dependencies
