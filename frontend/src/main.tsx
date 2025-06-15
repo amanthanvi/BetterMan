@@ -6,8 +6,11 @@ import App from './App'
 // import * as serviceWorker from './utils/serviceWorker'
 import { useAppStore } from './stores/appStore'
 
-// Make store available globally for toast
-(window as any).__appStore = useAppStore.getState();
+// Defer store initialization to avoid circular dependency issues
+setTimeout(() => {
+  // Make store available globally for toast
+  (window as any).__appStore = useAppStore.getState();
+}, 0);
 
 // Enable performance monitoring in development
 if (import.meta.env.DEV) {

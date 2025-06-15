@@ -81,26 +81,59 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, removeTo
 // Helper function for showing toasts
 export const toast = {
   success: (message: string) => {
-    const store = (window as any).__appStore;
-    if (store) {
+    // Use dynamic import to avoid circular dependency
+    const getStore = () => {
+      try {
+        return (window as any).__appStore || null;
+      } catch (e) {
+        console.warn('Toast store not available yet');
+        return null;
+      }
+    };
+    const store = getStore();
+    if (store && store.addToast) {
       store.addToast(message, 'success');
     }
   },
   error: (message: string) => {
-    const store = (window as any).__appStore;
-    if (store) {
+    const getStore = () => {
+      try {
+        return (window as any).__appStore || null;
+      } catch (e) {
+        console.warn('Toast store not available yet');
+        return null;
+      }
+    };
+    const store = getStore();
+    if (store && store.addToast) {
       store.addToast(message, 'error');
     }
   },
   info: (message: string) => {
-    const store = (window as any).__appStore;
-    if (store) {
+    const getStore = () => {
+      try {
+        return (window as any).__appStore || null;
+      } catch (e) {
+        console.warn('Toast store not available yet');
+        return null;
+      }
+    };
+    const store = getStore();
+    if (store && store.addToast) {
       store.addToast(message, 'info');
     }
   },
   warning: (message: string) => {
-    const store = (window as any).__appStore;
-    if (store) {
+    const getStore = () => {
+      try {
+        return (window as any).__appStore || null;
+      } catch (e) {
+        console.warn('Toast store not available yet');
+        return null;
+      }
+    };
+    const store = getStore();
+    if (store && store.addToast) {
       store.addToast(message, 'warning');
     }
   }
