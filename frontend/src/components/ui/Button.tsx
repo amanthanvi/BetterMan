@@ -1,8 +1,8 @@
-import { FC, ButtonHTMLAttributes } from 'react';
+import React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cn } from '@/utils/cn';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'outline';
   size?: 'sm' | 'md' | 'lg' | 'icon';
   asChild?: boolean;
@@ -24,7 +24,7 @@ const buttonSizes = {
   icon: 'w-10 h-10 p-0',
 };
 
-export const Button: FC<ButtonProps> = ({ 
+export const Button: React.FC<ButtonProps> = ({ 
   className, 
   variant = 'primary', 
   size = 'md', 

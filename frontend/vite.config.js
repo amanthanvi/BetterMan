@@ -174,12 +174,18 @@ export default defineConfig(async () => {
       'react-dom',
       'react-router-dom',
       'zustand'
-    ]
+    ],
+    force: true
   },
   
   // SSR configuration
   ssr: {
     noExternal: []
+  },
+  
+  // Ensure React is available globally
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
   },
   };
 });

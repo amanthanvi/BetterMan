@@ -1,18 +1,18 @@
-import { forwardRef, ReactNode, ButtonHTMLAttributes } from 'react';
+import React from 'react';
 import { cn } from '@/utils/cn';
 
-export interface PremiumButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface PremiumButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'gradient';
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   isLoading?: boolean;
-  leftIcon?: ReactNode;
-  rightIcon?: ReactNode;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
   fullWidth?: boolean;
   pill?: boolean;
   glow?: boolean;
 }
 
-export const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
+export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonProps>(
   (
     {
       className,
