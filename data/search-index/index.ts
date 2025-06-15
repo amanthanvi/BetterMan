@@ -7,7 +7,7 @@ import commonCommands from './common-commands.json'
 import Fuse from 'fuse.js'
 
 // Reconstruct Fuse index
-const fuseIndex = Fuse.parseIndex(fuseIndexData)
+const fuseIndex = Fuse.parseIndex(fuseIndexData as any)
 
 // Create Fuse instance
 export const fuse = new Fuse(documents, {

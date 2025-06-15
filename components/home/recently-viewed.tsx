@@ -41,7 +41,9 @@ export async function RecentlyViewed({ userId }: RecentlyViewedProps) {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {history.map((item, index) => {
         const doc = item.documents as any
-        if (!doc) return null
+        if (!doc) {
+          return null
+        }
         
         return (
           <Link

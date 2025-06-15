@@ -1,0 +1,9 @@
+fix: resolve TypeScript error in search index
+
+- Fix Fuse.js index type error in data/search-index/index.ts
+- Add braces to if statement in recently-viewed.tsx per linting rules
+- Build should now complete successfully
+
+🤖 Generated with Claude Code (https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
