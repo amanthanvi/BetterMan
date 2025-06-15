@@ -48,6 +48,10 @@
       "destination": "/api/search.py"
     },
     {
+      "source": "/api/analytics/:path*",
+      "destination": "/api/analytics.py"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
