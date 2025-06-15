@@ -23,7 +23,7 @@ import type { Document } from "@/types";
 
 // Import authentication
 // import { SupabaseProvider } from "@/providers/SupabaseProvider";
-import { AuthProvider } from "@/providers/AuthProvider";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Import test page directly for debugging
