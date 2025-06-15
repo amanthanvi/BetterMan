@@ -2,6 +2,8 @@
  * Preloading utilities for performance optimization
  */
 
+import { config } from '@/utils/config';
+
 // Critical routes that should be preloaded
 const CRITICAL_ROUTES = [
   '/docs',
@@ -56,21 +58,28 @@ export function addResourceHints() {
   const head = document.head;
   
   // Preconnect to API server
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-  const apiOrigin = new URL(apiUrl).origin;
+  const apiUrl = config.apiUrl;
   
-  const preconnect = document.createElement('link');
-  preconnect.rel = 'preconnect';
-  preconnect.href = apiOrigin;
-  preconnect.crossOrigin = 'anonymous';
-  head.appendChild(preconnect);
+  // Skip if using relative URLs in production
+  if (!apiUrl) return;
   
-  // DNS prefetch as fallback
-  const dnsPrefetch = document.createElement('link');
-  dnsPrefetch.rel = 'dns-prefetch';
-  dnsPrefetch.href = apiOrigin;
-  head.appendChild(dnsPrefetch);
-}
+  try {
+    const apiOrigin = new URL(apiUrl).origin;
+    
+    const preconnect = document.createElement('link');
+    preconnect.rel = 'preconnect';
+    preconnect.href = apiOrigin;
+    preconnect.crossOrigin = 'anonymous';
+    head.appendChild(preconnect);
+    
+    // DNS prefetch as fallback
+    const dnsPrefetch = document.createElement('link');
+    dnsPrefetch.rel = 'dns-prefetch';
+    dnsPrefetch.href = apiOrigin;
+    head.appendChild(dnsPrefetch);
+  } catch (error) {
+    console.warn('Failed to add resource hints:', error);
+  }
 
 // Intersection Observer for lazy loading images
 export function setupLazyLoading() {

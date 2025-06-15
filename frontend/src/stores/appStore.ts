@@ -243,6 +243,9 @@ class AppStoreImpl {
 // Create single instance
 const store = new AppStoreImpl();
 
+// Export store instance for direct access
+export const appStore = store;
+
 // React hook
 import { useEffect, useState } from 'react';
 

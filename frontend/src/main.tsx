@@ -4,13 +4,10 @@ import { createRoot } from 'react-dom/client' // v18.3.1
 import './index.css'
 import App from './App'
 // import * as serviceWorker from './utils/serviceWorker'
-import { useAppStore } from './stores/appStore'
+import { appStore } from './stores/appStore'
 
-// Defer store initialization to avoid circular dependency issues
-setTimeout(() => {
-  // Make store available globally for toast
-  (window as any).__appStore = useAppStore.getState();
-}, 0);
+// Make store available globally for toast
+(window as any).__appStore = appStore;
 
 // Enable performance monitoring in development
 if (import.meta.env.DEV) {
