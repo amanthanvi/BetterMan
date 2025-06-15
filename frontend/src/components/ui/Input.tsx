@@ -1,28 +1,46 @@
-import React from 'react';
-import { cn } from '@/utils/cn';
+import * as React from 'react';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface InputProps {
+  className?: string;
+  type?: string;
   error?: string;
   label?: string;
   description?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  id?: string;
+  placeholder?: string;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+  required?: boolean;
+  autoComplete?: string;
+  autoFocus?: boolean;
+  name?: string;
 }
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ 
-    className, 
-    type = 'text',
-    error,
-    label,
-    description,
-    leftIcon,
-    rightIcon,
-    id,
-    ...props 
-  }, ref) => {
+function cn(...classes: (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  function Input(props, ref) {
+    const {
+      className,
+      type = 'text',
+      error,
+      label,
+      description,
+      leftIcon,
+      rightIcon,
+      id,
+      ...rest
+    } = props;
+
     const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     return (
       <div className="space-y-1">
         {label && (
@@ -33,7 +51,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
-        
+
         <div className="relative">
           {leftIcon && (
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -42,8 +60,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               </div>
             </div>
           )}
-          
-          <input ref={ref}
+
+          <input
+            ref={ref}
             id={inputId}
             type={type}
             className={cn(
@@ -61,8 +80,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               rightIcon && 'pr-10',
               className
             )}
-            {...props} />
-          
+            {...rest}
+          />
+
           {rightIcon && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <div className="text-gray-400 dark:text-gray-500">
@@ -71,13 +91,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </div>
           )}
         </div>
-        
+
         {description && !error && (
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {description}
           </p>
         )}
-        
+
         {error && (
           <p className="text-xs text-red-600 dark:text-red-400">
             {error}
@@ -89,3 +109,6 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
+
+export { Input };
+export type { InputProps };

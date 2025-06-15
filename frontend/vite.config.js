@@ -62,15 +62,14 @@ export default defineConfig(async () => {
     
     // Rollup options for code splitting
     rollupOptions: {
-      external: [],
       output: {
         // Manual chunks for better caching
         manualChunks: (id) => {
           // Node modules chunking
           if (id.includes('node_modules')) {
-            // React ecosystem
+            // React ecosystem - force into main vendor chunk to ensure availability
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'react-vendor';
+              return 'vendor';
             }
             
             // UI component libraries
@@ -189,7 +188,8 @@ export default defineConfig(async () => {
   
   // Ensure React is available globally
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    global: 'globalThis'
   },
   };
 });
