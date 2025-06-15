@@ -136,7 +136,9 @@ class SearchClient {
    * Get search suggestions for autocomplete
    */
   async getSuggestions(prefix: string, limit = 10): Promise<string[]> {
-    if (prefix.length < 2) return []
+    if (prefix.length < 2) {
+      return []
+    }
     
     try {
       // Try API first for most up-to-date suggestions
