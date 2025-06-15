@@ -46,7 +46,7 @@ export function useVirtualScroll<T>(
     }
     
     return { positions, totalHeight };
-  }, [items.length, getItemHeight]);
+  }, [safeItems.length, getItemHeight]);
 
   // Calculate visible range
   const { startIndex, endIndex, offsetY, totalHeight } = useMemo(() => {

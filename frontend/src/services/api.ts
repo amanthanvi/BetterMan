@@ -5,8 +5,9 @@ import type {
 	ApiResponse,
 	SearchFilters,
 } from "@/types";
+import { config } from "@/utils/config";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_URL = config.apiUrl;
 
 // Generic API client
 class ApiClient {
