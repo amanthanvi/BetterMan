@@ -192,8 +192,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           {loading ? (
-            <div}}
-            >
+            <div>
               <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
             </div>
           ) : (
@@ -201,8 +200,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
           )}
         </div>
         
-        <input
-          ref={inputRef}
+        <input ref={inputRef}
           type="text"
           value={localQuery}
           onChange={handleInputChange}
@@ -219,8 +217,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
             'transition-all duration-200',
             compact && 'py-2 text-sm',
             error && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-          )}
-        />
+          )} />
         
         <div className="absolute inset-y-0 right-0 flex items-center space-x-1 pr-3">
           {localQuery && (
@@ -252,8 +249,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
       
       {/* Error State */}
       {error && (
-        <div}}
-          className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
         >
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         </div>
@@ -262,8 +258,8 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
       {/* Suggestions Dropdown */}
       <>
         {showDropdown && (
-          <div
-            ref={suggestionsRef}}}}
+          <div 
+            ref={suggestionsRef}
             className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto"
           >
             {/* Search Suggestions */}
@@ -273,8 +269,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
                   Suggestions
                 </div>
                 {suggestions.map((suggestion, index) => (
-                  <SuggestionItem
-                    key={index}
+                  <SuggestionItem key={index}
                     suggestion={suggestion}
                     selected={selectedSuggestion === index}
                     onClick={() => handleSuggestionClick(suggestion)}
@@ -291,8 +286,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
                   Recent Searches
                 </div>
                 {searchHistory.slice(0, 5).map((historyItem, index) => (
-                  <SuggestionItem
-                    key={index}
+                  <SuggestionItem key={index}
                     suggestion={historyItem}
                     selected={selectedSuggestion === index}
                     onClick={() => handleSuggestionClick(historyItem)}
@@ -309,8 +303,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
                   Recent Documents
                 </div>
                 {filteredRecent.map((doc) => (
-                  <RecentDocItem
-                    key={doc.id}
+                  <RecentDocItem key={doc.id}
                     doc={doc}
                     onClick={() => handleSuggestionClick(doc.title)}
                     isFavorite={isFavorite(doc.id)}

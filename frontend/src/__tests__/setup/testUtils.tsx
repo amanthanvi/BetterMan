@@ -85,7 +85,7 @@ const TestProviders: React.FC<TestProviderProps> = ({
   window.history.pushState({}, 'Test page', initialRoute);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}
       <BrowserRouter>
         {children}
       </BrowserRouter>
@@ -104,7 +104,7 @@ const customRender = (
     user: userEvent.setup(),
     ...render(ui, {
       wrapper: ({ children }) => (
-        <TestProviders initialRoute={initialRoute}>
+        <TestProviders initialRoute={initialRoute}
           {children}
         </TestProviders>
       ),

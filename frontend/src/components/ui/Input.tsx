@@ -43,8 +43,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </div>
           )}
           
-          <input
-            ref={ref}
+          <input ref={ref}
             id={inputId}
             type={type}
             className={cn(
@@ -62,9 +61,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               rightIcon && 'pr-10',
               className
             )}
-            whileFocus={{ scale: 1.01 }}
-            {...props}
-          />
+            {...props} />
           
           {rightIcon && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -82,9 +79,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         
         {error && (
-          <p}}
-            className="text-xs text-red-600 dark:text-red-400"
-          >
+          <p className="text-xs text-red-600 dark:text-red-400">
             {error}
           </p>
         )}

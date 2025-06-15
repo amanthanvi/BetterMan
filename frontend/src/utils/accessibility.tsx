@@ -29,7 +29,7 @@ export const useA11y = () => {
 };
 
 // Accessibility Provider
-export const A11yProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const A11yProvider: React.FC<{ children: ReactNode } = ({ children }) => {
   const [announcements, setAnnouncements] = useState<string[]>([]);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
@@ -90,8 +90,8 @@ export const A11yProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         highContrast,
         keyboardNavEnabled,
         setKeyboardNavEnabled,
-      }}
-    >
+      >
+    }
       {children}
       <LiveRegion announcements={announcements} />
     </A11yContext.Provider>
@@ -99,7 +99,7 @@ export const A11yProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 };
 
 // Live Region for screen reader announcements
-const LiveRegion: React.FC<{ announcements: string[] }> = ({ announcements }) => {
+const LiveRegion: React.FC<{ announcements: string[] } = ({ announcements }) => {
   return (
     <>
       <div
@@ -259,14 +259,14 @@ interface AccessibleIconProps {
 
 export const AccessibleIcon: React.FC<AccessibleIconProps> = ({ label, children }) => {
   return (
-    <span role="img" aria-label={label}>
+    <span role="img" aria-label={label}
       {children}
     </span>
   );
 };
 
 // Visually Hidden Component
-export const VisuallyHidden: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const VisuallyHidden: React.FC<{ children: ReactNode } = ({ children }) => {
   return (
     <span className="sr-only">
       {children}
@@ -361,7 +361,7 @@ export const AccessibleField: React.FC<AccessibleFieldProps> = ({
         </p>
       )}
       
-      <div aria-describedby={ariaDescribedBy || undefined}>
+      <div aria-describedby={ariaDescribedBy || undefined}
         {children}
       </div>
       

@@ -24,7 +24,7 @@ const badgeSizes = {
 
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant = 'default', size = 'md', animate = false, children, ...props }, ref) => {
-    const Component = animate ? motion.span : 'span';
+    const Component = 'span';
     
     return (
       <Component
@@ -34,7 +34,7 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
           badgeVariants[variant],
           badgeSizes[size],
           className
-        )} : undefined} : undefined} : undefined}
+        )}
         {...props}
       >
         {children}

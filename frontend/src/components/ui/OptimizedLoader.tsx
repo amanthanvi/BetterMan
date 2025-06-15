@@ -34,8 +34,7 @@ export const OptimizedLoader: React.FC<OptimizedLoaderProps> = ({
   if (error) {
     return (
       <>
-        <div
-          className={cn("error-container", className)}
+        <div className={cn("error-container", className)}
         >
           {errorComponent || <DefaultError error={error} />}
         </div>
@@ -74,7 +73,7 @@ const DefaultLoader: React.FC = () => (
   </div>
 );
 
-const DefaultError: React.FC<{ error: Error }> = ({ error }) => (
+const DefaultError: React.FC<{ error: Error } = ({ error }) => (
   <div className="flex flex-col items-center justify-center min-h-[200px] space-y-4 p-8">
     <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center">
       <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -119,7 +118,7 @@ export const SearchResultsSkeleton: React.FC = () => (
   </div>
 );
 
-export const ListSkeleton: React.FC<{ count?: number }> = ({ count = 10 }) => (
+export const ListSkeleton: React.FC<{ count?: number } = ({ count = 10 }) => (
   <div className="space-y-2">
     {[...Array(count)].map((_, i) => (
       <div key={i} className="animate-pulse flex items-center space-x-4 p-3">

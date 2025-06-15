@@ -209,8 +209,7 @@ export const EnhancedSearchInterface: React.FC = () => {
           {/* Filter Section */}
           <>
             {showFilters && (
-              <div}
-                className="overflow-hidden"
+              <div className="overflow-hidden"
               >
                 <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -218,9 +217,8 @@ export const EnhancedSearchInterface: React.FC = () => {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {sections.map((section) => (
-                      <button
-                        key={section.value}
-                        onClick={() => setSelectedSection(
+                      <button key={section.value}
+                    onClick={() => setSelectedSection(}
                           selectedSection === section.value ? null : section.value
                         )}
                         className={cn(
@@ -246,9 +244,7 @@ export const EnhancedSearchInterface: React.FC = () => {
       {/* Search Suggestions */}
       <>
         {isFocused && suggestions.length > 0 && (
-          <div
-            id="search-suggestions"}
-            className="absolute top-full left-0 right-0 mt-2 z-50"
+          <div id="search-suggestions"} className="absolute top-full left-0 right-0 mt-2 z-50"
           >
             <Card variant="elevated" padding="none" className="overflow-hidden">
               <ul role="listbox" className="py-2">

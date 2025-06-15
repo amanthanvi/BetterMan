@@ -30,19 +30,17 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   };
 
   return (
-    <div
-      className={cn(
+    <div className={cn(
         'bg-gray-200 dark:bg-gray-700',
         variantStyles[variant],
         animationStyles[animation],
         className
       )}
-      style={{
+      style={{ 
         width: width || (variant === 'circular' ? '40px' : '100%'),
         height: height || (variant === 'text' ? '1em' : '40px'),
       }}
-      {...props}
-    />
+      {...props} />
   );
 };
 

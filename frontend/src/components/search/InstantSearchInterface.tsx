@@ -226,8 +226,7 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
           {loading ? (
-            <div}}
-            >
+            <div>
               <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
             </div>
           ) : (
@@ -235,8 +234,7 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
           )}
         </div>
         
-        <input
-          ref={inputRef}
+        <input ref={inputRef}
           type="text"
           value={query}
           onChange={handleInputChange}
@@ -251,8 +249,7 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
             'focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500',
             'transition-all duration-200',
             'placeholder-gray-400 dark:placeholder-gray-500'
-          )}
-        />
+          )} />
         
         <div className="absolute inset-y-0 right-0 pr-4 flex items-center space-x-2">
           {query && (
@@ -274,8 +271,8 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
       {/* Results Dropdown */}
       <>
         {showResults && (results || !query) && (
-          <div
-            ref={resultsRef}}}}}
+          <div 
+            ref={resultsRef}
             className={cn(
               'absolute top-full left-0 right-0 mt-2',
               'bg-white dark:bg-gray-800',
@@ -316,8 +313,7 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
                   Quick Navigation
                 </div>
                 {results.shortcuts.map((shortcut: any, index: number) => (
-                  <QuickNavItem
-                    key={index}
+                  <QuickNavItem key={index}
                     item={shortcut}
                     selected={selectedIndex === index}
                     onClick={() => handleSelect(shortcut)}
@@ -335,9 +331,8 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
                 {results.natural_language.map((cmd: string, index: number) => {
                   const itemIndex = (results.shortcuts?.length || 0) + index;
                   return (
-                    <NaturalLanguageItem
-                      key={index}
-                      command={cmd}
+                    <NaturalLanguageItem key={index}
+                    command={cmd}
                       selected={selectedIndex === itemIndex}
                       onClick={() => handleSelect({ value: cmd, type: 'search' })}
                     />
@@ -356,9 +351,8 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
                   const itemIndex = (results.shortcuts?.length || 0) + 
                                    (results.natural_language?.length || 0) + index;
                   return (
-                    <SearchResultItem
-                      key={result.id || index}
-                      result={result}
+                    <SearchResultItem key={result.id || index}
+                    result={result}
                       selected={selectedIndex === itemIndex}
                       onClick={() => handleSelect(result)}
                       isFavorite={favorites.some((f: any) => f.id === result.id)}
@@ -379,9 +373,8 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
                                    (results.natural_language?.length || 0) + 
                                    (results.results?.length || 0) + index;
                   return (
-                    <SuggestionItem
-                      key={index}
-                      suggestion={suggestion}
+                    <SuggestionItem key={index}
+                    suggestion={suggestion}
                       selected={selectedIndex === itemIndex}
                       onClick={() => handleSelect({ value: suggestion, type: 'search' })}
                     />
@@ -399,9 +392,8 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
                 {recentDocuments.slice(0, 3).map((doc, index) => {
                   const itemIndex = items.length - recentDocuments.length + index;
                   return (
-                    <RecentDocItem
-                      key={doc.id}
-                      doc={doc}
+                    <RecentDocItem key={doc.id}
+                    doc={doc}
                       selected={selectedIndex === itemIndex}
                       onClick={() => handleSelect(doc)}
                       isFavorite={favorites.some((f: any) => f.id === doc.id)}
@@ -417,9 +409,8 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
                 <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
                   <span>Related categories:</span>
                   {results.categories.map((cat: string) => (
-                    <span
-                      key={cat}
-                      className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md"
+                    <span key={cat}
+                    className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md"
                     >
                       {cat}
                     </span>

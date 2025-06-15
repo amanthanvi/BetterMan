@@ -188,8 +188,7 @@ const TocItem = memo<{
 			<div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r" />
 		)}
 
-		<div
-			className={cn(
+		<div className={cn(
 				"flex-shrink-0 p-1.5 rounded-lg transition-all duration-200",
 				isActive
 					? "bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300"
@@ -203,12 +202,10 @@ const TocItem = memo<{
 			{item.title}
 		</span>
 
-		<ChevronRightIcon
-			className={cn(
+		<ChevronRightIcon className={cn(
 				"w-4 h-4 transition-all duration-200",
 				isActive ? "opacity-100 text-blue-600 dark:text-blue-400" : "opacity-0"
-			)}
-		/>
+			)} />
 	</button>
 ));
 
@@ -621,8 +618,7 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 	}
 
 	return (
-		<div 
-			className={cn(
+		<div className={cn(
 				"ultimate-document-viewer min-h-screen",
 				`font-size-${fontSize}`,
 				className
@@ -707,8 +703,7 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 			{/* TOC Sidebar */}
 			<>
 				{showToc && (
-					<aside
-						className="ultimate-toc fixed left-0 top-[120px] bottom-0 w-80 flex flex-col"
+					<aside className="ultimate-toc fixed left-0 top-[120px] bottom-0 w-80 flex flex-col"
 					>
 						<div className="p-6 border-b">
 							<h2 className="text-lg font-bold mb-4">Table of Contents</h2>
@@ -721,11 +716,8 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 							/>
 						</div>
 
-						<div
-							ref={tocParentRef}
-							className="flex-1 overflow-auto"
-							style={{ contain: "strict" }}
-						>
+						<div ref={tocParentRef} className="flex-1 overflow-auto"
+							style={{ contain: "strict" }}>
 							<div
 								style={{
 									height: `${tocVirtualizer.getTotalSize()}px`,
@@ -738,25 +730,21 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 									if (!item) return null;
 
 									return (
-										<div
-											key={virtualItem.key}
-											style={{
-												position: "absolute",
+										<div key={virtualItem.key}
+                    style={{ position: "absolute",
 												top: 0,
 												left: 0,
 												width: "100%",
 												height: `${virtualItem.size}px`,
 												transform: `translateY(${virtualItem.start}px)`,
-											}}
-											className="px-4"
+										}}	
+                    className="px-4"
 										>
-											<TocItem
-												item={item}
+											<TocItem item={item}
 												isActive={item.id === activeSection}
 												isSearchResult={searchResults.has(item.id)}
 												onClick={handleSectionClick}
-												level={0}
-											/>
+												level={0} />
 										</div>
 									);
 								})}
@@ -768,11 +756,8 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 
 			{/* Main Content */}
 			<div className={cn("ultimate-content", showToc && "toc-open")}>
-				<div
-					ref={parentRef}
-					className="h-[calc(100vh-140px)] overflow-auto"
-					style={{ contain: "strict" }}
-				>
+				<div ref={parentRef} className="h-[calc(100vh-140px)] overflow-auto"
+					style={{ contain: "strict" }}>
 					<div
 						style={{
 							height: `${rowVirtualizer.getTotalSize()}px`,
@@ -788,7 +773,7 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 							const isSearchResult = searchResults.has(section.id);
 
 							return (
-								<div
+								<div 
 									key={virtualRow.key}
 									data-index={virtualRow.index}
 									ref={rowVirtualizer.measureElement}
@@ -801,15 +786,12 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 									}}
 									className="px-4 sm:px-6 lg:px-8"
 								>
-									<section
-										id={section.id}
-										className={cn(
+									<section id={section.id} className={cn(
 											"ultimate-section",
 											isSearchResult && "ring-2 ring-yellow-400 rounded-xl"
 										)}
 									>
-										<div
-											className="ultimate-section-header cursor-pointer"
+										<div className="ultimate-section-header cursor-pointer"
 											onClick={() => {
 												setCollapsedSections((prev) => {
 													const next = new Set(prev);
@@ -828,8 +810,7 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 												)}
 											</div>
 
-											<h2
-												className={cn(
+											<h2 className={cn(
 													"ultimate-section-title flex-1",
 													section.level === 2 && "text-2xl",
 													section.level === 3 && "text-xl"
@@ -838,12 +819,10 @@ export const VirtualizedDocumentViewer: React.FC<DocumentViewerProps> = ({ docum
 												{section.title}
 											</h2>
 
-											<ChevronDownIcon
-												className={cn(
+											<ChevronDownIcon className={cn(
 													"w-5 h-5 transition-transform",
 													isCollapsed && "-rotate-90"
-												)}
-											/>
+												)} />
 										</div>
 
 										{!isCollapsed && (

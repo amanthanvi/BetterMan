@@ -197,7 +197,7 @@ class OfflineService {
     successful: number;
     failed: number;
     remaining: number;
-  }> {
+  } {
     if (!this.state.isOnline) {
       return {
         successful: 0,
@@ -374,7 +374,7 @@ export function useOfflineState() {
 
 // Higher-order component for offline-aware components
 export function withOfflineSupport<P extends object>(
-  Component: React.ComponentType<P & { offlineState: OfflineState }>,
+  Component: React.ComponentType<P & { offlineState: OfflineState },
   options?: {
     showOfflineIndicator?: boolean;
     fallbackComponent?: React.ComponentType<P>;
@@ -385,7 +385,7 @@ export function withOfflineSupport<P extends object>(
 
     if (!offlineState.isOnline && options?.fallbackComponent) {
       const FallbackComponent = options.fallbackComponent;
-      return <FallbackComponent {...props} />;
+      return <FallbackComponent {...props />;
     }
 
     return <Component {...props} offlineState={offlineState} />;

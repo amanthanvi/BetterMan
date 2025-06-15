@@ -98,9 +98,8 @@ export const Setup2FA: React.FC = () => {
         { name: '1Password', icon: '🔑' },
         { name: 'Microsoft Authenticator', icon: '🏢' },
       ].map((app) => (
-        <div
-          key={app.name}
-          className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+        <div key={app.name}
+                    className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
         >
           <div className="flex items-center space-x-2">
             <span className="text-2xl">{app.icon}</span>
@@ -113,8 +112,7 @@ export const Setup2FA: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-      <div}}
-        className="w-full max-w-2xl"
+      <div className="w-full max-w-2xl"
       >
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
@@ -137,8 +135,7 @@ export const Setup2FA: React.FC = () => {
           {/* Content */}
           <div className="p-6">
             {step === 'intro' && (
-              <div}}
-                className="space-y-6"
+              <div className="space-y-6"
               >
                 <div className="text-center py-8">
                   <MobileIcon className="w-16 h-16 text-blue-500 mx-auto mb-4" />
@@ -172,8 +169,7 @@ export const Setup2FA: React.FC = () => {
             )}
 
             {step === 'qr' && (
-              <div}}
-                className="space-y-6"
+              <div className="space-y-6"
               >
                 <div className="text-center">
                   <h2 className="text-xl font-semibold mb-2">
@@ -226,8 +222,7 @@ export const Setup2FA: React.FC = () => {
             )}
 
             {step === 'verify' && (
-              <div}}
-                className="space-y-6"
+              <div className="space-y-6"
               >
                 <div className="text-center">
                   <h2 className="text-xl font-semibold mb-2">
@@ -288,8 +283,7 @@ export const Setup2FA: React.FC = () => {
             )}
 
             {step === 'complete' && (
-              <div}}
-                className="text-center py-8"
+              <div className="text-center py-8"
               >
                 <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircledIcon className="w-10 h-10 text-green-600 dark:text-green-400" />

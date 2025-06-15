@@ -143,7 +143,7 @@ const detectLanguage = (code: string): string => {
 };
 
 // Memoized Copy Button Component
-const CopyButton = memo<{ text: string }>(({ text }) => {
+const CopyButton = memo<{ text: string }(({ text }) => {
 	const [copied, setCopied] = useState(false);
 
 	const handleCopy = useCallback(async () => {
@@ -204,13 +204,10 @@ const TocItem = memo<{
 			)}
 		>
 			{isActive && (
-				<div
-					className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r"}
-				/>
+				<div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r" />
 			)}
 
-			<div
-				className={cn(
+			<div className={cn(
 					"flex-shrink-0 p-1.5 rounded-lg transition-all duration-200",
 					isActive
 						? "bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 scale-110"
@@ -224,13 +221,11 @@ const TocItem = memo<{
 				{item.title}
 			</span>
 
-			<ChevronRightIcon
-				className={cn(
+			<ChevronRightIcon className={cn(
 					"w-4 h-4 opacity-0 group-hover:opacity-100 transition-all duration-200 transform",
 					"group-hover:translate-x-1",
 					isActive && "opacity-100 text-blue-600 dark:text-blue-400"
-				)}
-			/>
+				)} />
 		</button>
 	);
 });
@@ -250,15 +245,12 @@ const DocumentSectionComponent = memo<{
 	}, [section.id, onToggleCollapse]);
 
 	return (
-		<section}}
-			id={section.id}
-			className={cn(
+		<section id={section.id} className={cn(
 				"ultimate-section scroll-mt-32",
 				isSearchResult && "ring-2 ring-yellow-400 dark:ring-yellow-600 rounded-xl"
 			)}
 		>
-			<div
-				className={cn(
+			<div className={cn(
 					"ultimate-section-header cursor-pointer",
 					section.level === 3 && "ml-8"
 				)}
@@ -271,8 +263,7 @@ const DocumentSectionComponent = memo<{
 						)}
 				</div>
 
-				<h2
-					className={cn(
+				<h2 className={cn(
 						"ultimate-section-title flex-1",
 						section.level === 2 && "text-2xl",
 						section.level === 3 && "text-xl"
@@ -281,15 +272,14 @@ const DocumentSectionComponent = memo<{
 					{section.title}
 				</h2>
 
-				<div}}>
+				<div>
 					<ChevronDownIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
 				</div>
 			</div>
 
 			<>
 				{!isCollapsed && (
-					<div}
-						className={cn(
+					<div className={cn(
 							"ultimate-section-content overflow-hidden",
 							section.level === 3 && "ml-8"
 						)}
@@ -864,13 +854,11 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 								<CopyButton text={code} />
 							</div>
 						</div>
-						<EnhancedCodeBlock
-							code={code}
+						<EnhancedCodeBlock code={code}
 							language={language}
 							showLineNumbers={showLineNumbers}
 							showTryIt={language === "bash" || language === "sh"}
-							className={cn("ultimate-code-content", !showLineNumbers && "hide-line-numbers")}
-						/>
+							className={cn("ultimate-code-content", !showLineNumbers && "hide-line-numbers")} />
 					</div>
 				);
 
@@ -979,9 +967,8 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			const parts = text.split(new RegExp(`(${search})`, "gi"));
 			return parts.map((part, i) =>
 				part.toLowerCase() === search.toLowerCase() ? (
-					<mark
-						key={i}
-						className="bg-yellow-200 dark:bg-yellow-900 text-gray-900 dark:text-gray-100 px-1 rounded"
+					<mark key={i}
+                    className="bg-yellow-200 dark:bg-yellow-900 text-gray-900 dark:text-gray-100 px-1 rounded"
 					>
 						{part}
 					</mark>
@@ -1014,8 +1001,7 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 	}
 
 	return (
-		<div 
-			className={cn(
+		<div className={cn(
 				"ultimate-document-viewer min-h-screen",
 				`font-size-${fontSize}`,
 				`view-mode-${viewMode}`,
@@ -1023,16 +1009,13 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			)}
 		>
 			{/* Progress Bar */}
-			<div
-				className="ultimate-progress-bar"
-				style={{ scaleX: scrollProgress / 100 
+			<div className="ultimate-progress-bar"
+				style={{ scaleX: scrollProgress / 100 }}
 			/>
-
 			{/* Mobile TOC Overlay */}
 			<>
 				{showToc && (
-					<div}
-						className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
+					<div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
 						onClick={() => setShowToc(false)}
 					/>
 				)}
@@ -1115,8 +1098,7 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 									className="relative text-xs px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
 									title="Font size"
 								>
-									<span
-										className={cn(
+									<span className={cn(
 											"font-bold transition-all",
 											fontSize === "sm" && "text-xs",
 											fontSize === "base" && "text-sm",
@@ -1246,8 +1228,8 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Table of Contents */}
 			<>
 				{showToc && (
-					<aside
-						ref={tocRef}}
+					<aside 
+						ref={tocRef}
 						className={cn(
 							"ultimate-toc",
 							"fixed left-0 top-[120px] bottom-0 w-80 flex flex-col overflow-hidden",
@@ -1324,28 +1306,23 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 									{filteredTocItems.length > 0 ? (
 										filteredTocItems.map((item) => (
 											<Fragment key={item.id}>
-												<TocItem
-													item={item}
+												<TocItem item={item}
 													isActive={item.id === activeSection}
 													isSearchResult={searchResults.includes(item.id)}
 													onClick={handleSectionClick}
-													level={0}
-												/>
+													level={0} />
 												{item.children?.map((child) => (
-													<TocItem
-														key={child.id}
-														item={child}
+													<TocItem key={child.id}
+                    item={child}
 														isActive={child.id === activeSection}
 														isSearchResult={searchResults.includes(child.id)}
 														onClick={handleSectionClick}
-														level={1}
-													/>
+														level={1} />
 												))}
 											</Fragment>
 										))
 									) : (
-										<div}}
-											className="text-center py-8 text-gray-500 dark:text-gray-400"
+										<div className="text-center py-8 text-gray-500 dark:text-gray-400"
 										>
 											<MagnifyingGlassIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
 											<p className="text-sm">No sections found</p>
@@ -1389,16 +1366,13 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 			</>
 
 			{/* Main Content Area */}
-			<div
-				className={cn(
+			<div className={cn(
 					"ultimate-content min-h-screen transition-all duration-300 ease-out",
 					showToc && "toc-open"
 				)}
 			>
 				<main className="relative">
-					<div
-						ref={contentRef}
-						className={cn(
+					<div ref={contentRef} className={cn(
 							"max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8",
 							fontSize === "sm" && "text-sm",
 							fontSize === "lg" && "text-lg",
@@ -1410,14 +1384,12 @@ export const OptimizedDocumentViewer: React.FC<DocumentViewerProps> = ({
 						{sections.length > 0 ? (
 							<>
 								{sections.map((section) => (
-									<DocumentSectionComponent
-										key={section.id}
-										section={section}
+									<DocumentSectionComponent key={section.id}
+                    section={section}
 										isCollapsed={collapsedSections.has(section.id)}
 										isSearchResult={searchResults.includes(section.id)}
 										onToggleCollapse={toggleSectionCollapse}
-										renderContent={renderSectionContent}
-									/>
+										renderContent={renderSectionContent} />
 								))}
 							</>
 						) : (

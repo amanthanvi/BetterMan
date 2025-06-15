@@ -50,9 +50,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       'prose-a:text-blue-600 dark:prose-a:text-blue-400',
       'prose-a:no-underline hover:prose-a:underline',
       className
-    )}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+    )}
+      <ReactMarkdown remarkPlugins={[remarkGfm]}
         components={{
           code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
@@ -62,10 +61,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               <EnhancedCodeBlock
                 code={codeString}
                 language={language}
-                showLineNumbers={showLineNumbers}
-              />
+                showLineNumbers={showLineNumbers} />
             ) : (
-              <code className={className} {...props}>{children}</code>
+              <code className={className} {...props}{children}</code>
             );
           },
           // Custom rendering for definition lists (common in man pages)
@@ -88,66 +86,66 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                 );
               }
             }
-            return <p {...props}>{children}</p>;
+            return <p {...props}{children}</p>;
           },
           // Custom heading rendering with better spacing
           h1: ({ children, ...props }) => (
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6 mt-8 first:mt-0" {...props}>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6 mt-8 first:mt-0" {...props}
               {children}
             </h1>
           ),
           h2: ({ children, ...props }) => (
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4 mt-8 pb-2 border-b border-gray-200 dark:border-gray-700" {...props}>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4 mt-8 pb-2 border-b border-gray-200 dark:border-gray-700" {...props}
               {children}
             </h2>
           ),
           h3: ({ children, ...props }) => (
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3 mt-6" {...props}>
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3 mt-6" {...props}
               {children}
             </h3>
           ),
           // Better list rendering
           ul: ({ children, ...props }) => (
-            <ul className="list-disc pl-6 mb-4 space-y-1" {...props}>
+            <ul className="list-disc pl-6 mb-4 space-y-1" {...props}
               {children}
             </ul>
           ),
           ol: ({ children, ...props }) => (
-            <ol className="list-decimal pl-6 mb-4 space-y-1" {...props}>
+            <ol className="list-decimal pl-6 mb-4 space-y-1" {...props}
               {children}
             </ol>
           ),
           li: ({ children, ...props }) => (
-            <li className="text-gray-700 dark:text-gray-300 leading-relaxed" {...props}>
+            <li className="text-gray-700 dark:text-gray-300 leading-relaxed" {...props}
               {children}
             </li>
           ),
           // Better blockquote styling
           blockquote: ({ children, ...props }) => (
-            <blockquote className="border-l-4 border-blue-500 pl-4 my-4 italic text-gray-700 dark:text-gray-300" {...props}>
+            <blockquote className="border-l-4 border-blue-500 pl-4 my-4 italic text-gray-700 dark:text-gray-300" {...props}
               {children}
             </blockquote>
           ),
           // Table styling
           table: ({ children, ...props }) => (
             <div className="overflow-x-auto my-6">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700" {...props}>
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700" {...props}
                 {children}
               </table>
             </div>
           ),
           thead: ({ children, ...props }) => (
-            <thead className="bg-gray-50 dark:bg-gray-800" {...props}>
+            <thead className="bg-gray-50 dark:bg-gray-800" {...props}
               {children}
             </thead>
           ),
           th: ({ children, ...props }) => (
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100" {...props}>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100" {...props}
               {children}
             </th>
           ),
           td: ({ children, ...props }) => (
-            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300" {...props}>
+            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300" {...props}
               {children}
             </td>
           ),

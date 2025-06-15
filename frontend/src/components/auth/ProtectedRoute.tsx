@@ -34,7 +34,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // 2FA check can be implemented based on your Clerk configuration
   // if (require2FA && isAuthenticated && !user?.twoFactorEnabled) {
-  //   return <Navigate to="/setup-2fa" state={{ from: location }} replace />;
+  //   return <Navigate to="/setup-2fa" state={{ from: location } replace} />;
   // }
 
   return <>{children}</>;

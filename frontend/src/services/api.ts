@@ -94,7 +94,7 @@ export const searchAPI = {
 			section?: number | number[];
 			doc_set?: string[];
 		} = {}
-	): Promise<SearchResult> => {
+	) => {
 		const params: Record<string, string> = {
 			q: query,
 			page: String(options.page || 1),
@@ -125,7 +125,7 @@ export const searchAPI = {
 		return result;
 	},
 
-	suggest: async (query: string): Promise<string[]> => {
+	suggest: async (query: string) => {
 		if (!query.trim() || query.length < 2) return [];
 
 		try {
@@ -143,17 +143,7 @@ export const searchAPI = {
 	instantSearch: async (
 		query: string,
 		limit: number = 10
-	): Promise<{
-		query: string;
-		results: any[];
-		suggestions: string[];
-		shortcuts: any[];
-		natural_language: string[];
-		categories: string[];
-		did_you_mean?: string;
-		instant: boolean;
-		timestamp: string;
-	}> => {
+	) => {
 		try {
 			return await apiClient.get("/api/search/instant", { q: query, limit });
 		} catch (error) {
@@ -178,15 +168,7 @@ export const searchAPI = {
 			recent_commands?: string[];
 			current_command?: string;
 		}
-	): Promise<
-		Array<{
-			value: string;
-			type: "command" | "abbreviation" | "correction" | "fuzzy";
-			display: string;
-			description?: string;
-			score?: number;
-		}>
-	> => {
+	) => {
 		try {
 			const params: any = { prefix, limit };
 			if (context) {
@@ -207,14 +189,7 @@ export const searchAPI = {
 			offset?: number;
 			threshold?: number;
 		} = {}
-	): Promise<{
-		results: any[];
-		total: number;
-		query: string;
-		suggestions?: Array<{ command: string; title: string; score: number }>;
-		did_you_mean?: string;
-		fuzzy_matched: boolean;
-	}> => {
+	) => {
 		try {
 			const params = {
 				q: query,
@@ -236,19 +211,19 @@ export const documentAPI = {
 		search?: string;
 		limit?: number;
 		offset?: number;
-	}): Promise<Document[]> => {
+	}) => {
 		return apiClient.get<Document[]>("/api/docs", params);
 	},
 
-	getFavorites: async (): Promise<any[]> => {
+	getFavorites: async () => {
 		return apiClient.get<any[]>("/api/favorites");
 	},
 
-	addFavorite: async (documentId: number): Promise<void> => {
+	addFavorite: async (documentId: number) => {
 		return apiClient.post("/api/favorites", { document_id: documentId });
 	},
 
-	removeFavorite: async (documentId: number): Promise<void> => {
+	removeFavorite: async (documentId: number) => {
 		return apiClient.delete(`/api/favorites/${documentId}`);
 	},
 
@@ -256,7 +231,7 @@ export const documentAPI = {
 		name: string | undefined,
 		section: string | undefined,
 		options: RequestInit = {}
-	): Promise<Response> => {
+	) => {
 		if (!name || !section)
 			throw new Error("Document name and section required");
 		// Backend expects doc_id in format "name.section"
@@ -268,7 +243,7 @@ export const documentAPI = {
 	getDocument: async (
 		name: string | undefined,
 		section: string | undefined
-	): Promise<Document> => {
+	) => {
 		if (!name || !section)
 			throw new Error("Document name and section required");
 		// Backend expects doc_id in format "name.section"
@@ -278,7 +253,7 @@ export const documentAPI = {
 
 	// Removed getDocumentContent as content is included in getDocument response
 
-	getRelatedDocuments: async (docId: string): Promise<Document[]> => {
+	getRelatedDocuments: async (docId: string) => {
 		const result = await apiClient.get<{ documents: Document[] }>(
 			`/api/docs/${docId}/related`
 		);
@@ -288,22 +263,18 @@ export const documentAPI = {
 
 // System API
 export const systemAPI = {
-	getHealth: (): Promise<HealthStatus> => {
+	getHealth: () => {
 		return apiClient.get<HealthStatus>("/health");
 	},
 
-	getStats: (): Promise<{
-		total_documents: number;
-		total_searches: number;
-		popular_searches: string[];
-	}> => {
+	getStats: () => {
 		return apiClient.get("/api/stats");
 	},
 };
 
 // Analytics API
 export const analyticsAPI = {
-	trackSearch: (query: string, resultCount: number): Promise<void> => {
+	trackSearch: (query: string, resultCount: number) => {
 		return apiClient.post("/api/analytics/search", {
 			query,
 			result_count: resultCount,
@@ -311,18 +282,18 @@ export const analyticsAPI = {
 		});
 	},
 
-	trackDocumentView: (docId: string): Promise<void> => {
+	trackDocumentView: (docId: string) => {
 		return apiClient.post("/api/analytics/view", {
 			document_id: docId,
 			timestamp: new Date().toISOString(),
 		});
 	},
 
-	getOverview: (days: number = 7): Promise<any> => {
+	getOverview: (days: number = 7) => {
 		return apiClient.get(`/api/analytics/overview?days=${days}`);
 	},
 
-	getPopularCommands: (limit: number = 10, days: number = 7): Promise<any> => {
+	getPopularCommands: (limit: number = 10, days: number = 7) => {
 		return apiClient.get(`/api/analytics/popular-commands?limit=${limit}&days=${days}`);
 	},
 };
@@ -367,7 +338,7 @@ export const cache = new CacheManager();
 
 // Enhanced search API with caching
 export const cachedSearchAPI = {
-	search: async (query: string, options: any = {}): Promise<SearchResult> => {
+	search: async (query: string, options: any = {}) => {
 		const cacheKey = `search:${query}:${JSON.stringify(options)}`;
 
 		// Try cache first

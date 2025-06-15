@@ -22,7 +22,7 @@ export const ProfilePage: React.FC = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth/login" state={{ from: { pathname: '/profile' } }} />;
+    return <Navigate to="/auth/login" state={{ from: { pathname: '/profile'} />;
   }
 
   return (

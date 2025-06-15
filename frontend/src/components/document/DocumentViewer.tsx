@@ -382,7 +382,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 										? "1.125rem"
 										: "1rem",
 								borderRadius: "0.5rem",
-							}}
+							}
 							showLineNumbers={showLineNumbers}
 						>
 							{codeBlock.join("\n")}
@@ -437,7 +437,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 									? "1.125rem"
 									: "1rem",
 							borderRadius: "0.5rem",
-						}}
+						}
 						showLineNumbers={showLineNumbers}
 					>
 						{codeBlock.join("\n")}
@@ -452,8 +452,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-12">
-				<div}}
-					className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
+				<div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
 				/>
 			</div>
 		);
@@ -468,12 +467,11 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	}
 
 	return (
-		<div className={cn("relative bg-white dark:bg-gray-900", className)}>
+		<div className={cn("relative bg-white dark:bg-gray-900", className)}
 			{/* Table of Contents - Fixed Sidebar */}
 			{tocItems.length > 0 && (
-				<aside}}
-					className="document-toc fixed left-0 top-24 h-[calc(100vh-6rem)] w-64 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto z-20"
-					style={{ pointerEvents: showToc ? 'auto' : 'none' }}
+				<aside}} className="document-toc fixed left-0 top-24 h-[calc(100vh-6rem)] w-64 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto z-20"
+					style={{ pointerEvents: showToc ? 'auto' : 'none' >
 				>
 					<div className="sticky top-0 bg-gray-50 dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700">
 						<h3 className="font-semibold text-gray-900 dark:text-gray-100">
@@ -482,7 +480,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					</div>
 					<nav className="p-4 space-y-1">
 						{tocItems.map((item) => (
-							<button
+							<button }
 								key={item.id}
 								onClick={() => scrollToSection(item.id)}
 								className={cn(
@@ -503,16 +501,13 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			)}
 
 			{/* Main Content - Adjust margin based on TOC visibility */}
-			<div className={cn("flex-1 bg-white dark:bg-gray-900 transition-all duration-300", showToc && tocItems.length > 0 && "ml-64")}>
+			<div className={cn("flex-1 bg-white dark:bg-gray-900 transition-all duration-300", showToc && tocItems.length > 0 && "ml-64")}
 				{/* Progress Bar */}
 				<div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800 z-40">
-					<div
-						className="h-full bg-blue-500"
-						style={{ 
-							transformOrigin: "0%",
-							scaleX: scrollProgress
-						}}}
-					/>
+					<div className="h-full bg-blue-500"
+						style={{ transformOrigin: "0%",
+							scaleX: scrollProgress }
+			/>
 				</div>
 				
 				{/* Document Header - Sticky with proper offset */}
@@ -542,7 +537,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								<Button
 									variant="ghost"
 									size="sm"
-									onClick={() =>
+									onClick={() =>}
 										setFontSize(
 											fontSize === "sm"
 												? "base"
@@ -561,7 +556,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								<Button
 									variant="ghost"
 									size="sm"
-									onClick={() =>
+									onClick={() =>}
 										setShowLineNumbers(!showLineNumbers)
 									}
 								>
@@ -587,13 +582,11 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 										: "text-gray-600 dark:text-gray-400"
 								)}
 							>
-								<BookmarkIcon
-									className={cn(
+								<BookmarkIcon className={cn(
 										"w-4 h-4",
 										document.name && isFavorite(`${document.name}.${document.section}`) &&
 											"fill-current"
-									)}
-								/>
+									) />
 							</Button>
 
 							<Button
@@ -625,9 +618,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 				{/* Document Content with top padding for sticky header */}
 				<main className="p-6 pt-32">
-					<div
-						ref={contentRef}}}
-						className="max-w-4xl mx-auto"
+					<div ref={contentRef} className="max-w-4xl mx-auto"
 					>
 						{content || document.sections ? (
 							renderStructuredSections()

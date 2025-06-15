@@ -777,13 +777,11 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								<CopyButton text={code} />
 							</div>
 						</div>
-						<EnhancedCodeBlock
-							code={code}
+						<EnhancedCodeBlock code={code}
 							language={language}
 							showLineNumbers={showLineNumbers}
 							showTryIt={language === "bash" || language === "sh"}
-							className={cn("ultimate-code-content", !showLineNumbers && "hide-line-numbers")}
-						/>
+							className={cn("ultimate-code-content", !showLineNumbers && "hide-line-numbers")} />
 					</div>
 				);
 
@@ -910,9 +908,8 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			const parts = text.split(new RegExp(`(${search})`, "gi"));
 			return parts.map((part, i) =>
 				part.toLowerCase() === search.toLowerCase() ? (
-					<mark
-						key={i}
-						className="bg-yellow-200 dark:bg-yellow-900 text-gray-900 dark:text-gray-100 px-1 rounded"
+					<mark key={i}
+                    className="bg-yellow-200 dark:bg-yellow-900 text-gray-900 dark:text-gray-100 px-1 rounded"
 					>
 						{part}
 					</mark>
@@ -981,8 +978,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 	}
 
 	return (
-		<div
-			className={cn(
+		<div className={cn(
 				"ultimate-document-viewer min-h-screen",
 				`font-size-${fontSize}`,
 				`view-mode-${viewMode}`,
@@ -991,16 +987,13 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			)}
 		>
 			{/* Progress Bar */}
-			<div
-				className="ultimate-progress-bar"
-				style={{ scaleX: scrollProgress / 100 
+			<div className="ultimate-progress-bar"
+				style={{ scaleX: scrollProgress / 100 }}
 			/>
-
 			{/* Mobile TOC Overlay */}
 			<>
 				{showToc && (
-					<div}
-						className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
+					<div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
 						onClick={() => setShowToc(false)}
 					/>
 				)}
@@ -1092,8 +1085,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 									className="relative text-xs px-2 py-1 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
 									title="Font size"
 								>
-									<span
-										className={cn(
+									<span className={cn(
 											"font-bold transition-all",
 											fontSize === "sm" && "text-xs",
 											fontSize === "base" &&
@@ -1155,12 +1147,10 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 								)}
 								title="Toggle favorite"
 							>
-								<BookmarkIcon
-									className={cn(
+								<BookmarkIcon className={cn(
 										"w-5 h-5",
 										isDocFavorite && "fill-current"
-									)}
-								/>
+									)} />
 							</Button>
 
 							<Button
@@ -1232,8 +1222,8 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			{/* Enhanced Table of Contents */}
 			<>
 				{showToc && (
-					<aside
-						ref={tocRef}}
+					<aside 
+						ref={tocRef}
 						className={cn(
 							"ultimate-toc",
 							"fixed left-0 top-[120px] bottom-0 w-80 flex flex-col overflow-hidden",
@@ -1312,15 +1302,12 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 							<div className="p-4 space-y-1">
 								<>
 									{filteredTocItems.length > 0 ? (
-										<TocItemList
-											items={filteredTocItems}
+										<TocItemList items={filteredTocItems}
 											activeSection={activeSection}
 											onItemClick={handleSectionClick}
-											searchResults={searchResults}
-										/>
+											searchResults={searchResults} />
 									) : (
-										<div}}
-											className="text-center py-8 text-gray-500 dark:text-gray-400"
+										<div className="text-center py-8 text-gray-500 dark:text-gray-400"
 										>
 											<MagnifyingGlassIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
 											<p className="text-sm">
@@ -1366,17 +1353,14 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 			</>
 
 			{/* Main Content Area */}
-			<div
-				className={cn(
+			<div className={cn(
 					"ultimate-content min-h-screen transition-all duration-300 ease-out",
 					showToc && "toc-open"
 				)}
 			>
 				{/* Document Content */}
 				<main className="relative">
-					<div
-						ref={contentRef}
-						className={cn(
+					<div ref={contentRef} className={cn(
 							"max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8",
 							fontSize === "sm" && "text-sm",
 							fontSize === "lg" && "text-lg",
@@ -1392,17 +1376,15 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 									const isSearchResult = searchResults.includes(section.id);
 
 									return (
-										<section
-											key={section.id}
-											id={section.id}
+										<section key={section.id}
+                    id={section.id}
 											className={cn(
 												"ultimate-section scroll-mt-32",
 												isSearchResult && "ring-2 ring-yellow-400 dark:ring-yellow-600 rounded-xl"
 											)}
 										>
 											{/* Section header */}
-											<div
-												className={cn(
+											<div className={cn(
 													"ultimate-section-header cursor-pointer",
 													section.level === 3 && "ml-8"
 												)}
@@ -1421,8 +1403,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 												</div>
 
 												{/* Section title */}
-												<h2
-													className={cn(
+												<h2 className={cn(
 														"ultimate-section-title flex-1",
 														section.level === 2 &&
 															"text-2xl",
@@ -1434,8 +1415,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 												</h2>
 
 												{/* Collapse indicator */}
-												<div}}
-												>
+												<div>
 													<ChevronDownIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
 												</div>
 											</div>
@@ -1443,8 +1423,7 @@ export const UltimateDocumentViewer: React.FC<DocumentViewerProps> = ({
 											{/* Section content */}
 											<>
 												{!isCollapsed && (
-													<div}
-														className={cn(
+													<div className={cn(
 															"ultimate-section-content overflow-hidden",
 															section.level === 3 && "ml-8"
 														)}
@@ -1504,7 +1483,7 @@ const TocItemList: React.FC<{
 
 				return (
 					<Fragment key={item.id}>
-						<button}
+						<button
 							onClick={() => onItemClick(item.id)}
 							className={cn(
 								"toc-item group flex items-center gap-3 w-full text-left p-3 rounded-xl transition-all duration-200 relative overflow-hidden",
@@ -1516,14 +1495,11 @@ const TocItemList: React.FC<{
 						>
 							{/* Active indicator */}
 							{isActive && (
-								<div
-									className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r"}
-								/>
+								<div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r" />
 							)}
 
 							{/* Icon */}
-							<div
-								className={cn(
+							<div className={cn(
 									"flex-shrink-0 p-1.5 rounded-lg transition-all duration-200",
 									isActive
 										? "bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 scale-110"
@@ -1542,25 +1518,21 @@ const TocItemList: React.FC<{
 							</span>
 
 							{/* Chevron for interactive feedback */}
-							<ChevronRightIcon
-								className={cn(
+							<ChevronRightIcon className={cn(
 									"w-4 h-4 opacity-0 group-hover:opacity-100 transition-all duration-200 transform",
 									"group-hover:translate-x-1",
 									isActive &&
 										"opacity-100 text-blue-600 dark:text-blue-400"
-								)}
-							/>
+								)} />
 						</button>
 
 						{/* Render children */}
 						{item.children && item.children.length > 0 && (
-							<TocItemList
-								items={item.children}
+							<TocItemList items={item.children}
 								activeSection={activeSection}
 								onItemClick={onItemClick}
 								searchResults={searchResults}
-								level={level + 1}
-							/>
+								level={level + 1} />
 						)}
 					</Fragment>
 				);

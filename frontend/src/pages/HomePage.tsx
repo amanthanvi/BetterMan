@@ -157,13 +157,11 @@ export const HomePage: React.FC<HomePageProps> = ({
 				<AuthSetupNotice />
 				{/* Hero Section */}
 				{!hasSearched && (
-					<div}}
-						className="text-center mb-12"
+					<div className="text-center mb-12"
 					>
 						<div className="max-w-4xl mx-auto">
 							{/* Logo and title */}
-							<div
-								className="mb-8"
+							<div className="mb-8"
 							>
 								<div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
 									<CommandLineIcon className="w-10 h-10 text-white" />
@@ -182,18 +180,14 @@ export const HomePage: React.FC<HomePageProps> = ({
 							</div>
 
 							{/* Premium Search interface */}
-							<div
-								className="mb-8"
-							>
+							<div className="mb-8">
 								<SearchErrorBoundary onRetry={() => window.location.reload()}>
 									<AdvancedSearch />
 								</SearchErrorBoundary>
 							</div>
 
 							{/* Quick actions */}
-							<div
-								className="flex flex-wrap justify-center gap-2 mb-8"
-							>
+							<div className="flex flex-wrap justify-center gap-2 mb-8">
 								<Button
 									variant="ghost"
 									size="sm"
@@ -204,9 +198,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 									Command Palette (⌘K)
 								</Button>
 								{searchHistory.slice(0, 3).map((query) => (
-									<Button
-										key={query}
-										variant="ghost"
+									<Button key={query}
+                    variant="ghost"
 										size="sm"
 										onClick={() => handleQuickSearch(query)}
 										className="text-gray-600 dark:text-gray-400"
@@ -218,8 +211,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 							</div>
 
 							{/* Stats */}
-							<div
-								className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto"
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto"
 							>
 								<div className="text-center">
 									<div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -271,11 +263,9 @@ export const HomePage: React.FC<HomePageProps> = ({
 							</SearchErrorBoundary>
 						</div>
 						<SearchErrorBoundary onRetry={() => window.location.reload()}>
-							<VirtualSearchResults 
-								results={results}
+							<VirtualSearchResults results={results}
 								loading={searchLoading}
-								query={query}
-							/>
+								query={query} />
 						</SearchErrorBoundary>
 					</div>
 				)}
@@ -284,8 +274,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 				{!hasSearched && (
 					<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 						{/* Popular Commands */}
-						<section
-							className="lg:col-span-2"
+						<section className="lg:col-span-2"
 						>
 							<div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
 								<div className="flex items-center space-x-2 mb-6">
@@ -298,9 +287,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 									{loadingAnalytics ? (
 										// Loading skeleton
 										Array.from({ length: 6 }).map((_, index) => (
-											<div
-												key={index}
-												className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"
+											<div key={index}
+                    className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"
 											>
 												<div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-2"></div>
 												<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
@@ -308,11 +296,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 										))
 									) : popularCommands.length > 0 ? (
 										popularCommands.map((command, index) => (
-										<button
-											key={command.id}
-											onClick={() =>
+										<button key={command.id}
+                    onClick={() => {
 												handleDocumentSelect(command)
-											}
+											}}
 											className="text-left p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200 group"
 										>
 											<div className="flex items-center justify-between mb-2">
@@ -338,8 +325,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 						</section>
 
 						{/* Sidebar */}
-						<aside
-							className="space-y-6"
+						<aside className="space-y-6"
 						>
 							{/* Recent Documents */}
 							{recentDocs.length > 0 && (
@@ -352,11 +338,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 									</div>
 									<div className="space-y-3">
 										{recentDocs.slice(0, 5).map((doc) => (
-											<button
-												key={doc.id}
-												onClick={() =>
+											<button key={doc.id}
+                    onClick={() => {
 													handleDocumentSelect(doc)
-												}
+												}}
 												className="w-full text-left p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
 											>
 												<div className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -385,11 +370,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 											.filter(docId => !(/^\d+$/.test(docId)) && docId.includes('.'))
 											.slice(0, 5)
 											.map((docId) => (
-											<button
-												key={docId}
-												onClick={() =>
+											<button key={docId}
+                    onClick={() => {
 													navigate(`/docs/${docId}`)
-												}
+												}}
 												className="w-full text-left p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
 											>
 												<div className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">

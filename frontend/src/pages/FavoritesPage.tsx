@@ -99,9 +99,8 @@ export const FavoritesPage: React.FC = () => {
           <div className="space-y-6">
             <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 animate-pulse" />
             {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
+              <div key={i}
+                    className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
               >
                 <div className="animate-pulse">
                   <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3" />
@@ -117,8 +116,7 @@ export const FavoritesPage: React.FC = () => {
   }
   
   return (
-    <div}}
-      className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-8"
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-8"
     >
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -148,9 +146,7 @@ export const FavoritesPage: React.FC = () => {
         
         {/* Empty state */}
         {favoriteDocuments.length === 0 && (
-          <div}}
-            className="text-center py-16"
-          >
+          <div className="text-center py-16">
             <HeartIcon className="w-16 h-16 text-gray-400 mx-auto mb-6" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               No Favorites Yet
@@ -170,8 +166,7 @@ export const FavoritesPage: React.FC = () => {
         
         {/* No search results */}
         {favoriteDocuments.length > 0 && filteredDocuments.length === 0 && searchQuery && (
-          <div}}
-            className="text-center py-12"
+          <div className="text-center py-12"
           >
             <MagnifyingGlassIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -193,11 +188,10 @@ export const FavoritesPage: React.FC = () => {
               </h2>
             </div>
             
-            <div layout className="space-y-3">
+            <div className="space-y-3">
               {filteredDocuments.map((doc, index) => (
                 <div
                   key={`${doc.name || doc.id}.${doc.section}`}
-                  layout}}}
                 >
                   <FavoriteCard
                     document={doc}
@@ -247,9 +241,8 @@ const FavoriteCard: React.FC<FavoriteCardProps> = ({ document, onRemove }) => {
           {document.tags && document.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-3">
               {document.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                <span key={tag}
+                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                 >
                   {tag}
                 </span>

@@ -321,8 +321,7 @@ export const EnhancedCommandPalette: React.FC<EnhancedCommandPaletteProps> = ({
           />
 
           {/* Command Palette */}
-          <div}
-            className="fixed inset-x-0 top-[10%] mx-auto max-w-3xl z-50 px-4"
+          <div className="fixed inset-x-0 top-[10%] mx-auto max-w-3xl z-50 px-4"
           >
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
               {/* Mode Tabs */}
@@ -398,9 +397,8 @@ export const EnhancedCommandPalette: React.FC<EnhancedCommandPaletteProps> = ({
                         {categoryCommands.map((cmd, index) => {
                           const globalIndex = filteredCommands.indexOf(cmd);
                           return (
-                            <button
-                              key={cmd.id}
-                              onClick={cmd.action}
+                            <button key={cmd.id}
+                    onClick={cmd.action}
                               className={cn(
                                 "w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors",
                                 "hover:bg-gray-100 dark:hover:bg-gray-700",

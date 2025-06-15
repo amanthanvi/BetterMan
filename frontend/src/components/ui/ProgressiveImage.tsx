@@ -81,8 +81,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
 
   if (error) {
     return (
-      <div
-        className={cn(
+      <div className={cn(
           'flex items-center justify-center bg-gray-200 dark:bg-gray-700',
           className
         )}
@@ -95,38 +94,32 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
   }
 
   return (
-    <div className={cn('relative overflow-hidden', className)}>
+    <div className={cn('relative overflow-hidden', className)}
       {imageLoading && placeholder && (
-        <img
-          src={placeholder}
+        <img src={placeholder}
           alt={alt}
           className={cn(
             'absolute inset-0 w-full h-full object-cover filter blur-sm',
             'animate-pulse'
-          )}
-        />
+          )} />
       )}
-      <img
-        ref={imgRef}
+      <img ref={imgRef}
         src={imageSrc || placeholder}
         alt={alt}
         className={cn(
           'w-full h-full object-cover transition-opacity duration-300',
           imageLoading ? 'opacity-0' : 'opacity-100'
-        )}
-      />
+        )} />
     </div>
   );
 };
 
 // Skeleton loader for images
-export const ImageSkeleton: React.FC<{ className?: string }> = ({ className }) => {
+export const ImageSkeleton: React.FC<{ className?: string } = ({ className }) => {
   return (
-    <div
-      className={cn(
+    <div className={cn(
         'animate-pulse bg-gray-200 dark:bg-gray-700 rounded',
         className
-      )}
-    />
+      )} />
   );
 };

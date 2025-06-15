@@ -500,15 +500,14 @@ export class PremiumErrorBoundary extends Component<Props, State> {
                   {recoveryStrategies.map((strategy) => {
                     const Icon = strategy.icon;
                     return (
-                      <Button
-                        key={strategy.id}
-                        onClick={() => strategy.action()}
+                      <Button key={strategy.id}
+                    onClick={() => strategy.action()}
                         variant={strategy.id === 'retry' ? 'primary' : 'secondary'}
                         className={cn(
                           "flex items-center justify-start gap-3 p-4 h-auto",
                           strategy.attempted && !strategy.success && "opacity-50"
                         )}
-                        disabled={isRecovering || (strategy.attempted && !strategy.success)}
+                        disabled={isRecovering || (strategy.attempted && !strategy.success)}>
                       >
                         <Icon className="w-5 h-5 flex-shrink-0" />
                         <div className="text-left">
@@ -610,7 +609,7 @@ export class PremiumErrorBoundary extends Component<Props, State> {
                           onClick={() => this.sendFeedback()}
                           variant="secondary"
                           size="sm"
-                          disabled={!this.state.userFeedback.trim()}
+                          disabled={!this.state.userFeedback.trim()}>
                           className="flex items-center gap-2"
                         >
                           <Send className="w-4 h-4" />
@@ -660,8 +659,8 @@ export const withPremiumErrorBoundary = <P extends object>(
   errorBoundaryProps?: Omit<Props, 'children'>
 ) => {
   const WrappedComponent = (props: P) => (
-    <PremiumErrorBoundary {...errorBoundaryProps}>
-      <Component {...props} />
+    <PremiumErrorBoundary {...errorBoundaryProps}
+      <Component {...props />
     </PremiumErrorBoundary>
   );
 

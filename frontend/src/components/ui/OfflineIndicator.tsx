@@ -14,8 +14,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
   return (
     <>
       {!isOnline && (
-        <div}
-          className={cn(
+        <div className={cn(
             'fixed top-16 left-1/2 transform -translate-x-1/2 z-50',
             'bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg',
             'flex items-center gap-2',

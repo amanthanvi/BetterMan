@@ -40,8 +40,7 @@ export const Toast: React.FC<ToastProps> = ({
   };
 
   return (
-    <div
-      className={cn(
+    <div className={cn(
         'flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg',
         colors[type]
       )}
@@ -68,13 +67,11 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, removeTo
     <div className="fixed top-4 right-4 z-50 space-y-2">
       <>
         {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            id={toast.id}
+          <Toast key={toast.id}
+                    id={toast.id}
             message={toast.message}
             type={toast.type}
-            onClose={removeToast}
-          />
+            onClose={removeToast} />
         ))}
       </>
     </div>

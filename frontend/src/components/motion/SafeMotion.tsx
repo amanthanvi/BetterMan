@@ -20,7 +20,7 @@ export const SafeMotion: React.FC<SafeMotionProps> = ({
   ...props 
 }) => {
   return (
-    <div className={className} style={style} {...props}>
+    <div className={className} style={style} {...props}
       {children}
     </div>
   );

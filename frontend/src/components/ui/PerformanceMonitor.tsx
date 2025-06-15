@@ -188,7 +188,7 @@ export const PerformanceMonitor: React.FC = () => {
 	return (
 		<>
 			{/* Floating Button */}
-			<button}}
+			<button
 				onClick={() => setIsOpen(!isOpen)}
 				className={cn(
 					"fixed bottom-4 right-4 z-50 p-3 rounded-full shadow-lg",
@@ -205,8 +205,7 @@ export const PerformanceMonitor: React.FC = () => {
 			{/* Monitor Panel */}
 			<>
 				{isOpen && (
-					<div
-						className="fixed bottom-20 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]"
+					<div className="fixed bottom-20 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]"
 					>
 						<div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700">
 							{/* Header */}
@@ -232,9 +231,8 @@ export const PerformanceMonitor: React.FC = () => {
 									<div className="grid grid-cols-3 gap-2">
 										{Object.entries(health).map(
 											([service, status]) => (
-												<div
-													key={service}
-													className="flex items-center space-x-2 p-2 rounded bg-gray-50 dark:bg-gray-700"
+												<div key={service}
+                    className="flex items-center space-x-2 p-2 rounded bg-gray-50 dark:bg-gray-700"
 												>
 													<span
 														className={getStatusColor(
@@ -301,9 +299,8 @@ export const PerformanceMonitor: React.FC = () => {
 										</h4>
 										<div className="space-y-1 max-h-32 overflow-y-auto">
 											{recentErrors.map((error, idx) => (
-												<div
-													key={idx}
-													className="text-xs text-red-600 dark:text-red-400 font-mono p-1 bg-red-50 dark:bg-red-900/20 rounded"
+												<div key={idx}
+                    className="text-xs text-red-600 dark:text-red-400 font-mono p-1 bg-red-50 dark:bg-red-900/20 rounded"
 												>
 													{error}
 												</div>

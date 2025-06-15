@@ -74,8 +74,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     return (
       <div className={cn('space-y-4', className)}>
         {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
+          <div key={i}
             className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse"
           >
             <div className="animate-pulse">
@@ -92,9 +91,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   if (error) {
     return (
       <div className={cn('text-center py-12', className)}>
-        <div}}
-          className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md mx-auto"
-        >
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md mx-auto">
           <MagnifyingGlassIcon className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-2">
             Search Error
@@ -108,9 +105,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   if (!query) {
     return (
       <div className={cn('text-center py-12', className)}>
-        <div}}
-          className="max-w-md mx-auto"
-        >
+        <div className="max-w-md mx-auto">
           <MagnifyingGlassIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
             Search Documentation
@@ -126,9 +121,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   if (results.length === 0) {
     return (
       <div className={cn('text-center py-12', className)}>
-        <div}}
-          className="max-w-md mx-auto"
-        >
+        <div className="max-w-md mx-auto">
           <FileTextIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
             No Results Found
@@ -176,13 +169,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       </div>
       
       {/* Results list */}
-      <div layout className="space-y-3">
+      <div className="space-y-3">
         <>
           {sortedResults.map((doc, index) => (
-            <div
-              key={doc.id}
-              layout}}}}
-            >
+            <div key={doc.id}>
               <SearchResultCard
                 document={doc}
                 isFavorite={doc.name ? isFavorite(`${doc.name}.${doc.section}`) : false}
@@ -229,9 +219,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
       onClick={onClick}
       className="block group"
     >
-      <div}
-        className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
-      >
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             {/* Title and section */}
@@ -258,8 +246,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
             {document.matches && document.matches.length > 0 && (
               <div className="space-y-1">
                 {document.matches.slice(0, 2).map((match, index) => (
-                  <div
-                    key={index}
+                  <div key={index}
                     className="text-sm font-mono bg-gray-50 dark:bg-gray-700 rounded px-2 py-1 text-gray-700 dark:text-gray-300"
                   >
                     {match.length > 100 ? `${match.substring(0, 100)}...` : match}
@@ -274,8 +261,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
                 <HashtagIcon className="w-4 h-4 text-gray-400" />
                 <div className="flex flex-wrap gap-1">
                   {document.tags.map((tag) => (
-                    <span
-                      key={tag}
+                    <span key={tag}
                       className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     >
                       {tag}

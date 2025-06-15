@@ -101,13 +101,13 @@ export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonPr
           variantStyles[variant],
           className
         )}
-        disabled={disabled || isLoading}}}}
+        disabled={disabled || isLoading}>
         {...props}
       >
         {/* Loading spinner */}
         {isLoading && (
           <span
-            className="absolute inset-0 flex items-center justify-center"}}}
+            className="absolute inset-0 flex items-center justify-center"}
           >
             <svg
               className="animate-spin h-5 w-5"
@@ -146,10 +146,8 @@ export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonPr
 
         {/* Hover effect for gradient variant */}
         {variant === 'gradient' && (
-          <div
-            className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0"}}
-            style={{ mixBlendMode: 'overlay' }}
-          />
+          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0">
+            style={{ mixBlendMode: 'overlay'} /> }}
         )}
       </button>
     );

@@ -71,8 +71,7 @@ export const MagicalSearchModal: React.FC<MagicalSearchModalProps> = ({
 					/>
 
 					{/* Modal */}
-					<div}
-						className="fixed inset-x-0 top-[8%] mx-auto max-w-4xl z-50 px-4"
+					<div className="fixed inset-x-0 top-[8%] mx-auto max-w-4xl z-50 px-4"
 					>
 						<div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
 							{/* Gradient Border Effect */}
@@ -99,9 +98,9 @@ export const MagicalSearchModal: React.FC<MagicalSearchModalProps> = ({
 										{/* Mode Switcher */}
 										<div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
 											<button
-												onClick={() =>
+												onClick={() => {
 													setMode("instant")
-												}
+												}}
 												className={cn(
 													"flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
 													mode === "instant"
@@ -113,9 +112,9 @@ export const MagicalSearchModal: React.FC<MagicalSearchModalProps> = ({
 												<span>Instant</span>
 											</button>
 											<button
-												onClick={() =>
+												onClick={() => {
 													setMode("commands")
-												}
+												}}
 												className={cn(
 													"flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
 													mode === "commands"
@@ -170,10 +169,8 @@ export const MagicalSearchModal: React.FC<MagicalSearchModalProps> = ({
 											</div>
 										</>
 									) : (
-										<EnhancedCommandPalette
-											isOpen={true}
-											onClose={onClose}
-										/>
+										<EnhancedCommandPalette isOpen={true}
+											onClose={onClose} />
 									)}
 								</div>
 

@@ -73,8 +73,7 @@ export const UserProfile: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <div}}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden"
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden"
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
@@ -95,8 +94,7 @@ export const UserProfile: React.FC = () => {
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
-                  <button
-                    key={tab.id}
+                  <button key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
                       'flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors',

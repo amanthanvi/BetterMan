@@ -26,7 +26,7 @@ import type { Document } from "@/types";
 
 // Using the Document type from types/index.ts instead of custom interface
 
-const SectionBadge: React.FC<{ section: number }> = ({ section }) => {
+const SectionBadge: React.FC<{ section: number } = ({ section }) => {
 	const sectionInfo: Record<
 		number,
 		{ label: string; color: string; icon: React.ReactElement }
@@ -92,7 +92,7 @@ const SectionBadge: React.FC<{ section: number }> = ({ section }) => {
 	);
 };
 
-const ResultCard: React.FC<{ result: Document; index: number }> = ({
+const ResultCard: React.FC<{ result: Document; index: number } = ({
 	result,
 	index,
 }) => {
@@ -156,7 +156,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 	};
 
 	return (
-		<div}
+		<div
 			onHoverStart={() => setIsHovered(true)}
 			onHoverEnd={() => setIsHovered(false)}
 			className="group relative"
@@ -177,7 +177,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 								{result.matches &&
 									result.matches.length > 0 && (
 										<span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-											<LightningBoltIcon className="w-3 h-3" />
+											<LightningBoltIcon className="w-3 h-3"} />
 											Match
 										</span>
 									)}
@@ -191,8 +191,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 						</div>
 
 						{/* Score Badge */}
-						<div}
-							className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md"
+						<div className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-md"
 						>
 							<StarIcon className="w-4 h-4 text-white fill-white" />
 							<span className="text-sm font-bold text-white">
@@ -211,9 +210,8 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 								{result.matches
 									.slice(0, 2)
 									.map((match, idx) => (
-										<p
-											key={idx}
-											className="mt-1 text-gray-600 dark:text-gray-400 font-mono text-xs overflow-hidden text-ellipsis"
+										<p key={idx}
+                    className="mt-1 text-gray-600 dark:text-gray-400 font-mono text-xs overflow-hidden text-ellipsis"
 										>
 											{cleanGroffFormatting(match)}
 										</p>
@@ -237,7 +235,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 					</div>
 
 					<div className="flex items-center gap-2">
-						<button}}
+						<button>
 							onClick={handleFavorite}
 							className={cn(
 								"p-2 rounded-lg transition-colors",
@@ -247,15 +245,13 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 							)}
 							title="Add to favorites"
 						>
-							<BookmarkIcon
-								className={cn(
+							<BookmarkIcon className={cn(
 									"w-4 h-4",
 									isFavorited && "fill-current"
-								)}
-							/>
+								)} />
 						</button>
 
-						<button}}
+						<button>
 							onClick={handleCopyCommand}
 							className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
 							title="Copy command"
@@ -267,7 +263,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 							)}
 						</button>
 
-						<button}}
+						<button>
 							onClick={handleShare}
 							className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
 							title="Share"
@@ -281,8 +277,7 @@ const ResultCard: React.FC<{ result: Document; index: number }> = ({
 			{/* Hover Effect - Glow */}
 			<>
 				{isHovered && (
-					<div
-						className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-400/20 to-purple-400/20 blur-xl"
+					<div className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-400/20 to-purple-400/20 blur-xl"
 					/>
 				)}
 			</>
@@ -300,8 +295,7 @@ export const PremiumSearchResults: React.FC = () => {
 	if (isSearching) {
 		return (
 			<div className="flex flex-col items-center justify-center py-20">
-				<div}}
-					className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full"
+				<div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full"
 				/>
 				<p className="mt-4 text-gray-600 dark:text-gray-400">
 					Searching through documentation...
@@ -312,8 +306,7 @@ export const PremiumSearchResults: React.FC = () => {
 
 	if (!results.length && searchQuery) {
 		return (
-			<div}}
-				className="text-center py-20"
+			<div className="text-center py-20"
 			>
 				<div className="w-24 h-24 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
 					<FileTextIcon className="w-12 h-12 text-gray-400" />

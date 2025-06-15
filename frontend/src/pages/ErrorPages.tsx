@@ -84,16 +84,16 @@ export const NotFoundPage: React.FC = () => {
           <div className="text-9xl font-bold text-gray-200 dark:text-gray-800 select-none">
             404
           </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <FileQuestion className="w-16 h-16 text-gray-500 dark:text-gray-500" />
+          <div className="absolute inset-0 flex items-center justify-center"}
+            <FileQuestion className="w-16 h-16 text-gray-500 dark:text-gray-500"} />
           </div>
         </div>
       }
       actions={
-        <>
+        <}
           <Button
             variant="primary"
-            size="lg"
+            size="lg"}
             onClick={() => navigate('/')}
             className="min-w-[150px]"
           >
@@ -137,16 +137,16 @@ export const ServerErrorPage: React.FC = () => {
           <div className="text-9xl font-bold text-gray-200 dark:text-gray-800 select-none">
             500
           </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <ServerCrash className="w-16 h-16 text-red-500 animate-pulse" />
+          <div className="absolute inset-0 flex items-center justify-center"}
+            <ServerCrash className="w-16 h-16 text-red-500 animate-pulse"} />
           </div>
         </div>
       }
       actions={
-        <>
+        <}
           <Button
             variant="primary"
-            size="lg"
+            size="lg"}
             onClick={handleReload}
             className="min-w-[150px]"
           >
@@ -181,16 +181,16 @@ export const UnauthorizedPage: React.FC = () => {
           <div className="text-9xl font-bold text-gray-200 dark:text-gray-800 select-none">
             403
           </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <ShieldOff className="w-16 h-16 text-yellow-500" />
+          <div className="absolute inset-0 flex items-center justify-center"}
+            <ShieldOff className="w-16 h-16 text-yellow-500"} />
           </div>
         </div>
       }
       actions={
-        <>
+        <}
           <Button
             variant="primary"
-            size="lg"
+            size="lg"}
             onClick={() => navigate('/login')}
             className="min-w-[150px]"
           >
@@ -211,7 +211,7 @@ export const UnauthorizedPage: React.FC = () => {
   );
 };
 
-export const RateLimitPage: React.FC<{ retryAfter?: number }> = ({ retryAfter = 60 }) => {
+export const RateLimitPage: React.FC<{ retryAfter?: number } = ({ retryAfter = 60 }) => {
   const [countdown, setCountdown] = React.useState(retryAfter);
   const navigate = useNavigate();
 
@@ -241,8 +241,8 @@ export const RateLimitPage: React.FC<{ retryAfter?: number }> = ({ retryAfter = 
             429
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative">
-              <Clock className="w-16 h-16 text-orange-500" />
+            <div className="relative"}
+              <Clock className="w-16 h-16 text-orange-500"} />
               <div className="absolute -bottom-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-8 h-8 flex items-center justify-center font-bold">
                 {countdown}
               </div>
@@ -251,10 +251,10 @@ export const RateLimitPage: React.FC<{ retryAfter?: number }> = ({ retryAfter = 
         </div>
       }
       actions={
-        <>
+        <}
           <Button
             variant="primary"
-            size="lg"
+            size="lg"}
             disabled={countdown > 0}
             onClick={() => window.location.reload()}
             className="min-w-[200px]"
@@ -319,20 +319,20 @@ export const OfflinePage: React.FC = () => {
           <div className="relative p-8 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-3xl shadow-2xl">
             <WifiOff className="w-20 h-20 text-gray-500 dark:text-gray-500" />
             {offlineState.connectionQuality === 'poor' && (
-              <div className="absolute -top-2 -right-2 bg-yellow-500 rounded-full p-2">
-                <AlertTriangle className="w-4 h-4 text-white" />
+              <div className="absolute -top-2 -right-2 bg-yellow-500 rounded-full p-2"}
+                <AlertTriangle className="w-4 h-4 text-white"} />
               </div>
             )}
           </div>
         </div>
       }
       actions={
-        <>
+        <}
           <Button
             variant="primary"
-            size="lg"
+            size="lg"}
             onClick={checkConnection}
-            disabled={checking}
+            disabled={checking}>
             className="min-w-[200px]"
           >
             {checking ? (
@@ -361,7 +361,7 @@ export const OfflinePage: React.FC = () => {
   );
 };
 
-export const MaintenancePage: React.FC<{ estimatedTime?: string }> = ({ 
+export const MaintenancePage: React.FC<{ estimatedTime?: string } = ({ 
   estimatedTime = '2 hours' 
 }) => {
   return (
@@ -375,18 +375,18 @@ export const MaintenancePage: React.FC<{ estimatedTime?: string }> = ({
           <div className="relative p-8 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 rounded-3xl shadow-2xl">
             <div className="relative">
               <ServerCrash className="w-20 h-20 text-blue-600 dark:text-blue-400" />
-              <div className="absolute -bottom-2 -right-2 bg-blue-600 dark:bg-blue-400 rounded-full p-2 animate-spin">
-                <RefreshCw className="w-4 h-4 text-white" />
+              <div className="absolute -bottom-2 -right-2 bg-blue-600 dark:bg-blue-400 rounded-full p-2 animate-spin"}
+                <RefreshCw className="w-4 h-4 text-white"} />
               </div>
             </div>
           </div>
         </div>
       }
       actions={
-        <>
+        <}
           <Button
             variant="primary"
-            size="lg"
+            size="lg"}
             onClick={() => window.location.reload()}
             className="min-w-[150px]"
           >

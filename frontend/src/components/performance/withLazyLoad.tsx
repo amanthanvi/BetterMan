@@ -10,7 +10,7 @@ interface WithLazyLoadOptions {
  * Higher-order component for lazy loading with custom fallback
  */
 export function withLazyLoad<P extends object>(
-  importFunc: () => Promise<{ default: ComponentType<P> }>,
+  importFunc: () => Promise<{ default: ComponentType<P> },
   options: WithLazyLoadOptions = {}
 ) {
   const LazyComponent = React.lazy(importFunc);
@@ -31,8 +31,8 @@ export function withLazyLoad<P extends object>(
     );
     
     return (
-      <Suspense fallback={fallback}>
-        <LazyComponent {...props} />
+      <Suspense fallback={fallback}
+        <LazyComponent {...props />
       </Suspense>
     );
   };
@@ -72,7 +72,7 @@ export const ProgressiveEnhancement: React.FC<{
   basic: React.ReactNode;
   enhanced: React.ReactNode;
   threshold?: number;
-}> = ({ basic, enhanced, threshold = 1000 }) => {
+} = ({ basic, enhanced, threshold = 1000 }) => {
   const [shouldEnhance, setShouldEnhance] = useState(false);
   
   useEffect(() => {

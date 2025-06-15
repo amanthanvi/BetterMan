@@ -75,8 +75,7 @@ export const DocumentPage: React.FC = () => {
 	if (loading) {
 		return (
 			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-				<div}}
-					className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
+				<div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
 				/>
 			</div>
 		);
@@ -85,8 +84,7 @@ export const DocumentPage: React.FC = () => {
 	if (error || !document) {
 		return (
 			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-				<div}}
-					className="text-center max-w-md mx-auto p-6"
+				<div className="text-center max-w-md mx-auto p-6"
 				>
 					<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
 						Document Not Found
@@ -104,8 +102,7 @@ export const DocumentPage: React.FC = () => {
 	}
 
 	return (
-		<div
-			className="document-page"
+		<div className="document-page"
 		>
                         <DocumentViewerWrapper document={document} />
                 </div>

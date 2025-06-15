@@ -169,7 +169,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
               value={formData.fullName}
               onChange={handleChange}
               placeholder="John Doe"
-              disabled={isLoading}
+              disabled={isLoading}>
               autoComplete="name"
             />
           </div>
@@ -186,7 +186,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
               onChange={handleChange}
               placeholder="johndoe"
               error={errors.username}
-              disabled={isLoading}
+              disabled={isLoading}>
               autoComplete="username"
               required
             />
@@ -204,7 +204,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
               onChange={handleChange}
               placeholder="john@example.com"
               error={errors.email}
-              disabled={isLoading}
+              disabled={isLoading}>
               autoComplete="email"
               required
             />
@@ -223,7 +223,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
                 onChange={handleChange}
                 placeholder="Create a strong password"
                 error={errors.password}
-                disabled={isLoading}
+                disabled={isLoading}>
                 autoComplete="new-password"
                 required
                 className="pr-10"
@@ -234,7 +234,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700"
                 tabIndex={-1}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={20 /} : <Eye size={20} />}
               </button>
             </div>
             
@@ -242,19 +242,17 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
               <div className="mt-2">
                 <div className="flex gap-1 mb-2">
                   {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-1 flex-1 rounded ${
+                    <div key={i}
+                    className={`h-1 flex-1 rounded ${
                         i < passwordStrength.score
                           ? getPasswordStrengthColor()
                           : 'bg-gray-200'
-                      }`}
-                    />
+                      `} />
                   ))}
                 </div>
                 <ul className="text-xs space-y-1">
                   {Object.entries(passwordStrength.requirements).map(([key, met]) => (
-                    <li key={key} className={`flex items-center ${met ? 'text-green-600' : 'text-gray-500'}`}>
+                    <li key={key} className={`flex items-center ${met ? 'text-green-600' : 'text-gray-500'}`}
                       {met ? <Check size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
                       {key === 'length' && 'At least 8 characters'}
                       {key === 'uppercase' && 'One uppercase letter'}
@@ -280,7 +278,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
               onChange={handleChange}
               placeholder="Confirm your password"
               error={errors.confirmPassword}
-              disabled={isLoading}
+              disabled={isLoading}>
               autoComplete="new-password"
               required
             />
@@ -310,7 +308,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
             variant="primary"
             className="w-full"
             loading={isLoading}
-            disabled={isLoading}
+            disabled={isLoading}>
           >
             Create Account
           </Button>
@@ -331,7 +329,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
               type="button"
               variant="outline"
               onClick={() => handleOAuthSignup('github')}
-              disabled={isLoading}
+              disabled={isLoading}>
               className="flex items-center justify-center"
             >
               <Github size={20} />
@@ -341,7 +339,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
               type="button"
               variant="outline"
               onClick={() => handleOAuthSignup('google')}
-              disabled={isLoading}
+              disabled={isLoading}>
               className="flex items-center justify-center"
             >
               <Mail size={20} />
@@ -351,7 +349,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ redirectTo = '/' }) => {
               type="button"
               variant="outline"
               onClick={() => handleOAuthSignup('gitlab')}
-              disabled={isLoading}
+              disabled={isLoading}>
               className="flex items-center justify-center"
             >
               <GitBranch size={20} />

@@ -101,8 +101,7 @@ export const SettingsPage: React.FC = () => {
 	};
 
 	return (
-		<div}}
-			className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-8"
+		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-8"
 		>
 			<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 				{/* Header */}
@@ -140,9 +139,9 @@ export const SettingsPage: React.FC = () => {
 											: "outline"
 									}
 									size="sm"
-									onClick={() =>
+									onClick={() => {
 										handleFontSizeChange("small")
-									}
+									}}
 								>
 									Small
 								</Button>
@@ -153,9 +152,9 @@ export const SettingsPage: React.FC = () => {
 											: "outline"
 									}
 									size="sm"
-									onClick={() =>
+									onClick={() => {
 										handleFontSizeChange("medium")
-									}
+									}}
 								>
 									Medium
 								</Button>
@@ -166,9 +165,9 @@ export const SettingsPage: React.FC = () => {
 											: "outline"
 									}
 									size="sm"
-									onClick={() =>
+									onClick={() => {
 										handleFontSizeChange("large")
-									}
+									}}
 								>
 									Large
 								</Button>
@@ -188,9 +187,9 @@ export const SettingsPage: React.FC = () => {
 											: "outline"
 									}
 									size="sm"
-									onClick={() =>
+									onClick={() => {
 										handleFontFamilyChange("system")
-									}
+									}}
 								>
 									System
 								</Button>
@@ -201,9 +200,9 @@ export const SettingsPage: React.FC = () => {
 											: "outline"
 									}
 									size="sm"
-									onClick={() =>
+									onClick={() => {
 										handleFontFamilyChange("mono")
-									}
+									}}
 									className="font-mono"
 								>
 									Monospace
@@ -215,9 +214,9 @@ export const SettingsPage: React.FC = () => {
 											: "outline"
 									}
 									size="sm"
-									onClick={() =>
+									onClick={() => {
 										handleFontFamilyChange("serif")
-									}
+									}}
 									className="font-serif"
 								>
 									Serif

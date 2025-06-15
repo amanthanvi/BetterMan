@@ -212,7 +212,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
   const scoreColor = score >= 75 ? 'text-green-500' : score >= 50 ? 'text-yellow-500' : 'text-red-500';
 
   return (
-    <div className={cn('fixed z-50', positionClasses[position])}>
+    <div className={cn('fixed z-50', positionClasses[position])}
       <>
         {!isExpanded ? (
           <button
@@ -226,11 +226,10 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
             )}
           >
             <ActivityIcon className={cn('w-5 h-5', scoreColor)} />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"} />
           </button>
         ) : (
-          <div
-            className={cn(
+          <div className={cn(
               'w-96 bg-white dark:bg-gray-800',
               'border border-gray-200 dark:border-gray-700',
               'rounded-xl shadow-2xl',
@@ -242,7 +241,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
               <div className="flex items-center space-x-2">
                 <ActivityIcon className="w-5 h-5 text-blue-500" />
                 <h3 className="font-semibold">Performance Monitor</h3>
-                <span className={cn('text-sm font-medium', scoreColor)}>
+                <span className={cn('text-sm font-medium', scoreColor)}
                   {score}%
                 </span>
               </div>
@@ -267,7 +266,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
             <div className="p-4 space-y-3">
               {/* Page Load */}
               <MetricRow
-                icon={<ClockIcon className="w-4 h-4" />}
+                icon={<ClockIcon className="w-4 h-4" /}
                 label="Page Load"
                 value={`${metrics.pageLoadTime}ms`}
                 status={metrics.pageLoadTime < 2000 ? 'good' : metrics.pageLoadTime < 4000 ? 'warning' : 'error'}
@@ -275,7 +274,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
               {/* API Performance */}
               <MetricRow
-                icon={<LightningBoltIcon className="w-4 h-4" />}
+                icon={<LightningBoltIcon className="w-4 h-4" /}
                 label="API Response"
                 value={`${metrics.averageApiResponseTime}ms avg`}
                 status={metrics.averageApiResponseTime < 200 ? 'good' : metrics.averageApiResponseTime < 500 ? 'warning' : 'error'}
@@ -284,7 +283,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
               {/* Cache Hit Rate */}
               <MetricRow
-                icon={<ArchiveIcon className="w-4 h-4" />}
+                icon={<ArchiveIcon className="w-4 h-4" /}
                 label="Cache Hit Rate"
                 value={`${metrics.cacheHitRate}%`}
                 status={metrics.cacheHitRate > 70 ? 'good' : metrics.cacheHitRate > 40 ? 'warning' : 'error'}
@@ -292,7 +291,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
               {/* Memory Usage */}
               <MetricRow
-                icon={<CpuIcon className="w-4 h-4" />}
+                icon={<CpuIcon className="w-4 h-4" /}
                 label="Memory Usage"
                 value={`${metrics.memoryUsage}MB`}
                 status={metrics.memoryUsage < 100 ? 'good' : metrics.memoryUsage < 200 ? 'warning' : 'error'}
@@ -300,7 +299,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
               {/* Errors */}
               <MetricRow
-                icon={<ExclamationTriangleIcon className="w-4 h-4" />}
+                icon={<ExclamationTriangleIcon className="w-4 h-4" /}
                 label="Errors"
                 value={metrics.errorCount.toString()}
                 status={metrics.errorCount === 0 ? 'good' : metrics.errorCount < 5 ? 'warning' : 'error'}
@@ -308,7 +307,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
               {/* Renders */}
               <MetricRow
-                icon={<ActivityIcon className="w-4 h-4" />}
+                icon={<ActivityIcon className="w-4 h-4" /}
                 label="Render Count"
                 value={metrics.renderCount.toString()}
                 status="neutral"
@@ -327,8 +326,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
               
               <>
                 {showDetails && (
-                  <div
-                    className="overflow-hidden"
+                  <div className="overflow-hidden"
                   >
                     <div className="max-h-48 overflow-y-auto">
                       {apiCalls.length === 0 ? (
@@ -380,13 +378,13 @@ const MetricRow: React.FC<MetricRowProps> = ({ icon, label, value, status, detai
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
-        <span className={cn('text-gray-400 dark:text-gray-500', statusColors[status])}>
+        <span className={cn('text-gray-400 dark:text-gray-500', statusColors[status])}
           {icon}
         </span>
         <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
       </div>
       <div className="flex items-center space-x-2">
-        <span className={cn('text-sm font-medium', statusColors[status])}>
+        <span className={cn('text-sm font-medium', statusColors[status])}
           {value}
         </span>
         {detail && (
@@ -412,7 +410,7 @@ const ApiCallRow: React.FC<ApiCallRowProps> = ({ call }) => {
       'flex items-center justify-between px-3 py-2 text-xs',
       'border-b border-gray-100 dark:border-gray-700',
       'hover:bg-gray-50 dark:hover:bg-gray-700'
-    )}>
+    )}
       <div className="flex items-center space-x-2 flex-1 min-w-0">
         {isError ? (
           <CrossCircledIcon className="w-3 h-3 text-red-500 flex-shrink-0" />
@@ -429,7 +427,7 @@ const ApiCallRow: React.FC<ApiCallRowProps> = ({ call }) => {
           'font-medium',
           call.duration < 200 ? 'text-green-500' : 
           call.duration < 500 ? 'text-yellow-500' : 'text-red-500'
-        )}>
+        )}
           {call.duration}ms
         </span>
         {call.size && call.size > 0 && (

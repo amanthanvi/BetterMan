@@ -92,10 +92,9 @@ export function VirtualizedList<T>({
   }
 
   return (
-    <div className={cn("flex flex-col h-full", containerClassName)}>
+    <div className={cn("flex flex-col h-full", containerClassName)}
       {headerComponent}
-      <div
-        ref={parentRef}
+      <div ref={parentRef}
         className={cn(
           "flex-1 overflow-auto scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent",
           className
@@ -107,21 +106,19 @@ export function VirtualizedList<T>({
             height: `${totalSize}px`,
             width: '100%',
             position: 'relative',
-          }}
+          >
         >
           {virtualItems.map((virtualItem) => {
             const item = items[virtualItem.index];
             return (
-              <div
-                key={virtualItem.key}
-                style={{
-                  position: 'absolute',
+              <div key={virtualItem.key}
+                    style={{ position: 'absolute',
                   top: 0,
                   left: 0,
-                  width: '100%',
+                  width: '100%', }
                   height: `${virtualItem.size}px`,
                   transform: `translateY(${virtualItem.start}px)`,
-                }}
+                >
               >
                 {renderItem(item, virtualItem.index)}
               </div>
@@ -180,7 +177,7 @@ export const ListItemWrapper: React.FC<ListItemWrapperProps> = ({
   }, [onVisible, threshold, rootMargin]);
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={className}
       {children}
     </div>
   );
@@ -216,10 +213,9 @@ export const VirtualizedDocumentList: React.FC<VirtualizedDocumentListProps> = (
         className="border-b border-neutral-800 hover:bg-neutral-900/50 transition-colors cursor-pointer"
         onVisible={() => {
           // Could prefetch document data here
-        }}
+        }
       >
-        <div
-          className="p-4"
+        <div className="p-4"
           onClick={() => onDocumentClick(doc)}
           role="button"
           tabIndex={0}
@@ -281,7 +277,6 @@ export const VirtualizedDocumentList: React.FC<VirtualizedDocumentListProps> = (
             Loading more...
           </div>
         )
-      }
-    />
+    } />
   );
 };

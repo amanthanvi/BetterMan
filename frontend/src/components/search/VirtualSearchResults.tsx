@@ -61,8 +61,7 @@ const ResultCard = React.memo<{
   return (
     <div
     >
-      <Card
-        className={cn(
+      <Card className={cn(
           "group cursor-pointer hover:shadow-md transition-all duration-200",
           "transform hover:-translate-y-0.5",
           "border-gray-200 dark:border-gray-700"
@@ -103,9 +102,7 @@ const ResultCard = React.memo<{
                   isFavorite && "opacity-100 text-blue-600 dark:text-blue-400"
                 )}
               >
-                <BookmarkIcon
-                  className={cn("w-4 h-4", isFavorite && "fill-current")}
-                />
+                <BookmarkIcon className={cn("w-4 h-4", isFavorite && "fill-current")} />
               </Button>
             </div>
           </div>
@@ -252,8 +249,7 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
   // Show empty state
   if (!loading && results.length === 0) {
     return (
-      <div}}
-        className={cn("text-center py-12", className)}
+      <div className={cn("text-center py-12", className)}
       >
         <FileTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -268,17 +264,13 @@ export const VirtualSearchResults: React.FC<VirtualSearchResultsProps> = ({
 
   // Virtual scrolling container
   return (
-    <div
-      ref={containerRef}
-      className={cn("relative focus:outline-none", className)}
+    <div ref={containerRef} className={cn("relative focus:outline-none", className)}
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="list"
       aria-label="Search results"
     >
-      <div
-        ref={virtualContainerRef}
-        className="relative overflow-auto"
+      <div ref={virtualContainerRef} className="relative overflow-auto"
         style={{ height: '600px' }} // Fixed height for virtual scrolling
       >
         <div style={{ height: `${totalHeight}px` }}>

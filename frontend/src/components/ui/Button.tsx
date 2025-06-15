@@ -35,7 +35,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     children,
     ...props 
   }, ref) => {
-    const Comp = asChild ? Slot : motion.button;
+    const Comp = asChild ? Slot : 'button';
     
     return (
       <Comp
@@ -51,7 +51,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           buttonSizes[size],
           className
         )}
-        disabled={disabled || loading} : undefined} : undefined}
+        disabled={disabled || loading}
         {...props}
       >
         {loading && (

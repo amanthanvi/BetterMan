@@ -126,8 +126,7 @@ export const EnhancedNavbar: React.FC = () => {
                 to="/"
                 className="flex items-center space-x-3 group"
               >
-                <div}}
-                  className="relative"
+                <div className="relative"
                 >
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                     <Command className="w-6 h-6 text-white" />
@@ -152,7 +151,7 @@ export const EnhancedNavbar: React.FC = () => {
             {/* Right Side Actions */}
             <div className="flex items-center space-x-2">
               {/* Search Button */}
-              <button}}
+              <button>
                 onClick={() => setCommandPaletteOpen(true)}
                 className={cn(
                   'hidden sm:flex items-center space-x-2 px-4 py-2',
@@ -174,7 +173,7 @@ export const EnhancedNavbar: React.FC = () => {
               )}
 
               {/* Theme Toggle */}
-              <button}}
+              <button>
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Toggle theme"
@@ -221,13 +220,11 @@ export const EnhancedNavbar: React.FC = () => {
         {/* Mobile Menu */}
         <>
           {isMobileMenuOpen && (
-            <div}
-              className="md:hidden border-t border-gray-200 dark:border-gray-700"
+            <div className="md:hidden border-t border-gray-200 dark:border-gray-700"
             >
               <div className="px-4 py-4 space-y-2 bg-white dark:bg-gray-900">
                 {navItems.map((item) => (
-                  <MobileNavLink
-                    key={item.href}
+                  <MobileNavLink key={item.href}
                     item={item}
                     isActive={location.pathname === item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -261,7 +258,7 @@ export const EnhancedNavbar: React.FC = () => {
 };
 
 // Desktop Navigation Link
-const NavLink: React.FC<{ item: NavItem; isActive: boolean }> = ({ item, isActive }) => (
+const NavLink: React.FC<{ item: NavItem; isActive: boolean } = ({ item, isActive }) => (
   <Link
     to={item.href}
     className={cn(
@@ -287,7 +284,7 @@ const MobileNavLink: React.FC<{
   item: NavItem; 
   isActive: boolean; 
   onClick: () => void;
-}> = ({ item, isActive, onClick }) => (
+} = ({ item, isActive, onClick }) => (
   <Link
     to={item.href}
     onClick={onClick}
@@ -310,9 +307,8 @@ const MobileNavLink: React.FC<{
 );
 
 // Notification Button
-const NotificationButton: React.FC<{ count: number }> = ({ count }) => (
-  <button}}
-    className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+const NotificationButton: React.FC<{ count: number } = ({ count }) => (
+  <button> className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
   >
     <BellIcon className="w-5 h-5" />
     {count > 0 && (
@@ -328,7 +324,7 @@ const UserMenu: React.FC<{
   user: any;
   menuItems: NavItem[];
   onLogout: () => void;
-}> = ({ user, menuItems, onLogout }) => {
+} = ({ user, menuItems, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -349,8 +345,8 @@ const UserMenu: React.FC<{
   }, [isOpen]);
 
   return (
-    <div className="relative" ref={menuRef}>
-      <button}}
+    <div className="relative" ref={menuRef}
+      <button>
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           'flex items-center space-x-2 p-2 rounded-lg',
@@ -366,8 +362,7 @@ const UserMenu: React.FC<{
 
       <>
         {isOpen && (
-          <div}
-            className={cn(
+          <div className={cn(
               'absolute right-0 mt-2 w-64',
               'bg-white dark:bg-gray-800 rounded-xl shadow-lg',
               'border border-gray-200 dark:border-gray-700',
@@ -383,9 +378,8 @@ const UserMenu: React.FC<{
             {/* Menu Items */}
             <div className="py-2">
               {menuItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
+                <Link key={item.href}
+                    to={item.href}
                   onClick={() => setIsOpen(false)}
                   className={cn(
                     'flex items-center space-x-3 px-4 py-2',

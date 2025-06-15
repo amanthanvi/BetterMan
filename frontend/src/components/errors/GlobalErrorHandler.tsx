@@ -120,12 +120,10 @@ export class GlobalErrorHandler extends Component<Props, State> {
       const FallbackComponent = this.props.fallback || DefaultErrorFallback;
       
       return (
-        <FallbackComponent
-          error={this.state.error}
+        <FallbackComponent error={this.state.error}
           errorInfo={this.state.errorInfo}
           errorId={this.state.errorId}
-          resetError={this.resetError}
-        />
+          resetError={this.resetError} />
       );
     }
 
@@ -164,8 +162,7 @@ Time: ${new Date().toISOString()}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div}}
-        className="max-w-2xl w-full"
+      <div className="max-w-2xl w-full"
       >
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
@@ -212,8 +209,7 @@ Time: ${new Date().toISOString()}
               </p>
 
               {showDetails && (
-                <div
-                  className="mt-4 space-y-4"
+                <div className="mt-4 space-y-4"
                 >
                   {/* Stack Trace */}
                   {error.stack && (

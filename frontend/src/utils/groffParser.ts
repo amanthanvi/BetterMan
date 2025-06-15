@@ -26,7 +26,7 @@ export function parseGroffContent(content: string, options: ParseOptions = {}): 
   
   // Preserve .nf/.fi blocks (no-fill/fill - often used for code)
   result = result.replace(/^\.nf\s*\n([\s\S]*?)\n\.fi\s*$/gm, (match, codeContent) => {
-    const marker = `${codeBlockMarker}${codeBlockIndex}>>>`;
+    const marker = `${codeBlockMarker}${codeBlockIndex}>>`;
     codeBlocks[codeBlockIndex] = codeContent;
     codeBlockIndex++;
     return marker;
@@ -34,7 +34,7 @@ export function parseGroffContent(content: string, options: ParseOptions = {}): 
   
   // Preserve .EX/.EE blocks (example blocks)
   result = result.replace(/^\.EX\s*\n([\s\S]*?)\n\.EE\s*$/gm, (match, codeContent) => {
-    const marker = `${codeBlockMarker}${codeBlockIndex}>>>`;
+    const marker = `${codeBlockMarker}${codeBlockIndex}>>`;
     codeBlocks[codeBlockIndex] = codeContent;
     codeBlockIndex++;
     return marker;
@@ -46,7 +46,7 @@ export function parseGroffContent(content: string, options: ParseOptions = {}): 
     if (match.match(/^\s+(-\w|--\w)/m)) {
       return match;
     }
-    const marker = `${codeBlockMarker}${codeBlockIndex}>>>`;
+    const marker = `${codeBlockMarker}${codeBlockIndex}>>`;
     codeBlocks[codeBlockIndex] = match;
     codeBlockIndex++;
     return marker;
@@ -155,7 +155,7 @@ export function parseGroffContent(content: string, options: ParseOptions = {}): 
   
   // Step 6: Restore code blocks
   for (let i = 0; i < codeBlocks.length; i++) {
-    const marker = `${codeBlockMarker}${i}>>>`;
+    const marker = `${codeBlockMarker}${i}>>`;
     const codeContent = codeBlocks[i];
     
     if (convertToMarkdown) {

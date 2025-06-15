@@ -133,14 +133,11 @@ export const PremiumSearch: React.FC<PremiumSearchProps> = ({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-            onClick={onClose}
-          />
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            onClick={onClose} />
 
           {/* Search modal */}
-          <div}
-            className={cn(
+          <div className={cn(
               "fixed top-[10%] left-1/2 -translate-x-1/2 z-50",
               "w-full max-w-3xl max-h-[80vh]",
               "bg-white dark:bg-gray-900",
@@ -194,13 +191,11 @@ export const PremiumSearch: React.FC<PremiumSearchProps> = ({
                 
                 <>
                   {showFilters && (
-                    <div
-                      className="flex items-center gap-1"
+                    <div className="flex items-center gap-1"
                     >
                       {sections.map((section) => (
-                        <button
-                          key={section.value}
-                          onClick={() => setSelectedSection(
+                        <button key={section.value}
+                    onClick={() => setSelectedSection(}
                             selectedSection === section.value ? null : section.value
                           )}
                           className={cn(
@@ -224,17 +219,13 @@ export const PremiumSearch: React.FC<PremiumSearchProps> = ({
             </div>
 
             {/* Search results */}
-            <div 
-              ref={resultsRef}
-              className="overflow-y-auto"
-              style={{ maxHeight: 'calc(80vh - 140px)' }}
+            <div ref={resultsRef} className="overflow-y-auto"
+              style={{ maxHeight: 'calc(80vh - 140px)' >
             >
               {loading && (
                 <div className="flex items-center justify-center py-12">
-                  <div}}
-                    className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
-                  />
-                </div>
+                  <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+                </div> }
               )}
 
               {!loading && query.length < 2 && (
@@ -248,9 +239,8 @@ export const PremiumSearch: React.FC<PremiumSearchProps> = ({
                       </h3>
                       <div className="space-y-1">
                         {recentSearches.slice(0, 5).map((search, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setQuery(search)}
+                          <button key={index}
+                    onClick={() => setQuery(search)}
                             className={cn(
                               "w-full text-left px-4 py-2 rounded-lg",
                               "text-gray-700 dark:text-gray-300",
@@ -308,9 +298,8 @@ export const PremiumSearch: React.FC<PremiumSearchProps> = ({
               {!loading && results.length > 0 && (
                 <div className="py-2">
                   {results.map((result, index) => (
-                    <button
-                      key={result.id}
-                      onClick={() => handleSelectResult(result)}
+                    <button key={result.id}
+                    onClick={() => handleSelectResult(result)}
                       onMouseEnter={() => setSelectedIndex(index)}
                       className={cn(
                         "w-full px-6 py-3 text-left",

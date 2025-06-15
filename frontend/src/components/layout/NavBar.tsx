@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-	CommandLineIcon,
+	CodeIcon,
 	MagnifyingGlassIcon,
 	HamburgerMenuIcon,
 	Cross1Icon,
@@ -15,7 +15,7 @@ import {
 
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/utils/cn";
 
 interface NavBarProps {
@@ -27,7 +27,7 @@ export const NavBar: React.FC<NavBarProps> = ({ onSearchClick }) => {
 	const [userMenuOpen, setUserMenuOpen] = useState(false);
 	const location = useLocation();
 	const { darkMode, toggleDarkMode } = useAppStore();
-	const { user, signOut, loading } = useAuth();
+	const { user, logout: signOut, isLoading: loading } = useAuth();
 	const userMenuRef = useRef<HTMLDivElement>(null);
 
 	const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
@@ -65,8 +65,7 @@ export const NavBar: React.FC<NavBarProps> = ({ onSearchClick }) => {
 	};
 
 	return (
-		<nav
-			className={cn(
+		<nav className={cn(
 				"sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg",
 				"border-b border-gray-200 dark:border-gray-700",
 				"transition-all duration-200"
@@ -97,9 +96,8 @@ export const NavBar: React.FC<NavBarProps> = ({ onSearchClick }) => {
 						{/* Desktop navigation */}
 						<div className="hidden lg:flex items-center space-x-1">
 							{navigation.map((item) => (
-								<Link
-									key={item.name}
-									to={item.href}
+								<Link key={item.name}
+                    to={item.href}
 									className={cn(
 										"px-3 py-2 rounded-lg text-sm font-medium transition-colors",
 										isActive(item.href)
@@ -221,10 +219,8 @@ export const NavBar: React.FC<NavBarProps> = ({ onSearchClick }) => {
 			{sidebarOpen && (
 				<div className="fixed inset-0 z-50 lg:hidden">
 					{/* Backdrop */}
-					<div
-						className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-						onClick={toggleSidebar}
-					/>
+					<div className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+						onClick={toggleSidebar} />
 
 					{/* Sidebar */}
 					<div className="relative flex w-full max-w-xs flex-col bg-white dark:bg-gray-900 shadow-xl">
@@ -232,7 +228,7 @@ export const NavBar: React.FC<NavBarProps> = ({ onSearchClick }) => {
 						<div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
 							<Link to="/" className="flex items-center space-x-2" onClick={toggleSidebar}>
 								<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-									<CommandLineIcon className="w-5 h-5 text-white" />
+									<CodeIcon className="w-5 h-5 text-white" />
 								</div>
 								<span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
 									BetterMan
@@ -249,9 +245,8 @@ export const NavBar: React.FC<NavBarProps> = ({ onSearchClick }) => {
 						{/* Navigation */}
 						<div className="flex-1 px-4 py-6 space-y-2">
 							{navigation.map((item) => (
-								<Link
-									key={item.name}
-									to={item.href}
+								<Link key={item.name}
+                    to={item.href}
 									onClick={toggleSidebar}
 									className={cn(
 										"flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",

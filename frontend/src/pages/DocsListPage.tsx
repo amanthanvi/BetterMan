@@ -81,8 +81,7 @@ export const DocsListPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div}}
-          className="mb-8"
+        <div className="mb-8"
         >
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
             All Documentation
@@ -93,8 +92,7 @@ export const DocsListPage: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div
-          className="mb-8 space-y-4"
+        <div className="mb-8 space-y-4"
         >
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
@@ -132,9 +130,7 @@ export const DocsListPage: React.FC = () => {
           {Object.entries(groupedDocs)
             .sort(([a], [b]) => Number(a) - Number(b))
             .map(([section, docs], sectionIndex) => (
-              <div
-                key={section}
-              >
+              <div key={section}>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <FileTextIcon className="w-5 h-5" />
                   {sectionNames[section] || `Section ${section}`}
@@ -146,9 +142,7 @@ export const DocsListPage: React.FC = () => {
                   {docs
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((doc, index) => (
-                      <div
-                        key={doc.id}
-                      >
+                      <div key={doc.id}>
                         <Link
                           to={`/docs/${doc.name}.${doc.section}`}
                           className="block p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all duration-200 hover:scale-[1.02]"
@@ -168,8 +162,7 @@ export const DocsListPage: React.FC = () => {
         </div>
 
         {filteredDocs.length === 0 && (
-          <div}}
-            className="text-center py-12"
+          <div className="text-center py-12"
           >
             <FileTextIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 dark:text-gray-400">

@@ -212,7 +212,7 @@ export async function bulkOperation<T, R>(
     continueOnError?: boolean;
     onError?: (error: any, item: T) => void;
   } = {}
-): Promise<{ results: R[]; errors: Array<{ item: T; error: any }> }> {
+): Promise<{ results: R[]; errors: Array<{ item: T; error: any } } {
   const {
     concurrency = 5,
     continueOnError = true,
@@ -220,7 +220,7 @@ export async function bulkOperation<T, R>(
   } = options;
 
   const results: R[] = [];
-  const errors: Array<{ item: T; error: any }> = [];
+  const errors: Array<{ item: T; error: any } = [];
   
   // Process in chunks
   for (let i = 0; i < items.length; i += concurrency) {

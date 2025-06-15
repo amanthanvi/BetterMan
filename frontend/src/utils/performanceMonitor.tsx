@@ -155,10 +155,10 @@ class PerformanceMonitor {
    * Get performance summary
    */
   getSummary(): {
-    metrics: Record<string, { avg: number; min: number; max: number; count: number }>;
+    metrics: Record<string, { avg: number; min: number; max: number; count: number };
     webVitals: Record<string, number>;
   } {
-    const summary: Record<string, { sum: number; count: number; min: number; max: number }> = {};
+    const summary: Record<string, { sum: number; count: number; min: number; max: number } = {};
 
     // Aggregate metrics
     this.metrics.forEach((metric) => {
@@ -173,7 +173,7 @@ class PerformanceMonitor {
     });
 
     // Calculate averages
-    const metrics: Record<string, { avg: number; min: number; max: number; count: number }> = {};
+    const metrics: Record<string, { avg: number; min: number; max: number; count: number } = {};
     Object.entries(summary).forEach(([name, stats]) => {
       metrics[name] = {
         avg: stats.sum / stats.count,
@@ -236,7 +236,7 @@ export function withPerformanceMonitor<P extends object>(
 ): React.FC<P> {
   return (props: P) => {
     usePerformanceMonitor(componentName);
-    return <Component {...props} />;
+    return <Component {...props />;
   };
 }
 

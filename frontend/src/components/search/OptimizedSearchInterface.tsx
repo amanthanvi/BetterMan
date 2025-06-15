@@ -305,13 +305,10 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
           {/* Search Suggestions */}
           <>
             {showSuggestions && suggestions.length > 0 && (
-              <div}
-                id="search-suggestions"
-                className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+              <div id="search-suggestions" className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
               >
                 {suggestions.map((suggestion, index) => (
-                  <button
-                    key={suggestion}
+                  <button key={suggestion}
                     type="button"
                     onClick={() => handleSuggestionClick(suggestion)}
                     onMouseEnter={() => setSelectedSuggestionIndex(index)}
@@ -346,9 +343,8 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
           </span>
           <div className="flex space-x-2">
             {sections.map((section) => (
-              <FilterChip
-                key={section.value}
-                label={section.label}
+              <FilterChip key={section.value}
+                    label={section.label}
                 value={section.value}
                 isActive={(filters.section || 'all') === section.value}
                 onClick={() => handleFilterChange('section', section.value)}
@@ -364,8 +360,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
           disabled={!query.trim() || isSearching}
         >
           {isSearching ? (
-            <div}}
-              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
             />
           ) : (
             <>
@@ -378,8 +373,7 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
 
       {/* Recent Searches (when input is empty) */}
       {!query && recentSearches.length > 0 && showSuggestions && (
-        <div}}
-          className="absolute top-full left-0 right-0 mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+        <div className="absolute top-full left-0 right-0 mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
         >
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -394,9 +388,8 @@ export const OptimizedSearchInterface: React.FC<OptimizedSearchInterfaceProps> =
           </div>
           <div className="flex flex-wrap gap-2">
             {recentSearches.slice(0, 5).map((search) => (
-              <Badge
-                key={search}
-                variant="secondary"
+              <Badge key={search}
+                    variant="secondary"
                 className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
                 onClick={() => handleSuggestionClick(search)}
               >

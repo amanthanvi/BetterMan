@@ -26,7 +26,7 @@ describe('LoginForm', () => {
   const renderWithAuth = () => {
     return render(
       <BrowserRouter>
-        <AuthContext.Provider value={mockAuthContext}>
+        <AuthContext.Provider value={mockAuthContext}
           <LoginForm />
         </AuthContext.Provider>
       </BrowserRouter>

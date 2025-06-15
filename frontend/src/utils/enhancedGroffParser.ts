@@ -296,7 +296,7 @@ export class EnhancedGroffParser {
   }
 
   public parseGroffSections(
-    sections: Array<{ name: string; content: string; subsections?: any[] }>,
+    sections: Array<{ name: string; content: string; subsections?: any[] },
     options: ParseOptions = {}
   ): ParsedSection[] {
     return sections.map(section => {
@@ -346,8 +346,8 @@ export class EnhancedGroffParser {
     flags: string[];
     description: string;
     argument?: string;
-  }> {
-    const options: Array<{ flags: string[]; description: string; argument?: string }> = [];
+  } {
+    const options: Array<{ flags: string[]; description: string; argument?: string } = [];
     const lines = content.split('\n');
     
     let currentOption: { flags: string[]; description: string; argument?: string } | null = null;

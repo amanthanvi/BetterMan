@@ -43,7 +43,7 @@ describe('DocumentViewer', () => {
     return render(
       <BrowserRouter>
         <Routes>
-          <Route path="/docs/:command" element={<DocumentViewer />} />
+          <Route path="/docs/:command" element={<DocumentViewer} />} />
         </Routes>
       </BrowserRouter>,
       {

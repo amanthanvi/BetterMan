@@ -68,8 +68,7 @@ export const EnhancedCodeBlock: React.FC<EnhancedCodeBlockProps> = ({
           style: {
             fontFamily: '"Cascadia Code", Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
           }
-        }}
-      >
+        }}>
         {code}
       </SyntaxHighlighter>
     </div>

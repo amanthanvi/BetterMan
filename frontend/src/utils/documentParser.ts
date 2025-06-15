@@ -249,7 +249,7 @@ export function parseSynopsisSection(content: string): Array<{
   flags?: string[];
   args?: string[];
   text?: string;
-}> {
+} {
   const lines = content.trim().split('\n');
   const parsed: Array<any> = [];
   

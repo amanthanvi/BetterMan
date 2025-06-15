@@ -65,8 +65,7 @@ export const SignUp: React.FC = () => {
   if (success) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-        <div}}
-          className="text-center"
+        <div className="text-center"
         >
           <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircledIcon className="w-10 h-10 text-green-600 dark:text-green-400" />
@@ -87,8 +86,7 @@ export const SignUp: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <div
-        className="w-full max-w-md"
+      <div className="w-full max-w-md"
       >
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center mb-8">
@@ -221,9 +219,8 @@ export const SignUp: React.FC = () => {
                 <div className="mt-2">
                   <div className="flex space-x-1 mb-1">
                     {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={cn(
+                      <div key={i}
+                    className={cn(
                           "flex-1 h-1 rounded-full transition-colors",
                           i < passwordStrength
                             ? passwordStrength <= 2
@@ -232,8 +229,7 @@ export const SignUp: React.FC = () => {
                               ? "bg-yellow-500"
                               : "bg-green-500"
                             : "bg-gray-300 dark:bg-gray-600"
-                        )}
-                      />
+                        )} />
                     ))}
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">

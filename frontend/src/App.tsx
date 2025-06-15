@@ -217,15 +217,12 @@ function App() {
 							<Suspense fallback={<PageLoader />}>
 								<Routes>
 									{/* Home Page */}
-									<Route
-										path="/"
+									<Route path="/"
 										element={
 											<HomePage
 												docs={docs}
-												loading={loading}
-											/>
-										}
-									/>
+												loading={loading} />
+										} />
 
 									{/* Analytics Page */}
 									<Route
@@ -287,16 +284,14 @@ function App() {
 											<ProtectedRoute>
 												<UserProfile />
 											</ProtectedRoute>
-										}
-									/>
+								} />
 									<Route
 										path="/setup-2fa"
 										element={
 											<ProtectedRoute>
 												<Setup2FA />
 											</ProtectedRoute>
-										}
-									/>
+								} />
 									<Route
 										path="/auth/callback"
 										element={<AuthCallback />}

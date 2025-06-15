@@ -254,7 +254,7 @@ export const UserProfile: React.FC = () => {
         </div>
       </div>
       
-      <Button type="submit" loading={isSaving}>
+      <Button type="submit" loading={isSaving}
         <Save size={16} className="mr-2" />
         Save Profile
       </Button>
@@ -351,7 +351,7 @@ export const UserProfile: React.FC = () => {
         </div>
       </div>
       
-      <Button type="submit" loading={isSaving}>
+      <Button type="submit" loading={isSaving}
         <Save size={16} className="mr-2" />
         Save Preferences
       </Button>
@@ -412,7 +412,7 @@ export const UserProfile: React.FC = () => {
               onChange={(e) => setPasswordData(prev => ({ ...prev, confirm_password: e.target.value }))}
               required
             />
-            <Button type="submit" loading={isSaving}>
+            <Button type="submit" loading={isSaving}
               Change Password
             </Button>
           </form>
@@ -467,7 +467,7 @@ export const UserProfile: React.FC = () => {
           <p className="text-sm text-gray-600 mb-4">
             Once you delete your account, there is no going back.
           </p>
-          <Button variant="danger" onClick={handleDeleteAccount}>
+          <Button variant="danger" onClick={handleDeleteAccount}
             Delete Account
           </Button>
         </div>
@@ -553,7 +553,7 @@ export const UserProfile: React.FC = () => {
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Account Settings</h1>
-        <Button variant="outline" onClick={logout}>
+        <Button variant="outline" onClick={logout}
           <LogOut size={16} className="mr-2" />
           Sign Out
         </Button>
@@ -563,9 +563,8 @@ export const UserProfile: React.FC = () => {
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+            <button key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
               className={`flex items-center px-4 py-2 border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-primary-600 text-primary-600'

@@ -15,8 +15,8 @@ export interface Document {
     subsections?: Array<{
       name: string;
       content: string;
-    }>;
-  }>;
+    };
+  };
   related?: string[];
   matches?: string[];
   last_updated?: string;

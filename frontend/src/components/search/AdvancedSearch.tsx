@@ -227,8 +227,7 @@ export const AdvancedSearch: React.FC = () => {
 	return (
 		<div className="relative w-full max-w-4xl mx-auto">
 			{/* Search Input Container */}
-			<div}}
-				className="relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden"
+			<div className="relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden"
 			>
 				{/* Search Input */}
 				<div className="relative flex items-center">
@@ -299,9 +298,8 @@ export const AdvancedSearch: React.FC = () => {
 					</span>
 
 					{filters.map((filter) => (
-						<button
-							key={filter.id
-							onClick={() => toggleFilter(filter.id)}
+						<button key={filter.id}
+                    onClick={() => toggleFilter(filter.id)}
 							className={cn(
 								"px-3 py-1.5 rounded-full text-sm font-medium transition-all",
 								filter.active
@@ -327,14 +325,12 @@ export const AdvancedSearch: React.FC = () => {
 			{/* Suggestions Dropdown */}
 			<>
 				{showSuggestions && suggestions.length > 0 && (
-					<div
-						ref={suggestionsRef}}
-						className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden z-50"
+					<div ref={suggestionsRef} className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden z-50"
 					>
 						<div className="py-2">
 							{suggestions.map((suggestion, index) => (
 								<button
-									key={`${suggestion.type}-${suggestion.value}-${index}`}}
+									key={`${suggestion.type}-${suggestion.value}-${index}`}
 									onClick={() => {
 										setQuery(suggestion.value);
 										handleSearch(suggestion.value);
@@ -381,8 +377,7 @@ export const AdvancedSearch: React.FC = () => {
 
 			{/* Quick Tips */}
 			{!query && isFocused && (
-				<div
-					className="absolute top-full left-0 right-0 mt-4 flex items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400"
+				<div className="absolute top-full left-0 right-0 mt-4 flex items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400"
 				>
 					<div className="flex items-center gap-2">
 						<MagicWandIcon className="w-4 h-4" />

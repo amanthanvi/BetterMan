@@ -135,8 +135,7 @@ export const AnalyticsPage: React.FC = () => {
 	if (loading || !analytics) {
 		return (
 			<div className="flex items-center justify-center min-h-screen">
-				<div}}
-					className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
+				<div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
 				/>
 			</div>
 		);
@@ -198,19 +197,16 @@ export const AnalyticsPage: React.FC = () => {
 			{/* Metrics Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 				{metrics.map((metric, index) => (
-					<MetricCardComponent
-						key={metric.title}
-						metric={metric}
-						index={index}
-					/>
+					<MetricCardComponent key={metric.title}
+                    metric={metric}
+						index={index} />
 				))}
 			</div>
 
 			{/* Charts Row */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* Popular Commands */}
-				<div
-					className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+				<div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 				>
 					<div className="flex items-center justify-between mb-4">
 						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -220,9 +216,8 @@ export const AnalyticsPage: React.FC = () => {
 					</div>
 					<div className="space-y-3">
 						{analytics.popularCommands.map((command, index) => (
-							<div
-								key={command.command}
-								className="flex items-center justify-between"
+							<div key={command.command}
+                    className="flex items-center justify-between"
 							>
 								<div className="flex items-center space-x-3">
 									<span className="text-sm font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
@@ -231,18 +226,15 @@ export const AnalyticsPage: React.FC = () => {
 								</div>
 								<div className="flex items-center space-x-2">
 									<div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-										<div
-											className="h-full bg-blue-500 rounded-full transition-all duration-500"
-											style={{
-												width: `${
+										<div className="h-full bg-blue-500 rounded-full transition-all duration-500"
+											style={{ width: `${
 													(command.count /
 														analytics
 															.popularCommands[0]
 															.count) *
 													100
-												}%`,
-											}}
-										/>
+												}%` }}
+											/>
 									</div>
 									<span className="text-sm text-gray-600 dark:text-gray-400 w-12 text-right">
 										{command.count}
@@ -254,8 +246,7 @@ export const AnalyticsPage: React.FC = () => {
 				</div>
 
 				{/* System Health */}
-				<div
-					className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+				<div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 				>
 					<div className="flex items-center justify-between mb-4">
 						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -297,8 +288,7 @@ export const AnalyticsPage: React.FC = () => {
 			</div>
 
 			{/* Recent Activity */}
-			<div
-				className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 			>
 				<div className="flex items-center justify-between mb-4">
 					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -333,8 +323,7 @@ const MetricCardComponent: React.FC<MetricCardComponentProps> = ({
 	};
 
 	return (
-		<div
-			className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+		<div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
 		>
 			<div className="flex items-center justify-between">
 				<div>
@@ -346,15 +335,13 @@ const MetricCardComponent: React.FC<MetricCardComponentProps> = ({
 					</p>
 					{metric.change !== undefined && (
 						<div className="flex items-center mt-2">
-							<ArrowUpIcon
-								className={`w-4 h-4 mr-1 ${
+							<ArrowUpIcon className={`w-4 h-4 mr-1 ${
 									metric.trend === "up"
 										? "text-green-500 rotate-0"
 										: metric.trend === "down"
 										? "text-red-500 rotate-180"
 										: "text-gray-400"
-								}`}
-							/>
+								}`} />
 							<span
 								className={`text-sm ${
 									metric.trend === "up"
@@ -370,8 +357,7 @@ const MetricCardComponent: React.FC<MetricCardComponentProps> = ({
 						</div>
 					)}
 				</div>
-				<div
-					className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+				<div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
 						colorClasses[metric.color as keyof typeof colorClasses]
 					}`}
 				>
@@ -413,11 +399,11 @@ const HealthMetric: React.FC<HealthMetricProps> = ({
 				</span>
 			</div>
 			<div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-				<div}%` 
+				<div
+					style={{ width: `${value}%` }}
 					className={`h-full rounded-full ${
 						colorClasses[color as keyof typeof colorClasses]
-					}`}
-				/>
+					}`} />
 			</div>
 		</div>
 	);

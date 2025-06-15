@@ -52,7 +52,7 @@ interface ErrorDetails {
     feedback: string;
     contact_allowed: boolean;
     created_at: string;
-  }>;
+  };
 }
 
 export const ErrorAnalyticsDashboard: React.FC = () => {
@@ -196,7 +196,7 @@ export const ErrorAnalyticsDashboard: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={handleRefresh}
-            disabled={refreshing}
+            disabled={refreshing}>
           >
             <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
           </Button>
@@ -222,7 +222,7 @@ export const ErrorAnalyticsDashboard: React.FC = () => {
                 <div className={cn(
                   "flex items-center gap-1 text-sm",
                   errorRate.trend > 0 ? "text-red-600" : "text-green-600"
-                )}>
+                )}
                   {errorRate.trend > 0 ? (
                     <TrendingUp className="w-4 h-4" />
                   ) : (
@@ -303,8 +303,7 @@ export const ErrorAnalyticsDashboard: React.FC = () => {
               </thead>
               <tbody>
                 {errorSummary.map((error, index) => (
-                  <tr 
-                    key={index}
+                  <tr key={index}
                     className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                     onClick={() => fetchErrorDetails(error.error_type)}
                   >
