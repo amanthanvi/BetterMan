@@ -24,22 +24,20 @@ const buttonSizes = {
   icon: 'w-10 h-10 p-0',
 };
 
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  function ButtonComponent({ 
-    className, 
-    variant = 'primary', 
-    size = 'md', 
-    asChild = false, 
-    loading = false,
-    disabled,
-    children,
-    ...props 
-  }, btnRef) {
+export const Button: React.FC<ButtonProps> = ({ 
+  className, 
+  variant = 'primary', 
+  size = 'md', 
+  asChild = false, 
+  loading = false,
+  disabled,
+  children,
+  ...props 
+}) => {
     const Comp = asChild ? Slot : 'button';
     
     return (
       <Comp
-        ref={btnRef}
         className={cn(
           // Base styles
           'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
@@ -75,7 +73,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {children}
       </Comp>
     );
-  }
-);
+};
 
 Button.displayName = 'Button';
