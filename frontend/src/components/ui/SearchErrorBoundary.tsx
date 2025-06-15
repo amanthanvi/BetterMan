@@ -1,9 +1,12 @@
-import React, { Component, ReactNode, ErrorInfo } from 'react';
+import React from 'react';
 import { ExclamationTriangleIcon, ReloadIcon } from '@radix-ui/react-icons';
 import { Button } from './Button';
 
+// Ensure React is available
+const ReactModule = React || (window as any).React;
+
 interface SearchErrorBoundaryProps {
-  children: ReactNode;
+  children: React.ReactNode;
   onRetry?: () => void;
 }
 
@@ -12,7 +15,7 @@ interface SearchErrorBoundaryState {
   error: Error | null;
 }
 
-export class SearchErrorBoundary extends Component<SearchErrorBoundaryProps, SearchErrorBoundaryState> {
+export class SearchErrorBoundary extends ReactModule.Component<SearchErrorBoundaryProps, SearchErrorBoundaryState> {
   constructor(props: SearchErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -22,7 +25,7 @@ export class SearchErrorBoundary extends Component<SearchErrorBoundaryProps, Sea
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Search Error Boundary caught an error:', error, errorInfo);
   }
 

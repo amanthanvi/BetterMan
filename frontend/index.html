@@ -36,6 +36,10 @@
     <script>
       // Apply dark mode immediately to prevent flash
       document.documentElement.classList.add('dark');
+      
+      // Ensure global objects exist
+      window.React = window.React || {};
+      window.ReactDOM = window.ReactDOM || {};
     </script>
   </head>
   <body class="dark">
