@@ -32,8 +32,20 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/main"
+      "source": "/api/health",
+      "destination": "/api/health.py"
+    },
+    {
+      "source": "/api/documents",
+      "destination": "/api/documents.py"
+    },
+    {
+      "source": "/api/documents/:id",
+      "destination": "/api/documents.py"
+    },
+    {
+      "source": "/api/search",
+      "destination": "/api/search.py"
     },
     {
       "source": "/(.*)",
@@ -41,9 +53,8 @@
     }
   ],
   "functions": {
-    "api/main.py": {
-      "runtime": "python3.9",
-      "includeFiles": "backend/**"
+    "api/*.py": {
+      "runtime": "python3.9"
     }
   }
 }
