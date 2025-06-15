@@ -13,6 +13,10 @@ import {
   ArrowRightIcon,
   ExclamationTriangleIcon,
   KeyboardIcon,
+  ReloadIcon,
+  MixIcon,
+  PersonIcon,
+  FileIcon,
 } from '@radix-ui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { useDebounce } from '@/utils/useDebounce';
@@ -39,6 +43,8 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
   const [results, setResults] = useState<any>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showResults, setShowResults] = useState(false);
+  const [searchMode, setSearchMode] = useState<'instant' | 'fuzzy' | 'semantic'>('instant');
+  const [error, setError] = useState<string | null>(null);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -52,7 +58,7 @@ export const InstantSearchInterface: React.FC<InstantSearchInterfaceProps> = ({
     favorites,
   } = useAppStore();
   
-  const debouncedQuery = useDebounce(query, 150); // Fast debounce for instant feel
+  const debouncedQuery = useDebounce(query, searchMode === 'instant' ? 150 : 300);
   
   // Perform instant search
   const performSearch = useCallback(async (searchQuery: string) => {

@@ -54,6 +54,15 @@ BetterMan transforms traditional Linux man pages into a modern, fast, and intuit
 -   **Input Validation**: Comprehensive server-side validation
 -   **CORS Protection**: Strict origin validation
 
+### 🔐 **Authentication & User Management**
+
+-   **SSO Support**: Sign in with Google, GitHub, GitLab, and Apple
+-   **Two-Factor Authentication**: TOTP-based 2FA with QR codes
+-   **Secure Sessions**: JWT-based authentication with automatic refresh
+-   **User Profiles**: Personalized settings and preferences
+-   **Role-Based Access**: Fine-grained permission control
+-   **Audit Logging**: Complete user activity tracking
+
 ## 🏗️ Architecture
 
 ### Frontend Stack
@@ -88,10 +97,13 @@ BetterMan transforms traditional Linux man pages into a modern, fast, and intuit
 git clone https://github.com/amanthanvi/BetterMan.git
 cd BetterMan
 
+# Set up authentication (optional but recommended)
+./scripts/setup-auth.sh
+
 # Start development environment
 docker-compose up -d
 
-# Frontend will be available at http://localhost:3000
+# Frontend will be available at http://localhost:5173
 # Backend API at http://localhost:8000
 # Grafana dashboard at http://localhost:3001
 ```

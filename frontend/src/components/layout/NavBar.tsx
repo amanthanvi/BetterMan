@@ -11,7 +11,7 @@ import {
 import { User, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAppStore } from "@/stores/appStore";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/providers/AuthProvider";
 import { useSearchStore } from "@/stores/searchStore";
 import { cn } from "@/utils/cn";
 
@@ -153,15 +153,15 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 									{user?.avatar_url ? (
 										<img
 											src={user.avatar_url}
-											alt={user.username}
+											alt={user.full_name || user.username || 'User'}
 											className="w-8 h-8 rounded-full"
 										/>
 									) : (
 										<div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
-											{user?.username?.charAt(0).toUpperCase()}
+											{(user?.username?.charAt(0) || user?.email?.charAt(0) || 'U').toUpperCase()}
 										</div>
 									)}
-									<span className="hidden sm:inline">{user?.username}</span>
+									<span className="hidden sm:inline">{user?.full_name || user?.username}</span>
 								</Link>
 								<Button
 									variant="ghost"
@@ -174,13 +174,16 @@ export const NavBar: React.FC<NavBarProps> = ({ className, onSearchClick }) => {
 							</div>
 						) : (
 							<div className="flex items-center space-x-2">
-								<Link to="/auth/login">
-									<Button variant="ghost" size="sm">
+								<Link to="/sign-in">
+									<Button 
+										variant="ghost" 
+										size="sm"
+									>
 										<LogIn className="w-4 h-4 mr-2" />
 										Sign In
 									</Button>
 								</Link>
-								<Link to="/auth/signup" className="hidden sm:block">
+								<Link to="/sign-up" className="hidden sm:block">
 									<Button variant="primary" size="sm">
 										Get Started
 									</Button>

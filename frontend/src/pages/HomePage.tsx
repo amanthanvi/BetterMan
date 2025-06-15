@@ -17,6 +17,7 @@ import { AdvancedSearch } from "@/components/search/AdvancedSearch";
 import { Button } from "@/components/ui/Button";
 import { SearchErrorBoundary } from "@/components/ui/SearchErrorBoundary";
 import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
+import { AuthSetupNotice } from "@/components/ui/AuthSetupNotice";
 
 // Stores
 import { useSearchStore } from "@/stores/searchStore";
@@ -153,6 +154,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 			{import.meta.env.DEV && <PerformanceMonitor />}
 			
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				{/* Authentication Setup Notice */}
+				<AuthSetupNotice />
 				{/* Hero Section */}
 				{!hasSearched && (
 					<motion.div

@@ -21,7 +21,8 @@ import { useServiceWorker } from "@/hooks/useServiceWorker";
 import type { Document } from "@/types";
 
 // Import authentication
-import { AuthProvider } from "@/contexts/AuthContext";
+import { SupabaseProvider } from "@/providers/SupabaseProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Import test page directly for debugging
@@ -51,17 +52,20 @@ const DocsListPage = lazy(() =>
 );
 
 // Auth pages
-const LoginPage = lazy(() =>
-	import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage }))
+const SignIn = lazy(() =>
+	import("@/pages/auth/SignIn").then((m) => ({ default: m.SignIn }))
 );
-const SignupPage = lazy(() =>
-	import("@/pages/SignupPage").then((m) => ({ default: m.SignupPage }))
+const SignUp = lazy(() =>
+	import("@/pages/auth/SignUp").then((m) => ({ default: m.SignUp }))
 );
-const ProfilePage = lazy(() =>
-	import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage }))
+const UserProfile = lazy(() =>
+	import("@/pages/auth/UserProfile").then((m) => ({ default: m.UserProfile }))
 );
-const OAuthCallbackPage = lazy(() =>
-	import("@/pages/OAuthCallbackPage").then((m) => ({ default: m.OAuthCallbackPage }))
+const Setup2FA = lazy(() =>
+	import("@/pages/auth/Setup2FA").then((m) => ({ default: m.Setup2FA }))
+);
+const AuthCallback = lazy(() =>
+	import("@/pages/auth/AuthCallback").then((m) => ({ default: m.AuthCallback }))
 );
 
 // Lazy load heavy components
@@ -195,8 +199,9 @@ function App() {
 			}}
 		>
 			<Router>
-				<AuthProvider>
-					<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
+				<SupabaseProvider>
+					<AuthProvider>
+						<div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-150 w-full flex flex-col">
 					{/* Navigation */}
 					<NavBar onSearchClick={() => setShowSearch(true)} />
 					
@@ -268,24 +273,32 @@ function App() {
 
 									{/* Auth Routes */}
 									<Route
-										path="/auth/login"
-										element={<LoginPage />}
+										path="/sign-in"
+										element={<SignIn />}
 									/>
 									<Route
-										path="/auth/signup"
-										element={<SignupPage />}
-									/>
-									<Route
-										path="/auth/callback/:provider"
-										element={<OAuthCallbackPage />}
+										path="/sign-up"
+										element={<SignUp />}
 									/>
 									<Route
 										path="/profile"
 										element={
 											<ProtectedRoute>
-												<ProfilePage />
+												<UserProfile />
 											</ProtectedRoute>
 										}
+									/>
+									<Route
+										path="/setup-2fa"
+										element={
+											<ProtectedRoute>
+												<Setup2FA />
+											</ProtectedRoute>
+										}
+									/>
+									<Route
+										path="/auth/callback"
+										element={<AuthCallback />}
 									/>
 
 									{/* 404 - Not Found */}
@@ -315,8 +328,9 @@ function App() {
 
 					{/* Performance Monitor (dev only) - Temporarily disabled to debug CORS issues */}
 					{/* {process.env.NODE_ENV === 'development' && <PerformanceMonitor />} */}
-				</div>
-				</AuthProvider>
+						</div>
+					</AuthProvider>
+				</SupabaseProvider>
 			</Router>
 		</ErrorBoundary>
 	);
