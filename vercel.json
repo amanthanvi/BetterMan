@@ -3,7 +3,31 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm install",
   "framework": null,
+  "functions": {
+    "backend/api/index.py": {
+      "runtime": "python3.9",
+      "includeFiles": "backend/**",
+      "maxDuration": 60
+    }
+  },
   "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    },
     {
       "source": "/manifest.json",
       "headers": [
@@ -29,7 +53,11 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!.*\\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff|woff2|mp4|webm)).*)",
+      "source": "/api/(.*)",
+      "destination": "/backend/api/index"
+    },
+    {
+      "source": "/((?!api|.*\\.(js|css|png|jpg|jpeg|gif|ico|json|svg|woff|woff2|mp4|webm)).*)",
       "destination": "/index.html"
     }
   ]
