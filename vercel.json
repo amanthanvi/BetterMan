@@ -3,11 +3,6 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm install",
   "framework": null,
-  "functions": {
-    "api/index.py": {
-      "runtime": "python3.9"
-    }
-  },
   "headers": [
     {
       "source": "/manifest.json",
