@@ -1,6 +1,8 @@
-import { create } from 'zustand';
+// Simple search store implementation without Zustand to avoid initialization issues
+
 import type { SearchState, Document, SearchFilters, SearchResult } from '@/types';
 import { searchAPI } from '@/utils/apiWrapper';
+import { useEffect, useState } from 'react';
 
 interface SearchStore extends SearchState {
   // Search actions
@@ -23,8 +25,8 @@ interface SearchStore extends SearchState {
   clearRecent: () => void;
 }
 
-export const useSearchStore = create<SearchStore>((set, get) => ({
-  // Initial state
+// Default state
+const defaultState: SearchState = {
   query: '',
   results: [],
   loading: false,
@@ -33,14 +35,37 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
   suggestions: [],
   history: [],
   recent: [],
-  
+};
+
+// Store implementation
+class SearchStoreImpl {
+  private state: SearchState;
+  private listeners: Set<(state: SearchState) => void> = new Set();
+
+  constructor() {
+    this.state = { ...defaultState };
+  }
+
+  getState = () => this.state;
+
+  setState = (partial: Partial<SearchState> | ((state: SearchState) => Partial<SearchState>)) => {
+    const update = typeof partial === 'function' ? partial(this.state) : partial;
+    this.state = { ...this.state, ...update };
+    this.listeners.forEach(listener => listener(this.state));
+  };
+
+  subscribe = (listener: (state: SearchState) => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
   // Search actions
-  setQuery: (query: string) => set({ query }),
-  
-  performSearch: async (query: string, filters = {}) => {
+  setQuery = (query: string) => this.setState({ query });
+
+  performSearch = async (query: string, filters: SearchFilters = {}) => {
     // Allow empty queries to browse all documents
     
-    set({ loading: true, error: null, query });
+    this.setState({ loading: true, error: null, query });
     
     try {
       // Check if this is a shortcut (starts with !)
@@ -66,7 +91,7 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
           ...filters,
         });
         
-        set({ 
+        this.setState({ 
           results: result.results,
           loading: false,
           error: null,
@@ -80,7 +105,7 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
           ...filters,
         });
         
-        set({ 
+        this.setState({ 
           results: result.results,
           loading: false,
           error: null,
@@ -88,37 +113,36 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
       }
       
       // Add to search history
-      const currentHistory = get().history;
+      const currentHistory = this.state.history;
       if (!currentHistory.includes(query)) {
-        set({ 
+        this.setState({ 
           history: [query, ...currentHistory.slice(0, 19)] // Keep last 20
         });
       }
     } catch (error) {
-      set({ 
+      this.setState({ 
         loading: false, 
         error: error instanceof Error ? error.message : 'Search failed',
         results: []
       });
     }
-  },
-  
-  clearResults: () => set({ results: [], query: '', error: null }),
-  setLoading: (loading: boolean) => set({ loading }),
-  setError: (error: string | null) => set({ error }),
-  
+  };
+
+  clearResults = () => this.setState({ results: [], query: '', error: null });
+  setLoading = (loading: boolean) => this.setState({ loading });
+  setError = (error: string | null) => this.setState({ error });
+
   // Filter actions
-  updateFilters: (newFilters: Partial<SearchFilters>) =>
-    set((state) => ({
-      filters: { ...state.filters, ...newFilters },
-    })),
-    
-  clearFilters: () => set({ filters: {} }),
-  
+  updateFilters = (newFilters: Partial<SearchFilters>) => {
+    this.setState({ filters: { ...this.state.filters, ...newFilters } });
+  };
+
+  clearFilters = () => this.setState({ filters: {} });
+
   // Suggestions actions
-  fetchSuggestions: async (query: string) => {
+  fetchSuggestions = async (query: string) => {
     if (!query.trim() || query.length < 2) {
-      set({ suggestions: [] });
+      this.setState({ suggestions: [] });
       return;
     }
     
@@ -127,19 +151,19 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
       const apiSuggestions = await searchAPI.suggest(query);
       
       // Merge with search history
-      const history = get().history;
+      const history = this.state.history;
       const historySuggestions = history
         .filter(h => h.toLowerCase().includes(query.toLowerCase()))
         .slice(0, 3);
       
       // Combine and deduplicate
       const allSuggestions = [...new Set([...apiSuggestions, ...historySuggestions])].slice(0, 10);
-      set({ suggestions: allSuggestions });
+      this.setState({ suggestions: allSuggestions });
     } catch (error) {
       console.error('Failed to fetch suggestions:', error);
       
       // Fallback to local suggestions
-      const history = get().history;
+      const history = this.state.history;
       const suggestions = history
         .filter(h => h.toLowerCase().includes(query.toLowerCase()))
         .slice(0, 5);
@@ -151,20 +175,44 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
         .slice(0, 3);
       
       const allSuggestions = [...new Set([...suggestions, ...commandSuggestions])];
-      set({ suggestions: allSuggestions });
+      this.setState({ suggestions: allSuggestions });
     }
-  },
-  
-  clearSuggestions: () => set({ suggestions: [] }),
-  
+  };
+
+  clearSuggestions = () => this.setState({ suggestions: [] });
+
   // Recent/history actions
-  addToRecent: (doc: Document) =>
-    set((state) => {
-      const filtered = state.recent.filter(d => d.id !== doc.id);
-      return {
-        recent: [doc, ...filtered].slice(0, 10), // Keep last 10
-      };
-    }),
-    
-  clearRecent: () => set({ recent: [] }),
-}));
+  addToRecent = (doc: Document) => {
+    const filtered = this.state.recent.filter(d => d.id !== doc.id);
+    this.setState({ recent: [doc, ...filtered].slice(0, 10) }); // Keep last 10
+  };
+
+  clearRecent = () => this.setState({ recent: [] });
+}
+
+// Create single instance
+const searchStore = new SearchStoreImpl();
+
+// React hook
+export function useSearchStore(): SearchStore {
+  const [state, setState] = useState(searchStore.getState());
+
+  useEffect(() => {
+    return searchStore.subscribe(setState);
+  }, []);
+
+  return {
+    ...state,
+    setQuery: searchStore.setQuery,
+    performSearch: searchStore.performSearch,
+    clearResults: searchStore.clearResults,
+    setLoading: searchStore.setLoading,
+    setError: searchStore.setError,
+    updateFilters: searchStore.updateFilters,
+    clearFilters: searchStore.clearFilters,
+    fetchSuggestions: searchStore.fetchSuggestions,
+    clearSuggestions: searchStore.clearSuggestions,
+    addToRecent: searchStore.addToRecent,
+    clearRecent: searchStore.clearRecent,
+  };
+}
