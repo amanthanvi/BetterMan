@@ -3,9 +3,12 @@ Analytics endpoint for Vercel - using real man page statistics
 """
 import json
 from urllib.parse import urlparse
-from manpage_loader import load_manpage_metadata
+try:
+    from .manpage_loader import load_manpage_metadata
+except ImportError:
+    from manpage_loader import load_manpage_metadata
 
-def handler(request, context):
+def handler(request):
     """Vercel serverless function handler"""
     
     # CORS headers
@@ -17,7 +20,7 @@ def handler(request, context):
     }
     
     # Handle OPTIONS request
-    if request.get('method', 'GET') == 'OPTIONS':
+    if request.method == 'OPTIONS':
         return {
             'statusCode': 200,
             'headers': headers,
@@ -25,7 +28,7 @@ def handler(request, context):
         }
     
     # Parse the path
-    path = request.get('path', '/')
+    path = request.path
     path_parts = path.strip('/').split('/')
     
     try:

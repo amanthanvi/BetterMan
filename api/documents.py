@@ -3,7 +3,10 @@ Documents endpoint for Vercel - using real man page data
 """
 import json
 from urllib.parse import urlparse
-from manpage_loader import load_manpage_metadata, load_manpage_content
+try:
+    from .manpage_loader import load_manpage_metadata, load_manpage_content
+except ImportError:
+    from manpage_loader import load_manpage_metadata, load_manpage_content
 
 # Cache for performance
 _manpages_cache = None
@@ -15,7 +18,7 @@ def get_all_manpages():
         _manpages_cache = load_manpage_metadata()
     return _manpages_cache
 
-def handler(request, context):
+def handler(request):
     """Vercel serverless function handler"""
     
     # CORS headers
@@ -27,7 +30,7 @@ def handler(request, context):
     }
     
     # Handle OPTIONS request
-    if request.get('method', 'GET') == 'OPTIONS':
+    if request.method == 'OPTIONS':
         return {
             'statusCode': 200,
             'headers': headers,
@@ -35,7 +38,7 @@ def handler(request, context):
         }
     
     # Parse the path
-    path = request.get('path', '/')
+    path = request.path
     path_parts = path.strip('/').split('/')
     
     try:

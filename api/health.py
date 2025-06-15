@@ -3,7 +3,7 @@ Health check endpoint for Vercel
 """
 import json
 
-def handler(request, context):
+def handler(request):
     """Vercel serverless function handler"""
     
     # CORS headers
@@ -15,7 +15,7 @@ def handler(request, context):
     }
     
     # Handle OPTIONS request
-    if request.get('method', 'GET') == 'OPTIONS':
+    if request.method == 'OPTIONS':
         return {
             'statusCode': 200,
             'headers': headers,

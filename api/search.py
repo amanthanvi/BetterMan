@@ -3,9 +3,12 @@ Search endpoint for Vercel - using real man page data
 """
 import json
 from urllib.parse import parse_qs
-from manpage_loader import search_manpages
+try:
+    from .manpage_loader import search_manpages
+except ImportError:
+    from manpage_loader import search_manpages
 
-def handler(request, context):
+def handler(request):
     """Vercel serverless function handler"""
     
     # CORS headers
@@ -17,7 +20,7 @@ def handler(request, context):
     }
     
     # Handle OPTIONS request
-    if request.get('method', 'GET') == 'OPTIONS':
+    if request.method == 'OPTIONS':
         return {
             'statusCode': 200,
             'headers': headers,
@@ -25,8 +28,8 @@ def handler(request, context):
         }
     
     # Get query parameters
-    query_string = request.get('queryStringParameters', {})
-    query = query_string.get('q', '') if query_string else ''
+    query_params = parse_qs(request.query)
+    query = query_params.get('q', [''])[0]
     
     try:
         # Search using real data
@@ -48,7 +51,11 @@ def handler(request, context):
                 })
         else:
             # Return popular commands when no query
-            from manpage_loader import load_manpage_metadata
+            try:
+                from .manpage_loader import load_manpage_metadata
+            except ImportError:
+                from manpage_loader import load_manpage_metadata
+                
             all_pages = load_manpage_metadata()
             # Sort by priority and take top 10
             all_pages.sort(key=lambda x: x.get('priority', 0), reverse=True)
