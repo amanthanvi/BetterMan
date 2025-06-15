@@ -1,6 +1,9 @@
 import React from 'react';
 import { Slot } from '@radix-ui/react-slot';
-import { cn } from '@/utils/cn';
+
+function cn(...classes: (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'outline';
@@ -24,7 +27,7 @@ const buttonSizes = {
   icon: 'w-10 h-10 p-0',
 };
 
-export const Button: React.FC<ButtonProps> = ({ 
+export function Button({ 
   className, 
   variant = 'primary', 
   size = 'md', 
@@ -33,46 +36,46 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   children,
   ...props 
-}) => {
-    const Comp = asChild ? Slot : 'button';
-    
-    return (
-      <Comp
-        className={cn(
-          // Base styles
-          'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
-          'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900',
-          'disabled:opacity-50 disabled:pointer-events-none',
-          // Variants
-          buttonVariants[variant],
-          // Sizes
-          buttonSizes[size],
-          className
-        )}
-        disabled={disabled || loading}
-        {...props}
-      >
-        {loading && (
-          <svg className="w-4 h-4 mr-2 animate-spin" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-              fill="none"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="m12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8v-2z"
-            />
-          </svg>
-        )}
-        {children}
-      </Comp>
-    );
-};
+}: ButtonProps) {
+  const Comp = asChild ? Slot : 'button';
+  
+  return (
+    <Comp
+      className={cn(
+        // Base styles
+        'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
+        'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900',
+        'disabled:opacity-50 disabled:pointer-events-none',
+        // Variants
+        buttonVariants[variant],
+        // Sizes
+        buttonSizes[size],
+        className
+      )}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading && (
+        <svg className="w-4 h-4 mr-2 animate-spin" viewBox="0 0 24 24">
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+            fill="none"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="m12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8v-2z"
+          />
+        </svg>
+      )}
+      {children}
+    </Comp>
+  );
+}
 
 Button.displayName = 'Button';

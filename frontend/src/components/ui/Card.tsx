@@ -1,5 +1,8 @@
 import React from 'react';
-import { cn } from '@/utils/cn';
+
+function cn(...classes: (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'elevated' | 'outlined' | 'glass';
@@ -21,31 +24,22 @@ const paddingVariants = {
   lg: 'p-8',
 };
 
-export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = 'default', interactive = false, padding = 'md', children, ...props }, ref) => {
-    if (interactive) {
-      return (
-        <div ref={ref}
-          className={cn(
-            'rounded-xl transition-all duration-200',
-            cardVariants[variant],
-            paddingVariants[padding],
-            'cursor-pointer hover:shadow-xl dark:hover:shadow-gray-900/50',
-            className
-          )}
-          {...props}
-        >
-          {children}
-        </div>
-      );
-    }
-    
+export function Card({ 
+  className, 
+  variant = 'default', 
+  interactive = false, 
+  padding = 'md', 
+  children, 
+  ...props 
+}: CardProps) {
+  if (interactive) {
     return (
-      <div ref={ref}
+      <div 
         className={cn(
           'rounded-xl transition-all duration-200',
           cardVariants[variant],
           paddingVariants[padding],
+          'cursor-pointer hover:shadow-xl dark:hover:shadow-gray-900/50',
           className
         )}
         {...props}
@@ -54,54 +48,72 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       </div>
     );
   }
-);
+  
+  return (
+    <div 
+      className={cn(
+        'rounded-xl transition-all duration-200',
+        cardVariants[variant],
+        paddingVariants[padding],
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
 
 Card.displayName = 'Card';
 
-export const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref}
+export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div 
       className={cn('mb-4 pb-4 border-b border-gray-200 dark:border-gray-700', className)}
-      {...props} />
-  )
-);
+      {...props} 
+    />
+  );
+}
 
 CardHeader.displayName = 'CardHeader';
 
-export const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3 ref={ref}
+export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
+  return (
+    <h3 
       className={cn('text-lg font-semibold text-gray-900 dark:text-gray-100', className)}
-      {...props} />
-  )
-);
+      {...props} 
+    />
+  );
+}
 
 CardTitle.displayName = 'CardTitle';
 
-export const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
-    <p ref={ref}
+export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
+  return (
+    <p 
       className={cn('mt-1 text-sm text-gray-600 dark:text-gray-400', className)}
-      {...props} />
-  )
-);
+      {...props} 
+    />
+  );
+}
 
 CardDescription.displayName = 'CardDescription';
 
-export const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('', className)} {...props} />
-  )
-);
+export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn('', className)} {...props} />
+  );
+}
 
 CardContent.displayName = 'CardContent';
 
-export const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref}
+export function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div 
       className={cn('mt-4 pt-4 border-t border-gray-200 dark:border-gray-700', className)}
-      {...props} />
-  )
-);
+      {...props} 
+    />
+  );
+}
 
 CardFooter.displayName = 'CardFooter';
