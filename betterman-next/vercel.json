@@ -1,0 +1,21 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/search/route.ts": {
+      "maxDuration": 10
+    },
+    "app/api/docs/[slug]/route.ts": {
+      "maxDuration": 10
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/refresh-cache",
+      "schedule": "0 */6 * * *"
+    }
+  ]
+}
