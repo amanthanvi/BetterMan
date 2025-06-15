@@ -1,0 +1,9 @@
+fix: resolve Tailwind config and promise handling errors
+
+- Fix Tailwind darkMode configuration (use string instead of array)
+- Add catch handler to dynamic import promise in lib/search/client.ts
+- Resolves TypeScript compilation errors
+
+🤖 Generated with Claude Code (https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>

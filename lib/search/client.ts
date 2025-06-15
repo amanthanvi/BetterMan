@@ -5,6 +5,8 @@ let staticSearch: any = null
 if (typeof window !== 'undefined') {
   import('@/data/search-index').then(module => {
     staticSearch = module.search
+  }).catch(err => {
+    console.error('Failed to load search index:', err)
   })
 }
 
