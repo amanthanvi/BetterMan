@@ -1,7 +1,7 @@
-import React from 'react';
+import { forwardRef, FC, ReactNode, HTMLAttributes } from 'react';
 import { cn } from '@/utils/cn';
 
-interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
   size?: 'sm' | 'md' | 'lg';
   animate?: boolean;
@@ -22,7 +22,7 @@ const badgeSizes = {
   lg: 'px-3 py-1.5 text-base',
 };
 
-export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
+export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant = 'default', size = 'md', animate = false, children, ...props }, ref) => {
     const Component = 'span';
     
@@ -46,7 +46,7 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
 Badge.displayName = 'Badge';
 
 // Compound component for badge with icon
-export const BadgeIcon: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
+export const BadgeIcon: FC<{ children: ReactNode; className?: string }> = ({ 
   children, 
   className 
 }) => (
@@ -54,7 +54,7 @@ export const BadgeIcon: React.FC<{ children: React.ReactNode; className?: string
 );
 
 // Compound component for badge with close button
-export const BadgeClose: React.FC<{ 
+export const BadgeClose: FC<{ 
   onClick?: () => void; 
   className?: string;
   'aria-label'?: string;

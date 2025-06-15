@@ -1,18 +1,18 @@
-import React from 'react';
+import { forwardRef, ReactNode, ButtonHTMLAttributes } from 'react';
 import { cn } from '@/utils/cn';
 
-export interface PremiumButtonProps extends HTMLMotionProps<"button"> {
+export interface PremiumButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'gradient';
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   isLoading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
   fullWidth?: boolean;
   pill?: boolean;
   glow?: boolean;
 }
 
-export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonProps>(
+export const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
   (
     {
       className,
@@ -101,13 +101,13 @@ export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonPr
           variantStyles[variant],
           className
         )}
-        disabled={disabled || isLoading}>
+        disabled={disabled || isLoading}
         {...props}
       >
         {/* Loading spinner */}
         {isLoading && (
           <span
-            className="absolute inset-0 flex items-center justify-center"}
+            className="absolute inset-0 flex items-center justify-center"
           >
             <svg
               className="animate-spin h-5 w-5"
@@ -146,8 +146,10 @@ export const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonPr
 
         {/* Hover effect for gradient variant */}
         {variant === 'gradient' && (
-          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0">
-            style={{ mixBlendMode: 'overlay'} /> }}
+          <div 
+            className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0"
+            style={{ mixBlendMode: 'overlay' }}
+          />
         )}
       </button>
     );
