@@ -3,7 +3,7 @@
   "outputDirectory": "frontend/dist",
   "framework": null,
   "env": {
-    "FORCE_REBUILD": "2025-01-15-add-mock-data"
+    "FORCE_REBUILD": "2025-01-15-comprehensive-fix"
   },
   "headers": [
     {

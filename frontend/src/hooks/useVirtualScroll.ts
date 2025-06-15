@@ -27,6 +27,9 @@ export function useVirtualScroll<T>(
     getItemHeight,
   } = options;
 
+  // Safety check for items
+  const safeItems = items || [];
+
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +40,7 @@ export function useVirtualScroll<T>(
     const positions: number[] = [];
     let totalHeight = 0;
     
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < safeItems.length; i++) {
       positions.push(totalHeight);
       totalHeight += getItemHeight(i);
     }

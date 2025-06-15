@@ -12,7 +12,7 @@ import { useAppStore } from "@/stores/appStore";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
-import { ToastContainer } from "@/components/ui/Toast";
+import { SafeToastContainer } from "@/components/ui/SafeToastContainer";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { clearOldFavorites } from "@/utils/clearOldFavorites";
 import { useKeyboardShortcuts, defaultShortcuts } from "@/utils/keyboardShortcuts";
@@ -319,7 +319,7 @@ function App() {
 					/>
 
 					{/* Toast Notifications */}
-					<ToastContainer toasts={toasts} removeToast={removeToast} />
+					<SafeToastContainer toasts={toasts} removeToast={removeToast} />
 
 					{/* Performance Monitor (dev only) - Temporarily disabled to debug CORS issues */}
 					{/* {process.env.NODE_ENV === 'development' && <PerformanceMonitor />} */}

@@ -8,103 +8,180 @@ function loadManpages() {
   if (manpagesCache) return manpagesCache;
   
   const manpages = [];
-  const generatedPath = path.join(__dirname, '..', 'backend', 'generated_manpages');
   
-  try {
-    // Read all section directories
-    const sections = fs.readdirSync(generatedPath);
-    
-    for (const section of sections) {
-      if (!section.startsWith('man')) continue;
-      
-      const sectionPath = path.join(generatedPath, section);
-      const files = fs.readdirSync(sectionPath);
-      
-      for (const file of files) {
-        if (!file.endsWith('.json')) continue;
-        
-        try {
-          const content = fs.readFileSync(path.join(sectionPath, file), 'utf8');
-          const data = JSON.parse(content);
-          data.id = file.replace('.json', '').split('.')[0];
-          manpages.push(data);
-        } catch (e) {
-          console.error(`Error loading ${file}:`, e);
-        }
-      }
+  // Always include mock data for now
+  manpages.push(
+    {
+      id: 'ls',
+      command: 'ls',
+      name: 'ls',
+      title: 'ls - list directory contents',
+      brief: 'list directory contents',
+      section: '1',
+      category: 'file-management',
+      tags: 'files,directories,listing',
+      priority: 10
+    },
+    {
+      id: 'cd',
+      command: 'cd',
+      name: 'cd',
+      title: 'cd - change directory',
+      brief: 'change directory',
+      section: '1',
+      category: 'navigation',
+      tags: 'directories,navigation',
+      priority: 10
+    },
+    {
+      id: 'grep',
+      command: 'grep',
+      name: 'grep',
+      title: 'grep - print lines matching a pattern',
+      brief: 'print lines matching a pattern',
+      section: '1',
+      category: 'text-processing',
+      tags: 'search,text,pattern',
+      priority: 9
+    },
+    {
+      id: 'find',
+      command: 'find',
+      name: 'find',
+      title: 'find - search for files in a directory hierarchy',
+      brief: 'search for files in a directory hierarchy',
+      section: '1',
+      category: 'file-management',
+      tags: 'search,files,directories',
+      priority: 8
+    },
+    {
+      id: 'cat',
+      command: 'cat',
+      name: 'cat',
+      title: 'cat - concatenate files and print on the standard output',
+      brief: 'concatenate files and print on the standard output',
+      section: '1',
+      category: 'file-management',
+      tags: 'files,output,concatenate',
+      priority: 7
+    },
+    {
+      id: 'echo',
+      command: 'echo',
+      name: 'echo',
+      title: 'echo - display a line of text',
+      brief: 'display a line of text',
+      section: '1',
+      category: 'text-processing',
+      tags: 'text,output,display',
+      priority: 6
+    },
+    {
+      id: 'mkdir',
+      command: 'mkdir',
+      name: 'mkdir',
+      title: 'mkdir - make directories',
+      brief: 'make directories',
+      section: '1',
+      category: 'file-management',
+      tags: 'directories,create',
+      priority: 7
+    },
+    {
+      id: 'rm',
+      command: 'rm',
+      name: 'rm',
+      title: 'rm - remove files or directories',
+      brief: 'remove files or directories',
+      section: '1',
+      category: 'file-management',
+      tags: 'files,directories,delete,remove',
+      priority: 8
+    },
+    {
+      id: 'cp',
+      command: 'cp',
+      name: 'cp',
+      title: 'cp - copy files and directories',
+      brief: 'copy files and directories',
+      section: '1',
+      category: 'file-management',
+      tags: 'files,directories,copy',
+      priority: 7
+    },
+    {
+      id: 'mv',
+      command: 'mv',
+      name: 'mv',
+      title: 'mv - move (rename) files',
+      brief: 'move (rename) files',
+      section: '1',
+      category: 'file-management',
+      tags: 'files,directories,move,rename',
+      priority: 7
     }
-  } catch (e) {
-    console.error('Error loading manpages:', e);
-  }
-  
-  // If no manpages loaded, provide some mock data
-  if (manpages.length === 0) {
-    manpages.push(
-      {
-        id: 'ls',
-        command: 'ls',
-        brief: 'list directory contents',
-        section: '1',
-        category: 'file-management',
-        tags: 'files,directories,listing',
-        priority: 10
-      },
-      {
-        id: 'cd',
-        command: 'cd',
-        brief: 'change directory',
-        section: '1',
-        category: 'navigation',
-        tags: 'directories,navigation',
-        priority: 10
-      },
-      {
-        id: 'grep',
-        command: 'grep',
-        brief: 'print lines matching a pattern',
-        section: '1',
-        category: 'text-processing',
-        tags: 'search,text,pattern',
-        priority: 9
-      },
-      {
-        id: 'find',
-        command: 'find',
-        brief: 'search for files in a directory hierarchy',
-        section: '1',
-        category: 'file-management',
-        tags: 'search,files,directories',
-        priority: 8
-      },
-      {
-        id: 'cat',
-        command: 'cat',
-        brief: 'concatenate files and print on the standard output',
-        section: '1',
-        category: 'file-management',
-        tags: 'files,output,concatenate',
-        priority: 7
-      }
-    );
-  }
+  );
   
   manpagesCache = manpages;
   return manpages;
 }
 
 function loadManpageContent(command, section = '1') {
-  const plainPath = path.join(__dirname, '..', 'backend', 'extracted_manpages', `${command}.${section}.plain`);
+  // Return mock content for now
+  const mockContent = {
+    ls: `NAME
+       ls - list directory contents
+
+SYNOPSIS
+       ls [OPTION]... [FILE]...
+
+DESCRIPTION
+       List information about the FILEs (the current directory by default).
+       Sort entries alphabetically if none of -cftuvSUX nor --sort is specified.
+
+       -a, --all
+              do not ignore entries starting with .
+
+       -l     use a long listing format
+
+       -h, --human-readable
+              with -l, print sizes in human readable format (e.g., 1K 234M 2G)`,
+    
+    cd: `NAME
+       cd - change directory
+
+SYNOPSIS
+       cd [directory]
+
+DESCRIPTION
+       Change the current directory to directory. If no argument is given,
+       the value of the HOME shell variable is the default.`,
+    
+    grep: `NAME
+       grep - print lines matching a pattern
+
+SYNOPSIS
+       grep [OPTIONS] PATTERN [FILE...]
+
+DESCRIPTION
+       grep searches for PATTERN in each FILE. A FILE of "-" stands for
+       standard input. If no FILE is given, recursive searches examine the
+       working directory, and nonrecursive searches read standard input.`,
+    
+    find: `NAME
+       find - search for files in a directory hierarchy
+
+SYNOPSIS
+       find [-H] [-L] [-P] [-D debugopts] [-Olevel] [starting-point...] [expression]
+
+DESCRIPTION
+       This manual page documents the GNU version of find. GNU find searches
+       the directory tree rooted at each given starting-point by evaluating
+       the given expression from left to right.`
+  };
   
-  try {
-    return fs.readFileSync(plainPath, 'utf8');
-  } catch (e) {
-    const formattedPath = path.join(__dirname, '..', 'backend', 'extracted_manpages', `${command}.${section}.formatted`);
-    try {
-      return fs.readFileSync(formattedPath, 'utf8');
-    } catch (e2) {
-      return null;
-    }
-  }
+  return mockContent[command] || `${command}(${section}) - Command documentation`;
 }
 
 module.exports = (req, res) => {
@@ -120,6 +197,7 @@ module.exports = (req, res) => {
   }
   
   const url = req.url;
+  console.log('API Request:', url);
   
   // Route handling
   if (url.startsWith('/api/health')) {
@@ -134,7 +212,7 @@ module.exports = (req, res) => {
       }
     });
   }
-  else if (url.startsWith('/api/documents/')) {
+  else if (url.match(/^\/api\/documents\/[^\/]+$/)) {
     const docId = url.replace('/api/documents/', '').split('?')[0];
     const [command, section = '1'] = docId.split('.');
     
@@ -147,12 +225,14 @@ module.exports = (req, res) => {
       res.json({
         id: docId,
         command: command,
+        name: command,
         title: `${command} - ${doc.brief || 'manual page'}`,
         description: doc.brief || '',
         section: doc.section || section,
         category: doc.category || 'general',
         tags: doc.tags ? doc.tags.split(',') : [],
-        content: content || `Content not available for ${command}(${section})`,
+        content: content,
+        raw_content: content,
         priority: doc.priority || 0,
         package_hint: doc.package_hint || ''
       });
@@ -160,11 +240,12 @@ module.exports = (req, res) => {
       res.status(404).json({ error: 'Document not found' });
     }
   }
-  else if (url.startsWith('/api/documents')) {
+  else if (url.startsWith('/api/documents') || url.startsWith('/api/docs')) {
     const manpages = loadManpages();
-    const documents = manpages.slice(0, 100).map(page => ({
+    const documents = manpages.map(page => ({
       id: `${page.command}.${page.section || '1'}`,
       command: page.command || '',
+      name: page.command || '',
       title: `${page.command} - ${page.brief || ''}`,
       description: page.brief || '',
       section: page.section || '1',
@@ -197,6 +278,7 @@ module.exports = (req, res) => {
     const formatted = results.map(page => ({
       id: `${page.command}.${page.section || '1'}`,
       command: page.command || '',
+      name: page.command || '',
       title: `${page.command} - ${page.brief || ''}`,
       description: page.brief || '',
       section: page.section || '1',
@@ -266,6 +348,7 @@ module.exports = (req, res) => {
       endpoints: [
         '/api/health',
         '/api/documents',
+        '/api/docs',
         '/api/documents/:id',
         '/api/search?q=query',
         '/api/analytics/overview',
