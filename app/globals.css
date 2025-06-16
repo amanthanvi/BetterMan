@@ -84,33 +84,62 @@
   
   /* Typography improvements */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
+    font-weight: 600;
+    letter-spacing: -0.025em;
   }
   
   h1 {
-    @apply text-4xl md:text-5xl font-bold;
+    font-size: 2.25rem;
+    font-weight: 700;
+  }
+  
+  @media (min-width: 768px) {
+    h1 {
+      font-size: 3rem;
+    }
   }
   
   h2 {
-    @apply text-2xl md:text-3xl;
+    font-size: 1.5rem;
+  }
+  
+  @media (min-width: 768px) {
+    h2 {
+      font-size: 1.875rem;
+    }
   }
   
   h3 {
-    @apply text-xl md:text-2xl;
+    font-size: 1.25rem;
+  }
+  
+  @media (min-width: 768px) {
+    h3 {
+      font-size: 1.5rem;
+    }
   }
   
   h4 {
-    @apply text-lg md:text-xl;
+    font-size: 1.125rem; /* text-lg */
+  }
+  
+  @media (min-width: 768px) {
+    h4 {
+      font-size: 1.25rem; /* text-xl */
+    }
   }
   
   /* Focus visible improvements */
   :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
   }
   
   /* Selection colors */
   ::selection {
-    @apply bg-primary/30 text-primary-foreground;
+    background-color: hsl(var(--primary) / 0.3);
+    color: hsl(var(--primary-foreground));
   }
   
   /* Smooth scrolling */
@@ -122,51 +151,66 @@
 @layer components {
   /* Premium scrollbar styling */
   ::-webkit-scrollbar {
-    @apply w-2 h-2;
+    width: 0.5rem; /* w-2 */
+    height: 0.5rem; /* h-2 */
   }
   
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background-color: transparent;
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-muted rounded-full;
+    background-color: hsl(var(--muted));
+    border-radius: 9999px; /* rounded-full */
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
   
   /* Code blocks with syntax highlighting feel */
   .prose pre {
-    @apply bg-[hsl(222,47%,9%)] border border-border rounded-lg p-4 overflow-x-auto;
+    background-color: hsl(222, 47%, 9%);
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem; /* rounded-lg */
+    padding: 1rem; /* p-4 */
+    overflow-x: auto;
     box-shadow: inset 0 1px 3px 0 rgb(0 0 0 / 0.2);
   }
   
   .prose code {
-    @apply bg-muted/50 px-1.5 py-0.5 rounded text-sm font-medium;
+    background-color: hsl(var(--muted) / 0.5);
+    padding-left: 0.375rem; /* px-1.5 */
+    padding-right: 0.375rem; /* px-1.5 */
+    padding-top: 0.125rem; /* py-0.5 */
+    padding-bottom: 0.125rem; /* py-0.5 */
+    border-radius: 0.25rem; /* rounded */
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* font-medium */
     font-family: 'JetBrains Mono', monospace;
   }
   
   .prose pre code {
-    @apply bg-transparent p-0 text-sm;
+    background-color: transparent;
+    padding: 0;
+    font-size: 0.875rem; /* text-sm */
   }
   
   /* Premium card styles */
   .card-gradient {
-    @apply bg-gradient-to-br from-card via-card to-card/80;
     background-image: linear-gradient(
-      135deg,
+      to bottom right,
       hsl(var(--card)) 0%,
-      hsl(var(--card) / 0.95) 50%,
-      hsl(var(--card) / 0.9) 100%
+      hsl(var(--card)) 50%,
+      hsl(var(--card) / 0.8) 100%
     );
   }
   
   .card-glow {
-    @apply relative overflow-hidden;
+    position: relative;
+    overflow: hidden;
     background: linear-gradient(
       135deg,
       hsl(var(--card)) 0%,
@@ -176,7 +220,15 @@
   
   .card-glow::before {
     content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    opacity: 0;
+    transition-property: opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
     background: radial-gradient(
       circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
       hsl(var(--primary) / 0.15) 0%,
@@ -185,36 +237,44 @@
   }
   
   .card-glow:hover::before {
-    @apply opacity-100;
+    opacity: 1;
   }
   
   /* Command syntax highlighting */
   .command-syntax {
-    @apply font-mono text-sm;
     font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem; /* text-sm */
   }
   
   .command-syntax .flag {
-    @apply text-primary font-medium;
+    color: hsl(var(--primary));
+    font-weight: 500; /* font-medium */
   }
   
   .command-syntax .argument {
-    @apply text-accent;
+    color: hsl(var(--accent));
   }
   
   .command-syntax .optional {
-    @apply text-muted-foreground/70 italic;
+    color: hsl(var(--muted-foreground) / 0.7);
+    font-style: italic;
   }
   
   /* Search highlights */
   .search-highlight {
-    @apply bg-warning/20 text-warning-foreground px-1 rounded;
+    background-color: hsl(var(--warning) / 0.2);
+    color: hsl(var(--warning-foreground));
+    padding-left: 0.25rem; /* px-1 */
+    padding-right: 0.25rem; /* px-1 */
+    border-radius: 0.25rem; /* rounded */
     box-shadow: 0 0 0 1px hsl(var(--warning) / 0.3);
   }
   
   /* Glass morphism effects */
   .glass {
-    @apply bg-background/60 backdrop-blur-xl border-border/50;
+    background-color: hsl(var(--background) / 0.6);
+    backdrop-filter: blur(24px); /* backdrop-blur-xl */
+    border-color: hsl(var(--border) / 0.5);
     background-image: linear-gradient(
       to bottom,
       hsl(var(--background) / 0.8) 0%,
@@ -224,12 +284,20 @@
   
   /* Gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--secondary)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
   }
   
   /* Premium button styles */
   .btn-glow {
-    @apply relative overflow-hidden transition-all duration-200;
+    position: relative;
+    overflow: hidden;
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
     box-shadow: 
       0 0 20px hsl(var(--primary) / 0.15),
       0 0 40px hsl(var(--primary) / 0.1);
@@ -252,7 +320,10 @@
   }
   
   .skeleton {
-    @apply relative overflow-hidden bg-muted rounded;
+    position: relative;
+    overflow: hidden;
+    background-color: hsl(var(--muted));
+    border-radius: 0.25rem; /* rounded */
     background: linear-gradient(
       90deg,
       hsl(var(--muted)) 0%,
@@ -265,8 +336,13 @@
   
   /* Focus ring with glow */
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
     transition: box-shadow 0.2s ease;
+  }
+  
+  .focus-ring:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
   }
   
   .focus-ring:focus {

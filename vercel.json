@@ -8,7 +8,7 @@
     "app/api/search/route.ts": {
       "maxDuration": 10
     },
-    "app/api/docs/[slug]/route.ts": {
+    "app/api/search/suggestions/route.ts": {
       "maxDuration": 10
     }
   }

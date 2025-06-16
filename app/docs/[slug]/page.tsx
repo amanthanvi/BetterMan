@@ -5,8 +5,9 @@ import { DocumentViewer } from '@/components/docs/document-viewer';
 import { DocumentSidebar } from '@/components/docs/document-sidebar';
 import { getManPage, manPageList } from '@/data/man-pages';
 
-// Force static generation
-export const dynamic = 'force-static';
+// Configure page generation
+export const runtime = 'nodejs';
+export const dynamic = 'error';
 export const dynamicParams = false;
 
 interface PageProps {

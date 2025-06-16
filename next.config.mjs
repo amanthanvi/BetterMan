@@ -24,6 +24,11 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
   
+  // Force static generation for docs pages
+  generateBuildId: async () => {
+    return 'betterman-' + Date.now();
+  },
+  
   // Redirects
   async redirects() {
     return [
