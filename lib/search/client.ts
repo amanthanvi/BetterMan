@@ -147,8 +147,8 @@ class SearchClient {
       )
       
       if (response.ok) {
-        const data = await response.json()
-        return data.suggestions
+        const suggestions = await response.json()
+        return Array.isArray(suggestions) ? suggestions : []
       }
     } catch (error) {
       console.error('Suggestions API error:', error)

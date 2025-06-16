@@ -25,12 +25,7 @@ const features = [
 const popularCommands = [
   { name: 'ls', description: 'List directory contents' },
   { name: 'grep', description: 'Search text patterns' },
-  { name: 'find', description: 'Search for files' },
-  { name: 'awk', description: 'Pattern scanning' },
-  { name: 'sed', description: 'Stream editor' },
-  { name: 'chmod', description: 'Change file permissions' },
-  { name: 'ssh', description: 'Secure shell' },
-  { name: 'git', description: 'Version control' },
+  { name: 'cd', description: 'Change directory' },
 ];
 
 export default function HomePage() {
@@ -187,14 +182,14 @@ export default function HomePage() {
               </span>
             </div>
             <div className="flex items-center space-x-6">
-              <Link href="/docs/about" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                About
+              <Link href="/search" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                Search
               </Link>
               <Link href="https://github.com/yourusername/betterman" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 GitHub
               </Link>
-              <Link href="/docs/api" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                API
+              <Link href="/docs/ls" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                Browse
               </Link>
             </div>
           </div>
