@@ -70,11 +70,14 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv11", "ss01", "ss03";
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;

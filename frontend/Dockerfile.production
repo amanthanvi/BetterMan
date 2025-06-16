@@ -14,8 +14,19 @@ RUN npm ci --only=production
 # Copy source code
 COPY . .
 
+# Build arguments
+ARG NODE_ENV=production
+ARG VITE_API_URL
+ARG VITE_SENTRY_DSN
+ARG VITE_GA_TRACKING_ID
+
+# Set environment variables for build
+ENV NODE_ENV=${NODE_ENV}
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+ENV VITE_GA_TRACKING_ID=${VITE_GA_TRACKING_ID}
+
 # Build the application
-ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 2: Nginx server
