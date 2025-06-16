@@ -1,0 +1,18 @@
+feat: add missing pages, icons, and expand command database
+
+- Add app/docs/[slug]/page.tsx for dynamic documentation pages
+- Add app/search/page.tsx for dedicated search page
+- Add missing PWA icons (icon-192x192.png, icon-512x512.png)
+- Expand command database from 1 to 8 popular commands
+- Update search indices with more commands (ls, cd, grep, find, cat, echo, mkdir, rm)
+- Fix routing and navigation throughout the app
+
+This completes the basic functionality of the BetterMan app with:
+- Working home page with 8 popular commands
+- Dynamic documentation pages for each command
+- Search functionality
+- PWA support with proper icons
+
+🤖 Generated with Claude Code (https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>

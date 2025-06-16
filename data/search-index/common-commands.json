@@ -3,6 +3,64 @@
     "id": "ls.1",
     "name": "ls",
     "title": "list directory contents",
-    "description": "List information about the FILEs (the current directory by default)."
+    "description": "List information about the FILEs (the current directory by default).",
+    "section": 1,
+    "isCommon": true
+  },
+  {
+    "id": "cd.1",
+    "name": "cd",
+    "title": "change directory",
+    "description": "Change the current directory to the specified path.",
+    "section": 1,
+    "isCommon": true
+  },
+  {
+    "id": "grep.1",
+    "name": "grep",
+    "title": "print lines matching a pattern",
+    "description": "Search for PATTERN in each FILE or standard input.",
+    "section": 1,
+    "isCommon": true
+  },
+  {
+    "id": "find.1",
+    "name": "find",
+    "title": "search for files in a directory hierarchy",
+    "description": "Search for files in a directory hierarchy based on various criteria.",
+    "section": 1,
+    "isCommon": true
+  },
+  {
+    "id": "cat.1",
+    "name": "cat",
+    "title": "concatenate files and print on the standard output",
+    "description": "Concatenate FILE(s) to standard output.",
+    "section": 1,
+    "isCommon": true
+  },
+  {
+    "id": "echo.1",
+    "name": "echo",
+    "title": "display a line of text",
+    "description": "Echo the STRING(s) to standard output.",
+    "section": 1,
+    "isCommon": true
+  },
+  {
+    "id": "mkdir.1",
+    "name": "mkdir",
+    "title": "make directories",
+    "description": "Create the DIRECTORY(ies), if they do not already exist.",
+    "section": 1,
+    "isCommon": true
+  },
+  {
+    "id": "rm.1",
+    "name": "rm",
+    "title": "remove files or directories",
+    "description": "Remove (unlink) the FILE(s).",
+    "section": 1,
+    "isCommon": true
   }
 ]

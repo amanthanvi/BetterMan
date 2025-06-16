@@ -1,98 +1,55 @@
-import { notFound } from 'next/navigation'
-import { Metadata } from 'next'
-import { getManPage } from '@/data/man-pages'
-import { createClient } from '@/lib/supabase/server'
-import { DocumentViewer } from '@/components/docs/document-viewer'
-import { TableOfContents } from '@/components/docs/table-of-contents'
-import { DocumentHeader } from '@/components/docs/document-header'
+import { notFound } from 'next/navigation';
+import { DocumentViewer } from '@/components/docs/document-viewer';
+import { getByName } from '@/data/search-index';
 
 interface PageProps {
   params: {
-    slug: string
-  }
+    slug: string;
+  };
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const parts = params.slug.split('.')
-  const name = parts[0]
-  const section = parts[1] ? parseInt(parts[1]) : undefined
-  
-  const page = getManPage(name, section)
-  
-  if (!page) {
+export default function DocPage({ params }: PageProps) {
+  // Parse the slug to extract name and section
+  // Expected format: "command-section" (e.g., "ls-1", "grep-1")
+  const parts = params.slug.split('-');
+  if (parts.length < 2) {
+    notFound();
+  }
+
+  // Extract section (last part) and name (everything before)
+  const section = parts[parts.length - 1];
+  const name = parts.slice(0, -1).join('-');
+
+  // Look up the document
+  const doc = getByName(name, section);
+
+  if (!doc) {
+    notFound();
+  }
+
+  return <DocumentViewer document={doc} />;
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const parts = params.slug.split('-');
+  if (parts.length < 2) {
     return {
-      title: 'Not Found'
-    }
+      title: 'Not Found | BetterMan',
+    };
+  }
+
+  const section = parts[parts.length - 1];
+  const name = parts.slice(0, -1).join('-');
+  const doc = getByName(name, section);
+
+  if (!doc) {
+    return {
+      title: 'Not Found | BetterMan',
+    };
   }
 
   return {
-    title: `${page.name}(${page.section}) - ${page.title}`,
-    description: page.description,
-    openGraph: {
-      title: `${page.name}(${page.section}) - ${page.title}`,
-      description: page.description,
-    }
-  }
-}
-
-export default async function DocumentPage({ params }: PageProps) {
-  const parts = params.slug.split('.')
-  const name = parts[0]
-  const section = parts[1] ? parseInt(parts[1]) : undefined
-  
-  // Try to get from static data first
-  let page = getManPage(name, section)
-  
-  if (!page) {
-    // Try database as fallback
-    const supabase = await createClient()
-    const { data } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('name', name)
-      .eq('section', section || 1)
-      .single()
-    
-    if (data) {
-      page = data.content as any
-    }
-  }
-  
-  if (!page) {
-    notFound()
-  }
-
-  // Track page view for authenticated users
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (user) {
-    // Non-blocking analytics
-    supabase.from('user_history').insert({
-      user_id: user.id,
-      document_id: `${name}.${section || 1}`
-    }).then(console.log).catch(console.error)
-  }
-
-  return (
-    <div className="min-h-screen">
-      <DocumentHeader page={page} />
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_250px]">
-          {/* Main Content */}
-          <main className="min-w-0">
-            <DocumentViewer page={page} />
-          </main>
-          
-          {/* Table of Contents */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-20">
-              <TableOfContents sections={page.sections} />
-            </div>
-          </aside>
-        </div>
-      </div>
-    </div>
-  )
+    title: `${doc.name}(${doc.section}) - ${doc.description || 'Manual Page'} | BetterMan`,
+    description: doc.description || `Manual page for ${doc.name} command`,
+  };
 }
