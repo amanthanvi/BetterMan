@@ -53,10 +53,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a0a0b' },
-  ],
+  themeColor: '#0f172a',
 }
 
 export default function RootLayout({
@@ -65,11 +62,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <Providers>
-          {children}
-        </Providers>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased min-h-screen bg-background`}>
+        <div className="relative">
+          {/* Background pattern */}
+          <div className="fixed inset-0 -z-10 h-full w-full bg-background">
+            <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-accent/5" />
+            <div className="absolute inset-0 grid-pattern opacity-[0.02]" />
+          </div>
+          <Providers>
+            {children}
+          </Providers>
+        </div>
       </body>
     </html>
   )

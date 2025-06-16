@@ -1,55 +1,65 @@
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
+import { Navigation } from '@/components/layout/navigation';
 import { DocumentViewer } from '@/components/docs/document-viewer';
-import { getByName } from '@/data/search-index';
+import { DocumentSidebar } from '@/components/docs/document-sidebar';
+import { getManPage } from '@/data/man-pages';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
-export default function DocPage({ params }: PageProps) {
+export default async function DocPage({ params }: PageProps) {
+  const { slug } = await params;
+  
   // Parse the slug to extract name and section
-  // Expected format: "command-section" (e.g., "ls-1", "grep-1")
-  const parts = params.slug.split('-');
-  if (parts.length < 2) {
+  // Expected format: "command" or "command.section" (e.g., "ls", "grep.1")
+  const parts = slug.split('.');
+  const name = parts[0];
+  const section = parts[1] ? parseInt(parts[1]) : undefined;
+
+  // Get the man page data
+  const manPage = getManPage(name, section);
+
+  if (!manPage) {
     notFound();
   }
 
-  // Extract section (last part) and name (everything before)
-  const section = parts[parts.length - 1];
-  const name = parts.slice(0, -1).join('-');
-
-  // Look up the document
-  const doc = getByName(name, section);
-
-  if (!doc) {
-    notFound();
-  }
-
-  return <DocumentViewer document={doc} />;
+  return (
+    <>
+      <Navigation />
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-[1fr_280px] gap-8">
+          <main className="min-w-0">
+            <DocumentViewer page={manPage} />
+          </main>
+          <aside className="hidden lg:block">
+            <DocumentSidebar page={manPage} />
+          </aside>
+        </div>
+      </div>
+    </>
+  );
 }
 
-export async function generateMetadata({ params }: PageProps) {
-  const parts = params.slug.split('-');
-  if (parts.length < 2) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const parts = slug.split('.');
+  const name = parts[0];
+  const section = parts[1] ? parseInt(parts[1]) : undefined;
+  
+  const manPage = getManPage(name, section);
+  
+  if (!manPage) {
     return {
-      title: 'Not Found | BetterMan',
-    };
-  }
-
-  const section = parts[parts.length - 1];
-  const name = parts.slice(0, -1).join('-');
-  const doc = getByName(name, section);
-
-  if (!doc) {
-    return {
-      title: 'Not Found | BetterMan',
+      title: 'Page Not Found | BetterMan',
     };
   }
 
   return {
-    title: `${doc.name}(${doc.section}) - ${doc.description || 'Manual Page'} | BetterMan`,
-    description: doc.description || `Manual page for ${doc.name} command`,
+    title: `${name}(${section || 1}) - ${manPage.title || 'Manual Page'} | BetterMan`,
+    description: manPage.description || `Manual page for the ${name} command`,
   };
 }

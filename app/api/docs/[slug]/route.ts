@@ -2,14 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getManPage } from '@/data/man-pages'
 
-interface Params {
-  params: {
-    slug: string
-  }
-}
-
-export async function GET(request: NextRequest, { params }: Params) {
-  const { slug } = params
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params
   
   // Parse slug (format: command or command.section)
   const parts = slug.split('.')
@@ -23,10 +20,11 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (staticPage) {
       // Track page view (non-blocking)
       const supabase = await createClient()
-      supabase.from('analytics').insert({
+      // Fire and forget analytics tracking
+      void supabase.from('analytics').insert({
         event_type: 'page_view',
         metadata: { name, section }
-      }).then(console.log).catch(console.error)
+      })
       
       return NextResponse.json(staticPage)
     }
@@ -47,10 +45,8 @@ export async function GET(request: NextRequest, { params }: Params) {
       )
     }
 
-    // Increment access count
-    supabase.rpc('increment_access_count', { doc_id: data.id })
-      .then(console.log)
-      .catch(console.error)
+    // Increment access count (fire and forget)
+    void supabase.rpc('increment_access_count', { doc_id: data.id })
 
     return NextResponse.json(data)
   } catch (error) {
