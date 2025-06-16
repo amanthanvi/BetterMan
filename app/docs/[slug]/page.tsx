@@ -3,7 +3,11 @@ import { Metadata } from 'next';
 import { Navigation } from '@/components/layout/navigation';
 import { DocumentViewer } from '@/components/docs/document-viewer';
 import { DocumentSidebar } from '@/components/docs/document-sidebar';
-import { getManPage } from '@/data/man-pages';
+import { getManPage, manPageList } from '@/data/man-pages';
+
+// Force static generation
+export const dynamic = 'force-static';
+export const dynamicParams = false;
 
 interface PageProps {
   params: Promise<{
@@ -62,4 +66,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${name}(${section || 1}) - ${manPage.title || 'Manual Page'} | BetterMan`,
     description: manPage.description || `Manual page for the ${name} command`,
   };
+}
+
+// Generate static params for all available man pages
+export async function generateStaticParams() {
+  return manPageList.map((page) => ({
+    slug: page.name, // Use just the command name as the slug
+  }));
 }
