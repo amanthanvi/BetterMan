@@ -1,4 +1,4 @@
-import Fuse from 'fuse.js'
+import Fuse, { IFuseOptions, FuseResultMatch } from 'fuse.js'
 import { EnhancedManPage } from '../parser/enhanced-man-parser'
 
 export interface SearchResult {
@@ -41,12 +41,19 @@ export interface SearchIndex {
   popularityScores: Map<string, number>
 }
 
+export interface ManPageIndex {
+  commands: Record<string, any>
+  invertedIndex?: Record<string, string[]>
+  categoryIndex?: Record<string, string[]>
+  complexityIndex?: Record<string, string[]>
+}
+
 export class EnhancedSearch {
   private index: SearchIndex | null = null
   private commandData: Map<string, any> = new Map()
   
   // Fuse.js configuration for fuzzy search
-  private fuseOptions: Fuse.IFuseOptions<any> = {
+  private fuseOptions: IFuseOptions<any> = {
     keys: [
       { name: 'name', weight: 3 },
       { name: 'title', weight: 2 },
@@ -247,7 +254,6 @@ export class EnhancedSearch {
   ) {
     const fuseResults = this.index!.fuzzyIndex.search(query, {
       limit: 100,
-      threshold,
     })
     
     fuseResults.forEach(result => {
@@ -334,7 +340,6 @@ export class EnhancedSearch {
     if (suggestions.size < limit) {
       const fuzzyResults = this.index.fuzzyIndex.search(prefix, {
         limit: limit * 2,
-        threshold: 0.2,
       })
       
       fuzzyResults.forEach(result => {
@@ -413,7 +418,7 @@ export class EnhancedSearch {
   /**
    * Format Fuse.js matches for display
    */
-  private formatMatches(matches?: readonly Fuse.FuseResultMatch[]): SearchMatch[] {
+  private formatMatches(matches?: readonly FuseResultMatch[]): SearchMatch[] {
     if (!matches) return []
     
     return matches.map(match => ({

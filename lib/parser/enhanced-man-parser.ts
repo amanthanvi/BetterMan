@@ -632,7 +632,7 @@ export class EnhancedManPageParser {
         codeBlockBuffer.push('')
       } else if (inCodeBlock && !line.match(/^\s{4,}/)) {
         // End of code block
-        if (codeBlockBuffer.length > 0) {
+        if (codeBlockBuffer.length > 0 && currentSection) {
           currentSection.codeBlocks!.push(codeBlockBuffer.join('\n'))
           codeBlockBuffer = []
         }

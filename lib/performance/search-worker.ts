@@ -11,7 +11,8 @@ self.addEventListener('message', async (event) => {
   switch (type) {
     case 'INIT':
       searchData = payload.data
-      fuseInstance = new Fuse(Object.values(searchData.commands), {
+      if (searchData) {
+        fuseInstance = new Fuse(Object.values(searchData.commands), {
         keys: [
           { name: 'name', weight: 0.6 },
           { name: 'title', weight: 0.3 },
@@ -23,6 +24,7 @@ self.addEventListener('message', async (event) => {
         minMatchCharLength: 2,
         useExtendedSearch: true,
       })
+      }
       self.postMessage({ type: 'INIT_COMPLETE' })
       break
 

@@ -1,0 +1,5 @@
+{
+  "File Management": ["ls.1"],
+  "Navigation": ["cd.1"],
+  "Text Processing": ["grep.1"]
+}

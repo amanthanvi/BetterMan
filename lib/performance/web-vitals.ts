@@ -1,7 +1,7 @@
-import { onCLS, onFCP, onFID, onINP, onLCP, onTTFB } from 'web-vitals'
+import { onCLS, onFCP, onINP, onLCP, onTTFB } from 'web-vitals'
 
 export interface WebVitalsMetric {
-  name: 'CLS' | 'FCP' | 'FID' | 'INP' | 'LCP' | 'TTFB'
+  name: 'CLS' | 'FCP' | 'INP' | 'LCP' | 'TTFB'
   value: number
   rating: 'good' | 'needs-improvement' | 'poor'
   delta: number
@@ -49,7 +49,6 @@ export function reportWebVitals() {
 
   onCLS((metric) => sendToAnalytics(metric as WebVitalsMetric))
   onFCP((metric) => sendToAnalytics(metric as WebVitalsMetric))
-  onFID((metric) => sendToAnalytics(metric as WebVitalsMetric))
   onINP((metric) => sendToAnalytics(metric as WebVitalsMetric))
   onLCP((metric) => sendToAnalytics(metric as WebVitalsMetric))
   onTTFB((metric) => sendToAnalytics(metric as WebVitalsMetric))
