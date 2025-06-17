@@ -10,7 +10,7 @@ import { useState } from 'react';
 const navItems = [
   { href: '/', label: 'Home', icon: BookOpen },
   { href: '/search', label: 'Search', icon: Search },
-  { href: '/docs/ls', label: 'Browse', icon: Command },
+  { href: '/browse', label: 'Browse', icon: Command },
 ];
 
 export function Navigation() {
@@ -36,7 +36,7 @@ export function Navigation() {
               const Icon = item.icon;
               const isActive = pathname === item.href || 
                 (item.href === '/search' && pathname.startsWith('/search')) ||
-                (item.href === '/docs/ls' && pathname.startsWith('/docs'));
+                (item.href === '/browse' && pathname.startsWith('/docs'));
 
               return (
                 <Link key={item.href} href={item.href}>
@@ -106,7 +106,7 @@ export function Navigation() {
                 const Icon = item.icon;
                 const isActive = pathname === item.href || 
                   (item.href === '/search' && pathname.startsWith('/search')) ||
-                  (item.href === '/docs/ls' && pathname.startsWith('/docs'));
+                  (item.href === '/browse' && pathname.startsWith('/docs'));
 
                 return (
                   <Link key={item.href} href={item.href}>

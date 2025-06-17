@@ -26,6 +26,8 @@ export interface ManPage {
   examples: string[]
   category?: string
   isCommon?: boolean
+  seeAlso?: string[]
+  keywords?: string[]
 }
 
 export class ManPageParser {

@@ -34,7 +34,7 @@ export function adaptManPageToEnhanced(page: Partial<ManPage> & Pick<ManPage, 'n
     flags,
     examples,
     relatedCommands: page.relatedCommands || [],
-    seeAlso: (page.relatedCommands || []).map(cmd => ({
+    seeAlso: (page.seeAlso || page.relatedCommands || []).map((cmd: string) => ({
       name: cmd,
       section: 1, // Default to section 1 for related commands
     })),

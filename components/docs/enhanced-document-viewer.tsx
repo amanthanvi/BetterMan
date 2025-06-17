@@ -44,6 +44,7 @@ import Prism from 'prismjs'
 import 'prismjs/components/prism-bash'
 import 'prismjs/components/prism-shell-session'
 import type { EnhancedManPage, ManPageFlag, ManPageExample } from '@/lib/parser/enhanced-man-parser'
+import { getManPage } from '@/data/man-pages'
 
 // Load Prism for syntax highlighting
 if (typeof window !== 'undefined') {
@@ -261,20 +262,7 @@ export function EnhancedDocumentViewer({ page }: EnhancedDocumentViewerProps) {
             <SectionHeader title="See Also" id="see-also" onCopy={setCopiedId} copied={copiedId} />
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {page.seeAlso.map((ref) => (
-                <Link key={`${ref.name}.${ref.section}`} href={`/docs/${ref.name}.${ref.section}`}>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="card-glow rounded-lg border border-border/50 p-4 hover:border-primary/50 transition-all"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-sm font-medium">{ref.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        Section {ref.section}
-                      </Badge>
-                    </div>
-                  </motion.div>
-                </Link>
+                <SeeAlsoLink key={`${ref.name}.${ref.section}`} reference={ref} />
               ))}
             </div>
           </motion.section>
@@ -882,6 +870,49 @@ function CopyButton({ text }: { text: string }) {
         <Copy className="h-4 w-4" />
       )}
     </Button>
+  )
+}
+
+// See Also Link Component
+function SeeAlsoLink({ reference }: { reference: { name: string; section: number } }) {
+  // Check if the command exists in our data
+  const exists = getManPage(reference.name, reference.section) !== undefined
+  
+  const content = (
+    <motion.div
+      whileHover={{ scale: exists ? 1.02 : 1 }}
+      whileTap={{ scale: exists ? 0.98 : 1 }}
+      className={cn(
+        "card-glow rounded-lg border border-border/50 p-4 transition-all",
+        exists ? "hover:border-primary/50 cursor-pointer" : "opacity-60 cursor-not-allowed"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-sm font-medium">{reference.name}</span>
+        <Badge variant="outline" className="text-xs">
+          Section {reference.section}
+        </Badge>
+      </div>
+    </motion.div>
+  )
+  
+  if (exists) {
+    return (
+      <Link href={`/docs/${reference.name}.${reference.section}`}>
+        {content}
+      </Link>
+    )
+  }
+  
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {content}
+      </TooltipTrigger>
+      <TooltipContent>
+        <p className="text-xs">Command not available yet</p>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
