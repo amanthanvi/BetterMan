@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
+import { WebVitalsReporter } from '@/components/performance/web-vitals-reporter'\nimport { ServiceWorkerRegister } from '@/components/performance/service-worker-register'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -71,6 +72,8 @@ export default function RootLayout({
             <div className="absolute inset-0 grid-pattern opacity-[0.02]" />
           </div>
           <Providers>
+            <WebVitalsReporter />
+            <ServiceWorkerRegister />
             {children}
           </Providers>
         </div>

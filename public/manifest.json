@@ -21,5 +21,21 @@
       "purpose": "any"
     }
   ],
-  "categories": ["productivity", "developer", "utilities"]
+  "categories": ["productivity", "developer", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Search Commands",
+      "short_name": "Search",
+      "description": "Search Linux commands",
+      "url": "/search",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Popular Commands",
+      "short_name": "Popular",
+      "description": "View popular Linux commands",
+      "url": "/popular",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
 }

@@ -10,7 +10,13 @@
     "parse-man-pages": "tsx scripts/parse-man-pages.ts",
     "parse-all": "tsx scripts/parse-all-man-pages.ts",
     "build-search-index": "tsx scripts/build-search-index.ts",
-    "prebuild": "node prebuild.js"
+    "prebuild": "node prebuild.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
@@ -54,9 +60,16 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
+    "web-vitals": "^5.0.3",
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.41.1",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.1",
     "@types/prismjs": "^1.26.5",
     "@types/react": "^19.1.8",
@@ -64,6 +77,8 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9.29.0",
     "eslint-config-next": "^15.3.3",
+    "jest": "^30.0.0",
+    "jest-environment-jsdom": "^30.0.0",
     "postcss": "^8.5.5",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.10",
