@@ -10,10 +10,19 @@ export function useWorkerSearch() {
   const pendingSearchRef = useRef<((results: SearchResult[]) => void) | null>(null)
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.Worker) {
+      return
+    }
+    
     // Initialize worker
-    workerRef.current = new Worker(
-      new URL('@/lib/performance/search-worker.ts', import.meta.url)
-    )
+    try {
+      workerRef.current = new Worker(
+        new URL('@/lib/performance/search-worker.ts', import.meta.url)
+      )
+    } catch (error) {
+      console.error('Failed to initialize search worker:', error)
+      return
+    }
 
     workerRef.current.addEventListener('message', (event) => {
       const { type, results } = event.data
