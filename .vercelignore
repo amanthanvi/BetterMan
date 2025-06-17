@@ -1,20 +1,26 @@
-# Ignore old application folders
-frontend/
+# Ignore old backend/frontend folders from previous architecture
 backend/
-.old-app/
-docker-compose.yml
-docker-compose.production.yml
+frontend/
 nginx/
 monitoring/
-docs/
-supabase/migrations/
-*.sh
-*.py
+
+# Ignore docker and deployment configs for other platforms
+docker-compose*.yml
 Dockerfile*
 fly.toml
 railway.json
 render.yaml
-venv/
 
-# Keep the betterman-next folder if it exists
-!betterman-next/
+# Ignore scripts and Python files
+scripts/*.sh
+scripts/*.py
+venv/
+__pycache__/
+*.pyc
+
+# Ignore test results and reports
+test-results/
+playwright-report/
+coverage/
+
+# Keep all app/ components/ lib/ and other Next.js files
