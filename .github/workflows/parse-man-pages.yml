@@ -26,86 +26,35 @@ jobs:
           node-version: '20'
           cache: 'npm'
       
-      - name: Install Ubuntu man pages and documentation
+      - name: Install Essential Ubuntu Packages
         run: |
           # Update package list
           sudo apt-get update
           
-          # Install comprehensive man pages
+          # Install core man pages in one go
           sudo apt-get install -y \
-            man-db \
-            manpages \
-            manpages-dev \
-            manpages-posix \
-            manpages-posix-dev \
-            info \
-            texinfo || true
+            man-db manpages manpages-dev manpages-posix manpages-posix-dev || true
           
-          # Install additional documentation packages (skip failures)
-          # Note: Some packages might already be installed or have conflicts
+          # Install essential tools that provide important man pages
           sudo apt-get install -y --no-install-recommends \
-            bash-doc \
-            coreutils \
-            util-linux \
-            procps \
-            iproute2 \
-            net-tools \
-            iputils-ping \
-            dnsutils \
-            curl \
-            wget \
-            git \
-            vim \
-            nano \
-            tmux \
-            screen \
-            openssh-client \
-            rsync \
-            gzip \
-            bzip2 \
-            xz-utils \
-            tar \
-            zip \
-            unzip \
-            findutils \
-            grep \
-            sed \
-            gawk \
-            diffutils \
-            patch \
-            less \
-            make \
-            gcc \
-            python3 \
-            jq \
-            htop \
-            tree \
-            lsof \
-            strace \
-            tcpdump \
-            postgresql-client \
-            mysql-client \
-            redis-tools \
-            nginx \
-            apache2-utils || true
-          
-          # Install packages that might have conflicts separately
-          sudo apt-get install -y ncdu || true
-          sudo apt-get install -y nmap || true
-          
-          # Note: docker.io is skipped due to conflicts with containerd.io on GitHub runners
-          # The docker commands man pages are usually available anyway
+            bash-doc coreutils util-linux procps iproute2 net-tools \
+            iputils-ping dnsutils curl wget git vim nano tmux screen \
+            openssh-client rsync gzip bzip2 xz-utils tar zip unzip \
+            findutils grep sed gawk diffutils patch less make gcc \
+            python3 jq htop tree lsof strace tcpdump \
+            postgresql-client mysql-client redis-tools \
+            nginx apache2-utils ncdu nmap || true
           
           # Update man database
           sudo mandb
           
-      - name: Install Node.js dependencies
-        run: npm ci
+      - name: Install Node.js Dependencies
+        run: |
+          npm ci
+          npm install -g tsx
       
-      - name: Install tsx globally
-        run: npm install -g tsx
-      
-      - name: Parse man pages
+      - name: Parse Man Pages
+        id: parse
         run: |
           # Create output directory
           mkdir -p data/parsed-man-pages-linux
@@ -115,76 +64,94 @@ jobs:
         env:
           CI: true
       
-      - name: Migrate parsed pages to application format
+      - name: Migrate to Application Format
+        if: success()
         run: |
           # Run the migration script
           tsx scripts/migrate-linux-man-pages.ts
           
-          # Copy the Linux parsed pages for reference
+          # Create backup for reference
           cp -r data/parsed-man-pages-linux data/parsed-man-pages-linux-backup || true
       
-      - name: Generate man page index and stats
+      - name: Generate Summary Report
+        if: always()
         run: |
-          # Count parsed pages
-          echo "Parsed man pages:"
-          find data/parsed-man-pages-linux/json -name "*.json" | wc -l
+          # Generate summary report
+          echo "# Man Page Parse Report" > MAN_PAGES_REPORT.md
+          echo "" >> MAN_PAGES_REPORT.md
+          echo "**Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> MAN_PAGES_REPORT.md
+          echo "**Environment:** Ubuntu $(lsb_release -rs)" >> MAN_PAGES_REPORT.md
+          echo "" >> MAN_PAGES_REPORT.md
           
-          # Generate summary
-          echo "## Man Page Summary" > MAN_PAGES_SUMMARY.md
-          echo "" >> MAN_PAGES_SUMMARY.md
-          echo "Total pages: $(find data/parsed-man-pages-linux/json -name "*.json" | wc -l)" >> MAN_PAGES_SUMMARY.md
-          echo "" >> MAN_PAGES_SUMMARY.md
-          echo "### Categories:" >> MAN_PAGES_SUMMARY.md
-          echo "" >> MAN_PAGES_SUMMARY.md
-          
-          # List by section
-          for section in 1 2 3 4 5 6 7 8; do
-            count=$(find data/parsed-man-pages-linux/json -name "*.$section.json" | wc -l)
-            if [ $count -gt 0 ]; then
-              echo "- Section $section: $count pages" >> MAN_PAGES_SUMMARY.md
-            fi
-          done
-          
-          echo "" >> MAN_PAGES_SUMMARY.md
-          echo "### Improvements over macOS man pages:" >> MAN_PAGES_SUMMARY.md
-          echo "- Full GNU documentation with comprehensive examples" >> MAN_PAGES_SUMMARY.md
-          echo "- Detailed option descriptions and usage scenarios" >> MAN_PAGES_SUMMARY.md
-          echo "- Better formatting and structure" >> MAN_PAGES_SUMMARY.md
-          echo "- More cross-references and related commands" >> MAN_PAGES_SUMMARY.md
-          
-          # Show stats file if it exists
-          if [ -f data/man-pages/stats.json ]; then
-            echo "" >> MAN_PAGES_SUMMARY.md
-            echo "### Migration Stats:" >> MAN_PAGES_SUMMARY.md
-            echo '```json' >> MAN_PAGES_SUMMARY.md
-            cat data/man-pages/stats.json >> MAN_PAGES_SUMMARY.md
-            echo '```' >> MAN_PAGES_SUMMARY.md
+          # Parse stats from manifest if available
+          if [ -f data/parsed-man-pages-linux/manifest.json ]; then
+            total=$(jq -r '.totalPages' data/parsed-man-pages-linux/manifest.json)
+            echo "## Parse Statistics" >> MAN_PAGES_REPORT.md
+            echo "- **Total Pages Parsed:** $total" >> MAN_PAGES_REPORT.md
+            echo "" >> MAN_PAGES_REPORT.md
+            
+            echo "### By Section" >> MAN_PAGES_REPORT.md
+            jq -r '.stats.bySection | to_entries | sort_by(.key | tonumber) | .[] | "- Section \(.key): \(.value) pages"' data/parsed-man-pages-linux/manifest.json >> MAN_PAGES_REPORT.md
+            echo "" >> MAN_PAGES_REPORT.md
+            
+            echo "### Top Categories" >> MAN_PAGES_REPORT.md
+            jq -r '.stats.byCategory | to_entries | sort_by(.value) | reverse | .[0:10] | .[] | "- \(.key): \(.value) pages"' data/parsed-man-pages-linux/manifest.json >> MAN_PAGES_REPORT.md
+          else
+            # Fallback to file count
+            count=$(find data/parsed-man-pages-linux/json -name "*.json" 2>/dev/null | wc -l || echo "0")
+            echo "## Parse Results" >> MAN_PAGES_REPORT.md
+            echo "- **JSON Files Created:** $count" >> MAN_PAGES_REPORT.md
           fi
+          
+          echo "" >> MAN_PAGES_REPORT.md
+          echo "## Quality Improvements" >> MAN_PAGES_REPORT.md
+          echo "- ✅ Full GNU documentation with comprehensive examples" >> MAN_PAGES_REPORT.md
+          echo "- ✅ Detailed option descriptions and usage scenarios" >> MAN_PAGES_REPORT.md
+          echo "- ✅ Better formatting and structure" >> MAN_PAGES_REPORT.md
+          echo "- ✅ More cross-references and related commands" >> MAN_PAGES_REPORT.md
+      
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: man-pages-linux
+          path: |
+            data/parsed-man-pages-linux/
+            data/man-pages/
+            MAN_PAGES_REPORT.md
+          retention-days: 30
       
       - name: Create Pull Request
+        if: success()
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update man pages from Ubuntu Linux"
-          title: "Update Man Pages (Linux)"
+          title: "🚀 Update Man Pages (Linux)"
           body: |
-            ## Man Page Update
+            ## 📚 Man Page Update
             
             This PR updates the man pages parsed from Ubuntu Linux.
             
-            ### Changes:
-            - Parsed man pages from Ubuntu's comprehensive man page collection
-            - Updated with latest GNU/Linux documentation from Ubuntu
+            ### 📊 Parse Results
+            See attached `MAN_PAGES_REPORT.md` for detailed statistics.
+            
+            ### ✨ Highlights
+            - Parsed comprehensive man pages from Ubuntu's documentation
+            - Updated with latest GNU/Linux documentation
             - Includes full examples, detailed options, and comprehensive descriptions
             - Significantly improved quality over macOS man pages
-            - Comprehensive coverage of Linux commands and utilities
             
-            See `MAN_PAGES_SUMMARY.md` for details.
+            ### 🔍 Review Checklist
+            - [ ] Verify man page count is reasonable (>10,000 pages)
+            - [ ] Check that migration completed successfully
+            - [ ] Review sample pages for quality
             
             ---
             *This PR was automatically generated by the parse-man-pages workflow.*
-          branch: update-man-pages
+          branch: update-man-pages-linux
           delete-branch: true
           labels: |
             documentation
             automated
+            man-pages

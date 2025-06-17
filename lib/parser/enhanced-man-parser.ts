@@ -138,18 +138,20 @@ export class EnhancedManPageParser {
       // Get both raw groff and formatted content
       const sectionArg = section ? section.toString() : ''
       
-      // Get raw groff content
+      // Get raw groff content with increased buffer size for large man pages
       const { stdout: groffContent } = await execAsync(
-        `man -P cat ${sectionArg} '${cleanCommand}' 2>/dev/null || true`
+        `man -P cat ${sectionArg} '${cleanCommand}' 2>/dev/null || true`,
+        { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for large man pages like gcc
       )
       
       if (!groffContent || groffContent.trim().length < 50) {
         return null
       }
       
-      // Get formatted content for easier parsing
+      // Get formatted content for easier parsing with increased buffer
       const { stdout: formattedContent } = await execAsync(
-        `man ${sectionArg} '${cleanCommand}' | col -b 2>/dev/null || true`
+        `man ${sectionArg} '${cleanCommand}' | col -b 2>/dev/null || true`,
+        { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
       )
       
       // Parse with enhanced features
@@ -737,7 +739,10 @@ export class EnhancedManPageParser {
     // Process remaining commands by section
     for (const section of sections) {
       try {
-        const { stdout } = await execAsync(`man -k . -s ${section} 2>/dev/null | cut -d' ' -f1 | sort -u`)
+        const { stdout } = await execAsync(
+          `man -k . -s ${section} 2>/dev/null | cut -d' ' -f1 | sort -u`,
+          { maxBuffer: 5 * 1024 * 1024 } // 5MB buffer for command lists
+        )
         const commands = stdout
           .split('\n')
           .filter(cmd => cmd && !processed.has(cmd))
