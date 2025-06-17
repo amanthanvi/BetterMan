@@ -1,0 +1,103 @@
+{
+  "name": "head",
+  "section": 1,
+  "title": "head manual page",
+  "description": "This filter displays the first count lines or bytes of each of the specified files, or of the standard input if no files are specified.",
+  "synopsis": "head [-n count | -c bytes] [file ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tApril 10, 2018\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     head – display first lines of a file\n",
+        "     head [-n count | -c bytes] [file ...]\n",
+        "     This filter displays the first count lines or bytes of each of the\n     specified files, or of the standard input if no files are specified.  If\n     count is omitted it defaults to 10.\n\n     The following options are available:\n\n     -c bytes, --bytes=bytes\n\t     Print bytes of each of the specified files.\n\n     -n count, --lines=count\n\t     Print count lines of each of the specified files.\n\n     If more than a single file is specified, each file is preceded by a\n     header consisting of the string “==> XXX <==” where “XXX” is the name of\n     the file.\n",
+        "     The head utility exits 0 on success, and >0 if an error occurs.\n",
+        "     To display the first 500 lines of the file foo:\n\n\t   $ head -n 500 foo\n\n     head can be used in conjunction with tail(1) in the following way to, for\n     example, display only line 500 from the file foo:\n\n\t   $ head -n 500 foo | tail -n 1\n",
+        "     tail(1)\n",
+        "     The head command appeared in PWB UNIX.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-c",
+      "description": " Print bytes of each of the specified files.",
+      "optional": false
+    },
+    {
+      "flag": "-n",
+      "description": " Print count lines of each of the specified files. If more than a single file is specified, each file is preceded by a header consisting of the string “==> XXX <==” where “XXX” is the name of the file. EXIT STATUS The head utility exits 0 on success, and >0 if an error occurs.",
+      "optional": true
+    }
+  ],
+  "examples": [
+    {
+      "command": "head -n 500 foo",
+      "description": "",
+      "tags": [],
+      "output": "     head can be used in conjunction with tail(1) in the following way to, for\n     example, display only line 500 from the file foo:\n"
+    },
+    {
+      "command": "head -n 500 foo | tail -n 1",
+      "description": "",
+      "tags": [
+        "pipe"
+      ],
+      "output": "     tail(1)\n"
+    }
+  ],
+  "relatedCommands": [
+    "tail",
+    "head",
+    "display",
+    "first",
+    "lines",
+    "count",
+    "bytes",
+    "filter",
+    "displays",
+    "each",
+    "specified",
+    "standard",
+    "input",
+    "omitted",
+    "defaults"
+  ],
+  "seeAlso": [
+    {
+      "name": "tail",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "head head manual page this filter displays the first count lines or bytes of each of the specified files or of the standard input if no files are specified head -n count -c bytes file head manual page filter displays first count lines bytes each specified files standard input specified -c print bytes of each of the specified files -n print count lines of each of the specified files if more than a single file is specified each file is preceded by a header consisting of the string xxx where xxx is the name of the file exit status the head utility exits 0 on success and 0 if an error occurs head -n 500 foo head -n 500 foo tail -n 1 name macos 15 5 april 10 2018 macos 15 5",
+  "keywords": [
+    "head",
+    "manual",
+    "page",
+    "filter",
+    "displays",
+    "first",
+    "count",
+    "lines",
+    "bytes",
+    "each",
+    "specified",
+    "files,",
+    "standard",
+    "input",
+    "specified."
+  ],
+  "complexity": "basic",
+  "hash": "70230db53e7a30bc",
+  "parsedAt": "2025-06-17T19:41:56.597Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

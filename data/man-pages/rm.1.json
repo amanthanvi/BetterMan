@@ -1,0 +1,171 @@
+{
+  "name": "rm",
+  "section": 1,
+  "title": "rm manual page",
+  "description": "The rm utility attempts to remove the non-directory type files specified on the command line.",
+  "synopsis": "rm [-f | -i] [-dIRrvWx] file ... unlink [--] file",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t       November 10, 2018\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     rm, unlink – remove directory entries\n",
+        "     rm [-f | -i] [-dIRrvWx] file ...\n     unlink [--] file\n",
+        "     The rm utility attempts to remove the non-directory type files specified\n     on the command line.  If the permissions of the file do not permit\n     writing, and the standard input device is a terminal, the user is\n     prompted (on the standard error output) for confirmation.\n\n     The options are as follows:\n\n     -d      Attempt to remove directories as well as other types of files.\n\n     -f      Attempt to remove the files without prompting for confirmation,\n\t     regardless of the file's permissions.  If the file does not\n\t     exist, do not display a diagnostic message or modify the exit\n\t     status to reflect an error.  The -f option overrides any previous\n\t     -i options.\n\n     -i      Request confirmation before attempting to remove each file,\n\t     regardless of the file's permissions, or whether or not the\n\t     standard input device is a terminal.  The -i option overrides any\n\t     previous -f options.\n\n     -I      Request confirmation once if more than three files are being\n\t     removed or if a directory is being recursively removed.  This is\n\t     a far less intrusive option than -i yet provides almost the same\n\t     level of protection against mistakes.\n\n     -P      This flag has no effect.  It is kept only for backwards\n\t     compatibility with 4.4BSD-Lite2.\n\n     -R      Attempt to remove the file hierarchy rooted in each file\n\t     argument.\tThe -R option implies the -d option.  If the -i option\n\t     is specified, the user is prompted for confirmation before each\n\t     directory's contents are processed (as well as before the attempt\n\t     is made to remove the directory).\tIf the user does not respond\n\t     affirmatively, the file hierarchy rooted in that directory is\n\t     skipped.\n\n     -r      Equivalent to -R.\n\n     -v      Be verbose when deleting files, showing them as they are removed.\n\n     -W      Attempt to undelete the named files.  Currently, this option can\n\t     only be used to recover files covered by whiteouts in a union\n\t     file system (see undelete(2)).\n\n     -x      When removing a hierarchy, do not cross mount points.\n\n     The rm utility removes symbolic links, not the files referenced by the\n     links.\n\n     It is an error to attempt to remove the files /, . or ...\n\n     When the utility is called as unlink, only one argument, which must not\n     be a directory, may be supplied.  No options may be supplied in this\n     simple mode of operation, which performs an unlink(2) operation on the\n     passed argument.  However, the usual option-end delimiter, --, may\n     optionally precede the argument.\n",
+        "     The rm utility exits 0 if all of the named files or file hierarchies were\n     removed, or if the -f option was specified and all of the existing files\n     or file hierarchies were removed.\tIf an error occurs, rm exits with a\n     value >0.\n",
+        "     The rm command uses getopt(3) to parse its arguments, which allows it to\n     accept the ‘--’ option which will cause it to stop processing flag\n     options at that point.  This will allow the removal of file names that\n     begin with a dash (‘-’).  For example:\n\n\t   rm -- -filename\n\n     The same behavior can be obtained by using an absolute or relative path\n     reference.  For example:\n\n\t   rm /home/user/-filename\n\t   rm ./-filename\n",
+        "     Recursively remove all files contained within the foobar directory\n     hierarchy:\n\n\t   $ rm -rf foobar\n\n     Any of these commands will remove the file -f:\n\n\t   $ rm -- -f\n\t   $ rm ./-f\n\t   $ unlink -f\n",
+        "     The rm utility differs from historical implementations in that the -f\n     option only masks attempts to remove non-existent files instead of\n     masking a large variety of errors.  The -v option is non-standard and its\n     use in scripts is not recommended.\n\n     Also, historical BSD implementations prompted on the standard output, not\n     the standard error output.\n\n     The -P option does not have any effect as of FreeBSD 13 and may be\n     removed in the future.\n",
+        "     chflags(1), rmdir(1), undelete(2), unlink(2), fts(3), getopt(3),\n     symlink(7)\n",
+        "     The rm command conforms to.\n\n     The simplified unlink command conforms to Version 2 of the Single UNIX\n     Specification (“SUSv2”).\n",
+        "     A rm command appeared in Version 1 AT&T UNIX.\n",
+        "     The -P option assumes that the underlying file system is a fixed-block\n     file system.  In addition, only regular files are overwritten, other\n     types of files are not.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-d",
+      "description": "Attempt to remove directories as well as other types of files."
+    },
+    {
+      "flag": "-f",
+      "description": " regardless of the file's permissions.  If the file does not exist, do not display a diagnostic message or modify the exit status to reflect an error.  The -f option overrides any previous",
+      "optional": true
+    },
+    {
+      "flag": "-i",
+      "description": " regardless of the file's permissions, or whether or not the standard input device is a terminal.  The -i option overrides any previous -f options.",
+      "optional": false
+    },
+    {
+      "flag": "-i",
+      "description": " regardless of the file's permissions, or whether or not the standard input device is a terminal.  The -i option overrides any previous -f options.",
+      "optional": false
+    },
+    {
+      "flag": "-I",
+      "description": "Request confirmation once if more than three files are being removed or if a directory is being recursively removed.  This is a far less intrusive option than -i yet provides almost the same level of protection against mistakes."
+    },
+    {
+      "flag": "-P",
+      "description": "This flag has no effect.  It is kept only for backwards compatibility with 4.4BSD-Lite2."
+    },
+    {
+      "flag": "-R",
+      "description": "Attempt to remove the file hierarchy rooted in each file argument.\tThe -R option implies the -d option.  If the -i option is specified, the user is prompted for confirmation before each directory's contents are processed (as well as before the attempt is made to remove the directory).\tIf the user does not respond affirmatively, the file hierarchy rooted in that directory is skipped."
+    },
+    {
+      "flag": "-r",
+      "description": "Equivalent to -R."
+    },
+    {
+      "flag": "-v",
+      "description": "Be verbose when deleting files, showing them as they are removed."
+    },
+    {
+      "flag": "-W",
+      "description": "Attempt to undelete the named files.  Currently, this option can only be used to recover files covered by whiteouts in a union file system (see undelete(2))."
+    },
+    {
+      "flag": "-x",
+      "description": "When removing a hierarchy, do not cross mount points. The rm utility removes symbolic links, not the files referenced by the links. It is an error to attempt to remove the files /, . or ... When the utility is called as unlink, only one argument, which must not be a directory, may be supplied.  No options may be supplied in this simple mode of operation, which performs an unlink(2) operation on the passed argument.  However, the usual option-end delimiter, --, may optionally precede the argument. EXIT STATUS The rm utility exits 0 if all of the named files or file hierarchies were removed, or if the -f option was specified and all of the existing files or file hierarchies were removed.\tIf an error occurs, rm exits with a value >0."
+    }
+  ],
+  "examples": [
+    {
+      "command": "rm -rf foobar",
+      "description": "",
+      "tags": [],
+      "output": "     Any of these commands will remove the file -f:\n"
+    },
+    {
+      "command": "rm -- -f",
+      "description": "",
+      "tags": []
+    },
+    {
+      "command": "rm ./-f",
+      "description": "",
+      "tags": []
+    },
+    {
+      "command": "unlink -f",
+      "description": "",
+      "tags": []
+    }
+  ],
+  "relatedCommands": [
+    "chflags",
+    "rmdir",
+    "undelete",
+    "unlink",
+    "fts",
+    "getopt",
+    "symlink",
+    "remove",
+    "directory",
+    "entries",
+    "utility",
+    "attempts",
+    "non-directory",
+    "type",
+    "specified"
+  ],
+  "seeAlso": [
+    {
+      "name": "chflags",
+      "section": 1
+    },
+    {
+      "name": "rmdir",
+      "section": 1
+    },
+    {
+      "name": "undelete",
+      "section": 2
+    },
+    {
+      "name": "unlink",
+      "section": 2
+    },
+    {
+      "name": "fts",
+      "section": 3
+    },
+    {
+      "name": "getopt",
+      "section": 3
+    },
+    {
+      "name": "symlink",
+      "section": 7
+    }
+  ],
+  "metadata": {},
+  "searchContent": "rm rm manual page the rm utility attempts to remove the non-directory type files specified on the command line rm -f -i -dirrvwx file unlink -- file rm manual page utility attempts remove non-directory type specified command line -d attempt to remove directories as well as other types of files -f regardless of the file s permissions if the file does not exist do not display a diagnostic message or modify the exit status to reflect an error the -f option overrides any previous -i regardless of the file s permissions or whether or not the standard input device is a terminal the -i option overrides any previous -f options -i regardless of the file s permissions or whether or not the standard input device is a terminal the -i option overrides any previous -f options -i request confirmation once if more than three files are being removed or if a directory is being recursively removed this is a far less intrusive option than -i yet provides almost the same level of protection against mistakes -p this flag has no effect it is kept only for backwards compatibility with 4 4bsd-lite2 -r attempt to remove the file hierarchy rooted in each file argument the -r option implies the -d option if the -i option is specified the user is prompted for confirmation before each directory s contents are processed as well as before the attempt is made to remove the directory if the user does not respond affirmatively the file hierarchy rooted in that directory is skipped -r equivalent to -r -v be verbose when deleting files showing them as they are removed -w attempt to undelete the named files currently this option can only be used to recover files covered by whiteouts in a union file system see undelete 2 -x when removing a hierarchy do not cross mount points the rm utility removes symbolic links not the files referenced by the links it is an error to attempt to remove the files or when the utility is called as unlink only one argument which must not be a directory may be supplied no options may be supplied in this simple mode of operation which performs an unlink 2 operation on the passed argument however the usual option-end delimiter -- may optionally precede the argument exit status the rm utility exits 0 if all of the named files or file hierarchies were removed or if the -f option was specified and all of the existing files or file hierarchies were removed if an error occurs rm exits with a value 0 rm -rf foobar rm -- -f rm -f unlink -f name macos 15 5 november 10 2018 macos 15 5",
+  "keywords": [
+    "rm",
+    "manual",
+    "page",
+    "utility",
+    "attempts",
+    "remove",
+    "non-directory",
+    "type",
+    "specified",
+    "command",
+    "line."
+  ],
+  "complexity": "basic",
+  "hash": "b390cc3ccb8002a6",
+  "parsedAt": "2025-06-17T19:31:46.914Z",
+  "parseVersion": "2.0.0",
+  "isCommon": true,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

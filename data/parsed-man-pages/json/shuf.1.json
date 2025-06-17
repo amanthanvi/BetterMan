@@ -1,0 +1,106 @@
+{
+  "name": "shuf",
+  "section": 1,
+  "title": "generate random permutations",
+  "description": "Write a random permutation of the input lines to standard output.",
+  "synopsis": "shuf [OPTION]... [FILE] shuf -e [OPTION]... [ARG]... shuf -i LO-HI [OPTION]...",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "GNU coreutils 9.7\t\t  April 2025\t\t\t       SHUF(1)",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "       shuf - generate random permutations\n",
+        "       shuf [OPTION]... [FILE]\n       shuf -e [OPTION]... [ARG]...\n       shuf -i LO-HI [OPTION]...\n",
+        "       Write a random permutation of the input lines to standard output.\n\n       With no FILE, or when FILE is -, read standard input.\n\n       Mandatory arguments to long options are mandatory for short options\n       too.\n\n       -e, --echo\n\t      treat each ARG as an input line\n\n       -i, --input-range=LO-HI\n\t      treat each number LO through HI as an input line\n\n       -n, --head-count=COUNT\n\t      output at most COUNT lines\n\n       -o, --output=FILE\n\t      write result to FILE instead of standard output\n\n       --random-source=FILE\n\t      get random bytes from FILE\n\n       -r, --repeat\n\t      output lines can be repeated\n\n       -z, --zero-terminated\n\t      line delimiter is NUL, not newline\n\n       --help display this help and exit\n\n       --version\n\t      output version information and exit\n",
+        "       Written by Paul Eggert.\n",
+        "       GNU coreutils online help: <https://www.gnu.org/software/coreutils/>\n       Report any translation bugs to <https://translationproject.org/team/>\n",
+        "       Copyright © 2025 Free Software Foundation, Inc.\tLicense GPLv3+: GNU\n       GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\n       This is free software: you are free to change and redistribute it.\n       There is NO WARRANTY, to the extent permitted by law.\n",
+        "       Full documentation <https://www.gnu.org/software/coreutils/shuf>\n       or available locally via: info '(coreutils) shuf invocation'\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-e",
+      "description": " treat each ARG as an input line",
+      "argument": "OPTION",
+      "optional": false
+    },
+    {
+      "flag": "-i",
+      "description": " treat each number LO through HI as an input line",
+      "optional": false
+    },
+    {
+      "flag": "-n",
+      "description": ", --head-count=COUNT output at most COUNT lines"
+    },
+    {
+      "flag": "--random-source",
+      "description": "=FILE get random bytes from FILE",
+      "shortFlag": "-o"
+    },
+    {
+      "flag": "-r",
+      "description": ", --repeat output lines can be repeated"
+    },
+    {
+      "flag": "--help",
+      "description": "display this help and exit",
+      "shortFlag": "-z"
+    },
+    {
+      "flag": "--version",
+      "description": " output version information and exit"
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "SHUF",
+    "shuf",
+    "generate",
+    "random",
+    "permutations",
+    "permutation",
+    "input",
+    "lines",
+    "standard",
+    "output",
+    "when",
+    "read",
+    "arguments",
+    "long",
+    "options"
+  ],
+  "seeAlso": [
+    {
+      "name": "SHUF",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "shuf generate random permutations write a random permutation of the input lines to standard output shuf option file shuf -e option arg shuf -i lo-hi option shuf generate random permutations write permutation input lines standard output -e treat each arg as an input line -i treat each number lo through hi as an input line -n --head-count count output at most count lines --random-source file get random bytes from file -r --repeat output lines can be repeated --help display this help and exit --version output version information and exit name gnu coreutils 9 7 april 2025 shuf 1",
+  "keywords": [
+    "shuf",
+    "generate",
+    "random",
+    "permutations",
+    "write",
+    "permutation",
+    "input",
+    "lines",
+    "standard",
+    "output."
+  ],
+  "complexity": "intermediate",
+  "hash": "b7c070b08c0a30d2",
+  "parsedAt": "2025-06-17T19:42:11.825Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

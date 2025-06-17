@@ -129,25 +129,31 @@ export class EnhancedManPageParser {
    */
   static async parseFromSystem(command: string, section?: number): Promise<EnhancedManPage | null> {
     try {
+      // Clean command name to avoid shell injection issues
+      const cleanCommand = command.replace(/[^a-zA-Z0-9._-]/g, '')
+      if (cleanCommand !== command) {
+        console.warn(`Command name sanitized: ${command} -> ${cleanCommand}`)
+      }
+      
       // Get both raw groff and formatted content
       const sectionArg = section ? section.toString() : ''
       
       // Get raw groff content
       const { stdout: groffContent } = await execAsync(
-        `man -P cat ${sectionArg} ${command} 2>/dev/null || true`
+        `man -P cat ${sectionArg} '${cleanCommand}' 2>/dev/null || true`
       )
       
-      if (!groffContent) {
+      if (!groffContent || groffContent.trim().length < 50) {
         return null
       }
       
       // Get formatted content for easier parsing
       const { stdout: formattedContent } = await execAsync(
-        `man ${sectionArg} ${command} | col -b 2>/dev/null || true`
+        `man ${sectionArg} '${cleanCommand}' | col -b 2>/dev/null || true`
       )
       
       // Parse with enhanced features
-      return this.parseContent(command, groffContent, formattedContent, section)
+      return this.parseContent(cleanCommand, groffContent, formattedContent, section)
     } catch (error) {
       console.error(`Failed to parse man page for ${command}:`, error)
       return null

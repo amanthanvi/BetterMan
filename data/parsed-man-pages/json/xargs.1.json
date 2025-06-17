@@ -1,0 +1,180 @@
+{
+  "name": "xargs",
+  "section": 1,
+  "title": "xargs manual page",
+  "description": "The xargs utility reads space, tab, newline and end-of-file delimited strings from the standard input and executes utility with the strings as arguments.",
+  "synopsis": "xargs [-0oprt] [-E eofstr] [-I replstr [-R replacements] [-S replsize]] [-J replstr] [-L number] [-n number [-x]] [-P maxprocs] [-s size] [utility [argument ...]]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t      September 21, 2020\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     xargs – construct argument list(s) and execute utility\n",
+        "     xargs [-0oprt] [-E eofstr] [-I replstr [-R replacements] [-S replsize]]\n\t   [-J replstr] [-L number] [-n number [-x]] [-P maxprocs] [-s size]\n\t   [utility [argument ...]]\n",
+        "     The xargs utility reads space, tab, newline and end-of-file delimited\n     strings from the standard input and executes utility with the strings as\n     arguments.\n\n     Any arguments specified on the command line are given to utility upon\n     each invocation, followed by some number of the arguments read from the\n     standard input of xargs.  This is repeated until standard input is\n     exhausted.\n\n     Spaces, tabs and newlines may be embedded in arguments using single\n     (`` ' '') or double (``\"'') quotes or backslashes (``\\'').  Single quotes\n     escape all non-single quote characters, excluding newlines, up to the\n     matching single quote.  Double quotes escape all non-double quote\n     characters, excluding newlines, up to the matching double quote.  Any\n     single character, including newlines, may be escaped by a backslash.\n\n     The options are as follows:\n\n     -0, --null\n\t     Change xargs to expect NUL (``\\0'') characters as separators,\n\t     instead of spaces and newlines.  This is expected to be used in\n\t     concert with the -print0 function in find(1).\n\n     -E eofstr\n\t     Use eofstr as a logical EOF marker.\n\n     -I replstr\n\t     Execute utility for each input line, replacing one or more\n\t     occurrences of replstr in up to replacements (or 5 if no -R flag\n\t     is specified) arguments to utility with the entire line of input.\n\t     The resulting arguments, after replacement is done, will not be\n\t     allowed to grow beyond replsize (or 255 if no -S flag is\n\t     specified) bytes; this is implemented by concatenating as much of\n\t     the argument containing replstr as possible, to the constructed\n\t     arguments to utility, up to replsize bytes.  The size limit does\n\t     not apply to arguments to utility which do not contain replstr,\n\t     and furthermore, no replacement will be done on utility itself.\n\t     Implies -x.\n\n     -J replstr\n\t     If this option is specified, xargs will use the data read from\n\t     standard input to replace the first occurrence of replstr instead\n\t     of appending that data after all other arguments.\tThis option\n\t     will not affect how many arguments will be read from input (-n),\n\t     or the size of the command(s) xargs will generate (-s).  The\n\t     option just moves where those arguments will be placed in the\n\t     command(s) that are executed.  The replstr must show up as a\n\t     distinct argument to xargs.  It will not be recognized if, for\n\t     instance, it is in the middle of a quoted string.\tFurthermore,\n\t     only the first occurrence of the replstr will be replaced.  For\n\t     example, the following command will copy the list of files and\n\t     directories which start with an uppercase letter in the current\n\t     directory to destdir:\n\n\t\t   /bin/ls -1d [A-Z]* | xargs -J % cp -Rp % destdir\n\n     -L number\n\t     Call utility for every number lines read.\tIf EOF is reached and\n\t     fewer lines have been read than number then utility will be\n\t     called with the available lines.\n\n     -n number, --max-args=number\n\t     Set the maximum number of arguments taken from standard input for\n\t     each invocation of utility.  An invocation of utility will use\n\t     less than number standard input arguments if the number of bytes\n\t     accumulated (see the -s option) exceeds the specified size or\n\t     there are fewer than number arguments remaining for the last\n\t     invocation of utility.  The current default value for number is\n\t     5000.\n\n     -o      Reopen stdin as /dev/tty in the child process before executing\n\t     the command.  This is useful if you want xargs to run an\n\t     interactive application.\n\n     -P maxprocs, --max-procs=maxprocs\n\t     Parallel mode: run at most maxprocs invocations of utility at\n\t     once.  If maxprocs is set to 0, xargs will run as many processes\n\t     as possible.\n\n     -p, --interactive\n\t     Echo each command to be executed and ask the user whether it\n\t     should be executed.  An affirmative response, ‘y’ in the POSIX\n\t     locale, causes the command to be executed, any other response\n\t     causes it to be skipped.  No commands are executed if the process\n\t     is not attached to a terminal.\n\n     -r, --no-run-if-empty\n\t     Compatibility with GNU xargs.  The GNU version of xargs runs the\n\t     utility argument at least once, even if xargs input is empty, and\n\t     it supports a -r option to inhibit this behavior.\tThe FreeBSD\n\t     version of xargs does not run the utility argument on empty\n\t     input, but it supports the -r option for command-line\n\t     compatibility with GNU xargs, but the -r option does nothing in\n\t     the FreeBSD version of xargs.\n\n     -R replacements\n\t     Specify the maximum number of arguments that -I will do\n\t     replacement in.  If replacements is negative, the number of\n\t     arguments in which to replace is unbounded.\n\n     -S replsize\n\t     Specify the amount of space (in bytes) that -I can use for\n\t     replacements.  The default for replsize is 255.\n\n     -s size, --max-chars=size\n\t     Set the maximum number of bytes for the command line length\n\t     provided to utility.  The sum of the length of the utility name,\n\t     the arguments passed to utility (including NULL terminators) and\n\t     the current environment will be less than or equal to this\n\t     number.  The current default value for size is ARG_MAX - 4096.\n\n     -t, --verbose\n\t     Echo the command to be executed to standard error immediately\n\t     before it is executed.\n\n     -x, --exit\n\t     Force xargs to terminate immediately if a command line containing\n\t     number arguments will not fit in the specified (or default)\n\t     command line length.\n\n     If utility is omitted, echo(1) is used.\n\n     Undefined behavior may occur if utility reads from the standard input.\n\n     If a command line cannot be assembled, or cannot be invoked, or if an\n     invocation of utility is terminated by a signal, or an invocation of\n     utility exits with a value of 255, the xargs utility stops processing\n     input and exits after all invocations of utility finish processing.\n",
+        "     In legacy mode, the -L option treats all newlines as end-of-line,\n     regardless of whether the line is empty or ends with a space.  In\n     addition, the -L and -n options are not mutually-exclusive.\n\n     For more information about legacy mode, see compat(5).\n",
+        "     The xargs utility exits with a value of 0 if no error occurs.  If utility\n     cannot be found, xargs exits with a value of 127, otherwise if utility\n     cannot be executed, xargs exits with a value of 126.  If any other error\n     occurs, xargs exits with a value of 1.\n",
+        "     Create a 3x3 matrix with numbers from 1 to 9.  Every echo(1) instance\n     receives three lines as arguments:\n\n\t   $ seq 1 9 | xargs -L3 echo\n\t   1 2 3\n\t   4 5 6\n\t   7 8 9\n\n     Duplicate every line from standard input:\n\n\t   $ echo -e \"one\\ntwo\\nthree\" | xargs -I % echo % %\n\t   one one\n\t   two two\n\t   three three\n\n     Execute at most 2 concurrent instances of find(1) every one of them using\n     one of the directories from the standard input:\n\n\t   ls -d /usr/local /opt | xargs -J % -P2 -n1 find % -name file\n",
+        "     echo(1), find(1), execvp(3), compat(5)\n",
+        "     The xargs utility is expected to be IEEE Std 1003.2 (“POSIX.2”)\n     compliant.  The -J, -o, -P, -R and -S options are non-standard FreeBSD\n     extensions which may not be available on other operating systems.\n",
+        "     The xargs utility appeared in PWB UNIX.\n",
+        "     If utility attempts to invoke another command such that the number of\n     arguments or the size of the environment is increased, it risks execvp(3)\n     failing with E2BIG.\n\n     The xargs utility does not take multibyte characters into account when\n     performing string comparisons for the -I and -J options, which may lead\n     to incorrect results in some locales.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-0",
+      "description": ", --null Change xargs to expect NUL (``\\0'') characters as separators, instead of spaces and newlines.  This is expected to be used in concert with the -print0 function in find(1)."
+    },
+    {
+      "flag": "-E",
+      "description": " Use eofstr as a logical EOF marker.",
+      "optional": true
+    },
+    {
+      "flag": "-I",
+      "description": " Execute utility for each input line, replacing one or more occurrences of replstr in up to replacements (or 5 if no -R flag is specified) arguments to utility with the entire line of input. The resulting arguments, after replacement is done, will not be allowed to grow beyond replsize (or 255 if no -S flag is specified) bytes; this is implemented by concatenating as much of the argument containing replstr as possible, to the constructed arguments to utility, up to replsize bytes.  The size limit does not apply to arguments to utility which do not contain replstr, and furthermore, no replacement will be done on utility itself. Implies -x.",
+      "optional": true
+    },
+    {
+      "flag": "-J",
+      "description": " If this option is specified, xargs will use the data read from standard input to replace the first occurrence of replstr instead of appending that data after all other arguments.\tThis option will not affect how many arguments will be read from input (-n), or the size of the command(s) xargs will generate (-s).  The option just moves where those arguments will be placed in the command(s) that are executed.  The replstr must show up as a distinct argument to xargs.  It will not be recognized if, for instance, it is in the middle of a quoted string.\tFurthermore, only the first occurrence of the replstr will be replaced.  For example, the following command will copy the list of files and directories which start with an uppercase letter in the current directory to destdir: /bin/ls -1d [A-Z]* | xargs -J % cp -Rp % destdir",
+      "optional": true
+    },
+    {
+      "flag": "-L",
+      "description": " Call utility for every number lines read.\tIf EOF is reached and fewer lines have been read than number then utility will be called with the available lines.",
+      "optional": true
+    },
+    {
+      "flag": "-n",
+      "description": " Set the maximum number of arguments taken from standard input for each invocation of utility.  An invocation of utility will use less than number standard input arguments if the number of bytes accumulated (see the -s option) exceeds the specified size or there are fewer than number arguments remaining for the last invocation of utility.  The current default value for number is 5000.",
+      "optional": true
+    },
+    {
+      "flag": "-o",
+      "description": "Reopen stdin as /dev/tty in the child process before executing the command.  This is useful if you want xargs to run an interactive application."
+    },
+    {
+      "flag": "-P",
+      "description": " Parallel mode: run at most maxprocs invocations of utility at once.  If maxprocs is set to 0, xargs will run as many processes as possible.",
+      "optional": true
+    },
+    {
+      "flag": "-p",
+      "description": ", --interactive Echo each command to be executed and ask the user whether it should be executed.  An affirmative response, ‘y’ in the POSIX locale, causes the command to be executed, any other response causes it to be skipped.  No commands are executed if the process is not attached to a terminal."
+    },
+    {
+      "flag": "-r",
+      "description": ", --no-run-if-empty Compatibility with GNU xargs.  The GNU version of xargs runs the utility argument at least once, even if xargs input is empty, and it supports a -r option to inhibit this behavior.\tThe FreeBSD version of xargs does not run the utility argument on empty input, but it supports the -r option for command-line compatibility with GNU xargs, but the -r option does nothing in the FreeBSD version of xargs."
+    },
+    {
+      "flag": "-R",
+      "description": " Specify the maximum number of arguments that -I will do replacement in.  If replacements is negative, the number of arguments in which to replace is unbounded.",
+      "optional": true
+    },
+    {
+      "flag": "-S",
+      "description": " Specify the amount of space (in bytes) that -I can use for replacements.  The default for replsize is 255.",
+      "optional": true
+    },
+    {
+      "flag": "-s",
+      "description": " Set the maximum number of bytes for the command line length provided to utility.  The sum of the length of the utility name, the arguments passed to utility (including NULL terminators) and the current environment will be less than or equal to this number.  The current default value for size is ARG_MAX - 4096.",
+      "optional": true
+    },
+    {
+      "flag": "-t",
+      "description": ", --verbose Echo the command to be executed to standard error immediately before it is executed."
+    },
+    {
+      "flag": "-x",
+      "description": " Force xargs to terminate immediately if a command line containing number arguments will not fit in the specified (or default) command line length. If utility is omitted, echo(1) is used. Undefined behavior may occur if utility reads from the standard input. If a command line cannot be assembled, or cannot be invoked, or if an invocation of utility is terminated by a signal, or an invocation of utility exits with a value of 255, the xargs utility stops processing input and exits after all invocations of utility finish processing. LEGACY DESCRIPTION In legacy mode, the -L option treats all newlines as end-of-line, regardless of whether the line is empty or ends with a space.  In addition, the -L and -n options are not mutually-exclusive. For more information about legacy mode, see compat(5). EXIT STATUS The xargs utility exits with a value of 0 if no error occurs.  If utility cannot be found, xargs exits with a value of 127, otherwise if utility cannot be executed, xargs exits with a value of 126.  If any other error occurs, xargs exits with a value of 1.",
+      "optional": true
+    }
+  ],
+  "examples": [
+    {
+      "command": "seq 1 9 | xargs -L3 echo",
+      "description": "1 2 3",
+      "tags": [
+        "pipe"
+      ],
+      "output": "\t   1 2 3\n\t   4 5 6\n\t   7 8 9\n     Duplicate every line from standard input:\n"
+    },
+    {
+      "command": "echo -e \"one\\ntwo\\nthree\" | xargs -I % echo % %",
+      "description": "one one",
+      "tags": [
+        "pipe"
+      ],
+      "output": "\t   one one\n\t   two two\n\t   three three\n     Execute at most 2 concurrent instances of find(1) every one of them using\n     one of the directories from the standard input:\n\t   ls -d /usr/local /opt | xargs -J % -P2 -n1 find % -name file\nSEE ALSO\n     echo(1), find(1), execvp(3), compat(5)\n"
+    }
+  ],
+  "relatedCommands": [
+    "echo",
+    "find",
+    "execvp",
+    "compat",
+    "xargs",
+    "construct",
+    "argument",
+    "list",
+    "execute",
+    "utility",
+    "eofstr",
+    "replstr",
+    "replacements",
+    "replsize",
+    "number"
+  ],
+  "seeAlso": [
+    {
+      "name": "echo",
+      "section": 1
+    },
+    {
+      "name": "find",
+      "section": 1
+    },
+    {
+      "name": "execvp",
+      "section": 3
+    },
+    {
+      "name": "compat",
+      "section": 5
+    }
+  ],
+  "metadata": {},
+  "searchContent": "xargs xargs manual page the xargs utility reads space tab newline and end-of-file delimited strings from the standard input and executes utility with the strings as arguments xargs -0oprt -e eofstr -i replstr -r replacements -s replsize -j replstr -l number -n number -x -p maxprocs -s size utility argument xargs manual page utility reads space tab newline end-of-file delimited strings standard input executes arguments -0 --null change xargs to expect nul 0 characters as separators instead of spaces and newlines this is expected to be used in concert with the -print0 function in find 1 -e use eofstr as a logical eof marker -i execute utility for each input line replacing one or more occurrences of replstr in up to replacements or 5 if no -r flag is specified arguments to utility with the entire line of input the resulting arguments after replacement is done will not be allowed to grow beyond replsize or 255 if no -s flag is specified bytes this is implemented by concatenating as much of the argument containing replstr as possible to the constructed arguments to utility up to replsize bytes the size limit does not apply to arguments to utility which do not contain replstr and furthermore no replacement will be done on utility itself implies -x -j if this option is specified xargs will use the data read from standard input to replace the first occurrence of replstr instead of appending that data after all other arguments this option will not affect how many arguments will be read from input -n or the size of the command s xargs will generate -s the option just moves where those arguments will be placed in the command s that are executed the replstr must show up as a distinct argument to xargs it will not be recognized if for instance it is in the middle of a quoted string furthermore only the first occurrence of the replstr will be replaced for example the following command will copy the list of files and directories which start with an uppercase letter in the current directory to destdir bin ls -1d a-z xargs -j cp -rp destdir -l call utility for every number lines read if eof is reached and fewer lines have been read than number then utility will be called with the available lines -n set the maximum number of arguments taken from standard input for each invocation of utility an invocation of utility will use less than number standard input arguments if the number of bytes accumulated see the -s option exceeds the specified size or there are fewer than number arguments remaining for the last invocation of utility the current default value for number is 5000 -o reopen stdin as dev tty in the child process before executing the command this is useful if you want xargs to run an interactive application -p parallel mode run at most maxprocs invocations of utility at once if maxprocs is set to 0 xargs will run as many processes as possible -p --interactive echo each command to be executed and ask the user whether it should be executed an affirmative response y in the posix locale causes the command to be executed any other response causes it to be skipped no commands are executed if the process is not attached to a terminal -r --no-run-if-empty compatibility with gnu xargs the gnu version of xargs runs the utility argument at least once even if xargs input is empty and it supports a -r option to inhibit this behavior the freebsd version of xargs does not run the utility argument on empty input but it supports the -r option for command-line compatibility with gnu xargs but the -r option does nothing in the freebsd version of xargs -r specify the maximum number of arguments that -i will do replacement in if replacements is negative the number of arguments in which to replace is unbounded -s specify the amount of space in bytes that -i can use for replacements the default for replsize is 255 -s set the maximum number of bytes for the command line length provided to utility the sum of the length of the utility name the arguments passed to utility including null terminators and the current environment will be less than or equal to this number the current default value for size is arg max - 4096 -t --verbose echo the command to be executed to standard error immediately before it is executed -x force xargs to terminate immediately if a command line containing number arguments will not fit in the specified or default command line length if utility is omitted echo 1 is used undefined behavior may occur if utility reads from the standard input if a command line cannot be assembled or cannot be invoked or if an invocation of utility is terminated by a signal or an invocation of utility exits with a value of 255 the xargs utility stops processing input and exits after all invocations of utility finish processing legacy description in legacy mode the -l option treats all newlines as end-of-line regardless of whether the line is empty or ends with a space in addition the -l and -n options are not mutually-exclusive for more information about legacy mode see compat 5 exit status the xargs utility exits with a value of 0 if no error occurs if utility cannot be found xargs exits with a value of 127 otherwise if utility cannot be executed xargs exits with a value of 126 if any other error occurs xargs exits with a value of 1 seq 1 9 xargs -l3 echo 1 2 3 echo -e one ntwo nthree xargs -i echo one one name macos 15 5 september 21 2020 macos 15 5",
+  "keywords": [
+    "xargs",
+    "manual",
+    "page",
+    "utility",
+    "reads",
+    "space,",
+    "tab,",
+    "newline",
+    "end-of-file",
+    "delimited",
+    "strings",
+    "standard",
+    "input",
+    "executes",
+    "arguments."
+  ],
+  "complexity": "intermediate",
+  "hash": "c7ac648958ca3050",
+  "parsedAt": "2025-06-17T19:42:12.786Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

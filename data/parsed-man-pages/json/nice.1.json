@@ -1,0 +1,95 @@
+{
+  "name": "nice",
+  "section": 1,
+  "title": "nice manual page",
+  "description": "The nice utility runs utility at an altered scheduling priority, by incrementing its “nice” value by the specified increment, or a default value of 10.",
+  "synopsis": "nice [-n increment] utility [argument ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t       February 24, 2011\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     nice – execute a utility at an altered scheduling priority\n",
+        "     nice [-n increment] utility [argument ...]\n",
+        "     The nice utility runs utility at an altered scheduling priority, by\n     incrementing its “nice” value by the specified increment, or a default\n     value of 10.  The lower the nice value of a process, the higher its\n     scheduling priority.\n\n     The superuser may specify a negative increment in order to run a utility\n     with a higher scheduling priority.\n\n     Some shells may provide a builtin nice command which is similar or\n     identical to this utility.  Consult the builtin(1) manual page.\n",
+        "     The PATH environment variable is used to locate the requested utility if\n     the name contains no ‘/’ characters.\n",
+        "     If utility is invoked, the exit status of nice is the exit status of\n     utility.\n\n     An exit status of 126 indicates utility was found, but could not be\n     executed.\tAn exit status of 127 indicates utility could not be found.\n",
+        "     Execute utility ‘date’ at priority 5 assuming the priority of the shell\n     is 0:\n\n\t   nice -n 5 date\n\n     Execute utility ‘date’ at priority -19 assuming the priority of the shell\n     is 0 and you are the super-user:\n\n\t   nice -n 16 nice -n -35 date\n",
+        "     The traditional -increment option has been deprecated but is still\n     supported.\n",
+        "     builtin(1), csh(1), getpriority(2), setpriority(2), renice(8)\n",
+        "     The nice utility conforms to IEEE Std 1003.1-2001 (“POSIX.1”).\n",
+        "     A nice utility appeared in Version 4 AT&T UNIX.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "builtin",
+    "csh",
+    "getpriority",
+    "setpriority",
+    "renice",
+    "nice",
+    "execute",
+    "utility",
+    "altered",
+    "scheduling",
+    "priority",
+    "increment",
+    "argument",
+    "runs",
+    "incrementing"
+  ],
+  "seeAlso": [
+    {
+      "name": "builtin",
+      "section": 1
+    },
+    {
+      "name": "csh",
+      "section": 1
+    },
+    {
+      "name": "getpriority",
+      "section": 2
+    },
+    {
+      "name": "setpriority",
+      "section": 2
+    },
+    {
+      "name": "renice",
+      "section": 8
+    }
+  ],
+  "metadata": {},
+  "searchContent": "nice nice manual page the nice utility runs utility at an altered scheduling priority by incrementing its nice value by the specified increment or a default value of 10 nice -n increment utility argument nice manual page utility runs altered scheduling priority incrementing nice value specified increment default name macos 15 5 february 24 2011 macos 15 5",
+  "keywords": [
+    "nice",
+    "manual",
+    "page",
+    "utility",
+    "runs",
+    "altered",
+    "scheduling",
+    "priority,",
+    "incrementing",
+    "“nice”",
+    "value",
+    "specified",
+    "increment,",
+    "default"
+  ],
+  "complexity": "basic",
+  "hash": "53fd317e6e7d3f78",
+  "parsedAt": "2025-06-17T19:42:01.591Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

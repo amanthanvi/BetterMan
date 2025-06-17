@@ -1,0 +1,97 @@
+{
+  "name": "hostname",
+  "section": 1,
+  "title": "hostname manual page",
+  "description": "The hostname utility prints the name of the current host.",
+  "synopsis": "hostname [-f] [-s | -d] [name-of-host]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tOctober 5, 2020 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     hostname – set or print name of current host system\n",
+        "     hostname [-f] [-s | -d] [name-of-host]\n",
+        "     The hostname utility prints the name of the current host.\tThe super-user\n     can set the hostname by supplying an argument.  To keep the hostname\n     between reboots, run ‘scutil --set HostName name-of-host’.\n\n     Options:\n\n     -f    Include domain information in the printed name.  This is the\n\t   default behavior.\n\n     -s    Trim off any domain information from the printed name.\n\n     -d    Only print domain information.\n",
+        "     Set the host name of the machine and check the result:\n\n\t   $ hostname beastie.localdomain.org\n\t   $ hostname\n\t   beastie.localdomain.org\n\n     Do not show domain information:\n\n\t   $ hostname -s\n\t   beastie\n\n     Show only domain information:\n\n\t   $ hostname -d\n\t   localdomain.org\n",
+        "     gethostname(3), scutil(8)\n",
+        "     The hostname command appeared in 4.2BSD.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [
+    {
+      "command": "hostname beastie.localdomain.org",
+      "description": "",
+      "tags": []
+    },
+    {
+      "command": "hostname",
+      "description": "beastie.localdomain.org",
+      "tags": [],
+      "output": "\t   beastie.localdomain.org\n     Do not show domain information:\n"
+    },
+    {
+      "command": "hostname -s",
+      "description": "beastie",
+      "tags": [],
+      "output": "\t   beastie\n     Show only domain information:\n"
+    },
+    {
+      "command": "hostname -d",
+      "description": "localdomain.org",
+      "tags": [],
+      "output": "\t   localdomain.org\nSEE ALSO\n     gethostname(3), scutil(8)\n"
+    }
+  ],
+  "relatedCommands": [
+    "gethostname",
+    "scutil",
+    "hostname",
+    "set",
+    "print",
+    "name",
+    "current",
+    "host",
+    "name-of-host",
+    "utility",
+    "prints",
+    "super-user",
+    "supplying",
+    "argument",
+    "keep"
+  ],
+  "seeAlso": [
+    {
+      "name": "gethostname",
+      "section": 3
+    },
+    {
+      "name": "scutil",
+      "section": 8
+    }
+  ],
+  "metadata": {},
+  "searchContent": "hostname hostname manual page the hostname utility prints the name of the current host hostname -f -s -d name-of-host hostname manual page utility prints name current host hostname beastie localdomain org hostname beastie localdomain org hostname -s beastie hostname -d localdomain org name macos 15 5 october 5 2020 macos 15 5",
+  "keywords": [
+    "hostname",
+    "manual",
+    "page",
+    "utility",
+    "prints",
+    "name",
+    "current",
+    "host."
+  ],
+  "complexity": "intermediate",
+  "hash": "b7bd7079c18b3274",
+  "parsedAt": "2025-06-17T19:41:55.489Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

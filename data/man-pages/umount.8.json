@@ -1,0 +1,113 @@
+{
+  "name": "umount",
+  "section": 8,
+  "title": "umount manual page",
+  "description": "The umount command unmounts a mounted filesystem (volume), removing it from the filesystem namespace.",
+  "synopsis": "umount [-fv] special | node umount -a | -A [-fv] [-h host] [-t type]",
+  "category": "System Administration",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "BSD 4\t\t\t\t  May 8, 1995\t\t\t\t BSD 4",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     umount – unmount filesystems\n",
+        "     umount [-fv] special | node\n     umount -a | -A [-fv] [-h host] [-t type]\n",
+        "     The umount command unmounts a mounted filesystem (volume), removing it\n     from the filesystem namespace.  It calls the unmount(2) system call to\n     remove a special device or the remote node (rhost:path) from the\n     filesystem tree at the point node.  If either special or node are not\n     provided, the appropriate information is taken from the list of\n     filesystems provided by getfsent(3).\n\n     The options are as follows:\n\n     -a      All the filesystems described via getfsent(3) are unmounted.\n\n     -A      All the currently mounted filesystems except the root are\n\t     unmounted.\n\n     -f      The filesystem is forcibly unmounted.  Active special devices\n\t     continue to work, but all other files return errors if further\n\t     accesses are attempted.  The root filesystem cannot be forcibly\n\t     unmounted.\n\n     -h host\n\t     Only filesystems mounted from the specified host will be\n\t     unmounted.  This option implies the -A option and, unless\n\t     otherwise specified with the -t option, will only unmount NFS\n\t     filesystems.\n\n     -t type\n\t     Is used to indicate the actions should only be taken on\n\t     filesystems of the specified type.  More than one type may be\n\t     specified in a comma separated list.  The list of filesystem\n\t     types can be prefixed with “no” to specify the filesystem types\n\t     for which action should not be taken.  For example, the umount\n\t     command:\n\n\t\t   umount -A -t nfs,hfs\n\n\t     umounts all currently-mounted filesystems of the type NFS and\n\t     HFS.  (The -a option only unmounts entries in the /etc/fstab\n\t     list.)\n\n     -v      Verbose, additional information is printed out as each filesystem\n\t     is unmounted.\n",
+        "     Due to the complex and interwoven nature of Mac OS X, umount may fail\n     often.  It is recommended that diskutil(1) (as in, ``diskutil unmount\n     /mnt'') be used instead.\n",
+        "     unmount(2), getfsent(3), mount(8), diskutil(1)\n",
+        "     A umount command appeared in Version 6 AT&T UNIX.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-a",
+      "description": "",
+      "optional": false
+    },
+    {
+      "flag": "-A",
+      "description": " unmounted.",
+      "argument": "-fv",
+      "optional": false
+    },
+    {
+      "flag": "-f",
+      "description": "The filesystem is forcibly unmounted.  Active special devices continue to work, but all other files return errors if further accesses are attempted.  The root filesystem cannot be forcibly unmounted."
+    },
+    {
+      "flag": "-h",
+      "description": " Only filesystems mounted from the specified host will be unmounted.  This option implies the -A option and, unless otherwise specified with the -t option, will only unmount NFS filesystems.",
+      "optional": true
+    },
+    {
+      "flag": "-t",
+      "description": " Is used to indicate the actions should only be taken on filesystems of the specified type.  More than one type may be specified in a comma separated list.  The list of filesystem types can be prefixed with “no” to specify the filesystem types for which action should not be taken.  For example, the umount command: umount -A -t nfs,hfs umounts all currently-mounted filesystems of the type NFS and HFS.  (The -a option only unmounts entries in the /etc/fstab list.)",
+      "optional": true
+    },
+    {
+      "flag": "-v",
+      "description": "Verbose, additional information is printed out as each filesystem is unmounted."
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "unmount",
+    "getfsent",
+    "mount",
+    "diskutil",
+    "umount",
+    "filesystems",
+    "special",
+    "node",
+    "host",
+    "type",
+    "command",
+    "unmounts",
+    "mounted",
+    "filesystem",
+    "volume"
+  ],
+  "seeAlso": [
+    {
+      "name": "unmount",
+      "section": 2
+    },
+    {
+      "name": "getfsent",
+      "section": 3
+    },
+    {
+      "name": "mount",
+      "section": 8
+    },
+    {
+      "name": "diskutil",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "umount umount manual page the umount command unmounts a mounted filesystem volume removing it from the filesystem namespace umount -fv special node umount -a -a -fv -h host -t type umount manual page command unmounts mounted filesystem volume removing namespace -a -a unmounted -f the filesystem is forcibly unmounted active special devices continue to work but all other files return errors if further accesses are attempted the root filesystem cannot be forcibly unmounted -h only filesystems mounted from the specified host will be unmounted this option implies the -a option and unless otherwise specified with the -t option will only unmount nfs filesystems -t is used to indicate the actions should only be taken on filesystems of the specified type more than one type may be specified in a comma separated list the list of filesystem types can be prefixed with no to specify the filesystem types for which action should not be taken for example the umount command umount -a -t nfs hfs umounts all currently-mounted filesystems of the type nfs and hfs the -a option only unmounts entries in the etc fstab list -v verbose additional information is printed out as each filesystem is unmounted name bsd 4 may 8 1995 bsd 4",
+  "keywords": [
+    "umount",
+    "manual",
+    "page",
+    "command",
+    "unmounts",
+    "mounted",
+    "filesystem",
+    "(volume),",
+    "removing",
+    "namespace."
+  ],
+  "complexity": "intermediate",
+  "hash": "46819f01ecd3502d",
+  "parsedAt": "2025-06-17T19:32:14.195Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

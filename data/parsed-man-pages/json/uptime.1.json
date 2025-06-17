@@ -1,0 +1,85 @@
+{
+  "name": "uptime",
+  "section": 1,
+  "title": "uptime manual page",
+  "description": "The uptime utility displays the current time, the length of time the system has been up, the number of users, and the load average of the system over the last 1, 5, and 15 minutes.",
+  "synopsis": "uptime",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tAugust 18, 2020 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     uptime – show how long system has been running\n",
+        "     uptime\n",
+        "     The uptime utility displays the current time, the length of time the\n     system has been up, the number of users, and the load average of the\n     system over the last 1, 5, and 15 minutes.\n",
+        "\t   $ uptime\n\t   11:23AM  up\t3:01, 8 users, load averages: 21.09, 15.43, 12.79\n",
+        "     w(1)\n",
+        "     The uptime command appeared in 3.0BSD.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [
+    {
+      "command": "uptime",
+      "description": "11:23AM  up\t3:01, 8 users, load averages: 21.09, 15.43, 12.79",
+      "tags": [],
+      "output": "\t   11:23AM  up\t3:01, 8 users, load averages: 21.09, 15.43, 12.79\nSEE ALSO\n     w(1)\n"
+    }
+  ],
+  "relatedCommands": [
+    "w",
+    "uptime",
+    "show",
+    "how",
+    "long",
+    "has",
+    "been",
+    "running",
+    "utility",
+    "displays",
+    "current",
+    "time",
+    "length",
+    "number",
+    "users"
+  ],
+  "seeAlso": [
+    {
+      "name": "w",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "uptime uptime manual page the uptime utility displays the current time the length of time the system has been up the number of users and the load average of the system over the last 1 5 and 15 minutes uptime uptime manual page utility displays current time length time been number users load average over last minutes uptime 11 23am up 3 01 8 users load averages 21 09 15 43 12 79 name macos 15 5 august 18 2020 macos 15 5",
+  "keywords": [
+    "uptime",
+    "manual",
+    "page",
+    "utility",
+    "displays",
+    "current",
+    "time,",
+    "length",
+    "time",
+    "been",
+    "number",
+    "users,",
+    "load",
+    "average",
+    "over",
+    "last",
+    "minutes."
+  ],
+  "complexity": "basic",
+  "hash": "c797c7d366757817",
+  "parsedAt": "2025-06-17T19:41:55.475Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

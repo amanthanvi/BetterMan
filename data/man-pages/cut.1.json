@@ -1,0 +1,119 @@
+{
+  "name": "cut",
+  "section": 1,
+  "title": "cut manual page",
+  "description": "The cut utility cuts out selected portions of each line (as specified by list) from each file and writes them to the standard output.",
+  "synopsis": "cut -b list [-n] [file ...] cut -c list [file ...] cut -f list [-w | -d delim] [-s] [file ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tAugust 3, 2017\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     cut – cut out selected portions of each line of a file\n",
+        "     cut -b list [-n] [file ...]\n     cut -c list [file ...]\n     cut -f list [-w | -d delim] [-s] [file ...]\n",
+        "     The cut utility cuts out selected portions of each line (as specified by\n     list) from each file and writes them to the standard output.  If no file\n     arguments are specified, or a file argument is a single dash (‘-’), cut\n     reads from the standard input.  The items specified by list can be in\n     terms of column position or in terms of fields delimited by a special\n     character.  Column and field numbering start from 1.\n\n     The list option argument is a comma or whitespace separated set of\n     numbers and/or number ranges.  Number ranges consist of a number, a dash\n     (‘-’), and a second number and select the columns or fields from the\n     first number to the second, inclusive.  Numbers or number ranges may be\n     preceded by a dash, which selects all columns or fields from 1 to the\n     last number.  Numbers or number ranges may be followed by a dash, which\n     selects all columns or fields from the last number to the end of the\n     line.  Numbers and number ranges may be repeated, overlapping, and in any\n     order.  If a field or column is specified multiple times, it will appear\n     only once in the output.  It is not an error to select columns or fields\n     not present in the input line.\n\n     The options are as follows:\n\n     -b list\n\t     The list specifies byte positions.\n\n     -c list\n\t     The list specifies character positions.\n\n     -d delim\n\t     Use delim as the field delimiter character instead of the tab\n\t     character.\n\n     -f list\n\t     The list specifies fields, separated in the input by the field\n\t     delimiter character (see the -d option).  Output fields are\n\t     separated by a single occurrence of the field delimiter\n\t     character.\n\n     -n      Do not split multi-byte characters.  Characters will only be\n\t     output if at least one byte is selected, and, after a prefix of\n\t     zero or more unselected bytes, the rest of the bytes that form\n\t     the character are selected.\n\n     -s      Suppress lines with no field delimiter characters.  Unless\n\t     specified, lines with no delimiters are passed through\n\t     unmodified.\n\n     -w      Use whitespace (spaces and tabs) as the delimiter.  Consecutive\n\t     spaces and tabs count as one single field separator.\n",
+        "     The LANG, LC_ALL and LC_CTYPE environment variables affect the execution\n     of cut as described in environ(7).\n",
+        "     The cut utility exits 0 on success, and >0 if an error occurs.\n",
+        "     Extract users' login names and shells from the system passwd(5) file as\n     “name:shell” pairs:\n\n\t   cut -d : -f 1,7 /etc/passwd\n\n     Show the names and login times of the currently logged in users:\n\n\t   who | cut -c 1-16,26-38\n",
+        "     colrm(1), paste(1)\n",
+        "     The cut utility conforms to IEEE Std 1003.2-1992 (“POSIX.2”).\n\n     The -w flag is an extension to the specification.\n",
+        "     A cut command appeared in AT&T System III UNIX.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-b",
+      "description": " The list specifies byte positions.",
+      "optional": false
+    },
+    {
+      "flag": "-c",
+      "description": " The list specifies character positions.",
+      "optional": false
+    },
+    {
+      "flag": "-d",
+      "description": " Use delim as the field delimiter character instead of the tab character.",
+      "optional": false
+    },
+    {
+      "flag": "-f",
+      "description": " The list specifies fields, separated in the input by the field delimiter character (see the -d option).  Output fields are separated by a single occurrence of the field delimiter character.",
+      "optional": false
+    },
+    {
+      "flag": "-n",
+      "description": " output if at least one byte is selected, and, after a prefix of zero or more unselected bytes, the rest of the bytes that form the character are selected.",
+      "optional": true
+    },
+    {
+      "flag": "-s",
+      "description": " specified, lines with no delimiters are passed through unmodified.",
+      "optional": true
+    },
+    {
+      "flag": "-w",
+      "description": " spaces and tabs count as one single field separator.",
+      "optional": true
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "colrm",
+    "paste",
+    "cut",
+    "out",
+    "selected",
+    "portions",
+    "each",
+    "line",
+    "list",
+    "delim",
+    "utility",
+    "cuts",
+    "specified",
+    "writes",
+    "them"
+  ],
+  "seeAlso": [
+    {
+      "name": "colrm",
+      "section": 1
+    },
+    {
+      "name": "paste",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "cut cut manual page the cut utility cuts out selected portions of each line as specified by list from each file and writes them to the standard output cut -b list -n file cut -c list file cut -f list -w -d delim -s file cut manual page utility cuts selected portions each line specified list writes them standard output -b the list specifies byte positions -c the list specifies character positions -d use delim as the field delimiter character instead of the tab character -f the list specifies fields separated in the input by the field delimiter character see the -d option output fields are separated by a single occurrence of the field delimiter character -n output if at least one byte is selected and after a prefix of zero or more unselected bytes the rest of the bytes that form the character are selected -s specified lines with no delimiters are passed through unmodified -w spaces and tabs count as one single field separator name macos 15 5 august 3 2017 macos 15 5",
+  "keywords": [
+    "cut",
+    "manual",
+    "page",
+    "utility",
+    "cuts",
+    "selected",
+    "portions",
+    "each",
+    "line",
+    "specified",
+    "list)",
+    "writes",
+    "them",
+    "standard",
+    "output."
+  ],
+  "complexity": "intermediate",
+  "hash": "91e325d984cbf426",
+  "parsedAt": "2025-06-17T19:31:54.233Z",
+  "parseVersion": "2.0.0",
+  "isCommon": true,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

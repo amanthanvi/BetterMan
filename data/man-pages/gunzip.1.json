@@ -1,0 +1,93 @@
+{
+  "name": "gunzip",
+  "section": 1,
+  "title": "gunzip manual page",
+  "description": "The gzip program compresses and decompresses files using Lempel-Ziv coding (LZ77).",
+  "synopsis": "gzip [-cdfhkLlNnqrtVv] [-S suffix] file [file [...]] gunzip [-cfhkLNqrtVv] [-S suffix] file [file [...]] zcat [-fhV] file [file [...]]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tJanuary 7, 2019 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     gzip, gunzip, zcat – compression/decompression tool using Lempel-Ziv\n     coding (LZ77)\n",
+        "     gzip [-cdfhkLlNnqrtVv] [-S suffix] file [file [...]]\n     gunzip [-cfhkLNqrtVv] [-S suffix] file [file [...]]\n     zcat [-fhV] file [file [...]]\n",
+        "     The gzip program compresses and decompresses files using Lempel-Ziv\n     coding (LZ77).  If no files are specified, gzip will compress from\n     standard input, or decompress to standard output.\tWhen in compression\n     mode, each file will be replaced with another file with the suffix, set\n     by the -S suffix option, added, if possible.\n\n     In decompression mode, each file will be checked for existence, as will\n     the file with the suffix added.  Each file argument must contain a\n     separate complete archive; when multiple files are indicated, each is\n     decompressed in turn.\n\n     In the case of gzcat the resulting data is then concatenated in the\n     manner of cat(1).\n\n     If invoked as gunzip then the -d option is enabled.  If invoked as zcat\n     or gzcat then both the -c and -d options are enabled.\n\n     This version of gzip is also capable of decompressing files compressed\n     using compress(1), bzip2(1), lzip, or xz(1).\n",
+        "     The following options are available:\n\n     -1, --fast\n\n     -2, -3, -4, -5, -6, -7, -8\n\n     -9, --best        These options change the compression level used, with\n\t\t       the -1 option being the fastest, with less compression,\n\t\t       and the -9 option being the slowest, with optimal\n\t\t       compression.  The default compression level is 6.\n\n     -c, --stdout, --to-stdout\n\t\t       This option specifies that output will go to the\n\t\t       standard output stream, leaving files intact.\n\n     -d, --decompress, --uncompress\n\t\t       This option selects decompression rather than\n\t\t       compression.\n\n     -f, --force       This option turns on force mode.  This allows files\n\t\t       with multiple links, symbolic links to regular files,\n\t\t       overwriting of pre-existing files, reading from or\n\t\t       writing to a terminal, and when combined with the -c\n\t\t       option, allowing non-compressed data to pass through\n\t\t       unchanged.\n\n     -h, --help        This option prints a usage summary and exits.\n\n     -k, --keep        This option prevents gzip from deleting input files\n\t\t       after (de)compression.\n\n     -L, --license     This option prints gzip license.\n\n     -l, --list        This option displays information about the file's\n\t\t       compressed and uncompressed size, ratio, uncompressed\n\t\t       name.  With the -v option, it also displays the\n\t\t       compression method, CRC, date and time embedded in the\n\t\t       file.\n\n     -N, --name        This option causes the stored filename in the input\n\t\t       file to be used as the output file.\n\n     -n, --no-name     This option stops the filename and timestamp from being\n\t\t       stored in the output file.\n\n     -q, --quiet       With this option, no warnings or errors are printed.\n\n     -r, --recursive   This option is used to gzip the files in a directory\n\t\t       tree individually, using the fts(3) library.\n\n     -S suffix, --suffix suffix\n\t\t       This option changes the default suffix from .gz to\n\t\t       suffix.\n\n     -t, --test        This option will test compressed files for integrity.\n\n     -V, --version     This option prints the version of the gzip program.\n\n     -v, --verbose     This option turns on verbose mode, which prints the\n\t\t       compression ratio for each file compressed.\n",
+        "     If the environment variable GZIP is set, it is parsed as a white-space\n     separated list of options handled before any options on the command line.\n     Options on the command line will override anything in GZIP.\n",
+        "     The gzip utility exits 0 on success, 1 on errors, and 2 if a warning\n     occurs.\n",
+        "     gzip responds to the following signals:\n\n     SIGINFO\n\t     Report progress to standard error.\n",
+        "     bzip2(1), compress(1), xz(1), fts(3), zlib(3)\n",
+        "     The gzip program was originally written by Jean-loup Gailly, licensed\n     under the GNU Public Licence.  Matthew R. Green wrote a simple front end\n     for NetBSD 1.3 distribution media, based on the freely re-distributable\n     zlib library.  It was enhanced to be mostly feature-compatible with the\n     original GNU gzip program for NetBSD 2.0.\n\n     This implementation of gzip was ported based on the NetBSD gzip version\n     20181111, and first appeared in FreeBSD 7.0.\n",
+        "     This implementation of gzip was written by Matthew R. Green\n     <mrg@eterna.com.au> with unpack support written by Xin LI\n     <delphij@FreeBSD.org>.\n",
+        "     According to RFC 1952, the recorded file size is stored in a 32-bit\n     integer, therefore, it cannot represent files larger than 4GB.  This\n     limitation also applies to -l option of gzip utility.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "bzip2",
+    "compress",
+    "xz",
+    "fts",
+    "zlib",
+    "gzip",
+    "gunzip",
+    "zcat",
+    "compression",
+    "decompression",
+    "tool",
+    "using",
+    "coding",
+    "suffix",
+    "program"
+  ],
+  "seeAlso": [
+    {
+      "name": "bzip2",
+      "section": 1
+    },
+    {
+      "name": "compress",
+      "section": 1
+    },
+    {
+      "name": "xz",
+      "section": 1
+    },
+    {
+      "name": "fts",
+      "section": 3
+    },
+    {
+      "name": "zlib",
+      "section": 3
+    }
+  ],
+  "metadata": {},
+  "searchContent": "gunzip gunzip manual page the gzip program compresses and decompresses files using lempel-ziv coding lz77 gzip -cdfhkllnnqrtvv -s suffix file file gunzip -cfhklnqrtvv -s suffix file file zcat -fhv file file gunzip manual page gzip program compresses decompresses using lempel-ziv coding lz77 name macos 15 5 january 7 2019 macos 15 5",
+  "keywords": [
+    "gunzip",
+    "manual",
+    "page",
+    "gzip",
+    "program",
+    "compresses",
+    "decompresses",
+    "using",
+    "lempel-ziv",
+    "coding",
+    "(lz77)."
+  ],
+  "complexity": "basic",
+  "hash": "e9cd5a83d377ab6d",
+  "parsedAt": "2025-06-17T19:32:22.374Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

@@ -1,0 +1,81 @@
+{
+  "name": "true",
+  "section": 1,
+  "title": "true manual page",
+  "description": "The true utility always returns with an exit code of zero.",
+  "synopsis": "true",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t June 9, 1993\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     true – return true value\n",
+        "     true\n",
+        "     The true utility always returns with an exit code of zero.\n\n     Some shells may provide a builtin true command which is identical to this\n     utility.  Consult the builtin(1) manual page.\n",
+        "     builtin(1), csh(1), false(1), sh(1)\n",
+        "     The true utility is expected to be IEEE Std 1003.2 (“POSIX.2”)\n     compatible.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "builtin",
+    "csh",
+    "false",
+    "sh",
+    "true",
+    "return",
+    "value",
+    "utility",
+    "always",
+    "returns",
+    "exit",
+    "code",
+    "zero",
+    "shells",
+    "provide"
+  ],
+  "seeAlso": [
+    {
+      "name": "builtin",
+      "section": 1
+    },
+    {
+      "name": "csh",
+      "section": 1
+    },
+    {
+      "name": "false",
+      "section": 1
+    },
+    {
+      "name": "sh",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "true true manual page the true utility always returns with an exit code of zero true true manual page utility always returns exit code zero name macos 15 5 june 9 1993 macos 15 5",
+  "keywords": [
+    "true",
+    "manual",
+    "page",
+    "utility",
+    "always",
+    "returns",
+    "exit",
+    "code",
+    "zero."
+  ],
+  "complexity": "basic",
+  "hash": "e00ae0fcb4b3420a",
+  "parsedAt": "2025-06-17T19:42:11.874Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

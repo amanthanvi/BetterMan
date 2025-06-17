@@ -1,0 +1,59 @@
+{
+  "name": "more",
+  "section": 1,
+  "title": "opposite of more",
+  "description": "of which characters are to be considered normal, control, and binary.",
+  "synopsis": "less -? less --help less -V less --version less [-[+]aABcCdeEfFgGiIJKLmMnNqQrRsSuUVwWX~] [-b space] [-h lines] [-j line] [-k keyfile] [-{oO} logfile] [-p pattern] [-P prompt] [-t tag] [-T tagsfile] [-x tab,...] [-y lines] [-[z] lines] [-# shift] [+[+]cmd] [--] [filename]... (See the OPTIONS section for alternate option syntax with long option names.)",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "       Mark Nudelman\n       Report bugs at https://github.com/gwsw/less/issues.\n       For more information, see the less homepage at\n       https://greenwoodsoftware.com/less.\n\n\t\t\t  Version 581.2: 28 Apr 2021\t\t       LESS(1)\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "less",
+    "opposite",
+    "more",
+    "help",
+    "version",
+    "space",
+    "lines",
+    "line",
+    "keyfile",
+    "logfile",
+    "pattern",
+    "prompt",
+    "tag",
+    "tagsfile",
+    "tab"
+  ],
+  "seeAlso": [],
+  "metadata": {},
+  "searchContent": "more opposite of more of which characters are to be considered normal control and binary less - less --help less -v less --version less - aabccdeeffggiijklmmnnqqrrssuuvwwx -b space -h lines -j line -k keyfile - oo logfile -p pattern -p prompt -t tag -t tagsfile -x tab -y lines - z lines - shift cmd -- filename see the options section for alternate option syntax with long option names more opposite which characters considered normal control binary name",
+  "keywords": [
+    "more",
+    "opposite",
+    "which",
+    "characters",
+    "considered",
+    "normal,",
+    "control,",
+    "binary."
+  ],
+  "complexity": "basic",
+  "hash": "b048c6664769bca5",
+  "parsedAt": "2025-06-17T19:31:56.669Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

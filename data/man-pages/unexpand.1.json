@@ -1,0 +1,83 @@
+{
+  "name": "unexpand",
+  "section": 1,
+  "title": "unexpand manual page",
+  "description": "The expand utility processes the named files or the standard input writing the standard output with tabs changed into blanks.",
+  "synopsis": "expand [-t tab1,tab2,...,tabn] [file ...] unexpand [-a | -t tab1,tab2,...,tabn] [file ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t June 6, 2015\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     expand, unexpand – expand tabs to spaces, and vice versa\n",
+        "     expand [-t tab1,tab2,...,tabn] [file ...]\n     unexpand [-a | -t tab1,tab2,...,tabn] [file ...]\n",
+        "     The expand utility processes the named files or the standard input\n     writing the standard output with tabs changed into blanks.  Backspace\n     characters are preserved into the output and decrement the column count\n     for tab calculations.  The expand utility is useful for pre-processing\n     character files (before sorting, looking at specific columns, etc.) that\n     contain tabs.\n\n     The unexpand utility puts tabs back into the data from the standard input\n     or the named files and writes the result on the standard output.\n\n     The following options are available:\n\n     -a      (unexpand only.)  By default, only leading blanks and tabs are\n\t     reconverted to maximal strings of tabs.  If the -a option is\n\t     given, then tabs are inserted whenever they would compress the\n\t     resultant file by replacing two or more characters.\n\n     -t -Sm tab1, tab2, ..., tabn Sm\n\t     Set tab stops at column positions tab1, tab2, ..., tabn.  If only\n\t     a single number is given, tab stops are set that number of column\n\t     positions apart instead of the default number of 8.\n",
+        "     The LANG, LC_ALL and LC_CTYPE environment variables affect the execution\n     of expand and unexpand as described in environ(7).\n",
+        "     The expand and unexpand utilities exit 0 on success, and >0 if an error\n     occurs.\n",
+        "     The expand and unexpand utilities conform to IEEE Std 1003.1-2001\n     (“POSIX.1”).\n",
+        "     The expand utility first appeared in 1BSD.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-a",
+      "description": " reconverted to maximal strings of tabs.  If the -a option is given, then tabs are inserted whenever they would compress the resultant file by replacing two or more characters.",
+      "optional": true
+    },
+    {
+      "flag": "-t",
+      "description": " Set tab stops at column positions tab1, tab2, ..., tabn.  If only a single number is given, tab stops are set that number of column positions apart instead of the default number of 8.",
+      "optional": true
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "expand",
+    "unexpand",
+    "tabs",
+    "spaces",
+    "vice",
+    "versa",
+    "tab1",
+    "tab2",
+    "tabn",
+    "utility",
+    "processes",
+    "named",
+    "standard",
+    "input",
+    "writing"
+  ],
+  "seeAlso": [],
+  "metadata": {},
+  "searchContent": "unexpand unexpand manual page the expand utility processes the named files or the standard input writing the standard output with tabs changed into blanks expand -t tab1 tab2 tabn file unexpand -a -t tab1 tab2 tabn file unexpand manual page expand utility processes named standard input writing output tabs changed into blanks -a reconverted to maximal strings of tabs if the -a option is given then tabs are inserted whenever they would compress the resultant file by replacing two or more characters -t set tab stops at column positions tab1 tab2 tabn if only a single number is given tab stops are set that number of column positions apart instead of the default number of 8 name macos 15 5 june 6 2015 macos 15 5",
+  "keywords": [
+    "unexpand",
+    "manual",
+    "page",
+    "expand",
+    "utility",
+    "processes",
+    "named",
+    "standard",
+    "input",
+    "writing",
+    "output",
+    "tabs",
+    "changed",
+    "into",
+    "blanks."
+  ],
+  "complexity": "basic",
+  "hash": "f64854794aebe9a9",
+  "parsedAt": "2025-06-17T19:32:28.617Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

@@ -1,0 +1,253 @@
+{
+  "name": "sort",
+  "section": 1,
+  "title": "sort manual page",
+  "description": " manual page",
+  "synopsis": "sort [-bcCdfghiRMmnrsuVz] [-k field1[,field2]] [-S memsize] [-T dir] [-t char] [-o output] [file ...] sort --help sort --version",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "Use 'space' symbols as field separators (as modern GNU sort\n\t\t does).",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     sort – sort or merge records (lines) of text and binary files\n",
+        "     sort [-bcCdfghiRMmnrsuVz] [-k field1[,field2]] [-S memsize] [-T dir] [-t",
+        "     sort --help\n     sort --version\n",
+        "     The sort utility sorts text and binary files by lines.  A line is a\n     record separated from the subsequent record by a newline (default) or NUL\n     ´\\0´ character (-z option).  A record can contain any printable or\n     unprintable characters.  Comparisons are based on one or more sort keys\n     extracted from each line of input, and are performed lexicographically,\n     according to the current locale's collating rules and the specified\n     command-line options that can tune the actual sorting behavior.  By\n     default, if keys are not given, sort uses entire lines for comparison.\n\n     The command line options are as follows:\n\n     -c, --check, -C, --check=silent|quiet\n\t     Check that the single input file is sorted.  If the file is not\n\t     sorted, sort produces the appropriate error messages and exits\n\t     with code 1, otherwise returns 0.\tIf -C or --check=silent is\n\t     specified, sort produces no output.  This is a \"silent\" version\n\t     of -c.\n\n     -m, --merge\n\t     Merge only.  The input files are assumed to be pre-sorted.  If\n\t     they are not sorted the output order is undefined.\n\n     -o output, --output=output\n\t     Print the output to the output file instead of the standard\n\t     output.\n\n     -S size, --buffer-size=size\n\t     Use size for the maximum size of the memory buffer.  Size\n\t     modifiers %,b,K,M,G,T,P,E,Z,Y can be used.  If a memory limit is\n\t     not explicitly specified, sort takes up to about 90% of available\n\t     memory.  If the file size is too big to fit into the memory\n\t     buffer, the temporary disk files are used to perform the sorting.\n\n     -T dir, --temporary-directory=dir\n\t     Store temporary files in the directory dir.  The default path is\n\t     the value of the environment variable TMPDIR or /var/tmp if\n\t     TMPDIR is not defined.\n\n     -u, --unique\n\t     Unique keys.  Suppress all lines that have a key that is equal to\n\t     an already processed one.\tThis option, similarly to -s, implies\n\t     a stable sort.  If used with -c or -C, sort also checks that\n\t     there are no lines with duplicate keys.\n\n     -s      Stable sort.  This option maintains the original record order of\n\t     records that have an equal key.  This is a non-standard feature,\n\t     but it is widely accepted and used.\n\n     --version\n\t     Print the version and silently exits.\n\n     --help  Print the help text and silently exits.\n\n     The following options override the default ordering rules.  When ordering\n     options appear independently of key field specifications, they apply\n     globally to all sort keys.  When attached to a specific key (see -k), the\n     ordering options override all global ordering options for the key they\n     are attached to.\n\n     -b, --ignore-leading-blanks\n\t     Ignore leading blank characters when comparing lines.\n\n     -d, --dictionary-order\n\t     Consider only blank spaces and alphanumeric characters in\n\t     comparisons.\n\n     -f, --ignore-case\n\t     Convert all lowercase characters to their uppercase equivalent\n\t     before comparison, that is, perform case-independent sorting.\n\n     -g, --general-numeric-sort, --sort=general-numeric\n\t     Sort by general numerical value.  As opposed to -n, this option\n\t     handles general floating points.  It has a more permissive format\n\t     than that allowed by -n but it has a significant performance\n\t     drawback.\n\n     -h, --human-numeric-sort, --sort=human-numeric\n\t     Sort by numerical value, but take into account the SI suffix, if\n\t     present.  Sort first by numeric sign (negative, zero, or\n\t     positive); then by SI suffix (either empty, or `k' or `K', or one\n\t     of `MGTPEZY', in that order); and finally by numeric value.  The\n\t     SI suffix must immediately follow the number.  For example,\n\t     '12345K' sorts before '1M', because M is \"larger\" than K.\tThis\n\t     sort option is useful for sorting the output of a single\n\t     invocation of 'df' command with -h or -H options (human-\n\t     readable).\n\n     -i, --ignore-nonprinting\n\t     Ignore all non-printable characters.\n\n     -M, --month-sort, --sort=month\n\t     Sort by month abbreviations.  Unknown strings are considered\n\t     smaller than the month names.\n\n     -n, --numeric-sort, --sort=numeric\n\t     Sort fields numerically by arithmetic value.  Fields are supposed\n\t     to have optional blanks in the beginning, an optional minus sign,\n\t     zero or more digits (including decimal point and possible\n\t     thousand separators).\n\n     -R, --random-sort, --sort=random\n\t     Sort by a random order.  This is a random permutation of the\n\t     inputs except that the equal keys sort together.  It is\n\t     implemented by hashing the input keys and sorting the hash\n\t     values.  The hash function is chosen randomly.  The hash function\n\t     is randomized by /dev/random content, or by file content if it is\n\t     specified by --random-source.  Even if multiple sort fields are\n\t     specified, the same random hash function is used for all of them.\n\n     -r, --reverse\n\t     Sort in reverse order.\n\n     -V, --version-sort\n\t     Sort version numbers.  The input lines are treated as file names\n\t     in form PREFIX VERSION SUFFIX, where SUFFIX matches the regular\n\t     expression \"(.([A-Za-z~][A-Za-z0-9~]*)?)*\".  The files are\n\t     compared by their prefixes and versions (leading zeros are\n\t     ignored in version numbers, see example below).  If an input\n\t     string does not match the pattern, then it is compared using the\n\t     byte compare function.  All string comparisons are performed in C\n\t     locale, the locale environment setting is ignored.\n\n\t     Example:\n\n\t     $ ls sort* | sort -V\n\n\t     sort-1.022.tgz\n\n\t     sort-1.23.tgz\n\n\t     sort-1.23.1.tgz\n\n\t     sort-1.024.tgz\n\n\t     sort-1.024.003.\n\n\t     sort-1.024.003.tgz\n\n\t     sort-1.024.07.tgz\n\n\t     sort-1.024.009.tgz\n\n     The treatment of field separators can be altered using these options:\n\n     -b, --ignore-leading-blanks\n\t     Ignore leading blank space when determining the start and end of\n\t     a restricted sort key (see -k).  If -b is specified before the\n\t     first -k option, it applies globally to all key specifications.\n\t     Otherwise, -b can be attached independently to each field\n\t     argument of the key specifications.  Note that sort keys\n\t     specified with the -k option may have a variable number of\n\t     leading whitespace characters that will affect the result, as\n\t     described below in the -t option description.\n\n     -k field1[,field2], --key=field1[,field2]\n\t     Define a restricted sort key that has the starting position\n\t     field1, and optional ending position field2 of a key field.  The\n\t     -k option may be specified multiple times, in which case\n\t     subsequent keys are compared when earlier keys compare equal.\n\t     The -k option replaces the obsolete options +pos1 and -pos2, but\n\t     the old notation is also supported.\n\n     -t char, --field-separator=char\n\t     Use char as a field separator character.  The initial char is not\n\t     considered to be part of a field when determining key offsets.\n\t     Each occurrence of char is significant (for example, “charchar”\n\t     delimits an empty field).\tIf -t is not specified, the default\n\t     field separator is a sequence of blank space characters, and\n\t     consecutive blank spaces do not delimit an empty field, however,\n\t     the initial blank space is considered part of a field when\n\t     determining key offsets.  To use NUL as field separator, use -t\n\t     ´\\0´.\n\n     -z, --zero-terminated\n\t     Use NUL as record separator.  By default, records in the files\n\t     are supposed to be separated by the newline characters.  With\n\t     this option, NUL (´\\0´) is used as a record separator character.\n\n     Other options:\n\n     --batch-size=num\n\t     Specify maximum number of files that can be opened by sort at\n\t     once.  This option affects behavior when having many input files\n\t     or using temporary files.\tThe default value is 16.\n\n     --compress-program=PROGRAM\n\t     Use PROGRAM to compress temporary files.  PROGRAM must compress\n\t     standard input to standard output, when called without arguments.\n\t     When called with argument -d it must decompress standard input to\n\t     standard output.  If PROGRAM fails, sort must exit with error.\n\t     An example of PROGRAM that can be used here is bzip2.\n\n     --random-source=filename\n\t     In random sort, the file content is used as the source of the\n\t     'seed' data for the hash function choice.\tTwo invocations of\n\t     random sort with the same seed data will use the same hash\n\t     function and will produce the same result if the input is also\n\t     identical.  By default, file /dev/random is used.\n\n     --debug\n\t     Print some extra information about the sorting process to the\n\t     standard output.\n\n     --parallel\n\t     Set the maximum number of execution threads.  Default number\n\t     equals to the number of CPUs.\n\n     --files0-from=filename\n\t     Take the input file list from the file filename.  The file names\n\t     must be separated by NUL (like the output produced by the command\n\t     \"find ... -print0\").\n\n     --radixsort\n\t     Try to use radix sort, if the sort specifications allow.  The\n\t     radix sort can only be used for trivial locales (C and POSIX),\n\t     and it cannot be used for numeric or month sort.  Radix sort is\n\t     very fast and stable.\n\n     --mergesort\n\t     Use mergesort.  This is a universal algorithm that can always be\n\t     used, but it is not always the fastest.\n\n     --qsort\n\t     Try to use quick sort, if the sort specifications allow.  This\n\t     sort algorithm cannot be used with -u and -s.\n\n     --heapsort\n\t     Try to use heap sort, if the sort specifications allow.  This\n\t     sort algorithm cannot be used with -u and -s.\n\n     --mmap  Try to use file memory mapping system call.  It may increase\n\t     speed in some cases.\n\n     The following operands are available:\n\n     file    The pathname of a file to be sorted, merged, or checked.  If no\n\t     file operands are specified, or if a file operand is -, the\n\t     standard input is used.\n\n     A field is defined as a maximal sequence of characters other than the\n     field separator and record separator (newline by default).  Initial blank\n     spaces are included in the field unless -b has been specified; the first\n     blank space of a sequence of blank spaces acts as the field separator and\n     is included in the field (unless -t is specified).  For example, all\n     blank spaces at the beginning of a line are considered to be part of the\n     first field.\n\n     Fields are specified by the -k field1[,field2] command-line option.  If\n     field2 is missing, the end of the key defaults to the end of the line.\n\n     The arguments field1 and field2 have the form m.n (m,n > 0) and can be\n     followed by one or more of the modifiers b, d, f, i, n, g, M and r, which\n     correspond to the options discussed above.  When b is specified it\n     applies only to field1 or field2 where it is specified while the rest of\n     the modifiers apply to the whole key field regardless if they are\n     specified only with field1 or field2 or both.  A field1 position\n     specified by m.n is interpreted as the nth character from the beginning\n     of the mth field.\tA missing .n in field1 means ‘.1’, indicating the\n     first character of the mth field; if the -b option is in effect, n is\n     counted from the first non-blank character in the mth field; m.1b refers\n     to the first non-blank character in the mth field.  1.n refers to the nth\n     character from the beginning of the line; if n is greater than the length\n     of the line, the field is taken to be empty.\n\n     nth positions are always counted from the field beginning, even if the\n     field is shorter than the number of specified positions.  Thus, the key\n     can really start from a position in a subsequent field.\n\n     A field2 position specified by m.n is interpreted as the nth character\n     (including separators) from the beginning of the mth field.  A missing .n\n     indicates the last character of the mth field; m = 0 designates the end\n     of a line.  Thus the option -k v.x,w.y is synonymous with the obsolete\n     option +v-1.x-1 -w-1.y; when y is omitted, -k v.x,w is synonymous with\n     +v-1.x-1 -w.0.  The obsolete +pos1 -pos2 option is still supported,\n     except for -w.0b, which has no -k equivalent.\n",
+        "     LC_COLLATE  Locale settings to be used to determine the collation for",
+        "     LC_CTYPE\t Locale settings to be used to case conversion and",
+        "     LC_MESSAGES",
+        "     LC_NUMERIC  Locale settings that determine the number format used in",
+        "     LC_TIME\t Locale settings that determine the month format used in month",
+        "     LC_ALL\t Locale settings that override all of the above locale",
+        "     LANG\t Used as a last resort to determine different kinds of locale-",
+        "     TMPDIR\t Path to the directory in which temporary files will be",
+        "     GNUSORT_NUMERIC_COMPATIBILITY",
+        "     GNUSORT_COMPATIBLE_BLANKS"
+      ]
+    },
+    {
+      "id": "files",
+      "title": "FILES",
+      "content": "macOS 15.5\t\t       September 4, 2019\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     /var/tmp/.bsdsort.PID.*\t       Temporary files.\n     /dev/random\t\t       Default seed file for the random sort.\n",
+        "     The sort utility shall exit with one of the following values:\n\n     0\t   Successfully sorted the input files or if used with -c or -C, the\n\t   input file already met the sorting criteria.\n     1\t   On disorder (or non-uniqueness) with the -c or -C options.\n     2\t   An error occurred.\n",
+        "     comm(1), join(1), uniq(1)\n",
+        "     The sort utility is compliant with the IEEE Std 1003.1-2008 (“POSIX.1”)\n     specification.\n\n     The flags [-ghRMSsTVz] are extensions to the POSIX specification.\n\n     All long options are extensions to the specification, some of them are\n     provided for compatibility with GNU versions and some of them are own\n     extensions.\n\n     The old key notations +pos1 and -pos2 come from older versions of sort\n     and are still supported but their use is highly discouraged.\n",
+        "     A sort command first appeared in Version 1 AT&T UNIX.\n",
+        "     Gabor Kovesdan <gabor@FreeBSD.org>,\n\n     Oleg Moskalenko <mom040267@gmail.com>\n",
+        "     This implementation of sort has no limits on input line length (other\n     than imposed by available memory) or any restrictions on bytes allowed\n     within lines.\n\n     The performance depends highly on locale settings, efficient choice of\n     sort keys and key complexity.  The fastest sort is with locale C, on\n     whole lines, with option -s.  In general, locale C is the fastest, then\n     single-byte locales follow and multi-byte locales as the slowest but the\n     correct collation order is always respected.  As for the key\n     specification, the simpler to process the lines the faster the search\n     will be.\n\n     When sorting by arithmetic value, using -n results in much better\n     performance than -g so its use is encouraged whenever possible.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-c",
+      "description": ", --check, -C, --check=silent|quiet Check that the single input file is sorted.  If the file is not sorted, sort produces the appropriate error messages and exits with code 1, otherwise returns 0.\tIf -C or --check=silent is specified, sort produces no output.  This is a \"silent\" version of -c."
+    },
+    {
+      "flag": "-m",
+      "description": ", --merge Merge only.  The input files are assumed to be pre-sorted.  If they are not sorted the output order is undefined."
+    },
+    {
+      "flag": "-o",
+      "description": " Print the output to the output file instead of the standard output.",
+      "optional": true
+    },
+    {
+      "flag": "-S",
+      "description": " Use size for the maximum size of the memory buffer.  Size modifiers %,b,K,M,G,T,P,E,Z,Y can be used.  If a memory limit is not explicitly specified, sort takes up to about 90% of available memory.  If the file size is too big to fit into the memory buffer, the temporary disk files are used to perform the sorting.",
+      "optional": true
+    },
+    {
+      "flag": "-T",
+      "description": " Store temporary files in the directory dir.  The default path is the value of the environment variable TMPDIR or /var/tmp if TMPDIR is not defined.",
+      "optional": true
+    },
+    {
+      "flag": "-u",
+      "description": ", --unique Unique keys.  Suppress all lines that have a key that is equal to an already processed one.\tThis option, similarly to -s, implies a stable sort.  If used with -c or -C, sort also checks that there are no lines with duplicate keys."
+    },
+    {
+      "flag": "--version",
+      "description": " Print the version and silently exits.",
+      "optional": false,
+      "shortFlag": "-s"
+    },
+    {
+      "flag": "--help",
+      "description": " The following options override the default ordering rules.  When ordering options appear independently of key field specifications, they apply globally to all sort keys.  When attached to a specific key (see -k), the ordering options override all global ordering options for the key they are attached to.",
+      "optional": false
+    },
+    {
+      "flag": "-b",
+      "description": ", --ignore-leading-blanks Ignore leading blank characters when comparing lines."
+    },
+    {
+      "flag": "-d",
+      "description": ", --dictionary-order Consider only blank spaces and alphanumeric characters in comparisons."
+    },
+    {
+      "flag": "-f",
+      "description": ", --ignore-case Convert all lowercase characters to their uppercase equivalent before comparison, that is, perform case-independent sorting."
+    },
+    {
+      "flag": "-g",
+      "description": ", --general-numeric-sort, --sort=general-numeric Sort by general numerical value.  As opposed to -n, this option handles general floating points.  It has a more permissive format than that allowed by -n but it has a significant performance drawback."
+    },
+    {
+      "flag": "-h",
+      "description": ", --human-numeric-sort, --sort=human-numeric Sort by numerical value, but take into account the SI suffix, if present.  Sort first by numeric sign (negative, zero, or positive); then by SI suffix (either empty, or `k' or `K', or one of `MGTPEZY', in that order); and finally by numeric value.  The SI suffix must immediately follow the number.  For example, '12345K' sorts before '1M', because M is \"larger\" than K.\tThis sort option is useful for sorting the output of a single invocation of 'df' command with -h or -H options (human- readable)."
+    },
+    {
+      "flag": "-i",
+      "description": ", --ignore-nonprinting Ignore all non-printable characters."
+    },
+    {
+      "flag": "-M",
+      "description": ", --month-sort, --sort=month Sort by month abbreviations.  Unknown strings are considered smaller than the month names."
+    },
+    {
+      "flag": "-n",
+      "description": ", --numeric-sort, --sort=numeric Sort fields numerically by arithmetic value.  Fields are supposed to have optional blanks in the beginning, an optional minus sign, zero or more digits (including decimal point and possible thousand separators)."
+    },
+    {
+      "flag": "-R",
+      "description": ", --random-sort, --sort=random Sort by a random order.  This is a random permutation of the inputs except that the equal keys sort together.  It is implemented by hashing the input keys and sorting the hash values.  The hash function is chosen randomly.  The hash function is randomized by /dev/random content, or by file content if it is specified by --random-source.  Even if multiple sort fields are specified, the same random hash function is used for all of them."
+    },
+    {
+      "flag": "-r",
+      "description": ", --reverse Sort in reverse order."
+    },
+    {
+      "flag": "-V",
+      "description": ", --version-sort Sort version numbers.  The input lines are treated as file names in form PREFIX VERSION SUFFIX, where SUFFIX matches the regular expression \"(.([A-Za-z~][A-Za-z0-9~]*)?)*\".  The files are compared by their prefixes and versions (leading zeros are ignored in version numbers, see example below).  If an input string does not match the pattern, then it is compared using the byte compare function.  All string comparisons are performed in C locale, the locale environment setting is ignored. Example: $ ls sort* | sort -V sort-1.022.tgz sort-1.23.tgz sort-1.23.1.tgz sort-1.024.tgz sort-1.024.003. sort-1.024.003.tgz sort-1.024.07.tgz sort-1.024.009.tgz The treatment of field separators can be altered using these options:"
+    },
+    {
+      "flag": "-b",
+      "description": ", --ignore-leading-blanks Ignore leading blank space when determining the start and end of a restricted sort key (see -k).  If -b is specified before the first -k option, it applies globally to all key specifications. Otherwise, -b can be attached independently to each field argument of the key specifications.  Note that sort keys specified with the -k option may have a variable number of leading whitespace characters that will affect the result, as described below in the -t option description."
+    },
+    {
+      "flag": "-k",
+      "description": " Define a restricted sort key that has the starting position field1, and optional ending position field2 of a key field.  The subsequent keys are compared when earlier keys compare equal. The -k option replaces the obsolete options +pos1 and -pos2, but the old notation is also supported.",
+      "optional": true
+    },
+    {
+      "flag": "-k",
+      "description": " Define a restricted sort key that has the starting position field1, and optional ending position field2 of a key field.  The subsequent keys are compared when earlier keys compare equal. The -k option replaces the obsolete options +pos1 and -pos2, but the old notation is also supported.",
+      "optional": true
+    },
+    {
+      "flag": "-t",
+      "description": " Use char as a field separator character.  The initial char is not considered to be part of a field when determining key offsets. Each occurrence of char is significant (for example, “charchar” delimits an empty field).\tIf -t is not specified, the default field separator is a sequence of blank space characters, and consecutive blank spaces do not delimit an empty field, however, the initial blank space is considered part of a field when determining key offsets.  To use NUL as field separator, use -t ´\\0´.",
+      "optional": true
+    },
+    {
+      "flag": "--batch-size",
+      "description": "=num Specify maximum number of files that can be opened by sort at once.  This option affects behavior when having many input files or using temporary files.\tThe default value is 16.",
+      "shortFlag": "-z"
+    },
+    {
+      "flag": "--compress-program",
+      "description": "=PROGRAM Use PROGRAM to compress temporary files.  PROGRAM must compress standard input to standard output, when called without arguments. When called with argument -d it must decompress standard input to standard output.  If PROGRAM fails, sort must exit with error. An example of PROGRAM that can be used here is bzip2."
+    },
+    {
+      "flag": "--random-source",
+      "description": "=filename In random sort, the file content is used as the source of the 'seed' data for the hash function choice.\tTwo invocations of random sort with the same seed data will use the same hash function and will produce the same result if the input is also identical.  By default, file /dev/random is used."
+    },
+    {
+      "flag": "--debug",
+      "description": " Print some extra information about the sorting process to the standard output."
+    },
+    {
+      "flag": "--parallel",
+      "description": " Set the maximum number of execution threads.  Default number equals to the number of CPUs."
+    },
+    {
+      "flag": "--files0-from",
+      "description": "=filename Take the input file list from the file filename.  The file names must be separated by NUL (like the output produced by the command \"find ... -print0\")."
+    },
+    {
+      "flag": "--radixsort",
+      "description": " Try to use radix sort, if the sort specifications allow.  The radix sort can only be used for trivial locales (C and POSIX), and it cannot be used for numeric or month sort.  Radix sort is very fast and stable."
+    },
+    {
+      "flag": "--mergesort",
+      "description": " Use mergesort.  This is a universal algorithm that can always be used, but it is not always the fastest."
+    },
+    {
+      "flag": "--qsort",
+      "description": " Try to use quick sort, if the sort specifications allow.  This sort algorithm cannot be used with -u and -s."
+    },
+    {
+      "flag": "--heapsort",
+      "description": " Try to use heap sort, if the sort specifications allow.  This sort algorithm cannot be used with -u and -s."
+    },
+    {
+      "flag": "--mmap",
+      "description": "Try to use file memory mapping system call.  It may increase speed in some cases. The following operands are available: file    The pathname of a file to be sorted, merged, or checked.  If no file operands are specified, or if a file operand is -, the standard input is used. A field is defined as a maximal sequence of characters other than the field separator and record separator (newline by default).  Initial blank spaces are included in the field unless -b has been specified; the first blank space of a sequence of blank spaces acts as the field separator and is included in the field (unless -t is specified).  For example, all blank spaces at the beginning of a line are considered to be part of the first field. Fields are specified by the -k field1[,field2] command-line option.  If field2 is missing, the end of the key defaults to the end of the line. The arguments field1 and field2 have the form m.n (m,n > 0) and can be followed by one or more of the modifiers b, d, f, i, n, g, M and r, which correspond to the options discussed above.  When b is specified it applies only to field1 or field2 where it is specified while the rest of the modifiers apply to the whole key field regardless if they are specified only with field1 or field2 or both.  A field1 position specified by m.n is interpreted as the nth character from the beginning of the mth field.\tA missing .n in field1 means ‘.1’, indicating the first character of the mth field; if the -b option is in effect, n is counted from the first non-blank character in the mth field; m.1b refers to the first non-blank character in the mth field.  1.n refers to the nth character from the beginning of the line; if n is greater than the length of the line, the field is taken to be empty. nth positions are always counted from the field beginning, even if the field is shorter than the number of specified positions.  Thus, the key can really start from a position in a subsequent field. A field2 position specified by m.n is interpreted as the nth character (including separators) from the beginning of the mth field.  A missing .n indicates the last character of the mth field; m = 0 designates the end of a line.  Thus the option -k v.x,w.y is synonymous with the obsolete option +v-1.x-1 -w-1.y; when y is omitted, -k v.x,w is synonymous with +v-1.x-1 -w.0.  The obsolete +pos1 -pos2 option is still supported, except for -w.0b, which has no -k equivalent."
+    }
+  ],
+  "examples": [
+    {
+      "command": "ls sort* | sort -V",
+      "description": "",
+      "tags": [
+        "pipe",
+        "glob"
+      ],
+      "output": "\t     sort-1.022.tgz\n\t     sort-1.23.tgz\n\t     sort-1.23.1.tgz\n\t     sort-1.024.tgz\n\t     sort-1.024.003.\n\t     sort-1.024.003.tgz\n\t     sort-1.024.07.tgz\n\t     sort-1.024.009.tgz\n     The treatment of field separators can be altered using these options:\n     -b, --ignore-leading-blanks\n\t     Ignore leading blank space when determining the start and end of\n\t     a restricted sort key (see -k).  If -b is specified before the\n\t     first -k option, it applies globally to all key specifications.\n\t     Otherwise, -b can be attached independently to each field\n\t     argument of the key specifications.  Note that sort keys\n\t     specified with the -k option may have a variable number of\n\t     leading whitespace characters that will affect the result, as\n\t     described below in the -t option description.\n     -k field1[,field2], --key=field1[,field2]\n\t     Define a restricted sort key that has the starting position\n\t     field1, and optional ending position field2 of a key field.  The\n\t     -k option may be specified multiple times, in which case\n\t     subsequent keys are compared when earlier keys compare equal.\n\t     The -k option replaces the obsolete options +pos1 and -pos2, but\n\t     the old notation is also supported.\n     -t char, --field-separator=char\n\t     Use char as a field separator character.  The initial char is not\n\t     considered to be part of a field when determining key offsets.\n\t     Each occurrence of char is significant (for example, “charchar”\n\t     delimits an empty field).\tIf -t is not specified, the default\n\t     field separator is a sequence of blank space characters, and\n\t     consecutive blank spaces do not delimit an empty field, however,\n\t     the initial blank space is considered part of a field when\n\t     determining key offsets.  To use NUL as field separator, use -t\n\t     ´\\0´.\n     -z, --zero-terminated\n\t     Use NUL as record separator.  By default, records in the files\n\t     are supposed to be separated by the newline characters.  With\n\t     this option, NUL (´\\0´) is used as a record separator character.\n     Other options:\n     --batch-size=num\n\t     Specify maximum number of files that can be opened by sort at\n\t     once.  This option affects behavior when having many input files\n\t     or using temporary files.\tThe default value is 16.\n     --compress-program=PROGRAM\n\t     Use PROGRAM to compress temporary files.  PROGRAM must compress\n\t     standard input to standard output, when called without arguments.\n\t     When called with argument -d it must decompress standard input to\n\t     standard output.  If PROGRAM fails, sort must exit with error.\n\t     An example of PROGRAM that can be used here is bzip2.\n     --random-source=filename\n\t     In random sort, the file content is used as the source of the\n\t     'seed' data for the hash function choice.\tTwo invocations of\n\t     random sort with the same seed data will use the same hash\n\t     function and will produce the same result if the input is also\n\t     identical.  By default, file /dev/random is used.\n     --debug\n\t     Print some extra information about the sorting process to the\n\t     standard output.\n     --parallel\n\t     Set the maximum number of execution threads.  Default number\n\t     equals to the number of CPUs.\n     --files0-from=filename\n\t     Take the input file list from the file filename.  The file names\n\t     must be separated by NUL (like the output produced by the command\n\t     \"find ... -print0\").\n     --radixsort\n\t     Try to use radix sort, if the sort specifications allow.  The\n\t     radix sort can only be used for trivial locales (C and POSIX),\n\t     and it cannot be used for numeric or month sort.  Radix sort is\n\t     very fast and stable.\n     --mergesort\n\t     Use mergesort.  This is a universal algorithm that can always be\n\t     used, but it is not always the fastest.\n     --qsort\n\t     Try to use quick sort, if the sort specifications allow.  This\n\t     sort algorithm cannot be used with -u and -s.\n     --heapsort\n\t     Try to use heap sort, if the sort specifications allow.  This\n\t     sort algorithm cannot be used with -u and -s.\n     --mmap  Try to use file memory mapping system call.  It may increase\n\t     speed in some cases.\n     The following operands are available:\n     file    The pathname of a file to be sorted, merged, or checked.  If no\n\t     file operands are specified, or if a file operand is -, the\n\t     standard input is used.\n     A field is defined as a maximal sequence of characters other than the\n     field separator and record separator (newline by default).  Initial blank\n     spaces are included in the field unless -b has been specified; the first\n     blank space of a sequence of blank spaces acts as the field separator and\n     is included in the field (unless -t is specified).  For example, all\n     blank spaces at the beginning of a line are considered to be part of the\n     first field.\n     Fields are specified by the -k field1[,field2] command-line option.  If\n     field2 is missing, the end of the key defaults to the end of the line.\n     The arguments field1 and field2 have the form m.n (m,n > 0) and can be\n     followed by one or more of the modifiers b, d, f, i, n, g, M and r, which\n     correspond to the options discussed above.  When b is specified it\n     applies only to field1 or field2 where it is specified while the rest of\n     the modifiers apply to the whole key field regardless if they are\n     specified only with field1 or field2 or both.  A field1 position\n     specified by m.n is interpreted as the nth character from the beginning\n     of the mth field.\tA missing .n in field1 means ‘.1’, indicating the\n     first character of the mth field; if the -b option is in effect, n is\n     counted from the first non-blank character in the mth field; m.1b refers\n     to the first non-blank character in the mth field.  1.n refers to the nth\n     character from the beginning of the line; if n is greater than the length\n     of the line, the field is taken to be empty.\n     nth positions are always counted from the field beginning, even if the\n     field is shorter than the number of specified positions.  Thus, the key\n     can really start from a position in a subsequent field.\n     A field2 position specified by m.n is interpreted as the nth character\n     (including separators) from the beginning of the mth field.  A missing .n\n     indicates the last character of the mth field; m = 0 designates the end\n     of a line.  Thus the option -k v.x,w.y is synonymous with the obsolete\n     option +v-1.x-1 -w-1.y; when y is omitted, -k v.x,w is synonymous with\n     +v-1.x-1 -w.0.  The obsolete +pos1 -pos2 option is still supported,\n     except for -w.0b, which has no -k equivalent.\n"
+    }
+  ],
+  "relatedCommands": [
+    "comm",
+    "join",
+    "uniq",
+    "sort",
+    "merge",
+    "records",
+    "lines",
+    "text",
+    "binary",
+    "field1",
+    "field2",
+    "memsize",
+    "dir",
+    "char",
+    "output"
+  ],
+  "seeAlso": [
+    {
+      "name": "comm",
+      "section": 1
+    },
+    {
+      "name": "join",
+      "section": 1
+    },
+    {
+      "name": "uniq",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "sort sort manual page manual page sort -bccdfghirmmnrsuvz -k field1 field2 -s memsize -t dir -t char -o output file sort --help sort --version sort manual page -c --check -c --check silent quiet check that the single input file is sorted if the file is not sorted sort produces the appropriate error messages and exits with code 1 otherwise returns 0 if -c or --check silent is specified sort produces no output this is a silent version of -c -m --merge merge only the input files are assumed to be pre-sorted if they are not sorted the output order is undefined -o print the output to the output file instead of the standard output -s use size for the maximum size of the memory buffer size modifiers b k m g t p e z y can be used if a memory limit is not explicitly specified sort takes up to about 90 of available memory if the file size is too big to fit into the memory buffer the temporary disk files are used to perform the sorting -t store temporary files in the directory dir the default path is the value of the environment variable tmpdir or var tmp if tmpdir is not defined -u --unique unique keys suppress all lines that have a key that is equal to an already processed one this option similarly to -s implies a stable sort if used with -c or -c sort also checks that there are no lines with duplicate keys --version print the version and silently exits --help the following options override the default ordering rules when ordering options appear independently of key field specifications they apply globally to all sort keys when attached to a specific key see -k the ordering options override all global ordering options for the key they are attached to -b --ignore-leading-blanks ignore leading blank characters when comparing lines -d --dictionary-order consider only blank spaces and alphanumeric characters in comparisons -f --ignore-case convert all lowercase characters to their uppercase equivalent before comparison that is perform case-independent sorting -g --general-numeric-sort --sort general-numeric sort by general numerical value as opposed to -n this option handles general floating points it has a more permissive format than that allowed by -n but it has a significant performance drawback -h --human-numeric-sort --sort human-numeric sort by numerical value but take into account the si suffix if present sort first by numeric sign negative zero or positive then by si suffix either empty or k or k or one of mgtpezy in that order and finally by numeric value the si suffix must immediately follow the number for example 12345k sorts before 1m because m is larger than k this sort option is useful for sorting the output of a single invocation of df command with -h or -h options human- readable -i --ignore-nonprinting ignore all non-printable characters -m --month-sort --sort month sort by month abbreviations unknown strings are considered smaller than the month names -n --numeric-sort --sort numeric sort fields numerically by arithmetic value fields are supposed to have optional blanks in the beginning an optional minus sign zero or more digits including decimal point and possible thousand separators -r --random-sort --sort random sort by a random order this is a random permutation of the inputs except that the equal keys sort together it is implemented by hashing the input keys and sorting the hash values the hash function is chosen randomly the hash function is randomized by dev random content or by file content if it is specified by --random-source even if multiple sort fields are specified the same random hash function is used for all of them -r --reverse sort in reverse order -v --version-sort sort version numbers the input lines are treated as file names in form prefix version suffix where suffix matches the regular expression a-za-z a-za-z0-9 the files are compared by their prefixes and versions leading zeros are ignored in version numbers see example below if an input string does not match the pattern then it is compared using the byte compare function all string comparisons are performed in c locale the locale environment setting is ignored example ls sort sort -v sort-1 022 tgz sort-1 23 tgz sort-1 23 1 tgz sort-1 024 tgz sort-1 024 003 sort-1 024 003 tgz sort-1 024 07 tgz sort-1 024 009 tgz the treatment of field separators can be altered using these options -b --ignore-leading-blanks ignore leading blank space when determining the start and end of a restricted sort key see -k if -b is specified before the first -k option it applies globally to all key specifications otherwise -b can be attached independently to each field argument of the key specifications note that sort keys specified with the -k option may have a variable number of leading whitespace characters that will affect the result as described below in the -t option description -k define a restricted sort key that has the starting position field1 and optional ending position field2 of a key field the subsequent keys are compared when earlier keys compare equal the -k option replaces the obsolete options pos1 and -pos2 but the old notation is also supported -k define a restricted sort key that has the starting position field1 and optional ending position field2 of a key field the subsequent keys are compared when earlier keys compare equal the -k option replaces the obsolete options pos1 and -pos2 but the old notation is also supported -t use char as a field separator character the initial char is not considered to be part of a field when determining key offsets each occurrence of char is significant for example charchar delimits an empty field if -t is not specified the default field separator is a sequence of blank space characters and consecutive blank spaces do not delimit an empty field however the initial blank space is considered part of a field when determining key offsets to use nul as field separator use -t 0 --batch-size num specify maximum number of files that can be opened by sort at once this option affects behavior when having many input files or using temporary files the default value is 16 --compress-program program use program to compress temporary files program must compress standard input to standard output when called without arguments when called with argument -d it must decompress standard input to standard output if program fails sort must exit with error an example of program that can be used here is bzip2 --random-source filename in random sort the file content is used as the source of the seed data for the hash function choice two invocations of random sort with the same seed data will use the same hash function and will produce the same result if the input is also identical by default file dev random is used --debug print some extra information about the sorting process to the standard output --parallel set the maximum number of execution threads default number equals to the number of cpus --files0-from filename take the input file list from the file filename the file names must be separated by nul like the output produced by the command find -print0 --radixsort try to use radix sort if the sort specifications allow the radix sort can only be used for trivial locales c and posix and it cannot be used for numeric or month sort radix sort is very fast and stable --mergesort use mergesort this is a universal algorithm that can always be used but it is not always the fastest --qsort try to use quick sort if the sort specifications allow this sort algorithm cannot be used with -u and -s --heapsort try to use heap sort if the sort specifications allow this sort algorithm cannot be used with -u and -s --mmap try to use file memory mapping system call it may increase speed in some cases the following operands are available file the pathname of a file to be sorted merged or checked if no file operands are specified or if a file operand is - the standard input is used a field is defined as a maximal sequence of characters other than the field separator and record separator newline by default initial blank spaces are included in the field unless -b has been specified the first blank space of a sequence of blank spaces acts as the field separator and is included in the field unless -t is specified for example all blank spaces at the beginning of a line are considered to be part of the first field fields are specified by the -k field1 field2 command-line option if field2 is missing the end of the key defaults to the end of the line the arguments field1 and field2 have the form m n m n 0 and can be followed by one or more of the modifiers b d f i n g m and r which correspond to the options discussed above when b is specified it applies only to field1 or field2 where it is specified while the rest of the modifiers apply to the whole key field regardless if they are specified only with field1 or field2 or both a field1 position specified by m n is interpreted as the nth character from the beginning of the mth field a missing n in field1 means 1 indicating the first character of the mth field if the -b option is in effect n is counted from the first non-blank character in the mth field m 1b refers to the first non-blank character in the mth field 1 n refers to the nth character from the beginning of the line if n is greater than the length of the line the field is taken to be empty nth positions are always counted from the field beginning even if the field is shorter than the number of specified positions thus the key can really start from a position in a subsequent field a field2 position specified by m n is interpreted as the nth character including separators from the beginning of the mth field a missing n indicates the last character of the mth field m 0 designates the end of a line thus the option -k v x w y is synonymous with the obsolete option v-1 x-1 -w-1 y when y is omitted -k v x w is synonymous with v-1 x-1 -w 0 the obsolete pos1 -pos2 option is still supported except for -w 0b which has no -k equivalent ls sort sort -v name use space symbols as field separators as modern gnu sort does files macos 15 5 september 4 2019 macos 15 5",
+  "keywords": [
+    "sort",
+    "manual",
+    "page"
+  ],
+  "complexity": "intermediate",
+  "hash": "92a7ece55464b800",
+  "parsedAt": "2025-06-17T19:31:54.586Z",
+  "parseVersion": "2.0.0",
+  "isCommon": true,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

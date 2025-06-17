@@ -1,0 +1,101 @@
+{
+  "name": "strings",
+  "section": 1,
+  "title": "find the printable strings in a object, or other binary, file",
+  "description": "Strings looks for ASCII strings in a binary file or standard input.",
+  "synopsis": "strings [ - ] [ -a ] [ -o ] [ -t format ] [ -number ] [ -n number ] [--] [file ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "Apple, Inc.\t\t\t June 7, 2016\t\t\t    STRINGS(1)",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "       strings - find the printable strings in a object, or other binary, file\n",
+        "       strings [ - ] [ -a ] [ -o ] [ -t format ] [ -number ] [ -n number ]\n       [--] [file ...]\n",
+        "       Strings looks for ASCII strings in a binary file or standard input.\n       Strings is useful for identifying random object files and many other\n       things.\tA string is any sequence of 4 (the default) or more printing\n       characters [ending at, but not including, any other character or EOF].\n       Unless the - flag is given, strings looks in all sections of the object\n       files except the (__TEXT,__text) section.  If no files are specified\n       standard input is read.\n\n       The file arguments may be of the form libx.a(foo.o), to request\n       information about only that object file and not the entire library.\n       (Typically this argument must be quoted, ``libx.a(foo.o)'', to get it\n       past the shell.)\n\n       The options to strings(1) are:\n\n       -a     This option causes strings to look for strings in all sections\n\t      of the object file (including the (__TEXT,__text) section.\n\n       -      This option causes strings to look for strings in all bytes of\n\t      the files (the default for non-object files).\n\n       --     This option causes strings to treat all the following arguments\n\t      as files.\n\n       -o     Preceded each string by its offset in the file (in decimal).\n\n       -t format\n\t      Write each string preceded by its byte offset from the start of\n\t      the file.  The format shall be dependent on the single character\n\t      used as the format option-argument:\n\n       d      The offset shall be written in decimal.\n\n       o      The offset shall be written in octal.\n\n       x      The offset shall be written in hexadecimal.\n\n       -number\n\t      The decimal number is used as the minimum string length rather\n\t      than the default of 4.\n\n       -n number\n\t      Specify the minimum string length, where the number argument is\n\t      a positive decimal integer. The default shall be 4.\n\n       -arch arch_type\n\t      Specifies the architecture, arch_type, of the file for\n\t      strings(1) to operate on when the file is a universal file.\n\t      (See arch(3) for the currently know arch_types.)\tThe arch_type\n\t      can be \"all\" to operate on all architectures in the file.\n",
+        "       od(1)\n",
+        "       The algorithm for identifying strings is extremely primitive.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-a",
+      "description": " of the object file (including the (__TEXT,__text) section. -      This option causes strings to look for strings in all bytes of the files (the default for non-object files). --     This option causes strings to treat all the following arguments as files.",
+      "optional": false
+    },
+    {
+      "flag": "-o",
+      "description": "",
+      "optional": false
+    },
+    {
+      "flag": "-t",
+      "description": " Write each string preceded by its byte offset from the start of the file.  The format shall be dependent on the single character used as the format option-argument: d      The offset shall be written in decimal. o      The offset shall be written in octal. x      The offset shall be written in hexadecimal.",
+      "optional": false
+    },
+    {
+      "flag": "-number",
+      "description": " The decimal number is used as the minimum string length rather than the default of 4.",
+      "optional": false
+    },
+    {
+      "flag": "-n",
+      "description": " Specify the minimum string length, where the number argument is a positive decimal integer. The default shall be 4.",
+      "optional": false
+    },
+    {
+      "flag": "-arch",
+      "description": "arch_type Specifies the architecture, arch_type, of the file for strings(1) to operate on when the file is a universal file. (See arch(3) for the currently know arch_types.)\tThe arch_type can be \"all\" to operate on all architectures in the file. SEE ALSO od(1)"
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "od",
+    "strings",
+    "find",
+    "printable",
+    "object",
+    "other",
+    "binary",
+    "format",
+    "number",
+    "looks",
+    "standard",
+    "input",
+    "useful",
+    "identifying",
+    "random"
+  ],
+  "seeAlso": [
+    {
+      "name": "od",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "strings find the printable strings in a object or other binary file strings looks for ascii strings in a binary file or standard input strings - -a -o -t format -number -n number -- file strings find printable object other binary looks ascii binary standard input -a of the object file including the text text section - this option causes strings to look for strings in all bytes of the files the default for non-object files -- this option causes strings to treat all the following arguments as files -o -t write each string preceded by its byte offset from the start of the file the format shall be dependent on the single character used as the format option-argument d the offset shall be written in decimal o the offset shall be written in octal x the offset shall be written in hexadecimal -number the decimal number is used as the minimum string length rather than the default of 4 -n specify the minimum string length where the number argument is a positive decimal integer the default shall be 4 -arch arch type specifies the architecture arch type of the file for strings 1 to operate on when the file is a universal file see arch 3 for the currently know arch types the arch type can be all to operate on all architectures in the file see also od 1 name apple inc june 7 2016 strings 1",
+  "keywords": [
+    "strings",
+    "find",
+    "printable",
+    "object,",
+    "other",
+    "binary,",
+    "looks",
+    "ascii",
+    "binary",
+    "standard",
+    "input."
+  ],
+  "complexity": "intermediate",
+  "hash": "d58aed8959522446",
+  "parsedAt": "2025-06-17T19:41:58.019Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

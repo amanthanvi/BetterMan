@@ -1,0 +1,132 @@
+{
+  "name": "ln",
+  "section": 1,
+  "title": "ln manual page",
+  "description": " manual page",
+  "synopsis": "ln [-L | -P | -s [-F]] [-f | -iw] [-hnv] source_file [target_file] ln [-L | -P | -s [-F]] [-f | -iw] [-hnv] source_file ... target_dir link source_file target_file",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t May 10, 2021\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     ln, link – link files\n",
+        "     ln [-L | -P | -s [-F]] [-f | -iw] [-hnv] source_file [target_file]\n     ln [-L | -P | -s [-F]] [-f | -iw] [-hnv] source_file ... target_dir\n     link source_file target_file\n",
+        "     The ln utility creates a new directory entry (linked file) for the file\n     name specified by target_file.  The target_file will be created with the\n     same file modes as the source_file.  It is useful for maintaining\n     multiple copies of a file in many places at once without using up storage\n     for the “copies”; instead, a link “points” to the original copy.  There\n     are two types of links; hard links and symbolic links.  How a link\n     “points” to a file is one of the differences between a hard and symbolic\n     link.\n\n     The options are as follows:\n\n     -F    If the target file already exists and is a directory, then remove\n\t   it so that the link may occur.  The -F option should be used with\n\t   either -f or -i options.  If neither -f nor -i is specified, -f is\n\t   implied.  The -F option is a no-op unless -s is specified.\n\n     -L    When creating a hard link to a symbolic link, create a hard link to\n\t   the target of the symbolic link.  This is the default.  This option\n\t   cancels the -P option.\n\n     -P    When creating a hard link to a symbolic link, create a hard link to\n\t   the symbolic link itself.  This option cancels the -L option.\n\n     -f    If the target file already exists, then unlink it so that the link\n\t   may occur.  (The -f option overrides any previous -i and -w\n\t   options.)\n\n     -h    If the target_file or target_dir is a symbolic link, do not follow\n\t   it.\tThis is most useful with the -f option, to replace a symlink\n\t   which may point to a directory.\n\n     -i    Cause ln to write a prompt to standard error if the target file\n\t   exists.  If the response from the standard input begins with the\n\t   character ‘y’ or ‘Y’, then unlink the target file so that the link\n\t   may occur.  Otherwise, do not attempt the link.  (The -i option\n\t   overrides any previous -f options.)\n\n     -n    Same as -h, for compatibility with other ln implementations.\n\n     -s    Create a symbolic link.\n\n     -v    Cause ln to be verbose, showing files as they are processed.\n\n     -w    Warn if the source of a symbolic link does not currently exist.\n\n     By default, ln makes hard links.  A hard link to a file is\n     indistinguishable from the original directory entry; any changes to a\n     file are effectively independent of the name used to reference the file.\n     Directories may not be hardlinked, and hard links may not span file\n     systems.\n\n     A symbolic link contains the name of the file to which it is linked.  The\n     referenced file is used when an open(2) operation is performed on the\n     link.  A stat(2) on a symbolic link will return the linked-to file; an\n     lstat(2) must be done to obtain information about the link.  The\n     readlink(2) call may be used to read the contents of a symbolic link.\n     Symbolic links may span file systems and may refer to directories.\n\n     Given one or two arguments, ln creates a link to an existing file\n     source_file.  If target_file is given, the link has that name;\n     target_file may also be a directory in which to place the link; otherwise\n     it is placed in the current directory.  If only the directory is\n     specified, the link will be made to the last component of source_file.\n\n     Given more than two arguments, ln makes links in target_dir to all the\n     named source files.  The links made will have the same name as the files\n     being linked to.\n\n     When the utility is called as link, exactly two arguments must be\n     supplied, neither of which may specify a directory.  No options may be\n     supplied in this simple mode of operation, which performs a link(2)\n     operation using the two passed arguments.\n",
+        "     Create a symbolic link named /home/src and point it to /usr/src:\n\n\t   # ln -s /usr/src /home/src\n\n     Hard link /usr/local/bin/fooprog to file /usr/local/bin/fooprog-1.0:\n\n\t   # ln /usr/local/bin/fooprog-1.0 /usr/local/bin/fooprog\n\n     As an exercise, try the following commands:\n\n\t   # ls -i /bin/[\n\t   11553 /bin/[\n\t   # ls -i /bin/test\n\t   11553 /bin/test\n\n     Note that both files have the same inode; that is, /bin/[ is essentially\n     an alias for the test(1) command.\tThis hard link exists so test(1) may\n     be invoked from shell scripts, for example, using the if [ ] construct.\n\n     In the next example, the second call to ln removes the original foo and\n     creates a replacement pointing to baz:\n\n\t   # mkdir bar baz\n\t   # ln -s bar foo\n\t   # ln -shf baz foo\n\n     Without the -h option, this would instead leave foo pointing to bar and\n     inside foo create a new symlink baz pointing to itself.  This results\n     from directory-walking.\n\n     An easy rule to remember is that the argument order for ln is the same as\n     for cp(1): The first argument needs to exist, the second one is created.\n",
+        "     The -h, -i, -n, -v and -w options are non-standard and their use in\n     scripts is not recommended.  They are provided solely for compatibility\n     with other ln implementations.\n\n     The -F option is a FreeBSD extension and should not be used in portable\n     scripts.\n",
+        "     link(2), lstat(2), readlink(2), stat(2), symlink(2), symlink(7)\n",
+        "     The ln utility conforms to IEEE Std 1003.2-1992 (“POSIX.2”).\n\n     The simplified link command conforms to Version 2 of the Single UNIX\n     Specification (“SUSv2”).\n",
+        "     An ln command appeared in Version 1 AT&T UNIX.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-F",
+      "description": "If the target file already exists and is a directory, then remove it so that the link may occur.  The -F option should be used with either -f or -i options.  If neither -f nor -i is specified, -f is implied.  The -F option is a no-op unless -s is specified."
+    },
+    {
+      "flag": "-L",
+      "description": " the target of the symbolic link.  This is the default.  This option cancels the -P option.",
+      "optional": true
+    },
+    {
+      "flag": "-P",
+      "description": " the symbolic link itself.  This option cancels the -L option.",
+      "optional": false
+    },
+    {
+      "flag": "-f",
+      "description": " may occur.  (The -f option overrides any previous -i and -w options.)",
+      "optional": true
+    },
+    {
+      "flag": "-h",
+      "description": "If the target_file or target_dir is a symbolic link, do not follow it.\tThis is most useful with the -f option, to replace a symlink which may point to a directory."
+    },
+    {
+      "flag": "-i",
+      "description": "Cause ln to write a prompt to standard error if the target file exists.  If the response from the standard input begins with the character ‘y’ or ‘Y’, then unlink the target file so that the link may occur.  Otherwise, do not attempt the link.  (The -i option overrides any previous -f options.)"
+    },
+    {
+      "flag": "-n",
+      "description": "Same as -h, for compatibility with other ln implementations."
+    },
+    {
+      "flag": "-s",
+      "description": "",
+      "argument": "-F",
+      "optional": false
+    },
+    {
+      "flag": "-v",
+      "description": "Cause ln to be verbose, showing files as they are processed."
+    },
+    {
+      "flag": "-w",
+      "description": "Warn if the source of a symbolic link does not currently exist. By default, ln makes hard links.  A hard link to a file is indistinguishable from the original directory entry; any changes to a file are effectively independent of the name used to reference the file. Directories may not be hardlinked, and hard links may not span file systems. A symbolic link contains the name of the file to which it is linked.  The referenced file is used when an open(2) operation is performed on the link.  A stat(2) on a symbolic link will return the linked-to file; an lstat(2) must be done to obtain information about the link.  The readlink(2) call may be used to read the contents of a symbolic link. Symbolic links may span file systems and may refer to directories. Given one or two arguments, ln creates a link to an existing file source_file.  If target_file is given, the link has that name; target_file may also be a directory in which to place the link; otherwise it is placed in the current directory.  If only the directory is specified, the link will be made to the last component of source_file. Given more than two arguments, ln makes links in target_dir to all the named source files.  The links made will have the same name as the files being linked to. When the utility is called as link, exactly two arguments must be supplied, neither of which may specify a directory.  No options may be supplied in this simple mode of operation, which performs a link(2) operation using the two passed arguments."
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "link",
+    "lstat",
+    "readlink",
+    "stat",
+    "symlink",
+    "hnv",
+    "source_file",
+    "target_file",
+    "target_dir",
+    "utility",
+    "creates",
+    "new",
+    "directory",
+    "entry",
+    "linked"
+  ],
+  "seeAlso": [
+    {
+      "name": "link",
+      "section": 2
+    },
+    {
+      "name": "lstat",
+      "section": 2
+    },
+    {
+      "name": "readlink",
+      "section": 2
+    },
+    {
+      "name": "stat",
+      "section": 2
+    },
+    {
+      "name": "symlink",
+      "section": 2
+    },
+    {
+      "name": "symlink",
+      "section": 7
+    }
+  ],
+  "metadata": {},
+  "searchContent": "ln ln manual page manual page ln -l -p -s -f -f -iw -hnv source file target file ln -l -p -s -f -f -iw -hnv source file target dir link source file target file ln manual page -f if the target file already exists and is a directory then remove it so that the link may occur the -f option should be used with either -f or -i options if neither -f nor -i is specified -f is implied the -f option is a no-op unless -s is specified -l the target of the symbolic link this is the default this option cancels the -p option -p the symbolic link itself this option cancels the -l option -f may occur the -f option overrides any previous -i and -w options -h if the target file or target dir is a symbolic link do not follow it this is most useful with the -f option to replace a symlink which may point to a directory -i cause ln to write a prompt to standard error if the target file exists if the response from the standard input begins with the character y or y then unlink the target file so that the link may occur otherwise do not attempt the link the -i option overrides any previous -f options -n same as -h for compatibility with other ln implementations -s -v cause ln to be verbose showing files as they are processed -w warn if the source of a symbolic link does not currently exist by default ln makes hard links a hard link to a file is indistinguishable from the original directory entry any changes to a file are effectively independent of the name used to reference the file directories may not be hardlinked and hard links may not span file systems a symbolic link contains the name of the file to which it is linked the referenced file is used when an open 2 operation is performed on the link a stat 2 on a symbolic link will return the linked-to file an lstat 2 must be done to obtain information about the link the readlink 2 call may be used to read the contents of a symbolic link symbolic links may span file systems and may refer to directories given one or two arguments ln creates a link to an existing file source file if target file is given the link has that name target file may also be a directory in which to place the link otherwise it is placed in the current directory if only the directory is specified the link will be made to the last component of source file given more than two arguments ln makes links in target dir to all the named source files the links made will have the same name as the files being linked to when the utility is called as link exactly two arguments must be supplied neither of which may specify a directory no options may be supplied in this simple mode of operation which performs a link 2 operation using the two passed arguments name macos 15 5 may 10 2021 macos 15 5",
+  "keywords": [
+    "ln",
+    "manual",
+    "page"
+  ],
+  "complexity": "intermediate",
+  "hash": "a248aa4da3fb4547",
+  "parsedAt": "2025-06-17T19:41:57.752Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

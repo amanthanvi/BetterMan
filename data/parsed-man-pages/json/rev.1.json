@@ -1,0 +1,76 @@
+{
+  "name": "rev",
+  "section": 1,
+  "title": "rev manual page",
+  "description": "The rev utility copies the specified files to the standard output, reversing the order of characters in every line.",
+  "synopsis": "rev [file ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t June 27, 2020\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     rev – reverse lines of a file\n",
+        "     rev [file ...]\n",
+        "     The rev utility copies the specified files to the standard output,\n     reversing the order of characters in every line.  If no files are\n     specified, the standard input is read.\n",
+        "     Reverse the text from stdin:\n\n\t   $ echo -e \"reverse \\t these\\ntwo lines\" | rev\n\t   eseht    esrever\n\t   senil owt\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [
+    {
+      "command": "echo -e \"reverse \\t these\\ntwo lines\" | rev",
+      "description": "eseht    esrever",
+      "tags": [
+        "pipe"
+      ],
+      "output": "\t   eseht    esrever\n\t   senil owt\nmacOS 15.5\t\t\t June 27, 2020\t\t\t    macOS 15.5\n"
+    }
+  ],
+  "relatedCommands": [
+    "rev",
+    "reverse",
+    "lines",
+    "utility",
+    "copies",
+    "specified",
+    "standard",
+    "output",
+    "reversing",
+    "order",
+    "characters",
+    "every",
+    "line",
+    "input",
+    "read"
+  ],
+  "seeAlso": [],
+  "metadata": {},
+  "searchContent": "rev rev manual page the rev utility copies the specified files to the standard output reversing the order of characters in every line rev file rev manual page utility copies specified standard output reversing order characters every line echo -e reverse t these ntwo lines rev eseht esrever name macos 15 5 june 27 2020 macos 15 5",
+  "keywords": [
+    "rev",
+    "manual",
+    "page",
+    "utility",
+    "copies",
+    "specified",
+    "standard",
+    "output,",
+    "reversing",
+    "order",
+    "characters",
+    "every",
+    "line."
+  ],
+  "complexity": "basic",
+  "hash": "570974b61ca8302a",
+  "parsedAt": "2025-06-17T19:42:00.646Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

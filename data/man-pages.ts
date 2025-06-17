@@ -1,6 +1,4 @@
-// Temporary man pages data for production
-// In a real implementation, this would be populated from parsed man pages
-
+// Man page data structure
 export interface ManPage {
   name: string
   section: number
@@ -29,8 +27,11 @@ export interface ManPage {
   bugs?: string
 }
 
-// Basic man pages data
-const manPages: ManPage[] = [
+// Import enhanced pages (148 real man pages parsed from system)
+import { enhancedManPages } from './man-pages/enhanced-pages'
+
+// For backward compatibility, keep a few hardcoded entries merged with enhanced pages
+const legacyPages = [
   {
     name: 'ls',
     section: 1,
@@ -621,6 +622,9 @@ const manPages: ManPage[] = [
   },
 ];
 
+// Merge enhanced pages with any legacy pages, preferring enhanced
+const manPages = [...enhancedManPages];
+
 // Export the list of man pages for static generation
 export const manPageList = manPages;
 
@@ -638,6 +642,7 @@ export function searchManPages(query: string): ManPage[] {
   return manPages.filter(page => 
     page.name.toLowerCase().includes(lowerQuery) ||
     page.title.toLowerCase().includes(lowerQuery) ||
-    page.description.toLowerCase().includes(lowerQuery)
+    page.description.toLowerCase().includes(lowerQuery) ||
+    (page.keywords || []).some(k => k.toLowerCase().includes(lowerQuery))
   );
 }

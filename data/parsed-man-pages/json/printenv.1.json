@@ -1,0 +1,86 @@
+{
+  "name": "printenv",
+  "section": 1,
+  "title": "printenv manual page",
+  "description": "The printenv utility prints out the names and values of the variables in the environment, with one name/value pair per line.",
+  "synopsis": "printenv [name]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t May 12, 2003\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     printenv – print out the environment\n",
+        "     printenv [name]\n",
+        "     The printenv utility prints out the names and values of the variables in\n     the environment, with one name/value pair per line.  If name is\n     specified, only its value is printed.\n\n     Some shells may provide a builtin printenv command which is similar or\n     identical to this utility.  Consult the builtin(1) manual page.\n",
+        "     The printenv utility exits 0 on success, and >0 if an error occurs.\n",
+        "     csh(1), env(1), sh(1), environ(7)\n",
+        "     The printenv utility is provided for compatibility with earlier BSD and\n     FreeBSD releases and is not specified by any standards.  The\n     functionality of printenv can be duplicated with the echo(1) and env(1)\n     utilities.\n",
+        "     The printenv command appeared in 3.0BSD.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "csh",
+    "env",
+    "sh",
+    "environ",
+    "printenv",
+    "print",
+    "out",
+    "environment",
+    "name",
+    "utility",
+    "prints",
+    "names",
+    "values",
+    "variables",
+    "value"
+  ],
+  "seeAlso": [
+    {
+      "name": "csh",
+      "section": 1
+    },
+    {
+      "name": "env",
+      "section": 1
+    },
+    {
+      "name": "sh",
+      "section": 1
+    },
+    {
+      "name": "environ",
+      "section": 7
+    }
+  ],
+  "metadata": {},
+  "searchContent": "printenv printenv manual page the printenv utility prints out the names and values of the variables in the environment with one name value pair per line printenv name printenv manual page utility prints names values variables environment name value pair line name macos 15 5 may 12 2003 macos 15 5",
+  "keywords": [
+    "printenv",
+    "manual",
+    "page",
+    "utility",
+    "prints",
+    "names",
+    "values",
+    "variables",
+    "environment,",
+    "name/value",
+    "pair",
+    "line."
+  ],
+  "complexity": "basic",
+  "hash": "6ff2dc62cbcb2d9b",
+  "parsedAt": "2025-06-17T19:42:10.439Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

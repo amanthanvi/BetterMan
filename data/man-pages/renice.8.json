@@ -1,0 +1,104 @@
+{
+  "name": "renice",
+  "section": 8,
+  "title": "renice manual page",
+  "description": "The renice utility alters the scheduling priority of one or more running processes.",
+  "synopsis": "renice priority [[-gpu] target] renice -n increment [[-gpu] target]",
+  "category": "System Administration",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t       October 27, 2020 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     renice – alter priority of running processes\n",
+        "     renice priority [[-gpu] target]\n     renice -n increment [[-gpu] target]\n",
+        "     The renice utility alters the scheduling priority of one or more running\n     processes.  The following target parameters are interpreted as process\n     ID's (the default), process group ID's, user ID's or user names.  The\n     renice'ing of a process group causes all processes in the process group\n     to have their scheduling priority altered.  The renice'ing of a user\n     causes all processes owned by the user to have their scheduling priority\n     altered.\n\n     The following options are available:\n\n     -n      Instead of changing the specified processes to the given\n\t     priority, interpret the following argument as an increment to be\n\t     applied to the current priority of each process.\n\n     -g      Interpret target parameters as process group ID's.\n\n     -p      Interpret target parameters as process ID's (the default).\n\n     -u      Interpret target parameters as user names or user ID's.\n\n     Users other than the super-user may only alter the priority of processes\n     they own, and can only monotonically increase their ``nice value'' within\n     the range 0 to PRIO_MAX (20).  (This prevents overriding administrative\n     fiats.)  The super-user may alter the priority of any process and set the\n     priority to any value in the range PRIO_MIN (-20) to PRIO_MAX.  Useful\n     priorities are: 20 (the affected processes will run only when nothing\n     else in the system wants to), 0 (the ``base'' scheduling priority),\n     anything negative (to make things go very fast).\n",
+        "     /etc/passwd  to map user names to user ID's\n",
+        "     Change the priority of process ID's 987 and 32, and all processes owned\n     by users daemon and root.\n\n\t   renice +1 987 -u daemon root -p 32\n",
+        "     nice(1), rtprio(1), getpriority(2), setpriority(2)\n",
+        "     The renice utility conforms to IEEE Std 1003.1-2001 (“POSIX.1”).\n",
+        "     The renice utility appeared in 4.0BSD.\n",
+        "     Non super-users cannot increase scheduling priorities of their own\n     processes, even if they were the ones that decreased the priorities in\n     the first place.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-n",
+      "description": " priority, interpret the following argument as an increment to be applied to the current priority of each process.",
+      "optional": false
+    },
+    {
+      "flag": "-g",
+      "description": "Interpret target parameters as process group ID's."
+    },
+    {
+      "flag": "-p",
+      "description": "Interpret target parameters as process ID's (the default)."
+    },
+    {
+      "flag": "-u",
+      "description": "Interpret target parameters as user names or user ID's. Users other than the super-user may only alter the priority of processes they own, and can only monotonically increase their ``nice value'' within the range 0 to PRIO_MAX (20).  (This prevents overriding administrative fiats.)  The super-user may alter the priority of any process and set the priority to any value in the range PRIO_MIN (-20) to PRIO_MAX.  Useful priorities are: 20 (the affected processes will run only when nothing else in the system wants to), 0 (the ``base'' scheduling priority), anything negative (to make things go very fast)."
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "nice",
+    "rtprio",
+    "getpriority",
+    "setpriority",
+    "renice",
+    "alter",
+    "priority",
+    "running",
+    "processes",
+    "gpu",
+    "target",
+    "increment",
+    "utility",
+    "alters",
+    "scheduling"
+  ],
+  "seeAlso": [
+    {
+      "name": "nice",
+      "section": 1
+    },
+    {
+      "name": "rtprio",
+      "section": 1
+    },
+    {
+      "name": "getpriority",
+      "section": 2
+    },
+    {
+      "name": "setpriority",
+      "section": 2
+    }
+  ],
+  "metadata": {},
+  "searchContent": "renice renice manual page the renice utility alters the scheduling priority of one or more running processes renice priority -gpu target renice -n increment -gpu target renice manual page utility alters scheduling priority more running processes -n priority interpret the following argument as an increment to be applied to the current priority of each process -g interpret target parameters as process group id s -p interpret target parameters as process id s the default -u interpret target parameters as user names or user id s users other than the super-user may only alter the priority of processes they own and can only monotonically increase their nice value within the range 0 to prio max 20 this prevents overriding administrative fiats the super-user may alter the priority of any process and set the priority to any value in the range prio min -20 to prio max useful priorities are 20 the affected processes will run only when nothing else in the system wants to 0 the base scheduling priority anything negative to make things go very fast name macos 15 5 october 27 2020 macos 15 5",
+  "keywords": [
+    "renice",
+    "manual",
+    "page",
+    "utility",
+    "alters",
+    "scheduling",
+    "priority",
+    "more",
+    "running",
+    "processes."
+  ],
+  "complexity": "basic",
+  "hash": "1ea3655b1afe7d8e",
+  "parsedAt": "2025-06-17T19:32:03.532Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

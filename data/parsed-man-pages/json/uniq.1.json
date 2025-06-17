@@ -1,0 +1,134 @@
+{
+  "name": "uniq",
+  "section": 1,
+  "title": "uniq manual page",
+  "description": " manual page",
+  "synopsis": "uniq [-cdiu] [-D[septype]] [-f num] [-s chars] [input_file [output_file]]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t       December 9, 2024 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     uniq – report or filter out repeated lines in a file\n",
+        "     uniq [-cdiu] [-D[septype]] [-f num] [-s chars] [input_file [output_file]]\n",
+        "     The uniq utility reads the specified input_file comparing adjacent lines,\n     and writes a copy of each unique input line to the output_file.  If\n     input_file is a single dash (‘-’) or absent, the standard input is read.\n     If output_file is absent, standard output is used for output.  The second\n     and succeeding copies of identical adjacent input lines are not written.\n     Repeated lines in the input will not be detected if they are not\n     adjacent, so it may be necessary to sort the files first.\n\n     The following options are available:\n\n     -c, --count\n\t     Precede each output line with the count of the number of times\n\t     the line occurred in the input, followed by a single space.\n\n     -d, --repeated\n\t     Output a single copy of each line that is repeated in the input.\n\t     Ignored if -D is also specified.\n\n     -D, --all-repeated [septype]\n\t     Output all lines that are repeated (like -d, but each copy of the\n\t     repeated line is written).  The optional septype argument\n\t     controls how to separate groups of repeated lines in the output;\n\t     it must be one of the following values:\n\n\t     none      Do not separate groups of lines (this is the default).\n\t     prepend   Output an empty line before each group of lines.\n\t     separate  Output an empty line after each group of lines.\n\n     -f num, --skip-fields num\n\t     Ignore the first num fields in each input line when doing\n\t     comparisons.  A field is a string of non-blank characters\n\t     separated from adjacent fields by blanks.\tField numbers are one\n\t     based, i.e., the first field is field one.\n\n     -i, --ignore-case\n\t     Case insensitive comparison of lines.\n\n     -s chars, --skip-chars chars\n\t     Ignore the first chars characters in each input line when doing\n\t     comparisons.  If specified in conjunction with the -f, --unique\n\t     option, the first chars characters after the first num fields\n\t     will be ignored.  Character numbers are one based, i.e., the\n\t     first character is character one.\n\n     -u, --unique\n\t     Only output lines that are not repeated in the input.\n",
+        "     The LANG, LC_ALL, LC_COLLATE and LC_CTYPE environment variables affect\n     the execution of uniq as described in environ(7).\n",
+        "     The uniq utility exits 0 on success, and >0 if an error occurs.\n",
+        "     Assuming a file named cities.txt with the following content:\n\n\t   Madrid\n\t   Lisbon\n\t   Madrid\n\n     The following command reports three different lines since identical\n     elements are not adjacent:\n\n\t   $ uniq -u cities.txt\n\t   Madrid\n\t   Lisbon\n\t   Madrid\n\n     Sort the file and count the number of identical lines:\n\n\t   $ sort cities.txt | uniq -c\n\t\t   1 Lisbon\n\t\t   2 Madrid\n\n     Assuming the following content for the file cities.txt:\n\n\t   madrid\n\t   Madrid\n\t   Lisbon\n\n     Show repeated lines ignoring case sensitiveness:\n\n\t   $ uniq -d -i cities.txt\n\t   madrid\n\n     Same as above but showing the whole group of repeated lines:\n\n\t   $ uniq -D -i cities.txt\n\t   madrid\n\t   Madrid\n\n     Report the number of identical lines ignoring the first character of\n     every line:\n\n\t   $ uniq -s 1 -c cities.txt\n\t\t   2 madrid\n\t\t   1 Lisbon\n",
+        "     The historic +number and -number options have been deprecated but are\n     still supported in this implementation.\n",
+        "     sort(1)\n",
+        "     The uniq utility conforms to IEEE Std 1003.1-2001 (“POSIX.1”) as amended\n     by Cor. 1-2002.\n",
+        "     A uniq command appeared in Version 3 AT&T UNIX.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-c",
+      "description": ", --count Precede each output line with the count of the number of times the line occurred in the input, followed by a single space."
+    },
+    {
+      "flag": "-d",
+      "description": ", --repeated Output a single copy of each line that is repeated in the input. Ignored if -D is also specified."
+    },
+    {
+      "flag": "-D",
+      "description": " Output all lines that are repeated (like -d, but each copy of the repeated line is written).  The optional septype argument controls how to separate groups of repeated lines in the output; it must be one of the following values: none      Do not separate groups of lines (this is the default). prepend   Output an empty line before each group of lines. separate  Output an empty line after each group of lines.",
+      "argument": "septype",
+      "optional": true
+    },
+    {
+      "flag": "-f",
+      "description": " Ignore the first num fields in each input line when doing comparisons.  A field is a string of non-blank characters separated from adjacent fields by blanks.\tField numbers are one based, i.e., the first field is field one.",
+      "optional": true
+    },
+    {
+      "flag": "-i",
+      "description": ", --ignore-case Case insensitive comparison of lines."
+    },
+    {
+      "flag": "-s",
+      "description": " Ignore the first chars characters in each input line when doing comparisons.  If specified in conjunction with the -f, --unique option, the first chars characters after the first num fields will be ignored.  Character numbers are one based, i.e., the first character is character one.",
+      "optional": true
+    },
+    {
+      "flag": "-u",
+      "description": ", --unique Only output lines that are not repeated in the input."
+    }
+  ],
+  "examples": [
+    {
+      "command": "uniq -u cities.txt",
+      "description": "Madrid",
+      "tags": [],
+      "output": "\t   Madrid\n\t   Lisbon\n\t   Madrid\n     Sort the file and count the number of identical lines:\n"
+    },
+    {
+      "command": "sort cities.txt | uniq -c",
+      "description": "1 Lisbon",
+      "tags": [
+        "pipe"
+      ],
+      "output": "\t\t   1 Lisbon\n\t\t   2 Madrid\n     Assuming the following content for the file cities.txt:\n\t   madrid\n\t   Madrid\n\t   Lisbon\n     Show repeated lines ignoring case sensitiveness:\n"
+    },
+    {
+      "command": "uniq -d -i cities.txt",
+      "description": "madrid",
+      "tags": [],
+      "output": "\t   madrid\n     Same as above but showing the whole group of repeated lines:\n"
+    },
+    {
+      "command": "uniq -D -i cities.txt",
+      "description": "madrid",
+      "tags": [],
+      "output": "\t   madrid\n\t   Madrid\n     Report the number of identical lines ignoring the first character of\n     every line:\n"
+    },
+    {
+      "command": "uniq -s 1 -c cities.txt",
+      "description": "2 madrid",
+      "tags": [],
+      "output": "\t\t   2 madrid\n\t\t   1 Lisbon\n"
+    }
+  ],
+  "relatedCommands": [
+    "sort",
+    "uniq",
+    "report",
+    "filter",
+    "out",
+    "repeated",
+    "lines",
+    "cdiu",
+    "septype",
+    "num",
+    "chars",
+    "input_file",
+    "output_file",
+    "utility",
+    "reads"
+  ],
+  "seeAlso": [
+    {
+      "name": "sort",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "uniq uniq manual page manual page uniq -cdiu -d septype -f num -s chars input file output file uniq manual page -c --count precede each output line with the count of the number of times the line occurred in the input followed by a single space -d --repeated output a single copy of each line that is repeated in the input ignored if -d is also specified -d output all lines that are repeated like -d but each copy of the repeated line is written the optional septype argument controls how to separate groups of repeated lines in the output it must be one of the following values none do not separate groups of lines this is the default prepend output an empty line before each group of lines separate output an empty line after each group of lines -f ignore the first num fields in each input line when doing comparisons a field is a string of non-blank characters separated from adjacent fields by blanks field numbers are one based i e the first field is field one -i --ignore-case case insensitive comparison of lines -s ignore the first chars characters in each input line when doing comparisons if specified in conjunction with the -f --unique option the first chars characters after the first num fields will be ignored character numbers are one based i e the first character is character one -u --unique only output lines that are not repeated in the input uniq -u cities txt madrid sort cities txt uniq -c 1 lisbon uniq -d -i cities txt madrid uniq -d -i cities txt madrid uniq -s 1 -c cities txt 2 madrid name macos 15 5 december 9 2024 macos 15 5",
+  "keywords": [
+    "uniq",
+    "manual",
+    "page"
+  ],
+  "complexity": "intermediate",
+  "hash": "55791bb21a8010bb",
+  "parsedAt": "2025-06-17T19:41:56.742Z",
+  "parseVersion": "2.0.0",
+  "isCommon": true,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}
