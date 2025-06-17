@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { Navigation } from '@/components/layout/navigation';
-import { DocumentViewer } from '@/components/docs/document-viewer';
-import { DocumentSidebar } from '@/components/docs/document-sidebar';
+import { EnhancedDocumentViewer } from '@/components/docs/enhanced-document-viewer';
+import { EnhancedDocumentSidebar } from '@/components/docs/enhanced-document-sidebar';
 import { getManPage, manPageList } from '@/data/man-pages';
+import { adaptManPageToEnhanced } from '@/lib/adapters/man-page-adapter';
 
 // Configure page generation
 export const runtime = 'nodejs';
@@ -32,16 +33,19 @@ export default async function DocPage({ params }: PageProps) {
     notFound();
   }
 
+  // Adapt the basic man page to enhanced format
+  const enhancedPage = adaptManPageToEnhanced(manPage);
+
   return (
     <>
       <Navigation />
       <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-[1fr_280px] gap-8">
+        <div className="grid lg:grid-cols-[1fr_320px] gap-8">
           <main className="min-w-0">
-            <DocumentViewer page={manPage} />
+            <EnhancedDocumentViewer page={enhancedPage} />
           </main>
           <aside className="hidden lg:block">
-            <DocumentSidebar page={manPage} />
+            <EnhancedDocumentSidebar page={enhancedPage} />
           </aside>
         </div>
       </div>

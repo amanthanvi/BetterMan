@@ -3,61 +3,71 @@
 
 @layer base {
   :root {
-    /* Premium Dark Theme - Inspired by modern dev tools */
-    --background: 222 47% 11%;
-    --foreground: 213 31% 91%;
+    /* Premium Dark Theme - Ultra Modern Developer Experience */
+    --background: 222 84% 4.9%;
+    --foreground: 210 40% 96.1%;
     
-    /* Card backgrounds with subtle depth */
-    --card: 222 47% 13%;
-    --card-foreground: 213 31% 91%;
+    /* Card backgrounds with sophisticated depth */
+    --card: 222 84% 6.9%;
+    --card-foreground: 210 40% 96.1%;
     
-    /* Popover with slight elevation */
-    --popover: 222 47% 15%;
-    --popover-foreground: 213 31% 91%;
+    /* Popover with elegant elevation */
+    --popover: 222 84% 8.9%;
+    --popover-foreground: 210 40% 96.1%;
     
-    /* Primary brand color - Electric blue */
+    /* Primary brand color - Electric blue with vibrancy */
     --primary: 217 91% 60%;
     --primary-foreground: 222 47% 11%;
     
-    /* Secondary - Muted purple */
-    --secondary: 269 66% 70%;
-    --secondary-foreground: 222 47% 11%;
+    /* Secondary - Deep purple accent */
+    --secondary: 263 70% 58%;
+    --secondary-foreground: 210 40% 98%;
     
-    /* Muted elements */
-    --muted: 223 47% 20%;
-    --muted-foreground: 215 20% 65%;
+    /* Muted elements with sophistication */
+    --muted: 217 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
     
-    /* Accent - Vibrant cyan */
-    --accent: 190 90% 50%;
+    /* Accent - Vibrant cyan for highlights */
+    --accent: 190 95% 52%;
     --accent-foreground: 222 47% 11%;
     
-    /* Semantic colors */
-    --destructive: 0 72% 51%;
+    /* Semantic colors with proper contrast */
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --success: 142 71% 45%;
+    --success: 142 76.2% 52.3%;
     --success-foreground: 210 40% 98%;
-    --warning: 38 92% 50%;
+    --warning: 38 92% 55%;
     --warning-foreground: 222 47% 11%;
-    --info: 199 89% 48%;
+    --info: 199 95% 53%;
     --info-foreground: 222 47% 11%;
     
-    /* UI elements */
-    --border: 223 47% 20%;
-    --input: 223 47% 20%;
+    /* UI elements with premium feel */
+    --border: 217 32.6% 12.5%;
+    --input: 217 32.6% 12.5%;
     --ring: 217 91% 60%;
     
-    /* Radii */
+    /* Sophisticated radii */
     --radius: 0.5rem;
     --radius-sm: 0.375rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
     
-    /* Shadows for depth */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+    /* Premium shadows for depth */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow: 0 2px 4px -1px rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+    
+    /* Code syntax highlighting colors */
+    --syntax-comment: 136 33% 55%;
+    --syntax-keyword: 207 82% 66%;
+    --syntax-string: 95 76% 64%;
+    --syntax-function: 286 89% 74%;
+    --syntax-variable: 29 84% 67%;
+    --syntax-constant: 0 84% 60%;
   }
   
   /* Force dark mode */
@@ -449,5 +459,81 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  
+  /* Premium syntax highlighting */
+  .syntax-comment { color: hsl(var(--syntax-comment)); }
+  .syntax-keyword { color: hsl(var(--syntax-keyword)); font-weight: 500; }
+  .syntax-string { color: hsl(var(--syntax-string)); }
+  .syntax-function { color: hsl(var(--syntax-function)); }
+  .syntax-variable { color: hsl(var(--syntax-variable)); }
+  .syntax-constant { color: hsl(var(--syntax-constant)); }
+  
+  /* Prism overrides for premium feel */
+  .token.comment,
+  .token.prolog,
+  .token.doctype,
+  .token.cdata { color: hsl(var(--syntax-comment)); }
+  
+  .token.punctuation { color: hsl(var(--muted-foreground)); }
+  
+  .token.property,
+  .token.tag,
+  .token.boolean,
+  .token.number,
+  .token.constant,
+  .token.symbol,
+  .token.deleted { color: hsl(var(--syntax-constant)); }
+  
+  .token.selector,
+  .token.attr-name,
+  .token.string,
+  .token.char,
+  .token.builtin,
+  .token.inserted { color: hsl(var(--syntax-string)); }
+  
+  .token.operator,
+  .token.entity,
+  .token.url,
+  .language-css .token.string,
+  .style .token.string { color: hsl(var(--syntax-variable)); }
+  
+  .token.atrule,
+  .token.attr-value,
+  .token.keyword { color: hsl(var(--syntax-keyword)); }
+  
+  .token.function,
+  .token.class-name { color: hsl(var(--syntax-function)); }
+  
+  .token.regex,
+  .token.important,
+  .token.variable { color: hsl(var(--syntax-variable)); }
+  
+  .token.important,
+  .token.bold { font-weight: 600; }
+  
+  .token.italic { font-style: italic; }
+  
+  .token.entity { cursor: help; }
+  
+  /* Premium hover states */
+  .hover-glow {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-glow:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 10px 20px -5px hsl(var(--primary) / 0.2),
+      0 4px 6px -2px hsl(var(--primary) / 0.1);
+  }
+  
+  /* Premium focus states */
+  .focus-glow:focus {
+    outline: none;
+    box-shadow: 
+      0 0 0 3px hsl(var(--background)),
+      0 0 0 6px hsl(var(--primary) / 0.5),
+      0 0 20px hsl(var(--primary) / 0.2);
   }
 }

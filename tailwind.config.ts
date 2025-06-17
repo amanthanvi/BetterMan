@@ -1,10 +1,14 @@
 import type { Config } from 'tailwindcss'
+import tailwindcssAnimate from 'tailwindcss-animate'
+import typography from '@tailwindcss/typography'
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './lib/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
@@ -103,10 +107,25 @@ const config: Config = {
         'scale-in': 'scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
         shimmer: 'shimmer 1.5s infinite ease-in-out',
+        'spin-slow': 'spin 3s linear infinite',
+        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+        'bounce-slow': 'bounce 2s infinite',
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        'gradient-dark': 'linear-gradient(to bottom, hsl(222 47% 11%), hsl(222 47% 7%))',
+        'gradient-card': 'linear-gradient(135deg, hsl(222 47% 13%) 0%, hsl(222 47% 11%) 100%)',
+      },
+      boxShadow: {
+        'glow-sm': '0 0 15px -3px hsl(var(--primary) / 0.3)',
+        'glow': '0 0 25px -5px hsl(var(--primary) / 0.3)',
+        'glow-lg': '0 0 35px -7px hsl(var(--primary) / 0.3)',
+        'inner-glow': 'inset 0 0 20px -5px hsl(var(--primary) / 0.2)',
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate, typography],
 }
 
 export default config
