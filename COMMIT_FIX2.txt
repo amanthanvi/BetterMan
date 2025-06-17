@@ -1,9 +1,0 @@
-fix: resolve TypeScript error in recently-viewed component
-
-- Fix TypeScript error in components/home/recently-viewed.tsx
-- Cast documents property to any and use fallback for key prop
-- Build should now complete successfully
-
-🤖 Generated with Claude Code (https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>

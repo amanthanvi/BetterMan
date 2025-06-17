@@ -1,9 +1,0 @@
-fix: remove experimental CSS optimization to fix build
-
-- Remove experimental.optimizeCss from next.config.mjs to fix critters module error
-- Add braces to if statement in lib/search/client.ts
-- Build should now complete successfully
-
-🤖 Generated with Claude Code (https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
