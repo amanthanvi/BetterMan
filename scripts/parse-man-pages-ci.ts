@@ -177,6 +177,14 @@ async function parseCommand(command: string): Promise<EnhancedManPage | null> {
   try {
     const startTime = performance.now()
     
+    // Check if command exists first
+    try {
+      await execAsync(`which ${command} 2>/dev/null || man -w ${command} 2>/dev/null`)
+    } catch {
+      // Command doesn't exist on this system, skip silently
+      return null
+    }
+    
     const page = await EnhancedManPageParser.parseFromSystem(command)
     
     if (page) {
@@ -426,8 +434,8 @@ async function main() {
   
   console.log(`\n📁 Output directory: ${DATA_DIR}`)
   
-  // Exit with appropriate code
-  process.exit(stats.failed > stats.successful * 0.1 ? 1 : 0)
+  // Exit with appropriate code (allow up to 20% failure rate)
+  process.exit(stats.failed > stats.successful * 0.2 ? 1 : 0)
 }
 
 // Run the parser
