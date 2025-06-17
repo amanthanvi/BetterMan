@@ -7,9 +7,8 @@ import { getManPage, manPageList } from '@/data/man-pages';
 import { adaptManPageToEnhanced } from '@/lib/adapters/man-page-adapter';
 
 // Configure page generation
-export const runtime = 'nodejs';
-export const dynamic = 'error';
 export const dynamicParams = false;
+export const revalidate = 3600; // Revalidate every hour
 
 interface PageProps {
   params: Promise<{
@@ -75,7 +74,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 // Generate static params for all available man pages
 export async function generateStaticParams() {
-  return manPageList.map((page) => ({
-    slug: page.name, // Use just the command name as the slug
-  }));
+  const params = [];
+  
+  // Generate both with and without section numbers
+  for (const page of manPageList) {
+    // Add the basic command name (e.g., "ls")
+    params.push({ slug: page.name });
+    
+    // Add with section number if available (e.g., "ls.1")
+    if (page.section) {
+      params.push({ slug: `${page.name}.${page.section}` });
+    }
+  }
+  
+  return params;
 }
