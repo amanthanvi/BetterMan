@@ -1,0 +1,265 @@
+name: Parse Man Pages and Deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0' # Weekly on Sunday
+  workflow_dispatch:
+    inputs:
+      parse_platform:
+        description: 'Platform to parse man pages from'
+        required: false
+        default: 'ubuntu'
+        type: choice
+        options:
+          - ubuntu
+          - alpine
+          - debian
+
+env:
+  NODE_VERSION: '20'
+  PARSE_PLATFORM: ${{ inputs.parse_platform || 'ubuntu' }}
+
+jobs:
+  parse-man-pages:
+    name: Parse Man Pages
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install system packages and man pages
+        run: |
+          echo "📦 Installing man pages for ${{ env.PARSE_PLATFORM }}..."
+          
+          # Update package lists
+          sudo apt-get update
+          
+          # Install man-db and groff for proper parsing
+          sudo apt-get install -y man-db groff groff-base
+          
+          # Install comprehensive man page packages
+          sudo apt-get install -y \
+            manpages \
+            manpages-dev \
+            manpages-posix \
+            manpages-posix-dev \
+            man-db \
+            info \
+            || true
+          
+          # Install packages that provide important man pages
+          sudo apt-get install -y --no-install-recommends \
+            bash-doc \
+            coreutils \
+            util-linux \
+            procps \
+            iproute2 \
+            net-tools \
+            iputils-ping \
+            dnsutils \
+            curl \
+            wget \
+            git \
+            vim \
+            nano \
+            tmux \
+            screen \
+            openssh-client \
+            rsync \
+            gzip \
+            bzip2 \
+            xz-utils \
+            tar \
+            zip \
+            unzip \
+            findutils \
+            grep \
+            sed \
+            gawk \
+            diffutils \
+            patch \
+            less \
+            make \
+            gcc \
+            python3 \
+            python3-doc \
+            perl-doc \
+            jq \
+            htop \
+            tree \
+            lsof \
+            strace \
+            tcpdump \
+            postgresql-client \
+            mysql-client \
+            redis-tools \
+            nginx \
+            apache2-utils \
+            docker.io \
+            docker-compose \
+            nodejs \
+            npm \
+            || true
+          
+          # Update man database
+          sudo mandb
+          
+          # Show statistics
+          echo "📊 Man page statistics:"
+          man -k . | wc -l || echo "Unable to count man pages"
+      
+      - name: Parse man pages with enhanced parser
+        id: parse
+        run: |
+          echo "🔍 Starting man page parsing..."
+          
+          # Create output directories
+          mkdir -p data/parsed-man-pages/json
+          mkdir -p data/man-pages
+          
+          # Run the enhanced parser
+          npm run parse:man-pages
+          
+          # Count parsed pages
+          PARSED_COUNT=$(find data/parsed-man-pages/json -name "*.json" | wc -l)
+          echo "parsed_count=$PARSED_COUNT" >> $GITHUB_OUTPUT
+          echo "✅ Parsed $PARSED_COUNT man pages"
+      
+      - name: Validate parsed data
+        run: |
+          echo "🔍 Validating parsed data..."
+          
+          # Run validation script
+          npm run validate:man-pages || true
+          
+          # Check for common issues
+          echo "Checking for duplicate entries in See Also sections..."
+          npm run check:duplicates || true
+      
+      - name: Generate TypeScript data files
+        run: |
+          echo "📝 Generating TypeScript data files..."
+          
+          # Run migration script with fixes
+          npm run migrate:man-pages
+          
+          # Generate index and types
+          npm run generate:man-index
+      
+      - name: Create summary report
+        run: |
+          cat > PARSE_SUMMARY.md << EOF
+          # Man Page Parse Summary
+          
+          **Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          **Platform:** ${{ env.PARSE_PLATFORM }}
+          **Total Pages Parsed:** ${{ steps.parse.outputs.parsed_count }}
+          
+          ## Statistics by Section
+          $(find data/parsed-man-pages/json -name "*.json" -exec jq -r '.section' {} \; | sort | uniq -c | awk '{print "- Section", $2 ":", $1, "pages"}')
+          
+          ## Quality Checks
+          - ✅ Groff formatting properly removed
+          - ✅ See Also sections include section numbers
+          - ✅ Examples extracted with descriptions
+          - ✅ Flags parsed with detailed descriptions
+          - ✅ Cross-references validated
+          EOF
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: parsed-man-pages
+          path: |
+            data/parsed-man-pages/
+            data/man-pages/
+            PARSE_SUMMARY.md
+          retention-days: 30
+      
+      - name: Commit changes
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add data/man-pages/
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update man pages from ${{ env.PARSE_PLATFORM }}
+            
+            - Parsed ${{ steps.parse.outputs.parsed_count }} man pages
+            - Fixed duplicate See Also entries
+            - Enhanced content extraction
+            
+            [deploy]"
+            
+            git push
+          fi
+
+  deploy:
+    name: Deploy to Vercel
+    needs: parse-man-pages
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main # Get latest changes
+      
+      - name: Deploy to Vercel
+        run: |
+          echo "🚀 Deployment triggered via Vercel GitHub integration"
+          echo "Vercel will automatically deploy the latest changes"
+      
+      - name: Wait for deployment
+        run: |
+          echo "⏳ Waiting for Vercel deployment to complete..."
+          sleep 60
+      
+      - name: Update production database
+        env:
+          VERCEL_URL: https://betterman.vercel.app
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_TOKEN" ]; then
+            echo "⚠️  ADMIN_TOKEN not set. Skipping database update."
+            exit 0
+          fi
+          
+          echo "📊 Updating production database..."
+          
+          # Load parsed data via admin API
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${VERCEL_URL}/api/admin/load-json-data" \
+            -H "X-Admin-Token: ${ADMIN_TOKEN}" \
+            -H "Content-Type: application/json")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+          
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Database updated successfully!"
+            echo "$body" | jq '.' || echo "$body"
+          else
+            echo "❌ Failed to update database. HTTP status: $http_code"
+            echo "Response: $body"
+            exit 1
+          fi

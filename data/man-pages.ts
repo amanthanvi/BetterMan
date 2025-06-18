@@ -1,4 +1,9 @@
 // Man page data structure
+export interface SeeAlsoItem {
+  name: string
+  section: number
+}
+
 export interface ManPage {
   name: string
   section: number
@@ -21,7 +26,7 @@ export interface ManPage {
   }>
   examples?: string[]
   relatedCommands?: string[]
-  seeAlso?: string[]
+  seeAlso?: SeeAlsoItem[]
   keywords?: string[]
   author?: string
   bugs?: string

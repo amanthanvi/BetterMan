@@ -1,8 +1,40 @@
 // Auto-generated from parsed man pages
-// Generated at: 2025-06-17T19:43:17.852Z
+// Generated at: 2025-06-18T12:51:00.230Z
 // Total pages: 148
+// Fixed seeAlso references: 132
 
-import { ManPage } from './types'
+export interface SeeAlsoItem {
+  name: string
+  section: number
+}
+
+export interface ManPage {
+  name: string
+  section: number
+  title: string
+  description: string
+  synopsis?: string
+  category?: string
+  isCommon?: boolean
+  searchContent?: string
+  sections?: Array<{
+    id: string
+    title: string
+    content: string
+    level: number
+    subsections?: any[]
+  }>
+  options?: Array<{
+    flag: string
+    description: string
+  }>
+  examples?: string[]
+  relatedCommands?: string[]
+  seeAlso?: SeeAlsoItem[]
+  keywords?: string[]
+  author?: string
+  bugs?: string
+}
 
 export const enhancedManPages: ManPage[] = [
   {
@@ -43,24 +75,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "alias",
@@ -95,7 +181,6 @@ export const enhancedManPages: ManPage[] = [
       "grep",
       "lex",
       "sed",
-      "awk",
       "scanning",
       "processing",
       "language",
@@ -109,9 +194,18 @@ export const enhancedManPages: ManPage[] = [
       "lines"
     ],
     "seeAlso": [
-      "grep",
-      "lex",
-      "sed"
+      {
+        "name": "grep",
+        "section": 1
+      },
+      {
+        "name": "lex",
+        "section": 1
+      },
+      {
+        "name": "sed",
+        "section": 1
+      }
     ],
     "keywords": [
       "awk",
@@ -144,7 +238,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "csh",
       "sh",
-      "basename",
       "dirname",
       "return",
       "filename",
@@ -159,10 +252,18 @@ export const enhancedManPages: ManPage[] = [
       "prefix"
     ],
     "seeAlso": [
-      "csh",
-      "sh",
-      "basename",
-      "dirname"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "dirname",
+        "section": 1
+      }
     ],
     "keywords": [
       "basename",
@@ -211,7 +312,10 @@ export const enhancedManPages: ManPage[] = [
       "standard"
     ],
     "seeAlso": [
-      "dc"
+      {
+        "name": "dc",
+        "section": 1
+      }
     ],
     "keywords": [
       "bc",
@@ -267,24 +371,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "bg",
@@ -333,24 +491,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "builtin",
@@ -383,7 +595,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "bzip2",
-      "bunzip2",
       "block-sorting",
       "compressor",
       "bzcat",
@@ -437,7 +648,6 @@ export const enhancedManPages: ManPage[] = [
     "options": [],
     "examples": [],
     "relatedCommands": [
-      "bzip2",
       "bunzip2",
       "block-sorting",
       "compressor",
@@ -562,7 +772,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "calendar",
       "strftime",
-      "cal",
       "ncal",
       "displays",
       "date",
@@ -577,8 +786,14 @@ export const enhancedManPages: ManPage[] = [
       "traditional"
     ],
     "seeAlso": [
-      "calendar",
-      "strftime"
+      {
+        "name": "calendar",
+        "section": 1
+      },
+      {
+        "name": "strftime",
+        "section": 1
+      }
     ],
     "keywords": [
       "cal",
@@ -663,7 +878,6 @@ export const enhancedManPages: ManPage[] = [
       "zcat",
       "fcntl",
       "setbuf",
-      "cat",
       "concatenate",
       "print",
       "belnstuv",
@@ -671,15 +885,42 @@ export const enhancedManPages: ManPage[] = [
       "reads"
     ],
     "seeAlso": [
-      "head",
-      "more",
-      "pr",
-      "sh",
-      "tail",
-      "vis",
-      "zcat",
-      "fcntl",
-      "setbuf"
+      {
+        "name": "head",
+        "section": 1
+      },
+      {
+        "name": "more",
+        "section": 1
+      },
+      {
+        "name": "pr",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "tail",
+        "section": 1
+      },
+      {
+        "name": "vis",
+        "section": 1
+      },
+      {
+        "name": "zcat",
+        "section": 1
+      },
+      {
+        "name": "fcntl",
+        "section": 1
+      },
+      {
+        "name": "setbuf",
+        "section": 1
+      }
     ],
     "keywords": [
       "cat",
@@ -732,24 +973,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "cd",
@@ -812,7 +1107,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "chflags",
       "install",
-      "chmod",
       "stat",
       "umask",
       "fts",
@@ -827,17 +1121,46 @@ export const enhancedManPages: ManPage[] = [
       "mode"
     ],
     "seeAlso": [
-      "chflags",
-      "install",
-      "chmod",
-      "stat",
-      "umask",
-      "fts",
-      "setmode",
-      "sticky",
-      "symlink",
-      "chown",
-      "mount"
+      {
+        "name": "chflags",
+        "section": 1
+      },
+      {
+        "name": "install",
+        "section": 1
+      },
+      {
+        "name": "stat",
+        "section": 1
+      },
+      {
+        "name": "umask",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "setmode",
+        "section": 1
+      },
+      {
+        "name": "sticky",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      },
+      {
+        "name": "chown",
+        "section": 1
+      },
+      {
+        "name": "mount",
+        "section": 1
+      }
     ],
     "keywords": [
       "chmod",
@@ -913,7 +1236,6 @@ export const enhancedManPages: ManPage[] = [
       "chgrp",
       "chmod",
       "find",
-      "chown",
       "fts",
       "compat",
       "symlink",
@@ -927,13 +1249,30 @@ export const enhancedManPages: ManPage[] = [
       "links"
     ],
     "seeAlso": [
-      "chgrp",
-      "chmod",
-      "find",
-      "chown",
-      "fts",
-      "compat",
-      "symlink"
+      {
+        "name": "chgrp",
+        "section": 1
+      },
+      {
+        "name": "chmod",
+        "section": 1
+      },
+      {
+        "name": "find",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "compat",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      }
     ],
     "keywords": [
       "chown",
@@ -970,7 +1309,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "tput",
       "terminfo",
-      "clear",
       "terminal",
       "screen",
       "clears",
@@ -985,9 +1323,14 @@ export const enhancedManPages: ManPage[] = [
       "defined"
     ],
     "seeAlso": [
-      "tput",
-      "terminfo",
-      "clear"
+      {
+        "name": "tput",
+        "section": 1
+      },
+      {
+        "name": "terminfo",
+        "section": 1
+      }
     ],
     "keywords": [
       "clear",
@@ -1051,7 +1394,6 @@ export const enhancedManPages: ManPage[] = [
       "ls",
       "paste",
       "sort",
-      "column",
       "columnate",
       "lists",
       "columns",
@@ -1064,10 +1406,22 @@ export const enhancedManPages: ManPage[] = [
       "multiple"
     ],
     "seeAlso": [
-      "colrm",
-      "ls",
-      "paste",
-      "sort"
+      {
+        "name": "colrm",
+        "section": 1
+      },
+      {
+        "name": "ls",
+        "section": 1
+      },
+      {
+        "name": "paste",
+        "section": 1
+      },
+      {
+        "name": "sort",
+        "section": 1
+      }
     ],
     "keywords": [
       "column",
@@ -1126,7 +1480,6 @@ export const enhancedManPages: ManPage[] = [
       "diff",
       "sort",
       "uniq",
-      "comm",
       "select",
       "reject",
       "lines",
@@ -1139,10 +1492,22 @@ export const enhancedManPages: ManPage[] = [
       "should"
     ],
     "seeAlso": [
-      "cmp",
-      "diff",
-      "sort",
-      "uniq"
+      {
+        "name": "cmp",
+        "section": 1
+      },
+      {
+        "name": "diff",
+        "section": 1
+      },
+      {
+        "name": "sort",
+        "section": 1
+      },
+      {
+        "name": "uniq",
+        "section": 1
+      }
     ],
     "keywords": [
       "comm",
@@ -1205,24 +1570,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "command",
@@ -1283,7 +1702,6 @@ export const enhancedManPages: ManPage[] = [
       "zcat",
       "zmore",
       "znew",
-      "compress",
       "uncompress",
       "expand",
       "data",
@@ -1294,12 +1712,30 @@ export const enhancedManPages: ManPage[] = [
       "using"
     ],
     "seeAlso": [
-      "gunzip",
-      "gzexe",
-      "gzip",
-      "zcat",
-      "zmore",
-      "znew"
+      {
+        "name": "gunzip",
+        "section": 1
+      },
+      {
+        "name": "gzexe",
+        "section": 1
+      },
+      {
+        "name": "gzip",
+        "section": 1
+      },
+      {
+        "name": "zcat",
+        "section": 1
+      },
+      {
+        "name": "zmore",
+        "section": 1
+      },
+      {
+        "name": "znew",
+        "section": 1
+      }
     ],
     "keywords": [
       "compress",
@@ -1425,15 +1861,42 @@ export const enhancedManPages: ManPage[] = [
       "form"
     ],
     "seeAlso": [
-      "install",
-      "mv",
-      "rcp",
-      "clonefile",
-      "copyfile",
-      "umask",
-      "fts",
-      "compat",
-      "symlink"
+      {
+        "name": "install",
+        "section": 1
+      },
+      {
+        "name": "mv",
+        "section": 1
+      },
+      {
+        "name": "rcp",
+        "section": 1
+      },
+      {
+        "name": "clonefile",
+        "section": 1
+      },
+      {
+        "name": "copyfile",
+        "section": 1
+      },
+      {
+        "name": "umask",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "compat",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      }
     ],
     "keywords": [
       "cp",
@@ -1490,7 +1953,6 @@ export const enhancedManPages: ManPage[] = [
       "sed",
       "split",
       "re_format",
-      "csplit",
       "based",
       "context",
       "prefix",
@@ -1504,9 +1966,18 @@ export const enhancedManPages: ManPage[] = [
       "patterns"
     ],
     "seeAlso": [
-      "sed",
-      "split",
-      "re_format"
+      {
+        "name": "sed",
+        "section": 1
+      },
+      {
+        "name": "split",
+        "section": 1
+      },
+      {
+        "name": "re_format",
+        "section": 1
+      }
     ],
     "keywords": [
       "csplit",
@@ -1547,7 +2018,6 @@ export const enhancedManPages: ManPage[] = [
       "curl_getdate",
       "curl_easy_setopt",
       "curl_global_trace",
-      "curl",
       "transfer",
       "options",
       "tool",
@@ -1559,13 +2029,26 @@ export const enhancedManPages: ManPage[] = [
       "these"
     ],
     "seeAlso": [
-      "netrc",
-      "ftp",
-      "curl_getdate",
-      "curl_getdate",
-      "curl_easy_setopt",
-      "curl_getdate",
-      "curl_global_trace"
+      {
+        "name": "netrc",
+        "section": 1
+      },
+      {
+        "name": "ftp",
+        "section": 1
+      },
+      {
+        "name": "curl_getdate",
+        "section": 1
+      },
+      {
+        "name": "curl_easy_setopt",
+        "section": 1
+      },
+      {
+        "name": "curl_global_trace",
+        "section": 1
+      }
     ],
     "keywords": [
       "curl",
@@ -1631,7 +2114,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "colrm",
       "paste",
-      "cut",
       "out",
       "selected",
       "portions",
@@ -1646,8 +2128,14 @@ export const enhancedManPages: ManPage[] = [
       "them"
     ],
     "seeAlso": [
-      "colrm",
-      "paste"
+      {
+        "name": "colrm",
+        "section": 1
+      },
+      {
+        "name": "paste",
+        "section": 1
+      }
     ],
     "keywords": [
       "cut",
@@ -1743,7 +2231,6 @@ export const enhancedManPages: ManPage[] = [
       "strftime",
       "strptime",
       "tzset",
-      "date",
       "display",
       "set",
       "time",
@@ -1753,13 +2240,34 @@ export const enhancedManPages: ManPage[] = [
       "val"
     ],
     "seeAlso": [
-      "locale",
-      "clock_gettime",
-      "gettimeofday",
-      "getutxent",
-      "strftime",
-      "strptime",
-      "tzset"
+      {
+        "name": "locale",
+        "section": 1
+      },
+      {
+        "name": "clock_gettime",
+        "section": 1
+      },
+      {
+        "name": "gettimeofday",
+        "section": 1
+      },
+      {
+        "name": "getutxent",
+        "section": 1
+      },
+      {
+        "name": "strftime",
+        "section": 1
+      },
+      {
+        "name": "strptime",
+        "section": 1
+      },
+      {
+        "name": "tzset",
+        "section": 1
+      }
     ],
     "keywords": [
       "date",
@@ -1882,7 +2390,10 @@ export const enhancedManPages: ManPage[] = [
       "obase"
     ],
     "seeAlso": [
-      "bc"
+      {
+        "name": "bc",
+        "section": 1
+      }
     ],
     "keywords": [
       "dc",
@@ -2019,22 +2530,70 @@ export const enhancedManPages: ManPage[] = [
       "quot"
     ],
     "seeAlso": [
-      "lsvfs",
-      "quota",
-      "fstatfs",
-      "getfsstat",
-      "statfs",
-      "getbsize",
-      "getmntinfo",
-      "libxo",
-      "localeconv",
-      "xo_parse_args",
-      "compat",
-      "fstab",
-      "mount",
-      "pstat",
-      "quot",
-      "swapinfo"
+      {
+        "name": "lsvfs",
+        "section": 1
+      },
+      {
+        "name": "quota",
+        "section": 1
+      },
+      {
+        "name": "fstatfs",
+        "section": 1
+      },
+      {
+        "name": "getfsstat",
+        "section": 1
+      },
+      {
+        "name": "statfs",
+        "section": 1
+      },
+      {
+        "name": "getbsize",
+        "section": 1
+      },
+      {
+        "name": "getmntinfo",
+        "section": 1
+      },
+      {
+        "name": "libxo",
+        "section": 1
+      },
+      {
+        "name": "localeconv",
+        "section": 1
+      },
+      {
+        "name": "xo_parse_args",
+        "section": 1
+      },
+      {
+        "name": "compat",
+        "section": 1
+      },
+      {
+        "name": "fstab",
+        "section": 1
+      },
+      {
+        "name": "mount",
+        "section": 1
+      },
+      {
+        "name": "pstat",
+        "section": 1
+      },
+      {
+        "name": "quot",
+        "section": 1
+      },
+      {
+        "name": "swapinfo",
+        "section": 1
+      }
     ],
     "keywords": [
       "df",
@@ -2256,7 +2815,6 @@ export const enhancedManPages: ManPage[] = [
       "pr",
       "sdiff",
       "compat",
-      "diff",
       "differential",
       "directory",
       "comparator",
@@ -2265,14 +2823,38 @@ export const enhancedManPages: ManPage[] = [
       "brief"
     ],
     "seeAlso": [
-      "cmp",
-      "comm",
-      "diff3",
-      "ed",
-      "patch",
-      "pr",
-      "sdiff",
-      "compat"
+      {
+        "name": "cmp",
+        "section": 1
+      },
+      {
+        "name": "comm",
+        "section": 1
+      },
+      {
+        "name": "diff3",
+        "section": 1
+      },
+      {
+        "name": "ed",
+        "section": 1
+      },
+      {
+        "name": "patch",
+        "section": 1
+      },
+      {
+        "name": "pr",
+        "section": 1
+      },
+      {
+        "name": "sdiff",
+        "section": 1
+      },
+      {
+        "name": "compat",
+        "section": 1
+      }
     ],
     "keywords": [
       "diff",
@@ -2316,7 +2898,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "ps",
-      "dig",
       "lookup",
       "utility",
       "server",
@@ -2332,7 +2913,10 @@ export const enhancedManPages: ManPage[] = [
       "queryopt"
     ],
     "seeAlso": [
-      "ps"
+      {
+        "name": "ps",
+        "section": 1
+      }
     ],
     "keywords": [
       "dig",
@@ -2370,7 +2954,6 @@ export const enhancedManPages: ManPage[] = [
       "csh",
       "sh",
       "basename",
-      "dirname",
       "return",
       "filename",
       "directory",
@@ -2384,10 +2967,18 @@ export const enhancedManPages: ManPage[] = [
       "prefix"
     ],
     "seeAlso": [
-      "csh",
-      "sh",
-      "basename",
-      "dirname"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "basename",
+        "section": 1
+      }
     ],
     "keywords": [
       "dirname",
@@ -2528,11 +3119,26 @@ export const enhancedManPages: ManPage[] = [
       "displays"
     ],
     "seeAlso": [
-      "df",
-      "chflags",
-      "fts",
-      "symlink",
-      "quot"
+      {
+        "name": "df",
+        "section": 1
+      },
+      {
+        "name": "chflags",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      },
+      {
+        "name": "quot",
+        "section": 1
+      }
     ],
     "keywords": [
       "du",
@@ -2575,7 +3181,6 @@ export const enhancedManPages: ManPage[] = [
       "csh",
       "printf",
       "sh",
-      "echo",
       "write",
       "arguments",
       "standard",
@@ -2588,10 +3193,22 @@ export const enhancedManPages: ManPage[] = [
       "operands"
     ],
     "seeAlso": [
-      "builtin",
-      "csh",
-      "printf",
-      "sh"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      }
     ],
     "keywords": [
       "echo",
@@ -2677,7 +3294,6 @@ export const enhancedManPages: ManPage[] = [
       "execvp",
       "conf",
       "environ",
-      "env",
       "set",
       "environment",
       "execute",
@@ -2689,11 +3305,26 @@ export const enhancedManPages: ManPage[] = [
       "altpath"
     ],
     "seeAlso": [
-      "printenv",
-      "sh",
-      "execvp",
-      "conf",
-      "environ"
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "execvp",
+        "section": 1
+      },
+      {
+        "name": "conf",
+        "section": 1
+      },
+      {
+        "name": "environ",
+        "section": 1
+      }
     ],
     "keywords": [
       "env",
@@ -2748,24 +3379,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "exit",
@@ -2806,7 +3491,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "examples": [],
     "relatedCommands": [
-      "expand",
       "unexpand",
       "tabs",
       "spaces",
@@ -2878,24 +3562,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "export",
@@ -2936,7 +3674,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "sh",
       "test",
-      "expr",
       "evaluate",
       "expression",
       "utility",
@@ -2951,8 +3688,14 @@ export const enhancedManPages: ManPage[] = [
       "passed"
     ],
     "seeAlso": [
-      "sh",
-      "test"
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      }
     ],
     "keywords": [
       "expr",
@@ -2988,8 +3731,6 @@ export const enhancedManPages: ManPage[] = [
     "options": [],
     "examples": [],
     "relatedCommands": [
-      "FACTOR",
-      "factor",
       "numbers",
       "prime",
       "factors",
@@ -3004,9 +3745,7 @@ export const enhancedManPages: ManPage[] = [
       "standard",
       "input"
     ],
-    "seeAlso": [
-      "FACTOR"
-    ],
+    "seeAlso": [],
     "keywords": [
       "factor",
       "numbers",
@@ -3044,7 +3783,6 @@ export const enhancedManPages: ManPage[] = [
       "csh",
       "sh",
       "true",
-      "false",
       "return",
       "value",
       "utility",
@@ -3057,10 +3795,22 @@ export const enhancedManPages: ManPage[] = [
       "provide"
     ],
     "seeAlso": [
-      "builtin",
-      "csh",
-      "sh",
-      "true"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      }
     ],
     "keywords": [
       "false",
@@ -3146,7 +3896,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "gpt",
       "pdisk",
-      "fdisk",
       "partition",
       "maintenance",
       "program",
@@ -3161,8 +3910,14 @@ export const enhancedManPages: ManPage[] = [
       "boot"
     ],
     "seeAlso": [
-      "gpt",
-      "pdisk"
+      {
+        "name": "gpt",
+        "section": 1
+      },
+      {
+        "name": "pdisk",
+        "section": 1
+      }
     ],
     "keywords": [
       "fdisk",
@@ -3216,24 +3971,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "fg",
@@ -3391,12 +4200,26 @@ export const enhancedManPages: ManPage[] = [
       "value"
     ],
     "seeAlso": [
-      "ls",
-      "utime",
-      "utimes",
-      "stat",
-      "stat",
-      "cut"
+      {
+        "name": "ls",
+        "section": 1
+      },
+      {
+        "name": "utime",
+        "section": 1
+      },
+      {
+        "name": "utimes",
+        "section": 1
+      },
+      {
+        "name": "stat",
+        "section": 1
+      },
+      {
+        "name": "cut",
+        "section": 1
+      }
     ],
     "keywords": [
       "file",
@@ -3482,22 +4305,70 @@ export const enhancedManPages: ManPage[] = [
       "re_format"
     ],
     "seeAlso": [
-      "chflags",
-      "chmod",
-      "locate",
-      "lsvfs",
-      "whereis",
-      "which",
-      "xargs",
-      "stat",
-      "acl",
-      "fts",
-      "getgrent",
-      "getpwent",
-      "strmode",
-      "ascii",
-      "re_format",
-      "symlink"
+      {
+        "name": "chflags",
+        "section": 1
+      },
+      {
+        "name": "chmod",
+        "section": 1
+      },
+      {
+        "name": "locate",
+        "section": 1
+      },
+      {
+        "name": "lsvfs",
+        "section": 1
+      },
+      {
+        "name": "whereis",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "xargs",
+        "section": 1
+      },
+      {
+        "name": "stat",
+        "section": 1
+      },
+      {
+        "name": "acl",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "getgrent",
+        "section": 1
+      },
+      {
+        "name": "getpwent",
+        "section": 1
+      },
+      {
+        "name": "strmode",
+        "section": 1
+      },
+      {
+        "name": "ascii",
+        "section": 1
+      },
+      {
+        "name": "re_format",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      }
     ],
     "keywords": [
       "find",
@@ -3588,7 +4459,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "fold",
       "mail",
-      "fmt",
       "simple",
       "text",
       "formatter",
@@ -3603,8 +4473,14 @@ export const enhancedManPages: ManPage[] = [
       "reads"
     ],
     "seeAlso": [
-      "fold",
-      "mail"
+      {
+        "name": "fold",
+        "section": 1
+      },
+      {
+        "name": "mail",
+        "section": 1
+      }
     ],
     "keywords": [
       "fmt",
@@ -3651,7 +4527,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "expand",
       "fmt",
-      "fold",
       "long",
       "lines",
       "finite",
@@ -3666,8 +4541,14 @@ export const enhancedManPages: ManPage[] = [
       "specified"
     ],
     "seeAlso": [
-      "expand",
-      "fmt"
+      {
+        "name": "expand",
+        "section": 1
+      },
+      {
+        "name": "fmt",
+        "section": 1
+      }
     ],
     "keywords": [
       "fold",
@@ -3726,7 +4607,6 @@ export const enhancedManPages: ManPage[] = [
       "posix_memalign",
       "libgmalloc",
       "calloc",
-      "free",
       "malloc",
       "realloc",
       "reallocf",
@@ -3735,13 +4615,34 @@ export const enhancedManPages: ManPage[] = [
       "memory"
     ],
     "seeAlso": [
-      "leaks",
-      "malloc_history",
-      "abort",
-      "malloc_size",
-      "malloc_zone_malloc",
-      "posix_memalign",
-      "libgmalloc"
+      {
+        "name": "leaks",
+        "section": 1
+      },
+      {
+        "name": "malloc_history",
+        "section": 1
+      },
+      {
+        "name": "abort",
+        "section": 1
+      },
+      {
+        "name": "malloc_size",
+        "section": 1
+      },
+      {
+        "name": "malloc_zone_malloc",
+        "section": 1
+      },
+      {
+        "name": "posix_memalign",
+        "section": 1
+      },
+      {
+        "name": "libgmalloc",
+        "section": 1
+      }
     ],
     "keywords": [
       "free",
@@ -3785,7 +4686,6 @@ export const enhancedManPages: ManPage[] = [
       "getfsent",
       "fstab",
       "reboot",
-      "fsck",
       "filesystem",
       "consistency",
       "check",
@@ -3795,13 +4695,34 @@ export const enhancedManPages: ManPage[] = [
       "first"
     ],
     "seeAlso": [
-      "fs",
-      "fsck_hfs",
-      "fsck_apfs",
-      "fsck_msdos",
-      "getfsent",
-      "fstab",
-      "reboot"
+      {
+        "name": "fs",
+        "section": 1
+      },
+      {
+        "name": "fsck_hfs",
+        "section": 1
+      },
+      {
+        "name": "fsck_apfs",
+        "section": 1
+      },
+      {
+        "name": "fsck_msdos",
+        "section": 1
+      },
+      {
+        "name": "getfsent",
+        "section": 1
+      },
+      {
+        "name": "fstab",
+        "section": 1
+      },
+      {
+        "name": "reboot",
+        "section": 1
+      }
     ],
     "keywords": [
       "fsck",
@@ -3925,7 +4846,6 @@ export const enhancedManPages: ManPage[] = [
       "git-http-backend",
       "git-checkout",
       "git-diff",
-      "git",
       "stupid",
       "content",
       "tracker",
@@ -3934,19 +4854,38 @@ export const enhancedManPages: ManPage[] = [
       "path"
     ],
     "seeAlso": [
-      "git-config",
-      "git-var",
-      "config",
-      "rebase",
-      "git-config",
-      "git-config",
-      "git-config",
-      "git-prune",
-      "config",
-      "git-config",
-      "git-http-backend",
-      "git-checkout",
-      "git-diff"
+      {
+        "name": "git-config",
+        "section": 1
+      },
+      {
+        "name": "git-var",
+        "section": 1
+      },
+      {
+        "name": "config",
+        "section": 1
+      },
+      {
+        "name": "rebase",
+        "section": 1
+      },
+      {
+        "name": "git-prune",
+        "section": 1
+      },
+      {
+        "name": "git-http-backend",
+        "section": 1
+      },
+      {
+        "name": "git-checkout",
+        "section": 1
+      },
+      {
+        "name": "git-diff",
+        "section": 1
+      }
     ],
     "keywords": [
       "git",
@@ -4207,7 +5146,6 @@ export const enhancedManPages: ManPage[] = [
       "read",
       "re_format",
       "xz",
-      "grep",
       "egrep",
       "fgrep",
       "rgrep",
@@ -4219,11 +5157,26 @@ export const enhancedManPages: ManPage[] = [
       "zfgrep"
     ],
     "seeAlso": [
-      "bzip2",
-      "mmap",
-      "read",
-      "re_format",
-      "xz"
+      {
+        "name": "bzip2",
+        "section": 1
+      },
+      {
+        "name": "mmap",
+        "section": 1
+      },
+      {
+        "name": "read",
+        "section": 1
+      },
+      {
+        "name": "re_format",
+        "section": 1
+      },
+      {
+        "name": "xz",
+        "section": 1
+      }
     ],
     "keywords": [
       "grep",
@@ -4268,7 +5221,6 @@ export const enhancedManPages: ManPage[] = [
       "fts",
       "zlib",
       "gzip",
-      "gunzip",
       "zcat",
       "compression",
       "decompression",
@@ -4279,11 +5231,26 @@ export const enhancedManPages: ManPage[] = [
       "program"
     ],
     "seeAlso": [
-      "bzip2",
-      "compress",
-      "xz",
-      "fts",
-      "zlib"
+      {
+        "name": "bzip2",
+        "section": 1
+      },
+      {
+        "name": "compress",
+        "section": 1
+      },
+      {
+        "name": "xz",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "zlib",
+        "section": 1
+      }
     ],
     "keywords": [
       "gunzip",
@@ -4325,7 +5292,6 @@ export const enhancedManPages: ManPage[] = [
       "xz",
       "fts",
       "zlib",
-      "gzip",
       "gunzip",
       "zcat",
       "compression",
@@ -4337,11 +5303,26 @@ export const enhancedManPages: ManPage[] = [
       "program"
     ],
     "seeAlso": [
-      "bzip2",
-      "compress",
-      "xz",
-      "fts",
-      "zlib"
+      {
+        "name": "bzip2",
+        "section": 1
+      },
+      {
+        "name": "compress",
+        "section": 1
+      },
+      {
+        "name": "xz",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "zlib",
+        "section": 1
+      }
     ],
     "keywords": [
       "gzip",
@@ -4394,24 +5375,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "hash",
@@ -4456,7 +5491,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "relatedCommands": [
       "tail",
-      "head",
       "display",
       "first",
       "lines",
@@ -4472,7 +5506,10 @@ export const enhancedManPages: ManPage[] = [
       "defaults"
     ],
     "seeAlso": [
-      "tail"
+      {
+        "name": "tail",
+        "section": 1
+      }
     ],
     "keywords": [
       "head",
@@ -4564,7 +5601,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "relatedCommands": [
       "od",
-      "hexdump",
       "decimal",
       "hexadecimal",
       "octal",
@@ -4580,7 +5616,10 @@ export const enhancedManPages: ManPage[] = [
       "specified"
     ],
     "seeAlso": [
-      "od"
+      {
+        "name": "od",
+        "section": 1
+      }
     ],
     "keywords": [
       "hexdump",
@@ -4636,24 +5675,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "history",
@@ -4685,7 +5778,6 @@ export const enhancedManPages: ManPage[] = [
     "options": [],
     "examples": [],
     "relatedCommands": [
-      "host",
       "lookup",
       "utility",
       "class",
@@ -4740,7 +5832,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "gethostname",
       "scutil",
-      "hostname",
       "set",
       "print",
       "name",
@@ -4755,8 +5846,14 @@ export const enhancedManPages: ManPage[] = [
       "keep"
     ],
     "seeAlso": [
-      "gethostname",
-      "scutil"
+      {
+        "name": "gethostname",
+        "section": 1
+      },
+      {
+        "name": "scutil",
+        "section": 1
+      }
     ],
     "keywords": [
       "hostname",
@@ -4852,8 +5949,14 @@ export const enhancedManPages: ManPage[] = [
       "effective"
     ],
     "seeAlso": [
-      "groups",
-      "who"
+      {
+        "name": "groups",
+        "section": 1
+      },
+      {
+        "name": "who",
+        "section": 1
+      }
     ],
     "keywords": [
       "id",
@@ -4992,7 +6095,6 @@ export const enhancedManPages: ManPage[] = [
       "netstat",
       "netintro",
       "sysctl",
-      "ifconfig",
       "configure",
       "network",
       "interface",
@@ -5006,9 +6108,18 @@ export const enhancedManPages: ManPage[] = [
       "destroy"
     ],
     "seeAlso": [
-      "netstat",
-      "netintro",
-      "sysctl"
+      {
+        "name": "netstat",
+        "section": 1
+      },
+      {
+        "name": "netintro",
+        "section": 1
+      },
+      {
+        "name": "sysctl",
+        "section": 1
+      }
     ],
     "keywords": [
       "ifconfig",
@@ -5063,24 +6174,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "jobs",
@@ -5162,7 +6327,6 @@ export const enhancedManPages: ManPage[] = [
       "paste",
       "sort",
       "uniq",
-      "join",
       "relational",
       "database",
       "operator",
@@ -5174,11 +6338,26 @@ export const enhancedManPages: ManPage[] = [
       "file1"
     ],
     "seeAlso": [
-      "awk",
-      "comm",
-      "paste",
-      "sort",
-      "uniq"
+      {
+        "name": "awk",
+        "section": 1
+      },
+      {
+        "name": "comm",
+        "section": 1
+      },
+      {
+        "name": "paste",
+        "section": 1
+      },
+      {
+        "name": "sort",
+        "section": 1
+      },
+      {
+        "name": "uniq",
+        "section": 1
+      }
     ],
     "keywords": [
       "join",
@@ -5242,7 +6421,6 @@ export const enhancedManPages: ManPage[] = [
       "killall",
       "ps",
       "sh",
-      "kill",
       "sigaction",
       "terminate",
       "signal",
@@ -5254,13 +6432,30 @@ export const enhancedManPages: ManPage[] = [
       "utility"
     ],
     "seeAlso": [
-      "builtin",
-      "csh",
-      "killall",
-      "ps",
-      "sh",
-      "kill",
-      "sigaction"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "killall",
+        "section": 1
+      },
+      {
+        "name": "ps",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "sigaction",
+        "section": 1
+      }
     ],
     "keywords": [
       "kill",
@@ -5366,7 +6561,6 @@ export const enhancedManPages: ManPage[] = [
       "kill",
       "pkill",
       "sysctl",
-      "killall",
       "processes",
       "name",
       "delmsvqz",
@@ -5380,9 +6574,18 @@ export const enhancedManPages: ManPage[] = [
       "selection"
     ],
     "seeAlso": [
-      "kill",
-      "pkill",
-      "sysctl"
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "pkill",
+        "section": 1
+      },
+      {
+        "name": "sysctl",
+        "section": 1
+      }
     ],
     "keywords": [
       "killall",
@@ -5420,7 +6623,6 @@ export const enhancedManPages: ManPage[] = [
     "options": [],
     "examples": [],
     "relatedCommands": [
-      "less",
       "opposite",
       "more",
       "help",
@@ -5528,12 +6730,26 @@ export const enhancedManPages: ManPage[] = [
       "linked"
     ],
     "seeAlso": [
-      "link",
-      "lstat",
-      "readlink",
-      "stat",
-      "symlink",
-      "symlink"
+      {
+        "name": "link",
+        "section": 1
+      },
+      {
+        "name": "lstat",
+        "section": 1
+      },
+      {
+        "name": "readlink",
+        "section": 1
+      },
+      {
+        "name": "stat",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      }
     ],
     "keywords": [
       "ln",
@@ -5771,17 +6987,50 @@ export const enhancedManPages: ManPage[] = [
       "color"
     ],
     "seeAlso": [
-      "chflags",
-      "chmod",
-      "sort",
-      "xterm",
-      "localeconv",
-      "strftime",
-      "strmode",
-      "compat",
-      "termcap",
-      "sticky",
-      "symlink"
+      {
+        "name": "chflags",
+        "section": 1
+      },
+      {
+        "name": "chmod",
+        "section": 1
+      },
+      {
+        "name": "sort",
+        "section": 1
+      },
+      {
+        "name": "xterm",
+        "section": 1
+      },
+      {
+        "name": "localeconv",
+        "section": 1
+      },
+      {
+        "name": "strftime",
+        "section": 1
+      },
+      {
+        "name": "strmode",
+        "section": 1
+      },
+      {
+        "name": "compat",
+        "section": 1
+      },
+      {
+        "name": "termcap",
+        "section": 1
+      },
+      {
+        "name": "sticky",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      }
     ],
     "keywords": [
       "ls",
@@ -5823,7 +7072,6 @@ export const enhancedManPages: ManPage[] = [
     "options": [],
     "examples": [],
     "relatedCommands": [
-      "make",
       "utility",
       "maintain",
       "groups",
@@ -5944,7 +7192,6 @@ export const enhancedManPages: ManPage[] = [
       "whatis",
       "conf",
       "mdoc",
-      "man",
       "display",
       "online",
       "manual",
@@ -5954,21 +7201,34 @@ export const enhancedManPages: ManPage[] = [
       "pager"
     ],
     "seeAlso": [
-      "apropos",
-      "intro",
-      "mandoc",
-      "manpath",
-      "whatis",
-      "intro",
-      "intro",
-      "intro",
-      "intro",
-      "conf",
-      "intro",
-      "intro",
-      "mdoc",
-      "intro",
-      "intro"
+      {
+        "name": "apropos",
+        "section": 1
+      },
+      {
+        "name": "intro",
+        "section": 1
+      },
+      {
+        "name": "mandoc",
+        "section": 1
+      },
+      {
+        "name": "manpath",
+        "section": 1
+      },
+      {
+        "name": "whatis",
+        "section": 1
+      },
+      {
+        "name": "conf",
+        "section": 1
+      },
+      {
+        "name": "mdoc",
+        "section": 1
+      }
     ],
     "keywords": [
       "man",
@@ -6021,7 +7281,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "relatedCommands": [
       "rmdir",
-      "mkdir",
       "make",
       "directories",
       "mode",
@@ -6037,7 +7296,10 @@ export const enhancedManPages: ManPage[] = [
       "modified"
     ],
     "seeAlso": [
-      "rmdir"
+      {
+        "name": "rmdir",
+        "section": 1
+      }
     ],
     "keywords": [
       "mkdir",
@@ -6082,7 +7344,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "less",
       "opposite",
-      "more",
       "help",
       "version",
       "space",
@@ -6174,7 +7435,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "examples": [],
     "relatedCommands": [
-      "mount",
       "getfsent",
       "mount_afp",
       "mount_cd9660",
@@ -6191,20 +7451,58 @@ export const enhancedManPages: ManPage[] = [
       "systems"
     ],
     "seeAlso": [
-      "mount",
-      "getfsent",
-      "mount_afp",
-      "mount_cd9660",
-      "mount_cddafs",
-      "mount_fdesc",
-      "mount_hfs",
-      "mount_apfs",
-      "mount_msdos",
-      "mount_nfs",
-      "mount_smbfs",
-      "mount_udf",
-      "mount_webdav",
-      "umount"
+      {
+        "name": "getfsent",
+        "section": 1
+      },
+      {
+        "name": "mount_afp",
+        "section": 1
+      },
+      {
+        "name": "mount_cd9660",
+        "section": 1
+      },
+      {
+        "name": "mount_cddafs",
+        "section": 1
+      },
+      {
+        "name": "mount_fdesc",
+        "section": 1
+      },
+      {
+        "name": "mount_hfs",
+        "section": 1
+      },
+      {
+        "name": "mount_apfs",
+        "section": 1
+      },
+      {
+        "name": "mount_msdos",
+        "section": 1
+      },
+      {
+        "name": "mount_nfs",
+        "section": 1
+      },
+      {
+        "name": "mount_smbfs",
+        "section": 1
+      },
+      {
+        "name": "mount_udf",
+        "section": 1
+      },
+      {
+        "name": "mount_webdav",
+        "section": 1
+      },
+      {
+        "name": "umount",
+        "section": 1
+      }
     ],
     "keywords": [
       "mount",
@@ -6290,9 +7588,18 @@ export const enhancedManPages: ManPage[] = [
       "destination"
     ],
     "seeAlso": [
-      "cp",
-      "rm",
-      "symlink"
+      {
+        "name": "cp",
+        "section": 1
+      },
+      {
+        "name": "rm",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      }
     ],
     "keywords": [
       "mv",
@@ -6341,8 +7648,14 @@ export const enhancedManPages: ManPage[] = [
       "help"
     ],
     "seeAlso": [
-      "alpine",
-      "pico"
+      {
+        "name": "alpine",
+        "section": 1
+      },
+      {
+        "name": "pico",
+        "section": 1
+      }
     ],
     "keywords": [
       "nano",
@@ -6556,8 +7869,14 @@ export const enhancedManPages: ManPage[] = [
       "apple-ecn"
     ],
     "seeAlso": [
-      "cat",
-      "ssh"
+      {
+        "name": "cat",
+        "section": 1
+      },
+      {
+        "name": "ssh",
+        "section": 1
+      }
     ],
     "keywords": [
       "nc",
@@ -6703,23 +8022,55 @@ export const enhancedManPages: ManPage[] = [
       "services",
       "iostat",
       "bpf",
-      "netstat",
       "show",
       "network",
       "status"
     ],
     "seeAlso": [
-      "nfsstat",
-      "ps",
-      "inet",
-      "unix",
-      "hosts",
-      "networks",
-      "protocols",
-      "route",
-      "services",
-      "iostat",
-      "bpf"
+      {
+        "name": "nfsstat",
+        "section": 1
+      },
+      {
+        "name": "ps",
+        "section": 1
+      },
+      {
+        "name": "inet",
+        "section": 1
+      },
+      {
+        "name": "unix",
+        "section": 1
+      },
+      {
+        "name": "hosts",
+        "section": 1
+      },
+      {
+        "name": "networks",
+        "section": 1
+      },
+      {
+        "name": "protocols",
+        "section": 1
+      },
+      {
+        "name": "route",
+        "section": 1
+      },
+      {
+        "name": "services",
+        "section": 1
+      },
+      {
+        "name": "iostat",
+        "section": 1
+      },
+      {
+        "name": "bpf",
+        "section": 1
+      }
     ],
     "keywords": [
       "netstat",
@@ -6753,7 +8104,6 @@ export const enhancedManPages: ManPage[] = [
       "getpriority",
       "setpriority",
       "renice",
-      "nice",
       "execute",
       "utility",
       "altered",
@@ -6765,11 +8115,26 @@ export const enhancedManPages: ManPage[] = [
       "incrementing"
     ],
     "seeAlso": [
-      "builtin",
-      "csh",
-      "getpriority",
-      "setpriority",
-      "renice"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "getpriority",
+        "section": 1
+      },
+      {
+        "name": "setpriority",
+        "section": 1
+      },
+      {
+        "name": "renice",
+        "section": 1
+      }
     ],
     "keywords": [
       "nice",
@@ -7439,7 +8804,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "examples": [],
     "relatedCommands": [
-      "node",
       "server-side",
       "runtime",
       "options",
@@ -7488,7 +8852,6 @@ export const enhancedManPages: ManPage[] = [
       "builtin",
       "csh",
       "signal",
-      "nohup",
       "invoke",
       "utility",
       "immune",
@@ -7502,9 +8865,18 @@ export const enhancedManPages: ManPage[] = [
       "standard"
     ],
     "seeAlso": [
-      "builtin",
-      "csh",
-      "signal"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "signal",
+        "section": 1
+      }
     ],
     "keywords": [
       "nohup",
@@ -7541,8 +8913,6 @@ export const enhancedManPages: ManPage[] = [
     "options": [],
     "examples": [],
     "relatedCommands": [
-      "NPM",
-      "npm",
       "javascript",
       "package",
       "manager",
@@ -7557,9 +8927,7 @@ export const enhancedManPages: ManPage[] = [
       "find",
       "them"
     ],
-    "seeAlso": [
-      "NPM"
-    ],
+    "seeAlso": [],
     "keywords": [
       "npm",
       "javascript",
@@ -7593,7 +8961,6 @@ export const enhancedManPages: ManPage[] = [
       "dig",
       "host",
       "named",
-      "nslookup",
       "query",
       "name",
       "servers",
@@ -7607,9 +8974,18 @@ export const enhancedManPages: ManPage[] = [
       "interactive"
     ],
     "seeAlso": [
-      "dig",
-      "host",
-      "named"
+      {
+        "name": "dig",
+        "section": 1
+      },
+      {
+        "name": "host",
+        "section": 1
+      },
+      {
+        "name": "named",
+        "section": 1
+      }
     ],
     "keywords": [
       "nslookup",
@@ -7749,8 +9125,14 @@ export const enhancedManPages: ManPage[] = [
       "displays"
     ],
     "seeAlso": [
-      "hexdump",
-      "strings"
+      {
+        "name": "hexdump",
+        "section": 1
+      },
+      {
+        "name": "strings",
+        "section": 1
+      }
     ],
     "keywords": [
       "od",
@@ -7811,57 +9193,210 @@ export const enhancedManPages: ManPage[] = [
       "openssl-enc"
     ],
     "seeAlso": [
-      "openssl",
-      "openssl-asn1parse",
-      "openssl-ca",
-      "openssl-ciphers",
-      "openssl-cmp",
-      "openssl-cms",
-      "openssl-crl",
-      "openssl-crl2pkcs7",
-      "openssl-dgst",
-      "openssl-dhparam",
-      "openssl-dsa",
-      "openssl-dsaparam",
-      "openssl-ec",
-      "openssl-ecparam",
-      "openssl-enc",
-      "openssl-engine",
-      "openssl-errstr",
-      "openssl-gendsa",
-      "openssl-genpkey",
-      "openssl-genrsa",
-      "openssl-info",
-      "openssl-kdf",
-      "openssl-mac",
-      "openssl-nseq",
-      "openssl-ocsp",
-      "openssl-passwd",
-      "openssl-pkcs12",
-      "openssl-pkcs7",
-      "openssl-pkcs8",
-      "openssl-pkey",
-      "openssl-pkeyparam",
-      "openssl-pkeyutl",
-      "openssl-prime",
-      "openssl-rand",
-      "openssl-rehash",
-      "openssl-req",
-      "openssl-rsa",
-      "openssl-rsautl",
-      "openssl-s_client",
-      "openssl-s_server",
-      "openssl-s_time",
-      "openssl-sess_id",
-      "openssl-smime",
-      "openssl-speed",
-      "openssl-spkac",
-      "openssl-srp",
-      "openssl-storeutl",
-      "openssl-ts",
-      "openssl-verify",
-      "openssl-version",
-      "openssl-x509"
+      {
+        "name": "openssl",
+        "section": 1
+      },
+      {
+        "name": "openssl-asn1parse",
+        "section": 1
+      },
+      {
+        "name": "openssl-ca",
+        "section": 1
+      },
+      {
+        "name": "openssl-ciphers",
+        "section": 1
+      },
+      {
+        "name": "openssl-cmp",
+        "section": 1
+      },
+      {
+        "name": "openssl-cms",
+        "section": 1
+      },
+      {
+        "name": "openssl-crl",
+        "section": 1
+      },
+      {
+        "name": "openssl-crl2pkcs7",
+        "section": 1
+      },
+      {
+        "name": "openssl-dgst",
+        "section": 1
+      },
+      {
+        "name": "openssl-dhparam",
+        "section": 1
+      },
+      {
+        "name": "openssl-dsa",
+        "section": 1
+      },
+      {
+        "name": "openssl-dsaparam",
+        "section": 1
+      },
+      {
+        "name": "openssl-ec",
+        "section": 1
+      },
+      {
+        "name": "openssl-ecparam",
+        "section": 1
+      },
+      {
+        "name": "openssl-enc",
+        "section": 1
+      },
+      {
+        "name": "openssl-engine",
+        "section": 1
+      },
+      {
+        "name": "openssl-errstr",
+        "section": 1
+      },
+      {
+        "name": "openssl-gendsa",
+        "section": 1
+      },
+      {
+        "name": "openssl-genpkey",
+        "section": 1
+      },
+      {
+        "name": "openssl-genrsa",
+        "section": 1
+      },
+      {
+        "name": "openssl-info",
+        "section": 1
+      },
+      {
+        "name": "openssl-kdf",
+        "section": 1
+      },
+      {
+        "name": "openssl-mac",
+        "section": 1
+      },
+      {
+        "name": "openssl-nseq",
+        "section": 1
+      },
+      {
+        "name": "openssl-ocsp",
+        "section": 1
+      },
+      {
+        "name": "openssl-passwd",
+        "section": 1
+      },
+      {
+        "name": "openssl-pkcs12",
+        "section": 1
+      },
+      {
+        "name": "openssl-pkcs7",
+        "section": 1
+      },
+      {
+        "name": "openssl-pkcs8",
+        "section": 1
+      },
+      {
+        "name": "openssl-pkey",
+        "section": 1
+      },
+      {
+        "name": "openssl-pkeyparam",
+        "section": 1
+      },
+      {
+        "name": "openssl-pkeyutl",
+        "section": 1
+      },
+      {
+        "name": "openssl-prime",
+        "section": 1
+      },
+      {
+        "name": "openssl-rand",
+        "section": 1
+      },
+      {
+        "name": "openssl-rehash",
+        "section": 1
+      },
+      {
+        "name": "openssl-req",
+        "section": 1
+      },
+      {
+        "name": "openssl-rsa",
+        "section": 1
+      },
+      {
+        "name": "openssl-rsautl",
+        "section": 1
+      },
+      {
+        "name": "openssl-s_client",
+        "section": 1
+      },
+      {
+        "name": "openssl-s_server",
+        "section": 1
+      },
+      {
+        "name": "openssl-s_time",
+        "section": 1
+      },
+      {
+        "name": "openssl-sess_id",
+        "section": 1
+      },
+      {
+        "name": "openssl-smime",
+        "section": 1
+      },
+      {
+        "name": "openssl-speed",
+        "section": 1
+      },
+      {
+        "name": "openssl-spkac",
+        "section": 1
+      },
+      {
+        "name": "openssl-srp",
+        "section": 1
+      },
+      {
+        "name": "openssl-storeutl",
+        "section": 1
+      },
+      {
+        "name": "openssl-ts",
+        "section": 1
+      },
+      {
+        "name": "openssl-verify",
+        "section": 1
+      },
+      {
+        "name": "openssl-version",
+        "section": 1
+      },
+      {
+        "name": "openssl-x509",
+        "section": 1
+      }
     ],
     "keywords": [
       "passwd",
@@ -7908,7 +9443,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "cut",
       "lam",
-      "paste",
       "merge",
       "corresponding",
       "subsequent",
@@ -7923,8 +9457,14 @@ export const enhancedManPages: ManPage[] = [
       "newline"
     ],
     "seeAlso": [
-      "cut",
-      "lam"
+      {
+        "name": "cut",
+        "section": 1
+      },
+      {
+        "name": "lam",
+        "section": 1
+      }
     ],
     "keywords": [
       "paste",
@@ -8111,7 +9651,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "examples": [],
     "relatedCommands": [
-      "patch",
       "apply",
       "diff",
       "original",
@@ -8270,7 +9809,6 @@ export const enhancedManPages: ManPage[] = [
       "sigaction",
       "pidfile",
       "re_format",
-      "pgrep",
       "pkill",
       "find",
       "signal",
@@ -8280,14 +9818,34 @@ export const enhancedManPages: ManPage[] = [
       "ppid"
     ],
     "seeAlso": [
-      "kill",
-      "killall",
-      "ps",
-      "flock",
-      "kill",
-      "sigaction",
-      "pidfile",
-      "re_format"
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "killall",
+        "section": 1
+      },
+      {
+        "name": "ps",
+        "section": 1
+      },
+      {
+        "name": "flock",
+        "section": 1
+      },
+      {
+        "name": "sigaction",
+        "section": 1
+      },
+      {
+        "name": "pidfile",
+        "section": 1
+      },
+      {
+        "name": "re_format",
+        "section": 1
+      }
     ],
     "keywords": [
       "pgrep",
@@ -8498,7 +10056,6 @@ export const enhancedManPages: ManPage[] = [
       "ifconfig",
       "traceroute",
       "ping6",
-      "ping",
       "send",
       "packets",
       "network",
@@ -8511,10 +10068,22 @@ export const enhancedManPages: ManPage[] = [
       "wait"
     ],
     "seeAlso": [
-      "netstat",
-      "ifconfig",
-      "traceroute",
-      "ping6"
+      {
+        "name": "netstat",
+        "section": 1
+      },
+      {
+        "name": "ifconfig",
+        "section": 1
+      },
+      {
+        "name": "traceroute",
+        "section": 1
+      },
+      {
+        "name": "ping6",
+        "section": 1
+      }
     ],
     "keywords": [
       "ping",
@@ -8653,7 +10222,6 @@ export const enhancedManPages: ManPage[] = [
       "pidfile",
       "re_format",
       "pgrep",
-      "pkill",
       "find",
       "signal",
       "processes",
@@ -8662,14 +10230,34 @@ export const enhancedManPages: ManPage[] = [
       "ppid"
     ],
     "seeAlso": [
-      "kill",
-      "killall",
-      "ps",
-      "flock",
-      "kill",
-      "sigaction",
-      "pidfile",
-      "re_format"
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "killall",
+        "section": 1
+      },
+      {
+        "name": "ps",
+        "section": 1
+      },
+      {
+        "name": "flock",
+        "section": 1
+      },
+      {
+        "name": "sigaction",
+        "section": 1
+      },
+      {
+        "name": "pidfile",
+        "section": 1
+      },
+      {
+        "name": "re_format",
+        "section": 1
+      }
     ],
     "keywords": [
       "pkill",
@@ -8811,10 +10399,22 @@ export const enhancedManPages: ManPage[] = [
       "utility"
     ],
     "seeAlso": [
-      "cat",
-      "more",
-      "rs",
-      "compat"
+      {
+        "name": "cat",
+        "section": 1
+      },
+      {
+        "name": "more",
+        "section": 1
+      },
+      {
+        "name": "rs",
+        "section": 1
+      },
+      {
+        "name": "compat",
+        "section": 1
+      }
     ],
     "keywords": [
       "pr",
@@ -8853,7 +10453,6 @@ export const enhancedManPages: ManPage[] = [
       "env",
       "sh",
       "environ",
-      "printenv",
       "print",
       "out",
       "environment",
@@ -8866,10 +10465,22 @@ export const enhancedManPages: ManPage[] = [
       "value"
     ],
     "seeAlso": [
-      "csh",
-      "env",
-      "sh",
-      "environ"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "env",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "environ",
+        "section": 1
+      }
     ],
     "keywords": [
       "printenv",
@@ -8916,7 +10527,6 @@ export const enhancedManPages: ManPage[] = [
       "builtin",
       "echo",
       "sh",
-      "printf",
       "formatted",
       "output",
       "format",
@@ -8930,10 +10540,18 @@ export const enhancedManPages: ManPage[] = [
       "under"
     ],
     "seeAlso": [
-      "builtin",
-      "echo",
-      "sh",
-      "printf"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      }
     ],
     "keywords": [
       "printf",
@@ -9105,11 +10723,26 @@ export const enhancedManPages: ManPage[] = [
       "displays"
     ],
     "seeAlso": [
-      "kill",
-      "w",
-      "kvm",
-      "strftime",
-      "sysctl"
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "w",
+        "section": 1
+      },
+      {
+        "name": "kvm",
+        "section": 1
+      },
+      {
+        "name": "strftime",
+        "section": 1
+      },
+      {
+        "name": "sysctl",
+        "section": 1
+      }
     ],
     "keywords": [
       "ps",
@@ -9171,7 +10804,6 @@ export const enhancedManPages: ManPage[] = [
       "realpath",
       "sh",
       "getcwd",
-      "pwd",
       "return",
       "working",
       "directory",
@@ -9182,12 +10814,30 @@ export const enhancedManPages: ManPage[] = [
       "pathname"
     ],
     "seeAlso": [
-      "builtin",
-      "cd",
-      "csh",
-      "realpath",
-      "sh",
-      "getcwd"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "cd",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "realpath",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "getcwd",
+        "section": 1
+      }
     ],
     "keywords": [
       "pwd",
@@ -9253,7 +10903,10 @@ export const enhancedManPages: ManPage[] = [
       "help-env"
     ],
     "seeAlso": [
-      "malloc"
+      {
+        "name": "malloc",
+        "section": 1
+      }
     ],
     "keywords": [
       "python3",
@@ -9333,7 +10986,6 @@ export const enhancedManPages: ManPage[] = [
       "file",
       "ls",
       "lstat",
-      "readlink",
       "stat",
       "printf",
       "strftime",
@@ -9347,13 +10999,30 @@ export const enhancedManPages: ManPage[] = [
       "about"
     ],
     "seeAlso": [
-      "file",
-      "ls",
-      "lstat",
-      "readlink",
-      "stat",
-      "printf",
-      "strftime"
+      {
+        "name": "file",
+        "section": 1
+      },
+      {
+        "name": "ls",
+        "section": 1
+      },
+      {
+        "name": "lstat",
+        "section": 1
+      },
+      {
+        "name": "stat",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "strftime",
+        "section": 1
+      }
     ],
     "keywords": [
       "readlink",
@@ -9410,7 +11079,6 @@ export const enhancedManPages: ManPage[] = [
       "rtprio",
       "getpriority",
       "setpriority",
-      "renice",
       "alter",
       "priority",
       "running",
@@ -9423,10 +11091,22 @@ export const enhancedManPages: ManPage[] = [
       "scheduling"
     ],
     "seeAlso": [
-      "nice",
-      "rtprio",
-      "getpriority",
-      "setpriority"
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "rtprio",
+        "section": 1
+      },
+      {
+        "name": "getpriority",
+        "section": 1
+      },
+      {
+        "name": "setpriority",
+        "section": 1
+      }
     ],
     "keywords": [
       "renice",
@@ -9464,7 +11144,6 @@ export const enhancedManPages: ManPage[] = [
       "echo -e \"reverse \\t these\\ntwo lines\" | rev"
     ],
     "relatedCommands": [
-      "rev",
       "reverse",
       "lines",
       "utility",
@@ -9585,13 +11264,34 @@ export const enhancedManPages: ManPage[] = [
       "specified"
     ],
     "seeAlso": [
-      "chflags",
-      "rmdir",
-      "undelete",
-      "unlink",
-      "fts",
-      "getopt",
-      "symlink"
+      {
+        "name": "chflags",
+        "section": 1
+      },
+      {
+        "name": "rmdir",
+        "section": 1
+      },
+      {
+        "name": "undelete",
+        "section": 1
+      },
+      {
+        "name": "unlink",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "getopt",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      }
     ],
     "keywords": [
       "rm",
@@ -9846,7 +11546,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "ssh",
-      "rsync",
       "rsyncd",
       "openrsync",
       "synchronise",
@@ -9862,9 +11561,14 @@ export const enhancedManPages: ManPage[] = [
       "bwlimit"
     ],
     "seeAlso": [
-      "ssh",
-      "rsync",
-      "rsyncd"
+      {
+        "name": "ssh",
+        "section": 1
+      },
+      {
+        "name": "rsyncd",
+        "section": 1
+      }
     ],
     "keywords": [
       "rsync",
@@ -10009,7 +11713,6 @@ export const enhancedManPages: ManPage[] = [
       "ssh_config",
       "sftp-server",
       "sshd",
-      "scp",
       "secure",
       "copy",
       "cipher",
@@ -10018,14 +11721,38 @@ export const enhancedManPages: ManPage[] = [
       "limit"
     ],
     "seeAlso": [
-      "sftp",
-      "ssh",
-      "ssh-add",
-      "ssh-agent",
-      "ssh-keygen",
-      "ssh_config",
-      "sftp-server",
-      "sshd"
+      {
+        "name": "sftp",
+        "section": 1
+      },
+      {
+        "name": "ssh",
+        "section": 1
+      },
+      {
+        "name": "ssh-add",
+        "section": 1
+      },
+      {
+        "name": "ssh-agent",
+        "section": 1
+      },
+      {
+        "name": "ssh-keygen",
+        "section": 1
+      },
+      {
+        "name": "ssh_config",
+        "section": 1
+      },
+      {
+        "name": "sftp-server",
+        "section": 1
+      },
+      {
+        "name": "sshd",
+        "section": 1
+      }
     ],
     "keywords": [
       "scp",
@@ -10065,7 +11792,6 @@ export const enhancedManPages: ManPage[] = [
     "options": [],
     "examples": [],
     "relatedCommands": [
-      "screen",
       "manager",
       "terminal",
       "emulation",
@@ -10171,7 +11897,6 @@ export const enhancedManPages: ManPage[] = [
       "grep",
       "regex",
       "re_format",
-      "sed",
       "stream",
       "editor",
       "command",
@@ -10183,11 +11908,26 @@ export const enhancedManPages: ManPage[] = [
       "standard"
     ],
     "seeAlso": [
-      "awk",
-      "ed",
-      "grep",
-      "regex",
-      "re_format"
+      {
+        "name": "awk",
+        "section": 1
+      },
+      {
+        "name": "ed",
+        "section": 1
+      },
+      {
+        "name": "grep",
+        "section": 1
+      },
+      {
+        "name": "regex",
+        "section": 1
+      },
+      {
+        "name": "re_format",
+        "section": 1
+      }
     ],
     "keywords": [
       "sed",
@@ -10228,7 +11968,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "jot",
       "printf",
-      "seq",
       "print",
       "sequences",
       "numbers",
@@ -10243,9 +11982,14 @@ export const enhancedManPages: ManPage[] = [
       "per"
     ],
     "seeAlso": [
-      "jot",
-      "printf",
-      "printf"
+      {
+        "name": "jot",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      }
     ],
     "keywords": [
       "seq",
@@ -10304,24 +12048,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "set",
@@ -10382,8 +12180,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "examples": [],
     "relatedCommands": [
-      "SHUF",
-      "shuf",
       "generate",
       "random",
       "permutations",
@@ -10398,9 +12194,7 @@ export const enhancedManPages: ManPage[] = [
       "long",
       "options"
     ],
-    "seeAlso": [
-      "SHUF"
-    ],
+    "seeAlso": [],
     "keywords": [
       "shuf",
       "generate",
@@ -10436,7 +12230,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "nanosleep",
-      "sleep",
       "suspend",
       "execution",
       "interval",
@@ -10452,8 +12245,10 @@ export const enhancedManPages: ManPage[] = [
       "hours"
     ],
     "seeAlso": [
-      "nanosleep",
-      "sleep"
+      {
+        "name": "nanosleep",
+        "section": 1
+      }
     ],
     "keywords": [
       "sleep",
@@ -10644,7 +12439,6 @@ export const enhancedManPages: ManPage[] = [
       "comm",
       "join",
       "uniq",
-      "sort",
       "merge",
       "records",
       "lines",
@@ -10658,9 +12452,18 @@ export const enhancedManPages: ManPage[] = [
       "output"
     ],
     "seeAlso": [
-      "comm",
-      "join",
-      "uniq"
+      {
+        "name": "comm",
+        "section": 1
+      },
+      {
+        "name": "join",
+        "section": 1
+      },
+      {
+        "name": "uniq",
+        "section": 1
+      }
     ],
     "keywords": [
       "sort",
@@ -10706,24 +12509,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "source",
@@ -10791,7 +12648,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "csplit",
       "re_format",
-      "split",
       "into",
       "pieces",
       "line_count",
@@ -10806,8 +12662,14 @@ export const enhancedManPages: ManPage[] = [
       "breaks"
     ],
     "seeAlso": [
-      "csplit",
-      "re_format"
+      {
+        "name": "csplit",
+        "section": 1
+      },
+      {
+        "name": "re_format",
+        "section": 1
+      }
     ],
     "keywords": [
       "split",
@@ -11082,7 +12944,6 @@ export const enhancedManPages: ManPage[] = [
       "sftp",
       "tun",
       "syslog",
-      "ssh",
       "remote",
       "login",
       "client",
@@ -11094,21 +12955,26 @@ export const enhancedManPages: ManPage[] = [
       "escape_char"
     ],
     "seeAlso": [
-      "ssh_config",
-      "ssh_config",
-      "ssh_config",
-      "ssh_config",
-      "ssh_config",
-      "sshd_config",
-      "sshd_config",
-      "ssh_config",
-      "sftp",
-      "ssh_config",
-      "tun",
-      "ssh_config",
-      "ssh_config",
-      "syslog",
-      "ssh_config"
+      {
+        "name": "ssh_config",
+        "section": 1
+      },
+      {
+        "name": "sshd_config",
+        "section": 1
+      },
+      {
+        "name": "sftp",
+        "section": 1
+      },
+      {
+        "name": "tun",
+        "section": 1
+      },
+      {
+        "name": "syslog",
+        "section": 1
+      }
     ],
     "keywords": [
       "ssh",
@@ -11198,7 +13064,6 @@ export const enhancedManPages: ManPage[] = [
       "ls",
       "lstat",
       "readlink",
-      "stat",
       "printf",
       "strftime",
       "display",
@@ -11211,13 +13076,30 @@ export const enhancedManPages: ManPage[] = [
       "about"
     ],
     "seeAlso": [
-      "file",
-      "ls",
-      "lstat",
-      "readlink",
-      "stat",
-      "printf",
-      "strftime"
+      {
+        "name": "file",
+        "section": 1
+      },
+      {
+        "name": "ls",
+        "section": 1
+      },
+      {
+        "name": "lstat",
+        "section": 1
+      },
+      {
+        "name": "readlink",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "strftime",
+        "section": 1
+      }
     ],
     "keywords": [
       "stat",
@@ -11278,7 +13160,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "od",
-      "strings",
       "find",
       "printable",
       "object",
@@ -11294,7 +13175,10 @@ export const enhancedManPages: ManPage[] = [
       "random"
     ],
     "seeAlso": [
-      "od"
+      {
+        "name": "od",
+        "section": 1
+      }
     ],
     "keywords": [
       "strings",
@@ -11361,12 +13245,30 @@ export const enhancedManPages: ManPage[] = [
       "credentials"
     ],
     "seeAlso": [
-      "csh",
-      "sh",
-      "group",
-      "passwd",
-      "environ",
-      "pam_group"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "group",
+        "section": 1
+      },
+      {
+        "name": "passwd",
+        "section": 1
+      },
+      {
+        "name": "environ",
+        "section": 1
+      },
+      {
+        "name": "pam_group",
+        "section": 1
+      }
     ],
     "keywords": [
       "su",
@@ -11560,23 +13462,52 @@ export const enhancedManPages: ManPage[] = [
       "sudoers_timestamp",
       "sudoreplay",
       "visudo",
-      "sudo",
       "sudoedit",
       "execute",
       "command",
       "another"
     ],
     "seeAlso": [
-      "su",
-      "stat",
-      "login_cap",
-      "passwd",
-      "conf",
-      "sudo_plugin",
-      "sudoers",
-      "sudoers_timestamp",
-      "sudoreplay",
-      "visudo"
+      {
+        "name": "su",
+        "section": 1
+      },
+      {
+        "name": "stat",
+        "section": 1
+      },
+      {
+        "name": "login_cap",
+        "section": 1
+      },
+      {
+        "name": "passwd",
+        "section": 1
+      },
+      {
+        "name": "conf",
+        "section": 1
+      },
+      {
+        "name": "sudo_plugin",
+        "section": 1
+      },
+      {
+        "name": "sudoers",
+        "section": 1
+      },
+      {
+        "name": "sudoers_timestamp",
+        "section": 1
+      },
+      {
+        "name": "sudoreplay",
+        "section": 1
+      },
+      {
+        "name": "visudo",
+        "section": 1
+      }
     ],
     "keywords": [
       "sudo",
@@ -11635,8 +13566,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "cat",
       "rev",
-      "TAC",
-      "tac",
       "concatenate",
       "print",
       "reverse",
@@ -11650,9 +13579,14 @@ export const enhancedManPages: ManPage[] = [
       "read"
     ],
     "seeAlso": [
-      "cat",
-      "rev",
-      "TAC"
+      {
+        "name": "cat",
+        "section": 1
+      },
+      {
+        "name": "rev",
+        "section": 1
+      }
     ],
     "keywords": [
       "tac",
@@ -11733,7 +13667,6 @@ export const enhancedManPages: ManPage[] = [
       "head",
       "sed",
       "expand_number",
-      "tail",
       "display",
       "last",
       "part",
@@ -11746,10 +13679,22 @@ export const enhancedManPages: ManPage[] = [
       "standard"
     ],
     "seeAlso": [
-      "cat",
-      "head",
-      "sed",
-      "expand_number"
+      {
+        "name": "cat",
+        "section": 1
+      },
+      {
+        "name": "head",
+        "section": 1
+      },
+      {
+        "name": "sed",
+        "section": 1
+      },
+      {
+        "name": "expand_number",
+        "section": 1
+      }
     ],
     "keywords": [
       "tail",
@@ -12099,7 +14044,6 @@ export const enhancedManPages: ManPage[] = [
       "xz",
       "libarchive",
       "libarchive-formats",
-      "tar",
       "manipulate",
       "tape",
       "archives",
@@ -12107,16 +14051,42 @@ export const enhancedManPages: ManPage[] = [
       "args"
     ],
     "seeAlso": [
-      "bzip2",
-      "compress",
-      "cpio",
-      "gzip",
-      "pax",
-      "shar",
-      "xz",
-      "libarchive",
-      "libarchive-formats",
-      "tar"
+      {
+        "name": "bzip2",
+        "section": 1
+      },
+      {
+        "name": "compress",
+        "section": 1
+      },
+      {
+        "name": "cpio",
+        "section": 1
+      },
+      {
+        "name": "gzip",
+        "section": 1
+      },
+      {
+        "name": "pax",
+        "section": 1
+      },
+      {
+        "name": "shar",
+        "section": 1
+      },
+      {
+        "name": "xz",
+        "section": 1
+      },
+      {
+        "name": "libarchive",
+        "section": 1
+      },
+      {
+        "name": "libarchive-formats",
+        "section": 1
+      }
     ],
     "keywords": [
       "tar",
@@ -12161,7 +14131,6 @@ export const enhancedManPages: ManPage[] = [
       "echo \"Hello\" | tee greetings.txt"
     ],
     "relatedCommands": [
-      "tee",
       "duplicate",
       "standard",
       "input",
@@ -12221,7 +14190,6 @@ export const enhancedManPages: ManPage[] = [
       "sh",
       "stat",
       "symlink",
-      "test",
       "condition",
       "evaluation",
       "utility",
@@ -12232,12 +14200,30 @@ export const enhancedManPages: ManPage[] = [
       "zero"
     ],
     "seeAlso": [
-      "builtin",
-      "expr",
-      "find",
-      "sh",
-      "stat",
-      "symlink"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "expr",
+        "section": 1
+      },
+      {
+        "name": "find",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "stat",
+        "section": 1
+      },
+      {
+        "name": "symlink",
+        "section": 1
+      }
     ],
     "keywords": [
       "test",
@@ -12309,7 +14295,6 @@ export const enhancedManPages: ManPage[] = [
       "csh",
       "getrusage",
       "wait",
-      "time",
       "command",
       "execution",
       "utility",
@@ -12322,10 +14307,22 @@ export const enhancedManPages: ManPage[] = [
       "standard"
     ],
     "seeAlso": [
-      "builtin",
-      "csh",
-      "getrusage",
-      "wait"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "getrusage",
+        "section": 1
+      },
+      {
+        "name": "wait",
+        "section": 1
+      }
     ],
     "keywords": [
       "time",
@@ -12385,8 +14382,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "kill",
-      "TIMEOUT",
-      "timeout",
       "run",
       "command",
       "time",
@@ -12401,8 +14396,10 @@ export const enhancedManPages: ManPage[] = [
       "short"
     ],
     "seeAlso": [
-      "kill",
-      "TIMEOUT"
+      {
+        "name": "kill",
+        "section": 1
+      }
     ],
     "keywords": [
       "timeout",
@@ -12523,7 +14520,6 @@ export const enhancedManPages: ManPage[] = [
       "lock",
       "vi",
       "strftime",
-      "tmux",
       "terminal",
       "multiplexer",
       "shell-command",
@@ -12531,32 +14527,42 @@ export const enhancedManPages: ManPage[] = [
       "socket-path"
     ],
     "seeAlso": [
-      "xterm",
-      "xterm",
-      "terminfo",
-      "xterm",
-      "xterm",
-      "terminfo",
-      "terminfo",
-      "terminfo",
-      "terminfo",
-      "fnmatch",
-      "terminfo",
-      "xterm",
-      "xterm",
-      "terminfo",
-      "fnmatch",
-      "terminfo",
-      "strunvis",
-      "sh",
-      "getpwuid",
-      "lock",
-      "vi",
-      "terminfo",
-      "xterm",
-      "strftime",
-      "strftime",
-      "terminfo"
+      {
+        "name": "xterm",
+        "section": 1
+      },
+      {
+        "name": "terminfo",
+        "section": 1
+      },
+      {
+        "name": "fnmatch",
+        "section": 1
+      },
+      {
+        "name": "strunvis",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "getpwuid",
+        "section": 1
+      },
+      {
+        "name": "lock",
+        "section": 1
+      },
+      {
+        "name": "vi",
+        "section": 1
+      },
+      {
+        "name": "strftime",
+        "section": 1
+      }
     ],
     "keywords": [
       "tmux",
@@ -12607,7 +14613,6 @@ export const enhancedManPages: ManPage[] = [
       "vmmap",
       "kill",
       "signal",
-      "top",
       "display",
       "sorted",
       "information",
@@ -12619,11 +14624,26 @@ export const enhancedManPages: ManPage[] = [
       "ncols"
     ],
     "seeAlso": [
-      "taskinfo",
-      "vm_stat",
-      "vmmap",
-      "kill",
-      "signal"
+      {
+        "name": "taskinfo",
+        "section": 1
+      },
+      {
+        "name": "vm_stat",
+        "section": 1
+      },
+      {
+        "name": "vmmap",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "signal",
+        "section": 1
+      }
     ],
     "keywords": [
       "top",
@@ -12696,7 +14716,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "utimensat",
-      "touch",
       "change",
       "access",
       "modification",
@@ -12712,7 +14731,10 @@ export const enhancedManPages: ManPage[] = [
       "default"
     ],
     "seeAlso": [
-      "utimensat"
+      {
+        "name": "utimensat",
+        "section": 1
+      }
     ],
     "keywords": [
       "touch",
@@ -12943,7 +14965,6 @@ export const enhancedManPages: ManPage[] = [
       "netstat",
       "ping",
       "traceroute6",
-      "traceroute",
       "print",
       "route",
       "packets",
@@ -12957,9 +14978,18 @@ export const enhancedManPages: ManPage[] = [
       "max_ttl"
     ],
     "seeAlso": [
-      "netstat",
-      "ping",
-      "traceroute6"
+      {
+        "name": "netstat",
+        "section": 1
+      },
+      {
+        "name": "ping",
+        "section": 1
+      },
+      {
+        "name": "traceroute6",
+        "section": 1
+      }
     ],
     "keywords": [
       "traceroute",
@@ -13001,7 +15031,6 @@ export const enhancedManPages: ManPage[] = [
       "csh",
       "false",
       "sh",
-      "true",
       "return",
       "value",
       "utility",
@@ -13014,10 +15043,22 @@ export const enhancedManPages: ManPage[] = [
       "provide"
     ],
     "seeAlso": [
-      "builtin",
-      "csh",
-      "false",
-      "sh"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      }
     ],
     "keywords": [
       "true",
@@ -13069,24 +15110,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "type",
@@ -13147,7 +15242,6 @@ export const enhancedManPages: ManPage[] = [
       "getfsent",
       "mount",
       "diskutil",
-      "umount",
       "filesystems",
       "special",
       "node",
@@ -13160,10 +15254,22 @@ export const enhancedManPages: ManPage[] = [
       "volume"
     ],
     "seeAlso": [
-      "unmount",
-      "getfsent",
-      "mount",
-      "diskutil"
+      {
+        "name": "unmount",
+        "section": 1
+      },
+      {
+        "name": "getfsent",
+        "section": 1
+      },
+      {
+        "name": "mount",
+        "section": 1
+      },
+      {
+        "name": "diskutil",
+        "section": 1
+      }
     ],
     "keywords": [
       "umount",
@@ -13216,24 +15322,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "unalias",
@@ -13302,7 +15462,6 @@ export const enhancedManPages: ManPage[] = [
       "machine",
       "sw_vers",
       "sysctl",
-      "uname",
       "display",
       "information",
       "about",
@@ -13315,12 +15474,22 @@ export const enhancedManPages: ManPage[] = [
       "standard"
     ],
     "seeAlso": [
-      "hostname",
-      "machine",
-      "sw_vers",
-      "sysctl",
-      "uname",
-      "sysctl"
+      {
+        "name": "hostname",
+        "section": 1
+      },
+      {
+        "name": "machine",
+        "section": 1
+      },
+      {
+        "name": "sw_vers",
+        "section": 1
+      },
+      {
+        "name": "sysctl",
+        "section": 1
+      }
     ],
     "keywords": [
       "uname",
@@ -13386,7 +15555,6 @@ export const enhancedManPages: ManPage[] = [
       "zmore",
       "znew",
       "compress",
-      "uncompress",
       "expand",
       "data",
       "bits",
@@ -13396,12 +15564,30 @@ export const enhancedManPages: ManPage[] = [
       "using"
     ],
     "seeAlso": [
-      "gunzip",
-      "gzexe",
-      "gzip",
-      "zcat",
-      "zmore",
-      "znew"
+      {
+        "name": "gunzip",
+        "section": 1
+      },
+      {
+        "name": "gzexe",
+        "section": 1
+      },
+      {
+        "name": "gzip",
+        "section": 1
+      },
+      {
+        "name": "zcat",
+        "section": 1
+      },
+      {
+        "name": "zmore",
+        "section": 1
+      },
+      {
+        "name": "znew",
+        "section": 1
+      }
     ],
     "keywords": [
       "uncompress",
@@ -13448,7 +15634,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "expand",
-      "unexpand",
       "tabs",
       "spaces",
       "vice",
@@ -13539,7 +15724,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "relatedCommands": [
       "sort",
-      "uniq",
       "report",
       "filter",
       "out",
@@ -13555,7 +15739,10 @@ export const enhancedManPages: ManPage[] = [
       "reads"
     ],
     "seeAlso": [
-      "sort"
+      {
+        "name": "sort",
+        "section": 1
+      }
     ],
     "keywords": [
       "uniq",
@@ -13601,24 +15788,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "unset",
@@ -13650,7 +15891,6 @@ export const enhancedManPages: ManPage[] = [
     "options": [],
     "examples": [],
     "relatedCommands": [
-      "unzip",
       "list",
       "test",
       "extract",
@@ -13703,7 +15943,6 @@ export const enhancedManPages: ManPage[] = [
     ],
     "relatedCommands": [
       "w",
-      "uptime",
       "show",
       "how",
       "long",
@@ -13719,7 +15958,10 @@ export const enhancedManPages: ManPage[] = [
       "users"
     ],
     "seeAlso": [
-      "w"
+      {
+        "name": "w",
+        "section": 1
+      }
     ],
     "keywords": [
       "uptime",
@@ -14035,7 +16277,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "vimtutor",
-      "vim",
       "programmer",
       "text",
       "editor",
@@ -14051,7 +16292,10 @@ export const enhancedManPages: ManPage[] = [
       "rview"
     ],
     "seeAlso": [
-      "vimtutor"
+      {
+        "name": "vimtutor",
+        "section": 1
+      }
     ],
     "keywords": [
       "vim",
@@ -14101,24 +16345,78 @@ export const enhancedManPages: ManPage[] = [
       "time"
     ],
     "seeAlso": [
-      "csh",
-      "dash",
-      "echo",
-      "false",
-      "info",
-      "kill",
-      "login",
-      "nice",
-      "nohup",
-      "printenv",
-      "printf",
-      "pwd",
-      "sh",
-      "test",
-      "time",
-      "true",
-      "which",
-      "zsh"
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "dash",
+        "section": 1
+      },
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "false",
+        "section": 1
+      },
+      {
+        "name": "info",
+        "section": 1
+      },
+      {
+        "name": "kill",
+        "section": 1
+      },
+      {
+        "name": "login",
+        "section": 1
+      },
+      {
+        "name": "nice",
+        "section": 1
+      },
+      {
+        "name": "nohup",
+        "section": 1
+      },
+      {
+        "name": "printenv",
+        "section": 1
+      },
+      {
+        "name": "printf",
+        "section": 1
+      },
+      {
+        "name": "pwd",
+        "section": 1
+      },
+      {
+        "name": "sh",
+        "section": 1
+      },
+      {
+        "name": "test",
+        "section": 1
+      },
+      {
+        "name": "time",
+        "section": 1
+      },
+      {
+        "name": "true",
+        "section": 1
+      },
+      {
+        "name": "which",
+        "section": 1
+      },
+      {
+        "name": "zsh",
+        "section": 1
+      }
     ],
     "keywords": [
       "wait",
@@ -14196,9 +16494,18 @@ export const enhancedManPages: ManPage[] = [
       "contained"
     ],
     "seeAlso": [
-      "iswspace",
-      "libxo",
-      "xo_parse_args"
+      {
+        "name": "iswspace",
+        "section": 1
+      },
+      {
+        "name": "libxo",
+        "section": 1
+      },
+      {
+        "name": "xo_parse_args",
+        "section": 1
+      }
     ],
     "keywords": [
       "wc",
@@ -15013,7 +17320,6 @@ export const enhancedManPages: ManPage[] = [
       "non-interactive",
       "network",
       "downloader",
-      "wget",
       "option",
       "free",
       "utility",
@@ -15026,7 +17332,10 @@ export const enhancedManPages: ManPage[] = [
       "proxies"
     ],
     "seeAlso": [
-      "wget2"
+      {
+        "name": "wget2",
+        "section": 1
+      }
     ],
     "keywords": [
       "wget",
@@ -15083,7 +17392,6 @@ export const enhancedManPages: ManPage[] = [
       "find",
       "locate",
       "whereis",
-      "which",
       "program",
       "path",
       "utility",
@@ -15095,11 +17403,26 @@ export const enhancedManPages: ManPage[] = [
       "each"
     ],
     "seeAlso": [
-      "builtin",
-      "csh",
-      "find",
-      "locate",
-      "whereis"
+      {
+        "name": "builtin",
+        "section": 1
+      },
+      {
+        "name": "csh",
+        "section": 1
+      },
+      {
+        "name": "find",
+        "section": 1
+      },
+      {
+        "name": "locate",
+        "section": 1
+      },
+      {
+        "name": "whereis",
+        "section": 1
+      }
     ],
     "keywords": [
       "which",
@@ -15144,7 +17467,6 @@ export const enhancedManPages: ManPage[] = [
     "examples": [],
     "relatedCommands": [
       "id",
-      "whoami",
       "display",
       "effective",
       "utility",
@@ -15160,7 +17482,10 @@ export const enhancedManPages: ManPage[] = [
       "displays"
     ],
     "seeAlso": [
-      "id"
+      {
+        "name": "id",
+        "section": 1
+      }
     ],
     "keywords": [
       "whoami",
@@ -15264,7 +17589,6 @@ export const enhancedManPages: ManPage[] = [
       "find",
       "execvp",
       "compat",
-      "xargs",
       "construct",
       "argument",
       "list",
@@ -15277,10 +17601,22 @@ export const enhancedManPages: ManPage[] = [
       "number"
     ],
     "seeAlso": [
-      "echo",
-      "find",
-      "execvp",
-      "compat"
+      {
+        "name": "echo",
+        "section": 1
+      },
+      {
+        "name": "find",
+        "section": 1
+      },
+      {
+        "name": "execvp",
+        "section": 1
+      },
+      {
+        "name": "compat",
+        "section": 1
+      }
     ],
     "keywords": [
       "xargs",
@@ -15347,7 +17683,10 @@ export const enhancedManPages: ManPage[] = [
       "recommended"
     ],
     "seeAlso": [
-      "flac"
+      {
+        "name": "flac",
+        "section": 1
+      }
     ],
     "keywords": [
       "xz",
@@ -15388,7 +17727,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "jot",
       "seq",
-      "yes",
       "repetitively",
       "affirmative",
       "expletive",
@@ -15400,8 +17738,14 @@ export const enhancedManPages: ManPage[] = [
       "appeared"
     ],
     "seeAlso": [
-      "jot",
-      "seq"
+      {
+        "name": "jot",
+        "section": 1
+      },
+      {
+        "name": "seq",
+        "section": 1
+      }
     ],
     "keywords": [
       "yes",
@@ -15443,7 +17787,6 @@ export const enhancedManPages: ManPage[] = [
       "zlib",
       "gzip",
       "gunzip",
-      "zcat",
       "compression",
       "decompression",
       "tool",
@@ -15453,11 +17796,26 @@ export const enhancedManPages: ManPage[] = [
       "program"
     ],
     "seeAlso": [
-      "bzip2",
-      "compress",
-      "xz",
-      "fts",
-      "zlib"
+      {
+        "name": "bzip2",
+        "section": 1
+      },
+      {
+        "name": "compress",
+        "section": 1
+      },
+      {
+        "name": "xz",
+        "section": 1
+      },
+      {
+        "name": "fts",
+        "section": 1
+      },
+      {
+        "name": "zlib",
+        "section": 1
+      }
     ],
     "keywords": [
       "zcat",
@@ -15496,7 +17854,6 @@ export const enhancedManPages: ManPage[] = [
     "relatedCommands": [
       "compress",
       "tar",
-      "zip",
       "package",
       "archive",
       "longoption",
@@ -15511,8 +17868,14 @@ export const enhancedManPages: ManPage[] = [
       "man"
     ],
     "seeAlso": [
-      "compress",
-      "tar"
+      {
+        "name": "compress",
+        "section": 1
+      },
+      {
+        "name": "tar",
+        "section": 1
+      }
     ],
     "keywords": [
       "zip",
@@ -15561,7 +17924,6 @@ export const enhancedManPages: ManPage[] = [
       "less",
       "more",
       "zmore",
-      "zless",
       "view",
       "compressed",
       "flags",
@@ -15574,9 +17936,18 @@ export const enhancedManPages: ManPage[] = [
       "extension"
     ],
     "seeAlso": [
-      "compress",
-      "less",
-      "more"
+      {
+        "name": "compress",
+        "section": 1
+      },
+      {
+        "name": "less",
+        "section": 1
+      },
+      {
+        "name": "more",
+        "section": 1
+      }
     ],
     "keywords": [
       "zless",
@@ -15615,7 +17986,6 @@ export const enhancedManPages: ManPage[] = [
       "compress",
       "less",
       "more",
-      "zmore",
       "zless",
       "view",
       "compressed",
@@ -15629,9 +17999,18 @@ export const enhancedManPages: ManPage[] = [
       "extension"
     ],
     "seeAlso": [
-      "compress",
-      "less",
-      "more"
+      {
+        "name": "compress",
+        "section": 1
+      },
+      {
+        "name": "less",
+        "section": 1
+      },
+      {
+        "name": "more",
+        "section": 1
+      }
     ],
     "keywords": [
       "zmore",
