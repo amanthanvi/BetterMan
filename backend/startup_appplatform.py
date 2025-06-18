@@ -7,13 +7,13 @@ import os
 import sys
 import logging
 import subprocess
+import json
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from database_appplatform import ensure_database_exists, get_db
-from parser.enhanced_man_parser import EnhancedManPageParser
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,20 +23,33 @@ def load_initial_data():
     logger.info("Loading initial man page data...")
     
     try:
-        parser = EnhancedManPageParser()
-        
-        # Essential commands to load
-        essential_commands = [
-            'ls', 'cd', 'pwd', 'mkdir', 'rm', 'cp', 'mv', 'cat', 'echo', 'grep',
-            'find', 'sed', 'awk', 'sort', 'uniq', 'head', 'tail', 'less', 'more',
-            'chmod', 'chown', 'ps', 'kill', 'top', 'df', 'du', 'tar', 'gzip',
-            'curl', 'wget', 'ssh', 'scp', 'git', 'vim', 'nano', 'man', 'which',
-            'date', 'cal', 'history', 'alias', 'export', 'source', 'bash', 'sh'
-        ]
+        # Essential commands to load with basic info
+        essential_commands = {
+            'ls': ('list directory contents', 'file-management', 'basic'),
+            'cd': ('change directory', 'navigation', 'basic'),
+            'pwd': ('print working directory', 'navigation', 'basic'),
+            'mkdir': ('make directories', 'file-management', 'basic'),
+            'rm': ('remove files or directories', 'file-management', 'basic'),
+            'cp': ('copy files and directories', 'file-management', 'basic'),
+            'mv': ('move/rename files', 'file-management', 'basic'),
+            'cat': ('concatenate and print files', 'text-processing', 'basic'),
+            'echo': ('display a line of text', 'text-processing', 'basic'),
+            'grep': ('search text patterns', 'text-processing', 'intermediate'),
+            'find': ('search for files', 'file-management', 'intermediate'),
+            'sed': ('stream editor', 'text-processing', 'advanced'),
+            'awk': ('pattern scanning', 'text-processing', 'advanced'),
+            'chmod': ('change file permissions', 'security', 'intermediate'),
+            'curl': ('transfer data from URLs', 'networking', 'intermediate'),
+            'git': ('version control system', 'development', 'intermediate'),
+            'ssh': ('secure shell client', 'networking', 'intermediate'),
+            'tar': ('archive files', 'file-management', 'intermediate'),
+            'vim': ('text editor', 'editors', 'advanced'),
+            'ps': ('process status', 'system', 'intermediate')
+        }
         
         loaded = 0
         with get_db() as conn:
-            for cmd in essential_commands:
+            for cmd, (desc, category, complexity) in essential_commands.items():
                 try:
                     # Try to get man page content
                     result = subprocess.run(
@@ -46,34 +59,46 @@ def load_initial_data():
                         timeout=5
                     )
                     
-                    if result.returncode == 0:
-                        # Parse the man page
-                        parsed = parser.parse_man_output(result.stdout, cmd)
-                        
-                        # Insert into database
-                        conn.execute("""
-                            INSERT OR REPLACE INTO man_pages 
-                            (name, section, title, description, synopsis, content, 
-                             category, keywords, see_also, examples, options, 
-                             is_common, complexity)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (
-                            parsed['name'],
-                            parsed.get('section', 1),
-                            parsed.get('title', ''),
-                            parsed.get('description', ''),
-                            parsed.get('synopsis', ''),
-                            parsed.get('content', ''),
-                            parsed.get('category', 'general'),
-                            parsed.get('keywords', '[]'),
-                            parsed.get('see_also', '[]'),
-                            parsed.get('examples', '[]'),
-                            parsed.get('options', '[]'),
-                            1,  # is_common
-                            'basic' if cmd in ['ls', 'cd', 'pwd', 'mkdir', 'rm'] else 'intermediate'
-                        ))
-                        loaded += 1
-                        logger.info(f"Loaded: {cmd}")
+                    content = result.stdout if result.returncode == 0 else f"Documentation for {cmd}"
+                    
+                    # Basic parsing - extract synopsis
+                    synopsis = ''
+                    lines = content.split('\n')
+                    in_synopsis = False
+                    for line in lines:
+                        if 'SYNOPSIS' in line:
+                            in_synopsis = True
+                            continue
+                        if in_synopsis and line.strip() and not line.startswith(' '):
+                            break
+                        if in_synopsis and line.strip():
+                            synopsis = line.strip()
+                            break
+                    
+                    # Insert into database
+                    conn.execute("""
+                        INSERT OR REPLACE INTO man_pages 
+                        (name, section, title, description, synopsis, content, 
+                         category, keywords, see_also, examples, options, 
+                         is_common, complexity)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        cmd,
+                        1,
+                        desc,
+                        desc,
+                        synopsis or f"{cmd} [OPTIONS]",
+                        content[:5000],  # Limit content size
+                        category,
+                        json.dumps([cmd, category]),
+                        '[]',
+                        '[]',
+                        '[]',
+                        1,  # is_common
+                        complexity
+                    ))
+                    loaded += 1
+                    logger.info(f"Loaded: {cmd}")
                 except Exception as e:
                     logger.warning(f"Failed to load {cmd}: {e}")
             
