@@ -9,6 +9,7 @@ from .user_routes import router as user_router
 from .error_routes import router as error_router
 from .terminal_routes import router as terminal_router
 from .personalization_routes import router as personalization_router
+from .admin_routes import router as admin_router
 
 # Create a main API router that includes all other routers
 api_router = APIRouter()
@@ -21,3 +22,4 @@ api_router.include_router(user_router, tags=["user"])
 api_router.include_router(error_router, tags=["errors"])
 api_router.include_router(terminal_router, tags=["terminal"])
 api_router.include_router(personalization_router, tags=["personalization"])
+api_router.include_router(admin_router, tags=["admin"])

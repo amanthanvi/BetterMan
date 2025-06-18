@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     METRICS_PREFIX: str = Field(default="betterman")
     HEALTH_CHECK_INTERVAL: int = Field(default=60)  # seconds
     SENTRY_DSN: Optional[str] = Field(default=None, env="SENTRY_DSN")
+    
+    # Admin
+    ADMIN_TOKEN: Optional[str] = Field(default=None, env="ADMIN_TOKEN")
 
     @validator("LOG_LEVEL")
     def validate_log_level(cls, v):
