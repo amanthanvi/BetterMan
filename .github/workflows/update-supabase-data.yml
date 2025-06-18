@@ -1,0 +1,75 @@
+name: Update Supabase Data
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+jobs:
+  parse-and-load:
+    name: Parse Man Pages and Load to Supabase
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install man pages database
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y man-db manpages manpages-posix manpages-dev
+          sudo mandb
+      
+      - name: Parse man pages
+        run: |
+          echo "Parsing man pages from Ubuntu system..."
+          mkdir -p data/parsed-man-pages/json
+          npm run parse:man-pages
+      
+      - name: Migrate and enhance data
+        run: |
+          npm run migrate:man-pages
+          npm run generate:man-index
+      
+      - name: Load to Supabase
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "Loading man pages to Supabase..."
+          npx tsx scripts/load-to-supabase.ts
+      
+      - name: Verify data load
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          echo "Verifying data in Supabase..."
+          npx tsx -e "
+          import { createClient } from '@supabase/supabase-js'
+          
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          )
+          
+          const { count, error } = await supabase
+            .from('documents')
+            .select('*', { count: 'exact', head: true })
+          
+          if (error) {
+            console.error('Error:', error)
+            process.exit(1)
+          }
+          
+          console.log(\`✅ Successfully loaded \${count} man pages to Supabase\`)
+          "

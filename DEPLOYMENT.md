@@ -1,25 +1,17 @@
 # BetterMan Deployment Guide
 
-## Current Architecture Issue
+## Architecture Overview
 
-The repository currently contains **two separate frontend applications**:
+BetterMan now uses a **single, unified frontend architecture**:
 
-1. **Next.js 15 App (Root Directory)**
-   - Modern App Router architecture
-   - Optimized for static generation
-   - No authentication (public documentation browser)
-   - Configured for Vercel deployment
-   - Uses both API and local data fallback
+- **Next.js 15 App (Root Directory)**
+  - Modern App Router architecture with React 19
+  - Optimized for static generation and performance
+  - Configured for Vercel deployment
+  - Uses both API and local data fallback
+  - Ready for future authentication features
 
-2. **React + Vite App (frontend/ Directory)**
-   - Full-featured SPA with authentication
-   - User accounts, favorites, analytics
-   - OAuth and 2FA support
-   - Currently used by Docker Compose
-
-## Recommended Path: Keep Next.js, Add Missing Features
-
-The Next.js app is more modern and performant. We'll migrate the missing features from the React app.
+**Note**: The duplicate React/Vite frontend has been removed for clarity and maintainability.
 
 ## Backend Deployment Guide
 
