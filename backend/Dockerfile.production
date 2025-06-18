@@ -46,9 +46,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gzip \
     bzip2 \
     xz-utils \
-    # Additional documentation
-    linux-doc \
-    glibc-doc \
     # Compression tools for various man page formats
     lzma \
     zstd \
