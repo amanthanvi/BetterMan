@@ -195,7 +195,7 @@ export class EnhancedManPageParser {
     const examples = this.extractEnhancedExamples(formattedContent)
     
     // Extract relationships
-    const { relatedCommands, seeAlso } = this.extractRelationships(formattedContent)
+    const { relatedCommands, seeAlso } = this.extractRelationships(formattedContent, name)
     
     // Generate keywords
     const keywords = this.generateKeywords(name, title, description, sections)
@@ -363,14 +363,21 @@ export class EnhancedManPageParser {
       const lines = exampleSection[1].split('\n')
       let currentExample: ManPageExample | null = null
       let collectingOutput = false
+      let descriptionBuffer: string[] = []
       
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i]
         
-        // Check for example command
-        const cmdMatch = line.match(this.PATTERNS.example)
-        if (cmdMatch) {
+        // Check for example command ($ prefix or indented command)
+        const cmdMatch = line.match(this.PATTERNS.example) || 
+                         (line.match(/^\s{2,}([^$].+)$/) && line.includes(' '))
+        
+        if (cmdMatch && !collectingOutput) {
+          // Save previous example
           if (currentExample) {
+            if (descriptionBuffer.length > 0 && !currentExample.description) {
+              currentExample.description = descriptionBuffer.join(' ').trim()
+            }
             examples.push(currentExample)
           }
           
@@ -380,22 +387,37 @@ export class EnhancedManPageParser {
             tags: this.extractExampleTags(cmdMatch[1])
           }
           
-          // Look for description in next lines
-          if (i + 1 < lines.length && !lines[i + 1].match(/^\s*\$/)) {
-            currentExample.description = lines[i + 1].trim()
+          descriptionBuffer = []
+          collectingOutput = false
+          
+          // Look ahead for description
+          let j = i - 1
+          while (j >= 0 && lines[j].trim() && !lines[j].match(/^\s*\$/) && !lines[j].match(/^\s{4,}/)) {
+            descriptionBuffer.unshift(lines[j].trim())
+            j--
           }
           
-          collectingOutput = false
-        } else if (currentExample && line.trim() && !line.match(/^\s*\$/)) {
-          // Collect output if it looks like output
-          if (collectingOutput || line.match(/^\s{2,}/)) {
+        } else if (currentExample) {
+          // Check if this is output (typically more indented or follows the command)
+          if (line.match(/^\s{4,}/) && i > 0 && (lines[i-1].match(/^\s*\$/) || collectingOutput)) {
             currentExample.output = (currentExample.output || '') + line + '\n'
             collectingOutput = true
+          } else if (line.trim() === '') {
+            collectingOutput = false
+          } else if (!collectingOutput && line.trim() && !line.match(/^\s*\$/)) {
+            // This might be a description
+            if (!currentExample.description) {
+              descriptionBuffer.push(line.trim())
+            }
           }
         }
       }
       
+      // Save last example
       if (currentExample) {
+        if (descriptionBuffer.length > 0 && !currentExample.description) {
+          currentExample.description = descriptionBuffer.join(' ').trim()
+        }
         examples.push(currentExample)
       }
     }
@@ -421,37 +443,42 @@ export class EnhancedManPageParser {
   /**
    * Extract relationships and see also references
    */
-  private static extractRelationships(content: string): {
+  private static extractRelationships(content: string, currentCommand?: string): {
     relatedCommands: string[]
     seeAlso: Array<{ name: string; section: number }>
   } {
     const relatedSet = new Set<string>()
-    const seeAlsoList: Array<{ name: string; section: number }> = []
+    const seeAlsoMap = new Map<string, { name: string; section: number }>()
     
     // Extract from SEE ALSO section
     const seeAlsoSection = content.match(/SEE ALSO\s+([\s\S]+?)(?=\n[A-Z]+\s*\n|$)/i)
     if (seeAlsoSection) {
       const matches = seeAlsoSection[1].matchAll(this.PATTERNS.seeAlso)
       for (const match of matches) {
-        seeAlsoList.push({
-          name: match[1],
-          section: parseInt(match[2])
-        })
-        relatedSet.add(match[1])
+        const name = match[1].toLowerCase()
+        // Avoid duplicates and self-references
+        if (name !== currentCommand?.toLowerCase() && !seeAlsoMap.has(name)) {
+          seeAlsoMap.set(name, {
+            name: match[1],
+            section: parseInt(match[2])
+          })
+          relatedSet.add(match[1])
+        }
       }
     }
     
-    // Extract commands mentioned in content
-    const commandMatches = content.matchAll(/\b([a-z][a-z0-9_-]{2,})\b/gi)
-    for (const match of commandMatches) {
-      if (this.isLikelyCommand(match[1])) {
-        relatedSet.add(match[1])
-      }
+    // Only extract commands from SEE ALSO section, not from entire content
+    // This prevents false positives from general text
+    
+    // Remove current command from related set
+    if (currentCommand) {
+      relatedSet.delete(currentCommand)
+      relatedSet.delete(currentCommand.toLowerCase())
     }
     
     return {
       relatedCommands: Array.from(relatedSet).slice(0, 15),
-      seeAlso: seeAlsoList
+      seeAlso: Array.from(seeAlsoMap.values())
     }
   }
 

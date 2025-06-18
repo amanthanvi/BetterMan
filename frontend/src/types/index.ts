@@ -22,6 +22,20 @@ export interface Document {
   last_updated?: string;
   tags?: string[];
   access_count?: number;
+  options?: Array<{
+    flag: string;
+    shortFlag?: string;
+    description: string;
+    argument?: string;
+    optional?: boolean;
+    deprecated?: boolean;
+  }>;
+  examples?: Array<{
+    command: string;
+    description: string;
+    output?: string;
+    tags?: string[];
+  }>;
 }
 
 // Search types

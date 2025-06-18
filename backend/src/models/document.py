@@ -15,7 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 Base = declarative_base()
@@ -195,10 +195,12 @@ class DocumentResponse(BaseModel):
     related: Optional[List[str]] = None
     cache_status: Optional[str] = None  # Added to response model
     doc_set: Optional[str] = None  # For consistency with frontend
+    options: Optional[List[Dict[str, Any]]] = None  # Command options/flags
+    examples: Optional[List[Dict[str, Any]]] = None  # Command examples
     
     @classmethod
     def from_orm(cls, obj):
-        """Convert SQLAlchemy model to Pydantic model with sections."""
+        """Convert SQLAlchemy model to Pydantic model with sections, options, and examples."""
         import json
         
         data = {
@@ -212,13 +214,17 @@ class DocumentResponse(BaseModel):
             'cache_status': obj.cache_status,
             'doc_set': 'linux',  # Frontend expects lowercase
             'sections': [],
-            'related': []
+            'related': [],
+            'options': [],  # Initialize options
+            'examples': []  # Initialize examples
         }
         
-        # Extract sections from JSON content
+        # Extract data from JSON content
         if obj.content:
             try:
                 content_data = json.loads(obj.content)
+                
+                # Extract sections
                 if 'sections' in content_data and isinstance(content_data['sections'], list):
                     data['sections'] = [
                         {
@@ -228,8 +234,22 @@ class DocumentResponse(BaseModel):
                         }
                         for section in content_data['sections']
                     ]
+                
+                # Extract options (might be stored as 'options' or 'flags')
+                if 'options' in content_data:
+                    data['options'] = content_data['options']
+                elif 'flags' in content_data:
+                    data['options'] = content_data['flags']
+                
+                # Extract examples
+                if 'examples' in content_data:
+                    data['examples'] = content_data['examples']
+                    
             except (json.JSONDecodeError, KeyError) as e:
                 # If parsing fails, fall back to using raw_content
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to parse content JSON for document {obj.name}: {e}")
                 pass
         
         # Add sections from relationship if they exist (for backward compatibility)
