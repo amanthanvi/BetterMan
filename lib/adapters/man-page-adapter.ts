@@ -34,10 +34,24 @@ export function adaptManPageToEnhanced(page: Partial<ManPage> & Pick<ManPage, 'n
     flags,
     examples,
     relatedCommands: page.relatedCommands || [],
-    seeAlso: (page.seeAlso || page.relatedCommands || []).map((cmd: string) => ({
-      name: cmd,
-      section: 1, // Default to section 1 for related commands
-    })),
+    seeAlso: (() => {
+      if (page.seeAlso && Array.isArray(page.seeAlso)) {
+        // Check if it's already in the new format
+        if (page.seeAlso.length > 0 && typeof page.seeAlso[0] === 'object' && 'name' in page.seeAlso[0]) {
+          return page.seeAlso as Array<{ name: string; section: number }>
+        }
+        // Convert from string array
+        return (page.seeAlso as string[]).map(cmd => ({
+          name: cmd,
+          section: 1
+        }))
+      }
+      // Fallback to related commands
+      return (page.relatedCommands || []).map(cmd => ({
+        name: cmd,
+        section: 1
+      }))
+    })(),
     metadata,
     searchContent: page.searchContent || '',
     keywords: extractKeywords(page),
