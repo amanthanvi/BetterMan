@@ -236,7 +236,7 @@ jobs:
       
       - name: Update production database
         env:
-          VERCEL_URL: https://betterman.vercel.app
+          VERCEL_URL: https://betterman-7wuel0a8k-aman-thanvis-projects.vercel.app
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           if [ -z "$ADMIN_TOKEN" ]; then

@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Test API with Token
         env:
-          API_URL: https://betterman.vercel.app
+          API_URL: https://betterman-7wuel0a8k-aman-thanvis-projects.vercel.app
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           echo "🔍 Testing Admin API access..."
