@@ -1,97 +1,59 @@
-name: betterman
+version: '3.8'
 
 services:
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.comprehensive
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=sqlite:///./data/betterman.db
+      - REDIS_URL=redis://redis:6379/0
+      - BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+      - ADMIN_TOKEN=dev-admin-token
+      - API_V1_STR=/api/v1
+      - PROJECT_NAME=BetterMan
+    volumes:
+      - ./backend:/app
+      - backend_data:/app/data
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app
-      - ./data:/app/data  # Persistent database storage
-      - man_cache:/app/.cache  # Cache for processed man pages
-      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for terminal
-    environment:
-      - ENVIRONMENT=development
-      - DEBUG=true
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - DATABASE_URL=sqlite:////app/data/betterman.db
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     depends_on:
       - redis
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
+  # Next.js Frontend
   frontend:
-    build: ./frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     environment:
-      - VITE_API_URL=http://localhost:8000
-    depends_on:
-      backend:
-        condition: service_healthy
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "8081:80"
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_ENABLED=true
     volumes:
-      - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend/dist:/usr/share/nginx/html:ro
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
     depends_on:
       - backend
-      - frontend
-    restart: always
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Management service for loading man pages
-  man-loader:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.comprehensive
-    environment:
-      - DATABASE_URL=sqlite:////app/data/betterman.db
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    volumes:
-      - ./backend:/app
-      - ./data:/app/data
-      - man_cache:/app/.cache
-    depends_on:
-      - redis
-    profiles: ["tools"]
-    command: ["python", "-m", "src.management.comprehensive_cli"]
-
-  # Sandbox image for terminal
-  sandbox:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.sandbox
-    image: betterman-sandbox:latest
-    profiles: ["sandbox-build"]
-    command: echo "Sandbox image built successfully"
+    command: npm run dev
 
 volumes:
-  frontend_node_modules:
   redis_data:
-  man_cache:
+  backend_data:

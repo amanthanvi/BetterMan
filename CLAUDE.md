@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 docker-compose up -d
 
 # Access points:
-# - Frontend: http://localhost:5173
+# - Frontend: http://localhost:3000
 # - Backend API: http://localhost:8000
 # - API Documentation: http://localhost:8000/docs
 # - Redis: localhost:6379
@@ -38,7 +38,7 @@ python -m alembic upgrade head
 
 ### Frontend Development
 ```bash
-cd frontend
+# Install dependencies
 npm install
 
 # Run development server
@@ -50,8 +50,8 @@ npm run build
 # Run linting
 npm run lint
 
-# Preview production build
-npm run preview
+# Start production server
+npm start
 ```
 
 ### Docker Operations
@@ -67,6 +67,22 @@ docker-compose -f docker-compose.production.yml up -d
 # Rebuild containers
 docker-compose up --build
 ```
+
+### CI/CD Deployment
+
+**GitHub Actions Workflows:**
+- `ci.yml` - Runs tests and linting on every push/PR
+- `deploy.yml` - Deploys to production on main branch
+- `update-man-pages.yml` - Weekly man page updates
+
+**Deployment Targets:**
+- Frontend: Vercel (automatic deployment)
+- Backend: Render.com (triggered via API)
+- Man Pages: Parsed in GitHub Actions, committed to repo
+
+**Required Secrets:**
+- `VERCEL_TOKEN` - For frontend deployment
+- `RENDER_API_KEY` & `RENDER_SERVICE_ID` - For backend deployment
 
 ## Architecture Overview
 
@@ -92,21 +108,24 @@ BetterMan is a modern documentation platform that transforms Linux man pages int
 - Comprehensive error handling with custom exceptions
 - Rate limiting and security middleware
 
-### Frontend Architecture (React + TypeScript)
+### Frontend Architecture (Next.js 15 + TypeScript)
 
 **Core Components:**
-- `src/components/` - Reusable UI components
+- `app/` - Next.js App Router pages and layouts
+  - `(marketing)/` - Marketing pages
+  - `docs/` - Documentation viewer
+  - `api/` - API routes
+- `components/` - Reusable UI components
   - `CommandPalette.tsx` - Cmd/Ctrl+K navigation
   - `search/` - Search interface components
-  - `document/` - Document viewer
   - `ui/` - Base UI components (Button, Input, etc.)
-- `src/pages/` - Route-level page components
-- `src/stores/` - Zustand state management
-- `src/services/` - API client services
+- `lib/` - Utilities and data access
+- `hooks/` - Custom React hooks
 
 **Key Patterns:**
 - Component composition with TypeScript interfaces
-- Global state management with Zustand
+- Server and client components (Next.js App Router)
+- Static generation with dynamic fallbacks
 - Error boundaries for graceful error handling
 - Responsive design with Tailwind CSS
 - Keyboard navigation support throughout
@@ -121,8 +140,10 @@ BetterMan is a modern documentation platform that transforms Linux man pages int
 
 ### Production Considerations
 - Nginx reverse proxy with caching headers
-- PostgreSQL for production database
-- Prometheus + Grafana for monitoring
+- PostgreSQL for production database (or SQLite for smaller deployments)
 - Rate limiting and CORS protection
 - Health check endpoints for all services
 - Multi-stage Docker builds for optimization
+- GitHub Actions for CI/CD with cost-effective man page parsing
+- Vercel for frontend hosting with automatic deployments
+- Render/Railway for backend API hosting

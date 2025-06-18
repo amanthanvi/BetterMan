@@ -1,167 +1,214 @@
-# BetterMan - Modern Linux Documentation
+# BetterMan - Modern Linux Documentation Platform
 
-A production-ready, Vercel-deployable modern interface for Linux man pages with enhanced readability, instant search, and intelligent navigation.
+A modern, performant web interface for Linux man pages with enhanced readability, instant search, and intelligent navigation. Built with React, FastAPI, and deployed via GitHub Actions.
 
 ## Features
 
-- **Lightning Fast Search**: Hybrid search with client-side index and PostgreSQL full-text search
-- **Static Generation**: Pre-rendered man pages for instant loading
+- **Lightning Fast Search**: Full-text search with caching and optimization
 - **Modern UI**: Clean, responsive design with dark mode support
-- **Authentication**: Supabase Auth with OAuth support (GitHub, Google)
-- **Personalization**: User history, favorites, and preferences
-- **Edge Optimized**: Runs on Vercel Edge Runtime for global performance
-- **Real-time Updates**: WebSocket support for live features
+- **Enhanced Parsing**: Improved man page parsing with better formatting
+- **Command Palette**: Quick navigation with Cmd/Ctrl+K
+- **Related Commands**: Discover related tools and commands
+- **Categories & Sections**: Organized by standard man page sections
+- **Syntax Highlighting**: Code examples with proper highlighting
+- **Keyboard Navigation**: Full keyboard support throughout
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
-- **Caching**: Vercel KV (Redis)
+### Frontend
+- **Framework**: Next.js 15 with React 19
+- **Build Tool**: Next.js with Turbopack
 - **Styling**: Tailwind CSS + Radix UI
-- **Search**: Hybrid (Fuse.js + PostgreSQL FTS)
-- **Deployment**: Vercel
+- **State Management**: Zustand + React Context
+- **Routing**: Next.js App Router
+
+### Backend
+- **Framework**: FastAPI (Python)
+- **Database**: SQLite (development) / PostgreSQL (production)
+- **Caching**: Redis
+- **Search**: SQLAlchemy with full-text search
+- **Parser**: Enhanced groff/man parser
+
+### Deployment
+- **CI/CD**: GitHub Actions
+- **Frontend**: Vercel
+- **Backend**: Render.com / Railway
+- **Man Pages**: Parsed in GitHub Actions, stored in repo
 
 ## Getting Started
 
 ### Prerequisites
+- Node.js 20+
+- Python 3.11+
+- Redis
+- Docker (optional)
 
-- Node.js 18+
-- npm or yarn
-- Supabase account
-- Vercel account (for deployment)
-
-### Environment Variables
-
-Create a `.env.local` file:
+### Quick Start with Docker
 
 ```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Clone the repository
+git clone https://github.com/yourusername/betterman.git
+cd betterman
 
-# Vercel KV (optional in development)
-KV_URL=your-kv-url
-KV_REST_API_URL=your-kv-rest-url
-KV_REST_API_TOKEN=your-kv-token
-KV_REST_API_READ_ONLY_TOKEN=your-kv-read-token
+# Start all services
+docker-compose up -d
 
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# Access the application
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
 ```
 
-### Installation
+### Manual Setup
 
+#### Backend Setup
+```bash
+cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment variables
+cp .env.example .env
+
+# Run migrations
+python -m alembic upgrade head
+
+# Start development server
+uvicorn src.main:app --reload
+```
+
+#### Frontend Setup
 ```bash
 # Install dependencies
 npm install
 
-# Set up Supabase database
-# 1. Create a new Supabase project
-# 2. Run the schema from supabase/schema.sql
-# 3. Copy your project URL and keys to .env.local
+# Copy environment variables
+cp .env.example .env.local
 
-# Parse man pages (optional, for custom pages)
-npm run parse-man-pages
-
-# Build search index
-npm run build-search-index
-
-# Run development server
+# Start development server
 npm run dev
 ```
 
-### Project Structure
+### Environment Variables
+
+#### Backend (.env)
+```bash
+DATABASE_URL=sqlite:///./betterman.db
+REDIS_URL=redis://localhost:6379/0
+ADMIN_TOKEN=your-secure-admin-token
+BACKEND_CORS_ORIGINS=["http://localhost:5173"]
+```
+
+#### Frontend (.env.local)
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_ENABLED=true
+```
+
+## Project Structure
 
 ```
-betterman-next/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes (Edge Functions)
-│   ├── docs/              # Documentation pages
-│   ├── auth/              # Authentication pages
-│   └── (marketing)/       # Marketing pages
-├── components/            # React components
-│   ├── ui/               # Base UI components
-│   ├── docs/             # Documentation components
-│   └── search/           # Search components
-├── lib/                   # Utilities
-│   ├── supabase/         # Database client
-│   ├── cache/            # Caching utilities
-│   ├── parser/           # Man page parser
-│   └── search/           # Search implementation
-├── data/                  # Static data
-│   ├── man-pages/        # Pre-parsed pages
-│   └── search-index/     # Search index
-└── scripts/              # Build scripts
+BetterMan/
+├── app/                   # Next.js 15 App Router
+│   ├── (marketing)/      # Marketing pages
+│   ├── docs/            # Documentation pages
+│   └── api/             # API routes
+├── components/           # React components
+│   ├── ui/              # Base UI components
+│   └── search/          # Search components
+├── lib/                  # Utilities and helpers
+├── hooks/               # Custom React hooks
+├── backend/             # FastAPI backend
+│   ├── src/
+│   │   ├── api/         # API endpoints
+│   │   ├── models/      # Database models
+│   │   ├── search/      # Search implementation
+│   │   └── parser/      # Man page parser
+│   └── requirements.txt
+├── scripts/              # Build and parsing scripts
+├── data/                 # Parsed man pages data
+└── .github/workflows/    # CI/CD pipelines
 ```
 
 ## Deployment
 
-### Deploy to Vercel
+### GitHub Actions Setup
 
-1. Push your code to GitHub
-2. Import project in Vercel
-3. Add environment variables
-4. Deploy!
+1. Fork this repository
+2. Set up the following secrets in your GitHub repository:
+   - `VERCEL_TOKEN` - Your Vercel authentication token
+   - `RENDER_API_KEY` - Your Render API key
+   - `RENDER_SERVICE_ID` - Your Render service ID
 
+3. Push to main branch to trigger deployment
+
+### Manual Deployment
+
+#### Frontend (Vercel)
 ```bash
-# Or use Vercel CLI
-npm i -g vercel
+npm install -g vercel
 vercel
 ```
 
-### Post-Deployment Setup
-
-1. **Configure Supabase**:
-   - Enable Row Level Security
-   - Set up OAuth providers
-   - Configure email templates
-
-2. **Set up Vercel KV**:
-   - Create KV database in Vercel dashboard
-   - Connect to your project
-   - Copy credentials to environment
-
-3. **Configure Domain**:
-   - Add custom domain in Vercel
-   - Update NEXT_PUBLIC_APP_URL
+#### Backend (Render)
+1. Create a new Web Service on Render
+2. Connect your GitHub repository
+3. Set build command: `cd backend && pip install -r requirements.txt`
+4. Set start command: `cd backend && uvicorn src.main:app --host 0.0.0.0 --port $PORT`
 
 ## Development
 
-### Adding New Man Pages
+### Running Tests
 
 ```bash
-# Parse specific command
-npm run parse-man-pages -- --command git
+# Frontend tests
+npm test
 
-# Parse all available
-npm run parse-man-pages -- --all
+# Backend tests
+cd backend
+python -m pytest
 ```
 
-### API Routes
+### Code Quality
 
-- `GET /api/search` - Search documents
-- `GET /api/docs/[slug]` - Get document
-- `GET /api/search/suggestions` - Autocomplete
-- `POST /api/auth/*` - Authentication endpoints
+```bash
+# Frontend linting
+npm run lint
 
-### Performance Optimizations
+# Backend formatting
+cd backend
+python -m black src/
+python -m ruff check src/
+```
 
-1. **Static Generation**: Man pages are pre-rendered at build time
-2. **Edge Caching**: API responses cached at edge locations
-3. **Client-side Search**: Instant search with local index
-4. **Image Optimization**: Automatic with Next.js
-5. **Code Splitting**: Automatic with App Router
+### Updating Man Pages
+
+Man pages are automatically updated weekly via GitHub Actions. To manually update:
+
+```bash
+npm run parse:man-pages
+npm run migrate:man-pages
+npm run generate:man-index
+```
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
 ## License
 
-MIT License - see LICENSE file for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Linux man-pages project for the documentation
+- The open source community for the amazing tools and libraries

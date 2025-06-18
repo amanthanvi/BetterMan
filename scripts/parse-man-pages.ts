@@ -1,194 +1,279 @@
 #!/usr/bin/env tsx
 
-import { ManPageParser } from '../lib/parser/man-parser'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import fs from 'fs/promises'
 import path from 'path'
-import { createHash } from 'crypto'
+import { EnhancedManPageParser, type EnhancedManPage } from '../lib/parser/enhanced-man-parser'
 
-const DATA_DIR = path.join(process.cwd(), 'data', 'man-pages')
-const CACHE_FILE = path.join(DATA_DIR, '.cache-manifest.json')
+const execAsync = promisify(exec)
+const DATA_DIR = path.join(process.cwd(), 'data', 'parsed-man-pages', 'json')
 
-interface CacheManifest {
-  version: string
-  parsedAt: string
-  pages: {
-    [key: string]: {
-      hash: string
-      parsedAt: string
+interface ParseResult {
+  success: boolean
+  command: string
+  section?: number
+  error?: string
+  duration?: number
+}
+
+interface ParseStats {
+  total: number
+  successful: number
+  failed: number
+  duration: number
+  bySection: Record<number, number>
+  byCategory: Record<string, number>
+  errors: string[]
+}
+
+class ManPageParser {
+  private stats: ParseStats = {
+    total: 0,
+    successful: 0,
+    failed: 0,
+    duration: 0,
+    bySection: {},
+    byCategory: {},
+    errors: []
+  }
+
+  async parseAll() {
+    const startTime = Date.now()
+    
+    console.log('🚀 Starting enhanced man page parsing...')
+    
+    // Ensure output directory exists
+    await fs.mkdir(DATA_DIR, { recursive: true })
+    
+    // Get all available man pages
+    const commands = await this.getAllAvailableCommands()
+    console.log(`📋 Found ${commands.length} commands to parse`)
+    
+    // Parse in batches for better performance
+    const batchSize = 10
+    const results: ParseResult[] = []
+    
+    for (let i = 0; i < commands.length; i += batchSize) {
+      const batch = commands.slice(i, i + batchSize)
+      const batchResults = await Promise.all(
+        batch.map(cmd => this.parseCommand(cmd))
+      )
+      results.push(...batchResults)
+      
+      // Progress update
+      const progress = Math.round((i + batch.length) / commands.length * 100)
+      console.log(`📊 Progress: ${progress}% (${i + batch.length}/${commands.length})`)
     }
+    
+    // Calculate statistics
+    this.stats.duration = Date.now() - startTime
+    this.stats.total = results.length
+    this.stats.successful = results.filter(r => r.success).length
+    this.stats.failed = results.filter(r => !r.success).length
+    
+    // Save statistics
+    await this.saveStatistics()
+    
+    console.log('\n✨ Parsing complete!')
+    console.log(`📊 Total: ${this.stats.total}`)
+    console.log(`✅ Successful: ${this.stats.successful}`)
+    console.log(`❌ Failed: ${this.stats.failed}`)
+    console.log(`⏱️  Duration: ${(this.stats.duration / 1000).toFixed(2)}s`)
   }
-}
 
-async function loadCacheManifest(): Promise<CacheManifest | null> {
-  try {
-    const content = await fs.readFile(CACHE_FILE, 'utf-8')
-    return JSON.parse(content)
-  } catch {
-    return null
-  }
-}
-
-async function saveCacheManifest(manifest: CacheManifest) {
-  await fs.writeFile(CACHE_FILE, JSON.stringify(manifest, null, 2))
-}
-
-function generateHash(content: string): string {
-  return createHash('sha256').update(content).digest('hex').slice(0, 16)
-}
-
-async function parseAndSaveManPages() {
-  console.log('🚀 Starting man page parsing...')
-  
-  // Ensure data directory exists
-  await fs.mkdir(DATA_DIR, { recursive: true })
-  
-  // Load cache manifest
-  const manifest = await loadCacheManifest() || {
-    version: '1.0',
-    parsedAt: new Date().toISOString(),
-    pages: {}
-  }
-  
-  // Priority commands to parse first
-  const priorityCommands = [
-    'ls', 'cd', 'pwd', 'mkdir', 'rm', 'cp', 'mv', 'cat', 'echo', 'grep',
-    'find', 'sed', 'awk', 'cut', 'sort', 'head', 'tail', 'man', 'chmod',
-    'ps', 'kill', 'tar', 'curl', 'wget', 'ssh', 'git', 'vim', 'docker'
-  ]
-  
-  let parsedCount = 0
-  let skippedCount = 0
-  let errorCount = 0
-  
-  // Parse priority commands first
-  console.log('📋 Parsing priority commands...')
-  for (const command of priorityCommands) {
+  private async getAllAvailableCommands(): Promise<string[]> {
+    const commands = new Set<string>()
+    
     try {
-      const page = await ManPageParser.parseFromSystem(command)
-      if (!page) {
-        console.warn(`⚠️  Could not find man page for: ${command}`)
-        errorCount++
-        continue
+      // Method 1: Get from man database (most reliable)
+      const { stdout: manDb } = await execAsync(
+        `man -k . 2>/dev/null | cut -d' ' -f1 | cut -d'(' -f1 | sort -u`,
+        { maxBuffer: 10 * 1024 * 1024 }
+      )
+      manDb.split('\n').filter(Boolean).forEach(cmd => commands.add(cmd))
+      
+      // Method 2: Get from whatis database
+      try {
+        const { stdout: whatisDb } = await execAsync(
+          `whatis -r '.*' 2>/dev/null | cut -d' ' -f1 | sort -u`,
+          { maxBuffer: 10 * 1024 * 1024 }
+        )
+        whatisDb.split('\n').filter(Boolean).forEach(cmd => commands.add(cmd))
+      } catch {
+        // whatis might not be available
       }
       
-      const hash = generateHash(page.rawContent)
-      const cacheKey = `${page.name}.${page.section}`
+      // Method 3: Scan man directories directly
+      const manDirs = [
+        '/usr/share/man',
+        '/usr/local/share/man',
+        '/opt/local/share/man'
+      ]
       
-      // Skip if already cached and unchanged
-      if (manifest.pages[cacheKey]?.hash === hash) {
-        skippedCount++
-        continue
+      for (const manDir of manDirs) {
+        try {
+          for (let section = 1; section <= 8; section++) {
+            const sectionDir = path.join(manDir, `man${section}`)
+            try {
+              const files = await fs.readdir(sectionDir)
+              files.forEach(file => {
+                const match = file.match(/^([^.]+)\.(\d+)/)
+                if (match) {
+                  commands.add(match[1])
+                }
+              })
+            } catch {
+              // Section directory might not exist
+            }
+          }
+        } catch {
+          // Man directory might not exist
+        }
       }
       
-      // Save parsed page
-      const fileName = `${page.name}.${page.section}.json`
-      const filePath = path.join(DATA_DIR, fileName)
-      
-      await fs.writeFile(filePath, JSON.stringify({
-        ...page,
-        rawContent: undefined // Don't store raw content to save space
-      }, null, 2))
-      
-      // Update manifest
-      manifest.pages[cacheKey] = {
-        hash,
-        parsedAt: new Date().toISOString()
-      }
-      
-      parsedCount++
-      console.log(`✅ Parsed: ${command} (${parsedCount} done)`)
     } catch (error) {
-      console.error(`❌ Error parsing ${command}:`, error)
-      errorCount++
+      console.error('Error getting command list:', error)
+      
+      // Fallback: Use a predefined list of common commands
+      const commonCommands = [
+        'ls', 'cd', 'pwd', 'mkdir', 'rm', 'cp', 'mv', 'cat', 'echo', 'touch',
+        'grep', 'find', 'sed', 'awk', 'cut', 'sort', 'uniq', 'head', 'tail',
+        'chmod', 'chown', 'ps', 'kill', 'top', 'df', 'du', 'tar', 'gzip',
+        'ssh', 'scp', 'rsync', 'curl', 'wget', 'git', 'vim', 'nano', 'less',
+        'man', 'which', 'whereis', 'locate', 'history', 'alias', 'export'
+      ]
+      commonCommands.forEach(cmd => commands.add(cmd))
     }
+    
+    // Filter out invalid entries
+    return Array.from(commands)
+      .filter(cmd => cmd && cmd.length > 0 && /^[a-zA-Z0-9._-]+$/.test(cmd))
+      .sort()
   }
-  
-  // Parse additional common commands (with limit for build time)
-  console.log('\\n📚 Parsing additional commands...')
-  const additionalPages = await ManPageParser.parseAllAvailable({
-    sections: [1, 8], // User commands and system admin
-    limit: 100,
-    onProgress: (name, index, total) => {
-      if (index % 10 === 0) {
-        console.log(`Progress: ${index}/${total} commands processed`)
+
+  private async parseCommand(command: string): Promise<ParseResult> {
+    const startTime = Date.now()
+    
+    try {
+      // Check if command has man page
+      const { stdout: manPath } = await execAsync(
+        `man -w "${command}" 2>/dev/null | head -1`,
+        { maxBuffer: 1024 * 1024 }
+      )
+      
+      if (!manPath || manPath.trim().length === 0) {
+        return { success: false, command, error: 'No man page found' }
       }
+      
+      // Extract section from path
+      const sectionMatch = manPath.match(/man(\d+)/)
+      const section = sectionMatch ? parseInt(sectionMatch[1]) : undefined
+      
+      // Parse using enhanced parser
+      const page = await EnhancedManPageParser.parseFromSystem(command, section)
+      
+      if (!page) {
+        return { success: false, command, section, error: 'Failed to parse' }
+      }
+      
+      // Validate parsed content
+      if (!this.validateParsedPage(page)) {
+        return { success: false, command, section, error: 'Invalid content' }
+      }
+      
+      // Save to file
+      const filename = `${page.name}.${page.section}.json`
+      const filepath = path.join(DATA_DIR, filename)
+      await fs.writeFile(filepath, JSON.stringify(page, null, 2))
+      
+      // Update statistics
+      this.stats.bySection[page.section] = (this.stats.bySection[page.section] || 0) + 1
+      this.stats.byCategory[page.category] = (this.stats.byCategory[page.category] || 0) + 1
+      
+      const duration = Date.now() - startTime
+      console.log(`✅ ${command}(${page.section}) - ${page.category} - ${duration}ms`)
+      
+      return { success: true, command, section: page.section, duration }
+      
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      this.stats.errors.push(`${command}: ${errorMsg}`)
+      return { success: false, command, error: errorMsg }
     }
-  })
-  
-  for (const page of additionalPages) {
-    const hash = generateHash(page.rawContent)
-    const cacheKey = `${page.name}.${page.section}`
-    
-    // Skip if already parsed or cached
-    if (manifest.pages[cacheKey]?.hash === hash) {
-      skippedCount++
-      continue
-    }
-    
-    const fileName = `${page.name}.${page.section}.json`
-    const filePath = path.join(DATA_DIR, fileName)
-    
-    await fs.writeFile(filePath, JSON.stringify({
-      ...page,
-      rawContent: undefined
-    }, null, 2))
-    
-    manifest.pages[cacheKey] = {
-      hash,
-      parsedAt: new Date().toISOString()
-    }
-    
-    parsedCount++
   }
-  
-  // Save updated manifest
-  manifest.parsedAt = new Date().toISOString()
-  await saveCacheManifest(manifest)
-  
-  // Create index file for easy importing
-  const indexContent = await generateIndex()
-  await fs.writeFile(
-    path.join(DATA_DIR, 'index.ts'),
-    indexContent
-  )
-  
-  console.log(`\\n✨ Man page parsing complete!`)
-  console.log(`   📊 Parsed: ${parsedCount}`)
-  console.log(`   ⏭️  Skipped (cached): ${skippedCount}`)
-  console.log(`   ❌ Errors: ${errorCount}`)
-  console.log(`   📁 Output: ${DATA_DIR}`)
-}
 
-async function generateIndex(): Promise<string> {
-  const files = await fs.readdir(DATA_DIR)
-  const manPages = files
-    .filter(f => f.endsWith('.json') && !f.startsWith('.'))
-    .map(f => f.replace('.json', ''))
-  
-  const imports = manPages.map((page, i) => 
-    `import page${i} from './${page}.json'`
-  ).join('\\n')
-  
-  const exports = `
-export const manPages = {
-${manPages.map((page, i) => `  '${page}': page${i}`).join(',\\n')}
-}
+  private validateParsedPage(page: EnhancedManPage): boolean {
+    // Basic validation
+    if (!page.name || !page.description || !page.sections) {
+      return false
+    }
+    
+    // Description should be meaningful
+    if (page.description.length < 10) {
+      return false
+    }
+    
+    // Should have at least one section
+    if (page.sections.length === 0) {
+      return false
+    }
+    
+    // Check for parsing artifacts
+    const hasParsingIssues = page.sections.some(section => 
+      section.content.includes('\\f') || 
+      section.content.includes('.SH') ||
+      section.content.includes('.SS')
+    )
+    
+    if (hasParsingIssues) {
+      console.warn(`⚠️  ${page.name}: Contains parsing artifacts`)
+      return false
+    }
+    
+    return true
+  }
 
-export const manPageList = [
-${manPages.map((page, i) => `  page${i}`).join(',\\n')}
-]
+  private async saveStatistics() {
+    const manifest = {
+      timestamp: new Date().toISOString(),
+      parseVersion: '2.0.0',
+      platform: process.platform,
+      stats: this.stats,
+      totalPages: this.stats.successful,
+      sections: Object.entries(this.stats.bySection)
+        .sort(([a], [b]) => parseInt(a) - parseInt(b))
+        .map(([section, count]) => ({
+          section: parseInt(section),
+          count,
+          name: this.getSectionName(parseInt(section))
+        })),
+      categories: Object.entries(this.stats.byCategory)
+        .sort(([, a], [, b]) => b - a)
+        .map(([category, count]) => ({ category, count }))
+    }
+    
+    const manifestPath = path.join(path.dirname(DATA_DIR), 'manifest.json')
+    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2))
+  }
 
-export function getManPage(name: string, section?: number) {
-  const key = section ? \`\${name}.\${section}\` : Object.keys(manPages).find(k => k.startsWith(name + '.'))
-  return key ? manPages[key as keyof typeof manPages] : null
-}
-`
-  
-  return `// Auto-generated index file
-${imports}
-
-${exports}`
+  private getSectionName(section: number): string {
+    const sectionNames: Record<number, string> = {
+      1: 'User Commands',
+      2: 'System Calls',
+      3: 'Library Functions',
+      4: 'Special Files',
+      5: 'File Formats',
+      6: 'Games',
+      7: 'Miscellaneous',
+      8: 'System Administration'
+    }
+    return sectionNames[section] || 'Other'
+  }
 }
 
 // Run the parser
-parseAndSaveManPages().catch(console.error)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const parser = new ManPageParser()
+  parser.parseAll().catch(console.error)
+}

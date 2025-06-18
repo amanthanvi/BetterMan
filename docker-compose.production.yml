@@ -1,49 +1,13 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: betterman_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-betterman}
-      POSTGRES_USER: ${POSTGRES_USER:-betterman}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-    ports:
-      - "127.0.0.1:5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-betterman}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - betterman_network
-
-  # Redis Cache
+  # Redis Cache (required)
   redis:
     image: redis:7-alpine
-    container_name: betterman_redis
     restart: unless-stopped
-    command: >
-      redis-server
-      --appendonly yes
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD}
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
-    ports:
-      - "127.0.0.1:6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - betterman_network
 
@@ -52,252 +16,62 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args:
-        - PYTHON_VERSION=3.11
-    container_name: betterman_backend
     restart: unless-stopped
     environment:
-      - ENV=production
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-betterman}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-betterman}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://betterman.example.com}
-      - SENTRY_DSN=${SENTRY_DSN}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USERNAME=${SMTP_USERNAME}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      # Database
+      DATABASE_URL: ${DATABASE_URL}
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      # API
+      API_V1_STR: "/api/v1"
+      PROJECT_NAME: "BetterMan"
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
+      # Auth
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./backend/logs:/app/logs
-      - ./backend/uploads:/app/uploads
-      - /usr/share/man:/usr/share/man:ro
-    ports:
-      - "127.0.0.1:8000:8000"
+      - redis
+    networks:
+      - betterman_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-    networks:
-      - betterman_network
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '1'
-          memory: 1G
 
-  # Frontend Web App
+  # Frontend
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.production
+      dockerfile: Dockerfile
       args:
-        - NODE_ENV=production
-        - VITE_API_URL=${VITE_API_URL:-https://api.betterman.example.com}
-        - VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
-        - VITE_GA_TRACKING_ID=${VITE_GA_TRACKING_ID}
-    container_name: betterman_frontend
+        VITE_API_URL: ${VITE_API_URL}
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-    ports:
-      - "127.0.0.1:3000:80"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      VITE_API_URL: ${VITE_API_URL}
     networks:
       - betterman_network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
 
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
-    container_name: betterman_nginx
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/sites-enabled:/etc/nginx/sites-enabled:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./nginx/cache:/var/cache/nginx
-      - nginx_logs:/var/log/nginx
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
     depends_on:
-      - backend
       - frontend
-    healthcheck:
-      test: ["CMD", "nginx", "-t"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - backend
     networks:
       - betterman_network
 
-  # Prometheus Monitoring
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: betterman_prometheus
-    restart: unless-stopped
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-    ports:
-      - "127.0.0.1:9090:9090"
-    networks:
-      - betterman_network
-
-  # Grafana Dashboard
-  grafana:
-    image: grafana/grafana:latest
-    container_name: betterman_grafana
-    restart: unless-stopped
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GF_SERVER_ROOT_URL=https://grafana.betterman.example.com
-      - GF_SMTP_ENABLED=true
-      - GF_SMTP_HOST=${SMTP_HOST}:${SMTP_PORT:-587}
-      - GF_SMTP_USER=${SMTP_USERNAME}
-      - GF_SMTP_PASSWORD=${SMTP_PASSWORD}
-      - GF_SMTP_FROM_ADDRESS=${SMTP_FROM_EMAIL}
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    ports:
-      - "127.0.0.1:3001:3000"
-    depends_on:
-      - prometheus
-    networks:
-      - betterman_network
-
-  # Elasticsearch for Advanced Search
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
-    container_name: betterman_elasticsearch
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - cluster.name=betterman-cluster
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-      - xpack.security.enabled=true
-      - xpack.security.authc.api_key.enabled=true
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    ports:
-      - "127.0.0.1:9200:9200"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - betterman_network
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
-
-  # Background Job Worker
-  worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.worker
-    container_name: betterman_worker
-    restart: unless-stopped
-    environment:
-      - ENV=production
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-betterman}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-betterman}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - SENTRY_DSN=${SENTRY_DSN}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./backend/logs:/app/logs
-      - /usr/share/man:/usr/share/man:ro
-    networks:
-      - betterman_network
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-
-  # Backup Service
-  backup:
-    image: postgres:15-alpine
-    container_name: betterman_backup
-    environment:
-      - PGPASSWORD=${POSTGRES_PASSWORD}
-    volumes:
-      - ./backups:/backups
-      - ./scripts/backup.sh:/backup.sh:ro
-    entrypoint: ["/bin/sh", "-c"]
-    command: ["crond -f -d 8"]
-    depends_on:
-      - postgres
-    networks:
-      - betterman_network
+volumes:
+  redis_data:
 
 networks:
   betterman_network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
-
-volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  elasticsearch_data:
-    driver: local
-  prometheus_data:
-    driver: local
-  grafana_data:
-    driver: local
-  nginx_logs:
-    driver: local

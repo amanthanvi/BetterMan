@@ -33,11 +33,11 @@ jobs:
       - name: Parse man pages
         run: |
           mkdir -p data/parsed-man-pages/json
-          npm run parse:man-pages || npx tsx scripts/parse-man-pages-enhanced.ts
+          npm run parse:man-pages || npx tsx scripts/parse-man-pages.ts
       
       - name: Migrate data
         run: |
-          npm run migrate:man-pages || npx tsx scripts/migrate-parsed-pages-fixed.ts
+          npm run migrate:man-pages || npx tsx scripts/migrate-parsed-pages.ts
       
       - name: Generate index
         run: |
