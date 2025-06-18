@@ -52,7 +52,7 @@ jobs:
       
       - name: Update database via API
         env:
-          API_URL: ${{ secrets.VERCEL_API_URL || needs.deploy.outputs.deployment-url }}
+          API_URL: ${{ secrets.VERCEL_API_URL || 'https://betterman.vercel.app' }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           if [ -z "$ADMIN_TOKEN" ]; then
