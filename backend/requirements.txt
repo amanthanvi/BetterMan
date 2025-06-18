@@ -73,3 +73,7 @@ fuzzywuzzy==0.18.0
 # Terminal Support
 docker==7.1.0
 websockets==14.1
+
+# Deployment
+gunicorn==20.1.0
+boto3==1.26.137
