@@ -22,14 +22,21 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create data directory for SQLite
-RUN mkdir -p /data
+# Create directories for database and temporary files
+RUN mkdir -p /tmp /data
 
 # Set Python path
 ENV PYTHONPATH=/app/src:$PYTHONPATH
 
+# Set database to use /tmp (writable in App Platform)
+ENV DATABASE_PATH=/tmp/betterman.db
+ENV BACKUP_PATH=/tmp/betterman.db.backup
+
 # Expose port
 EXPOSE 8000
 
-# Run with gunicorn for production
-CMD ["gunicorn", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--access-logfile", "-", "--error-logfile", "-", "src.main:app"]
+# Make startup script executable
+RUN chmod +x startup_appplatform.py
+
+# Run startup script which handles DB init and starts gunicorn
+CMD ["python", "startup_appplatform.py"]
