@@ -370,9 +370,9 @@ export class EnhancedManPageParser {
         
         // Check for example command ($ prefix or indented command)
         const cmdMatch = line.match(this.PATTERNS.example) || 
-                         (line.match(/^\s{2,}([^$].+)$/) && line.includes(' '))
+                         line.match(/^\s{2,}([^$].+)$/)
         
-        if (cmdMatch && !collectingOutput) {
+        if (cmdMatch && !collectingOutput && line.includes(' ')) {
           // Save previous example
           if (currentExample) {
             if (descriptionBuffer.length > 0 && !currentExample.description) {
@@ -381,10 +381,11 @@ export class EnhancedManPageParser {
             examples.push(currentExample)
           }
           
+          const commandText = cmdMatch[1].trim()
           currentExample = {
-            command: cmdMatch[1].trim(),
+            command: commandText,
             description: '',
-            tags: this.extractExampleTags(cmdMatch[1])
+            tags: this.extractExampleTags(commandText)
           }
           
           descriptionBuffer = []
