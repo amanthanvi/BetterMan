@@ -33,8 +33,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     less \
     manpages \
     manpages-dev \
-    manpages-posix \
-    manpages-posix-dev \
     # System utilities
     util-linux \
     coreutils \

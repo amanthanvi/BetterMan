@@ -224,7 +224,7 @@ services:
       - key: ENVIRONMENT
         value: "production"
       - key: CORS_ORIGINS
-        value: "https://betterman.vercel.app,https://betterman-7wuel0a8k-aman-thanvis-projects.vercel.app"
+        value: "https://betterman.sh,https://www.betterman.sh"
     
     http_port: 8000
     
@@ -289,7 +289,7 @@ services:
       - key: ENVIRONMENT
         value: "production"
       - key: CORS_ORIGINS
-        value: "https://betterman.vercel.app,https://betterman-7wuel0a8k-aman-thanvis-projects.vercel.app"
+        value: "https://betterman.sh,https://www.betterman.sh"
     
     http_port: 8000
     
@@ -352,7 +352,7 @@ services:
       - key: ENVIRONMENT
         value: "production"
       - key: CORS_ORIGINS
-        value: "https://betterman.vercel.app,https://betterman-7wuel0a8k-aman-thanvis-projects.vercel.app"
+        value: "https://betterman.sh,https://www.betterman.sh"
     
     http_port: 8000
     

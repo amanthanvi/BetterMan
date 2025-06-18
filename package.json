@@ -15,7 +15,6 @@
     "check:duplicates": "tsx scripts/check-duplicates.ts",
     "generate:man-index": "tsx scripts/generate-man-index.ts",
     "build-search-index": "tsx scripts/build-search-index.ts",
-    "prebuild": "node prebuild.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
