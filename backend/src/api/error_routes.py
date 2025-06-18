@@ -260,7 +260,6 @@ async def get_error_trends(
         ).all()
         
         # Calculate error rates (errors per hour)
-        total_hours = hours
         results = []
         
         for row in trends:

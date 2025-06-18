@@ -86,7 +86,7 @@ async function loadManPages() {
         page.description,
         page.synopsis,
         (page.keywords || []).join(' '),
-        (page.related_commands || []).join(' ')
+        (page.relatedCommands || []).join(' ')
       ].filter(Boolean).join(' ')
     }))
     

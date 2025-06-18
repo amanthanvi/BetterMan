@@ -4,7 +4,9 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 import fs from 'fs/promises'
 import path from 'path'
-import { EnhancedManPageParser, type EnhancedManPage } from '../lib/parser/enhanced-man-parser'
+import { ManPageParser as BaseManPageParser } from '../lib/parser/man-parser'
+import type { EnhancedManPage } from '../lib/parser/enhanced-man-parser'
+import { adaptManPageToEnhanced } from '../lib/adapters/man-page-adapter'
 
 const execAsync = promisify(exec)
 const DATA_DIR = path.join(process.cwd(), 'data', 'parsed-man-pages', 'json')
@@ -171,11 +173,14 @@ class ManPageParser {
       const section = sectionMatch ? parseInt(sectionMatch[1]) : undefined
       
       // Parse using enhanced parser
-      const page = await EnhancedManPageParser.parseFromSystem(command, section)
+      const basePage = await BaseManPageParser.parseFromSystem(command, section)
       
-      if (!page) {
+      if (!basePage) {
         return { success: false, command, section, error: 'Failed to parse' }
       }
+      
+      // Convert to enhanced format
+      const page = adaptManPageToEnhanced(basePage)
       
       // Validate parsed content
       if (!this.validateParsedPage(page)) {

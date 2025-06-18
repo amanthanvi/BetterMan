@@ -120,19 +120,19 @@ async function checkDuplicates() {
   // Generate report
   console.log(`✅ Checked ${checkedCount} man pages\n`)
   
+  // Group by issue type
+  const issuesByType = issues.reduce((acc, issue) => {
+    if (!acc[issue.issue]) {
+      acc[issue.issue] = []
+    }
+    acc[issue.issue].push(issue)
+    return acc
+  }, {} as Record<string, DuplicateIssue[]>)
+  
   if (issues.length === 0) {
     console.log('🎉 No issues found!')
   } else {
     console.log(`⚠️  Found ${issues.length} issues:\n`)
-    
-    // Group by issue type
-    const issuesByType = issues.reduce((acc, issue) => {
-      if (!acc[issue.issue]) {
-        acc[issue.issue] = []
-      }
-      acc[issue.issue].push(issue)
-      return acc
-    }, {} as Record<string, DuplicateIssue[]>)
     
     for (const [issueType, issueList] of Object.entries(issuesByType)) {
       console.log(`\n${issueType} (${issueList.length} pages)`)

@@ -237,5 +237,5 @@ export async function getFavorites(): Promise<ManPage[]> {
     return []
   }
 
-  return data?.map(f => f.documents).filter(Boolean) || []
+  return (data?.map((f: any) => f.documents).filter(Boolean) || []) as ManPage[]
 }

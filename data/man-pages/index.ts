@@ -1853,11 +1853,11 @@ export const manPageIndex = {
 }
 
 export function getPagesByCategory(category: string) {
-  return manPageIndex.byCategory[category] || []
+  return (manPageIndex.byCategory as any)[category] || []
 }
 
 export function getPagesBySection(section: number) {
-  return manPageIndex.bySection[section] || []
+  return (manPageIndex.bySection as any)[section] || []
 }
 
 export function getCategoryStats() {

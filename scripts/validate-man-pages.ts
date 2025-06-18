@@ -145,19 +145,19 @@ async function validateManPages() {
   // Generate report
   console.log(`✅ Validated ${pages.length} man pages\n`)
   
+  // Group by type
+  const byType = issues.reduce((acc, issue) => {
+    if (!acc[issue.type]) {
+      acc[issue.type] = []
+    }
+    acc[issue.type].push(issue)
+    return acc
+  }, {} as Record<string, ValidationIssue[]>)
+  
   if (issues.length === 0) {
     console.log('🎉 All validations passed!')
   } else {
     console.log(`⚠️  Found ${issues.length} issues:\n`)
-    
-    // Group by type
-    const byType = issues.reduce((acc, issue) => {
-      if (!acc[issue.type]) {
-        acc[issue.type] = []
-      }
-      acc[issue.type].push(issue)
-      return acc
-    }, {} as Record<string, ValidationIssue[]>)
     
     for (const [type, typeIssues] of Object.entries(byType)) {
       console.log(`\n${type.replace(/-/g, ' ').toUpperCase()} (${typeIssues.length})`)

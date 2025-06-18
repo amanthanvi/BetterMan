@@ -13,6 +13,11 @@ export interface ManPageSection {
   subsections?: ManPageSection[]
 }
 
+export interface SeeAlsoItem {
+  name: string
+  section: number
+}
+
 export interface ManPage {
   name: string
   section: number
@@ -26,7 +31,7 @@ export interface ManPage {
   examples: string[]
   category?: string
   isCommon?: boolean
-  seeAlso?: string[]
+  seeAlso?: SeeAlsoItem[]
   keywords?: string[]
 }
 
@@ -97,7 +102,7 @@ export class ManPageParser {
     const examples = this.extractExamples(formattedContent)
     
     // Extract related commands
-    const relatedCommands = this.extractRelatedCommands(formattedContent)
+    const { relatedCommands, seeAlso } = this.extractRelatedCommands(formattedContent)
     
     // Generate search content
     const searchContent = this.generateSearchContent({
@@ -120,6 +125,7 @@ export class ManPageParser {
       searchContent,
       relatedCommands,
       examples,
+      seeAlso,
       category: this.CATEGORIES[actualSection as keyof typeof this.CATEGORIES],
       isCommon: this.COMMON_COMMANDS.has(name)
     }
@@ -266,16 +272,21 @@ export class ManPageParser {
     return examples
   }
 
-  private static extractRelatedCommands(content: string): string[] {
+  private static extractRelatedCommands(content: string): { relatedCommands: string[], seeAlso: SeeAlsoItem[] } {
     const related = new Set<string>()
+    const seeAlsoItems: SeeAlsoItem[] = []
     const seeAlsoSection = content.match(
       /SEE ALSO\\s+([\\s\\S]+?)(?=\\n[A-Z]|$)/i
     )
     
     if (seeAlsoSection) {
-      const matches = seeAlsoSection[1].matchAll(/\\b([a-z0-9_-]+)\\(\\d\\)/gi)
+      const matches = seeAlsoSection[1].matchAll(/\\b([a-z0-9_-]+)\\((\\d)\\)/gi)
       for (const match of matches) {
         related.add(match[1])
+        seeAlsoItems.push({
+          name: match[1],
+          section: parseInt(match[2])
+        })
       }
     }
     
@@ -287,7 +298,10 @@ export class ManPageParser {
       }
     }
     
-    return Array.from(related).slice(0, 10)
+    return {
+      relatedCommands: Array.from(related).slice(0, 10),
+      seeAlso: seeAlsoItems
+    }
   }
 
   private static generateSearchContent(data: {

@@ -61,11 +61,11 @@ async function generateIndex() {
   
   // Sort entries
   for (const category of Object.keys(byCategory)) {
-    byCategory[category].sort((a, b) => a.name.localeCompare(b.name))
+    (byCategory as any)[category].sort((a: any, b: any) => a.name.localeCompare(b.name))
   }
   
   for (const section of Object.keys(bySection)) {
-    bySection[section].sort((a, b) => a.name.localeCompare(b.name))
+    (bySection as any)[section].sort((a: any, b: any) => a.name.localeCompare(b.name))
   }
   
   commonCommands.sort((a, b) => a.name.localeCompare(b.name))
