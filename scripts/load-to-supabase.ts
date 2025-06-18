@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { createClient } from '@supabase/supabase-js'
-import { manPages } from '../data/enhanced-pages'
+import { manPageList as manPages } from '../data/man-pages'
 
 // Get Supabase credentials from environment or command line
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.argv[2]
@@ -71,13 +71,13 @@ async function loadManPages() {
       title: page.title,
       description: page.description,
       synopsis: page.synopsis || '',
-      content: page.content,
+      content: page.sections?.map(s => `${s.title}\n${s.content}`).join('\n\n') || page.description,
       category: page.category,
-      is_common: page.is_common || false,
+      is_common: page.isCommon || false,
       complexity: determineComplexity(page),
       keywords: page.keywords || [],
-      see_also: page.see_also || [],
-      related_commands: page.related_commands || [],
+      see_also: page.seeAlso || [],
+      related_commands: page.relatedCommands || [],
       examples: page.examples || [],
       options: page.options || [],
       search_content: [
