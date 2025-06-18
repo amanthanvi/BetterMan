@@ -1,0 +1,45 @@
+name: Test Admin API
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-api:
+    name: Test Admin API Access
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Test API with Token
+        env:
+          API_URL: https://betterman-7wuel0a8k-aman-thanvis-projects.vercel.app
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          echo "🔍 Testing Admin API access..."
+          
+          if [ -z "$ADMIN_TOKEN" ]; then
+            echo "❌ ADMIN_TOKEN is not set in GitHub Secrets"
+            exit 1
+          fi
+          
+          echo "✅ ADMIN_TOKEN is set (length: ${#ADMIN_TOKEN})"
+          
+          # Test API endpoint
+          echo -e "\n📊 Testing /api/admin/stats endpoint..."
+          
+          response=$(curl -s -w "\n%{http_code}" -X GET \
+            "${API_URL}/api/admin/stats" \
+            -H "X-Admin-Token: ${ADMIN_TOKEN}")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+          
+          echo "HTTP Status: $http_code"
+          echo "Response:"
+          echo "$body" | jq '.' 2>/dev/null || echo "$body"
+          
+          if [ "$http_code" -eq 200 ]; then
+            echo -e "\n✅ API access successful!"
+          else
+            echo -e "\n❌ API access failed"
+            exit 1
+          fi
