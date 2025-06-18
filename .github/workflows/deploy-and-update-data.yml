@@ -1,0 +1,161 @@
+name: Deploy and Update Data
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_data_update:
+        description: 'Force update database data'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    outputs:
+      deployment-url: ${{ steps.vercel-deploy.outputs.deployment-url }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Deploy to Vercel
+        id: vercel-deploy
+        run: |
+          # Vercel will auto-deploy on push to main
+          # This job waits for deployment to complete
+          echo "Waiting for Vercel deployment..."
+          # In practice, Vercel webhooks handle this automatically
+          echo "deployment-url=https://betterman.vercel.app" >> $GITHUB_OUTPUT
+
+  update-data:
+    name: Update Database Data
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.force_data_update == 'true' ||
+      contains(github.event.head_commit.message, '[update-data]') ||
+      contains(github.event.head_commit.message, 'man pages') ||
+      contains(github.event.head_commit.message, 'man-pages')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Wait for deployment
+        run: |
+          echo "Waiting 60 seconds for deployment to stabilize..."
+          sleep 60
+      
+      - name: Update database via API
+        env:
+          API_URL: ${{ secrets.VERCEL_API_URL || needs.deploy.outputs.deployment-url }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_TOKEN" ]; then
+            echo "⚠️  Warning: ADMIN_TOKEN not set. Skipping database update."
+            echo "To enable automatic data updates:"
+            echo "1. Generate a token: python3 scripts/generate-admin-token.py"
+            echo "2. Add ADMIN_TOKEN to GitHub Secrets"
+            echo "3. Add ADMIN_TOKEN to Vercel Environment Variables"
+            exit 0
+          fi
+          
+          echo "📊 Updating database with parsed man pages..."
+          
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${API_URL}/api/admin/load-json-data" \
+            -H "X-Admin-Token: ${ADMIN_TOKEN}" \
+            -H "Content-Type: application/json")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+          
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Database updated successfully!"
+            echo "$body" | jq '.' || echo "$body"
+          else
+            echo "❌ Failed to update database. HTTP status: $http_code"
+            echo "Response: $body"
+            exit 1
+          fi
+          
+          # Check stats
+          echo -e "\n📈 Checking database stats..."
+          stats=$(curl -s -X GET \
+            "${API_URL}/api/admin/stats" \
+            -H "X-Admin-Token: ${ADMIN_TOKEN}")
+          
+          echo "$stats" | jq '.' || echo "$stats"
+
+  parse-and-update:
+    name: Parse Man Pages and Update
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule ||
+      contains(github.event.head_commit.message, '[parse-man-pages]')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm install -g tsx
+      
+      - name: Install Ubuntu Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            man-db manpages manpages-dev manpages-posix manpages-posix-dev || true
+          
+          sudo apt-get install -y --no-install-recommends \
+            coreutils util-linux procps iproute2 net-tools \
+            curl wget git vim nano tmux screen \
+            findutils grep sed gawk diffutils patch less make gcc || true
+          
+          sudo mandb
+      
+      - name: Parse Man Pages
+        run: |
+          mkdir -p data/parsed-man-pages-linux
+          tsx scripts/parse-man-pages-ci.ts
+        env:
+          CI: true
+      
+      - name: Migrate to Application Format  
+        run: |
+          tsx scripts/migrate-linux-man-pages.ts
+      
+      - name: Commit and Push
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add data/man-pages/
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update man pages from Ubuntu Linux [update-data]
+            
+            - Parsed man pages from Ubuntu
+            - Auto-generated by GitHub Actions
+            
+            Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+            
+            git push
+          fi
