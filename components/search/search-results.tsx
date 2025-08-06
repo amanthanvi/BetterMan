@@ -18,6 +18,10 @@ interface SearchResult {
   category: string;
   snippet?: string;
   relevance?: number;
+  score?: number;
+  isExactMatch?: boolean;
+  isCommon?: boolean;
+  matches?: any[];
 }
 
 interface SearchResponse {
@@ -48,7 +52,11 @@ export function SearchResults() {
       setError(null);
 
       try {
-        const params = new URLSearchParams({ q: query });
+        const params = new URLSearchParams({ 
+          q: query,
+          fuzzy: 'true', // Enable fuzzy search by default
+          limit: '30'
+        });
         if (section) params.append('section', section);
         
         const response = await fetch(`/api/search?${params}`);
@@ -166,13 +174,23 @@ export function SearchResults() {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {result.isExactMatch && (
+                      <Badge variant="default" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                        Exact
+                      </Badge>
+                    )}
+                    {result.isCommon && (
+                      <Badge variant="secondary" className="text-xs">
+                        Popular
+                      </Badge>
+                    )}
                     {result.category && (
                       <Badge variant="outline" className="text-xs">
                         {result.category}
                       </Badge>
                     )}
-                    {result.relevance && result.relevance > 0.8 && (
-                      <TrendingUp className="h-3 w-3" />
+                    {result.score !== undefined && result.score < 0.3 && !result.isExactMatch && (
+                      <span className="text-xs text-muted-foreground">fuzzy</span>
                     )}
                   </div>
                 </div>

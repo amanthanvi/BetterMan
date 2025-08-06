@@ -245,26 +245,29 @@ export function CommandPalette() {
     return []
   }, [search, recentCommands, favorites, navigationCommands, actionCommands, preferenceCommands, router])
 
-  // Perform documentation search
+  // Perform documentation search with Fuse.js
   useEffect(() => {
-    if (debouncedSearch.length >= 2) {
-      setIsSearching(true)
-      
-      // Simulate search - in real app, use the search API
-      fetch(`/api/search/enhanced?q=${encodeURIComponent(debouncedSearch)}&limit=5`)
-        .then(res => res.json())
-        .then(data => {
+    const performSearch = async () => {
+      if (debouncedSearch.length >= 1) { // Start searching from 1 character
+        setIsSearching(true)
+        
+        try {
+          // Use the improved search API with fuzzy search
+          const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedSearch)}&limit=8&fuzzy=true`)
+          const data = await response.json()
           setSearchResults(data.results || [])
-        })
-        .catch(() => {
+        } catch (error) {
+          console.error('Search error:', error)
           setSearchResults([])
-        })
-        .finally(() => {
+        } finally {
           setIsSearching(false)
-        })
-    } else {
-      setSearchResults([])
+        }
+      } else {
+        setSearchResults([])
+      }
     }
+
+    performSearch()
   }, [debouncedSearch])
 
   // Calculate all items for keyboard navigation

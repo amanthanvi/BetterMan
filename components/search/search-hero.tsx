@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Command, Sparkles } from 'lucide-react';
-import { searchClient } from '@/lib/search/client';
+import { Search, Command, Sparkles, Loader2 } from 'lucide-react';
+import { instantSearchClient } from '@/lib/search/instant-search-client';
 import { cn } from '@/lib/utils/cn';
 import { useDebounce } from '@/hooks/use-debounce';
 
@@ -14,23 +14,47 @@ export function SearchHero() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isFocused, setIsFocused] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debouncedQuery = useDebounce(query, 200);
+  const debouncedQuery = useDebounce(query, 100); // Fast debounce for instant feel
 
+  // Fetch suggestions with instant search
   useEffect(() => {
-    if (debouncedQuery.length >= 2) {
-      searchClient.getSuggestions(debouncedQuery, 8).then(setSuggestions);
-      setIsOpen(true);
-    } else {
-      setSuggestions([]);
-      setIsOpen(false);
-    }
+    const fetchSuggestions = async () => {
+      if (debouncedQuery.length >= 1) { // Start suggesting from 1 character
+        setIsLoadingSuggestions(true);
+        try {
+          const results = await instantSearchClient.getSuggestions(debouncedQuery, 10);
+          setSuggestions(results);
+          setIsOpen(results.length > 0);
+        } catch (error) {
+          console.error('Failed to fetch suggestions:', error);
+          setSuggestions([]);
+        } finally {
+          setIsLoadingSuggestions(false);
+        }
+      } else {
+        setSuggestions([]);
+        setIsOpen(false);
+        setIsLoadingSuggestions(false);
+      }
+    };
+
+    fetchSuggestions();
+    
+    // Cleanup on unmount
+    return () => {
+      instantSearchClient.cancelPendingSearches();
+    };
   }, [debouncedQuery]);
 
   const handleSearch = useCallback((searchQuery: string) => {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setIsOpen(false);
+      
+      // Clear pending searches when navigating
+      instantSearchClient.cancelPendingSearches();
     }
   }, [router]);
 
@@ -56,11 +80,23 @@ export function SearchHero() {
     }
   }, [suggestions, selectedIndex, query, handleSearch]);
 
+  // Global keyboard shortcut for focusing search
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K to focus search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+      // "/" to focus search (common pattern)
+      else if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const target = e.target as HTMLElement;
+        // Don't trigger if user is typing in an input
+        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }
       }
     };
 
@@ -74,14 +110,14 @@ export function SearchHero() {
       <div className="absolute -top-20 left-1/2 -translate-x-1/2 pointer-events-none">
         <div className="relative">
           <div className="absolute inset-0 bg-primary/20 blur-3xl" />
-          <Sparkles className="relative h-8 w-8 text-primary/50 animate-glow-pulse" />
+          <Sparkles className="relative h-8 w-8 text-primary/50 animate-pulse" />
         </div>
       </div>
 
       <div className="relative">
         <div
           className={cn(
-            "relative transition-all duration-300",
+            "relative transition-all duration-200",
             isFocused && "scale-[1.02]"
           )}
         >
@@ -101,15 +137,16 @@ export function SearchHero() {
               onKeyDown={handleKeyDown}
               onFocus={() => {
                 setIsFocused(true);
-                suggestions.length > 0 && setIsOpen(true);
+                if (suggestions.length > 0) setIsOpen(true);
               }}
               onBlur={() => {
                 setIsFocused(false);
+                // Delay closing to allow click on suggestions
                 setTimeout(() => setIsOpen(false), 200);
               }}
-              placeholder="Search for any Linux command..."
+              placeholder="Search for any Linux command... (Press / or ⌘K)"
               className={cn(
-                "h-14 w-full rounded-full pl-14 pr-24",
+                "h-14 w-full rounded-full pl-14 pr-32",
                 "bg-card border border-border/50",
                 "text-lg placeholder:text-muted-foreground/70",
                 "shadow-sm transition-all duration-200",
@@ -117,41 +154,65 @@ export function SearchHero() {
                 "focus:shadow-lg focus:shadow-primary/5",
                 isFocused && "bg-card/90 backdrop-blur-sm"
               )}
+              autoComplete="off"
+              spellCheck="false"
             />
             
             <div className="absolute right-5 flex items-center gap-2">
-              <kbd className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
-                <Command className="h-3 w-3" />K
-              </kbd>
+              {isLoadingSuggestions && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+              <div className="hidden sm:flex items-center gap-1">
+                <kbd className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
+                  <Command className="h-3 w-3" />K
+                </kbd>
+                <span className="text-xs text-muted-foreground">or</span>
+                <kbd className="inline-flex items-center rounded-md border border-border bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
+                  /
+                </kbd>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Suggestions Dropdown */}
+        {/* Suggestions Dropdown with Fuzzy Search Results */}
         {isOpen && suggestions.length > 0 && (
-          <div className="absolute top-full z-50 mt-3 w-full animate-slide-up">
+          <div className="absolute top-full z-50 mt-3 w-full animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="overflow-hidden rounded-lg border border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl">
-              <ul className="py-2">
-                {suggestions.map((suggestion, index) => (
-                  <li key={suggestion}>
-                    <button
-                      className={cn(
-                        "flex w-full items-center gap-3 px-5 py-3 text-left transition-all duration-150",
-                        selectedIndex === index
-                          ? "bg-primary/10 text-primary"
-                          : "hover:bg-muted/50 text-foreground"
-                      )}
-                      onClick={() => handleSearch(suggestion)}
-                    >
-                      <Search className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-mono text-sm font-medium">{suggestion}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <div className="border-t border-border/50 px-5 py-2">
+              <div className="max-h-80 overflow-y-auto">
+                <ul className="py-2">
+                  {suggestions.map((suggestion, index) => (
+                    <li key={`${suggestion}-${index}`}>
+                      <button
+                        className={cn(
+                          "flex w-full items-center gap-3 px-5 py-3 text-left transition-all duration-150",
+                          "hover:bg-muted/50",
+                          selectedIndex === index
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground"
+                        )}
+                        onClick={() => handleSearch(suggestion)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      >
+                        <Search className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <span className="font-mono text-sm font-medium">{suggestion}</span>
+                        {/* Show if it's a fuzzy match */}
+                        {!suggestion.toLowerCase().startsWith(query.toLowerCase()) && (
+                          <span className="ml-auto text-xs text-muted-foreground">fuzzy</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="border-t border-border/50 px-5 py-2 bg-muted/30">
                 <p className="text-xs text-muted-foreground">
-                  Press <kbd className="mx-1 rounded bg-muted px-1 py-0.5 text-xs">Enter</kbd> to search
+                  <kbd className="mx-1 rounded bg-muted px-1 py-0.5 text-xs border border-border">↑↓</kbd>
+                  Navigate
+                  <kbd className="mx-1 rounded bg-muted px-1 py-0.5 text-xs border border-border">Enter</kbd>
+                  Search
+                  <kbd className="mx-1 rounded bg-muted px-1 py-0.5 text-xs border border-border">Esc</kbd>
+                  Close
                 </p>
               </div>
             </div>
@@ -161,15 +222,15 @@ export function SearchHero() {
 
       {/* Example searches */}
       <div className="mt-6 flex flex-wrap justify-center gap-2 text-sm">
-        <span className="text-muted-foreground">Popular:</span>
-        {['grep', 'find', 'awk', 'sed', 'chmod'].map((cmd) => (
+        <span className="text-muted-foreground">Try:</span>
+        {['grep', 'find', 'awk', 'sed', 'chmod', 'docker', 'git'].map((cmd) => (
           <button
             key={cmd}
             onClick={() => {
               setQuery(cmd);
               handleSearch(cmd);
             }}
-            className="text-primary/80 hover:text-primary font-mono hover:underline transition-colors"
+            className="text-primary/80 hover:text-primary font-mono hover:underline transition-colors text-sm"
           >
             {cmd}
           </button>
