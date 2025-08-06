@@ -19,71 +19,31 @@ A modern, performant web interface for Linux man pages with enhanced readability
 - **Framework**: Next.js 15 with React 19
 - **Build Tool**: Next.js with Turbopack
 - **Styling**: Tailwind CSS + Radix UI
-- **State Management**: Zustand + React Context
+- **State Management**: React Context
 - **Routing**: Next.js App Router
-
-### Backend
-- **Framework**: FastAPI (Python)
-- **Database**: SQLite (development) / PostgreSQL (production)
-- **Caching**: Redis
-- **Search**: SQLAlchemy with full-text search
-- **Parser**: Enhanced groff/man parser
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
 
 ### Deployment
-- **CI/CD**: GitHub Actions
+- **CI/CD**: GitHub Actions (ci.yml, deploy.yml, update-docs.yml)
 - **Frontend**: Vercel
-- **Backend**: Render.com / Railway
-- **Man Pages**: Parsed in GitHub Actions, stored in repo
+- **Database**: Supabase
+- **Man Pages**: Pre-parsed JSON in repo, updated via GitHub Actions
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 20+
-- Python 3.11+
-- Redis
-- Docker (optional)
+- npm or pnpm
+- Supabase account (for database)
 
-### Quick Start with Docker
+### Quick Start
 
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/betterman.git
 cd betterman
 
-# Start all services
-docker-compose up -d
-
-# Access the application
-# Frontend: http://localhost:5173
-# Backend API: http://localhost:8000
-# API Docs: http://localhost:8000/docs
-```
-
-### Manual Setup
-
-#### Backend Setup
-```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy environment variables
-cp .env.example .env
-
-# Run migrations
-python -m alembic upgrade head
-
-# Start development server
-uvicorn src.main:app --reload
-```
-
-#### Frontend Setup
-```bash
 # Install dependencies
 npm install
 
@@ -92,48 +52,68 @@ cp .env.example .env.local
 
 # Start development server
 npm run dev
+
+# Access the application at http://localhost:3000
+```
+
+### Development Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your Supabase credentials
+
+# Run development server
+npm run dev
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
+```
+
+### Project Structure
+
+```
+BetterMan/
+├── app/              # Next.js App Router pages
+├── components/       # React components
+│   ├── ui/          # Base UI components
+│   ├── docs/        # Documentation viewer components
+│   ├── search/      # Search interface components
+│   └── ...          # Other feature components
+├── lib/             # Utilities and helpers
+├── data/            # Man page data (JSON)
+│   ├── man-pages/   # Individual man page files
+│   └── indexes/     # Search indexes
+├── hooks/           # Custom React hooks
+├── public/          # Static assets
+├── scripts/         # Build and maintenance scripts
+├── supabase/        # Database migrations and functions
+└── .github/         # GitHub Actions workflows
+    └── workflows/
+        ├── ci.yml           # Continuous Integration
+        ├── deploy.yml       # Deployment workflow
+        └── update-docs.yml  # Man page update workflow
 ```
 
 ### Environment Variables
 
-#### Backend (.env)
 ```bash
-DATABASE_URL=sqlite:///./betterman.db
-REDIS_URL=redis://localhost:6379/0
-ADMIN_TOKEN=your-secure-admin-token
-BACKEND_CORS_ORIGINS=["http://localhost:5173"]
-```
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-#### Frontend (.env.local)
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
+# Optional: API Configuration  
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
 NEXT_PUBLIC_API_ENABLED=true
 ```
 
-## Project Structure
-
-```
-BetterMan/
-├── app/                   # Next.js 15 App Router
-│   ├── (marketing)/      # Marketing pages
-│   ├── docs/            # Documentation pages
-│   └── api/             # API routes
-├── components/           # React components
-│   ├── ui/              # Base UI components
-│   └── search/          # Search components
-├── lib/                  # Utilities and helpers
-├── hooks/               # Custom React hooks
-├── backend/             # FastAPI backend
-│   ├── src/
-│   │   ├── api/         # API endpoints
-│   │   ├── models/      # Database models
-│   │   ├── search/      # Search implementation
-│   │   └── parser/      # Man page parser
-│   └── requirements.txt
-├── scripts/              # Build and parsing scripts
-├── data/                 # Parsed man pages data
-└── .github/workflows/    # CI/CD pipelines
-```
 
 ## Deployment
 
@@ -142,58 +122,45 @@ BetterMan/
 1. Fork this repository
 2. Set up the following secrets in your GitHub repository:
    - `VERCEL_TOKEN` - Your Vercel authentication token
-   - `RENDER_API_KEY` - Your Render API key
-   - `RENDER_SERVICE_ID` - Your Render service ID
+   - `SUPABASE_URL` - Your Supabase project URL
+   - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
 
 3. Push to main branch to trigger deployment
 
-### Manual Deployment
+### Manual Deployment (Vercel)
 
-#### Frontend (Vercel)
 ```bash
 npm install -g vercel
 vercel
 ```
 
-#### Backend (Render)
-1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Set build command: `cd backend && pip install -r requirements.txt`
-4. Set start command: `cd backend && uvicorn src.main:app --host 0.0.0.0 --port $PORT`
+The application will be deployed to Vercel with automatic preview deployments for pull requests.
 
 ## Development
 
 ### Running Tests
 
 ```bash
-# Frontend tests
+# Run unit tests
 npm test
 
-# Backend tests
-cd backend
-python -m pytest
-```
+# Run E2E tests with Playwright
+npm run test:e2e
 
-### Code Quality
-
-```bash
-# Frontend linting
+# Run linting
 npm run lint
 
-# Backend formatting
-cd backend
-python -m black src/
-python -m ruff check src/
+# Type checking
+npm run type-check
 ```
 
 ### Updating Man Pages
 
-Man pages are automatically updated weekly via GitHub Actions. To manually update:
+Man pages are automatically updated weekly via GitHub Actions (update-docs.yml). The parsed JSON files are stored in the `data/man-pages/` directory.
 
+To manually update:
 ```bash
-npm run parse:man-pages
-npm run migrate:man-pages
-npm run generate:man-index
+npm run build:search-index
 ```
 
 ## Contributing
