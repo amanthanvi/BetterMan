@@ -61,7 +61,7 @@ export default function HomePage() {
                   Start Searching
                 </Button>
               </Link>
-              <Link href="/docs/ls">
+              <Link href="/browse">
                 <Button size="lg" variant="secondary" className="min-w-[200px]">
                   <BookOpen className="mr-2 h-5 w-5" />
                   Browse Docs
@@ -188,7 +188,7 @@ export default function HomePage() {
               <Link href="https://github.com/yourusername/betterman" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 GitHub
               </Link>
-              <Link href="/docs/ls" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link href="/browse" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Browse
               </Link>
             </div>
