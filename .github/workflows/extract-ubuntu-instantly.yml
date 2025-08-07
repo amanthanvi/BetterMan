@@ -1,0 +1,85 @@
+name: Instant Ubuntu Extraction
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/extract-ubuntu-instantly.yml'
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Quick Extract Essential Commands
+        run: |
+          # Install packages
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq man-db manpages coreutils net-tools curl git vim python3
+          
+          # Quick extraction script
+          python3 - << 'PYTHON'
+          import subprocess, json, re
+          from pathlib import Path
+          
+          # Essential commands to extract
+          commands = [
+              'ls', 'cd', 'pwd', 'mkdir', 'rm', 'cp', 'mv', 'cat', 'echo', 'grep',
+              'find', 'sed', 'awk', 'sort', 'uniq', 'head', 'tail', 'less', 'more',
+              'chmod', 'chown', 'ps', 'kill', 'top', 'df', 'du', 'tar', 'gzip',
+              'curl', 'wget', 'ssh', 'scp', 'git', 'vim', 'nano', 'make', 'gcc',
+              'apt', 'sudo', 'systemctl', 'journalctl', 'ip', 'ping', 'netstat',
+              'diff', 'patch', 'touch', 'ln', 'which', 'whereis', 'man', 'info'
+          ]
+          
+          extracted = []
+          for cmd in commands:
+              try:
+                  result = subprocess.run(['man', cmd], capture_output=True, text=True, timeout=2)
+                  if result.returncode == 0:
+                      extracted.append({
+                          'name': cmd,
+                          'content': result.stdout[:5000],  # First 5000 chars
+                          'platform': 'ubuntu'
+                      })
+                      print(f'✓ {cmd}')
+              except:
+                  print(f'✗ {cmd}')
+          
+          # Save as JSON
+          Path('manpages.json').write_text(json.dumps(extracted, indent=2))
+          print(f'\n✅ Extracted {len(extracted)} commands!')
+          PYTHON
+          
+      - name: Create SQLite Database
+        run: |
+          python3 - << 'PYTHON'
+          import json, sqlite3
+          
+          data = json.loads(open('manpages.json').read())
+          
+          conn = sqlite3.connect('betterman.db')
+          c = conn.cursor()
+          
+          c.execute('''CREATE TABLE IF NOT EXISTS commands
+                      (name TEXT PRIMARY KEY, content TEXT, platform TEXT)''')
+          
+          for cmd in data:
+              c.execute('INSERT OR REPLACE INTO commands VALUES (?, ?, ?)',
+                       (cmd['name'], cmd['content'], cmd['platform']))
+          
+          conn.commit()
+          conn.close()
+          
+          print(f'✅ Database created with {len(data)} commands')
+          PYTHON
+          
+      - name: Upload Database
+        uses: actions/upload-artifact@v3
+        with:
+          name: betterman-database
+          path: |
+            betterman.db
+            manpages.json
