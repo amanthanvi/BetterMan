@@ -20,6 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Make start script executable
+RUN chmod +x start.sh
+
 # Create non-root user
 RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app
 USER appuser
@@ -27,9 +30,8 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+# Set default PORT
+ENV PORT=8000
 
 # Start the application
-CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["./start.sh"]

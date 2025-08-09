@@ -5,9 +5,6 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   
-  // Monorepo configuration
-  transpilePackages: ['@betterman/shared'],
-  
   // Optimize images
   images: {
     domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
