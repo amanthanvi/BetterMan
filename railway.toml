@@ -1,3 +1,5 @@
+# Railway monorepo configuration for BetterMan
+
 [build]
 builder = "nixpacks"
 
@@ -5,16 +7,32 @@ builder = "nixpacks"
 numReplicas = 1
 restartPolicyType = "on-failure"
 
+# Frontend Service (Next.js)
 [[services]]
 name = "frontend"
-buildCommand = "cd frontend && npm ci && npm run build"
-startCommand = "cd frontend && npm start"
+root = "frontend"
+buildCommand = "npm ci && npm run build"
+startCommand = "npm start"
 healthcheckPath = "/"
 port = 3000
 
+  [services.env]
+  NODE_ENV = "production"
+  NEXT_PUBLIC_API_URL = "${{RAILWAY_SERVICE_BACKEND_URL}}"
+
+# Backend Service (FastAPI)
 [[services]]
 name = "backend"
-buildCommand = "cd backend && pip install -r requirements.txt"
-startCommand = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+root = "backend"
+buildCommand = "pip install -r requirements.txt"
+startCommand = "uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}"
 healthcheckPath = "/health"
 port = 8000
+
+  [services.env]
+  PYTHON_VERSION = "3.11"
+  ENVIRONMENT = "production"
+  DATABASE_URL = "${{DATABASE_URL}}"
+  REDIS_URL = "${{REDIS_URL}}"
+  SECRET_KEY = "${{SECRET_KEY}}"
+  CORS_ORIGINS = "${{RAILWAY_SERVICE_FRONTEND_URL}}"

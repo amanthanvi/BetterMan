@@ -4,6 +4,9 @@ import crypto from 'crypto';
 const nextConfig = {
   reactStrictMode: true,
   
+  // Monorepo configuration
+  transpilePackages: ['@betterman/shared'],
+  
   // Optimize images
   images: {
     domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
