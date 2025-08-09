@@ -1,0 +1,20 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+numReplicas = 1
+restartPolicyType = "on-failure"
+
+[[services]]
+name = "frontend"
+buildCommand = "cd frontend && npm ci && npm run build"
+startCommand = "cd frontend && npm start"
+healthcheckPath = "/"
+port = 3000
+
+[[services]]
+name = "backend"
+buildCommand = "cd backend && pip install -r requirements.txt"
+startCommand = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+port = 8000

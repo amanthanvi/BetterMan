@@ -1,0 +1,45 @@
+name: Extract and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install man pages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y man-db manpages manpages-dev
+      
+      - name: Extract man pages
+        run: python3 scripts/extract_man_pages.py
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: man-pages
+          path: data/
+  
+  deploy:
+    needs: extract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download man pages
+        uses: actions/download-artifact@v3
+        with:
+          name: man-pages
+          path: data/
+      
+      - name: Deploy to Railway
+        run: |
+          npm install -g @railway/cli
+          railway up
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
