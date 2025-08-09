@@ -1,7 +1,6 @@
-# Frontend Dockerfile for production
+# Simple Frontend Dockerfile for Railway
 
-# Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -11,34 +10,18 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy application code (includes everything needed)
+# Copy all files
 COPY . .
 
 # Build the application
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Copy built application
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
-# Set user
-USER nextjs
-
 # Expose port
 EXPOSE 3000
 
-ENV PORT 3000
-ENV NODE_ENV production
+# Use Railway's PORT if available
+ENV PORT=3000
+ENV NODE_ENV=production
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["npm", "start"]

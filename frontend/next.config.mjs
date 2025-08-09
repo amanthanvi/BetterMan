@@ -3,7 +3,6 @@ import crypto from 'crypto';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'standalone',
   
   // Optimize images
   images: {
