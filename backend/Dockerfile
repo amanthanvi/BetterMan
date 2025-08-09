@@ -27,8 +27,5 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Set default PORT
-ENV PORT=8000
-
 # Start the application
 CMD ["python", "start.py"]

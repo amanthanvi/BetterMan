@@ -11,9 +11,9 @@ export interface WebVitalsMetric {
 
 function sendToAnalytics(metric: WebVitalsMetric) {
   // Use Vercel Analytics
-  if (typeof window !== 'undefined' && window.vercel?.analyticsId) {
+  if (typeof window !== 'undefined' && (window as any).vercel?.analyticsId) {
     const body = {
-      dsn: window.vercel.analyticsId,
+      dsn: (window as any).vercel.analyticsId,
       id: metric.id,
       page: window.location.pathname,
       href: window.location.href,
