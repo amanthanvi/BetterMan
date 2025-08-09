@@ -7,12 +7,11 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY ../shared /shared
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
-# Copy application code
+# Copy application code (includes everything needed)
 COPY . .
 
 # Build the application

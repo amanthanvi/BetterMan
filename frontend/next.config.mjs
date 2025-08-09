@@ -3,6 +3,7 @@ import crypto from 'crypto';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   
   // Monorepo configuration
   transpilePackages: ['@betterman/shared'],
