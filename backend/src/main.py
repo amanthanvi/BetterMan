@@ -29,7 +29,7 @@ from .security.rate_limiter import RateLimitMiddleware
 from .db.query_performance import setup_query_monitoring, performance_monitor
 from .middleware.compression import CompressionMiddleware
 from .monitoring_metrics.metrics import system_monitor, update_app_info, RequestTracker
-from .search.unified_search import UnifiedSearch as FullTextSearchEngine
+from .search.unified_search import UnifiedSearchEngine as FullTextSearchEngine
 
 # Initialize settings and logging
 settings = get_settings()
