@@ -23,9 +23,14 @@ if settings.DATABASE_URL.startswith("sqlite"):
         connect_args={"check_same_thread": False, "timeout": 30}
     )
 else:
-    # Use connection pooling for other databases
+    # Use connection pooling for PostgreSQL with psycopg3
+    database_url = settings.DATABASE_URL
+    # Convert to psycopg3 format if needed
+    if database_url.startswith('postgresql://') and '+' not in database_url:
+        database_url = database_url.replace('postgresql://', 'postgresql+psycopg://')
+    
     engine = create_engine(
-        settings.DATABASE_URL,
+        database_url,
         poolclass=QueuePool,
         **get_database_config(settings)
     )

@@ -16,7 +16,7 @@ from sqlalchemy.pool import NullPool
 from urllib.parse import urlparse, urlunparse
 
 from ..config import get_settings
-from ..models.postgres_models import Base
+# Import Base from postgres_models when needed to avoid circular imports
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -156,6 +156,7 @@ async def init_async_db():
     
     # Test connection
     try:
+        from ..models.postgres_models import Base
         async with async_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             logger.info("Async database connection established successfully")
@@ -189,6 +190,8 @@ async def get_asyncpg_pool():
 def init_db():
     """Initialize database with all tables and functions."""
     try:
+        # Import here to avoid circular imports
+        from ..models.postgres_models import Base
         # Create all tables
         Base.metadata.create_all(bind=engine)
         
@@ -222,6 +225,7 @@ def init_db():
 
 def drop_all_tables():
     """Drop all tables (use with caution!)."""
+    from ..models.postgres_models import Base
     Base.metadata.drop_all(bind=engine)
     logger.warning("All database tables dropped")
 
