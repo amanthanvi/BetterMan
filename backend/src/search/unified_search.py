@@ -13,8 +13,8 @@ import json
 
 from ..models.document import Document
 from ..cache.cache_manager import CacheManager
-from ..config_v2 import get_settings
-from .search_engine import SearchEngine
+from ..config import get_settings
+# Removed import for non-existent SearchEngine module
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -470,7 +470,7 @@ class UnifiedSearchEngine:
             "sqlite_fts": SQLiteFullTextSearchBackend(db),
             "postgresql": PostgreSQLFullTextSearchBackend(db),
             "semantic": SemanticSearchBackend(db, cache_manager) if cache_manager else None,
-            "fallback": SearchEngine(db)  # Original search engine as fallback
+            # "fallback": SearchEngine(db)  # Removed - SearchEngine doesn't exist
         }
         
         # Determine primary backend
