@@ -19,7 +19,7 @@ from ..models.document import (
     LoadingSession,
     ManPageStats,
 )
-from ..parser.linux_parser import LinuxManParser
+from ..parser.enhanced_groff_parser import EnhancedGroffParser as LinuxManParser
 from ..cache.cache_manager import CacheManager, COMMON_COMMANDS
 from ..jobs.simple_scheduler import get_scheduler
 from ..security import EnhancedRateLimiter
