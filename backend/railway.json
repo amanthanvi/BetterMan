@@ -1,15 +1,13 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "./Dockerfile"
+    "builder": "DOCKERFILE"
   },
   "deploy": {
     "startCommand": "python start.py",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3,
-    "preDeployCommand": "cd /app && python -m alembic upgrade head || true"
+    "restartPolicyMaxRetries": 3
   }
 }
