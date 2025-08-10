@@ -84,9 +84,9 @@ class CacheManager:
         self.max_cache_size = max_cache_size
         # Try to initialize search engine if available
         try:
-            from ..search.search_engine import SearchEngine
+            from ..search.unified_search import UnifiedSearchEngine
 
-            self.search_engine = SearchEngine(db)
+            self.search_engine = UnifiedSearchEngine(db)
             self.has_search_engine = True
         except (ImportError, ModuleNotFoundError):
             self.has_search_engine = False

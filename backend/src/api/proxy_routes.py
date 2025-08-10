@@ -8,7 +8,7 @@ import base64
 from typing import Optional
 
 from ..db.session import get_db
-from ..search.search_engine import SearchEngine
+from ..search.unified_search import UnifiedSearchEngine
 from ..models.document import Document
 
 router = APIRouter()
@@ -28,14 +28,16 @@ async def proxy_search(
     This bypasses browser extension interference.
     """
     # Create search engine instance
-    search_engine = SearchEngine(db)
+    search_engine = UnifiedSearchEngine(db)
     
     # Perform search using the search engine
-    results = search_engine.search(
+    # Convert page/per_page to offset/limit
+    offset = (page - 1) * per_page
+    results = await search_engine.search(
         query=q,
-        section=section,
-        page=page,
-        per_page=per_page
+        sections=[section] if section else None,
+        limit=per_page,
+        offset=offset
     )
     
     # Add page information for compatibility

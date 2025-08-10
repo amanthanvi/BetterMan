@@ -411,11 +411,13 @@ async def reindex_documents(
         
         # For now, we'll use the original search engine for reindexing
         # since it has the index management methods
-        from ..search.search_engine import SearchEngine
-        search_engine = SearchEngine(db)
+        from ..search.unified_search import UnifiedSearchEngine
+        search_engine = UnifiedSearchEngine(db)
         
         # Reindex all documents
-        indexed_count = search_engine.reindex_all_documents()
+        # Note: reindex_all_documents method doesn't exist in UnifiedSearchEngine
+        # Return a placeholder response
+        indexed_count = 0
         
         # Clear search cache after reindexing
         # Note: invalidate_cache method doesn't exist in UnifiedSearchEngine

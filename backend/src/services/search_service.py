@@ -8,9 +8,9 @@ import logging
 
 from .base import BaseService
 from ..models.document import Document
-from ..search.search_engine import SearchEngine
-from ..search.advanced_search import AdvancedSearchEngine
-from ..search.optimized_search import OptimizedSearchEngine
+from ..search.unified_search import UnifiedSearchEngine
+# Note: AdvancedSearchEngine and OptimizedSearchEngine don't exist
+# Using UnifiedSearchEngine for all search functionality
 from ..errors import SearchError
 
 
@@ -27,29 +27,9 @@ class SearchService(BaseService[Document]):
         super().__init__(db)
         self.logger = logging.getLogger(__name__)
         
-        # Initialize search engines
-        self.basic_engine = SearchEngine(db)
-        self.advanced_engine = AdvancedSearchEngine(db)
-        self.optimized_engine = OptimizedSearchEngine(db)
-        
-        # Determine which engine to use based on capabilities
-        self._select_engine()
+        # Initialize search engine
+        self.primary_engine = UnifiedSearchEngine(db)
     
-    def _select_engine(self):
-        """Select the best available search engine."""
-        try:
-            # Try to use optimized engine first
-            if self.optimized_engine.check_fts_availability():
-                self.primary_engine = self.optimized_engine
-                self.logger.info("Using optimized search engine with FTS")
-            else:
-                # Fallback to advanced engine
-                self.primary_engine = self.advanced_engine
-                self.logger.info("Using advanced search engine")
-        except Exception as e:
-            # Final fallback to basic engine
-            self.primary_engine = self.basic_engine
-            self.logger.warning(f"Falling back to basic search engine: {e}")
     
     def search(
         self,

@@ -80,8 +80,8 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"Error initializing search engine: {e}")
             # Fallback to regular search
-            from .search.search_engine import SearchEngine
-            search_engine = SearchEngine(db)
+            from .search.unified_search import UnifiedSearchEngine
+            search_engine = UnifiedSearchEngine(db)
             logger.info("Fallback search engine initialized")
 
         # Start system monitoring
