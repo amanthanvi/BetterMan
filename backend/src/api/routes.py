@@ -21,7 +21,7 @@ from ..models.document import (
 )
 from ..parser.enhanced_groff_parser import EnhancedGroffParser as LinuxManParser
 from ..cache.cache_manager import CacheManager, COMMON_COMMANDS
-from ..jobs.simple_scheduler import get_scheduler
+from ..jobs.scheduler import get_scheduler
 from ..security import EnhancedRateLimiter
 from ..security_utils import SecurityUtils, InputValidator, limiter
 from ..errors import NotFoundError, ValidationError, ParseError

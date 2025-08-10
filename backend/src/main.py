@@ -29,7 +29,7 @@ from .security.rate_limiter import RateLimitMiddleware
 from .db.query_performance import setup_query_monitoring, performance_monitor
 from .middleware.compression import CompressionMiddleware
 from .monitoring_metrics.metrics import system_monitor, update_app_info, RequestTracker
-from .search.fts_search import FullTextSearchEngine
+from .search.unified_search import UnifiedSearch as FullTextSearchEngine
 
 # Initialize settings and logging
 settings = get_settings()
@@ -37,7 +37,7 @@ setup_logging(settings)
 logger = logging.getLogger(__name__)
 
 # Import scheduler-related functions
-from .jobs.simple_scheduler import get_scheduler
+from .jobs.scheduler import get_scheduler
 
 
 # Global references for cleanup
