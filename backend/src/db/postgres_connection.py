@@ -34,15 +34,19 @@ def get_database_url(async_mode: bool = False) -> str:
     """
     database_url = os.environ.get('DATABASE_URL', settings.DATABASE_URL)
     
-    # Handle Railway internal domain (won't work locally)
+    # Handle Railway internal domain
     if '.railway.internal' in database_url:
-        # Try to get the public URL instead
-        public_url = os.environ.get('DATABASE_PUBLIC_URL')
-        if public_url:
-            database_url = public_url
-            logger.info("Using DATABASE_PUBLIC_URL for external connection")
+        # Check if we're running inside Railway (internal domains work there)
+        if os.environ.get('RAILWAY_ENVIRONMENT'):
+            logger.info("Using Railway internal domain for database connection")
         else:
-            logger.warning("DATABASE_URL contains .railway.internal which is not accessible externally")
+            # We're running locally, need public URL
+            public_url = os.environ.get('DATABASE_PUBLIC_URL')
+            if public_url:
+                database_url = public_url
+                logger.info("Using DATABASE_PUBLIC_URL for external connection")
+            else:
+                logger.warning("DATABASE_URL contains .railway.internal which is not accessible externally")
     
     # Handle Railway PostgreSQL URL format
     if database_url.startswith('postgresql://'):
@@ -198,23 +202,28 @@ def init_db():
         # Execute PostgreSQL-specific functions if using PostgreSQL
         database_url = get_database_url()
         if 'postgresql' in database_url:
-            from ..models.postgres_models import (
-                create_search_trigger,
-                search_function,
-                popular_commands_function
-            )
-            
-            with engine.begin() as conn:
-                # Create search trigger
-                conn.execute(create_search_trigger)
+            try:
+                from ..models.postgres_models import (
+                    create_search_trigger,
+                    search_function,
+                    popular_commands_function
+                )
                 
-                # Create search function
-                conn.execute(search_function)
+                from sqlalchemy import text
                 
-                # Create popular commands function
-                conn.execute(popular_commands_function)
-                
-                logger.info("PostgreSQL functions and triggers created successfully")
+                with engine.begin() as conn:
+                    # Create search trigger
+                    conn.execute(text(create_search_trigger))
+                    
+                    # Create search function
+                    conn.execute(text(search_function))
+                    
+                    # Create popular commands function
+                    conn.execute(text(popular_commands_function))
+                    
+                    logger.info("PostgreSQL functions and triggers created successfully")
+            except Exception as e:
+                logger.warning(f"Could not create PostgreSQL functions (may already exist): {e}")
         
         logger.info("Database initialized successfully")
         
