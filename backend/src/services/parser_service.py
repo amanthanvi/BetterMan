@@ -10,7 +10,7 @@ import hashlib
 from .base import BaseService
 from .cache_service import CacheService
 from ..parser.groff_parser import GroffParser
-from ..parser.linux_parser import LinuxManParser
+from ..parser.enhanced_groff_parser import EnhancedGroffParser as LinuxManParser
 from ..parser.man_utils import fetch_man_page_content, get_available_man_pages
 from ..models.document import Document, Section as SectionModel
 from ..errors import ParseError, NotFoundError

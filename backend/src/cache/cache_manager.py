@@ -7,10 +7,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..models.document import Document, Section, Subsection, RelatedDocument
-from ..parser.linux_parser import LinuxManParser
-from ..parser.formatted_parser import parse_formatted_man_page
+from ..parser.enhanced_groff_parser import EnhancedGroffParser as LinuxManParser
 from ..parser.man_utils import fetch_man_page_content
-from ..parser.system_man_loader import get_complete_man_page, parse_man_page_structure
+# Removed imports for non-existent modules: formatted_parser, system_man_loader
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -149,19 +148,16 @@ class CacheManager:
         self.evict_if_needed()
 
         try:
-            # Use the new system man loader to get complete man page
-            content, error_msg = get_complete_man_page(name, str(section) if section else None)
-
-            if not content:
-                # Fallback to old method
-                content, error_msg = fetch_man_page_content(name, str(section) if section else None)
+            # Get man page content
+            content, error_msg = fetch_man_page_content(name, str(section) if section else None)
                 
             if not content:
                 logger.warning(f"No content found for man page {name}: {error_msg}")
                 raise ValueError(f"Document not found: {name}")
 
-            # Parse the man page structure using new parser
-            parsed_data = parse_man_page_structure(content)
+            # Parse the man page using the groff parser
+            parser = LinuxManParser()
+            parsed_data = parser.parse(content)
 
             # Determine cache status and priority
             is_common = name in COMMON_COMMANDS

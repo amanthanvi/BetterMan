@@ -12,7 +12,7 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 from ..db.session import get_db, SessionLocal
 from ..cache.cache_manager import CacheManager
-from ..parser.linux_parser import LinuxManParser
+from ..parser.enhanced_groff_parser import EnhancedGroffParser as LinuxManParser
 
 # Configure logging
 logger = logging.getLogger(__name__)
