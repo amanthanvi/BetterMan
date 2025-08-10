@@ -1,0 +1,346 @@
+{
+  "name": "diff",
+  "section": 1,
+  "title": "diff manual page",
+  "description": "The diff utility compares the contents of file1 and file2 and writes to the standard output the list of changes necessary to convert one file into the other.",
+  "synopsis": "diff [-aBbdipTtw] [-c | -e | -f | -n | -q | -u | -y] [-A algo | --algorithm algo] [--brief] [--color=when] [--changed-group-format GFMT] [--ed] [--expand-tabs] [--forward-ed] [--ignore-all-space] [--ignore-case] [--ignore-space-change] [--initial-tab] [--minimal] [--no-ignore-file-name-case] [--normal] [--rcs] [--show-c-function] [--starting-file] [--speed-large-files] [--strip-trailing-cr] [--tabsize number] [--text] [--unified] [-I pattern | --ignore-matching-lines pattern] [-F pattern | --show-function-line pattern] [-L label | --label label] file1 file2 diff [-aBbdilpTtw] [-A algo | --algorithm algo] [-I pattern | --ignore-matching-lines pattern] [-F pattern | --show-function-line pattern] [-L label | --label label] [--brief] [--color=when] [--changed-group-format GFMT] [--ed] [--expand-tabs] [--forward-ed] [--ignore-all-space] [--ignore-case] [--ignore-space-change] [--initial-tab] [--minimal] [--no-ignore-file-name-case] [--normal] [--paginate] [--rcs] [--show-c-function] [--speed-large-files] [--starting-file] [--strip-trailing-cr] [--tabsize number] [--text] -C number | -context number file1 file2 diff [-aBbdiltw] [-A algo | --algorithm algo] [-I pattern | --ignore-matching-lines pattern] [--brief] [--color=when] [--changed-group-format GFMT] [--ed] [--expand-tabs] [--forward-ed] [--ignore-all-space] [--ignore-case] [--ignore-space-change] [--initial-tab] [--minimal] [--no-ignore-file-name-case] [--normal] [--paginate] [--rcs] [--show-c-function] [--speed-large-files] [--starting-file] [--strip-trailing-cr] [--tabsize number] [--text] -D string | --ifdef string file1 file2 diff [-aBbdilpTtw] [-A algo | --algorithm algo] [-I pattern | --ignore-matching-lines pattern] [-F pattern | --show-function-line pattern] [-L label | --label label] [--brief] [--color=when] [--changed-group-format GFMT] [--ed] [--expand-tabs] [--forward-ed] [--ignore-all-space] [--ignore-case] [--ignore-space-change] [--initial-tab] [--minimal] [--no-ignore-file-name-case] [--normal] [--paginate] [--rcs] [--show-c-function] [--speed-large-files] [--starting-file] [--strip-trailing-cr] [--tabsize number] [--text] -U number | --unified number file1 file2 diff [-aBbdilNPprsTtw] [-c | -e | -f | -n | -q | -u] [-A algo | --algorithm algo] [--brief] [--color=when] [--changed-group-format GFMT] [--context] [--ed] [--expand-tabs] [--forward-ed] [--ignore-all-space] [--ignore-case] [--ignore-space-change] [--initial-tab] [--minimal] [--new-file] [--no-ignore-file-name-case] [--normal] [--paginate] [--rcs] [--recursive] [--report-identical-files] [--show-c-function] [--speed-large-files] [--strip-trailing-cr] [--tabsize number] [--text] [--unidirectional-new-file] [--unified] [-I pattern | --ignore-matching-lines pattern] [-F pattern | --show-function-line pattern] [-L label | --label label] [-S name | --starting-file name] [-X file | --exclude-from file] [-x pattern | --exclude pattern] dir1 dir2 diff [-aBbditwW] [--color=when] [--expand-tabs] [--ignore-all-blanks] [--ignore-blank-lines] [--ignore-case] [--minimal] [--no-ignore-file-name-case] [--strip-trailing-cr] [--suppress-common-lines] [--tabsize number] [--text] [--width] -y | --side-by-side file1 file2 diff [--help] [--version]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "the ASCII escape sequence for additions and rm is the ASCII\n\t\t escape sequence for deletions.  If this is unset, diff uses\n\t\t green for additions and red for removals.",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     diff – differential file and directory comparator\n",
+        "     diff [-aBbdipTtw] [-c | -e | -f | -n | -q | -u | -y]",
+        "     diff [-aBbdilpTtw] [-A algo | --algorithm algo]",
+        "     diff [-aBbdiltw] [-A algo | --algorithm algo]",
+        "     diff [-aBbdilpTtw] [-A algo | --algorithm algo]",
+        "     diff [-aBbdilNPprsTtw] [-c | -e | -f | -n | -q | -u]",
+        "     diff [-aBbditwW] [--color=when] [--expand-tabs] [--ignore-all-blanks]",
+        "     diff [--help] [--version]\n",
+        "     The diff utility compares the contents of file1 and file2 and writes to\n     the standard output the list of changes necessary to convert one file\n     into the other.  No output is produced if the files are identical.\n\n     Output options (mutually exclusive):\n\n     -C number --context number\n\t     Like -c but produces a diff with number lines of context.\n\n     -c      Produces a diff with 3 lines of context.  With -c the output\n\t     format is modified slightly: the output begins with\n\t     identification of the files involved and their creation dates and\n\t     then each change is separated by a line with fifteen *'s.\tThe\n\t     lines removed from file1 are marked with ‘- ’; those added to\n\t     file2 are marked ‘+ ’.  Lines which are changed from one file to\n\t     the other are marked in both files with ‘! ’.  Changes which lie\n\t     within 3 lines of each other are grouped together on output.\n\n     -D string --ifdef string\n\t     Creates a merged version of file1 and file2 on the standard\n\t     output, with C preprocessor controls included so that a\n\t     compilation of the result without defining string is equivalent\n\t     to compiling file1, while defining string will yield file2.\n\n     -e --ed\n\t     Produces output in a form suitable as input for the editor\n\t     utility, ed(1), which can then be used to convert file1 into\n\t     file2.\n\n\t     Note that when comparing directories with -e, the resulting file\n\t     may no longer be interpreted as an ed(1) script.  Output is added\n\t     to indicate which file each set of ed(1) commands applies to.\n\t     These hunks can be manually extracted to produce an ed(1) script,\n\t     which can also be applied with patch(1).\n\n     -f --forward-ed\n\t     Identical output to that of the -e flag, but in reverse order.\n\t     It cannot be digested by ed(1).\n\n     --help  This option prints a summary to stdout and exits with status 0.\n\n     -n      Produces a script similar to that of -e, but in the opposite\n\t     order and with a count of changed lines on each insert or delete\n\t     command.  This is the form used by rcsdiff.\n\n     -q --brief\n\t     Just print a line when the files differ.  Does not output a list\n\t     of changes.\n\n     -U number --unified number\n\t     Like -u but produces a diff with number lines of context.\n\n     -u      Produces a unified diff with 3 lines of context.  A unified diff\n\t     is similar to the context diff produced by the -c option.\n\t     However, unlike with -c, all lines to be changed (added and/or\n\t     removed) are present in a single section.\n\n     --version\n\t     This option prints a version string to stdout and exits with\n\t     status 0.\n\n     -y --side-by-side\n\t     Output in two columns with a marker between them.\tThe marker can\n\t     be one of the following:\n\n\t\t   space   Corresponding lines are identical.\n\t\t   '|'\t   Corresponding lines are different.\n\t\t   '<'\t   Files differ and only the first file contains the\n\t\t\t   line.\n\t\t   '>'\t   Files differ and only the second file contains the\n\t\t\t   line.\n\n     Comparison options:\n\n     -A algo, --algorithm algo\n\t     Configure the algorithm used when comparing files.  diff supports\n\t     3 algorithms:\n\n\t     myers   The Myers diff algorithm finds the shortest edit which\n\t\t     transforms one input into the other.  It generally runs\n\t\t     in O(N+D²) time, requiring O(N) space, where N is the sum\n\t\t     of the lengths of the inputs and D is the length of the\n\t\t     difference between them, with a theoretical O(N·D) worst\n\t\t     case.  If it encounters worst-case input, the\n\t\t     implementation used by diff falls back to a less optimal\n\t\t     but faster algorithm.\n\t     patience\n\t\t     The Patience variant of the Myers algorithm attempts to\n\t\t     create more aesthetically pleasing diff output by\n\t\t     logically grouping lines.\n\t     stone   The Stone algorithm (commonly known as Hunt-McIlroy or\n\t\t     Hunt-Szymanski) looks for the longest common subsequence\n\t\t     between compared files.  Stone encounters worst case\n\t\t     performance when there are long common subsequences.  In\n\t\t     large files this can lead to a significant performance\n\t\t     impact.  The Stone algorithm is maintained for\n\t\t     compatibility.\n\n\t     The default algorithm is affected by the POSIXLY_CORRECT and\n\t     POSIX_PEDANTIC environment variables.  When either variable is\n\t     set the default algorithm will be “stone”.  Otherwise, the diff\n\t     utility defaults to the Myers algorithm, but will fall back to\n\t     the Stone algorithm if the input or output options are not\n\t     supported by the Myers implementation.\n\n     -a --text\n\t     Treat all files as ASCII text.  Normally diff will simply print\n\t     “Binary files ... differ” if files contain binary characters.\n\t     Use of this option forces diff to produce a diff.\n\n     -B --ignore-blank-lines\n\t     Causes chunks that include only blank lines to be ignored.\n\n     -b --ignore-space-change\n\t     Causes trailing blanks (spaces and tabs) to be ignored, and other\n\t     strings of blanks to compare equal.\n\n     --color=[when]\n\t     Color the additions green, and removals red, or the value in the\n\t     DIFFCOLORS environment variable.  The possible values of when are\n\t     “never”, “always” and “auto”.  auto will use color if the output\n\t     is a tty and the COLORTERM environment variable is set to a non-\n\t     empty string.\n\n     -d --minimal\n\t     Try very hard to produce a diff as small as possible.  This may\n\t     consume a lot of processing power and memory when processing\n\t     large files with many changes.\n\n     -F pattern, --show-function-line pattern\n\t     Like -p, but display the last line that matches provided pattern.\n\n     -I pattern --ignore-matching-lines pattern\n\t     Ignores changes, insertions, and deletions whose lines match the\n\t     extended regular expression pattern.  Multiple -I patterns may be\n\t     specified.  All lines in the change must match some pattern for\n\t     the change to be ignored.\tSee re_format(7) for more information\n\t     on regular expression patterns.\n\n     -i --ignore-case\n\t     Ignores the case of letters.  E.g., “A” will compare equal to\n\t     “a”.\n\n     -l --paginate\n\t     Pass the output through pr(1) to paginate it.\n\n     -L label --label label\n\t     Print label instead of the first (and second, if this option is\n\t     specified twice) file name and time in the context or unified\n\t     diff header.\n\n     -p --show-c-function\n\t     With unified and context diffs, show with each change the first\n\t     40 characters of the last line before the context beginning with\n\t     a letter, an underscore or a dollar sign.\tFor C and Objective-C\n\t     source code following standard layout conventions, this will show\n\t     the prototype of the function the change applies to.\n\n     -T --initial-tab\n\t     Print a tab rather than a space before the rest of the line for\n\t     the normal, context or unified output formats.  This makes the\n\t     alignment of tabs in the line consistent.\n\n     -t --expand-tabs\n\t     Will expand tabs in output lines.\tNormal or -c output adds\n\t     character(s) to the front of each line which may screw up the\n\t     indentation of the original source lines and make the output\n\t     listing difficult to interpret.  This option will preserve the\n\t     original source's indentation.\n\n     -w --ignore-all-blanks\n\t     Is similar to -b --ignore-space-change but causes whitespace\n\t     (blanks and tabs) to be totally ignored.  E.g., “if ( a == b )”\n\t     will compare equal to “if(a==b)”.\n\n     -W number --width number\n\t     Output at most number columns when using side by side format.\n\t     The default value is 130.\tNote that unless\n\n     -t      was specified, diff will always align the second column to a tab\n\t     stop, so values of --width smaller than approximately five times\n\t     the value of --tabsize may yield surprising results.\n\n     --changed-group-format GFMT\n\t     Format input groups in the provided\n\n\t     the format is a string with special keywords:\n\n\t     %<  lines from FILE1\n\n\t     %<  lines from FILE2\n\n     --ignore-file-name-case\n\t     ignore case when comparing file names\n\n     --no-ignore-file-name-case\n\t     do not ignore case when comparing file names (default)\n\n     --normal\n\t     default diff output\n\n     --speed-large-files\n\t     stub option for compatibility with GNU diff\n\n     --strip-trailing-cr\n\t     strip carriage return on input files\n\n     --suppress-common-lines\n\t     Do not output common lines when using the side by side format\n\n     --tabsize number\n\t     Number of spaces representing a tab (default 8)\n\n     Directory comparison options:\n\n     -N --new-file\n\t     If a file is found in only one directory, act as if it was found\n\t     in the other directory too but was of zero size.\n\n     -P --unidirectional-new-file\n\t     If a file is found only in dir2, act as if it was found in dir1\n\t     too but was of zero size.\n\n     -r --recursive\n\t     Causes application of diff recursively to common subdirectories\n\t     encountered.\n\n     -S name --starting-file name\n\t     Re-starts a directory diff in the middle, beginning with file\n\t     name.\n\n     -s --report-identical-files\n\t     Causes diff to report files which are the same, which are\n\t     otherwise not mentioned.\n\n     -X file --exclude-from file\n\t     Exclude files and subdirectories from comparison whose basenames\n\t     match lines in file.  Multiple -X options may be specified.\n\n     -x pattern --exclude pattern\n\t     Exclude files and subdirectories from comparison whose basenames\n\t     match pattern.  Patterns are matched using shell-style globbing\n\t     via fnmatch(3).  Multiple -x options may be specified.\n\n     If both arguments are directories, diff sorts the contents of the\n     directories by name, and then runs the regular file diff algorithm,\n     producing a change list, on text files which are different.  Binary files\n     which differ, common subdirectories, and files which appear in only one\n     directory are described as such.  In directory mode only regular files\n     and directories are compared.  If a non-regular file such as a device\n     special file or FIFO is encountered, a diagnostic message is printed.\n\n     If only one of file1 and file2 is a directory, diff is applied to the\n     non-directory file and the file contained in the directory file with a\n     filename that is the same as the last component of the non-directory\n     file.\n\n     If either file1 or file2 is ‘-’, the standard input is used in its place.\n",
+        "     The default (without -e, -c, or -n --rcs options) output contains lines\n     of these forms, where XX, YY, ZZ, QQ are line numbers respective of file\n     order.\n\n     XXaYY\t  At (the end of) line XX of file1, append the contents of\n\t\t  line YY of file2 to make them equal.\n     XXaYY,ZZ\t  Same as above, but append the range of lines, YY through ZZ\n\t\t  of file2 to line XX of file1.\n     XXdYY\t  At line XX delete the line.  The value YY tells to which\n\t\t  line the change would bring file1 in line with file2.\n     XX,YYdZZ\t  Delete the range of lines XX through YY in file1.\n     XXcYY\t  Change the line XX in file1 to the line YY in file2.\n     XX,YYcZZ\t  Replace the range of specified lines with the line ZZ.\n     XX,YYcZZ,QQ  Replace the range XX,YY from file1 with the range ZZ,QQ from\n\t\t  file2.\n\n     These lines resemble ed(1) subcommands to convert file1 into file2.  The\n     line numbers before the action letters pertain to file1; those after\n     pertain to file2.\tThus, by exchanging a for d and reading the line in\n     reverse order, one can also determine how to convert file2 into file1.\n     As in ed(1), identical pairs (where num1 = num2) are abbreviated as a\n     single number.\n",
+        "     DIFFCOLORS  The value of this variable is the form add:rm, where add is"
+      ]
+    },
+    {
+      "id": "files",
+      "title": "FILES",
+      "content": "macOS 15.5\t\t\t March 7, 2024\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     /tmp/diff.XXXXXXXX  Temporary file used when comparing a device or the\n\t\t\t standard input.  Note that the temporary file is\n\t\t\t unlinked as soon as it is created so it will not show\n\t\t\t up in a directory listing.\n",
+        "     The diff utility exits with one of the following values:\n\n\t   0\t   No differences were found.\n\t   1\t   Differences were found.\n\t   >1\t   An error occurred.\n\n     The --help and --version options exit with a status of 0.\n",
+        "     Compare old_dir and new_dir recursively generating an unified diff and\n     treating files found only in one of those directories as new files:\n\n\t   $ diff -ruN /path/to/old_dir /path/to/new_dir\n\n     Same as above but excluding files matching the expressions “*.h” and\n     “*.c”:\n\n\t   $ diff -ruN -x '*.h' -x '*.c' /path/to/old_dir /path/to/new_dir\n\n     Show a single line indicating if the files differ:\n\n\t   $ diff -q /boot/loader.conf /boot/defaults/loader.conf\n\t   Files /boot/loader.conf and /boot/defaults/loader.conf differ\n\n     Assuming a file named example.txt with the following contents:\n\n\t   FreeBSD is an operating system\n\t   Linux is a kernel\n\t   OpenBSD is an operating system\n\n     Compare stdin with example.txt excluding from the comparison those lines\n     containing either \"Linux\" or \"Open\":\n\n\t   $ echo \"FreeBSD is an operating system\" | diff -q -I 'Linux|Open' example.txt -\n",
+        "     The unified diff format's timestamps are formatted differently in legacy\n     mode.  By default, diff does not include nanoseconds or a timezone in\n     unified diff timestamps.  In legacy mode, nanoseconds and a timezone are\n     both included.  Note that patch(1) may not be able to process timestamps\n     in the legacy format.\n\n     For more information about legacy mode, see compat(5).\n",
+        "     cmp(1), comm(1), diff3(1), ed(1), patch(1), pr(1), sdiff(1), compat(5)\n\n     James W. Hunt and M. Douglas McIlroy, “An Algorithm for Differential File\n     Comparison”, Computing Science Technical Report, Bell Laboratories 41,\n     June 1976.\n",
+        "     The diff utility is compliant with the IEEE Std 1003.1-2008 (“POSIX.1”)\n     specification.\n\n     The flags [-AaDdIiLlNnPpqSsTtwXxy] are extensions to that specification.\n",
+        "     A diff command appeared in Version 6 AT&T UNIX.  The diff implementation\n     used in FreeBSD was GNU diff until FreeBSD 11.4.  This was replaced in\n     FreeBSD 12.0 by a BSD-licensed implementation written by Todd Miller.\n     Some GNUisms were lost in the process.\n\n     libdiff was imported from the Game of Trees version control system and\n     default algorithm was changed to Myers for FreeBSD 15.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-C",
+      "description": " Like -c but produces a diff with number lines of context.",
+      "optional": false
+    },
+    {
+      "flag": "-c",
+      "description": " format is modified slightly: the output begins with identification of the files involved and their creation dates and then each change is separated by a line with fifteen *'s.\tThe lines removed from file1 are marked with ‘- ’; those added to file2 are marked ‘+ ’.  Lines which are changed from one file to the other are marked in both files with ‘! ’.  Changes which lie within 3 lines of each other are grouped together on output.",
+      "optional": true
+    },
+    {
+      "flag": "-D",
+      "description": " Creates a merged version of file1 and file2 on the standard output, with C preprocessor controls included so that a compilation of the result without defining string is equivalent to compiling file1, while defining string will yield file2.",
+      "optional": false
+    },
+    {
+      "flag": "-e",
+      "description": " Produces output in a form suitable as input for the editor utility, ed(1), which can then be used to convert file1 into file2. Note that when comparing directories with -e, the resulting file may no longer be interpreted as an ed(1) script.  Output is added to indicate which file each set of ed(1) commands applies to. These hunks can be manually extracted to produce an ed(1) script, which can also be applied with patch(1).",
+      "optional": false
+    },
+    {
+      "flag": "--help",
+      "description": "",
+      "optional": true,
+      "shortFlag": "-f"
+    },
+    {
+      "flag": "-n",
+      "description": " order and with a count of changed lines on each insert or delete command.  This is the form used by rcsdiff.",
+      "optional": false
+    },
+    {
+      "flag": "-q",
+      "description": " Just print a line when the files differ.  Does not output a list of changes.",
+      "optional": false
+    },
+    {
+      "flag": "-U",
+      "description": " Like -u but produces a diff with number lines of context.",
+      "optional": false
+    },
+    {
+      "flag": "--version",
+      "description": " This option prints a version string to stdout and exits with status 0.",
+      "optional": true,
+      "shortFlag": "-u"
+    },
+    {
+      "flag": "-y",
+      "description": " Output in two columns with a marker between them.\tThe marker can be one of the following: space   Corresponding lines are identical. '|'\t   Corresponding lines are different. '<'\t   Files differ and only the first file contains the line. '>'\t   Files differ and only the second file contains the line. Comparison options:",
+      "optional": false
+    },
+    {
+      "flag": "-A",
+      "description": " Configure the algorithm used when comparing files.  diff supports 3 algorithms: myers   The Myers diff algorithm finds the shortest edit which transforms one input into the other.  It generally runs in O(N+D²) time, requiring O(N) space, where N is the sum of the lengths of the inputs and D is the length of the difference between them, with a theoretical O(N·D) worst case.  If it encounters worst-case input, the implementation used by diff falls back to a less optimal but faster algorithm. patience The Patience variant of the Myers algorithm attempts to create more aesthetically pleasing diff output by logically grouping lines. stone   The Stone algorithm (commonly known as Hunt-McIlroy or Hunt-Szymanski) looks for the longest common subsequence between compared files.  Stone encounters worst case performance when there are long common subsequences.  In large files this can lead to a significant performance impact.  The Stone algorithm is maintained for compatibility. The default algorithm is affected by the POSIXLY_CORRECT and POSIX_PEDANTIC environment variables.  When either variable is set the default algorithm will be “stone”.  Otherwise, the diff utility defaults to the Myers algorithm, but will fall back to the Stone algorithm if the input or output options are not supported by the Myers implementation.",
+      "optional": true
+    },
+    {
+      "flag": "-a",
+      "description": "--text Treat all files as ASCII text.  Normally diff will simply print “Binary files ... differ” if files contain binary characters. Use of this option forces diff to produce a diff."
+    },
+    {
+      "flag": "-B",
+      "description": "--ignore-blank-lines Causes chunks that include only blank lines to be ignored."
+    },
+    {
+      "flag": "--color",
+      "description": " Color the additions green, and removals red, or the value in the DIFFCOLORS environment variable.  The possible values of when are “never”, “always” and “auto”.  auto will use color if the output is a tty and the COLORTERM environment variable is set to a non- empty string.",
+      "optional": true,
+      "shortFlag": "-b"
+    },
+    {
+      "flag": "-d",
+      "description": "--minimal Try very hard to produce a diff as small as possible.  This may consume a lot of processing power and memory when processing large files with many changes."
+    },
+    {
+      "flag": "-F",
+      "description": " Like -p, but display the last line that matches provided pattern.",
+      "optional": true
+    },
+    {
+      "flag": "-I",
+      "description": " Ignores changes, insertions, and deletions whose lines match the extended regular expression pattern.  Multiple -I patterns may be specified.  All lines in the change must match some pattern for the change to be ignored.\tSee re_format(7) for more information on regular expression patterns.",
+      "optional": true
+    },
+    {
+      "flag": "-i",
+      "description": "--ignore-case Ignores the case of letters.  E.g., “A” will compare equal to “a”."
+    },
+    {
+      "flag": "-l",
+      "description": "--paginate Pass the output through pr(1) to paginate it."
+    },
+    {
+      "flag": "-L",
+      "description": " Print label instead of the first (and second, if this option is specified twice) file name and time in the context or unified diff header.",
+      "optional": true
+    },
+    {
+      "flag": "-p",
+      "description": "--show-c-function With unified and context diffs, show with each change the first 40 characters of the last line before the context beginning with a letter, an underscore or a dollar sign.\tFor C and Objective-C source code following standard layout conventions, this will show the prototype of the function the change applies to."
+    },
+    {
+      "flag": "-T",
+      "description": "--initial-tab Print a tab rather than a space before the rest of the line for the normal, context or unified output formats.  This makes the alignment of tabs in the line consistent."
+    },
+    {
+      "flag": "-t",
+      "description": "--expand-tabs Will expand tabs in output lines.\tNormal or -c output adds character(s) to the front of each line which may screw up the indentation of the original source lines and make the output listing difficult to interpret.  This option will preserve the original source's indentation."
+    },
+    {
+      "flag": "-w",
+      "description": "--ignore-all-blanks Is similar to -b --ignore-space-change but causes whitespace (blanks and tabs) to be totally ignored.  E.g., “if ( a == b )” will compare equal to “if(a==b)”."
+    },
+    {
+      "flag": "-W",
+      "description": "number --width number Output at most number columns when using side by side format. The default value is 130.\tNote that unless"
+    },
+    {
+      "flag": "--changed-group-format",
+      "description": " Format input groups in the provided the format is a string with special keywords: %<  lines from FILE1 %<  lines from FILE2",
+      "optional": true,
+      "shortFlag": "-t"
+    },
+    {
+      "flag": "--ignore-file-name-case",
+      "description": " ignore case when comparing file names"
+    },
+    {
+      "flag": "--no-ignore-file-name-case",
+      "description": " do not ignore case when comparing file names (default)",
+      "optional": true
+    },
+    {
+      "flag": "--normal",
+      "description": " default diff output",
+      "optional": true
+    },
+    {
+      "flag": "--speed-large-files",
+      "description": " stub option for compatibility with GNU diff",
+      "optional": true
+    },
+    {
+      "flag": "--strip-trailing-cr",
+      "description": " strip carriage return on input files",
+      "optional": true
+    },
+    {
+      "flag": "--suppress-common-lines",
+      "description": " Do not output common lines when using the side by side format",
+      "optional": true
+    },
+    {
+      "flag": "--tabsize",
+      "description": " Number of spaces representing a tab (default 8) Directory comparison options:",
+      "optional": true
+    },
+    {
+      "flag": "-N",
+      "description": "--new-file If a file is found in only one directory, act as if it was found in the other directory too but was of zero size."
+    },
+    {
+      "flag": "-P",
+      "description": "--unidirectional-new-file If a file is found only in dir2, act as if it was found in dir1 too but was of zero size."
+    },
+    {
+      "flag": "-r",
+      "description": "--recursive Causes application of diff recursively to common subdirectories encountered."
+    },
+    {
+      "flag": "-S",
+      "description": " Re-starts a directory diff in the middle, beginning with file name.",
+      "optional": true
+    },
+    {
+      "flag": "-s",
+      "description": "--report-identical-files Causes diff to report files which are the same, which are otherwise not mentioned."
+    },
+    {
+      "flag": "-X",
+      "description": " Exclude files and subdirectories from comparison whose basenames match lines in file.  Multiple -X options may be specified.",
+      "optional": true
+    },
+    {
+      "flag": "-x",
+      "description": " Exclude files and subdirectories from comparison whose basenames match pattern.  Patterns are matched using shell-style globbing via fnmatch(3).  Multiple -x options may be specified. If both arguments are directories, diff sorts the contents of the directories by name, and then runs the regular file diff algorithm, producing a change list, on text files which are different.  Binary files which differ, common subdirectories, and files which appear in only one directory are described as such.  In directory mode only regular files and directories are compared.  If a non-regular file such as a device special file or FIFO is encountered, a diagnostic message is printed. If only one of file1 and file2 is a directory, diff is applied to the non-directory file and the file contained in the directory file with a filename that is the same as the last component of the non-directory file. If either file1 or file2 is ‘-’, the standard input is used in its place. Output Style The default (without -e, -c, or -n --rcs options) output contains lines of these forms, where XX, YY, ZZ, QQ are line numbers respective of file order. XXaYY\t  At (the end of) line XX of file1, append the contents of line YY of file2 to make them equal. XXaYY,ZZ\t  Same as above, but append the range of lines, YY through ZZ of file2 to line XX of file1. XXdYY\t  At line XX delete the line.  The value YY tells to which line the change would bring file1 in line with file2. XX,YYdZZ\t  Delete the range of lines XX through YY in file1. XXcYY\t  Change the line XX in file1 to the line YY in file2. XX,YYcZZ\t  Replace the range of specified lines with the line ZZ. XX,YYcZZ,QQ  Replace the range XX,YY from file1 with the range ZZ,QQ from file2. These lines resemble ed(1) subcommands to convert file1 into file2.  The line numbers before the action letters pertain to file1; those after pertain to file2.\tThus, by exchanging a for d and reading the line in reverse order, one can also determine how to convert file2 into file1. As in ed(1), identical pairs (where num1 = num2) are abbreviated as a single number.",
+      "optional": true
+    }
+  ],
+  "examples": [
+    {
+      "command": "diff -ruN /path/to/old_dir /path/to/new_dir",
+      "description": "",
+      "tags": [],
+      "output": "     Same as above but excluding files matching the expressions “*.h” and\n     “*.c”:\n"
+    },
+    {
+      "command": "diff -ruN -x '*.h' -x '*.c' /path/to/old_dir /path/to/new_dir",
+      "description": "",
+      "tags": [
+        "glob"
+      ],
+      "output": "     Show a single line indicating if the files differ:\n"
+    },
+    {
+      "command": "diff -q /boot/loader.conf /boot/defaults/loader.conf",
+      "description": "Files /boot/loader.conf and /boot/defaults/loader.conf differ",
+      "tags": [],
+      "output": "\t   Files /boot/loader.conf and /boot/defaults/loader.conf differ\n     Assuming a file named example.txt with the following contents:\n\t   FreeBSD is an operating system\n\t   Linux is a kernel\n\t   OpenBSD is an operating system\n     Compare stdin with example.txt excluding from the comparison those lines\n     containing either \"Linux\" or \"Open\":\n"
+    },
+    {
+      "command": "echo \"FreeBSD is an operating system\" | diff -q -I 'Linux|Open' example.txt -",
+      "description": "",
+      "tags": [
+        "pipe"
+      ],
+      "output": "     The unified diff format's timestamps are formatted differently in legacy\n     mode.  By default, diff does not include nanoseconds or a timezone in\n     unified diff timestamps.  In legacy mode, nanoseconds and a timezone are\n     both included.  Note that patch(1) may not be able to process timestamps\n     in the legacy format.\n     For more information about legacy mode, see compat(5).\nSEE ALSO\n     cmp(1), comm(1), diff3(1), ed(1), patch(1), pr(1), sdiff(1), compat(5)\n     James W. Hunt and M. Douglas McIlroy, “An Algorithm for Differential File\n     Comparison”, Computing Science Technical Report, Bell Laboratories 41,\n     June 1976.\n"
+    }
+  ],
+  "relatedCommands": [
+    "cmp",
+    "comm",
+    "diff3",
+    "ed",
+    "patch",
+    "pr",
+    "sdiff",
+    "compat",
+    "diff",
+    "differential",
+    "directory",
+    "comparator",
+    "algo",
+    "algorithm",
+    "brief"
+  ],
+  "seeAlso": [
+    {
+      "name": "cmp",
+      "section": 1
+    },
+    {
+      "name": "comm",
+      "section": 1
+    },
+    {
+      "name": "diff3",
+      "section": 1
+    },
+    {
+      "name": "ed",
+      "section": 1
+    },
+    {
+      "name": "patch",
+      "section": 1
+    },
+    {
+      "name": "pr",
+      "section": 1
+    },
+    {
+      "name": "sdiff",
+      "section": 1
+    },
+    {
+      "name": "compat",
+      "section": 5
+    }
+  ],
+  "metadata": {},
+  "searchContent": "diff diff manual page the diff utility compares the contents of file1 and file2 and writes to the standard output the list of changes necessary to convert one file into the other diff -abbdipttw -c -e -f -n -q -u -y -a algo --algorithm algo --brief --color when --changed-group-format gfmt --ed --expand-tabs --forward-ed --ignore-all-space --ignore-case --ignore-space-change --initial-tab --minimal --no-ignore-file-name-case --normal --rcs --show-c-function --starting-file --speed-large-files --strip-trailing-cr --tabsize number --text --unified -i pattern --ignore-matching-lines pattern -f pattern --show-function-line pattern -l label --label label file1 file2 diff -abbdilpttw -a algo --algorithm algo -i pattern --ignore-matching-lines pattern -f pattern --show-function-line pattern -l label --label label --brief --color when --changed-group-format gfmt --ed --expand-tabs --forward-ed --ignore-all-space --ignore-case --ignore-space-change --initial-tab --minimal --no-ignore-file-name-case --normal --paginate --rcs --show-c-function --speed-large-files --starting-file --strip-trailing-cr --tabsize number --text -c number -context number file1 file2 diff -abbdiltw -a algo --algorithm algo -i pattern --ignore-matching-lines pattern --brief --color when --changed-group-format gfmt --ed --expand-tabs --forward-ed --ignore-all-space --ignore-case --ignore-space-change --initial-tab --minimal --no-ignore-file-name-case --normal --paginate --rcs --show-c-function --speed-large-files --starting-file --strip-trailing-cr --tabsize number --text -d string --ifdef string file1 file2 diff -abbdilpttw -a algo --algorithm algo -i pattern --ignore-matching-lines pattern -f pattern --show-function-line pattern -l label --label label --brief --color when --changed-group-format gfmt --ed --expand-tabs --forward-ed --ignore-all-space --ignore-case --ignore-space-change --initial-tab --minimal --no-ignore-file-name-case --normal --paginate --rcs --show-c-function --speed-large-files --starting-file --strip-trailing-cr --tabsize number --text -u number --unified number file1 file2 diff -abbdilnpprsttw -c -e -f -n -q -u -a algo --algorithm algo --brief --color when --changed-group-format gfmt --context --ed --expand-tabs --forward-ed --ignore-all-space --ignore-case --ignore-space-change --initial-tab --minimal --new-file --no-ignore-file-name-case --normal --paginate --rcs --recursive --report-identical-files --show-c-function --speed-large-files --strip-trailing-cr --tabsize number --text --unidirectional-new-file --unified -i pattern --ignore-matching-lines pattern -f pattern --show-function-line pattern -l label --label label -s name --starting-file name -x file --exclude-from file -x pattern --exclude pattern dir1 dir2 diff -abbditww --color when --expand-tabs --ignore-all-blanks --ignore-blank-lines --ignore-case --minimal --no-ignore-file-name-case --strip-trailing-cr --suppress-common-lines --tabsize number --text --width -y --side-by-side file1 file2 diff --help --version diff manual page utility compares contents file1 file2 writes standard output list changes necessary convert into other -c like -c but produces a diff with number lines of context -c format is modified slightly the output begins with identification of the files involved and their creation dates and then each change is separated by a line with fifteen s the lines removed from file1 are marked with - those added to file2 are marked lines which are changed from one file to the other are marked in both files with changes which lie within 3 lines of each other are grouped together on output -d creates a merged version of file1 and file2 on the standard output with c preprocessor controls included so that a compilation of the result without defining string is equivalent to compiling file1 while defining string will yield file2 -e produces output in a form suitable as input for the editor utility ed 1 which can then be used to convert file1 into file2 note that when comparing directories with -e the resulting file may no longer be interpreted as an ed 1 script output is added to indicate which file each set of ed 1 commands applies to these hunks can be manually extracted to produce an ed 1 script which can also be applied with patch 1 --help -n order and with a count of changed lines on each insert or delete command this is the form used by rcsdiff -q just print a line when the files differ does not output a list of changes -u like -u but produces a diff with number lines of context --version this option prints a version string to stdout and exits with status 0 -y output in two columns with a marker between them the marker can be one of the following space corresponding lines are identical corresponding lines are different files differ and only the first file contains the line files differ and only the second file contains the line comparison options -a configure the algorithm used when comparing files diff supports 3 algorithms myers the myers diff algorithm finds the shortest edit which transforms one input into the other it generally runs in o n d time requiring o n space where n is the sum of the lengths of the inputs and d is the length of the difference between them with a theoretical o n d worst case if it encounters worst-case input the implementation used by diff falls back to a less optimal but faster algorithm patience the patience variant of the myers algorithm attempts to create more aesthetically pleasing diff output by logically grouping lines stone the stone algorithm commonly known as hunt-mcilroy or hunt-szymanski looks for the longest common subsequence between compared files stone encounters worst case performance when there are long common subsequences in large files this can lead to a significant performance impact the stone algorithm is maintained for compatibility the default algorithm is affected by the posixly correct and posix pedantic environment variables when either variable is set the default algorithm will be stone otherwise the diff utility defaults to the myers algorithm but will fall back to the stone algorithm if the input or output options are not supported by the myers implementation -a --text treat all files as ascii text normally diff will simply print binary files differ if files contain binary characters use of this option forces diff to produce a diff -b --ignore-blank-lines causes chunks that include only blank lines to be ignored --color color the additions green and removals red or the value in the diffcolors environment variable the possible values of when are never always and auto auto will use color if the output is a tty and the colorterm environment variable is set to a non- empty string -d --minimal try very hard to produce a diff as small as possible this may consume a lot of processing power and memory when processing large files with many changes -f like -p but display the last line that matches provided pattern -i ignores changes insertions and deletions whose lines match the extended regular expression pattern multiple -i patterns may be specified all lines in the change must match some pattern for the change to be ignored see re format 7 for more information on regular expression patterns -i --ignore-case ignores the case of letters e g a will compare equal to a -l --paginate pass the output through pr 1 to paginate it -l print label instead of the first and second if this option is specified twice file name and time in the context or unified diff header -p --show-c-function with unified and context diffs show with each change the first 40 characters of the last line before the context beginning with a letter an underscore or a dollar sign for c and objective-c source code following standard layout conventions this will show the prototype of the function the change applies to -t --initial-tab print a tab rather than a space before the rest of the line for the normal context or unified output formats this makes the alignment of tabs in the line consistent -t --expand-tabs will expand tabs in output lines normal or -c output adds character s to the front of each line which may screw up the indentation of the original source lines and make the output listing difficult to interpret this option will preserve the original source s indentation -w --ignore-all-blanks is similar to -b --ignore-space-change but causes whitespace blanks and tabs to be totally ignored e g if a b will compare equal to if a b -w number --width number output at most number columns when using side by side format the default value is 130 note that unless --changed-group-format format input groups in the provided the format is a string with special keywords lines from file1 lines from file2 --ignore-file-name-case ignore case when comparing file names --no-ignore-file-name-case do not ignore case when comparing file names default --normal default diff output --speed-large-files stub option for compatibility with gnu diff --strip-trailing-cr strip carriage return on input files --suppress-common-lines do not output common lines when using the side by side format --tabsize number of spaces representing a tab default 8 directory comparison options -n --new-file if a file is found in only one directory act as if it was found in the other directory too but was of zero size -p --unidirectional-new-file if a file is found only in dir2 act as if it was found in dir1 too but was of zero size -r --recursive causes application of diff recursively to common subdirectories encountered -s re-starts a directory diff in the middle beginning with file name -s --report-identical-files causes diff to report files which are the same which are otherwise not mentioned -x exclude files and subdirectories from comparison whose basenames match lines in file multiple -x options may be specified -x exclude files and subdirectories from comparison whose basenames match pattern patterns are matched using shell-style globbing via fnmatch 3 multiple -x options may be specified if both arguments are directories diff sorts the contents of the directories by name and then runs the regular file diff algorithm producing a change list on text files which are different binary files which differ common subdirectories and files which appear in only one directory are described as such in directory mode only regular files and directories are compared if a non-regular file such as a device special file or fifo is encountered a diagnostic message is printed if only one of file1 and file2 is a directory diff is applied to the non-directory file and the file contained in the directory file with a filename that is the same as the last component of the non-directory file if either file1 or file2 is - the standard input is used in its place output style the default without -e -c or -n --rcs options output contains lines of these forms where xx yy zz qq are line numbers respective of file order xxayy at the end of line xx of file1 append the contents of line yy of file2 to make them equal xxayy zz same as above but append the range of lines yy through zz of file2 to line xx of file1 xxdyy at line xx delete the line the value yy tells to which line the change would bring file1 in line with file2 xx yydzz delete the range of lines xx through yy in file1 xxcyy change the line xx in file1 to the line yy in file2 xx yyczz replace the range of specified lines with the line zz xx yyczz qq replace the range xx yy from file1 with the range zz qq from file2 these lines resemble ed 1 subcommands to convert file1 into file2 the line numbers before the action letters pertain to file1 those after pertain to file2 thus by exchanging a for d and reading the line in reverse order one can also determine how to convert file2 into file1 as in ed 1 identical pairs where num1 num2 are abbreviated as a single number diff -run path to old dir path to new dir diff -run -x h -x c path to old dir path to new dir diff -q boot loader conf boot defaults loader conf files boot loader conf and boot defaults loader conf differ echo freebsd is an operating system diff -q -i linux open example txt - name the ascii escape sequence for additions and rm is the ascii escape sequence for deletions if this is unset diff uses green for additions and red for removals files macos 15 5 march 7 2024 macos 15 5",
+  "keywords": [
+    "diff",
+    "manual",
+    "page",
+    "utility",
+    "compares",
+    "contents",
+    "file1",
+    "file2",
+    "writes",
+    "standard",
+    "output",
+    "list",
+    "changes",
+    "necessary",
+    "convert",
+    "into",
+    "other."
+  ],
+  "complexity": "advanced",
+  "hash": "18ab71a14842db97",
+  "parsedAt": "2025-06-17T19:41:56.760Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

@@ -1,0 +1,241 @@
+{
+  "name": "man",
+  "section": 1,
+  "title": "man manual page",
+  "description": "The man utility finds and displays online manual documentation pages.",
+  "synopsis": "man [-adho] [-t | -w] [-M manpath] [-P pager] [-S mansect] [-m arch[:machine]] [-p [eprtv]] [mansect] page ... man -f [-d] [-M manpath] [-P pager] [-S mansect] keyword ... whatis [-d] [-s mansect] keyword ... man -k [-d] [-M manpath] [-P pager] [-S mansect] keyword ... apropos [-d] [-s mansect] keyword ...",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tJanuary 9, 2021 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     man, apropos, whatis – display online manual documentation pages\n",
+        "     man [-adho] [-t | -w] [-M manpath] [-P pager] [-S mansect]",
+        "     man -f [-d] [-M manpath] [-P pager] [-S mansect] keyword ...\n     whatis [-d] [-s mansect] keyword ...\n\n     man -k [-d] [-M manpath] [-P pager] [-S mansect] keyword ...\n     apropos [-d] [-s mansect] keyword ...\n",
+        "     The man utility finds and displays online manual documentation pages.  If\n     mansect is provided, man restricts the search to the specific section of\n     the manual.\n\n     The sections of the manual are:\n\t   1.\tGeneral Commands Manual\n\t   2.\tSystem Calls Manual\n\t   3.\tLibrary Functions Manual\n\t   4.\tKernel Interfaces Manual\n\t   5.\tFile Formats Manual\n\t   6.\tGames Manual\n\t   7.\tMiscellaneous Information Manual\n\t   8.\tSystem Manager's Manual\n\t   9.\tKernel Developer's Manual\n\n     Options that man understands:\n\n     -M manpath\n\t     Forces a specific colon separated manual path instead of the\n\t     default search path.  See manpath(1).  Overrides the MANPATH\n\t     environment variable.\n\n     -P pager\n\t     Use specified pager.  Defaults to “less -sR” if color support is\n\t     enabled, or “less -s”.  Overrides the MANPAGER environment\n\t     variable, which in turn overrides the PAGER environment variable.\n\n     -S mansect\n\t     Restricts manual sections searched to the specified colon\n\t     delimited list.  Defaults to “1:8:2:3:3lua:n:4:5:6:7:9:l”.\n\t     Overrides the MANSECT environment variable.\n\n     -a      Display all manual pages instead of just the first found for each\n\t     page argument.\n\n     -d      Print extra debugging information.  Repeat for increased\n\t     verbosity.  Does not display the manual page.\n\n     -f      Emulate whatis(1).  Note that only a subset of options will have\n\t     any effect when man is invoked in this mode.  See the below\n\t     description of whatis options for details.\n\n     -h      Display short help message and exit.\n\n     -k      Emulate apropos(1).  Note that only a subset of options will have\n\t     any effect when man is invoked in this mode.  See the below\n\t     description of apropos options for details.\n\n     -m arch[:machine]\n\t     Override the default architecture and machine settings allowing\n\t     lookup of other platform specific manual pages.  This option is\n\t     accepted, but not implemented, on macOS.\n\n     -o      Force use of non-localized manual pages.  See IMPLEMENTATION\n\t     NOTES for how locale specific searches work.  Overrides the\n\t     LC_ALL, LC_CTYPE, and LANG environment variables.\n\n     -p [eprtv]\n\t     Use the list of given preprocessors before running nroff(1) or\n\t     troff(1).\tValid preprocessors arguments:\n\n\t     e\t     eqn(1)\n\t     p\t     pic(1)\n\t     r\t     refer(1)\n\t     t\t     tbl(1)\n\t     v\t     vgrind(1)\n\n\t     Overrides the MANROFFSEQ environment variable.\n\n     -t      Send manual page source through troff(1) allowing transformation\n\t     of the manual pages to other formats.\n\n     -w      Display the location of the manual page instead of the contents\n\t     of the manual page.\n\n     Options that apropos and whatis understand:\n\n     -d      Same as the -d option for man.\n\n     -s      Same as the -S option for man.\n\n     When man is operated in apropos or whatis emulation mode, only a subset\n     of its options will be honored.  Specifically, -d, -M, -P, and -S have\n     equivalent functionality in the apropos and whatis implementation\n     provided.\tThe MANPATH, MANSECT, and MANPAGER environment variables will\n     similarly be honored.\n",
+        "     The man utility supports manual pages in different locales.  The search\n     behavior is dictated by the first of three environment variables with a\n     nonempty string: LC_ALL, LC_CTYPE, or LANG.  If set, man will search for\n     locale specific manual pages using the following logic:\n\n\t   lang_country.charset\n\t   lang.charset\n\t   en.charset\n\n     For example, if LC_ALL is set to “ja_JP.eucJP”, man will search the\n     following paths when considering section 1 manual pages in\n     /usr/share/man:\n\n\t   /usr/share/man/ja_JP.eucJP/man1\n\t   /usr/share/man/ja.eucJP/man1\n\t   /usr/share/man/en.eucJP/man1\n\t   /usr/share/man/man1\n",
+        "     The man utility also supports displaying a specific manual page if passed\n     a path to the file as long as it contains a ‘/’ character.\n",
+        "     The following environment variables affect the execution of man:\n\n     LC_ALL, LC_CTYPE, LANG\n\t\t     Used to find locale specific manual pages.  Valid values\n\t\t     can be found by running the locale(1) command.  See\n\t\t     IMPLEMENTATION NOTES for details.\tInfluenced by the -o\n\t\t     option.\n\n     MACHINE_ARCH, MACHINE\n\t\t     Used to find platform specific manual pages.  If unset,\n\t\t     the output of “sysctl hw.machine_arch” and “sysctl\n\t\t     hw.machine” is used respectively.\tSee IMPLEMENTATION\n\t\t     NOTES for details.  Corresponds to the -m option.\n\n     MANPATH\t     The standard search path used by man(1) may be changed by\n\t\t     specifying a path in the MANPATH environment variable.\n\t\t     Invalid paths, or paths without manual databases, are\n\t\t     ignored.  Overridden by -M.  If MANPATH begins with a\n\t\t     colon, it is appended to the default list; if it ends\n\t\t     with a colon, it is prepended to the default list; or if\n\t\t     it contains two adjacent colons, the standard search path\n\t\t     is inserted between the colons.  If none of these\n\t\t     conditions are met, it overrides the standard search\n\t\t     path.\n\n     MANROFFSEQ      Used to determine the preprocessors for the manual source\n\t\t     before running nroff(1) or troff(1).  If unset, defaults\n\t\t     to tbl(1).  Corresponds to the -p option.\n\n     MANSECT\t     Restricts manual sections searched to the specified colon\n\t\t     delimited list.  Corresponds to the -S option.\n\n     MANWIDTH\t     If set to a numeric value, used as the width manpages\n\t\t     should be displayed.  Otherwise, if set to a special\n\t\t     value “tty”, and output is to a terminal, the pages may\n\t\t     be displayed over the whole width of the screen.\n\n     MANCOLOR\t     If set, enables color support.\n\n     MANPAGER\t     Program used to display files.\n\n\t\t     If unset, and color support is enabled, “less -sR” is\n\t\t     used.\n\n\t\t     If unset, and color support is disabled, then PAGER is\n\t\t     used.  If that has no value either, “less -s” is used.\n",
+        "     /etc/man.conf\n\t     System configuration file.\n     /usr/local/etc/man.d/*.conf\n\t     Local configuration files.\n",
+        "     The man utility exits 0 on success, and >0 if an error occurs.\n",
+        "     Show the manual page for stat(2):\n\n\t   $ man 2 stat\n\n     Show all manual pages for ‘stat’.\n\n\t   $ man -a stat\n\n     List manual pages which match the regular expression either in the title\n     or in the body:\n\n\t   $ man -k '\\<copy\\>.*archive'\n\n     Show the manual page for ls(1) and use cat(1) as pager:\n\n\t   $ man -P cat ls\n\n     Show the location of the ls(1) manual page:\n\n\t   $ man -w ls\n",
+        "     apropos(1), intro(1), mandoc(1), manpath(1), whatis(1), intro(2),\n     intro(3), intro(3lua), intro(4), intro(5), man.conf(5), intro(6),\n     intro(7), mdoc(7), intro(8), intro(9)\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-M",
+      "description": " Forces a specific colon separated manual path instead of the default search path.  See manpath(1).  Overrides the MANPATH environment variable.",
+      "optional": true
+    },
+    {
+      "flag": "-P",
+      "description": " Use specified pager.  Defaults to “less -sR” if color support is enabled, or “less -s”.  Overrides the MANPAGER environment variable, which in turn overrides the PAGER environment variable.",
+      "optional": true
+    },
+    {
+      "flag": "-S",
+      "description": " Restricts manual sections searched to the specified colon delimited list.  Defaults to “1:8:2:3:3lua:n:4:5:6:7:9:l”. Overrides the MANSECT environment variable.",
+      "optional": true
+    },
+    {
+      "flag": "-a",
+      "description": "Display all manual pages instead of just the first found for each page argument."
+    },
+    {
+      "flag": "-d",
+      "description": " verbosity.  Does not display the manual page.",
+      "optional": true
+    },
+    {
+      "flag": "-f",
+      "description": " any effect when man is invoked in this mode.  See the below description of whatis options for details.",
+      "argument": "-d",
+      "optional": false
+    },
+    {
+      "flag": "-h",
+      "description": "Display short help message and exit."
+    },
+    {
+      "flag": "-k",
+      "description": " any effect when man is invoked in this mode.  See the below description of apropos options for details.",
+      "argument": "-d",
+      "optional": false
+    },
+    {
+      "flag": "-m",
+      "description": " Override the default architecture and machine settings allowing lookup of other platform specific manual pages.  This option is accepted, but not implemented, on macOS.",
+      "optional": true
+    },
+    {
+      "flag": "-o",
+      "description": "Force use of non-localized manual pages.  See IMPLEMENTATION NOTES for how locale specific searches work.  Overrides the LC_ALL, LC_CTYPE, and LANG environment variables."
+    },
+    {
+      "flag": "-p",
+      "description": " Use the list of given preprocessors before running nroff(1) or troff(1).\tValid preprocessors arguments: e\t     eqn(1) p\t     pic(1) r\t     refer(1) t\t     tbl(1) v\t     vgrind(1) Overrides the MANROFFSEQ environment variable.",
+      "argument": "eprtv",
+      "optional": true
+    },
+    {
+      "flag": "-t",
+      "description": " of the manual pages to other formats.",
+      "optional": true
+    },
+    {
+      "flag": "-w",
+      "description": " of the manual page. Options that apropos and whatis understand:",
+      "optional": false
+    },
+    {
+      "flag": "-d",
+      "description": " verbosity.  Does not display the manual page.",
+      "optional": true
+    },
+    {
+      "flag": "-s",
+      "description": " When man is operated in apropos or whatis emulation mode, only a subset of its options will be honored.  Specifically, -d, -M, -P, and -S have equivalent functionality in the apropos and whatis implementation provided.\tThe MANPATH, MANSECT, and MANPAGER environment variables will similarly be honored. IMPLEMENTATION NOTES Locale Specific Searches The man utility supports manual pages in different locales.  The search behavior is dictated by the first of three environment variables with a nonempty string: LC_ALL, LC_CTYPE, or LANG.  If set, man will search for locale specific manual pages using the following logic: lang_country.charset lang.charset en.charset For example, if LC_ALL is set to “ja_JP.eucJP”, man will search the following paths when considering section 1 manual pages in /usr/share/man: /usr/share/man/ja_JP.eucJP/man1 /usr/share/man/ja.eucJP/man1 /usr/share/man/en.eucJP/man1 /usr/share/man/man1 Displaying Specific Manual Files The man utility also supports displaying a specific manual page if passed a path to the file as long as it contains a ‘/’ character.",
+      "optional": true
+    }
+  ],
+  "examples": [
+    {
+      "command": "man 2 stat",
+      "description": "",
+      "tags": [],
+      "output": "     Show all manual pages for ‘stat’.\n"
+    },
+    {
+      "command": "man -a stat",
+      "description": "",
+      "tags": [],
+      "output": "     List manual pages which match the regular expression either in the title\n     or in the body:\n"
+    },
+    {
+      "command": "man -k '\\<copy\\>.*archive'",
+      "description": "",
+      "tags": [
+        "redirect",
+        "glob"
+      ],
+      "output": "     Show the manual page for ls(1) and use cat(1) as pager:\n"
+    },
+    {
+      "command": "man -P cat ls",
+      "description": "",
+      "tags": [],
+      "output": "     Show the location of the ls(1) manual page:\n"
+    },
+    {
+      "command": "man -w ls",
+      "description": "",
+      "tags": [],
+      "output": "     apropos(1), intro(1), mandoc(1), manpath(1), whatis(1), intro(2),\n     intro(3), intro(3lua), intro(4), intro(5), man.conf(5), intro(6),\n     intro(7), mdoc(7), intro(8), intro(9)\nmacOS 15.5\t\t\tJanuary 9, 2021 \t\t    macOS 15.5\n"
+    }
+  ],
+  "relatedCommands": [
+    "apropos",
+    "intro",
+    "mandoc",
+    "manpath",
+    "whatis",
+    "conf",
+    "mdoc",
+    "man",
+    "display",
+    "online",
+    "manual",
+    "documentation",
+    "pages",
+    "adho",
+    "pager"
+  ],
+  "seeAlso": [
+    {
+      "name": "apropos",
+      "section": 1
+    },
+    {
+      "name": "intro",
+      "section": 1
+    },
+    {
+      "name": "mandoc",
+      "section": 1
+    },
+    {
+      "name": "manpath",
+      "section": 1
+    },
+    {
+      "name": "whatis",
+      "section": 1
+    },
+    {
+      "name": "intro",
+      "section": 2
+    },
+    {
+      "name": "intro",
+      "section": 3
+    },
+    {
+      "name": "intro",
+      "section": 4
+    },
+    {
+      "name": "intro",
+      "section": 5
+    },
+    {
+      "name": "conf",
+      "section": 5
+    },
+    {
+      "name": "intro",
+      "section": 6
+    },
+    {
+      "name": "intro",
+      "section": 7
+    },
+    {
+      "name": "mdoc",
+      "section": 7
+    },
+    {
+      "name": "intro",
+      "section": 8
+    },
+    {
+      "name": "intro",
+      "section": 9
+    }
+  ],
+  "metadata": {},
+  "searchContent": "man man manual page the man utility finds and displays online manual documentation pages man -adho -t -w -m manpath -p pager -s mansect -m arch machine -p eprtv mansect page man -f -d -m manpath -p pager -s mansect keyword whatis -d -s mansect keyword man -k -d -m manpath -p pager -s mansect keyword apropos -d -s mansect keyword man manual page utility finds displays online documentation pages -m forces a specific colon separated manual path instead of the default search path see manpath 1 overrides the manpath environment variable -p use specified pager defaults to less -sr if color support is enabled or less -s overrides the manpager environment variable which in turn overrides the pager environment variable -s restricts manual sections searched to the specified colon delimited list defaults to 1 8 2 3 3lua n 4 5 6 7 9 l overrides the mansect environment variable -a display all manual pages instead of just the first found for each page argument -d verbosity does not display the manual page -f any effect when man is invoked in this mode see the below description of whatis options for details -h display short help message and exit -k any effect when man is invoked in this mode see the below description of apropos options for details -m override the default architecture and machine settings allowing lookup of other platform specific manual pages this option is accepted but not implemented on macos -o force use of non-localized manual pages see implementation notes for how locale specific searches work overrides the lc all lc ctype and lang environment variables -p use the list of given preprocessors before running nroff 1 or troff 1 valid preprocessors arguments e eqn 1 p pic 1 r refer 1 t tbl 1 v vgrind 1 overrides the manroffseq environment variable -t of the manual pages to other formats -w of the manual page options that apropos and whatis understand -d verbosity does not display the manual page -s when man is operated in apropos or whatis emulation mode only a subset of its options will be honored specifically -d -m -p and -s have equivalent functionality in the apropos and whatis implementation provided the manpath mansect and manpager environment variables will similarly be honored implementation notes locale specific searches the man utility supports manual pages in different locales the search behavior is dictated by the first of three environment variables with a nonempty string lc all lc ctype or lang if set man will search for locale specific manual pages using the following logic lang country charset lang charset en charset for example if lc all is set to ja jp eucjp man will search the following paths when considering section 1 manual pages in usr share man usr share man ja jp eucjp man1 usr share man ja eucjp man1 usr share man en eucjp man1 usr share man man1 displaying specific manual files the man utility also supports displaying a specific manual page if passed a path to the file as long as it contains a character man 2 stat man -a stat man -k copy archive man -p cat ls man -w ls name macos 15 5 january 9 2021 macos 15 5",
+  "keywords": [
+    "man",
+    "manual",
+    "page",
+    "utility",
+    "finds",
+    "displays",
+    "online",
+    "documentation",
+    "pages."
+  ],
+  "complexity": "intermediate",
+  "hash": "e9d00ba09d548408",
+  "parsedAt": "2025-06-17T19:41:53.914Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

@@ -1,0 +1,65 @@
+{
+  "name": "bunzip2",
+  "section": 1,
+  "title": "bunzip2 manual page",
+  "description": "bzip2 compresses files using the Burrows-Wheeler block sorting text compression algorithm, and Huffman coding.",
+  "synopsis": "bzip2 [ -cdfkqstvzVL123456789 ] [ filenames ... ] bunzip2 [ -fkvsVL ] [ filenames ... ] bzcat [ -s ] [ filenames ... ] bzip2recover filename",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "       Julian Seward, jseward@acm.org.\n\n       https://sourceware.org/bzip2/\n\n       The ideas embodied in bzip2 are due to (at least) the following people:\n       Michael Burrows and David Wheeler (for the block sorting\n       transformation), David Wheeler (again, for the Huffman coder), Peter\n       Fenwick (for the structured coding model in the original bzip, and many\n       refinements), and Alistair Moffat, Radford Neal and Ian Witten (for the\n       arithmetic coder in the original bzip).\tI am much indebted for their\n       help, support and advice.  See the manual in the source distribution\n       for pointers to sources of documentation.  Christian von Roques\n       encouraged me to look for faster sorting algorithms, so as to speed up\n       compression.  Bela Lubkin encouraged me to improve the worst-case\n       compression performance.  Donna Robinson XMLised the documentation.\n       The bz* scripts are derived from those of GNU gzip.  Many people sent\n       patches, helped with portability problems, lent machines, gave advice\n       and were generally helpful.\n\n\t\t\t\t\t\t\t\t      bzip2(1)\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "bzip2",
+    "bunzip2",
+    "block-sorting",
+    "compressor",
+    "bzcat",
+    "decompresses",
+    "stdout",
+    "bzip2recover",
+    "recovers",
+    "data",
+    "damaged",
+    "filenames",
+    "filename",
+    "compresses",
+    "using"
+  ],
+  "seeAlso": [],
+  "metadata": {},
+  "searchContent": "bunzip2 bunzip2 manual page bzip2 compresses files using the burrows-wheeler block sorting text compression algorithm and huffman coding bzip2 -cdfkqstvzvl123456789 filenames bunzip2 -fkvsvl filenames bzcat -s filenames bzip2recover filename bunzip2 manual page bzip2 compresses using burrows-wheeler block sorting text compression algorithm huffman coding name",
+  "keywords": [
+    "bunzip2",
+    "manual",
+    "page",
+    "bzip2",
+    "compresses",
+    "using",
+    "burrows-wheeler",
+    "block",
+    "sorting",
+    "text",
+    "compression",
+    "algorithm,",
+    "huffman",
+    "coding."
+  ],
+  "complexity": "basic",
+  "hash": "6c77d0ac52bbcd4c",
+  "parsedAt": "2025-06-17T19:32:24.141Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

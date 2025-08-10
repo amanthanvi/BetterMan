@@ -1,0 +1,263 @@
+{
+  "name": "df",
+  "section": 1,
+  "title": "df manual page",
+  "description": "The df utility displays statistics about the amount of free disk space on the specified mounted file system or on the file system of which file is a part.",
+  "synopsis": "df [--libxo] [-b | -g | -H | -h | -k | -m | -P] [-acIilntY] [-,] [-T type] [file | filesystem ...] LEGACY SYNOPSIS df [--libxo] [-b | -g | -H | -h | -k | -m | -P] [-acIilnY] [-,] [-T type] [-t type] [file | filesystem ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "[-T type] [file | filesystem ...]",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     df – display free disk space\n",
+        "     df [--libxo] [-b | -g | -H | -h | -k | -m | -P] [-acIilntY] [-,]"
+      ]
+    },
+    {
+      "id": "legacy-synopsis",
+      "title": "LEGACY SYNOPSIS",
+      "content": "uses getbsize(3), which allows units of bytes or numbers\n\t\tscaled with the letters k (for multiples of 1024 bytes), m\n\t\t(for multiples of 1048576 bytes) or g (for gibibytes).\tThe\n\t\tallowed range is 512 bytes to 1 GB.  If the value is outside,\n\t\tit will be set to the appropriate limit.",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     df [--libxo] [-b | -g | -H | -h | -k | -m | -P] [-acIilnY] [-,] [-T type]\n     [-t type] [file | filesystem ...]\n",
+        "     The df utility displays statistics about the amount of free disk space on\n     the specified mounted file system or on the file system of which file is\n     a part.  By default block counts are displayed with an assumed block size\n     of 512 bytes.  If neither a file or a file system operand is specified,\n     statistics for all mounted file systems are displayed (subject to the -t\n     option below).\n\n     The following options are available:\n\n     --libxo\n\t     Generate output via libxo(3) in a selection of different human\n\t     and machine readable formats.  See xo_parse_args(3) for details\n\t     on command line arguments.\n\n     -a      Show all mount points, including those that were mounted with the\n\t     MNT_IGNORE flag.  This is implied for file systems specified on\n\t     the command line.\n\n     -b      Explicitly use 512 byte blocks, overriding any BLOCKSIZE\n\t     specification from the environment.  This is the same as the -P\n\t     option.  The -k option overrides this option.\n\n     -c      Display a grand total.\n\n     -g      Use 1073741824 byte (1 Gibibyte) blocks rather than the default.\n\t     This overrides any BLOCKSIZE specification from the environment.\n\n     -h      “Human-readable” output.  Use unit suffixes: Byte, Kibibyte,\n\t     Mebibyte, Gibibyte, Tebibyte and Pebibyte (based on powers of\n\t     1024) in order to reduce the number of digits to four or fewer.\n\t     This applies to the Size, Used, and Avail columns only; the iused\n\t     and ifree columns will be displayed in powers of 1000.\n\n     -H, --si\n\t     Same as -h but based on powers of 1000.\n\n     -I      Suppress inode counts.  See -i below.\n\n     -i      Include statistics on the number of free and used inodes.\tIn\n\t     conjunction with the -h or -H options, the number of inodes is\n\t     scaled by powers of 1000.\tIn case the filesystem has no inodes\n\t     then ‘-’ is displayed instead of the usage percentage.\n\n\t     This option is now the default to conform to Version 3 of the\n\t     Single UNIX Specification (“SUSv3”).  Use -I to suppress this\n\t     output.\n\n     -k      Use 1024 byte (1 Kibibyte) blocks rather than the default.  This\n\t     overrides the -P option and any BLOCKSIZE specification from the\n\t     environment.\n\n     -l      Select locally-mounted file system for display.  If used in\n\t     combination with the -T type option, file system types will be\n\t     added or excluded acccording to the parameters of that option.\n\n     -m      Use 1048576 byte (1 Mebibyte) blocks rather than the default.\n\t     This overrides any BLOCKSIZE specification from the environment.\n\n     -n      Print out the previously obtained statistics from the file\n\t     systems.  This option should be used if it is possible that one\n\t     or more file systems are in a state such that they will not be\n\t     able to provide statistics without a long delay.  When this\n\t     option is specified, df will not request new statistics from the\n\t     file systems, but will respond with the possibly stale statistics\n\t     that were previously obtained.\n\n     -P      Explicitly use 512 byte blocks, overriding any BLOCKSIZE\n\t     specification from the environment.  This is the same as the -b\n\t     option.  The -g and -k options override this option.  In\n\t     compatibility mode, this also suppresses inode counts.\n\n     -T type\n\t     Select file systems to display.  More than one type may be\n\t     specified in a comma separated list.  The list of file system\n\t     types can be prefixed with “no” to specify the file system types\n\t     for which action should not be taken.  If used in combination\n\t     with the -l option, the parameters of this option will modify the\n\t     list of locally-mounted file systems selected by the -l option.\n\t     For example, the df command:\n\n\t\t   df -T nonfs,mfs\n\n\t     lists all file systems except those of type NFS and MFS.  The\n\t     lsvfs(1) command can be used to find out the types of file\n\t     systems that are available on the system.\n\n     -t      If used with no arguments, this option is a no-op (macOS already\n\t     prints the total allocated-space figures).  If used with an\n\t     argument, it acts like -T, but this usage is deprecated and\n\t     should not be relied upon.\n\n     -Y      Include file system type.\n\n     -,      (Comma) Print sizes grouped and separated by thousands using the\n\t     non-monetary separator returned by localeconv(3), typically a\n\t     comma or period.  If no locale is set, or the locale does not\n\t     have a non-monetary separator, this option has no effect.\n",
+        "     BLOCKSIZE\tSpecifies the units in which to report block counts.  This"
+      ]
+    },
+    {
+      "id": "examples",
+      "title": "EXAMPLES",
+      "content": "macOS 15.5\t\t       February 22, 2023\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     Show human readable free disk space for all mount points including file\n     system type:\n\n\t   $ df -ahY\n\t   Filesystem\t  Type\t    Size    Used   Avail Capacity iused ifree %iused  Mounted on\n\t   /dev/disk1s5s1 apfs\t   465Gi    15Gi   266Gi     6%    533k  2.8G\t 0%   /\n\t   devfs\t  devfs    194Ki   194Ki     0Bi   100%     672     0  100%   /dev\n\t   /dev/disk1s2   apfs\t   465Gi   3.4Gi   266Gi     2%    1.6k  2.8G\t 0%   /System/Volumes/Preboot\n\t   /dev/disk1s4   apfs\t   465Gi   3.0Gi   266Gi     2%       3  2.8G\t 0%   /System/Volumes/VM\n\t   /dev/disk1s6   apfs\t   465Gi    11Mi   266Gi     1%      33  2.8G\t 0%   /System/Volumes/Update\n\t   /dev/disk1s1   apfs\t   465Gi   177Gi   266Gi    40%    3.9M  2.8G\t 0%   /System/Volumes/Data\n\n     The filesystems on this machine are virtual volumes on a single\n     partition.  Therefore, the size and space available is the same for all\n     filesystems even though the space in use is different.  The capacity\n     column shows the amount of space used by each filesystem as a percentage\n     of the sum of space used and space available.\n\n     Show previously collected data, excluding inode information, except for\n     the devfs file system.  Note that the “no” prefix affects all the file\n     systems in the list and the -t option can be specified only once:\n\n\t   $ df -l -I -n -t nodevfs\n\t   Filesystem\t  1K-blocks\t Used Available Capacity  Mounted on\n\t   /dev/disk1s5s1 487196712  15300072 278432984     6%\t  /\n\t   /dev/disk1s2   487196712   3604640 278430312     2%\t  /System/Volumes/Preboot\n\t   /dev/disk1s4   487196712   3145748 278430312     2%\t  /System/Volumes/VM\n\t   /dev/disk1s6   487196712\t11576 278430312     1%\t  /System/Volumes/Update\n\t   /dev/disk1s1   487196712 185371244 278432984    40%\t  /System/Volumes/Data\n\n     Show human readable information for the file system containing the file\n     /etc/rc.common:\n\n\t   $ df -h /etc/rc.common\n\t   Filesystem\t   Size    Used   Avail Capacity iused ifree %iused  Mounted on\n\t   /dev/disk1s1   465Gi   177Gi   266Gi    40%\t  3.9M\t2.8G\t0%   /System/Volumes/Data\n\n     Same as above but specifying some file system:\n\n\t   $ df -h /dev/disk1s1\n\t   Filesystem\t   Size    Used   Avail Capacity iused ifree %iused  Mounted on\n\t   /dev/disk1s1   465Gi   177Gi   266Gi    40%\t  3.9M\t2.8G\t0%   /System/Volumes/Data\n",
+        "     The \"capacity\" percentage is normally rounded up to the next higher\n     integer.  In legacy mode, it is rounded down to the next lower integer.\n\n     When the -P option and the -k option are used together, sizes are\n     reported in 1024-byte blocks.\n\n     The -t option is normally a no-op (macOS already prints the total\n     allocated-space figures).\tIn legacy mode, it is equivalent to -T.\n\n     For more information about legacy mode, see compat(5).\n",
+        "     lsvfs(1), quota(1), fstatfs(2), getfsstat(2), statfs(2), getbsize(3),\n     getmntinfo(3), libxo(3), localeconv(3), xo_parse_args(3), compat(5),\n     fstab(5), mount(8), pstat(8), quot(8), swapinfo(8)\n",
+        "     With the exception of most options, the df utility conforms to IEEE Std\n     1003.1-2004 (“POSIX.1”), which defines only the -k, -P and -t options.\n",
+        "     A df command appeared in Version 1 AT&T UNIX.\n",
+        "     The -n flag is ignored if a file or file system is specified.  Also, if a\n     mount point is not accessible by the user, it is possible that the file\n     system information could be stale.\n\n     The -b and -P options are identical.  The former comes from the BSD\n     tradition, and the latter is required for IEEE Std 1003.1-2004\n     (“POSIX.1”) conformity.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "--libxo",
+      "description": " Generate output via libxo(3) in a selection of different human and machine readable formats.  See xo_parse_args(3) for details on command line arguments.",
+      "optional": true
+    },
+    {
+      "flag": "-a",
+      "description": "Show all mount points, including those that were mounted with the MNT_IGNORE flag.  This is implied for file systems specified on the command line."
+    },
+    {
+      "flag": "-b",
+      "description": " specification from the environment.  This is the same as the -P option.  The -k option overrides this option.",
+      "optional": true
+    },
+    {
+      "flag": "-c",
+      "description": "Display a grand total."
+    },
+    {
+      "flag": "-g",
+      "description": " This overrides any BLOCKSIZE specification from the environment.",
+      "optional": false
+    },
+    {
+      "flag": "-h",
+      "description": " Mebibyte, Gibibyte, Tebibyte and Pebibyte (based on powers of 1024) in order to reduce the number of digits to four or fewer. This applies to the Size, Used, and Avail columns only; the iused and ifree columns will be displayed in powers of 1000.",
+      "optional": false
+    },
+    {
+      "flag": "-H",
+      "description": " Same as -h but based on powers of 1000.",
+      "optional": false
+    },
+    {
+      "flag": "-I",
+      "description": "Suppress inode counts.  See -i below."
+    },
+    {
+      "flag": "-i",
+      "description": "Include statistics on the number of free and used inodes.\tIn conjunction with the -h or -H options, the number of inodes is scaled by powers of 1000.\tIn case the filesystem has no inodes then ‘-’ is displayed instead of the usage percentage. This option is now the default to conform to Version 3 of the Single UNIX Specification (“SUSv3”).  Use -I to suppress this output."
+    },
+    {
+      "flag": "-k",
+      "description": " overrides the -P option and any BLOCKSIZE specification from the environment.",
+      "optional": false
+    },
+    {
+      "flag": "-l",
+      "description": "Select locally-mounted file system for display.  If used in combination with the -T type option, file system types will be added or excluded acccording to the parameters of that option."
+    },
+    {
+      "flag": "-m",
+      "description": " This overrides any BLOCKSIZE specification from the environment.",
+      "optional": false
+    },
+    {
+      "flag": "-n",
+      "description": "Print out the previously obtained statistics from the file systems.  This option should be used if it is possible that one or more file systems are in a state such that they will not be able to provide statistics without a long delay.  When this option is specified, df will not request new statistics from the file systems, but will respond with the possibly stale statistics that were previously obtained."
+    },
+    {
+      "flag": "-P",
+      "description": " specification from the environment.  This is the same as the -b option.  The -g and -k options override this option.  In compatibility mode, this also suppresses inode counts.",
+      "optional": false
+    },
+    {
+      "flag": "-T",
+      "description": " Select file systems to display.  More than one type may be specified in a comma separated list.  The list of file system types can be prefixed with “no” to specify the file system types for which action should not be taken.  If used in combination with the -l option, the parameters of this option will modify the list of locally-mounted file systems selected by the -l option. For example, the df command: df -T nonfs,mfs lists all file systems except those of type NFS and MFS.  The lsvfs(1) command can be used to find out the types of file systems that are available on the system.",
+      "optional": true
+    },
+    {
+      "flag": "-t",
+      "description": " prints the total allocated-space figures).  If used with an argument, it acts like -T, but this usage is deprecated and should not be relied upon.",
+      "optional": true
+    },
+    {
+      "flag": "-Y",
+      "description": "Include file system type. -,      (Comma) Print sizes grouped and separated by thousands using the non-monetary separator returned by localeconv(3), typically a comma or period.  If no locale is set, or the locale does not have a non-monetary separator, this option has no effect."
+    }
+  ],
+  "examples": [
+    {
+      "command": "df -ahY",
+      "description": "Filesystem\t  Type\t    Size    Used   Avail Capacity iused ifree %iused  Mounted on",
+      "tags": [],
+      "output": "\t   Filesystem\t  Type\t    Size    Used   Avail Capacity iused ifree %iused  Mounted on\n\t   /dev/disk1s5s1 apfs\t   465Gi    15Gi   266Gi     6%    533k  2.8G\t 0%   /\n\t   devfs\t  devfs    194Ki   194Ki     0Bi   100%     672     0  100%   /dev\n\t   /dev/disk1s2   apfs\t   465Gi   3.4Gi   266Gi     2%    1.6k  2.8G\t 0%   /System/Volumes/Preboot\n\t   /dev/disk1s4   apfs\t   465Gi   3.0Gi   266Gi     2%       3  2.8G\t 0%   /System/Volumes/VM\n\t   /dev/disk1s6   apfs\t   465Gi    11Mi   266Gi     1%      33  2.8G\t 0%   /System/Volumes/Update\n\t   /dev/disk1s1   apfs\t   465Gi   177Gi   266Gi    40%    3.9M  2.8G\t 0%   /System/Volumes/Data\n     The filesystems on this machine are virtual volumes on a single\n     partition.  Therefore, the size and space available is the same for all\n     filesystems even though the space in use is different.  The capacity\n     column shows the amount of space used by each filesystem as a percentage\n     of the sum of space used and space available.\n     Show previously collected data, excluding inode information, except for\n     the devfs file system.  Note that the “no” prefix affects all the file\n     systems in the list and the -t option can be specified only once:\n"
+    },
+    {
+      "command": "df -l -I -n -t nodevfs",
+      "description": "Filesystem\t  1K-blocks\t Used Available Capacity  Mounted on",
+      "tags": [],
+      "output": "\t   Filesystem\t  1K-blocks\t Used Available Capacity  Mounted on\n\t   /dev/disk1s5s1 487196712  15300072 278432984     6%\t  /\n\t   /dev/disk1s2   487196712   3604640 278430312     2%\t  /System/Volumes/Preboot\n\t   /dev/disk1s4   487196712   3145748 278430312     2%\t  /System/Volumes/VM\n\t   /dev/disk1s6   487196712\t11576 278430312     1%\t  /System/Volumes/Update\n\t   /dev/disk1s1   487196712 185371244 278432984    40%\t  /System/Volumes/Data\n     Show human readable information for the file system containing the file\n     /etc/rc.common:\n"
+    },
+    {
+      "command": "df -h /etc/rc.common",
+      "description": "Filesystem\t   Size    Used   Avail Capacity iused ifree %iused  Mounted on",
+      "tags": [],
+      "output": "\t   Filesystem\t   Size    Used   Avail Capacity iused ifree %iused  Mounted on\n\t   /dev/disk1s1   465Gi   177Gi   266Gi    40%\t  3.9M\t2.8G\t0%   /System/Volumes/Data\n     Same as above but specifying some file system:\n"
+    },
+    {
+      "command": "df -h /dev/disk1s1",
+      "description": "Filesystem\t   Size    Used   Avail Capacity iused ifree %iused  Mounted on",
+      "tags": [],
+      "output": "\t   Filesystem\t   Size    Used   Avail Capacity iused ifree %iused  Mounted on\n\t   /dev/disk1s1   465Gi   177Gi   266Gi    40%\t  3.9M\t2.8G\t0%   /System/Volumes/Data\nLEGACY DESCRIPTION\n     The \"capacity\" percentage is normally rounded up to the next higher\n     integer.  In legacy mode, it is rounded down to the next lower integer.\n     When the -P option and the -k option are used together, sizes are\n     reported in 1024-byte blocks.\n     The -t option is normally a no-op (macOS already prints the total\n     allocated-space figures).\tIn legacy mode, it is equivalent to -T.\n     For more information about legacy mode, see compat(5).\nSEE ALSO\n     lsvfs(1), quota(1), fstatfs(2), getfsstat(2), statfs(2), getbsize(3),\n     getmntinfo(3), libxo(3), localeconv(3), xo_parse_args(3), compat(5),\n     fstab(5), mount(8), pstat(8), quot(8), swapinfo(8)\n"
+    }
+  ],
+  "relatedCommands": [
+    "lsvfs",
+    "quota",
+    "fstatfs",
+    "getfsstat",
+    "statfs",
+    "getbsize",
+    "getmntinfo",
+    "libxo",
+    "localeconv",
+    "xo_parse_args",
+    "compat",
+    "fstab",
+    "mount",
+    "pstat",
+    "quot"
+  ],
+  "seeAlso": [
+    {
+      "name": "lsvfs",
+      "section": 1
+    },
+    {
+      "name": "quota",
+      "section": 1
+    },
+    {
+      "name": "fstatfs",
+      "section": 2
+    },
+    {
+      "name": "getfsstat",
+      "section": 2
+    },
+    {
+      "name": "statfs",
+      "section": 2
+    },
+    {
+      "name": "getbsize",
+      "section": 3
+    },
+    {
+      "name": "getmntinfo",
+      "section": 3
+    },
+    {
+      "name": "libxo",
+      "section": 3
+    },
+    {
+      "name": "localeconv",
+      "section": 3
+    },
+    {
+      "name": "xo_parse_args",
+      "section": 3
+    },
+    {
+      "name": "compat",
+      "section": 5
+    },
+    {
+      "name": "fstab",
+      "section": 5
+    },
+    {
+      "name": "mount",
+      "section": 8
+    },
+    {
+      "name": "pstat",
+      "section": 8
+    },
+    {
+      "name": "quot",
+      "section": 8
+    },
+    {
+      "name": "swapinfo",
+      "section": 8
+    }
+  ],
+  "metadata": {},
+  "searchContent": "df df manual page the df utility displays statistics about the amount of free disk space on the specified mounted file system or on the file system of which file is a part df --libxo -b -g -h -h -k -m -p -aciilnty - -t type file filesystem legacy synopsis df --libxo -b -g -h -h -k -m -p -aciilny - -t type -t type file filesystem df manual page utility displays statistics about amount free disk space specified mounted which part --libxo generate output via libxo 3 in a selection of different human and machine readable formats see xo parse args 3 for details on command line arguments -a show all mount points including those that were mounted with the mnt ignore flag this is implied for file systems specified on the command line -b specification from the environment this is the same as the -p option the -k option overrides this option -c display a grand total -g this overrides any blocksize specification from the environment -h mebibyte gibibyte tebibyte and pebibyte based on powers of 1024 in order to reduce the number of digits to four or fewer this applies to the size used and avail columns only the iused and ifree columns will be displayed in powers of 1000 -h same as -h but based on powers of 1000 -i suppress inode counts see -i below -i include statistics on the number of free and used inodes in conjunction with the -h or -h options the number of inodes is scaled by powers of 1000 in case the filesystem has no inodes then - is displayed instead of the usage percentage this option is now the default to conform to version 3 of the single unix specification susv3 use -i to suppress this output -k overrides the -p option and any blocksize specification from the environment -l select locally-mounted file system for display if used in combination with the -t type option file system types will be added or excluded acccording to the parameters of that option -m this overrides any blocksize specification from the environment -n print out the previously obtained statistics from the file systems this option should be used if it is possible that one or more file systems are in a state such that they will not be able to provide statistics without a long delay when this option is specified df will not request new statistics from the file systems but will respond with the possibly stale statistics that were previously obtained -p specification from the environment this is the same as the -b option the -g and -k options override this option in compatibility mode this also suppresses inode counts -t select file systems to display more than one type may be specified in a comma separated list the list of file system types can be prefixed with no to specify the file system types for which action should not be taken if used in combination with the -l option the parameters of this option will modify the list of locally-mounted file systems selected by the -l option for example the df command df -t nonfs mfs lists all file systems except those of type nfs and mfs the lsvfs 1 command can be used to find out the types of file systems that are available on the system -t prints the total allocated-space figures if used with an argument it acts like -t but this usage is deprecated and should not be relied upon -y include file system type - comma print sizes grouped and separated by thousands using the non-monetary separator returned by localeconv 3 typically a comma or period if no locale is set or the locale does not have a non-monetary separator this option has no effect df -ahy filesystem type size used avail capacity iused ifree iused mounted on df -l -i -n -t nodevfs filesystem 1k-blocks used available capacity mounted on df -h etc rc common filesystem size used avail capacity iused ifree iused mounted on df -h dev disk1s1 filesystem size used avail capacity iused ifree iused mounted on name -t type file filesystem legacy synopsis uses getbsize 3 which allows units of bytes or numbers scaled with the letters k for multiples of 1024 bytes m for multiples of 1048576 bytes or g for gibibytes the allowed range is 51 examples macos 15 5 february 22 2023 macos 15 5",
+  "keywords": [
+    "df",
+    "manual",
+    "page",
+    "utility",
+    "displays",
+    "statistics",
+    "about",
+    "amount",
+    "free",
+    "disk",
+    "space",
+    "specified",
+    "mounted",
+    "which",
+    "part."
+  ],
+  "complexity": "intermediate",
+  "hash": "b05c60986b935a88",
+  "parsedAt": "2025-06-17T19:41:55.190Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

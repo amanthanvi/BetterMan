@@ -1,0 +1,35 @@
+{
+  "ls": {
+    "id": "ls.1",
+    "name": "ls",
+    "section": 1,
+    "title": "list directory contents",
+    "description": "List information about the FILEs (the current directory by default).",
+    "category": "File Management",
+    "complexity": "basic",
+    "aliases": ["dir", "list"],
+    "tags": ["files", "directory", "listing"]
+  },
+  "cd": {
+    "id": "cd.1",
+    "name": "cd",
+    "section": 1,
+    "title": "change directory",
+    "description": "Change the current directory to the specified path.",
+    "category": "Navigation",
+    "complexity": "basic",
+    "aliases": ["chdir"],
+    "tags": ["directory", "navigation", "path"]
+  },
+  "grep": {
+    "id": "grep.1",
+    "name": "grep",
+    "section": 1,
+    "title": "print lines matching a pattern",
+    "description": "Search for patterns in files using regular expressions.",
+    "category": "Text Processing",
+    "complexity": "intermediate",
+    "aliases": ["egrep", "fgrep"],
+    "tags": ["search", "pattern", "regex", "text"]
+  }
+}

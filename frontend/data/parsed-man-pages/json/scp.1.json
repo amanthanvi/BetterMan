@@ -1,0 +1,210 @@
+{
+  "name": "scp",
+  "section": 1,
+  "title": "scp manual page",
+  "description": "scp copies files between hosts on a network.",
+  "synopsis": "scp [-346ABCOpqRrsTv] [-c cipher] [-D sftp_server_path] [-F ssh_config] [-i identity_file] [-J destination] [-l limit] [-o ssh_option] [-P port] [-S program] [-X sftp_option] source ... target",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "[-i identity_file] [-J destination] [-l limit] [-o ssh_option]\n\t [-P port] [-S program] [-X sftp_option] source ... target",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     scp – OpenSSH secure file copy\n",
+        "     scp [-346ABCOpqRrsTv] [-c cipher] [-D sftp_server_path] [-F ssh_config]"
+      ]
+    },
+    {
+      "id": "description",
+      "title": "DESCRIPTION",
+      "content": "macOS 15.5\t\t       December 16, 2022\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     scp copies files between hosts on a network.\n\n     scp uses the SFTP protocol over a ssh(1) connection for data transfer,\n     and uses the same authentication and provides the same security as a\n     login session.\n\n     scp will ask for passwords or passphrases if they are needed for\n     authentication.\n\n     The source and target may be specified as a local pathname, a remote host\n     with optional path in the form [user@]host:[path], or a URI in the form\n     scp://[user@]host[:port][/path].  Local file names can be made explicit\n     using absolute or relative pathnames to avoid scp treating file names\n     containing ‘:’ as host specifiers.\n\n     When copying between two remote hosts, if the URI format is used, a port\n     cannot be specified on the target if the -R option is used.\n\n     The options are as follows:\n\n     -3      Copies between two remote hosts are transferred through the local\n\t     host.  Without this option the data is copied directly between\n\t     the two remote hosts.  Note that, when using the legacy SCP\n\t     protocol (via the -O flag), this option selects batch mode for\n\t     the second host as scp cannot ask for passwords or passphrases\n\t     for both hosts.  This mode is the default.\n\n     -4      Forces scp to use IPv4 addresses only.\n\n     -6      Forces scp to use IPv6 addresses only.\n\n     -A      Allows forwarding of ssh-agent(1) to the remote system.  The\n\t     default is not to forward an authentication agent.\n\n     -B      Selects batch mode (prevents asking for passwords or\n\t     passphrases).\n\n     -C      Compression enable.  Passes the -C flag to ssh(1) to enable\n\t     compression.\n\n     -c cipher\n\t     Selects the cipher to use for encrypting the data transfer.  This\n\t     option is directly passed to ssh(1).\n\n     -D sftp_server_path\n\t     Connect directly to a local SFTP server program rather than a\n\t     remote one via ssh(1).  This option may be useful in debugging\n\t     the client and server.\n\n     -F ssh_config\n\t     Specifies an alternative per-user configuration file for ssh.\n\t     This option is directly passed to ssh(1).\n\n     -i identity_file\n\t     Selects the file from which the identity (private key) for public\n\t     key authentication is read.  This option is directly passed to\n\t     ssh(1).\n\n     -J destination\n\t     Connect to the target host by first making an scp connection to\n\t     the jump host described by destination and then establishing a\n\t     TCP forwarding to the ultimate destination from there.  Multiple\n\t     jump hops may be specified separated by comma characters.\tThis\n\t     is a shortcut to specify a ProxyJump configuration directive.\n\t     This option is directly passed to ssh(1).\n\n     -l limit\n\t     Limits the used bandwidth, specified in Kbit/s.\n\n     -O      Use the legacy SCP protocol for file transfers instead of the\n\t     SFTP protocol.  Forcing the use of the SCP protocol may be\n\t     necessary for servers that do not implement SFTP, for backwards-\n\t     compatibility for particular filename wildcard patterns and for\n\t     expanding paths with a ‘~’ prefix for older SFTP servers.\n\n     -o ssh_option\n\t     Can be used to pass options to ssh in the format used in\n\t     ssh_config(5).  This is useful for specifying options for which\n\t     there is no separate scp command-line flag.  For full details of\n\t     the options listed below, and their possible values, see\n\t     ssh_config(5).\n\n\t\t   AddressFamily\n\t\t   BatchMode\n\t\t   BindAddress\n\t\t   BindInterface\n\t\t   CanonicalDomains\n\t\t   CanonicalizeFallbackLocal\n\t\t   CanonicalizeHostname\n\t\t   CanonicalizeMaxDots\n\t\t   CanonicalizePermittedCNAMEs\n\t\t   CASignatureAlgorithms\n\t\t   CertificateFile\n\t\t   CheckHostIP\n\t\t   Ciphers\n\t\t   Compression\n\t\t   ConnectionAttempts\n\t\t   ConnectTimeout\n\t\t   ControlMaster\n\t\t   ControlPath\n\t\t   ControlPersist\n\t\t   GlobalKnownHostsFile\n\t\t   GSSAPIAuthentication\n\t\t   GSSAPIDelegateCredentials\n\t\t   HashKnownHosts\n\t\t   Host\n\t\t   HostbasedAcceptedAlgorithms\n\t\t   HostbasedAuthentication\n\t\t   HostKeyAlgorithms\n\t\t   HostKeyAlias\n\t\t   Hostname\n\t\t   IdentitiesOnly\n\t\t   IdentityAgent\n\t\t   IdentityFile\n\t\t   IPQoS\n\t\t   KbdInteractiveAuthentication\n\t\t   KbdInteractiveDevices\n\t\t   KexAlgorithms\n\t\t   KnownHostsCommand\n\t\t   LogLevel\n\t\t   MACs\n\t\t   NoHostAuthenticationForLocalhost\n\t\t   NumberOfPasswordPrompts\n\t\t   PasswordAuthentication\n\t\t   PKCS11Provider\n\t\t   Port\n\t\t   PreferredAuthentications\n\t\t   ProxyCommand\n\t\t   ProxyJump\n\t\t   PubkeyAcceptedAlgorithms\n\t\t   PubkeyAuthentication\n\t\t   RekeyLimit\n\t\t   RequiredRSASize\n\t\t   SendEnv\n\t\t   ServerAliveInterval\n\t\t   ServerAliveCountMax\n\t\t   SetEnv\n\t\t   StrictHostKeyChecking\n\t\t   TCPKeepAlive\n\t\t   UpdateHostKeys\n\t\t   User\n\t\t   UserKnownHostsFile\n\t\t   VerifyHostKeyDNS\n\n     -P port\n\t     Specifies the port to connect to on the remote host.  Note that\n\t     this option is written with a capital ‘P’, because -p is already\n\t     reserved for preserving the times and mode bits of the file.\n\n     -p      Preserves modification times, access times, and file mode bits\n\t     from the source file.\n\n     -q      Quiet mode: disables the progress meter as well as warning and\n\t     diagnostic messages from ssh(1).\n\n     -R      Copies between two remote hosts are performed by connecting to\n\t     the origin host and executing scp there.  This requires that scp\n\t     running on the origin host can authenticate to the destination\n\t     host without requiring a password.\n\n     -r      Recursively copy entire directories.  Note that scp follows\n\t     symbolic links encountered in the tree traversal.\n\n     -S program\n\t     Name of program to use for the encrypted connection.  The program\n\t     must understand ssh(1) options.\n\n     -T      Disable strict filename checking.\tBy default when copying files\n\t     from a remote host to a local directory scp checks that the\n\t     received filenames match those requested on the command-line to\n\t     prevent the remote end from sending unexpected or unwanted files.\n\t     Because of differences in how various operating systems and\n\t     shells interpret filename wildcards, these checks may cause\n\t     wanted files to be rejected.  This option disables these checks\n\t     at the expense of fully trusting that the server will not send\n\t     unexpected filenames.\n\n     -v      Verbose mode.  Causes scp and ssh(1) to print debugging messages\n\t     about their progress.  This is helpful in debugging connection,\n\t     authentication, and configuration problems.\n\n     -X sftp_option\n\t     Specify an option that controls aspects of SFTP protocol\n\t     behaviour.  The valid options are:\n\n\t     nrequests=value\n\t\t     Controls how many concurrent SFTP read or write requests\n\t\t     may be in progress at any point in time during a download\n\t\t     or upload.  By default 64 requests may be active\n\t\t     concurrently.\n\n\t     buffer=value\n\t\t     Controls the maximum buffer size for a single SFTP\n\t\t     read/write operation used during download or upload.  By\n\t\t     default a 32KB buffer is used.\n",
+        "     The scp utility exits 0 on success, and >0 if an error occurs.\n",
+        "     sftp(1), ssh(1), ssh-add(1), ssh-agent(1), ssh-keygen(1), ssh_config(5),\n     sftp-server(8), sshd(8)\n",
+        "     scp is based on the rcp program in BSD source code from the Regents of\n     the University of California.\n\n     Since OpenSSH 9.0, scp has used the SFTP protocol for transfers by\n     default.\n",
+        "     Timo Rinne <tri@iki.fi>\n     Tatu Ylonen <ylo@cs.hut.fi>\n",
+        "     The legacy SCP protocol (selected by the -O flag) requires execution of\n     the remote user's shell to perform glob(3) pattern matching.  This\n     requires careful quoting of any characters that have special meaning to\n     the remote shell, such as quote characters.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-3",
+      "description": "Copies between two remote hosts are transferred through the local host.  Without this option the data is copied directly between the two remote hosts.  Note that, when using the legacy SCP protocol (via the -O flag), this option selects batch mode for the second host as scp cannot ask for passwords or passphrases for both hosts.  This mode is the default."
+    },
+    {
+      "flag": "-4",
+      "description": "Forces scp to use IPv4 addresses only."
+    },
+    {
+      "flag": "-6",
+      "description": "Forces scp to use IPv6 addresses only."
+    },
+    {
+      "flag": "-A",
+      "description": "Allows forwarding of ssh-agent(1) to the remote system.  The default is not to forward an authentication agent."
+    },
+    {
+      "flag": "-B",
+      "description": "Selects batch mode (prevents asking for passwords or passphrases)."
+    },
+    {
+      "flag": "-C",
+      "description": "Compression enable.  Passes the -C flag to ssh(1) to enable compression."
+    },
+    {
+      "flag": "-c",
+      "description": " Selects the cipher to use for encrypting the data transfer.  This option is directly passed to ssh(1).",
+      "optional": true
+    },
+    {
+      "flag": "-D",
+      "description": " Connect directly to a local SFTP server program rather than a remote one via ssh(1).  This option may be useful in debugging the client and server.",
+      "optional": true
+    },
+    {
+      "flag": "-F",
+      "description": " Specifies an alternative per-user configuration file for ssh. This option is directly passed to ssh(1).",
+      "optional": true
+    },
+    {
+      "flag": "-i",
+      "description": " Selects the file from which the identity (private key) for public key authentication is read.  This option is directly passed to ssh(1).",
+      "optional": true
+    },
+    {
+      "flag": "-J",
+      "description": " Connect to the target host by first making an scp connection to the jump host described by destination and then establishing a TCP forwarding to the ultimate destination from there.  Multiple jump hops may be specified separated by comma characters.\tThis is a shortcut to specify a ProxyJump configuration directive. This option is directly passed to ssh(1).",
+      "optional": true
+    },
+    {
+      "flag": "-l",
+      "description": " Limits the used bandwidth, specified in Kbit/s.",
+      "optional": true
+    },
+    {
+      "flag": "-O",
+      "description": "Use the legacy SCP protocol for file transfers instead of the SFTP protocol.  Forcing the use of the SCP protocol may be necessary for servers that do not implement SFTP, for backwards- compatibility for particular filename wildcard patterns and for expanding paths with a ‘~’ prefix for older SFTP servers."
+    },
+    {
+      "flag": "-o",
+      "description": " Can be used to pass options to ssh in the format used in ssh_config(5).  This is useful for specifying options for which there is no separate scp command-line flag.  For full details of the options listed below, and their possible values, see ssh_config(5). AddressFamily BatchMode BindAddress BindInterface CanonicalDomains CanonicalizeFallbackLocal CanonicalizeHostname CanonicalizeMaxDots CanonicalizePermittedCNAMEs CASignatureAlgorithms CertificateFile CheckHostIP Ciphers Compression ConnectionAttempts ConnectTimeout ControlMaster ControlPath ControlPersist GlobalKnownHostsFile GSSAPIAuthentication GSSAPIDelegateCredentials HashKnownHosts Host HostbasedAcceptedAlgorithms HostbasedAuthentication HostKeyAlgorithms HostKeyAlias Hostname IdentitiesOnly IdentityAgent IdentityFile IPQoS KbdInteractiveAuthentication KbdInteractiveDevices KexAlgorithms KnownHostsCommand LogLevel MACs NoHostAuthenticationForLocalhost NumberOfPasswordPrompts PasswordAuthentication PKCS11Provider Port PreferredAuthentications ProxyCommand ProxyJump PubkeyAcceptedAlgorithms PubkeyAuthentication RekeyLimit RequiredRSASize SendEnv ServerAliveInterval ServerAliveCountMax SetEnv StrictHostKeyChecking TCPKeepAlive UpdateHostKeys User UserKnownHostsFile VerifyHostKeyDNS",
+      "optional": true
+    },
+    {
+      "flag": "-P",
+      "description": " Specifies the port to connect to on the remote host.  Note that this option is written with a capital ‘P’, because -p is already reserved for preserving the times and mode bits of the file.",
+      "optional": true
+    },
+    {
+      "flag": "-p",
+      "description": "Preserves modification times, access times, and file mode bits from the source file."
+    },
+    {
+      "flag": "-q",
+      "description": "Quiet mode: disables the progress meter as well as warning and diagnostic messages from ssh(1)."
+    },
+    {
+      "flag": "-R",
+      "description": "Copies between two remote hosts are performed by connecting to the origin host and executing scp there.  This requires that scp running on the origin host can authenticate to the destination host without requiring a password."
+    },
+    {
+      "flag": "-r",
+      "description": "Recursively copy entire directories.  Note that scp follows symbolic links encountered in the tree traversal."
+    },
+    {
+      "flag": "-S",
+      "description": " Name of program to use for the encrypted connection.  The program must understand ssh(1) options.",
+      "optional": true
+    },
+    {
+      "flag": "-T",
+      "description": "Disable strict filename checking.\tBy default when copying files from a remote host to a local directory scp checks that the received filenames match those requested on the command-line to prevent the remote end from sending unexpected or unwanted files. Because of differences in how various operating systems and shells interpret filename wildcards, these checks may cause wanted files to be rejected.  This option disables these checks at the expense of fully trusting that the server will not send unexpected filenames."
+    },
+    {
+      "flag": "-v",
+      "description": "Verbose mode.  Causes scp and ssh(1) to print debugging messages about their progress.  This is helpful in debugging connection, authentication, and configuration problems."
+    },
+    {
+      "flag": "-X",
+      "description": " Specify an option that controls aspects of SFTP protocol behaviour.  The valid options are: nrequests=value Controls how many concurrent SFTP read or write requests may be in progress at any point in time during a download or upload.  By default 64 requests may be active concurrently. buffer=value Controls the maximum buffer size for a single SFTP read/write operation used during download or upload.  By default a 32KB buffer is used. EXIT STATUS The scp utility exits 0 on success, and >0 if an error occurs. SEE ALSO sftp(1), ssh(1), ssh-add(1), ssh-agent(1), ssh-keygen(1), ssh_config(5), sftp-server(8), sshd(8)",
+      "optional": true
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "sftp",
+    "ssh",
+    "ssh-add",
+    "ssh-agent",
+    "ssh-keygen",
+    "ssh_config",
+    "sftp-server",
+    "sshd",
+    "scp",
+    "secure",
+    "copy",
+    "cipher",
+    "identity_file",
+    "destination",
+    "limit"
+  ],
+  "seeAlso": [
+    {
+      "name": "sftp",
+      "section": 1
+    },
+    {
+      "name": "ssh",
+      "section": 1
+    },
+    {
+      "name": "ssh-add",
+      "section": 1
+    },
+    {
+      "name": "ssh-agent",
+      "section": 1
+    },
+    {
+      "name": "ssh-keygen",
+      "section": 1
+    },
+    {
+      "name": "ssh_config",
+      "section": 5
+    },
+    {
+      "name": "sftp-server",
+      "section": 8
+    },
+    {
+      "name": "sshd",
+      "section": 8
+    }
+  ],
+  "metadata": {},
+  "searchContent": "scp scp manual page scp copies files between hosts on a network scp -346abcopqrrstv -c cipher -d sftp server path -f ssh config -i identity file -j destination -l limit -o ssh option -p port -s program -x sftp option source target scp manual page copies between hosts network -3 copies between two remote hosts are transferred through the local host without this option the data is copied directly between the two remote hosts note that when using the legacy scp protocol via the -o flag this option selects batch mode for the second host as scp cannot ask for passwords or passphrases for both hosts this mode is the default -4 forces scp to use ipv4 addresses only -6 forces scp to use ipv6 addresses only -a allows forwarding of ssh-agent 1 to the remote system the default is not to forward an authentication agent -b selects batch mode prevents asking for passwords or passphrases -c compression enable passes the -c flag to ssh 1 to enable compression -c selects the cipher to use for encrypting the data transfer this option is directly passed to ssh 1 -d connect directly to a local sftp server program rather than a remote one via ssh 1 this option may be useful in debugging the client and server -f specifies an alternative per-user configuration file for ssh this option is directly passed to ssh 1 -i selects the file from which the identity private key for public key authentication is read this option is directly passed to ssh 1 -j connect to the target host by first making an scp connection to the jump host described by destination and then establishing a tcp forwarding to the ultimate destination from there multiple jump hops may be specified separated by comma characters this is a shortcut to specify a proxyjump configuration directive this option is directly passed to ssh 1 -l limits the used bandwidth specified in kbit s -o use the legacy scp protocol for file transfers instead of the sftp protocol forcing the use of the scp protocol may be necessary for servers that do not implement sftp for backwards- compatibility for particular filename wildcard patterns and for expanding paths with a prefix for older sftp servers -o can be used to pass options to ssh in the format used in ssh config 5 this is useful for specifying options for which there is no separate scp command-line flag for full details of the options listed below and their possible values see ssh config 5 addressfamily batchmode bindaddress bindinterface canonicaldomains canonicalizefallbacklocal canonicalizehostname canonicalizemaxdots canonicalizepermittedcnames casignaturealgorithms certificatefile checkhostip ciphers compression connectionattempts connecttimeout controlmaster controlpath controlpersist globalknownhostsfile gssapiauthentication gssapidelegatecredentials hashknownhosts host hostbasedacceptedalgorithms hostbasedauthentication hostkeyalgorithms hostkeyalias hostname identitiesonly identityagent identityfile ipqos kbdinteractiveauthentication kbdinteractivedevices kexalgorithms knownhostscommand loglevel macs nohostauthenticationforlocalhost numberofpasswordprompts passwordauthentication pkcs11provider port preferredauthentications proxycommand proxyjump pubkeyacceptedalgorithms pubkeyauthentication rekeylimit requiredrsasize sendenv serveraliveinterval serveralivecountmax setenv stricthostkeychecking tcpkeepalive updatehostkeys user userknownhostsfile verifyhostkeydns -p specifies the port to connect to on the remote host note that this option is written with a capital p because -p is already reserved for preserving the times and mode bits of the file -p preserves modification times access times and file mode bits from the source file -q quiet mode disables the progress meter as well as warning and diagnostic messages from ssh 1 -r copies between two remote hosts are performed by connecting to the origin host and executing scp there this requires that scp running on the origin host can authenticate to the destination host without requiring a password -r recursively copy entire directories note that scp follows symbolic links encountered in the tree traversal -s name of program to use for the encrypted connection the program must understand ssh 1 options -t disable strict filename checking by default when copying files from a remote host to a local directory scp checks that the received filenames match those requested on the command-line to prevent the remote end from sending unexpected or unwanted files because of differences in how various operating systems and shells interpret filename wildcards these checks may cause wanted files to be rejected this option disables these checks at the expense of fully trusting that the server will not send unexpected filenames -v verbose mode causes scp and ssh 1 to print debugging messages about their progress this is helpful in debugging connection authentication and configuration problems -x specify an option that controls aspects of sftp protocol behaviour the valid options are nrequests value controls how many concurrent sftp read or write requests may be in progress at any point in time during a download or upload by default 64 requests may be active concurrently buffer value controls the maximum buffer size for a single sftp read write operation used during download or upload by default a 32kb buffer is used exit status the scp utility exits 0 on success and 0 if an error occurs see also sftp 1 ssh 1 ssh-add 1 ssh-agent 1 ssh-keygen 1 ssh config 5 sftp-server 8 sshd 8 name -i identity file -j destination -l limit -o ssh option -p port -s program -x sftp option source target description macos 15 5 december 16 2022 macos 15 5",
+  "keywords": [
+    "scp",
+    "manual",
+    "page",
+    "copies",
+    "between",
+    "hosts",
+    "network."
+  ],
+  "complexity": "advanced",
+  "hash": "cb39cc55ca7cc77d",
+  "parsedAt": "2025-06-17T19:42:03.235Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

@@ -1,0 +1,150 @@
+{
+  "name": "split",
+  "section": 1,
+  "title": "split manual page",
+  "description": "The split utility reads the given file and breaks it up into files of 1000 lines each (if no options are specified), leaving the file unchanged.",
+  "synopsis": "split [-cd] [-l line_count] [-a suffix_length] [file [prefix]] split [-cd] -b byte_count[K|k|M|m|G|g] [-a suffix_length] [file [prefix]] split [-cd] -n chunk_count [-a suffix_length] [file [prefix]] split [-cd] -p pattern [-a suffix_length] [file [prefix]]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t May 26, 2023\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     split – split a file into pieces\n",
+        "     split [-cd] [-l line_count] [-a suffix_length] [file [prefix]]\n     split [-cd] -b byte_count[K|k|M|m|G|g] [-a suffix_length] [file [prefix]]\n     split [-cd] -n chunk_count [-a suffix_length] [file [prefix]]\n     split [-cd] -p pattern [-a suffix_length] [file [prefix]]\n",
+        "     The split utility reads the given file and breaks it up into files of\n     1000 lines each (if no options are specified), leaving the file\n     unchanged.  If file is a single dash (‘-’) or absent, split reads from\n     the standard input.\n\n     The options are as follows:\n\n     -a suffix_length\n\t     Use suffix_length letters to form the suffix of the file name.\n\n     -b byte_count[K|k|M|m|G|g]\n\t     Create split files byte_count bytes in length.  If k or K is\n\t     appended to the number, the file is split into byte_count\n\t     kilobyte pieces.  If m or M is appended to the number, the file\n\t     is split into byte_count megabyte pieces.\tIf g or G is appended\n\t     to the number, the file is split into byte_count gigabyte pieces.\n\n     -c      Continue creating files and do not overwrite existing output\n\t     files.\n\n     -d      Use a numeric suffix instead of a alphabetic suffix.\n\n     -l line_count\n\t     Create split files line_count lines in length.\n\n     -n chunk_count\n\t     Split file into chunk_count smaller files.  The first n - 1 files\n\t     will be of size (size of file / chunk_count ) and the last file\n\t     will contain the remaining bytes.\n\n     -p pattern\n\t     The file is split whenever an input line matches pattern, which\n\t     is interpreted as an extended regular expression.\tThe matching\n\t     line will be the first line of the next output file.  This option\n\t     is incompatible with the -b and -l options.\n\n     If additional arguments are specified, the first is used as the name of\n     the input file which is to be split.  If a second additional argument is\n     specified, it is used as a prefix for the names of the files into which\n     the file is split.  In this case, each file into which the file is split\n     is named by the prefix followed by a lexically ordered suffix using\n     suffix_length characters in the range “a-z”.  If -a is not specified, two\n     letters are used as the initial suffix.\n\n     If the prefix argument is not specified, the file is split into lexically\n     ordered files named with the prefix “x” and with suffixes as above.\n\n     By default, split will overwrite any existing output files.  If the -c\n     flag is specified, split will instead create files with names that do not\n     already exist.\n",
+        "     The LANG, LC_ALL, LC_CTYPE and LC_COLLATE environment variables affect\n     the execution of split as described in environ(7).\n",
+        "     The split utility exits 0 on success, and >0 if an error occurs.\n",
+        "     Split input into as many files as needed, so that each file contains at\n     most 2 lines:\n\n\t   $ echo -e \"first line\\nsecond line\\nthird line\\nforth line\" | split -l2\n\n     Split input in chunks of 10 bytes using numeric prefixes for file names.\n     This generates two files of 10 bytes (x00 and x01) and a third file (x02)\n     with the remaining 2 bytes:\n\n\t   $ echo -e \"This is 22 bytes long\" | split -d -b10\n\n     Split input generating 6 files:\n\n\t   $ echo -e \"This is 22 bytes long\" | split -n 6\n\n     Split input creating a new file every time a line matches the regular\n     expression for a “t” followed by either “a” or “u” thus creating two\n     files:\n\n\t   $ echo -e \"stack\\nstock\\nstuck\\nanother line\" | split -p 't[au]'\n",
+        "     csplit(1), re_format(7)\n",
+        "     The split utility conforms to IEEE Std 1003.1-2001 (“POSIX.1”).\n",
+        "     A split command appeared in Version 3 AT&T UNIX.\n\n     Before FreeBSD 14, pattern and line matching only operated on lines\n     shorter than 65,536 bytes.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-a",
+      "description": " Use suffix_length letters to form the suffix of the file name.",
+      "optional": true
+    },
+    {
+      "flag": "-b",
+      "description": " Create split files byte_count bytes in length.  If k or K is appended to the number, the file is split into byte_count kilobyte pieces.  If m or M is appended to the number, the file is split into byte_count megabyte pieces.\tIf g or G is appended to the number, the file is split into byte_count gigabyte pieces.",
+      "optional": false
+    },
+    {
+      "flag": "-c",
+      "description": "Continue creating files and do not overwrite existing output files."
+    },
+    {
+      "flag": "-d",
+      "description": "Use a numeric suffix instead of a alphabetic suffix."
+    },
+    {
+      "flag": "-l",
+      "description": " Create split files line_count lines in length.",
+      "optional": true
+    },
+    {
+      "flag": "-n",
+      "description": " Split file into chunk_count smaller files.  The first n - 1 files will be of size (size of file / chunk_count ) and the last file will contain the remaining bytes.",
+      "optional": false
+    },
+    {
+      "flag": "-p",
+      "description": " The file is split whenever an input line matches pattern, which is interpreted as an extended regular expression.\tThe matching line will be the first line of the next output file.  This option is incompatible with the -b and -l options. If additional arguments are specified, the first is used as the name of the input file which is to be split.  If a second additional argument is specified, it is used as a prefix for the names of the files into which the file is split.  In this case, each file into which the file is split is named by the prefix followed by a lexically ordered suffix using suffix_length characters in the range “a-z”.  If -a is not specified, two letters are used as the initial suffix. If the prefix argument is not specified, the file is split into lexically ordered files named with the prefix “x” and with suffixes as above. By default, split will overwrite any existing output files.  If the -c flag is specified, split will instead create files with names that do not already exist.",
+      "optional": false
+    }
+  ],
+  "examples": [
+    {
+      "command": "echo -e \"first line\\nsecond line\\nthird line\\nforth line\" | split -l2",
+      "description": "",
+      "tags": [
+        "pipe"
+      ],
+      "output": "     Split input in chunks of 10 bytes using numeric prefixes for file names.\n     This generates two files of 10 bytes (x00 and x01) and a third file (x02)\n     with the remaining 2 bytes:\n"
+    },
+    {
+      "command": "echo -e \"This is 22 bytes long\" | split -d -b10",
+      "description": "",
+      "tags": [
+        "pipe"
+      ],
+      "output": "     Split input generating 6 files:\n"
+    },
+    {
+      "command": "echo -e \"This is 22 bytes long\" | split -n 6",
+      "description": "",
+      "tags": [
+        "pipe"
+      ],
+      "output": "     Split input creating a new file every time a line matches the regular\n     expression for a “t” followed by either “a” or “u” thus creating two\n     files:\n"
+    },
+    {
+      "command": "echo -e \"stack\\nstock\\nstuck\\nanother line\" | split -p 't[au]'",
+      "description": "",
+      "tags": [
+        "pipe"
+      ],
+      "output": "     csplit(1), re_format(7)\n"
+    }
+  ],
+  "relatedCommands": [
+    "csplit",
+    "re_format",
+    "split",
+    "into",
+    "pieces",
+    "line_count",
+    "suffix_length",
+    "prefix",
+    "byte_count",
+    "chunk_count",
+    "pattern",
+    "utility",
+    "reads",
+    "given",
+    "breaks"
+  ],
+  "seeAlso": [
+    {
+      "name": "csplit",
+      "section": 1
+    },
+    {
+      "name": "re_format",
+      "section": 7
+    }
+  ],
+  "metadata": {},
+  "searchContent": "split split manual page the split utility reads the given file and breaks it up into files of 1000 lines each if no options are specified leaving the file unchanged split -cd -l line count -a suffix length file prefix split -cd -b byte count k k m m g g -a suffix length file prefix split -cd -n chunk count -a suffix length file prefix split -cd -p pattern -a suffix length file prefix split manual page utility reads given breaks into 1000 lines each options specified leaving unchanged -a use suffix length letters to form the suffix of the file name -b create split files byte count bytes in length if k or k is appended to the number the file is split into byte count kilobyte pieces if m or m is appended to the number the file is split into byte count megabyte pieces if g or g is appended to the number the file is split into byte count gigabyte pieces -c continue creating files and do not overwrite existing output files -d use a numeric suffix instead of a alphabetic suffix -l create split files line count lines in length -n split file into chunk count smaller files the first n - 1 files will be of size size of file chunk count and the last file will contain the remaining bytes -p the file is split whenever an input line matches pattern which is interpreted as an extended regular expression the matching line will be the first line of the next output file this option is incompatible with the -b and -l options if additional arguments are specified the first is used as the name of the input file which is to be split if a second additional argument is specified it is used as a prefix for the names of the files into which the file is split in this case each file into which the file is split is named by the prefix followed by a lexically ordered suffix using suffix length characters in the range a-z if -a is not specified two letters are used as the initial suffix if the prefix argument is not specified the file is split into lexically ordered files named with the prefix x and with suffixes as above by default split will overwrite any existing output files if the -c flag is specified split will instead create files with names that do not already exist echo -e first line nsecond line nthird line nforth line split -l2 echo -e this is 22 bytes long split -d -b10 echo -e this is 22 bytes long split -n 6 echo -e stack nstock nstuck nanother line split -p t au name macos 15 5 may 26 2023 macos 15 5",
+  "keywords": [
+    "split",
+    "manual",
+    "page",
+    "utility",
+    "reads",
+    "given",
+    "breaks",
+    "into",
+    "1000",
+    "lines",
+    "each",
+    "options",
+    "specified),",
+    "leaving",
+    "unchanged."
+  ],
+  "complexity": "intermediate",
+  "hash": "d5a68b4b12650c01",
+  "parsedAt": "2025-06-17T19:42:00.677Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

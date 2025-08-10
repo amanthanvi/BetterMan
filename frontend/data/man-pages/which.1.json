@@ -1,0 +1,150 @@
+{
+  "name": "which",
+  "section": 1,
+  "title": "which manual page",
+  "description": "The which utility takes a list of command names and searches the path for each executable file that would be run had these commands actually been invoked.",
+  "synopsis": "which [-as] program ...",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t      September 24, 2020\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     which – locate a program file in the user's path\n",
+        "     which [-as] program ...\n",
+        "     The which utility takes a list of command names and searches the path for\n     each executable file that would be run had these commands actually been\n     invoked.\n\n     The following options are available:\n\n     -a      List all instances of executables found (instead of just the\n\t     first one of each).\n\n     -s      No output, just return 0 if all of the executables are found, or\n\t     1 if some were not found.\n\n     Some shells may provide a builtin which command which is similar or\n     identical to this utility.  Consult the builtin(1) manual page.\n",
+        "     Locate the ls(1) and cp(1) commands:\n\n\t   $ /usr/bin/which ls cp\n\t   /bin/ls\n\t   /bin/cp\n\n     Same as above with a specific PATH and showing all occurrences:\n\n\t   $ PATH=/bin:/rescue /usr/bin/which -a ls cp\n\t   /bin/ls\n\t   /rescue/ls\n\t   /bin/cp\n\t   /rescue/cp\n\n     which will show duplicates if the same executable is found more than\n     once:\n\n\t   $ PATH=/bin:/bin /usr/bin/which -a ls\n\t   /bin/ls\n\t   /bin/ls\n\n     Do not show output.  Just exit with an appropriate return code:\n\n\t   $ /usr/bin/which -s ls cp\n\t   $ echo $?\n\t   0\n\n\t   $ /usr/bin/which -s fakecommand\n\t   $ echo $?\n\t   1\n",
+        "     builtin(1), csh(1), find(1), locate(1), whereis(1)\n",
+        "     The which command first appeared in FreeBSD 2.1.\n",
+        "     The which utility was originally written in Perl and was contributed by\n     Wolfram Schneider <wosch@FreeBSD.org>.  The current version of which was\n     rewritten in C by Daniel Papasian <dpapasia@andrew.cmu.edu>.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-a",
+      "description": "List all instances of executables found (instead of just the first one of each)."
+    },
+    {
+      "flag": "-s",
+      "description": "No output, just return 0 if all of the executables are found, or 1 if some were not found. Some shells may provide a builtin which command which is similar or identical to this utility.  Consult the builtin(1) manual page."
+    }
+  ],
+  "examples": [
+    {
+      "command": "/usr/bin/which ls cp",
+      "description": "/bin/ls",
+      "tags": [],
+      "output": "\t   /bin/ls\n\t   /bin/cp\n     Same as above with a specific PATH and showing all occurrences:\n"
+    },
+    {
+      "command": "PATH=/bin:/rescue /usr/bin/which -a ls cp",
+      "description": "/bin/ls",
+      "tags": [],
+      "output": "\t   /bin/ls\n\t   /rescue/ls\n\t   /bin/cp\n\t   /rescue/cp\n     which will show duplicates if the same executable is found more than\n     once:\n"
+    },
+    {
+      "command": "PATH=/bin:/bin /usr/bin/which -a ls",
+      "description": "/bin/ls",
+      "tags": [],
+      "output": "\t   /bin/ls\n\t   /bin/ls\n     Do not show output.  Just exit with an appropriate return code:\n"
+    },
+    {
+      "command": "/usr/bin/which -s ls cp",
+      "description": "",
+      "tags": []
+    },
+    {
+      "command": "echo $?",
+      "description": "0",
+      "tags": [
+        "glob"
+      ],
+      "output": "\t   0\n"
+    },
+    {
+      "command": "/usr/bin/which -s fakecommand",
+      "description": "",
+      "tags": []
+    },
+    {
+      "command": "echo $?",
+      "description": "1",
+      "tags": [
+        "glob"
+      ],
+      "output": "\t   1\nSEE ALSO\n     builtin(1), csh(1), find(1), locate(1), whereis(1)\n"
+    }
+  ],
+  "relatedCommands": [
+    "builtin",
+    "csh",
+    "find",
+    "locate",
+    "whereis",
+    "which",
+    "program",
+    "path",
+    "utility",
+    "takes",
+    "list",
+    "command",
+    "names",
+    "searches",
+    "each"
+  ],
+  "seeAlso": [
+    {
+      "name": "builtin",
+      "section": 1
+    },
+    {
+      "name": "csh",
+      "section": 1
+    },
+    {
+      "name": "find",
+      "section": 1
+    },
+    {
+      "name": "locate",
+      "section": 1
+    },
+    {
+      "name": "whereis",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "which which manual page the which utility takes a list of command names and searches the path for each executable file that would be run had these commands actually been invoked which -as program which manual page utility takes list command names searches path each executable would these commands actually been invoked -a list all instances of executables found instead of just the first one of each -s no output just return 0 if all of the executables are found or 1 if some were not found some shells may provide a builtin which command which is similar or identical to this utility consult the builtin 1 manual page usr bin which ls cp bin ls path bin rescue usr bin which -a ls cp bin ls path bin bin usr bin which -a ls bin ls usr bin which -s ls cp echo 0 usr bin which -s fakecommand echo 1 name macos 15 5 september 24 2020 macos 15 5",
+  "keywords": [
+    "which",
+    "manual",
+    "page",
+    "utility",
+    "takes",
+    "list",
+    "command",
+    "names",
+    "searches",
+    "path",
+    "each",
+    "executable",
+    "would",
+    "these",
+    "commands",
+    "actually",
+    "been",
+    "invoked."
+  ],
+  "complexity": "basic",
+  "hash": "19fbc4751136846f",
+  "parsedAt": "2025-06-17T19:31:50.775Z",
+  "parseVersion": "2.0.0",
+  "isCommon": true,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "ls.1",
+    "name": "ls",
+    "section": 1,
+    "title": "list directory contents",
+    "description": "List information about the FILEs (the current directory by default).",
+    "category": "User Commands",
+    "keywords": ["ls", "list", "directory", "files", "folders"],
+    "content": "ls list directory contents files folders options all long format human readable",
+    "isCommon": true,
+    "examples": ["$ ls -la", "$ ls -lh /usr/bin"]
+  },
+  {
+    "id": "cd.1",
+    "name": "cd",
+    "section": 1,
+    "title": "change directory",
+    "description": "Change the current directory to the specified path.",
+    "category": "User Commands",
+    "keywords": ["cd", "change", "directory", "navigate", "path"],
+    "content": "cd change directory navigate path folder home previous pwd",
+    "isCommon": true,
+    "examples": ["$ cd /home/user", "$ cd ..", "$ cd ~"]
+  },
+  {
+    "id": "grep.1",
+    "name": "grep",
+    "section": 1,
+    "title": "print lines matching a pattern",
+    "description": "Search for PATTERN in each FILE or standard input.",
+    "category": "User Commands",
+    "keywords": ["grep", "search", "pattern", "regex", "find", "match"],
+    "content": "grep search pattern regex find match text files recursive case insensitive",
+    "isCommon": true,
+    "examples": ["$ grep 'pattern' file.txt", "$ grep -r 'TODO' .", "$ grep -i 'error' log.txt"]
+  },
+  {
+    "id": "find.1",
+    "name": "find",
+    "section": 1,
+    "title": "search for files in a directory hierarchy",
+    "description": "Search for files in a directory hierarchy based on various criteria.",
+    "category": "User Commands",
+    "keywords": ["find", "search", "locate", "files", "directories"],
+    "content": "find search locate files directories name type size modified exec",
+    "isCommon": true,
+    "examples": ["$ find . -name '*.txt'", "$ find /home -type d", "$ find . -mtime -7"]
+  },
+  {
+    "id": "cat.1",
+    "name": "cat",
+    "section": 1,
+    "title": "concatenate files and print on the standard output",
+    "description": "Concatenate FILE(s) to standard output.",
+    "category": "User Commands",
+    "keywords": ["cat", "concatenate", "display", "print", "file"],
+    "content": "cat concatenate display print file contents combine append number lines",
+    "isCommon": true,
+    "examples": ["$ cat file.txt", "$ cat file1.txt file2.txt", "$ cat -n script.sh"]
+  },
+  {
+    "id": "echo.1",
+    "name": "echo",
+    "section": 1,
+    "title": "display a line of text",
+    "description": "Echo the STRING(s) to standard output.",
+    "category": "User Commands",
+    "keywords": ["echo", "print", "display", "output", "text"],
+    "content": "echo print display output text string newline escape sequences",
+    "isCommon": true,
+    "examples": ["$ echo 'Hello World'", "$ echo $PATH", "$ echo -n 'No newline'"]
+  },
+  {
+    "id": "mkdir.1",
+    "name": "mkdir",
+    "section": 1,
+    "title": "make directories",
+    "description": "Create the DIRECTORY(ies), if they do not already exist.",
+    "category": "User Commands",
+    "keywords": ["mkdir", "make", "create", "directory", "folder"],
+    "content": "mkdir make create directory folder parents permissions recursive",
+    "isCommon": true,
+    "examples": ["$ mkdir newdir", "$ mkdir -p path/to/dir", "$ mkdir -m 755 project"]
+  },
+  {
+    "id": "rm.1",
+    "name": "rm",
+    "section": 1,
+    "title": "remove files or directories",
+    "description": "Remove (unlink) the FILE(s).",
+    "category": "User Commands",
+    "keywords": ["rm", "remove", "delete", "unlink", "file"],
+    "content": "rm remove delete unlink file directory recursive force interactive",
+    "isCommon": true,
+    "examples": ["$ rm file.txt", "$ rm -rf directory/", "$ rm -i *.log"]
+  }
+]

@@ -1,0 +1,113 @@
+{
+  "name": "mkdir",
+  "section": 1,
+  "title": "mkdir manual page",
+  "description": "The mkdir utility creates the directories named as operands, in the order specified, using mode “rwxrwxrwx” (0777) as modified by the current umask(2).",
+  "synopsis": "mkdir [-pv] [-m mode] directory_name ...",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tMarch 15, 2013\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     mkdir – make directories\n",
+        "     mkdir [-pv] [-m mode] directory_name ...\n",
+        "     The mkdir utility creates the directories named as operands, in the order\n     specified, using mode “rwxrwxrwx” (0777) as modified by the current\n     umask(2).\n\n     The options are as follows:\n\n     -m mode\t    Set the file permission bits of the final created\n\t\t    directory to the specified mode.  The mode argument can be\n\t\t    in any of the formats specified to the chmod(1) command.\n\t\t    If a symbolic mode is specified, the operation characters\n\t\t    ‘+’ and ‘-’ are interpreted relative to an initial mode of\n\t\t    “a=rwx”.\n\n     -p \t    Create intermediate directories as required.  If this\n\t\t    option is not specified, the full path prefix of each\n\t\t    operand must already exist.  On the other hand, with this\n\t\t    option specified, no error will be reported if a directory\n\t\t    given as an operand already exists.  Intermediate\n\t\t    directories are created with permission bits of\n\t\t    “rwxrwxrwx” (0777) as modified by the current umask, plus\n\t\t    write and search permission for the owner.\n\n     -v \t    Be verbose when creating directories, listing them as they\n\t\t    are created.\n\n     The user must have write permission in the parent directory.\n",
+        "     The mkdir utility exits 0 on success, and >0 if an error occurs.\n",
+        "     Create a directory named foobar:\n\n\t   $ mkdir foobar\n\n     Create a directory named foobar and set its file mode to 700:\n\n\t   $ mkdir -m 700 foobar\n\n     Create a directory named cow/horse/monkey, creating any non-existent\n     intermediate directories as necessary:\n\n\t   $ mkdir -p cow/horse/monkey\n",
+        "     The -v option is non-standard and its use in scripts is not recommended.\n",
+        "     rmdir(1)\n",
+        "     The mkdir utility is expected to be IEEE Std 1003.2 (“POSIX.2”)\n     compatible.\n",
+        "     A mkdir command appeared in Version 1 AT&T UNIX.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-m",
+      "description": " directory to the specified mode.  The mode argument can be in any of the formats specified to the chmod(1) command. If a symbolic mode is specified, the operation characters ‘+’ and ‘-’ are interpreted relative to an initial mode of “a=rwx”.",
+      "optional": true
+    },
+    {
+      "flag": "-p",
+      "description": "Create intermediate directories as required.  If this option is not specified, the full path prefix of each operand must already exist.  On the other hand, with this option specified, no error will be reported if a directory given as an operand already exists.  Intermediate directories are created with permission bits of “rwxrwxrwx” (0777) as modified by the current umask, plus write and search permission for the owner."
+    },
+    {
+      "flag": "-v",
+      "description": "Be verbose when creating directories, listing them as they are created. The user must have write permission in the parent directory. EXIT STATUS The mkdir utility exits 0 on success, and >0 if an error occurs."
+    }
+  ],
+  "examples": [
+    {
+      "command": "mkdir foobar",
+      "description": "",
+      "tags": [],
+      "output": "     Create a directory named foobar and set its file mode to 700:\n"
+    },
+    {
+      "command": "mkdir -m 700 foobar",
+      "description": "",
+      "tags": [],
+      "output": "     Create a directory named cow/horse/monkey, creating any non-existent\n     intermediate directories as necessary:\n"
+    },
+    {
+      "command": "mkdir -p cow/horse/monkey",
+      "description": "",
+      "tags": []
+    }
+  ],
+  "relatedCommands": [
+    "rmdir",
+    "mkdir",
+    "make",
+    "directories",
+    "mode",
+    "directory_name",
+    "utility",
+    "creates",
+    "named",
+    "operands",
+    "order",
+    "specified",
+    "using",
+    "rwxrwxrwx",
+    "modified"
+  ],
+  "seeAlso": [
+    {
+      "name": "rmdir",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "mkdir mkdir manual page the mkdir utility creates the directories named as operands in the order specified using mode rwxrwxrwx 0777 as modified by the current umask 2 mkdir -pv -m mode directory name mkdir manual page utility creates directories named operands order specified using mode rwxrwxrwx 0777 modified current umask 2 -m directory to the specified mode the mode argument can be in any of the formats specified to the chmod 1 command if a symbolic mode is specified the operation characters and - are interpreted relative to an initial mode of a rwx -p create intermediate directories as required if this option is not specified the full path prefix of each operand must already exist on the other hand with this option specified no error will be reported if a directory given as an operand already exists intermediate directories are created with permission bits of rwxrwxrwx 0777 as modified by the current umask plus write and search permission for the owner -v be verbose when creating directories listing them as they are created the user must have write permission in the parent directory exit status the mkdir utility exits 0 on success and 0 if an error occurs mkdir foobar mkdir -m 700 foobar mkdir -p cow horse monkey name macos 15 5 march 15 2013 macos 15 5",
+  "keywords": [
+    "mkdir",
+    "manual",
+    "page",
+    "utility",
+    "creates",
+    "directories",
+    "named",
+    "operands,",
+    "order",
+    "specified,",
+    "using",
+    "mode",
+    "“rwxrwxrwx”",
+    "(0777)",
+    "modified",
+    "current",
+    "umask(2)."
+  ],
+  "complexity": "basic",
+  "hash": "f7cfdfbd53fccf9e",
+  "parsedAt": "2025-06-17T19:31:46.494Z",
+  "parseVersion": "2.0.0",
+  "isCommon": true,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

@@ -1,0 +1,149 @@
+{
+  "name": "uncompress",
+  "section": 1,
+  "title": "uncompress manual page",
+  "description": "The compress utility reduces the size of files using adaptive Lempel-Ziv coding.",
+  "synopsis": "compress [-fv] [-b bits] [file ...] compress -c [-b bits] [file] uncompress [-fv] [file ...] uncompress -c [file ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t March 4, 2021\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     compress, uncompress – compress and expand data\n",
+        "     compress [-fv] [-b bits] [file ...]\n     compress -c [-b bits] [file]\n     uncompress [-fv] [file ...]\n     uncompress -c [file ...]\n",
+        "     The compress utility reduces the size of files using adaptive Lempel-Ziv\n     coding.  Each file is renamed to the same name plus the extension .Z.  A\n     file argument with a .Z extension will be ignored except it will cause an\n     error exit after other arguments are processed.  If compression would not\n     reduce the size of a file, the file is ignored.\n\n     The uncompress utility restores compressed files to their original form,\n     renaming the files by deleting the .Z extensions.\tA file specification\n     need not include the file's .Z extension.\tIf a file's name in its file\n     system does not have a .Z extension, it will not be uncompressed and it\n     will cause an error exit after other arguments are processed.\n\n     If renaming the files would cause files to be overwritten and the\n     standard input device is a terminal, the user is prompted (on the\n     standard error output) for confirmation.  If prompting is not possible or\n     confirmation is not received, the files are not overwritten.\n\n     As many of the modification time, access time, file flags, file mode,\n     user ID, and group ID as allowed by permissions are retained in the new\n     file.\n\n     If no files are specified or a file argument is a single dash (‘-’), the\n     standard input is compressed or uncompressed to the standard output.  If\n     either the input and output files are not regular files, the checks for\n     reduction in size and file overwriting are not performed, the input file\n     is not removed, and the attributes of the input file are not retained in\n     the output file.\n\n     The options are as follows:\n\n     -b bits\t    The code size (see below) is limited to bits, which must\n\t\t    be in the range 9..16.  The default is 16.\n\n     -c \t    Compressed or uncompressed output is written to the\n\t\t    standard output.  No files are modified.  The -v option is\n\t\t    ignored.  Compression is attempted even if the results\n\t\t    will be larger than the original.\n\n     -f \t    Files are overwritten without prompting for confirmation.\n\t\t    Also, for compress, files are compressed even if they are\n\t\t    not actually reduced in size.\n\n     -v \t    Print the percentage reduction of each file.  Ignored by\n\t\t    uncompress or if the -c option is also used.\n\n     The compress utility uses a modified Lempel-Ziv algorithm.  Common\n     substrings in the file are first replaced by 9-bit codes 257 and up.\n     When code 512 is reached, the algorithm switches to 10-bit codes and\n     continues to use more bits until the limit specified by the -b option or\n     its default is reached.\n\n     After the limit is reached, compress periodically checks the compression\n     ratio.  If it is increasing, compress continues to use the existing code\n     dictionary.  However, if the compression ratio decreases, compress\n     discards the table of substrings and rebuilds it from scratch.  This\n     allows the algorithm to adapt to the next \"block\" of the file.\n\n     The -b option is unavailable for uncompress since the bits parameter\n     specified during compression is encoded within the output, along with a\n     magic number to ensure that neither decompression of random data nor\n     recompression of compressed data is attempted.\n\n     The amount of compression obtained depends on the size of the input, the\n     number of bits per code, and the distribution of common substrings.\n     Typically, text such as source code or English is reduced by 50-60%.\n     Compression is generally much better than that achieved by Huffman coding\n     (as used in the historical command pack), or adaptive Huffman coding (as\n     used in the historical command compact), and takes less time to compute.\n\n     If file is a soft or hard link compress will replace it with a compressed\n     copy of the file pointed to by the link.  The link's target file is left\n     uncompressed.\n",
+        "     The compress and uncompress utilities exit 0 on success, and >0 if an\n     error occurs.\n\n     The compress utility exits 2 if attempting to compress a file would not\n     reduce its size and the -f option was not specified and if no other error\n     occurs.\n",
+        "     Create a file test_file with a single line of text:\n\n\t   echo \"This is a test\" > test_file\n\n     Try to reduce the size of the file using a 10-bit code and show the exit\n     status:\n\n\t   $ compress -b 10 test_file\n\t   $ echo $?\n\t   2\n\n     Try to compress the file and show compression percentage:\n\n\t   $ compress -v test_file\n\t   test_file: file would grow; left unmodified\n\n     Same as above but forcing compression:\n\n\t   $ compress -f -v test_file\n\t   test_file.Z: 79% expansion\n\n     Compress and uncompress the string ‘hello’ on the fly:\n\n\t   $ echo \"hello\" | compress | uncompress\n\t   hello\n",
+        "     gunzip(1), gzexe(1), gzip(1), zcat(1), zmore(1), znew(1)\n\n     Welch, Terry A., “A Technique for High Performance Data Compression”,\n     IEEE Computer, 17:6, pp. 8-19, June, 1984.\n",
+        "     The compress and uncompress utilities conform to IEEE Std 1003.1-2001\n     (“POSIX.1”).\n",
+        "     The compress command appeared in 4.3BSD.\n",
+        "     The program does not handle links well and has no link-handling options.\n\n     Some of these might be considered otherwise-undocumented features.\n\n     compress: If the utility does not compress a file because doing so would\n     not reduce its size, and a file of the same name except with an .Z\n     extension exists, the named file is not really ignored as stated above;\n     it causes a prompt to confirm the overwriting of the file with the\n     extension.  If the operation is confirmed, that file is deleted.\n\n     uncompress: If an empty file is compressed (using -f), the resulting .Z\n     file is also empty.  That seems right, but if uncompress is then used on\n     that file, an error will occur.\n\n     Both utilities: If a ‘-’ argument is used and the utility prompts the\n     user, the standard input is taken as the user's reply to the prompt.\n\n     Both utilities: If the specified file does not exist, but a similarly-\n     named one with (for compress) or without (for uncompress) a .Z extension\n     does exist, the utility will waste the user's time by not immediately\n     emitting an error message about the missing file and continuing.\n     Instead, it first asks for confirmation to overwrite the existing file\n     and then does not overwrite it.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-b",
+      "description": " be in the range 9..16.  The default is 16.",
+      "optional": true
+    },
+    {
+      "flag": "-c",
+      "description": " standard output.  No files are modified.  The -v option is ignored.  Compression is attempted even if the results will be larger than the original.",
+      "argument": "file ...",
+      "optional": false
+    },
+    {
+      "flag": "-f",
+      "description": "Files are overwritten without prompting for confirmation. Also, for compress, files are compressed even if they are not actually reduced in size."
+    },
+    {
+      "flag": "-v",
+      "description": "Print the percentage reduction of each file.  Ignored by uncompress or if the -c option is also used. The compress utility uses a modified Lempel-Ziv algorithm.  Common substrings in the file are first replaced by 9-bit codes 257 and up. When code 512 is reached, the algorithm switches to 10-bit codes and continues to use more bits until the limit specified by the -b option or its default is reached. After the limit is reached, compress periodically checks the compression ratio.  If it is increasing, compress continues to use the existing code dictionary.  However, if the compression ratio decreases, compress discards the table of substrings and rebuilds it from scratch.  This allows the algorithm to adapt to the next \"block\" of the file. The -b option is unavailable for uncompress since the bits parameter specified during compression is encoded within the output, along with a magic number to ensure that neither decompression of random data nor recompression of compressed data is attempted. The amount of compression obtained depends on the size of the input, the number of bits per code, and the distribution of common substrings. Typically, text such as source code or English is reduced by 50-60%. Compression is generally much better than that achieved by Huffman coding (as used in the historical command pack), or adaptive Huffman coding (as used in the historical command compact), and takes less time to compute. If file is a soft or hard link compress will replace it with a compressed copy of the file pointed to by the link.  The link's target file is left uncompressed. EXIT STATUS The compress and uncompress utilities exit 0 on success, and >0 if an error occurs. The compress utility exits 2 if attempting to compress a file would not reduce its size and the -f option was not specified and if no other error occurs."
+    }
+  ],
+  "examples": [
+    {
+      "command": "compress -b 10 test_file",
+      "description": "",
+      "tags": []
+    },
+    {
+      "command": "echo $?",
+      "description": "2",
+      "tags": [
+        "glob"
+      ],
+      "output": "\t   2\n     Try to compress the file and show compression percentage:\n"
+    },
+    {
+      "command": "compress -v test_file",
+      "description": "test_file: file would grow; left unmodified",
+      "tags": [],
+      "output": "\t   test_file: file would grow; left unmodified\n     Same as above but forcing compression:\n"
+    },
+    {
+      "command": "compress -f -v test_file",
+      "description": "test_file.Z: 79% expansion",
+      "tags": [],
+      "output": "\t   test_file.Z: 79% expansion\n     Compress and uncompress the string ‘hello’ on the fly:\n"
+    },
+    {
+      "command": "echo \"hello\" | compress | uncompress",
+      "description": "hello",
+      "tags": [
+        "pipe"
+      ],
+      "output": "\t   hello\nSEE ALSO\n     gunzip(1), gzexe(1), gzip(1), zcat(1), zmore(1), znew(1)\n     Welch, Terry A., “A Technique for High Performance Data Compression”,\n     IEEE Computer, 17:6, pp. 8-19, June, 1984.\n"
+    }
+  ],
+  "relatedCommands": [
+    "gunzip",
+    "gzexe",
+    "gzip",
+    "zcat",
+    "zmore",
+    "znew",
+    "compress",
+    "uncompress",
+    "expand",
+    "data",
+    "bits",
+    "utility",
+    "reduces",
+    "size",
+    "using"
+  ],
+  "seeAlso": [
+    {
+      "name": "gunzip",
+      "section": 1
+    },
+    {
+      "name": "gzexe",
+      "section": 1
+    },
+    {
+      "name": "gzip",
+      "section": 1
+    },
+    {
+      "name": "zcat",
+      "section": 1
+    },
+    {
+      "name": "zmore",
+      "section": 1
+    },
+    {
+      "name": "znew",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "uncompress uncompress manual page the compress utility reduces the size of files using adaptive lempel-ziv coding compress -fv -b bits file compress -c -b bits file uncompress -fv file uncompress -c file uncompress manual page compress utility reduces size using adaptive lempel-ziv coding -b be in the range 9 16 the default is 16 -c standard output no files are modified the -v option is ignored compression is attempted even if the results will be larger than the original -f files are overwritten without prompting for confirmation also for compress files are compressed even if they are not actually reduced in size -v print the percentage reduction of each file ignored by uncompress or if the -c option is also used the compress utility uses a modified lempel-ziv algorithm common substrings in the file are first replaced by 9-bit codes 257 and up when code 512 is reached the algorithm switches to 10-bit codes and continues to use more bits until the limit specified by the -b option or its default is reached after the limit is reached compress periodically checks the compression ratio if it is increasing compress continues to use the existing code dictionary however if the compression ratio decreases compress discards the table of substrings and rebuilds it from scratch this allows the algorithm to adapt to the next block of the file the -b option is unavailable for uncompress since the bits parameter specified during compression is encoded within the output along with a magic number to ensure that neither decompression of random data nor recompression of compressed data is attempted the amount of compression obtained depends on the size of the input the number of bits per code and the distribution of common substrings typically text such as source code or english is reduced by 50-60 compression is generally much better than that achieved by huffman coding as used in the historical command pack or adaptive huffman coding as used in the historical command compact and takes less time to compute if file is a soft or hard link compress will replace it with a compressed copy of the file pointed to by the link the link s target file is left uncompressed exit status the compress and uncompress utilities exit 0 on success and 0 if an error occurs the compress utility exits 2 if attempting to compress a file would not reduce its size and the -f option was not specified and if no other error occurs compress -b 10 test file echo 2 compress -v test file test file file would grow left unmodified compress -f -v test file test file z 79 expansion echo hello compress uncompress hello name macos 15 5 march 4 2021 macos 15 5",
+  "keywords": [
+    "uncompress",
+    "manual",
+    "page",
+    "compress",
+    "utility",
+    "reduces",
+    "size",
+    "using",
+    "adaptive",
+    "lempel-ziv",
+    "coding."
+  ],
+  "complexity": "intermediate",
+  "hash": "d6079edd65ba711e",
+  "parsedAt": "2025-06-17T19:42:05.867Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

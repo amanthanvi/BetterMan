@@ -1,0 +1,135 @@
+{
+  "name": "bg",
+  "section": 1,
+  "title": "bg manual page",
+  "description": "in the appropriate shell manual page.",
+  "synopsis": "See the built-in command description in the appropriate shell manual page.",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t       December 21, 2010\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     builtin, !, %, ., :, @, [, {, }, alias, alloc, bg, bind, bindkey, break,\n     breaksw, builtins, case, cd, chdir, command, complete, continue, default,\n     dirs, do, done, echo, echotc, elif, else, end, endif, endsw, esac, eval,\n     exec, exit, export, false, fc, fg, filetest, fi, for, foreach, getopts,\n     glob, goto, hash, hashstat, history, hup, if, jobid, jobs, kill, limit,\n     local, log, login, logout, ls-F, nice, nohup, notify, onintr, popd,\n     printenv, printf, pushd, pwd, read, readonly, rehash, repeat, return,\n     sched, set, setenv, settc, setty, setvar, shift, source, stop, suspend,\n     switch, telltc, test, then, time, times, trap, true, type, ulimit, umask,\n     unalias, uncomplete, unhash, unlimit, unset, unsetenv, until, wait,\n     where, which, while – shell built-in commands\n",
+        "     See the built-in command description in the appropriate shell manual\n     page.\n",
+        "     Shell builtin commands are commands that can be executed within the\n     running shell's process.  Note that, in the case of csh(1) builtin\n     commands, the command is executed in a subshell if it occurs as any\n     component of a pipeline except the last.\n\n     If a command specified to the shell contains a slash ‘/’, the shell will\n     not execute a builtin command, even if the last component of the\n     specified command matches the name of a builtin command.  Thus, while\n     specifying “echo” causes a builtin command to be executed under shells\n     that support the echo builtin command, specifying “/bin/echo” or “./echo”\n     does not.\n\n     While some builtin commands may exist in more than one shell, their\n     operation may be different under each shell which supports them.  Below\n     is a table which lists shell builtin commands, the standard shells that\n     support them and whether they exist as standalone utilities.\n\n     Only builtin commands for the csh(1) and sh(1) shells are listed here.\n     Consult a shell's manual page for details on the operation of its builtin\n     commands.\tBeware that the sh(1) manual page, at least, calls some of\n     these commands “built-in commands” and some of them “reserved words”.\n     Users of other shells may need to consult an info(1) page or other\n     sources of documentation.\n\n     Commands marked “No**” under External do exist externally, but are\n     implemented as scripts using a builtin command of the same name.\n\n\t   Command\t     External\t     csh(1)\t  sh(1)\n\t   !\t\t     No \t     No \t  Yes\n\t   %\t\t     No \t     Yes\t  No\n\t   .\t\t     No \t     No \t  Yes\n\t   :\t\t     No \t     Yes\t  Yes\n\t   @\t\t     No \t     Yes\t  Yes\n\t   [\t\t     Yes\t     No \t  Yes\n\t   {\t\t     No \t     No \t  Yes\n\t   }\t\t     No \t     No \t  Yes\n\t   alias\t     No**\t     Yes\t  Yes\n\t   alloc\t     No \t     Yes\t  No\n\t   bg\t\t     No**\t     Yes\t  Yes\n\t   bind \t     No \t     No \t  Yes\n\t   bindkey\t     No \t     Yes\t  No\n\t   break\t     No \t     Yes\t  Yes\n\t   breaksw\t     No \t     Yes\t  No\n\t   builtin\t     No \t     No \t  Yes\n\t   builtins\t     No \t     Yes\t  No\n\t   case \t     No \t     Yes\t  Yes\n\t   cd\t\t     No**\t     Yes\t  Yes\n\t   chdir\t     No \t     Yes\t  Yes\n\t   command\t     No**\t     No \t  Yes\n\t   complete\t     No \t     Yes\t  No\n\t   continue\t     No \t     Yes\t  Yes\n\t   default\t     No \t     Yes\t  No\n\t   dirs \t     No \t     Yes\t  No\n\t   do\t\t     No \t     No \t  Yes\n\t   done \t     No \t     No \t  Yes\n\t   echo \t     Yes\t     Yes\t  Yes\n\t   echotc\t     No \t     Yes\t  No\n\t   elif \t     No \t     No \t  Yes\n\t   else \t     No \t     Yes\t  Yes\n\t   end\t\t     No \t     Yes\t  No\n\t   endif\t     No \t     Yes\t  No\n\t   endsw\t     No \t     Yes\t  No\n\t   esac \t     No \t     No \t  Yes\n\t   eval \t     No \t     Yes\t  Yes\n\t   exec \t     No \t     Yes\t  Yes\n\t   exit \t     No \t     Yes\t  Yes\n\t   export\t     No \t     No \t  Yes\n\t   false\t     Yes\t     No \t  Yes\n\t   fc\t\t     No**\t     No \t  Yes\n\t   fg\t\t     No**\t     Yes\t  Yes\n\t   filetest\t     No \t     Yes\t  No\n\t   fi\t\t     No \t     No \t  Yes\n\t   for\t\t     No \t     No \t  Yes\n\t   foreach\t     No \t     Yes\t  No\n\t   getopts\t     No**\t     No \t  Yes\n\t   glob \t     No \t     Yes\t  No\n\t   goto \t     No \t     Yes\t  No\n\t   hash \t     No**\t     No \t  Yes\n\t   hashstat\t     No \t     Yes\t  No\n\t   history\t     No \t     Yes\t  No\n\t   hup\t\t     No \t     Yes\t  No\n\t   if\t\t     No \t     Yes\t  Yes\n\t   jobid\t     No \t     No \t  Yes\n\t   jobs \t     No**\t     Yes\t  Yes\n\t   kill \t     Yes\t     Yes\t  Yes\n\t   limit\t     No \t     Yes\t  No\n\t   local\t     No \t     No \t  Yes\n\t   log\t\t     No \t     Yes\t  No\n\t   login\t     Yes\t     Yes\t  No\n\t   logout\t     No \t     Yes\t  No\n\t   ls-F \t     No \t     Yes\t  No\n\t   nice \t     Yes\t     Yes\t  No\n\t   nohup\t     Yes\t     Yes\t  No\n\t   notify\t     No \t     Yes\t  No\n\t   onintr\t     No \t     Yes\t  No\n\t   popd \t     No \t     Yes\t  No\n\t   printenv\t     Yes\t     Yes\t  No\n\t   printf\t     Yes\t     No \t  Yes\n\t   pushd\t     No \t     Yes\t  No\n\t   pwd\t\t     Yes\t     No \t  Yes\n\t   read \t     No**\t     No \t  Yes\n\t   readonly\t     No \t     No \t  Yes\n\t   rehash\t     No \t     Yes\t  No\n\t   repeat\t     No \t     Yes\t  No\n\t   return\t     No \t     No \t  Yes\n\t   sched\t     No \t     Yes\t  No\n\t   set\t\t     No \t     Yes\t  Yes\n\t   setenv\t     No \t     Yes\t  No\n\t   settc\t     No \t     Yes\t  No\n\t   setty\t     No \t     Yes\t  No\n\t   setvar\t     No \t     No \t  Yes\n\t   shift\t     No \t     Yes\t  Yes\n\t   source\t     No \t     Yes\t  No\n\t   stop \t     No \t     Yes\t  No\n\t   suspend\t     No \t     Yes\t  No\n\t   switch\t     No \t     Yes\t  No\n\t   telltc\t     No \t     Yes\t  No\n\t   test \t     Yes\t     No \t  Yes\n\t   then \t     No \t     No \t  Yes\n\t   time \t     Yes\t     Yes\t  No\n\t   times\t     No \t     No \t  Yes\n\t   trap \t     No \t     No \t  Yes\n\t   true \t     Yes\t     No \t  Yes\n\t   type \t     No**\t     No \t  Yes\n\t   ulimit\t     No**\t     No \t  Yes\n\t   umask\t     No**\t     Yes\t  Yes\n\t   unalias\t     No**\t     Yes\t  Yes\n\t   uncomplete\t     No \t     Yes\t  No\n\t   unhash\t     No \t     Yes\t  No\n\t   unlimit\t     No \t     Yes\t  No\n\t   unset\t     No \t     Yes\t  Yes\n\t   unsetenv\t     No \t     Yes\t  No\n\t   until\t     No \t     No \t  Yes\n\t   wait \t     No**\t     Yes\t  Yes\n\t   where\t     No \t     Yes\t  No\n\t   which\t     Yes\t     Yes\t  No\n\t   while\t     No \t     Yes\t  Yes\n",
+        "     csh(1), dash(1), echo(1), false(1), info(1), kill(1), login(1), nice(1),\n     nohup(1), printenv(1), printf(1), pwd(1), sh(1), test(1), time(1),\n     true(1), which(1), zsh(1)\n",
+        "     The builtin manual page first appeared in FreeBSD 3.4.\n",
+        "     This manual page was written by Sheldon Hearn <sheldonh@FreeBSD.org>.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "csh",
+    "dash",
+    "echo",
+    "false",
+    "info",
+    "kill",
+    "login",
+    "nice",
+    "nohup",
+    "printenv",
+    "printf",
+    "pwd",
+    "sh",
+    "test",
+    "time"
+  ],
+  "seeAlso": [
+    {
+      "name": "csh",
+      "section": 1
+    },
+    {
+      "name": "dash",
+      "section": 1
+    },
+    {
+      "name": "echo",
+      "section": 1
+    },
+    {
+      "name": "false",
+      "section": 1
+    },
+    {
+      "name": "info",
+      "section": 1
+    },
+    {
+      "name": "kill",
+      "section": 1
+    },
+    {
+      "name": "login",
+      "section": 1
+    },
+    {
+      "name": "nice",
+      "section": 1
+    },
+    {
+      "name": "nohup",
+      "section": 1
+    },
+    {
+      "name": "printenv",
+      "section": 1
+    },
+    {
+      "name": "printf",
+      "section": 1
+    },
+    {
+      "name": "pwd",
+      "section": 1
+    },
+    {
+      "name": "sh",
+      "section": 1
+    },
+    {
+      "name": "test",
+      "section": 1
+    },
+    {
+      "name": "time",
+      "section": 1
+    },
+    {
+      "name": "true",
+      "section": 1
+    },
+    {
+      "name": "which",
+      "section": 1
+    },
+    {
+      "name": "zsh",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "bg bg manual page in the appropriate shell manual page see the built-in command description in the appropriate shell manual page bg manual page appropriate shell page name macos 15 5 december 21 2010 macos 15 5",
+  "keywords": [
+    "bg",
+    "manual",
+    "page",
+    "appropriate",
+    "shell",
+    "page."
+  ],
+  "complexity": "basic",
+  "hash": "e6c43c1e8bb75fd1",
+  "parsedAt": "2025-06-17T19:42:01.935Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

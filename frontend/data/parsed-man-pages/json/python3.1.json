@@ -1,0 +1,132 @@
+{
+  "name": "python3",
+  "section": 1,
+  "title": "an interpreted, interactive, object-oriented programming",
+  "description": "an interpreted, interactive, object-oriented programming",
+  "synopsis": "python [ -B ] [ -b ] [ -d ] [ -E ] [ -h ] [ -i ] [ -I ] [ -m module-name ] [ -q ] [ -R ] [ -O ] [ -OO ] [ -P ] [ -s ] [ -S ] [ -u ] [ -v ] [ -V ] [ -W argument ] [ -x ] [ -X option ] [ -? ] [ --check-hash-based-pycs default | always | never ] [ --help ] [ --help-env ] [ --help-xoptions ] [ --help-all ] [ -c command | script | - ] [ arguments ]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "       Python is distributed under an Open Source license.  See the file\n       \"LICENSE\" in the Python source distribution for information on terms &\n       conditions for accessing and otherwise using Python and for a\n       DISCLAIMER OF ALL WARRANTIES.\n\n\t\t\t\t\t\t\t\t     PYTHON(1)\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [
+    {
+      "command": "{exec_prefix}/bin/python",
+      "description": "Recommended location of the interpreter.",
+      "tags": [],
+      "output": "\t      Recommended location of the interpreter.\n"
+    },
+    {
+      "command": "{prefix}/lib/python<version>",
+      "description": "",
+      "tags": [
+        "redirect"
+      ]
+    },
+    {
+      "command": "{exec_prefix}/lib/python<version>",
+      "description": "Recommended locations of the directories containing the standard",
+      "tags": [
+        "redirect"
+      ],
+      "output": "\t      Recommended locations of the directories containing the standard\n\t      modules.\n"
+    },
+    {
+      "command": "{prefix}/include/python<version>",
+      "description": "",
+      "tags": [
+        "redirect"
+      ]
+    },
+    {
+      "command": "{exec_prefix}/include/python<version>",
+      "description": "Recommended locations of the directories containing the include",
+      "tags": [
+        "redirect"
+      ],
+      "output": "\t      Recommended locations of the directories containing the include\n\t      files needed for developing Python extensions and embedding the\n\t      interpreter.\nENVIRONMENT VARIABLES\n       PYTHONASYNCIODEBUG\n\t      If this environment variable is set to a non-empty string,\n\t      enable the debug mode of the asyncio module.\n       PYTHON_BASIC_REPL\n\t      If this variable is set to any value, the interpreter will not\n\t      attempt to load the Python-based REPL that requires curses and\n\t      readline, and will instead use the traditional parser-based\n\t      REPL.\n       PYTHONBREAKPOINT\n\t      If this environment variable is set to 0, it disables the\n\t      default debugger. It can be set to the callable of your debugger\n\t      of choice.\n       PYTHONCOERCECLOCALE\n\t      If set to the value 0, causes the main Python command line\n\t      application to skip coercing the legacy ASCII-based C and POSIX\n\t      locales to a more capable UTF-8 based alternative.\n       PYTHON_COLORS\n\t      If this variable is set to 1, the interpreter will colorize\n\t      various kinds of output. Setting it to 0 deactivates this\n\t      behavior.\n       PYTHON_CPU_COUNT\n\t      If this variable is set to a positive integer, it overrides the\n\t      return values of os.cpu_count and os.process_cpu_count.\n\t      See also the -X cpu_count option.\n       PYTHONDEBUG\n\t      If this is set to a non-empty string it is equivalent to\n\t      specifying the -d option. If set to an integer, it is equivalent\n\t      to specifying -d multiple times.\n       PYTHONEXECUTABLE\n\t      If this environment variable is set, sys.argv[0] will be set to\n\t      its value instead of the value got through the C runtime. Only\n\t      works on Mac OS X.\n       PYTHONFAULTHANDLER\n\t      If this environment variable is set to a non-empty string,\n\t      faulthandler.enable() is called at startup: install a handler\n\t      for SIGSEGV, SIGFPE, SIGABRT, SIGBUS and SIGILL signals to dump\n\t      the Python traceback.\n\t      This is equivalent to the -X faulthandler option.\n       PYTHON_FROZEN_MODULES\n\t      If this variable is set to on or off, it determines whether or\n\t      not frozen modules are ignored by the import machinery.  A value\n\t      of on means they get imported and off means they are ignored.\n\t      The default is on for non-debug builds (the normal case) and off\n\t      for debug builds.\n\t      See also the -X frozen_modules option.\n       PYTHON_GIL\n\t      If this variable is set to 1, the global interpreter lock (GIL)\n\t      will be forced on. Setting it to 0 forces the GIL off. Only\n\t      available in builds configured with --disable-gil.\n\t      This is equivalent to the -X gil option.\n       PYTHON_HISTORY\n\t      This environment variable can be used to set the location of a\n\t      history file (on Unix, it is ~/.python_history by default).\n       PYTHONNODEBUGRANGES\n\t      If this variable is set, it disables the inclusion of the tables\n\t      mapping extra location information (end line, start column\n\t      offset and end column offset) to every instruction in code\n\t      objects. This is useful when smaller code objects and pyc files\n\t      are desired as well as suppressing the extra visual location\n\t      indicators when the interpreter displays tracebacks.\n       PYTHONDONTWRITEBYTECODE\n\t      If this is set to a non-empty string it is equivalent to\n\t      specifying the -B option (don't try to write .pyc files).\n       PYTHONDEVMODE\n\t      If this environment variable is set to a non-empty string,\n\t      enable Python's \"development mode\", introducing additional\n\t      runtime checks that are too expensive to be enabled by default.\n\t      This is equivalent to the -X dev option.\n       PYTHONHASHSEED\n\t      If this variable is set to \"random\", a random value is used to\n\t      seed the hashes of str and bytes objects.\n\t      If PYTHONHASHSEED is set to an integer value, it is used as a\n\t      fixed seed for generating the hash() of the types covered by the\n\t      hash randomization.  Its purpose is to allow repeatable hashing,\n\t      such as for selftests for the interpreter itself, or to allow a\n\t      cluster of python processes to share hash values.\n\t      The integer must be a decimal number in the range\n\t      [0,4294967295].  Specifying the value 0 will disable hash\n\t      randomization.\n       PYTHONHOME\n\t      Change the location of the standard Python libraries.  By\n\t      default, the libraries are searched in\n"
+    },
+    {
+      "command": "{prefix}/lib/python<version> and",
+      "description": "",
+      "tags": [
+        "redirect"
+      ]
+    },
+    {
+      "command": "{exec_prefix}/lib/python<version>, where ${prefix} and",
+      "description": "",
+      "tags": [
+        "redirect"
+      ]
+    },
+    {
+      "command": "{exec_prefix} are installation-dependent directories, both",
+      "description": "defaulting to /usr/local.  When $PYTHONHOME is set to a single",
+      "tags": [],
+      "output": "\t      defaulting to /usr/local.  When $PYTHONHOME is set to a single\n\t      directory, its value replaces both ${prefix} and ${exec_prefix}.\n\t      To specify different values for these, set $PYTHONHOME to\n"
+    },
+    {
+      "command": "{prefix}:${exec_prefix}.",
+      "description": "",
+      "tags": [],
+      "output": "       PYTHONINSPECT\n\t      If this is set to a non-empty string it is equivalent to\n\t      specifying the -i option.\n       PYTHONINTMAXSTRDIGITS\n\t      Limit the maximum digit characters in an int value when\n\t      converting from a string and when converting an int back to a\n\t      str.  A value of 0 disables the limit.  Conversions to or from\n\t      bases 2, 4, 8, 16, and 32 are never limited.\n\t      This is equivalent to the -X int_max_str_digits=NUMBER option.\n       PYTHONIOENCODING\n\t      If this is set before running the interpreter, it overrides the\n\t      encoding used for stdin/stdout/stderr, in the syntax\n\t      encodingname:errorhandler The errorhandler part is optional and\n\t      has the same meaning as in str.encode. For stderr, the\n\t      errorhandler part is ignored; the handler will always be\n\t      ´backslashreplace´.\n       PYTHONMALLOC\n\t      Set the Python memory allocators and/or install debug hooks. The\n\t      available memory allocators are malloc and pymalloc.  The\n\t      available debug hooks are debug, malloc_debug, and\n\t      pymalloc_debug.\n\t      When Python is compiled in debug mode, the default is\n\t      pymalloc_debug and the debug hooks are automatically used.\n\t      Otherwise, the default is pymalloc.\n       PYTHONMALLOCSTATS\n\t      If set to a non-empty string, Python will print statistics of\n\t      the pymalloc memory allocator every time a new pymalloc object\n\t      arena is created, and on shutdown.\n\t      This variable is ignored if the $PYTHONMALLOC environment\n\t      variable is used to force the malloc(3) allocator of the C\n\t      library, or if Python is configured without pymalloc support.\n       PYTHONNOUSERSITE\n\t      If this is set to a non-empty string it is equivalent to\n\t      specifying the -s option (Don't add the user site directory to\n\t      sys.path).\n       PYTHONOPTIMIZE\n\t      If this is set to a non-empty string it is equivalent to\n\t      specifying the -O option. If set to an integer, it is equivalent\n\t      to specifying -O multiple times.\n       PYTHONPATH\n\t      Augments the default search path for module files.  The format\n\t      is the same as the shell's $PATH: one or more directory\n\t      pathnames separated by colons.  Non-existent directories are\n\t      silently ignored.  The default search path is installation\n\t      dependent, but generally begins with\n"
+    },
+    {
+      "command": "{prefix}/lib/python<version> (see PYTHONHOME above).  The",
+      "description": "default search path is always appended to $PYTHONPATH.  If a",
+      "tags": [
+        "redirect"
+      ],
+      "output": "\t      default search path is always appended to $PYTHONPATH.  If a\n\t      script argument is given, the directory containing the script is\n\t      inserted in the path in front of $PYTHONPATH.  The search path\n\t      can be manipulated from within a Python program as the variable\n\t      sys.path.\n       PYTHON_PERF_JIT_SUPPORT\n\t      If this variable is set to a nonzero value, it enables support\n\t      for the Linux perf profiler so Python calls can be detected by\n\t      it using DWARF information.  Setting to 0 disables.\n\t      See also the -X perf_jit option.\n       PYTHONPERFSUPPORT\n\t      If this variable is set to a nonzero value, it enables support\n\t      for the Linux perf profiler so Python calls can be detected by\n\t      it.  Setting to 0 disables.\n\t      See also the -X perf option.\n       PYTHONPLATLIBDIR\n\t      Override sys.platlibdir.\n       PYTHONPROFILEIMPORTTIME\n\t      If this environment variable is set to a non-empty string,\n\t      Python will show how long each import takes. This is exactly\n\t      equivalent to setting -X importtime on the command line.\n       PYTHONPYCACHEPREFIX\n\t      If this is set, Python will write .pyc files in a mirror\n\t      directory tree at this path, instead of in __pycache__\n\t      directories within the source tree.\n\t      This is equivalent to specifying the -X pycache_prefix=PATH\n\t      option.\n       PYTHONSAFEPATH\n\t      If this is set to a non-empty string, don't automatically\n\t      prepend a potentially unsafe path to sys.path such as the\n\t      current directory, the script's directory or an empty string.\n\t      See also the -P option.\n       PYTHONSTARTUP\n\t      If this is the name of a readable file, the Python commands in\n\t      that file are executed before the first prompt is displayed in\n\t      interactive mode.  The file is executed in the same name space\n\t      where interactive commands are executed so that objects defined\n\t      or imported in it can be used without qualification in the\n\t      interactive session.  You can also change the prompts sys.ps1\n\t      and sys.ps2 in this file.\n       PYTHONTRACEMALLOC\n\t      If this environment variable is set to a non-empty string, start\n\t      tracing Python memory allocations using the tracemalloc module.\n\t      The value of the variable is the maximum number of frames stored\n\t      in a traceback of a trace. For example, PYTHONTRACEMALLOC=1\n\t      stores only the most recent frame.\n       PYTHONUNBUFFERED\n\t      If this is set to a non-empty string it is equivalent to\n\t      specifying the -u option.\n       PYTHONUSERBASE\n\t      Defines the user base directory, which is used to compute the\n\t      path of the user site-packages directory and installation paths\n\t      for python -m pip install --user.\n       PYTHONUTF8\n\t      If set to 1, enable the Python \"UTF-8 Mode\". Setting to 0\n\t      disables.\n       PYTHONVERBOSE\n\t      If this is set to a non-empty string it is equivalent to\n\t      specifying the -v option. If set to an integer, it is equivalent\n\t      to specifying -v multiple times.\n       PYTHONWARNDEFAULTENCODING\n\t      If this environment variable is set to a non-empty string, issue\n\t      a EncodingWarning when the locale-specific default encoding is\n\t      used.\n       PYTHONWARNINGS\n\t      If this is set to a comma-separated string it is equivalent to\n\t      specifying the -W option for each separate value.\n   Debug-mode variables\n       Setting these variables only has an effect in a debug build of Python,\n       that is, if Python was configured with the --with-pydebug build option.\n       PYTHONDUMPREFS\n\t      If this environment variable is set, Python will dump objects\n\t      and reference counts still alive after shutting down the\n\t      interpreter.\n       PYTHONDUMPREFSFILE\n\t      If set, Python will dump objects and reference counts still\n\t      alive after shutting down the interpreter into a file under the\n\t      path given as the value to this environment variable.\n       PYTHON_PRESITE\n\t      If this variable is set to a module, that module will be\n\t      imported early in the interpreter lifecycle, before the site\n\t      module is executed, and before the __main__ module is created.\n\t      This only works on debug builds.\n\t      This is equivalent to the -X presite=module option.\n"
+    }
+  ],
+  "relatedCommands": [
+    "malloc",
+    "python",
+    "interpreted",
+    "interactive",
+    "object-oriented",
+    "programming",
+    "language",
+    "module-name",
+    "argument",
+    "option",
+    "default",
+    "always",
+    "never",
+    "help",
+    "help-env"
+  ],
+  "seeAlso": [
+    {
+      "name": "malloc",
+      "section": 3
+    }
+  ],
+  "metadata": {},
+  "searchContent": "python3 an interpreted interactive object-oriented programming an interpreted interactive object-oriented programming python -b -b -d -e -h -i -i -m module-name -q -r -o -oo -p -s -s -u -v -v -w argument -x -x option - --check-hash-based-pycs default always never --help --help-env --help-xoptions --help-all -c command script - arguments python3 interpreted interactive object-oriented programming exec prefix bin python recommended location of the interpreter prefix lib python version exec prefix lib python version recommended locations of the directories containing the standard prefix include python version exec prefix include python version recommended locations of the directories containing the include prefix lib python version and exec prefix lib python version where prefix and exec prefix are installation-dependent directories both defaulting to usr local when pythonhome is set to a single prefix exec prefix prefix lib python version see pythonhome above the default search path is always appended to pythonpath if a name",
+  "keywords": [
+    "python3",
+    "interpreted,",
+    "interactive,",
+    "object-oriented",
+    "programming"
+  ],
+  "complexity": "intermediate",
+  "hash": "2a16dbc4aca8b90d",
+  "parsedAt": "2025-06-17T19:42:08.073Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

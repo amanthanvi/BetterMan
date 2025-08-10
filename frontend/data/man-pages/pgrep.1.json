@@ -1,0 +1,250 @@
+{
+  "name": "pgrep",
+  "section": 1,
+  "title": "pgrep manual page",
+  "description": "The pgrep command searches the process table on the running system and prints the process IDs of all processes that match the criteria given on the command line.",
+  "synopsis": "pgrep [-Lafilnoqvx] [-F pidfile] [-G gid] [-P ppid] [-U uid] [-d delim] [-g pgrp] [-t tty] [-u euid] pattern ... pkill [-signal] [-ILafilnovx] [-F pidfile] [-G gid] [-P ppid] [-U uid] [-g pgrp] [-t tty] [-u euid] pattern ...",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tOctober 5, 2020 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     pgrep, pkill – find or signal processes by name\n",
+        "     pgrep [-Lafilnoqvx] [-F pidfile] [-G gid] [-P ppid] [-U uid] [-d delim]\n\t   [-g pgrp] [-t tty] [-u euid] pattern ...\n     pkill [-signal] [-ILafilnovx] [-F pidfile] [-G gid] [-P ppid] [-U uid]\n\t   [-g pgrp] [-t tty] [-u euid] pattern ...\n",
+        "     The pgrep command searches the process table on the running system and\n     prints the process IDs of all processes that match the criteria given on\n     the command line.\n\n     The pkill command searches the process table on the running system and\n     signals all processes that match the criteria given on the command line.\n\n     The following options are available:\n\n     -F pidfile        Restrict matches to a process whose PID is stored in\n\t\t       the pidfile file.\n\n     -G gid\t       Restrict matches to processes with a real group ID in\n\t\t       the comma-separated list gid.\n\n     -I \t       Request confirmation before attempting to signal each\n\t\t       process.\n\n     -L \t       The pidfile file given for the -F option must be locked\n\t\t       with the flock(2) syscall or created with pidfile(3).\n\n     -P ppid\t       Restrict matches to processes with a parent process ID\n\t\t       in the comma-separated list ppid.\n\n     -U uid\t       Restrict matches to processes with a real user ID in\n\t\t       the comma-separated list uid.\n\n     -d delim\t       Specify a delimiter to be printed between each process\n\t\t       ID.  The default is a newline.  This option can only be\n\t\t       used with the pgrep command.\n\n     -a \t       Include process ancestors in the match list.  By\n\t\t       default, the current pgrep or pkill process and all of\n\t\t       its ancestors are excluded (unless -v is used).\n\n     -f \t       Match against full argument lists.  The default is to\n\t\t       match against process names.\n\n     -g pgrp\t       Restrict matches to processes with a process group ID\n\t\t       in the comma-separated list pgrp.  The value zero is\n\t\t       taken to mean the process group ID of the running pgrep\n\t\t       or pkill command.\n\n     -i \t       Ignore case distinctions in both the process table and\n\t\t       the supplied pattern.\n\n     -l \t       Long output.  For pgrep, print the process name in\n\t\t       addition to the process ID for each matching process.\n\t\t       If used in conjunction with -f, print the process ID\n\t\t       and the full argument list for each matching process.\n\t\t       For pkill, display the kill command used for each\n\t\t       process killed.\n\n     -n \t       Select only the newest (most recently started) of the\n\t\t       matching processes.\n\n     -o \t       Select only the oldest (least recently started) of the\n\t\t       matching processes.\n\n     -q \t       For pgrep, Do not write anything to standard output.\n\n     -t tty\t       Restrict matches to processes associated with a\n\t\t       terminal in the comma-separated list tty.  Terminal\n\t\t       names may be of the form ttyxx or the shortened form\n\t\t       xx.  A single dash (‘-’) matches processes not\n\t\t       associated with a terminal.\n\n     -u euid\t       Restrict matches to processes with an effective user ID\n\t\t       in the comma-separated list euid.\n\n     -v \t       Reverse the sense of the matching; display processes\n\t\t       that do not match the given criteria.\n\n     -x \t       Require an exact match of the process name, or argument\n\t\t       list if -f is given.  The default is to match any\n\t\t       substring.\n\n     -signal\t       A non-negative decimal number or symbolic signal name\n\t\t       specifying the signal to be sent instead of the default\n\t\t       TERM.  This option is valid only when given as the\n\t\t       first argument to pkill.\n\n     If any pattern operands are specified, they are used as extended regular\n     expressions to match the command name or full argument list of each\n     process.\n\n     Note that a running pgrep or pkill process will never consider itself as\n     a potential match.\n",
+        "     The pgrep and pkill utilities return one of the following values upon\n     exit:\n\n     0\t     One or more processes were matched.\n\n     1\t     No processes were matched.\n\n     2\t     Invalid options were specified on the command line.\n\n     3\t     An internal error occurred.\n",
+        "     Show the pid of the process holding the /tmp/.X0-lock pid file:\n\n\t   $ pgrep -F /tmp/.X0-lock\n\t   1211\n\n     Show long output for firefox processes:\n\n\t   $ pgrep -l firefox\n\t   1312 firefox\n\t   1309 firefox\n\t   1288 firefox\n\t   1280 firefox\n\t   1279 firefox\n\t   1278 firefox\n\t   1277 firefox\n\t   1264 firefox\n\n     Same as above but just showing the pid of the most recent process:\n\n\t   $ pgrep -n firefox\n\t   1312\n\n     Look for vim processes.  Match against the full argument list:\n\n\t   $ pgrep -f vim\n\t   44968\n\t   30790\n\n     Same as above but matching against the ‘list’ word and showing the full\n     argument list:\n\n\t   $ pgrep -f -l list\n\t   30790 vim list.txt\n\n     Send SIGSTOP signal to processes that are an exact match:\n\n\t   $ pkill -SIGSTOP -f -x \"vim list.txt\"\n\n     Without -f names over 19 characters will silently fail:\n\n\t   $ vim this_is_a_very_long_file_name &\n\t   [1] 36689\n\t   $\n\n\t   [1]+  Stopped\t\t vim this_is_a_very_long_file_name\n\t   $ pgrep \"vim this\"\n\t   $\n\n     Same as above using the -f flag:\n\n\t   $ pgrep -f \"vim this\"\n\t   36689\n",
+        "     kill(1), killall(1), ps(1), flock(2), kill(2), sigaction(2), pidfile(3),\n     re_format(7)\n",
+        "     The pkill and pgrep utilities first appeared in NetBSD 1.6.  They are\n     modelled after utilities of the same name that appeared in Sun Solaris 7.\n     They made their first appearance in FreeBSD 5.3.\n",
+        "     Andrew Doran <ad@NetBSD.org>\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-F",
+      "description": " the pidfile file.",
+      "optional": true
+    },
+    {
+      "flag": "-G",
+      "description": " the comma-separated list gid.",
+      "optional": true
+    },
+    {
+      "flag": "-I",
+      "description": "Request confirmation before attempting to signal each process."
+    },
+    {
+      "flag": "-L",
+      "description": "The pidfile file given for the -F option must be locked with the flock(2) syscall or created with pidfile(3)."
+    },
+    {
+      "flag": "-P",
+      "description": " in the comma-separated list ppid.",
+      "optional": true
+    },
+    {
+      "flag": "-U",
+      "description": " the comma-separated list uid.",
+      "optional": true
+    },
+    {
+      "flag": "-d",
+      "description": " ID.  The default is a newline.  This option can only be used with the pgrep command.",
+      "optional": true
+    },
+    {
+      "flag": "-a",
+      "description": "Include process ancestors in the match list.  By default, the current pgrep or pkill process and all of its ancestors are excluded (unless -v is used)."
+    },
+    {
+      "flag": "-f",
+      "description": "Match against full argument lists.  The default is to match against process names."
+    },
+    {
+      "flag": "-g",
+      "description": " in the comma-separated list pgrp.  The value zero is taken to mean the process group ID of the running pgrep or pkill command.",
+      "optional": true
+    },
+    {
+      "flag": "-i",
+      "description": "Ignore case distinctions in both the process table and the supplied pattern."
+    },
+    {
+      "flag": "-l",
+      "description": "Long output.  For pgrep, print the process name in addition to the process ID for each matching process. If used in conjunction with -f, print the process ID and the full argument list for each matching process. For pkill, display the kill command used for each process killed."
+    },
+    {
+      "flag": "-n",
+      "description": "Select only the newest (most recently started) of the matching processes."
+    },
+    {
+      "flag": "-o",
+      "description": "Select only the oldest (least recently started) of the matching processes."
+    },
+    {
+      "flag": "-q",
+      "description": "For pgrep, Do not write anything to standard output."
+    },
+    {
+      "flag": "-t",
+      "description": " terminal in the comma-separated list tty.  Terminal names may be of the form ttyxx or the shortened form xx.  A single dash (‘-’) matches processes not associated with a terminal.",
+      "optional": true
+    },
+    {
+      "flag": "-u",
+      "description": " in the comma-separated list euid.",
+      "optional": true
+    },
+    {
+      "flag": "-v",
+      "description": "Reverse the sense of the matching; display processes that do not match the given criteria."
+    },
+    {
+      "flag": "-x",
+      "description": "Require an exact match of the process name, or argument list if -f is given.  The default is to match any substring."
+    },
+    {
+      "flag": "-signal",
+      "description": " specifying the signal to be sent instead of the default TERM.  This option is valid only when given as the first argument to pkill. If any pattern operands are specified, they are used as extended regular expressions to match the command name or full argument list of each process. Note that a running pgrep or pkill process will never consider itself as a potential match. EXIT STATUS The pgrep and pkill utilities return one of the following values upon exit: 0\t     One or more processes were matched. 1\t     No processes were matched. 2\t     Invalid options were specified on the command line. 3\t     An internal error occurred.",
+      "optional": true
+    }
+  ],
+  "examples": [
+    {
+      "command": "pgrep -F /tmp/.X0-lock",
+      "description": "1211",
+      "tags": [],
+      "output": "\t   1211\n     Show long output for firefox processes:\n"
+    },
+    {
+      "command": "pgrep -l firefox",
+      "description": "1312 firefox",
+      "tags": [],
+      "output": "\t   1312 firefox\n\t   1309 firefox\n\t   1288 firefox\n\t   1280 firefox\n\t   1279 firefox\n\t   1278 firefox\n\t   1277 firefox\n\t   1264 firefox\n     Same as above but just showing the pid of the most recent process:\n"
+    },
+    {
+      "command": "pgrep -n firefox",
+      "description": "1312",
+      "tags": [],
+      "output": "\t   1312\n     Look for vim processes.  Match against the full argument list:\n"
+    },
+    {
+      "command": "pgrep -f vim",
+      "description": "44968",
+      "tags": [],
+      "output": "\t   44968\n\t   30790\n     Same as above but matching against the ‘list’ word and showing the full\n     argument list:\n"
+    },
+    {
+      "command": "pgrep -f -l list",
+      "description": "30790 vim list.txt",
+      "tags": [],
+      "output": "\t   30790 vim list.txt\n     Send SIGSTOP signal to processes that are an exact match:\n"
+    },
+    {
+      "command": "pkill -SIGSTOP -f -x \"vim list.txt\"",
+      "description": "",
+      "tags": [],
+      "output": "     Without -f names over 19 characters will silently fail:\n"
+    },
+    {
+      "command": "vim this_is_a_very_long_file_name &",
+      "description": "[1] 36689",
+      "tags": [],
+      "output": "\t   [1] 36689\n\t   [1]+  Stopped\t\t vim this_is_a_very_long_file_name\n"
+    },
+    {
+      "command": "pgrep \"vim this\"",
+      "description": "",
+      "tags": [],
+      "output": "     Same as above using the -f flag:\n"
+    },
+    {
+      "command": "pgrep -f \"vim this\"",
+      "description": "36689",
+      "tags": [],
+      "output": "\t   36689\nSEE ALSO\n     kill(1), killall(1), ps(1), flock(2), kill(2), sigaction(2), pidfile(3),\n     re_format(7)\n"
+    }
+  ],
+  "relatedCommands": [
+    "kill",
+    "killall",
+    "ps",
+    "flock",
+    "sigaction",
+    "pidfile",
+    "re_format",
+    "pgrep",
+    "pkill",
+    "find",
+    "signal",
+    "processes",
+    "name",
+    "gid",
+    "ppid"
+  ],
+  "seeAlso": [
+    {
+      "name": "kill",
+      "section": 1
+    },
+    {
+      "name": "killall",
+      "section": 1
+    },
+    {
+      "name": "ps",
+      "section": 1
+    },
+    {
+      "name": "flock",
+      "section": 2
+    },
+    {
+      "name": "kill",
+      "section": 2
+    },
+    {
+      "name": "sigaction",
+      "section": 2
+    },
+    {
+      "name": "pidfile",
+      "section": 3
+    },
+    {
+      "name": "re_format",
+      "section": 7
+    }
+  ],
+  "metadata": {},
+  "searchContent": "pgrep pgrep manual page the pgrep command searches the process table on the running system and prints the process ids of all processes that match the criteria given on the command line pgrep -lafilnoqvx -f pidfile -g gid -p ppid -u uid -d delim -g pgrp -t tty -u euid pattern pkill -signal -ilafilnovx -f pidfile -g gid -p ppid -u uid -g pgrp -t tty -u euid pattern pgrep manual page command searches process table running prints processes match criteria given line -f the pidfile file -g the comma-separated list gid -i request confirmation before attempting to signal each process -l the pidfile file given for the -f option must be locked with the flock 2 syscall or created with pidfile 3 -p in the comma-separated list ppid -u the comma-separated list uid -d id the default is a newline this option can only be used with the pgrep command -a include process ancestors in the match list by default the current pgrep or pkill process and all of its ancestors are excluded unless -v is used -f match against full argument lists the default is to match against process names -g in the comma-separated list pgrp the value zero is taken to mean the process group id of the running pgrep or pkill command -i ignore case distinctions in both the process table and the supplied pattern -l long output for pgrep print the process name in addition to the process id for each matching process if used in conjunction with -f print the process id and the full argument list for each matching process for pkill display the kill command used for each process killed -n select only the newest most recently started of the matching processes -o select only the oldest least recently started of the matching processes -q for pgrep do not write anything to standard output -t terminal in the comma-separated list tty terminal names may be of the form ttyxx or the shortened form xx a single dash - matches processes not associated with a terminal -u in the comma-separated list euid -v reverse the sense of the matching display processes that do not match the given criteria -x require an exact match of the process name or argument list if -f is given the default is to match any substring -signal specifying the signal to be sent instead of the default term this option is valid only when given as the first argument to pkill if any pattern operands are specified they are used as extended regular expressions to match the command name or full argument list of each process note that a running pgrep or pkill process will never consider itself as a potential match exit status the pgrep and pkill utilities return one of the following values upon exit 0 one or more processes were matched 1 no processes were matched 2 invalid options were specified on the command line 3 an internal error occurred pgrep -f tmp x0-lock 1211 pgrep -l firefox 1312 firefox pgrep -n firefox 1312 pgrep -f vim 44968 pgrep -f -l list 30790 vim list txt pkill -sigstop -f -x vim list txt vim this is a very long file name 1 36689 pgrep vim this pgrep -f vim this 36689 name macos 15 5 october 5 2020 macos 15 5",
+  "keywords": [
+    "pgrep",
+    "manual",
+    "page",
+    "command",
+    "searches",
+    "process",
+    "table",
+    "running",
+    "prints",
+    "processes",
+    "match",
+    "criteria",
+    "given",
+    "line."
+  ],
+  "complexity": "intermediate",
+  "hash": "2f134f98b69e92ba",
+  "parsedAt": "2025-06-17T19:32:03.971Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

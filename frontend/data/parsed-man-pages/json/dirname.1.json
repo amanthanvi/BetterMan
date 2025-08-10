@@ -1,0 +1,78 @@
+{
+  "name": "dirname",
+  "section": 1,
+  "title": "dirname manual page",
+  "description": " manual page",
+  "synopsis": "basename string [suffix] basename [-a] [-s suffix] string [...] dirname string [...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t May 26, 2020\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     basename, dirname – return filename or directory portion of pathname\n",
+        "     basename string [suffix]\n     basename [-a] [-s suffix] string [...]\n     dirname string [...]\n",
+        "     The basename utility deletes any prefix ending with the last slash ‘/’\n     character present in string (after first stripping trailing slashes), and\n     a suffix, if given.  The suffix is not stripped if it is identical to the\n     remaining characters in string.  The resulting filename is written to the\n     standard output.  A non-existent suffix is ignored.  If -a is specified,\n     then every argument is treated as a string as if basename were invoked\n     with just one argument.  If -s is specified, then the suffix is taken as\n     its argument, and all other arguments are treated as a string.\n\n     The dirname utility deletes the filename portion, beginning with the last\n     slash ‘/’ character to the end of string (after first stripping trailing\n     slashes), and writes the result to the standard output.\n",
+        "     The basename and dirname utilities exit 0 on success, and >0 if an error\n     occurs.\n",
+        "     The following line sets the shell variable FOO to /usr/bin.\n\n\t   FOO=`dirname /usr/bin/trail`\n",
+        "     csh(1), sh(1), basename(3), dirname(3)\n",
+        "     The basename and dirname utilities are expected to be IEEE Std 1003.2\n     (“POSIX.2”) compatible.\n",
+        "     The basename and dirname utilities first appeared in 4.4BSD.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "csh",
+    "sh",
+    "basename",
+    "dirname",
+    "return",
+    "filename",
+    "directory",
+    "portion",
+    "pathname",
+    "string",
+    "suffix",
+    "utility",
+    "deletes",
+    "any",
+    "prefix"
+  ],
+  "seeAlso": [
+    {
+      "name": "csh",
+      "section": 1
+    },
+    {
+      "name": "sh",
+      "section": 1
+    },
+    {
+      "name": "basename",
+      "section": 3
+    },
+    {
+      "name": "dirname",
+      "section": 3
+    }
+  ],
+  "metadata": {},
+  "searchContent": "dirname dirname manual page manual page basename string suffix basename -a -s suffix string dirname string dirname manual page name macos 15 5 may 26 2020 macos 15 5",
+  "keywords": [
+    "dirname",
+    "manual",
+    "page"
+  ],
+  "complexity": "basic",
+  "hash": "c45650ad29c8ffcf",
+  "parsedAt": "2025-06-17T19:41:57.957Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

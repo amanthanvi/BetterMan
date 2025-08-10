@@ -1,0 +1,106 @@
+{
+  "name": "free",
+  "section": 3,
+  "title": "free manual page",
+  "description": "The malloc(), calloc(), valloc(), realloc(), and reallocf() functions allocate memory.",
+  "synopsis": "#include <stdlib.h> void * calloc(size_t count, size_t size); void free(void *ptr); void * malloc(size_t size); void * realloc(void *ptr, size_t size); void * reallocf(void *ptr, size_t size); void * valloc(size_t size); void * aligned_alloc(size_t alignment, size_t size);",
+  "category": "Library Functions",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "DIAGNOSTIC MESSAGES",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     calloc, free, malloc, realloc, reallocf, valloc, aligned_alloc – memory\n     allocation\n",
+        "     #include <stdlib.h>\n\n     void *\n     calloc(size_t count, size_t size);\n\n     void\n     free(void *ptr);\n\n     void *\n     malloc(size_t size);\n\n     void *\n     realloc(void *ptr, size_t size);\n\n     void *\n     reallocf(void *ptr, size_t size);\n\n     void *\n     valloc(size_t size);\n\n     void *\n     aligned_alloc(size_t alignment, size_t size);\n",
+        "     The malloc(), calloc(), valloc(), realloc(), and reallocf() functions\n     allocate memory.  The allocated memory is aligned such that it can be\n     used for any data type, including AltiVec- and SSE-related types.\tThe\n     aligned_alloc() function allocates memory with the requested alignment.\n     The free() function frees allocations that were created via the preceding\n     allocation functions.\n\n     The malloc() function allocates size bytes of memory and returns a\n     pointer to the allocated memory.\n\n     The calloc() function contiguously allocates enough space for count\n     objects that are size bytes of memory each and returns a pointer to the\n     allocated memory.\tThe allocated memory is filled with bytes of value\n     zero.\n\n     The valloc() function allocates size bytes of memory and returns a\n     pointer to the allocated memory.  The allocated memory is aligned on a\n     page boundary.\n\n     The aligned_alloc() function allocates size bytes of memory with an\n     alignment specified by alignment and returns a pointer to the allocated\n     memory.\n\n     The realloc() function tries to change the size of the allocation pointed\n     to by ptr to size, and returns ptr.  If there is not enough room to\n     enlarge the memory allocation pointed to by ptr, realloc() creates a new\n     allocation, copies as much of the old data pointed to by ptr as will fit\n     to the new allocation, frees the old allocation, and returns a pointer to\n     the allocated memory.  If ptr is NULL, realloc() is identical to a call\n     to malloc() for size bytes.  If size is zero and ptr is not NULL, a new,\n     minimum sized object is allocated and the original object is freed.  When\n     extending a region allocated with calloc(3), realloc(3) does not\n     guarantee that the additional memory is also zero-filled.\n\n     The reallocf() function is identical to the realloc() function, except\n     that it will free the passed pointer when the requested memory cannot be\n     allocated.  This is a FreeBSD specific API designed to ease the problems\n     with traditional coding styles for realloc causing memory leaks in\n     libraries.\n\n     The free() function deallocates the memory allocation pointed to by ptr.\n     If ptr is a NULL pointer, no operation is performed.\n",
+        "     If successful, calloc(), malloc(), realloc(), reallocf(), valloc(), and\n     aligned_alloc() functions return a pointer to allocated memory.  If there\n     is an error, they return a NULL pointer and set errno to ENOMEM.\n\n     In addition, aligned_alloc() returns a NULL pointer and sets errno to\n     EINVAL if size is not an integral multiple of alignment, or if alignment\n     is not a power of 2 at least as large as sizeof(void *).\n\n     For realloc(), the input pointer is still valid if reallocation failed.\n     For reallocf(), the input pointer will have been freed if reallocation\n     failed.\n\n     The free() function does not return a value.\n",
+        "     A number of facilities are provided to aid in debugging allocation errors\n     in applications.  These facilities are primarily controlled via\n     environment variables.  The recognized environment variables and their\n     meanings are documented below.\n",
+        "     The following environment variables change the behavior of the\n     allocation-related functions.\n\n     MallocDebugReport\t\t      If set, specifies where messages are\n\t\t\t\t      written. Set to \"stderr\" to write\n\t\t\t\t      messages to the standard error stream,\n\t\t\t\t      \"none\" to discard all messages and\n\t\t\t\t      \"crash\" to write messages to standard\n\t\t\t\t      error only for a condition that is about\n\t\t\t\t      to cause a crash. When not set, message\n\t\t\t\t      are written to the standard error stream\n\t\t\t\t      if it appears to be a terminal (that is,\n\t\t\t\t      if isatty(STDERR_FILENO) returns a non-\n\t\t\t\t      zero value) and are otherwise discarded.\n\n     MallocGuardEdges\t\t      If set, add a guard page before and\n\t\t\t\t      after each large block.\n\n     MallocDoNotProtectPrelude\t      If set, do not add a guard page before\n\t\t\t\t      large blocks, even if the\n\t\t\t\t      MallocGuardEdges environment variable is\n\t\t\t\t      set.\n\n     MallocDoNotProtectPostlude       If set, do not add a guard page after\n\t\t\t\t      large blocks, even if the\n\t\t\t\t      MallocGuardEdges environment variable is\n\t\t\t\t      set.\n\n     MallocStackLogging \t      The default behavior if this is set is\n\t\t\t\t      to record all allocation and\n\t\t\t\t      deallocation events to an on-disk log,\n\t\t\t\t      along with stacks, so that tools like\n\t\t\t\t      leaks(1) and malloc_history(1) can be\n\t\t\t\t      used.\n\n\t\t\t\t      Set to \"vm\" to record only allocation of\n\t\t\t\t      virtual memory regions allocated by\n\t\t\t\t      system calls and mach traps, such as by\n\t\t\t\t      mmap(1)\n\n\t\t\t\t      Set to \"malloc\" to record only\n\t\t\t\t      allocations via malloc(3) and related\n\t\t\t\t      interfaces, not virtual memory regions.\n\n\t\t\t\t      Set to \"lite\" to record current\n\t\t\t\t      allocations only, not history.   These\n\t\t\t\t      are recorded by in-memory data\n\t\t\t\t      structures, instead of an on-disk log.\n\n     MallocStackLoggingNoCompact      If set, record all stacks in a manner\n\t\t\t\t      that is compatible with the\n\t\t\t\t      malloc_history program.\n\n     MallocStackLoggingDirectory      If set, records stack logs to the\n\t\t\t\t      directory specified instead of saving\n\t\t\t\t      them to the default location (/tmp).\n\n     MallocScribble\t\t      If set, fill memory that has been\n\t\t\t\t      allocated with 0xaa bytes.  This\n\t\t\t\t      increases the likelihood that a program\n\t\t\t\t      making assumptions about the contents of\n\t\t\t\t      freshly allocated memory will fail.\n\t\t\t\t      Also if set, fill memory that has been\n\t\t\t\t      deallocated with 0x55 bytes.  This\n\t\t\t\t      increases the likelihood that a program\n\t\t\t\t      will fail due to accessing memory that\n\t\t\t\t      is no longer allocated. Note that due to\n\t\t\t\t      the way in which freed memory is managed\n\t\t\t\t      internally, the 0x55 pattern may not\n\t\t\t\t      appear in some parts of a deallocated\n\t\t\t\t      memory block.\n\n     MallocCheckHeapStart <s>\t      If set, specifies the number of\n\t\t\t\t      allocations <s> to wait before begining\n\t\t\t\t      periodic heap checks every <n> as\n\t\t\t\t      specified by MallocCheckHeapEach.  If\n\t\t\t\t      MallocCheckHeapStart is set but\n\t\t\t\t      MallocCheckHeapEach is not specified,\n\t\t\t\t      the default check repetition is 1000.\n\n     MallocCheckHeapEach <n>\t      If set, run a consistency check on the\n\t\t\t\t      heap every <n> operations.\n\t\t\t\t      MallocCheckHeapEach is only meaningful\n\t\t\t\t      if MallocCheckHeapStart is also set.\n\n     MallocCheckHeapSleep <t>\t      Sets the number of seconds to sleep\n\t\t\t\t      (waiting for a debugger to attach) when\n\t\t\t\t      MallocCheckHeapStart is set and a heap\n\t\t\t\t      corruption is detected.  The default is\n\t\t\t\t      100 seconds.  Setting this to zero means\n\t\t\t\t      not to sleep at all.  Setting this to a\n\t\t\t\t      negative number means to sleep (for the\n\t\t\t\t      positive number of seconds) only the\n\t\t\t\t      very first time a heap corruption is\n\t\t\t\t      detected.\n\n     MallocCheckHeapAbort <b>\t      When MallocCheckHeapStart is set and\n\t\t\t\t      this is set to a non-zero value, causes\n\t\t\t\t      abort(3) to be called if a heap\n\t\t\t\t      corruption is detected, instead of any\n\t\t\t\t      sleeping.\n\n     MallocErrorAbort\t\t      If set, causes abort(3) to be called if\n\t\t\t\t      an error was encountered in malloc(3) or\n\t\t\t\t      free(3) , such as a calling free(3) on a\n\t\t\t\t      pointer previously freed.\n\n     MallocCorruptionAbort\t      Similar to MallocErrorAbort but will not\n\t\t\t\t      abort in out of memory conditions,\n\t\t\t\t      making it more useful to catch only\n\t\t\t\t      those errors which will cause memory\n\t\t\t\t      corruption.  MallocCorruptionAbort is\n\t\t\t\t      always set on 64-bit processes.\n\n     MallocZeroOnFree\t\t      Starting in macOS 13, iOS 16.1 and\n\t\t\t\t      aligned releases, free(3) fully zeroes\n\t\t\t\t      many blocks immediately.\tThis may\n\t\t\t\t      expose some previously-silent bugs in\n\t\t\t\t      existing applications.  In particular,\n\t\t\t\t      read-after-free bugs may now observe\n\t\t\t\t      zeroes instead of the previous content\n\t\t\t\t      of an allocation, and write-after-free\n\t\t\t\t      bugs may cause calloc(3) to return non-\n\t\t\t\t      zero memory.  MallocZeroOnFree can be\n\t\t\t\t      set to 0 or 1 to explicitly disable or\n\t\t\t\t      enable this zeroing behavior to aid in\n\t\t\t\t      diagnosing such bugs.  Support for this\n\t\t\t\t      environment variable will eventually be\n\t\t\t\t      removed, and it should not be used by\n\t\t\t\t      shipping software.\n\n     MallocCheckZeroOnFreeCorruption  When zero-on-free behavior is active,\n\t\t\t\t      this environment variable can be set to\n\t\t\t\t      1 to cause the allocator to check that\n\t\t\t\t      the free block chosen for a given\n\t\t\t\t      allocation remained fully zeroed and was\n\t\t\t\t      not corrupted by any invalid use-after-\n\t\t\t\t      free writes.  If corruption is detected,\n\t\t\t\t      the allocator will abort.\n\n     MallocHelp \t\t      If set, print a list of environment\n\t\t\t\t      variables that are paid heed to by the\n\t\t\t\t      allocation-related functions, along with\n\t\t\t\t      short descriptions.  The list should\n\t\t\t\t      correspond to this documentation.\n"
+      ]
+    },
+    {
+      "id": "see-also",
+      "title": "SEE ALSO",
+      "content": "macOS 15.5\t\t\tAugust 13, 2008 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     leaks(1), malloc_history(1), abort(3), malloc_size(3),\n     malloc_zone_malloc(3), posix_memalign(3), libgmalloc(3)\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "leaks",
+    "malloc_history",
+    "abort",
+    "malloc_size",
+    "malloc_zone_malloc",
+    "posix_memalign",
+    "libgmalloc",
+    "calloc",
+    "free",
+    "malloc",
+    "realloc",
+    "reallocf",
+    "valloc",
+    "aligned_alloc",
+    "memory"
+  ],
+  "seeAlso": [
+    {
+      "name": "leaks",
+      "section": 1
+    },
+    {
+      "name": "malloc_history",
+      "section": 1
+    },
+    {
+      "name": "abort",
+      "section": 3
+    },
+    {
+      "name": "malloc_size",
+      "section": 3
+    },
+    {
+      "name": "malloc_zone_malloc",
+      "section": 3
+    },
+    {
+      "name": "posix_memalign",
+      "section": 3
+    },
+    {
+      "name": "libgmalloc",
+      "section": 3
+    }
+  ],
+  "metadata": {},
+  "searchContent": "free free manual page the malloc calloc valloc realloc and reallocf functions allocate memory include stdlib h void calloc size t count size t size void free void ptr void malloc size t size void realloc void ptr size t size void reallocf void ptr size t size void valloc size t size void aligned alloc size t alignment size t size free manual page malloc calloc valloc realloc reallocf functions allocate memory name diagnostic messages see also macos 15 5 august 13 2008 macos 15 5",
+  "keywords": [
+    "free",
+    "manual",
+    "page",
+    "malloc(),",
+    "calloc(),",
+    "valloc(),",
+    "realloc(),",
+    "reallocf()",
+    "functions",
+    "allocate",
+    "memory."
+  ],
+  "complexity": "basic",
+  "hash": "8e29da5ecf6dfa4a",
+  "parsedAt": "2025-06-17T19:41:55.352Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

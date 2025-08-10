@@ -1,0 +1,70 @@
+{
+  "name": "yes",
+  "section": 1,
+  "title": "yes manual page",
+  "description": "The yes utility outputs expletive, or, by default, “y”, forever.",
+  "synopsis": "yes [expletive]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t June 4, 2014\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     yes – be repetitively affirmative\n",
+        "     yes [expletive]\n",
+        "     The yes utility outputs expletive, or, by default, “y”, forever.\n",
+        "     jot(1), seq(1)\n",
+        "     The yes command appeared in Version 7 AT&T UNIX.\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [],
+  "relatedCommands": [
+    "jot",
+    "seq",
+    "yes",
+    "repetitively",
+    "affirmative",
+    "expletive",
+    "utility",
+    "outputs",
+    "default",
+    "forever",
+    "command",
+    "appeared"
+  ],
+  "seeAlso": [
+    {
+      "name": "jot",
+      "section": 1
+    },
+    {
+      "name": "seq",
+      "section": 1
+    }
+  ],
+  "metadata": {},
+  "searchContent": "yes yes manual page the yes utility outputs expletive or by default y forever yes expletive yes manual page utility outputs expletive default y forever name macos 15 5 june 4 2014 macos 15 5",
+  "keywords": [
+    "yes",
+    "manual",
+    "page",
+    "utility",
+    "outputs",
+    "expletive,",
+    "default,",
+    "“y”,",
+    "forever."
+  ],
+  "complexity": "basic",
+  "hash": "ebb13cc34cc690ff",
+  "parsedAt": "2025-06-17T19:42:11.857Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}

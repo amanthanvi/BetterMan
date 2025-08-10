@@ -1,0 +1,128 @@
+{
+  "name": "printf",
+  "section": 1,
+  "title": "printf manual page",
+  "description": "The printf utility formats and prints its arguments, after the first, under control of the format.",
+  "synopsis": "printf format [arguments ...]",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\t July 1, 2020\t\t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     printf – formatted output\n",
+        "     printf format [arguments ...]\n",
+        "     The printf utility formats and prints its arguments, after the first,\n     under control of the format.  The format is a character string which\n     contains three types of objects: plain characters, which are simply\n     copied to standard output, character escape sequences which are converted\n     and copied to the standard output, and format specifications, each of\n     which causes printing of the next successive argument.\n\n     The arguments after the first are treated as strings if the corresponding\n     format is either c, b or s; otherwise it is evaluated as a C constant,\n     with the following extensions:\n\n\t   •   A leading plus or minus sign is allowed.\n\t   •   If the leading character is a single or double quote, the value\n\t       is the character code of the next character.\n\n     The format string is reused as often as necessary to satisfy the\n     arguments.  Any extra format specifications are evaluated with zero or\n     the null string.\n\n     Character escape sequences are in backslash notation as defined in the\n     ANSI X3.159-1989 (“ANSI C89”), with extensions.  The characters and their\n     meanings are as follows:\n\n\t   \\a\t   Write a <bell> character.\n\t   \\b\t   Write a <backspace> character.\n\t   \\f\t   Write a <form-feed> character.\n\t   \\n\t   Write a <new-line> character.\n\t   \\r\t   Write a <carriage return> character.\n\t   \\t\t   Write a <tab> character.\n\t   \\v\t   Write a <vertical tab> character.\n\t   \\´\t   Write a <single quote> character.\n\t   \\\\\t   Write a backslash character.\n\t   \\num    Write a byte whose value is the 1-, 2-, or 3-digit octal\n\t\t   number num.\tMultibyte characters can be constructed using\n\t\t   multiple \\num sequences.\n\n     Each format specification is introduced by the percent character (``%'').\n     The remainder of the format specification includes, in the following\n     order:\n\n     Zero or more of the following flags:\n\n\t     #\t     A `#' character specifying that the value should be\n\t\t     printed in an ``alternate form''.\tFor b, c, d, s and u\n\t\t     formats, this option has no effect.  For the o formats\n\t\t     the precision of the number is increased to force the\n\t\t     first character of the output string to a zero.  For the\n\t\t     x (X) format, a non-zero result has the string 0x (0X)\n\t\t     prepended to it.  For a, A, e, E, f, F, g and G formats,\n\t\t     the result will always contain a decimal point, even if\n\t\t     no digits follow the point (normally, a decimal point\n\t\t     only appears in the results of those formats if a digit\n\t\t     follows the decimal point).  For g and G formats,\n\t\t     trailing zeros are not removed from the result as they\n\t\t     would otherwise be;\n\n\t     -\t     A minus sign `-' which specifies left adjustment of the\n\t\t     output in the indicated field;\n\n\t     +\t     A `+' character specifying that there should always be a\n\t\t     sign placed before the number when using signed formats.\n\n\t     ‘ ’     A space specifying that a blank should be left before a\n\t\t     positive number for a signed format.  A `+' overrides a\n\t\t     space if both are used;\n\n\t     0\t     A zero `0' character indicating that zero-padding should\n\t\t     be used rather than blank-padding.  A `-' overrides a `0'\n\t\t     if both are used;\n\n     Field Width:\n\t     An optional digit string specifying a field width; if the output\n\t     string has fewer bytes than the field width it will be blank-\n\t     padded on the left (or right, if the left-adjustment indicator\n\t     has been given) to make up the field width (note that a leading\n\t     zero is a flag, but an embedded zero is part of a field width);\n\n     Precision:\n\t     An optional period, ‘.’, followed by an optional digit string\n\t     giving a precision which specifies the number of digits to appear\n\t     after the decimal point, for e and f formats, or the maximum\n\t     number of bytes to be printed from a string; if the digit string\n\t     is missing, the precision is treated as zero;\n\n     Format:\n\t     A character which indicates the type of format to use (one of\n\t     diouxXfFeEgGaAcsb).  The uppercase formats differ from their\n\t     lowercase counterparts only in that the output of the former is\n\t     entirely in uppercase.  The floating-point format specifiers\n\t     (fFeEgGaA) may be prefixed by an L to request that additional\n\t     precision be used, if available.\n\n     A field width or precision may be ‘*’ instead of a digit string.  In this\n     case an argument supplies the field width or precision.\n\n     The format characters and their meanings are:\n\n     diouXx\t The argument is printed as a signed decimal (d or i),",
+        "     fF \t The argument is printed in the style `[-]ddd.ddd' where the",
+        "     eE \t The argument is printed in the style e ‘[-d.ddd±dd]’ where",
+        "     gG \t The argument is printed in style f (F) or in style e (E)",
+        "     aA \t The argument is printed in style ‘[-h.hhh±pd]’ where there is",
+        "     c\t\t The first byte of argument is printed.\n\n     s\t\t Bytes from the string argument are printed until the end is",
+        "     b\t\t As for s, but interpret character escapes in backslash",
+        "     n$ \t Allows reordering of the output according to argument.\n\n     %\t\t Print a `%'; no argument is used.\n\n     The decimal point character is defined in the program's locale (category\n     LC_NUMERIC).\n\n     In no case does a non-existent or small field width cause truncation of a\n     field; padding takes place only if the specified field width exceeds the\n     actual width.\n\n     Some shells may provide a builtin printf command which is similar or\n     identical to this utility.  Consult the builtin(1) manual page.\n",
+        "     The printf utility exits 0 on success, and >0 if an error occurs.\n",
+        "     Print the string \"hello\":\n\n\t   $ printf \"%s\\n\" hello\n\t   hello\n\n     Same as above, but notice that the format string is not quoted and hence\n     we do not get the expected behavior:\n\n\t   $ printf %s\\n hello\n\t   hellon$\n\n     Print arguments forcing sign only for the first argument:\n\n\t   $ printf \"%+d\\n%d\\n%d\\n\" 1 -2 13\n\t   +1\n\t   -2\n\t   13\n\n     Same as above, but the single format string will be applied to the three\n     arguments:\n\n\t   $ printf \"%+d\\n\" 1 -2 13\n\t   +1\n\t   -2\n\t   +13\n\n     Print number using only two digits after the decimal point:\n\n\t   $ printf \"%.2f\\n\" 31.7456\n\t   31.75\n",
+        "     The traditional BSD behavior of converting arguments of numeric formats\n     not beginning with a digit to the ASCII code of the first character is\n     not supported.\n",
+        "     builtin(1), echo(1), sh(1), printf(3)\n",
+        "     The printf command is expected to be compatible with the IEEE Std 1003.2\n     (“POSIX.2”) specification.\n",
+        "     The printf command appeared in 4.3BSD-Reno.  It is modeled after the\n     standard library function, printf(3).\n",
+        "     ANSI hexadecimal character constants were deliberately not provided.\n\n     Trying to print a dash (\"-\") as the first character causes printf to\n     interpret the dash as a program argument.\t-- must be used before format.\n\n     If the locale contains multibyte characters (such as UTF-8), the c format\n     and b and s formats with a precision may not operate as expected.\n",
+        "     Since the floating point numbers are translated from ASCII to floating-\n     point and then back again, floating-point precision may be lost.  (By\n     default, the number is translated to an IEEE-754 double-precision value\n     before being printed.  The L modifier may produce additional precision,\n     depending on the hardware platform.)\n\n     The escape sequence \\000 is the string terminator.  When present in the\n     argument for the b format, the argument will be truncated at the \\000\n     character.\n\n     Multibyte characters are not recognized in format strings (this is only a\n     problem if ‘%’ can appear inside a multibyte character).\n"
+      ]
+    }
+  ],
+  "flags": [],
+  "examples": [
+    {
+      "command": "printf \"%s\\n\" hello",
+      "description": "hello",
+      "tags": [],
+      "output": "\t   hello\n     Same as above, but notice that the format string is not quoted and hence\n     we do not get the expected behavior:\n"
+    },
+    {
+      "command": "printf %s\\n hello",
+      "description": "hellon$",
+      "tags": [],
+      "output": "\t   hellon$\n     Print arguments forcing sign only for the first argument:\n"
+    },
+    {
+      "command": "printf \"%+d\\n%d\\n%d\\n\" 1 -2 13",
+      "description": "+1",
+      "tags": [],
+      "output": "\t   +1\n\t   -2\n\t   13\n     Same as above, but the single format string will be applied to the three\n     arguments:\n"
+    },
+    {
+      "command": "printf \"%+d\\n\" 1 -2 13",
+      "description": "+1",
+      "tags": [],
+      "output": "\t   +1\n\t   -2\n\t   +13\n     Print number using only two digits after the decimal point:\n"
+    },
+    {
+      "command": "printf \"%.2f\\n\" 31.7456",
+      "description": "31.75",
+      "tags": [],
+      "output": "\t   31.75\n"
+    }
+  ],
+  "relatedCommands": [
+    "builtin",
+    "echo",
+    "sh",
+    "printf",
+    "formatted",
+    "output",
+    "format",
+    "arguments",
+    "utility",
+    "formats",
+    "prints",
+    "its",
+    "after",
+    "first",
+    "under"
+  ],
+  "seeAlso": [
+    {
+      "name": "builtin",
+      "section": 1
+    },
+    {
+      "name": "echo",
+      "section": 1
+    },
+    {
+      "name": "sh",
+      "section": 1
+    },
+    {
+      "name": "printf",
+      "section": 3
+    }
+  ],
+  "metadata": {},
+  "searchContent": "printf printf manual page the printf utility formats and prints its arguments after the first under control of the format printf format arguments printf manual page utility formats prints arguments after first under control format printf s n hello hello printf s n hello hellon printf d n d n d n 1 -2 13 1 printf d n 1 -2 13 1 printf 2f n 31 7456 31 75 name macos 15 5 july 1 2020 macos 15 5",
+  "keywords": [
+    "printf",
+    "manual",
+    "page",
+    "utility",
+    "formats",
+    "prints",
+    "arguments,",
+    "after",
+    "first,",
+    "under",
+    "control",
+    "format."
+  ],
+  "complexity": "intermediate",
+  "hash": "61263d3dcb7b01e4",
+  "parsedAt": "2025-06-17T19:42:12.753Z",
+  "parseVersion": "2.0.0",
+  "isCommon": false,
+  "hasInteractiveExamples": true,
+  "hasDiagrams": false
+}

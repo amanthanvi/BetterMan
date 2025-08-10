@@ -1,0 +1,123 @@
+{
+  "name": "kill",
+  "section": 1,
+  "title": "kill manual page",
+  "description": "The kill utility sends a signal to the processes specified by the pid operands.",
+  "synopsis": "kill [-s signal_name] pid ... kill -l [exit_status] kill -signal_name pid ... kill -signal_number pid ...",
+  "category": "User Commands",
+  "sections": [
+    {
+      "id": "name",
+      "title": "NAME",
+      "content": "macOS 15.5\t\t\tOctober 3, 2016 \t\t    macOS 15.5",
+      "level": 1,
+      "subsections": [],
+      "codeBlocks": [
+        "     kill – terminate or signal a process\n",
+        "     kill [-s signal_name] pid ...\n     kill -l [exit_status]\n     kill -signal_name pid ...\n     kill -signal_number pid ...\n",
+        "     The kill utility sends a signal to the processes specified by the pid\n     operands.\n\n     Only the super-user may send signals to other users' processes.\n\n     The options are as follows:\n\n     -s signal_name\n\t     A symbolic signal name specifying the signal to be sent instead\n\t     of the default TERM.\n\n     -l [exit_status]\n\t     If no operand is given, list the signal names; otherwise, write\n\t     the signal name corresponding to exit_status.\n\n     -signal_name\n\t     A symbolic signal name specifying the signal to be sent instead\n\t     of the default TERM.\n\n     -signal_number\n\t     A non-negative decimal integer, specifying the signal to be sent\n\t     instead of the default TERM.\n\n     The following PIDs have special meanings:\n\n     -1      If superuser, broadcast the signal to all processes; otherwise\n\t     broadcast to all processes belonging to the user.\n\n     Some of the more commonly used signals:\n\n     1\t     HUP (hang up)\n     2\t     INT (interrupt)\n     3\t     QUIT (quit)\n     6\t     ABRT (abort)\n     9\t     KILL (non-catchable, non-ignorable kill)\n     14      ALRM (alarm clock)\n     15      TERM (software termination signal)\n\n     Some shells may provide a builtin kill command which is similar or\n     identical to this utility.  Consult the builtin(1) manual page.\n",
+        "     The kill utility exits 0 on success, and >0 if an error occurs.\n",
+        "     Terminate the processes with PIDs 142 and 157:\n\n\t   kill 142 157\n\n     Send the hangup signal (SIGHUP) to the process with PID 507:\n\n\t   kill -s HUP 507\n\n     Terminate the process group with PGID 117:\n\n\t   kill -- -117\n",
+        "     builtin(1), csh(1), killall(1), ps(1), sh(1), kill(2), sigaction(2)\n",
+        "     The kill utility is expected to be IEEE Std 1003.2 (“POSIX.2”)\n     compatible.\n",
+        "     A kill command appeared in Version 3 AT&T UNIX in section 8 of the\n     manual.\n",
+        "     A replacement for the command “kill 0” for csh(1) users should be\n     provided.\n"
+      ]
+    }
+  ],
+  "flags": [
+    {
+      "flag": "-s",
+      "description": " A symbolic signal name specifying the signal to be sent instead of the default TERM.",
+      "optional": true
+    },
+    {
+      "flag": "-l",
+      "description": " If no operand is given, list the signal names; otherwise, write the signal name corresponding to exit_status.",
+      "argument": "exit_status",
+      "optional": false
+    },
+    {
+      "flag": "-signal",
+      "description": " A symbolic signal name specifying the signal to be sent instead of the default TERM. A non-negative decimal integer, specifying the signal to be sent instead of the default TERM. The following PIDs have special meanings:",
+      "optional": false
+    },
+    {
+      "flag": "-signal",
+      "description": " A symbolic signal name specifying the signal to be sent instead of the default TERM. A non-negative decimal integer, specifying the signal to be sent instead of the default TERM. The following PIDs have special meanings:",
+      "optional": false
+    },
+    {
+      "flag": "-1",
+      "description": "If superuser, broadcast the signal to all processes; otherwise broadcast to all processes belonging to the user. Some of the more commonly used signals: 1\t     HUP (hang up) 2\t     INT (interrupt) 3\t     QUIT (quit) 6\t     ABRT (abort) 9\t     KILL (non-catchable, non-ignorable kill) 14      ALRM (alarm clock) 15      TERM (software termination signal) Some shells may provide a builtin kill command which is similar or identical to this utility.  Consult the builtin(1) manual page. EXIT STATUS The kill utility exits 0 on success, and >0 if an error occurs."
+    }
+  ],
+  "examples": [],
+  "relatedCommands": [
+    "builtin",
+    "csh",
+    "killall",
+    "ps",
+    "sh",
+    "kill",
+    "sigaction",
+    "terminate",
+    "signal",
+    "process",
+    "signal_name",
+    "pid",
+    "exit_status",
+    "signal_number",
+    "utility"
+  ],
+  "seeAlso": [
+    {
+      "name": "builtin",
+      "section": 1
+    },
+    {
+      "name": "csh",
+      "section": 1
+    },
+    {
+      "name": "killall",
+      "section": 1
+    },
+    {
+      "name": "ps",
+      "section": 1
+    },
+    {
+      "name": "sh",
+      "section": 1
+    },
+    {
+      "name": "kill",
+      "section": 2
+    },
+    {
+      "name": "sigaction",
+      "section": 2
+    }
+  ],
+  "metadata": {},
+  "searchContent": "kill kill manual page the kill utility sends a signal to the processes specified by the pid operands kill -s signal name pid kill -l exit status kill -signal name pid kill -signal number pid kill manual page utility sends signal processes specified operands -s a symbolic signal name specifying the signal to be sent instead of the default term -l if no operand is given list the signal names otherwise write the signal name corresponding to exit status -signal a symbolic signal name specifying the signal to be sent instead of the default term a non-negative decimal integer specifying the signal to be sent instead of the default term the following pids have special meanings -signal a symbolic signal name specifying the signal to be sent instead of the default term a non-negative decimal integer specifying the signal to be sent instead of the default term the following pids have special meanings -1 if superuser broadcast the signal to all processes otherwise broadcast to all processes belonging to the user some of the more commonly used signals 1 hup hang up 2 int interrupt 3 quit quit 6 abrt abort 9 kill non-catchable non-ignorable kill 14 alrm alarm clock 15 term software termination signal some shells may provide a builtin kill command which is similar or identical to this utility consult the builtin 1 manual page exit status the kill utility exits 0 on success and 0 if an error occurs name macos 15 5 october 3 2016 macos 15 5",
+  "keywords": [
+    "kill",
+    "manual",
+    "page",
+    "utility",
+    "sends",
+    "signal",
+    "processes",
+    "specified",
+    "operands."
+  ],
+  "complexity": "intermediate",
+  "hash": "4e3cac201b9d00ec",
+  "parsedAt": "2025-06-17T19:42:00.679Z",
+  "parseVersion": "2.0.0",
+  "isCommon": true,
+  "hasInteractiveExamples": false,
+  "hasDiagrams": false
+}
