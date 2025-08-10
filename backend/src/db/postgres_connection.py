@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool
-import asyncpg
 from urllib.parse import urlparse, urlunparse
 
 from ..config import get_settings
@@ -35,14 +34,25 @@ def get_database_url(async_mode: bool = False) -> str:
     """
     database_url = os.environ.get('DATABASE_URL', settings.DATABASE_URL)
     
+    # Handle Railway internal domain (won't work locally)
+    if '.railway.internal' in database_url:
+        # Try to get the public URL instead
+        public_url = os.environ.get('DATABASE_PUBLIC_URL')
+        if public_url:
+            database_url = public_url
+            logger.info("Using DATABASE_PUBLIC_URL for external connection")
+        else:
+            logger.warning("DATABASE_URL contains .railway.internal which is not accessible externally")
+    
     # Handle Railway PostgreSQL URL format
     if database_url.startswith('postgresql://'):
         if async_mode:
             # Convert to asyncpg format
             database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
         else:
-            # Ensure proper psycopg2 format
-            database_url = database_url.replace('postgresql://', 'postgresql+psycopg2://')
+            # Use psycopg3 format (just postgresql:// works with psycopg3)
+            # psycopg3 accepts postgresql:// directly
+            pass
     
     # Parse and validate URL
     parsed = urlparse(database_url)
@@ -68,8 +78,13 @@ def get_database_url(async_mode: bool = False) -> str:
 
 # Synchronous setup (for migrations and admin tasks)
 def get_sync_engine():
-    """Create synchronous SQLAlchemy engine."""
+    """Create synchronous SQLAlchemy engine with psycopg3."""
     database_url = get_database_url(async_mode=False)
+    
+    # For psycopg3, we can use postgresql:// directly or postgresql+psycopg://
+    if database_url.startswith('postgresql://') and '+' not in database_url:
+        # SQLAlchemy 2.0+ with psycopg3 uses this format
+        database_url = database_url.replace('postgresql://', 'postgresql+psycopg://')
     
     engine = create_engine(
         database_url,
@@ -79,12 +94,8 @@ def get_sync_engine():
         pool_pre_ping=True,
         echo=settings.DEBUG,
         connect_args={
-            "server_settings": {
-                "application_name": f"betterman_{settings.ENVIRONMENT}",
-                "jit": "off"
-            },
-            "command_timeout": 60,
-            "options": "-c default_text_search_config=english"
+            "options": f"-c application_name=betterman_{settings.ENVIRONMENT} -c default_text_search_config=english",
+            "connect_timeout": 10,
         } if not database_url.startswith('sqlite') else {}
     )
     
@@ -168,42 +179,11 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
 @asynccontextmanager
 async def get_asyncpg_pool():
     """
-    Get direct asyncpg connection pool for advanced queries.
-    Useful for bulk operations and complex PostgreSQL-specific features.
+    DEPRECATED: Direct asyncpg pool disabled to prevent connection issues.
+    Use get_async_db() for async database operations instead.
     """
-    database_url = os.environ.get('DATABASE_URL', settings.DATABASE_URL)
-    
-    # Convert to asyncpg format
-    if database_url.startswith('postgresql://'):
-        # Parse the URL
-        parsed = urlparse(database_url)
-        
-        # Create asyncpg connection string
-        config = {
-            'host': parsed.hostname,
-            'port': parsed.port or 5432,
-            'user': parsed.username,
-            'password': parsed.password,
-            'database': parsed.path.lstrip('/'),
-            'min_size': 5,
-            'max_size': 20,
-            'command_timeout': 60,
-        }
-        
-        # Add SSL for production
-        if settings.ENVIRONMENT == 'production':
-            config['ssl'] = 'require'
-        
-        pool = await asyncpg.create_pool(**config)
-    else:
-        # For SQLite or other databases, return None
-        pool = None
-    
-    try:
-        yield pool
-    finally:
-        if pool:
-            await pool.close()
+    # Return None to prevent asyncpg usage
+    yield None
 
 
 def init_db():

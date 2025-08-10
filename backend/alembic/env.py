@@ -29,11 +29,12 @@ target_metadata = Base.metadata
 settings = get_settings()
 database_url = os.environ.get('DATABASE_URL', settings.DATABASE_URL)
 
-# Handle Railway PostgreSQL URL format
-if database_url.startswith('postgresql://'):
-    config.set_main_option('sqlalchemy.url', database_url)
-else:
-    config.set_main_option('sqlalchemy.url', database_url)
+# Handle Railway PostgreSQL URL format for psycopg3
+if database_url.startswith('postgresql://') and '+' not in database_url:
+    # Convert to psycopg3 format for SQLAlchemy
+    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://')
+
+config.set_main_option('sqlalchemy.url', database_url)
 
 
 def run_migrations_offline() -> None:

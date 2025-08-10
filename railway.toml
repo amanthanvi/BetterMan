@@ -1,12 +1,12 @@
-# Railway monorepo configuration for BetterMan
-# This is a monorepo - configure services in Railway dashboard
-# Set root directory for each service:
-# - Frontend service: /frontend
-# - Backend service: /backend
+# Railway configuration for BetterMan
 
 [build]
 builder = "nixpacks"
+buildCommand = "cd backend && pip install -r requirements.txt"
 
 [deploy]
+startCommand = "./start.sh"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

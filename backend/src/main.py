@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 import os
 
 from .config import get_settings, setup_logging
-from .db.postgres_connection import get_db, init_db, init_async_db, check_database_health
+from .db.postgres_connection import get_db, init_db, check_database_health
 from .api import api_router
 from .auth import auth_router
 from .middleware import setup_middleware
@@ -61,10 +61,8 @@ async def lifespan(app: FastAPI):
         logger.info("Initializing database...")
         init_db()
         
-        # Initialize async database connection for high-performance endpoints
-        if settings.ENVIRONMENT == 'production':
-            await init_async_db()
-            logger.info("Async database connection initialized")
+        # Note: Async database initialization removed to prevent asyncpg issues
+        # Use synchronous connections with psycopg3 for stability
         
         # Setup query performance monitoring
         from .db.postgres_connection import engine
