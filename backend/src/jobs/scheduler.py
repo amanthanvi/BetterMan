@@ -27,6 +27,10 @@ class JobScheduler:
         Args:
             db_url: SQLAlchemy database URL
         """
+        # Convert URL to psycopg3 format if needed
+        if db_url.startswith('postgresql://') and '+' not in db_url:
+            db_url = db_url.replace('postgresql://', 'postgresql+psycopg://')
+        
         self.db_url = db_url
         self.scheduler = BackgroundScheduler(
             jobstores={"default": SQLAlchemyJobStore(url=db_url)}

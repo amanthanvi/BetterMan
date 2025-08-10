@@ -70,7 +70,10 @@ async def lifespan(app: FastAPI):
 
         # Initialize scheduler
         logger.info("Initializing scheduler...")
-        scheduler = get_scheduler(settings.DATABASE_URL)
+        # Get properly formatted database URL for scheduler
+        from .db.postgres_connection import get_database_url
+        scheduler_db_url = get_database_url(async_mode=False)
+        scheduler = get_scheduler(scheduler_db_url)
         if not scheduler.running:
             scheduler.start()
         logger.info("Scheduler initialized successfully")
