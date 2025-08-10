@@ -55,8 +55,8 @@ class ManPage(Base):
     category = Column(String(100), index=True)
     related_commands = Column(ARRAY(String), default=[])
     
-    # Metadata as JSONB
-    metadata = Column(JSONB, default={})
+    # Metadata as JSONB (renamed to avoid SQLAlchemy conflict)
+    meta_data = Column(JSONB, default={})
     
     # Performance and caching fields
     is_common = Column(Boolean, default=False, index=True)

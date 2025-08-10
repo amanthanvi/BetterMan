@@ -30,7 +30,6 @@ from .db.query_performance import setup_query_monitoring, performance_monitor
 from .middleware.compression import CompressionMiddleware
 from .monitoring_metrics.metrics import system_monitor, update_app_info, RequestTracker
 from .search.unified_search import UnifiedSearchEngine as FullTextSearchEngine
-from .models.postgres_models import Base
 
 # Initialize settings and logging
 settings = get_settings()

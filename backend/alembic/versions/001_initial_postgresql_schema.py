@@ -58,7 +58,7 @@ def upgrade() -> None:
         sa.Column('search_vector', postgresql.TSVECTOR(), nullable=True),
         sa.Column('category', sa.String(length=100), nullable=True),
         sa.Column('related_commands', postgresql.ARRAY(sa.String()), nullable=True),
-        sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('meta_data', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column('is_common', sa.Boolean(), nullable=True, default=False),
         sa.Column('view_count', sa.Integer(), nullable=True, default=0),
         sa.Column('last_accessed', sa.TIMESTAMP(timezone=True), nullable=True),
