@@ -10,9 +10,9 @@ import json
 
 from ..db.session import get_db
 from ..models.document import Document
-from ..search.optimized_search import OptimizedSearchEngine
-from ..search.instant_search import InstantSearchEngine
-from ..search.fuzzy_search import FuzzySearchEngine
+from ..search.unified_search import UnifiedSearch as OptimizedSearchEngine
+# Removed imports for non-existent instant_search and fuzzy_search modules
+# Using UnifiedSearch for all search functionality
 from ..cache.cache_manager import CacheManager
 from ..errors import SearchError, ValidationError
 from ..config import get_settings
@@ -30,16 +30,14 @@ def get_search_engine(db: Session = Depends(get_db)) -> OptimizedSearchEngine:
     return OptimizedSearchEngine(db)
 
 
-def get_fuzzy_search_engine(db: Session = Depends(get_db)) -> FuzzySearchEngine:
-    """Dependency to get a FuzzySearchEngine instance."""
-    return FuzzySearchEngine(db)
+def get_fuzzy_search_engine(db: Session = Depends(get_db)) -> OptimizedSearchEngine:
+    """Dependency to get a search engine instance."""
+    return OptimizedSearchEngine(db)
 
 
-def get_instant_search_engine(db: Session = Depends(get_db)) -> InstantSearchEngine:
-    """Dependency to get an InstantSearchEngine instance."""
-    from ..parser.groff_parser import GroffParser
-    cache_manager = CacheManager(db, GroffParser())
-    return InstantSearchEngine(db, cache_manager)
+def get_instant_search_engine(db: Session = Depends(get_db)) -> OptimizedSearchEngine:
+    """Dependency to get a search engine instance."""
+    return OptimizedSearchEngine(db)
 
 
 @router.get("", response_model=Dict[str, Any])
@@ -249,7 +247,7 @@ async def instant_search(
     request: Request,
     q: str = Query("", description="Search query"),
     limit: int = Query(10, ge=1, le=50, description="Maximum results"),
-    instant_engine: InstantSearchEngine = Depends(get_instant_search_engine),
+    instant_engine: OptimizedSearchEngine = Depends(get_instant_search_engine),
     current_user = Depends(get_current_user_optional),
 ):
     """
@@ -305,7 +303,7 @@ async def autocomplete(
     prefix: str = Query(..., min_length=1, description="Search prefix"),
     limit: int = Query(10, ge=1, le=20, description="Maximum suggestions"),
     context: Optional[str] = Query(None, description="JSON context object"),
-    fuzzy_engine: FuzzySearchEngine = Depends(get_fuzzy_search_engine),
+    fuzzy_engine: OptimizedSearchEngine = Depends(get_fuzzy_search_engine),
 ):
     """
     Get autocomplete suggestions for search prefix.
@@ -365,7 +363,7 @@ async def fuzzy_search(
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Result offset"),
     threshold: float = Query(0.7, ge=0.0, le=1.0, description="Fuzzy match threshold"),
-    fuzzy_engine: FuzzySearchEngine = Depends(get_fuzzy_search_engine),
+    fuzzy_engine: OptimizedSearchEngine = Depends(get_fuzzy_search_engine),
 ):
     """
     Fuzzy search with typo tolerance and similarity matching.
