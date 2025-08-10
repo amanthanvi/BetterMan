@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime
 
-from ..db.session import get_db
+from ..db.postgres_connection import get_db
 from ..models.document import (
     Document,
     DocumentResponse,

@@ -1,0 +1,276 @@
+"""PostgreSQL connection management for Railway deployment."""
+
+import os
+import logging
+from typing import Optional, AsyncGenerator
+from contextlib import asynccontextmanager
+from sqlalchemy import create_engine, MetaData, event
+from sqlalchemy.ext.asyncio import (
+    create_async_engine, 
+    AsyncSession, 
+    async_sessionmaker,
+    AsyncEngine
+)
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import NullPool
+import asyncpg
+from urllib.parse import urlparse, urlunparse
+
+from ..config import get_settings
+from ..models.postgres_models import Base
+
+logger = logging.getLogger(__name__)
+settings = get_settings()
+
+
+def get_database_url(async_mode: bool = False) -> str:
+    """
+    Get properly formatted database URL for Railway PostgreSQL.
+    
+    Args:
+        async_mode: If True, return asyncpg URL format
+    
+    Returns:
+        Formatted database URL
+    """
+    database_url = os.environ.get('DATABASE_URL', settings.DATABASE_URL)
+    
+    # Handle Railway PostgreSQL URL format
+    if database_url.startswith('postgresql://'):
+        if async_mode:
+            # Convert to asyncpg format
+            database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
+        else:
+            # Ensure proper psycopg2 format
+            database_url = database_url.replace('postgresql://', 'postgresql+psycopg2://')
+    
+    # Parse and validate URL
+    parsed = urlparse(database_url)
+    
+    # Add SSL mode for production
+    if settings.ENVIRONMENT == 'production' and 'sslmode' not in parsed.query:
+        if parsed.query:
+            query = f"{parsed.query}&sslmode=require"
+        else:
+            query = "sslmode=require"
+        
+        database_url = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            query,
+            parsed.fragment
+        ))
+    
+    return database_url
+
+
+# Synchronous setup (for migrations and admin tasks)
+def get_sync_engine():
+    """Create synchronous SQLAlchemy engine."""
+    database_url = get_database_url(async_mode=False)
+    
+    engine = create_engine(
+        database_url,
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=10,
+        pool_recycle=settings.DATABASE_POOL_RECYCLE,
+        pool_pre_ping=True,
+        echo=settings.DEBUG,
+        connect_args={
+            "server_settings": {
+                "application_name": f"betterman_{settings.ENVIRONMENT}",
+                "jit": "off"
+            },
+            "command_timeout": 60,
+            "options": "-c default_text_search_config=english"
+        } if not database_url.startswith('sqlite') else {}
+    )
+    
+    # Add connection event listeners
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        if database_url.startswith('sqlite'):
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+    
+    return engine
+
+
+# Create sync session factory
+engine = get_sync_engine()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db() -> Session:
+    """Get database session for dependency injection."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# Asynchronous setup (for high-performance API endpoints)
+async_engine: Optional[AsyncEngine] = None
+AsyncSessionLocal: Optional[async_sessionmaker] = None
+
+
+async def init_async_db():
+    """Initialize async database connection."""
+    global async_engine, AsyncSessionLocal
+    
+    database_url = get_database_url(async_mode=True)
+    
+    # Create async engine with proper configuration
+    async_engine = create_async_engine(
+        database_url,
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=10,
+        pool_recycle=settings.DATABASE_POOL_RECYCLE,
+        pool_pre_ping=True,
+        echo=settings.DEBUG,
+        # Use NullPool for serverless/Railway deployments
+        poolclass=NullPool if settings.ENVIRONMENT == 'production' else None
+    )
+    
+    # Create async session factory
+    AsyncSessionLocal = async_sessionmaker(
+        async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+    
+    # Test connection
+    try:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("Async database connection established successfully")
+    except Exception as e:
+        logger.error(f"Failed to connect to database: {e}")
+        raise
+
+
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+    """Get async database session for dependency injection."""
+    if AsyncSessionLocal is None:
+        await init_async_db()
+    
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
+@asynccontextmanager
+async def get_asyncpg_pool():
+    """
+    Get direct asyncpg connection pool for advanced queries.
+    Useful for bulk operations and complex PostgreSQL-specific features.
+    """
+    database_url = os.environ.get('DATABASE_URL', settings.DATABASE_URL)
+    
+    # Convert to asyncpg format
+    if database_url.startswith('postgresql://'):
+        # Parse the URL
+        parsed = urlparse(database_url)
+        
+        # Create asyncpg connection string
+        config = {
+            'host': parsed.hostname,
+            'port': parsed.port or 5432,
+            'user': parsed.username,
+            'password': parsed.password,
+            'database': parsed.path.lstrip('/'),
+            'min_size': 5,
+            'max_size': 20,
+            'command_timeout': 60,
+        }
+        
+        # Add SSL for production
+        if settings.ENVIRONMENT == 'production':
+            config['ssl'] = 'require'
+        
+        pool = await asyncpg.create_pool(**config)
+    else:
+        # For SQLite or other databases, return None
+        pool = None
+    
+    try:
+        yield pool
+    finally:
+        if pool:
+            await pool.close()
+
+
+def init_db():
+    """Initialize database with all tables and functions."""
+    try:
+        # Create all tables
+        Base.metadata.create_all(bind=engine)
+        
+        # Execute PostgreSQL-specific functions if using PostgreSQL
+        database_url = get_database_url()
+        if 'postgresql' in database_url:
+            from ..models.postgres_models import (
+                create_search_trigger,
+                search_function,
+                popular_commands_function
+            )
+            
+            with engine.begin() as conn:
+                # Create search trigger
+                conn.execute(create_search_trigger)
+                
+                # Create search function
+                conn.execute(search_function)
+                
+                # Create popular commands function
+                conn.execute(popular_commands_function)
+                
+                logger.info("PostgreSQL functions and triggers created successfully")
+        
+        logger.info("Database initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        raise
+
+
+def drop_all_tables():
+    """Drop all tables (use with caution!)."""
+    Base.metadata.drop_all(bind=engine)
+    logger.warning("All database tables dropped")
+
+
+# Health check function
+async def check_database_health() -> dict:
+    """Check database health and return status."""
+    try:
+        # Try async connection
+        if async_engine:
+            async with async_engine.connect() as conn:
+                result = await conn.execute("SELECT 1")
+                await conn.commit()
+        
+        # Try sync connection as fallback
+        with engine.connect() as conn:
+            result = conn.execute("SELECT 1")
+            conn.commit()
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "pool_size": settings.DATABASE_POOL_SIZE,
+            "environment": settings.ENVIRONMENT
+        }
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e)
+        }

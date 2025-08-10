@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 import os
 
 from .config import get_settings, setup_logging
-from .db.session import get_db, init_db
+from .db.postgres_connection import get_db, init_db, init_async_db, check_database_health
 from .api import api_router
 from .auth import auth_router
 from .middleware import setup_middleware
@@ -30,6 +30,7 @@ from .db.query_performance import setup_query_monitoring, performance_monitor
 from .middleware.compression import CompressionMiddleware
 from .monitoring_metrics.metrics import system_monitor, update_app_info, RequestTracker
 from .search.unified_search import UnifiedSearchEngine as FullTextSearchEngine
+from .models.postgres_models import Base
 
 # Initialize settings and logging
 settings = get_settings()
@@ -60,8 +61,13 @@ async def lifespan(app: FastAPI):
         logger.info("Initializing database...")
         init_db()
         
+        # Initialize async database connection for high-performance endpoints
+        if settings.ENVIRONMENT == 'production':
+            await init_async_db()
+            logger.info("Async database connection initialized")
+        
         # Setup query performance monitoring
-        from .db.session import engine
+        from .db.postgres_connection import engine
         setup_query_monitoring(engine)
         logger.info("Query monitoring enabled")
 
