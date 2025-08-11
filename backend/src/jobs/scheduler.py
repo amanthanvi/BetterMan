@@ -14,16 +14,9 @@ from ..db.session import get_db, SessionLocal
 from ..cache.cache_manager import CacheManager
 from ..parser.enhanced_groff_parser import EnhancedGroffParser as LinuxManParser
 
-# Import man page extractor if available
-try:
-    import sys
-    import os
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from app.workers.extractor import ManPageExtractor
-    EXTRACTOR_AVAILABLE = True
-except ImportError:
-    EXTRACTOR_AVAILABLE = False
-    logger.warning("Man page extractor not available")
+# Man page extractor is handled separately as a cron job in Railway
+# It's not imported here to avoid dependency issues
+EXTRACTOR_AVAILABLE = False
 
 # Configure logging
 logger = logging.getLogger(__name__)
