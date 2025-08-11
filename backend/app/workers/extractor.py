@@ -342,7 +342,7 @@ class ManPageExtractor:
                 option_lines = re.findall(r'^\s*(-[\w\-]+)[,\s]*(.*)$', options_text, re.MULTILINE)
                 for opt, desc in option_lines[:20]:  # Limit to 20 options
                     options.append({'option': opt.strip(), 'description': desc.strip()})
-            parsed['options'] = json.dumps(options) if options else None
+            parsed['options'] = json.dumps(options) if options else '[]'
             
             # Extract examples (simplified)
             examples = []
@@ -357,7 +357,7 @@ class ManPageExtractor:
                 example_blocks = re.findall(r'^\s{2,}(.+?)(?:\n\n|\Z)', examples_text, re.MULTILINE | re.DOTALL)
                 for block in example_blocks[:5]:  # Limit to 5 examples
                     examples.append({'code': block.strip()})
-            parsed['examples'] = json.dumps(examples) if examples else None
+            parsed['examples'] = json.dumps(examples) if examples else '[]'
             
             # Extract see also
             see_also = []
@@ -371,7 +371,7 @@ class ManPageExtractor:
                 # Extract command references (word followed by section in parentheses)
                 refs = re.findall(r'(\w+)\s*\((\d+)\)', see_also_text)
                 see_also = [f"{cmd}({sec})" for cmd, sec in refs[:10]]  # Limit to 10
-            parsed['see_also'] = json.dumps(see_also) if see_also else None
+            parsed['see_also'] = json.dumps(see_also) if see_also else '[]'
             
             # Extract author
             author_match = re.search(
@@ -409,62 +409,72 @@ class ManPageExtractor:
         with self.Session() as session:
             try:
                 for page in man_pages:
-                    # Prepare the data matching the actual schema
-                    # The content field in the schema is JSONB, so we need to structure it properly
-                    content_json = {
-                        'raw': page['content'],
-                        'synopsis': page.get('synopsis'),
-                        'options': json.loads(page.get('options', '[]')),
-                        'examples': json.loads(page.get('examples', '[]')),
-                        'see_also': json.loads(page.get('see_also', '[]')),
-                        'author': page.get('author')
-                    }
-                    
-                    # Prepare meta_data JSONB field
-                    meta_data = {
-                        'parsed_at': datetime.now(timezone.utc).isoformat(),
-                        'content_hash': page['content_hash']
-                    }
-                    
-                    data = {
-                        'id': str(uuid.uuid4()),
-                        'name': page['name'],
-                        'section': page['section'],
-                        'title': page.get('title'),
-                        'description': page.get('description'),
-                        'synopsis': page.get('synopsis'),
-                        'content': json.dumps(content_json),
-                        'category': page['category'],
-                        'meta_data': json.dumps(meta_data),
-                        'is_common': page['name'] in ['ls', 'cd', 'grep', 'find', 'cat', 'echo', 'rm', 'cp', 'mv', 'mkdir']
-                    }
-                    
-                    # Use INSERT ... ON CONFLICT UPDATE
-                    stmt = text("""
-                        INSERT INTO man_pages (
-                            id, name, section, title, description, synopsis,
-                            content, category, meta_data, is_common,
-                            created_at, updated_at
-                        ) VALUES (
-                            :id::uuid, :name, :section, :title, :description, :synopsis,
-                            :content::jsonb, :category, :meta_data::jsonb, :is_common,
-                            NOW(), NOW()
-                        )
-                        ON CONFLICT (name, section) 
-                        DO UPDATE SET
-                            title = EXCLUDED.title,
-                            description = EXCLUDED.description,
-                            synopsis = EXCLUDED.synopsis,
-                            content = EXCLUDED.content,
-                            category = EXCLUDED.category,
-                            meta_data = EXCLUDED.meta_data,
-                            is_common = EXCLUDED.is_common,
-                            updated_at = NOW()
-                    """)
-                    
-                    result = session.execute(stmt, data)
-                    if result.rowcount > 0:
-                        stored += 1
+                    try:
+                        # Prepare the data matching the actual schema
+                        # The content field in the schema is JSONB, so we need to structure it properly
+                        # Safely parse JSON fields - they should already be JSON strings
+                        options_data = page.get('options')
+                        examples_data = page.get('examples')
+                        see_also_data = page.get('see_also')
+                        
+                        content_json = {
+                            'raw': page['content'],
+                            'synopsis': page.get('synopsis'),
+                            'options': json.loads(options_data) if options_data else [],
+                            'examples': json.loads(examples_data) if examples_data else [],
+                            'see_also': json.loads(see_also_data) if see_also_data else [],
+                            'author': page.get('author')
+                        }
+                        
+                        # Prepare meta_data JSONB field
+                        meta_data = {
+                            'parsed_at': datetime.now(timezone.utc).isoformat(),
+                            'content_hash': page['content_hash']
+                        }
+                        
+                        data = {
+                            'id': str(uuid.uuid4()),
+                            'name': page['name'],
+                            'section': page['section'],
+                            'title': page.get('title'),
+                            'description': page.get('description'),
+                            'synopsis': page.get('synopsis'),
+                            'content': json.dumps(content_json),
+                            'category': page['category'],
+                            'meta_data': json.dumps(meta_data),
+                            'is_common': page['name'] in ['ls', 'cd', 'grep', 'find', 'cat', 'echo', 'rm', 'cp', 'mv', 'mkdir']
+                        }
+                        
+                        # Use INSERT ... ON CONFLICT UPDATE
+                        stmt = text("""
+                            INSERT INTO man_pages (
+                                id, name, section, title, description, synopsis,
+                                content, category, meta_data, is_common,
+                                created_at, updated_at
+                            ) VALUES (
+                                :id::uuid, :name, :section, :title, :description, :synopsis,
+                                :content::jsonb, :category, :meta_data::jsonb, :is_common,
+                                NOW(), NOW()
+                            )
+                            ON CONFLICT (name, section) 
+                            DO UPDATE SET
+                                title = EXCLUDED.title,
+                                description = EXCLUDED.description,
+                                synopsis = EXCLUDED.synopsis,
+                                content = EXCLUDED.content,
+                                category = EXCLUDED.category,
+                                meta_data = EXCLUDED.meta_data,
+                                is_common = EXCLUDED.is_common,
+                                updated_at = NOW()
+                        """)
+                        
+                        result = session.execute(stmt, data)
+                        if result.rowcount > 0:
+                            stored += 1
+                            
+                    except Exception as e:
+                        logger.warning(f"Failed to store {page.get('name', 'unknown')}({page.get('section', '?')}): {e}")
+                        continue
                 
                 session.commit()
                 
