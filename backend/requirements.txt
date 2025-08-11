@@ -71,6 +71,7 @@ pyotp==2.9.0
 qrcode[pil]==8.0
 python-levenshtein==0.26.1
 fuzzywuzzy==0.18.0
+tenacity==8.2.3
 
 # Terminal Support
 docker==7.1.0

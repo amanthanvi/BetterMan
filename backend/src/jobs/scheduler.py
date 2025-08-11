@@ -14,6 +14,17 @@ from ..db.session import get_db, SessionLocal
 from ..cache.cache_manager import CacheManager
 from ..parser.enhanced_groff_parser import EnhancedGroffParser as LinuxManParser
 
+# Import man page extractor if available
+try:
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from app.workers.extractor import ManPageExtractor
+    EXTRACTOR_AVAILABLE = True
+except ImportError:
+    EXTRACTOR_AVAILABLE = False
+    logger.warning("Man page extractor not available")
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -119,6 +130,19 @@ class JobScheduler:
             replace_existing=True,
             args=[self.db_url]
         )
+        
+        # Extract man pages - daily at 3am (if extractor is available)
+        if EXTRACTOR_AVAILABLE:
+            self.scheduler.add_job(
+                extract_man_pages,
+                "cron",
+                hour=3,
+                minute=30,
+                id="extract_man_pages",
+                replace_existing=True,
+                args=[self.db_url]
+            )
+            logger.info("Man page extraction job scheduled")
 
     def _prefetch_common_commands(self) -> None:
         """Pre-fetch all common commands."""
@@ -362,6 +386,38 @@ def log_cache_statistics(db_url: str) -> None:
         logger.error(f"Error logging cache statistics: {str(e)}")
     finally:
         db.close()
+
+
+def extract_man_pages(db_url: str) -> None:
+    """Extract man pages from system.
+    
+    Args:
+        db_url: Database URL for storing extracted pages
+    """
+    if not EXTRACTOR_AVAILABLE:
+        logger.warning("Man page extractor not available, skipping extraction")
+        return
+    
+    logger.info("Starting man page extraction job")
+    
+    try:
+        # Run extraction asynchronously
+        extractor = ManPageExtractor(db_url)
+        
+        # Create event loop if not exists
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        # Run extraction
+        loop.run_until_complete(extractor.run_extraction(incremental=True))
+        
+        logger.info("Man page extraction completed")
+        
+    except Exception as e:
+        logger.error(f"Man page extraction failed: {e}")
 
 
 # Singleton instance

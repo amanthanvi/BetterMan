@@ -1,0 +1,45 @@
+# Ubuntu 24.04 base image for man page extraction
+FROM ubuntu:24.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV TZ=UTC
+
+# Install Python and system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.12 \
+    python3-pip \
+    python3.12-venv \
+    man-db \
+    groff \
+    less \
+    gzip \
+    locales \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Generate locale
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Create working directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements-extractor.txt .
+RUN pip3 install --no-cache-dir -r requirements-extractor.txt
+
+# Copy the extractor module
+COPY app/workers/ /app/workers/
+
+# Create directories for man pages
+RUN mkdir -p /usr/share/man /var/cache/man
+
+# Set up man-db
+RUN mandb --create
+
+# Entry point for the extractor
+CMD ["python3", "-m", "workers.extractor"]
