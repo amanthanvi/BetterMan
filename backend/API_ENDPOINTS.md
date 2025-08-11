@@ -2,6 +2,8 @@
 
 ## Man Pages API (`/api/man/*`)
 
+**Note:** All endpoints are prefixed with `/api` automatically by the FastAPI application.
+
 These endpoints provide access to Linux man pages stored in PostgreSQL.
 
 ### 1. Search Man Pages

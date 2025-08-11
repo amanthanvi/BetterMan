@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # Create router with prefix
-router = APIRouter(prefix="/api/man", tags=["man-pages"])
+router = APIRouter(prefix="/man", tags=["man-pages"])
 
 
 @router.get("/search", response_model=Dict[str, Any])
