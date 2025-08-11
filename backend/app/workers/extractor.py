@@ -555,7 +555,7 @@ class ManPageExtractor:
                                     synopsis = :synopsis,
                                     content = :content::jsonb,
                                     category = :category,
-                                    related_commands = :related_commands,
+                                    related_commands = :related_commands::text[],
                                     meta_data = :meta_data::jsonb,
                                     is_common = :is_common,
                                     updated_at = NOW()
@@ -569,7 +569,7 @@ class ManPageExtractor:
                                 "synopsis": page_data['synopsis'],
                                 "content": json.dumps(page_data['content']),
                                 "category": page_data['category'],
-                                "related_commands": page_data['related_commands'],
+                                "related_commands": page_data['related_commands'] if page_data['related_commands'] else [],
                                 "meta_data": json.dumps(page_data['meta_data']),
                                 "is_common": page_data['is_common']
                             }
@@ -577,6 +577,8 @@ class ManPageExtractor:
                         logger.info(f"Updated: {page_data['name']}({page_data['section']})")
                     else:
                         # Insert new page
+                        from sqlalchemy.dialects.postgresql import ARRAY
+                        from sqlalchemy import cast
                         session.execute(
                             text("""
                                 INSERT INTO man_pages (
@@ -585,7 +587,7 @@ class ManPageExtractor:
                                     is_common, view_count, cache_priority, created_at
                                 ) VALUES (
                                     :id::uuid, :name, :section, :title, :description, :synopsis,
-                                    :content::jsonb, :category, :related_commands, :meta_data::jsonb,
+                                    :content::jsonb, :category, :related_commands::text[], :meta_data::jsonb,
                                     :is_common, :view_count, :cache_priority, NOW()
                                 )
                             """),
@@ -598,7 +600,7 @@ class ManPageExtractor:
                                 "synopsis": page_data['synopsis'],
                                 "content": json.dumps(page_data['content']),
                                 "category": page_data['category'],
-                                "related_commands": page_data['related_commands'],
+                                "related_commands": page_data['related_commands'] if page_data['related_commands'] else [],
                                 "meta_data": json.dumps(page_data['meta_data']),
                                 "is_common": page_data['is_common'],
                                 "view_count": 0,
