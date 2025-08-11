@@ -35,9 +35,15 @@ In the extractor service settings:
 2. **Build**:
    - Builder: Docker
    - Dockerfile Path: `app/workers/Dockerfile.extractor`
+   
+   **IMPORTANT**: Make sure Railway is using the correct Dockerfile path!
+   - Go to Settings → Build
+   - Set "Dockerfile Path" to: `app/workers/Dockerfile.extractor`
+   - NOT the default `Dockerfile`
 
 3. **Deploy**:
    - Start Command: (leave empty, uses Dockerfile CMD)
+   - Railway Config Path: `railway-extractor.toml` (if prompted)
 
 ### 3. Configure as Cron Job
 

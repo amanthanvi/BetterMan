@@ -5,6 +5,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV TZ=UTC
+ENV PYTHONPATH=/app:$PYTHONPATH
 
 # Install Python and system dependencies
 RUN apt-get update && apt-get install -y \
@@ -17,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     gzip \
     locales \
     ca-certificates \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Generate locale
@@ -32,14 +34,20 @@ WORKDIR /app
 COPY requirements-extractor.txt .
 RUN pip3 install --no-cache-dir -r requirements-extractor.txt
 
-# Copy the extractor module
-COPY app/workers/ /app/workers/
+# Install dotenv for environment variable handling
+RUN pip3 install python-dotenv
+
+# Copy the entire backend app structure (needed for imports)
+COPY . /app/
 
 # Create directories for man pages
 RUN mkdir -p /usr/share/man /var/cache/man
 
 # Set up man-db
-RUN mandb --create
+RUN mandb --create || true
 
-# Entry point for the extractor
-CMD ["python3", "/app/workers/railway_extractor.py"]
+# Make the extractor script executable
+RUN chmod +x /app/app/workers/railway_extractor.py
+
+# Entry point for the extractor - use full path
+CMD ["python3", "/app/app/workers/railway_extractor.py"]
