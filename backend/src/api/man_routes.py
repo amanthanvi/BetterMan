@@ -75,8 +75,8 @@ async def search_man_pages(
                                'MaxWords=50, MinWords=20') AS snippet
                 FROM man_pages
                 WHERE search_vector @@ plainto_tsquery('english', :query)
-                    AND (:category IS NULL OR category = :category)
-                    AND (:section IS NULL OR section = :section)
+                    AND (:category::text IS NULL OR category = :category)
+                    AND (:section::text IS NULL OR section = :section)
             )
             SELECT *, COUNT(*) OVER() AS total_count
             FROM search_results
@@ -280,14 +280,24 @@ async def get_categories(db: Session = Depends(get_db)) -> List[CategoryInfo]:
         
         # Query categories with statistics
         category_sql = """
+            WITH ranked_commands AS (
+                SELECT 
+                    category,
+                    name,
+                    view_count,
+                    ROW_NUMBER() OVER (PARTITION BY category ORDER BY view_count DESC) as rn
+                FROM man_pages
+                WHERE category IS NOT NULL
+            )
             SELECT 
                 category as name,
                 category as slug,
-                COUNT(*) as command_count,
-                ARRAY_AGG(name ORDER BY view_count DESC LIMIT 5) as popular_commands
-            FROM man_pages
-            WHERE category IS NOT NULL
-            GROUP BY category
+                COUNT(DISTINCT m.name) as command_count,
+                ARRAY_AGG(rc.name ORDER BY rc.view_count DESC) as popular_commands
+            FROM man_pages m
+            LEFT JOIN ranked_commands rc ON m.category = rc.category AND rc.rn <= 5
+            WHERE m.category IS NOT NULL
+            GROUP BY m.category
             ORDER BY command_count DESC
         """
         
