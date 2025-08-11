@@ -705,7 +705,7 @@ class ManPageExtractor:
                     INSERT INTO cache_metadata (
                         id, cache_key, cache_type, data, created_at
                     ) VALUES (
-                        uuid_generate_v4(), :cache_key, :cache_type, :data\:\:jsonb, NOW()
+                        gen_random_uuid(), :cache_key, :cache_type, :data\:\:jsonb, NOW()
                     )
                     ON CONFLICT (cache_key) DO UPDATE
                     SET data = :data\:\:jsonb, created_at = NOW()

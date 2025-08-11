@@ -17,14 +17,14 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create UUID extension
-    op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+    # Create extensions (gen_random_uuid() is built-in since PostgreSQL 13)
+    # op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')  # Not needed with gen_random_uuid()
     op.execute('CREATE EXTENSION IF NOT EXISTS pg_trgm')
     op.execute('CREATE EXTENSION IF NOT EXISTS btree_gin')
     
     # Create categories table
     op.create_table('categories',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('uuid_generate_v4()')),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('gen_random_uuid()')),
         sa.Column('name', sa.String(length=100), nullable=False),
         sa.Column('slug', sa.String(length=100), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
@@ -48,7 +48,7 @@ def upgrade() -> None:
     
     # Create man_pages table
     op.create_table('man_pages',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('uuid_generate_v4()')),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('gen_random_uuid()')),
         sa.Column('name', sa.String(length=255), nullable=False),
         sa.Column('section', sa.String(length=10), nullable=False),
         sa.Column('title', sa.Text(), nullable=True),
@@ -78,7 +78,7 @@ def upgrade() -> None:
     
     # Create search_history table
     op.create_table('search_history',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('uuid_generate_v4()')),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('gen_random_uuid()')),
         sa.Column('query', sa.String(length=500), nullable=False),
         sa.Column('normalized_query', sa.String(length=500), nullable=True),
         sa.Column('search_type', sa.String(length=50), nullable=True),
@@ -99,7 +99,7 @@ def upgrade() -> None:
     
     # Create cache_metadata table
     op.create_table('cache_metadata',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('uuid_generate_v4()')),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('gen_random_uuid()')),
         sa.Column('cache_key', sa.String(length=500), nullable=False),
         sa.Column('cache_type', sa.String(length=50), nullable=False),
         sa.Column('data', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -120,7 +120,7 @@ def upgrade() -> None:
     
     # Create popular_commands table
     op.create_table('popular_commands',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('uuid_generate_v4()')),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('gen_random_uuid()')),
         sa.Column('man_page_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('period', sa.String(length=20), nullable=False),
         sa.Column('rank', sa.Integer(), nullable=False),
@@ -138,7 +138,7 @@ def upgrade() -> None:
     
     # Create user_preferences table
     op.create_table('user_preferences',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('uuid_generate_v4()')),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, default=sa.text('gen_random_uuid()')),
         sa.Column('user_id', sa.String(length=100), nullable=False),
         sa.Column('preferences', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column('frequent_commands', postgresql.ARRAY(sa.String()), nullable=True),
