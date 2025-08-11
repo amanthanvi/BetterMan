@@ -450,15 +450,15 @@ class ManPageExtractor:
                             'is_common': page['name'] in ['ls', 'cd', 'grep', 'find', 'cat', 'echo', 'rm', 'cp', 'mv', 'mkdir']
                         }
                         
-                        # Use INSERT ... ON CONFLICT UPDATE
+                        # Use INSERT ... ON CONFLICT UPDATE with proper casting
                         stmt = text("""
                             INSERT INTO man_pages (
                                 id, name, section, title, description, synopsis,
                                 content, category, meta_data, is_common,
                                 created_at, updated_at
                             ) VALUES (
-                                :id::uuid, :name, :section, :title, :description, :synopsis,
-                                :content::jsonb, :category, :meta_data::jsonb, :is_common,
+                                CAST(:id AS uuid), :name, :section, :title, :description, :synopsis,
+                                CAST(:content AS jsonb), :category, CAST(:meta_data AS jsonb), :is_common,
                                 NOW(), NOW()
                             )
                             ON CONFLICT (name, section) 

@@ -33,17 +33,28 @@ def install_system_packages():
         'man-db',
         'manpages',
         'manpages-dev',
-        'manpages-posix',  # May not be available in all distros
-        'manpages-posix-dev',  # May not be available
-        'coreutils',
-        'util-linux',
-        'procps',
-        'net-tools',
-        'iproute2',
-        'build-essential',
-        'git',
-        'docker.io',
-        'kubectl'
+        # Ubuntu 24.04 packages that contain man pages
+        'coreutils',  # ls, cp, mv, rm, etc.
+        'util-linux',  # mount, fdisk, etc.
+        'procps',  # ps, top, kill, etc.
+        'net-tools',  # netstat, ifconfig, etc.
+        'iproute2',  # ip, ss, etc.
+        'findutils',  # find, xargs, etc.
+        'grep',  # grep, egrep, fgrep
+        'sed',  # sed
+        'gawk',  # awk
+        'diffutils',  # diff, cmp, etc.
+        'tar',  # tar
+        'gzip',  # gzip, gunzip
+        'bzip2',  # bzip2, bunzip2
+        'xz-utils',  # xz compression
+        'curl',  # curl
+        'wget',  # wget
+        'openssh-client',  # ssh, scp, sftp
+        'git',  # git
+        'vim',  # vim
+        'nano',  # nano
+        'less',  # less, more
     ]
     
     try:
@@ -61,6 +72,11 @@ def install_system_packages():
             logger.warning(f"Some packages may have failed to install: {result.stderr}")
         else:
             logger.info("System packages installed successfully")
+            
+        # Update man database after installing packages
+        logger.info("Updating man database...")
+        subprocess.run(['mandb'], capture_output=True, text=True)
+        logger.info("Man database updated")
             
     except subprocess.CalledProcessError as e:
         logger.error(f"Failed to install packages: {e}")
@@ -86,9 +102,12 @@ async def main():
     # Get Redis URL (optional)
     redis_url = os.environ.get('REDIS_URL')
     
-    # Install system packages if needed
-    logger.info("Installing system packages...")
-    install_system_packages()
+    # Install system packages if enabled
+    if os.environ.get('INSTALL_PACKAGES', 'false').lower() == 'true':
+        logger.info("Installing system packages...")
+        install_system_packages()
+    else:
+        logger.info("Skipping package installation (INSTALL_PACKAGES != true)")
     
     # Determine extraction mode
     extraction_mode = os.environ.get('EXTRACTION_MODE', 'incremental')
