@@ -548,7 +548,7 @@ class ManPageExtractor:
                         
                         # Update existing page (escape :: for SQLAlchemy text())
                         session.execute(
-                            text("""
+                            text(r"""
                                 UPDATE man_pages 
                                 SET title = :title,
                                     description = :description,
@@ -580,7 +580,7 @@ class ManPageExtractor:
                         from sqlalchemy.dialects.postgresql import ARRAY
                         from sqlalchemy import cast
                         session.execute(
-                            text("""
+                            text(r"""
                                 INSERT INTO man_pages (
                                     id, name, section, title, description, synopsis,
                                     content, category, related_commands, meta_data,
@@ -701,7 +701,7 @@ class ManPageExtractor:
         session = self.SessionLocal()
         try:
             session.execute(
-                text("""
+                text(r"""
                     INSERT INTO cache_metadata (
                         id, cache_key, cache_type, data, created_at
                     ) VALUES (
