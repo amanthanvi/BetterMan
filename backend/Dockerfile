@@ -1,4 +1,5 @@
 # Backend Dockerfile for production
+# Force rebuild: 2025-08-11-v2
 
 FROM python:3.12.8-slim
 
@@ -16,8 +17,9 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies (no cache)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
