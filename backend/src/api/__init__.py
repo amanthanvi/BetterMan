@@ -10,6 +10,7 @@ from .error_routes import router as error_router
 from .terminal_routes import router as terminal_router
 from .personalization_routes import router as personalization_router
 from .admin_routes import router as admin_router
+from .man_routes import router as man_router  # New man pages router
 
 # Create a main API router that includes all other routers
 api_router = APIRouter()
@@ -17,6 +18,7 @@ api_router = APIRouter()
 # Include all routers
 api_router.include_router(main_router, tags=["documents"])
 api_router.include_router(search_router, prefix="/search", tags=["search"])
+api_router.include_router(man_router, tags=["man-pages"])  # Add man pages routes
 api_router.include_router(proxy_router, tags=["proxy"])
 api_router.include_router(user_router, tags=["user"])
 api_router.include_router(error_router, tags=["errors"])

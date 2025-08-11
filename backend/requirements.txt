@@ -41,6 +41,7 @@ markdown==3.7
 python-json-logger==3.2.1
 slowapi==0.1.9
 prometheus-client==0.21.1
+prometheus-fastapi-instrumentator==7.0.0
 sentry-sdk[fastapi]==2.19.2
 
 # AI/ML (Optional)
