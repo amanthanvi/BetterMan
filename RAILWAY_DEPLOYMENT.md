@@ -57,11 +57,16 @@ In the extractor service settings:
 
 The extractor needs these environment variables:
 
-1. **Automatic** (inherited from Railway):
+1. **REQUIRED - Add this first**:
+   ```
+   RAILWAY_DOCKERFILE_PATH=Dockerfile.extractor
+   ```
+
+2. **Automatic** (inherited from Railway):
    - `DATABASE_URL` - Should auto-connect to your Postgres
    - `REDIS_URL` - Should auto-connect to your Redis
 
-2. **Manual** (add these):
+3. **Manual** (add these):
    ```
    EXTRACTION_MODE=incremental
    PYTHON_VERSION=3.12
