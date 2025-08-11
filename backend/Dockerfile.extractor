@@ -6,6 +6,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV TZ=UTC
 ENV PYTHONPATH=/app:$PYTHONPATH
+# Enable man pages installation
+ENV MANPATH=/usr/local/man:/usr/local/share/man:/usr/share/man
+
+# Remove Ubuntu's man page minimization
+RUN rm -f /etc/dpkg/dpkg.cfg.d/excludes
 
 # Install Python and system dependencies
 RUN apt-get update && apt-get install -y \
@@ -43,6 +48,32 @@ RUN apt-get update && apt-get install -y \
     # Ensure man pages are installed
     manpages \
     manpages-dev \
+    man-db \
+    && rm -rf /var/lib/apt/lists/*
+
+# Unminimize the system to restore man pages
+RUN yes | unminimize || true
+
+# Reinstall specific packages to get their man pages
+RUN apt-get update && apt-get install -y --reinstall \
+    coreutils \
+    util-linux \
+    grep \
+    sed \
+    gawk \
+    findutils \
+    procps \
+    net-tools \
+    iproute2 \
+    curl \
+    wget \
+    tar \
+    gzip \
+    bzip2 \
+    openssh-client \
+    git \
+    vim \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
 # Generate locale
