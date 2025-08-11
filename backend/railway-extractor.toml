@@ -1,7 +1,0 @@
-[build]
-builder = "DOCKERFILE"
-dockerfilePath = "app/workers/Dockerfile.extractor"
-
-[deploy]
-cronSchedule = "0 3 * * *"
-restartPolicyType = "NEVER"

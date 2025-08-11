@@ -8,5 +8,16 @@
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "extractor": {
+      "build": {
+        "builder": "DOCKERFILE"
+      },
+      "deploy": {
+        "cronSchedule": "0 3 * * *",
+        "restartPolicyType": "NEVER"
+      }
+    }
   }
 }
