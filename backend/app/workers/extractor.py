@@ -527,9 +527,9 @@ class ManPageExtractor:
         try:
             for page_data in pages:
                 try:
-                    # Check if page already exists
+                    # Check if page already exists (using psycopg2 parameter format)
                     existing = session.execute(
-                        text("SELECT id, meta_data FROM man_pages WHERE name = :name AND section = :section"),
+                        text("SELECT id, meta_data FROM man_pages WHERE name = %(name)s AND section = %(section)s"),
                         {"name": page_data['name'], "section": page_data['section']}
                     ).first()
                     
@@ -543,20 +543,20 @@ class ManPageExtractor:
                             self.extraction_stats['skipped'] += 1
                             continue
                         
-                        # Update existing page
+                        # Update existing page (using psycopg2 parameter format)
                         session.execute(
                             text("""
                                 UPDATE man_pages 
-                                SET title = :title,
-                                    description = :description,
-                                    synopsis = :synopsis,
-                                    content = :content::jsonb,
-                                    category = :category,
-                                    related_commands = :related_commands,
-                                    meta_data = :meta_data::jsonb,
-                                    is_common = :is_common,
+                                SET title = %(title)s,
+                                    description = %(description)s,
+                                    synopsis = %(synopsis)s,
+                                    content = %(content)s::jsonb,
+                                    category = %(category)s,
+                                    related_commands = %(related_commands)s,
+                                    meta_data = %(meta_data)s::jsonb,
+                                    is_common = %(is_common)s,
                                     updated_at = NOW()
-                                WHERE name = :name AND section = :section
+                                WHERE name = %(name)s AND section = %(section)s
                             """),
                             {
                                 "name": page_data['name'],
@@ -573,7 +573,7 @@ class ManPageExtractor:
                         )
                         logger.info(f"Updated: {page_data['name']}({page_data['section']})")
                     else:
-                        # Insert new page
+                        # Insert new page (using psycopg2 parameter format)
                         session.execute(
                             text("""
                                 INSERT INTO man_pages (
@@ -581,9 +581,9 @@ class ManPageExtractor:
                                     content, category, related_commands, meta_data,
                                     is_common, view_count, cache_priority, created_at
                                 ) VALUES (
-                                    :id::uuid, :name, :section, :title, :description, :synopsis,
-                                    :content::jsonb, :category, :related_commands, :meta_data::jsonb,
-                                    :is_common, :view_count, :cache_priority, NOW()
+                                    %(id)s::uuid, %(name)s, %(section)s, %(title)s, %(description)s, %(synopsis)s,
+                                    %(content)s::jsonb, %(category)s, %(related_commands)s, %(meta_data)s::jsonb,
+                                    %(is_common)s, %(view_count)s, %(cache_priority)s, NOW()
                                 )
                             """),
                             {
@@ -700,10 +700,10 @@ class ManPageExtractor:
                     INSERT INTO cache_metadata (
                         id, cache_key, cache_type, data, created_at
                     ) VALUES (
-                        uuid_generate_v4(), :cache_key, :cache_type, :data::jsonb, NOW()
+                        uuid_generate_v4(), %(cache_key)s, %(cache_type)s, %(data)s::jsonb, NOW()
                     )
                     ON CONFLICT (cache_key) DO UPDATE
-                    SET data = :data::jsonb, created_at = NOW()
+                    SET data = %(data)s::jsonb, created_at = NOW()
                 """),
                 {
                     "cache_key": "extraction_metadata",
