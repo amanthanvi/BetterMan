@@ -24,6 +24,109 @@ from sqlalchemy.dialects.postgresql import insert
 logger = logging.getLogger(__name__)
 
 
+class ManPageCategory:
+    """Categorization for man pages."""
+    
+    CATEGORIES = {
+        'file_operations': {
+            'keywords': ['ls', 'cp', 'mv', 'rm', 'mkdir', 'touch', 'chmod', 'chown', 'ln', 'find', 'locate', 'tree', 'stat', 'file', 'readlink'],
+            'description': 'File and directory management',
+            'icon': '📁',
+            'color': '#4A90E2'
+        },
+        'text_processing': {
+            'keywords': ['grep', 'sed', 'awk', 'cut', 'sort', 'uniq', 'tr', 'head', 'tail', 'less', 'more', 'cat', 'echo', 'printf', 'wc', 'diff', 'patch'],
+            'description': 'Text manipulation and searching',
+            'icon': '📝',
+            'color': '#F5A623'
+        },
+        'process_management': {
+            'keywords': ['ps', 'top', 'htop', 'kill', 'killall', 'jobs', 'bg', 'fg', 'nice', 'renice', 'nohup', 'pgrep', 'pkill', 'pidof', 'pstree'],
+            'description': 'Process control and monitoring',
+            'icon': '⚙️',
+            'color': '#7ED321'
+        },
+        'network': {
+            'keywords': ['ssh', 'scp', 'rsync', 'curl', 'wget', 'ping', 'traceroute', 'netstat', 'ss', 'nc', 'telnet', 'ftp', 'nslookup', 'dig', 'host', 'ip', 'ifconfig', 'route'],
+            'description': 'Network utilities and communication',
+            'icon': '🌐',
+            'color': '#BD10E0'
+        },
+        'development': {
+            'keywords': ['git', 'gcc', 'make', 'cmake', 'gdb', 'valgrind', 'strace', 'ltrace', 'nm', 'objdump', 'ldd', 'python', 'node', 'npm', 'docker', 'kubectl'],
+            'description': 'Development and debugging tools',
+            'icon': '💻',
+            'color': '#9013FE'
+        },
+        'system_administration': {
+            'keywords': ['systemctl', 'service', 'journalctl', 'mount', 'umount', 'fdisk', 'parted', 'mkfs', 'fsck', 'useradd', 'usermod', 'passwd', 'su', 'sudo', 'cron', 'crontab', 'at'],
+            'description': 'System administration and configuration',
+            'icon': '🔧',
+            'color': '#D0021B'
+        },
+        'package_management': {
+            'keywords': ['apt', 'dpkg', 'yum', 'rpm', 'snap', 'flatpak', 'pip', 'npm', 'composer', 'cargo', 'gem'],
+            'description': 'Package and software management',
+            'icon': '📦',
+            'color': '#50E3C2'
+        },
+        'shell': {
+            'keywords': ['bash', 'sh', 'zsh', 'fish', 'export', 'alias', 'source', 'eval', 'set', 'unset', 'env', 'which', 'type', 'history', 'fc'],
+            'description': 'Shell commands and scripting',
+            'icon': '🖥️',
+            'color': '#4A4A4A'
+        },
+        'compression': {
+            'keywords': ['tar', 'gzip', 'gunzip', 'zip', 'unzip', 'bzip2', 'bunzip2', 'xz', 'unxz', '7z', 'rar', 'unrar'],
+            'description': 'File compression and archiving',
+            'icon': '🗜️',
+            'color': '#F8E71C'
+        }
+    }
+    
+    @classmethod
+    def categorize(cls, command_name: str) -> str:
+        """
+        Categorize a command based on its name.
+        
+        Args:
+            command_name: Name of the command
+            
+        Returns:
+            Category name or 'miscellaneous'
+        """
+        command_lower = command_name.lower()
+        
+        for category, info in cls.CATEGORIES.items():
+            if command_lower in [k.lower() for k in info['keywords']]:
+                return category
+        
+        # Try prefix matching for common patterns
+        if command_lower.startswith('git'):
+            return 'development'
+        elif command_lower.startswith('docker'):
+            return 'development'
+        elif command_lower.startswith('kubectl') or command_lower.startswith('k8s'):
+            return 'development'
+        elif command_lower.startswith('npm') or command_lower.startswith('node'):
+            return 'development'
+        elif command_lower.startswith('python') or command_lower.startswith('pip'):
+            return 'development'
+        elif command_lower.startswith('systemd') or command_lower.startswith('systemctl'):
+            return 'system_administration'
+        
+        return 'miscellaneous'
+    
+    @classmethod
+    def get_category_info(cls, category: str) -> Dict[str, Any]:
+        """Get information about a category."""
+        return cls.CATEGORIES.get(category, {
+            'description': 'Other commands',
+            'icon': '📄',
+            'color': '#B8B8B8'
+        })
+
+
 class ManPageExtractor:
     """Extracts and processes man pages for storage in PostgreSQL."""
     
@@ -102,7 +205,10 @@ class ManPageExtractor:
     
     def _get_category(self, name: str) -> str:
         """Get category for a command."""
-        return self.category_lookup.get(name, 'miscellaneous')
+        # Use ManPageCategory for categorization
+        category = ManPageCategory.categorize(name)
+        # Map underscores to hyphens for consistency with database
+        return category.replace('_', '-')
     
     def _calculate_hash(self, content: str) -> str:
         """Calculate SHA256 hash of content."""
