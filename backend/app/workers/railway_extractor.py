@@ -8,7 +8,7 @@ import os
 import sys
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 import subprocess
 
 # Add parent directory to path for imports
@@ -103,14 +103,14 @@ async def run_extraction():
 
 def main():
     """Main entry point."""
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     logger.info(f"Railway extractor job started at {start_time}")
     
     try:
         # Run the async extraction
         asyncio.run(run_extraction())
         
-        duration = (datetime.utcnow() - start_time).total_seconds()
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.info(f"Job completed in {duration:.2f} seconds")
         
     except KeyboardInterrupt:

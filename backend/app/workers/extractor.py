@@ -11,7 +11,7 @@ import subprocess
 import logging
 import tempfile
 from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 import asyncio
@@ -281,7 +281,7 @@ class ManPageExtractor:
                     'file_path': file_path,
                     'file_size': os.path.getsize(file_path) if file_path and os.path.exists(file_path) else None,
                     'content_hash': content_hash,
-                    'extracted_at': datetime.utcnow().isoformat(),
+                    'extracted_at': datetime.now(timezone.utc).isoformat(),
                     'extractor_version': '1.0.0'
                 },
                 'is_common': self.is_common_command(name),
@@ -631,7 +631,7 @@ class ManPageExtractor:
     
     async def run_extraction(self, incremental: bool = True):
         """Run the complete extraction pipeline."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         logger.info(f"Starting man page extraction (incremental={incremental})")
         
         try:
@@ -680,7 +680,7 @@ class ManPageExtractor:
                 session.close()
             
             # Log statistics
-            duration = (datetime.utcnow() - start_time).total_seconds()
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
             logger.info(f"Extraction completed in {duration:.2f} seconds")
             logger.info(f"Statistics: {json.dumps(self.extraction_stats, indent=2)}")
             
@@ -712,7 +712,7 @@ class ManPageExtractor:
                         "start_time": start_time.isoformat(),
                         "duration_seconds": duration,
                         "stats": self.extraction_stats,
-                        "timestamp": datetime.utcnow().isoformat()
+                        "timestamp": datetime.now(timezone.utc).isoformat()
                     })
                 }
             )

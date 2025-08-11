@@ -8,6 +8,8 @@ if [ "$SERVICE_TYPE" = "extractor" ] || [ "$RUN_EXTRACTOR" = "true" ]; then
     # Install man page packages if needed
     if [ "$INSTALL_PACKAGES" = "true" ]; then
         echo "Installing man page packages..."
+        # Create apt directories if they don't exist
+        mkdir -p /var/lib/apt/lists/partial
         apt-get update -qq && apt-get install -y -qq man-db manpages manpages-dev || true
     fi
     

@@ -25,9 +25,11 @@ COPY . .
 # Make start script executable
 RUN chmod +x start.sh
 
-# Create non-root user
+# Create non-root user but don't switch yet
 RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app
-USER appuser
+
+# Keep running as root for now (Railway will handle security)
+# USER appuser
 
 # Set default port
 ENV PORT=8000
