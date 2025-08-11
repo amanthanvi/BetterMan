@@ -1,5 +1,5 @@
-# Ubuntu 24.04 base image for man page extraction
-FROM ubuntu:24.04
+# Use Debian base image which includes man pages by default
+FROM debian:bookworm
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -9,14 +9,11 @@ ENV PYTHONPATH=/app:$PYTHONPATH
 # Enable man pages installation
 ENV MANPATH=/usr/local/man:/usr/local/share/man:/usr/share/man
 
-# Remove Ubuntu's man page minimization
-RUN rm -f /etc/dpkg/dpkg.cfg.d/excludes
-
 # Install Python and system dependencies
 RUN apt-get update && apt-get install -y \
-    python3.12 \
+    python3 \
     python3-pip \
-    python3.12-venv \
+    python3-venv \
     man-db \
     groff \
     less \
@@ -51,30 +48,6 @@ RUN apt-get update && apt-get install -y \
     man-db \
     && rm -rf /var/lib/apt/lists/*
 
-# Unminimize the system to restore man pages
-RUN yes | unminimize || true
-
-# Reinstall specific packages to get their man pages
-RUN apt-get update && apt-get install -y --reinstall \
-    coreutils \
-    util-linux \
-    grep \
-    sed \
-    gawk \
-    findutils \
-    procps \
-    net-tools \
-    iproute2 \
-    curl \
-    wget \
-    tar \
-    gzip \
-    bzip2 \
-    openssh-client \
-    git \
-    vim \
-    nano \
-    && rm -rf /var/lib/apt/lists/*
 
 # Generate locale
 RUN locale-gen en_US.UTF-8
@@ -98,8 +71,14 @@ COPY . /app/
 # Create directories for man pages
 RUN mkdir -p /usr/share/man /var/cache/man
 
-# Set up man-db
+# Set up man-db and verify man pages
 RUN mandb --create || true
+
+# Verify that man pages are available
+RUN echo "Checking for man pages..." && \
+    ls -la /usr/share/man/man1/ | head -20 || echo "No man1 directory" && \
+    ls -la /usr/share/man/man8/ | head -20 || echo "No man8 directory" && \
+    man -k ls 2>/dev/null | head -5 || echo "No ls man page found"
 
 # Make the extractor script executable
 RUN chmod +x /app/app/workers/railway_extractor.py

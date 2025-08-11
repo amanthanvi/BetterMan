@@ -233,8 +233,11 @@ class ManPageExtractor:
         
         for base_dir in man_dirs:
             if not os.path.exists(base_dir):
+                logger.info(f"Directory does not exist: {base_dir}")
                 continue
-                
+            
+            logger.info(f"Searching in {base_dir}")
+            
             # Look for man sections (man1, man2, etc.)
             for section_dir in Path(base_dir).glob('man*'):
                 if not section_dir.is_dir():
@@ -246,6 +249,9 @@ class ManPageExtractor:
                     continue
                     
                 section = int(section_match.group(1))
+                files_in_section = list(section_dir.glob('*.[0-9]*'))
+                if files_in_section:
+                    logger.info(f"Found {len(files_in_section)} files in section {section}")
                 
                 # Find all man pages in this section
                 for man_file in section_dir.glob('*.[0-9]*'):
