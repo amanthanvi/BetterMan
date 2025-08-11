@@ -546,17 +546,17 @@ class ManPageExtractor:
                             self.extraction_stats['skipped'] += 1
                             continue
                         
-                        # Update existing page
+                        # Update existing page (escape :: for SQLAlchemy text())
                         session.execute(
                             text("""
                                 UPDATE man_pages 
                                 SET title = :title,
                                     description = :description,
                                     synopsis = :synopsis,
-                                    content = :content::jsonb,
+                                    content = :content\:\:jsonb,
                                     category = :category,
-                                    related_commands = :related_commands::text[],
-                                    meta_data = :meta_data::jsonb,
+                                    related_commands = :related_commands\:\:text[],
+                                    meta_data = :meta_data\:\:jsonb,
                                     is_common = :is_common,
                                     updated_at = NOW()
                                 WHERE name = :name AND section = :section
@@ -576,7 +576,7 @@ class ManPageExtractor:
                         )
                         logger.info(f"Updated: {page_data['name']}({page_data['section']})")
                     else:
-                        # Insert new page
+                        # Insert new page (escape :: for SQLAlchemy text())
                         from sqlalchemy.dialects.postgresql import ARRAY
                         from sqlalchemy import cast
                         session.execute(
@@ -586,8 +586,8 @@ class ManPageExtractor:
                                     content, category, related_commands, meta_data,
                                     is_common, view_count, cache_priority, created_at
                                 ) VALUES (
-                                    :id::uuid, :name, :section, :title, :description, :synopsis,
-                                    :content::jsonb, :category, :related_commands::text[], :meta_data::jsonb,
+                                    :id\:\:uuid, :name, :section, :title, :description, :synopsis,
+                                    :content\:\:jsonb, :category, :related_commands\:\:text[], :meta_data\:\:jsonb,
                                     :is_common, :view_count, :cache_priority, NOW()
                                 )
                             """),
@@ -705,10 +705,10 @@ class ManPageExtractor:
                     INSERT INTO cache_metadata (
                         id, cache_key, cache_type, data, created_at
                     ) VALUES (
-                        uuid_generate_v4(), :cache_key, :cache_type, :data::jsonb, NOW()
+                        uuid_generate_v4(), :cache_key, :cache_type, :data\:\:jsonb, NOW()
                     )
                     ON CONFLICT (cache_key) DO UPDATE
-                    SET data = :data::jsonb, created_at = NOW()
+                    SET data = :data\:\:jsonb, created_at = NOW()
                 """),
                 {
                     "cache_key": "extraction_metadata",
