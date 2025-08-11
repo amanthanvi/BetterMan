@@ -10,6 +10,7 @@ import logging
 import subprocess
 import hashlib
 import json
+import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timezone
@@ -408,50 +409,57 @@ class ManPageExtractor:
         with self.Session() as session:
             try:
                 for page in man_pages:
-                    # Prepare the data
+                    # Prepare the data matching the actual schema
+                    # The content field in the schema is JSONB, so we need to structure it properly
+                    content_json = {
+                        'raw': page['content'],
+                        'synopsis': page.get('synopsis'),
+                        'options': json.loads(page.get('options', '[]')),
+                        'examples': json.loads(page.get('examples', '[]')),
+                        'see_also': json.loads(page.get('see_also', '[]')),
+                        'author': page.get('author')
+                    }
+                    
+                    # Prepare meta_data JSONB field
+                    meta_data = {
+                        'parsed_at': datetime.now(timezone.utc).isoformat(),
+                        'content_hash': page['content_hash']
+                    }
+                    
                     data = {
+                        'id': str(uuid.uuid4()),
                         'name': page['name'],
                         'section': page['section'],
                         'title': page.get('title'),
-                        'summary': page.get('summary'),
-                        'synopsis': page.get('synopsis'),
                         'description': page.get('description'),
-                        'options': page.get('options'),
-                        'examples': page.get('examples'),
-                        'see_also': page.get('see_also'),
-                        'author': page.get('author'),
+                        'synopsis': page.get('synopsis'),
+                        'content': json.dumps(content_json),
                         'category': page['category'],
-                        'content': page['content'],
-                        'content_hash': page['content_hash'],
-                        'last_updated': page['last_updated']
+                        'meta_data': json.dumps(meta_data),
+                        'is_common': page['name'] in ['ls', 'cd', 'grep', 'find', 'cat', 'echo', 'rm', 'cp', 'mv', 'mkdir']
                     }
                     
                     # Use INSERT ... ON CONFLICT UPDATE
                     stmt = text("""
                         INSERT INTO man_pages (
-                            name, section, title, summary, synopsis, description,
-                            options, examples, see_also, author, category,
-                            content, content_hash, last_updated
+                            id, name, section, title, description, synopsis,
+                            content, category, meta_data, is_common,
+                            created_at, updated_at
                         ) VALUES (
-                            :name, :section, :title, :summary, :synopsis, :description,
-                            :options::jsonb, :examples::jsonb, :see_also::jsonb, 
-                            :author, :category, :content, :content_hash, :last_updated
+                            :id::uuid, :name, :section, :title, :description, :synopsis,
+                            :content::jsonb, :category, :meta_data::jsonb, :is_common,
+                            NOW(), NOW()
                         )
                         ON CONFLICT (name, section) 
                         DO UPDATE SET
                             title = EXCLUDED.title,
-                            summary = EXCLUDED.summary,
-                            synopsis = EXCLUDED.synopsis,
                             description = EXCLUDED.description,
-                            options = EXCLUDED.options,
-                            examples = EXCLUDED.examples,
-                            see_also = EXCLUDED.see_also,
-                            author = EXCLUDED.author,
-                            category = EXCLUDED.category,
+                            synopsis = EXCLUDED.synopsis,
                             content = EXCLUDED.content,
-                            content_hash = EXCLUDED.content_hash,
-                            last_updated = EXCLUDED.last_updated
-                        WHERE man_pages.content_hash != EXCLUDED.content_hash
+                            category = EXCLUDED.category,
+                            meta_data = EXCLUDED.meta_data,
+                            is_common = EXCLUDED.is_common,
+                            updated_at = NOW()
                     """)
                     
                     result = session.execute(stmt, data)
@@ -521,15 +529,17 @@ class ManPageExtractor:
             man_pages = await self.discover_man_pages()
             stats['total'] = len(man_pages)
             
-            # Get existing hashes if incremental
-            existing_hashes = {}
+            # Get existing pages if incremental
+            existing_pages = set()
             if incremental:
                 with self.Session() as session:
+                    # Only check for existing pages by name and section
+                    # since content_hash doesn't exist in the schema
                     result = session.execute(text(
-                        "SELECT name, section, content_hash FROM man_pages"
+                        "SELECT name, section FROM man_pages"
                     ))
                     for row in result:
-                        existing_hashes[(row.name, str(row.section))] = row.content_hash
+                        existing_pages.add((row.name, str(row.section)))
             
             # Process in batches
             batch_size = 50
@@ -540,16 +550,15 @@ class ManPageExtractor:
                 logger.info(f"Processing batch {i//batch_size + 1}/{(len(man_pages) + batch_size - 1)//batch_size}")
                 
                 for name, section in batch:
-                    # Skip if unchanged (incremental mode)
+                    # Skip if already exists (incremental mode)
                     if incremental:
-                        parsed = self.parse_man_page(name, section)
-                        if parsed:
-                            key = (name, str(section))
-                            if key in existing_hashes and existing_hashes[key] == parsed['content_hash']:
-                                stats['skipped'] += 1
-                                continue
-                    else:
-                        parsed = self.parse_man_page(name, section)
+                        key = (name, str(section))
+                        if key in existing_pages:
+                            stats['skipped'] += 1
+                            continue
+                    
+                    # Parse the man page
+                    parsed = self.parse_man_page(name, section)
                     
                     if parsed:
                         parsed_pages.append(parsed)
@@ -596,15 +605,20 @@ class ManPageExtractor:
                     'statistics': stats
                 }
                 
-                session.execute(text("""
-                    INSERT INTO cache_metadata (cache_key, cache_value, created_at)
-                    VALUES ('extraction_metadata', :metadata::jsonb, NOW())
-                    ON CONFLICT (cache_key) DO UPDATE 
-                    SET cache_value = EXCLUDED.cache_value,
-                        created_at = NOW()
-                """), {'metadata': json.dumps(metadata)})
-                
-                session.commit()
+                # Check if cache_metadata table exists, if not skip saving
+                try:
+                    session.execute(text("""
+                        INSERT INTO cache_metadata (cache_key, cache_value, created_at)
+                        VALUES ('extraction_metadata', :metadata::jsonb, NOW())
+                        ON CONFLICT (cache_key) DO UPDATE 
+                        SET cache_value = EXCLUDED.cache_value,
+                            created_at = NOW()
+                    """), {'metadata': json.dumps(metadata)})
+                    
+                    session.commit()
+                except Exception:
+                    # Table might not exist, log extraction stats instead
+                    logger.info(f"Extraction metadata: {json.dumps(metadata, indent=2)}")
                 
         except Exception as e:
             logger.warning(f"Failed to save metadata: {e}")
