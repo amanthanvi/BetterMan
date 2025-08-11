@@ -306,10 +306,6 @@ class ManPageExtractor:
             title_match = re.search(r'^NAME\s*\n\s*(.+?)(?:\n|$)', content, re.MULTILINE)
             if title_match:
                 parsed['title'] = title_match.group(1).strip()
-                # Extract summary from title line (after - or :)
-                summary_match = re.match(r'^[\w\-,\s]+\s*[-:]\s*(.+)$', parsed['title'])
-                if summary_match:
-                    parsed['summary'] = summary_match.group(1).strip()
             
             # Extract synopsis
             synopsis_match = re.search(
@@ -432,12 +428,21 @@ class ManPageExtractor:
                             'content_hash': page['content_hash']
                         }
                         
+                        # Truncate fields to fit database column limits
+                        title = page.get('title', '')
+                        if title and len(title) > 255:
+                            title = title[:252] + '...'
+                        
+                        description = page.get('description', '')
+                        if description and len(description) > 5000:
+                            description = description[:4997] + '...'
+                        
                         data = {
                             'id': str(uuid.uuid4()),
-                            'name': page['name'],
-                            'section': page['section'],
-                            'title': page.get('title'),
-                            'description': page.get('description'),
+                            'name': page['name'][:255] if page['name'] else '',
+                            'section': page['section'][:10] if page['section'] else '',
+                            'title': title,
+                            'description': description,
                             'synopsis': page.get('synopsis'),
                             'content': json.dumps(content_json),
                             'category': page['category'],
@@ -491,17 +496,18 @@ class ManPageExtractor:
         with self.Session() as session:
             try:
                 # Update search vectors for all pages
+                # Using updated_at column which exists in the schema
                 session.execute(text("""
                     UPDATE man_pages 
                     SET search_vector = to_tsvector('english',
                         coalesce(name, '') || ' ' ||
                         coalesce(title, '') || ' ' ||
-                        coalesce(summary, '') || ' ' ||
-                        coalesce(description, '')
+                        coalesce(description, '') || ' ' ||
+                        coalesce(synopsis, '')
                     )
                     WHERE search_vector IS NULL 
-                       OR last_updated > COALESCE(
-                           (SELECT MAX(last_updated) FROM man_pages WHERE search_vector IS NOT NULL),
+                       OR updated_at > COALESCE(
+                           (SELECT MAX(updated_at) FROM man_pages WHERE search_vector IS NOT NULL),
                            '1900-01-01'::timestamp
                        )
                 """))
