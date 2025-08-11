@@ -19,6 +19,16 @@ RUN apt-get update && apt-get install -y \
     locales \
     ca-certificates \
     postgresql-client \
+    coreutils \
+    util-linux \
+    procps \
+    net-tools \
+    iproute2 \
+    findutils \
+    grep \
+    sed \
+    gawk \
+    diffutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Generate locale
