@@ -42,4 +42,4 @@ RUN mkdir -p /usr/share/man /var/cache/man
 RUN mandb --create
 
 # Entry point for the extractor
-CMD ["python3", "-m", "workers.extractor"]
+CMD ["python3", "/app/workers/railway_extractor.py"]
