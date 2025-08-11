@@ -56,9 +56,9 @@ async def search_man_pages(
         cache_manager = get_cache_manager(db)
         cache_key = f"search:{q}:{category}:{section}:{limit}:{offset}"
         
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cached = cache_manager.redis_client.get(cache_key)
+                cached = cache_manager.redis_cache.get(cache_key)
                 if cached:
                     logger.info(f"Cache hit for search: {q}")
                     return json.loads(cached)
@@ -127,13 +127,9 @@ async def search_man_pages(
         }
         
         # Cache the results (5 minute TTL)
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cache_manager.redis_client.setex(
-                    cache_key,
-                    300,
-                    json.dumps(response)
-                )
+                cache_manager.redis_cache.set(cache_key, json.dumps(response), expire=300)
             except Exception as e:
                 logger.warning(f"Failed to cache results: {e}")
         
@@ -170,9 +166,9 @@ async def get_command(
         cache_manager = get_cache_manager(db)
         cache_key = f"command:{name}:{section}"
         
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cached = cache_manager.redis_client.get(cache_key)
+                cached = cache_manager.redis_cache.get(cache_key)
                 if cached:
                     logger.info(f"Cache hit for command: {name}({section})")
                     return ManPageDetail(**json.loads(cached))
@@ -199,13 +195,9 @@ async def get_command(
         response = man_page.to_dict()
         
         # Cache the result (1 hour TTL)
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cache_manager.redis_client.setex(
-                    cache_key,
-                    3600,
-                    json.dumps(response)
-                )
+                cache_manager.redis_cache.set(cache_key, json.dumps(response), expire=3600)
             except Exception as e:
                 logger.warning(f"Failed to cache command: {e}")
         
@@ -277,9 +269,9 @@ async def get_categories(db: Session = Depends(get_db)) -> List[CategoryInfo]:
         cache_manager = get_cache_manager(db)
         cache_key = "categories:all"
         
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cached = cache_manager.redis_client.get(cache_key)
+                cached = cache_manager.redis_cache.get(cache_key)
                 if cached:
                     logger.info("Cache hit for categories")
                     return [CategoryInfo(**cat) for cat in json.loads(cached)]
@@ -327,13 +319,9 @@ async def get_categories(db: Session = Depends(get_db)) -> List[CategoryInfo]:
             })
         
         # Cache the results (2 hour TTL)
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cache_manager.redis_client.setex(
-                    cache_key,
-                    7200,
-                    json.dumps(categories)
-                )
+                cache_manager.redis_cache.set(cache_key, json.dumps(categories), expire=7200)
             except Exception as e:
                 logger.warning(f"Failed to cache categories: {e}")
         
@@ -356,9 +344,9 @@ async def get_popular_commands(
         cache_manager = get_cache_manager(db)
         cache_key = f"popular:{period}:{limit}"
         
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cached = cache_manager.redis_client.get(cache_key)
+                cached = cache_manager.redis_cache.get(cache_key)
                 if cached:
                     logger.info(f"Cache hit for popular commands: {period}")
                     return [PopularCommand(**cmd) for cmd in json.loads(cached)]
@@ -416,13 +404,9 @@ async def get_popular_commands(
             })
         
         # Cache the results (30 minute TTL)
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cache_manager.redis_client.setex(
-                    cache_key,
-                    1800,
-                    json.dumps(commands)
-                )
+                cache_manager.redis_cache.set(cache_key, json.dumps(commands), expire=1800)
             except Exception as e:
                 logger.warning(f"Failed to cache popular commands: {e}")
         
@@ -445,9 +429,9 @@ async def get_related_commands(
         cache_manager = get_cache_manager(db)
         cache_key = f"related:{name}:{limit}"
         
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cached = cache_manager.redis_client.get(cache_key)
+                cached = cache_manager.redis_cache.get(cache_key)
                 if cached:
                     logger.info(f"Cache hit for related commands: {name}")
                     return [ManPageSummary(**cmd) for cmd in json.loads(cached)]
@@ -515,13 +499,9 @@ async def get_related_commands(
         related = related[:limit]
         
         # Cache the results (1 hour TTL)
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager and hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
             try:
-                cache_manager.redis_client.setex(
-                    cache_key,
-                    3600,
-                    json.dumps(related)
-                )
+                cache_manager.redis_cache.set(cache_key, json.dumps(related), expire=3600)
             except Exception as e:
                 logger.warning(f"Failed to cache related commands: {e}")
         
@@ -546,10 +526,14 @@ async def man_pages_health(db: Session = Depends(get_db)):
         # Check cache
         cache_status = "unavailable"
         cache_manager = get_cache_manager(db)
-        if cache_manager and cache_manager.redis_client:
+        if cache_manager:
             try:
-                cache_manager.redis_client.ping()
-                cache_status = "healthy"
+                # Check for redis_cache attribute (used by existing cache manager)
+                if hasattr(cache_manager, 'redis_cache') and cache_manager.redis_cache:
+                    cache_status = "healthy"
+                elif hasattr(cache_manager, 'redis_client') and cache_manager.redis_client:
+                    cache_manager.redis_client.ping()
+                    cache_status = "healthy"
             except Exception:
                 cache_status = "unhealthy"
         
