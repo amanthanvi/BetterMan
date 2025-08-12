@@ -27,6 +27,44 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def verify_man_ready():
+    """Verify that essential man pages are available before extraction."""
+    import subprocess
+    check_commands = [
+        'ls', 'grep', 'curl', 'git', 'tar', 'ps', 'cat', 
+        'mkdir', 'cp', 'mv', 'rm', 'find', 'sed', 'awk'
+    ]
+    missing = []
+    
+    for cmd in check_commands:
+        result = subprocess.run(
+            ['man', '-w', cmd], 
+            capture_output=True, 
+            text=True
+        )
+        if result.returncode != 0:
+            missing.append(cmd)
+        else:
+            logger.info(f"✓ Found man page for {cmd}: {result.stdout.strip()}")
+    
+    if missing:
+        logger.error(f"Missing man pages for: {', '.join(missing)}")
+        raise RuntimeError(f"Missing essential man pages: {', '.join(missing)}")
+    
+    # Count total man pages
+    result = subprocess.run(
+        ['find', '/usr/share/man', '-type', 'f', '-name', '*.gz'],
+        capture_output=True,
+        text=True
+    )
+    total = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
+    logger.info(f"Total man pages available: {total}")
+    
+    if total < 1000:
+        logger.warning(f"Only {total} man pages found, expected 1500+")
+    
+    return True
+
 def install_system_packages():
     """Install required system packages for man page extraction."""
     packages = [
@@ -117,9 +155,15 @@ async def main():
     # Get Redis URL (optional)
     redis_url = os.environ.get('REDIS_URL')
     
-    # Always install system packages in the container
-    logger.info("Installing system packages...")
-    install_system_packages()
+    # Verify man pages are available (packages are installed in Dockerfile now)
+    logger.info("Verifying man pages are available...")
+    try:
+        verify_man_ready()
+        logger.info("Man pages verification successful")
+    except RuntimeError as e:
+        logger.error(f"Man pages verification failed: {e}")
+        # Don't fail completely, try to continue with what we have
+        logger.warning("Continuing with extraction despite verification failure...")
     
     # Determine extraction mode
     extraction_mode = os.environ.get('EXTRACTION_MODE', 'incremental')

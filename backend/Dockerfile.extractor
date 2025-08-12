@@ -1,108 +1,71 @@
-# Use Ubuntu 24.04 LTS for latest man page support
+# backend/Dockerfile.extractor
 FROM ubuntu:24.04
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
-ENV TZ=UTC
-ENV PYTHONPATH=/app:$PYTHONPATH
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
 
-# Step 1: Unminimize Ubuntu to restore all man pages and documentation
-# This is the key step that restores man pages
-RUN yes | unminimize
+# --- Re-enable documentation/man pages BEFORE any installs ---
+# Ubuntu/Debian docker images exclude docs to save space.
+# Remove/neutralize those rules and explicitly include man directories.
+RUN set -eux; \
+    for f in /etc/dpkg/dpkg.cfg.d/*; do \
+      sed -i '/^path-exclude=\/usr\/share\/\(man\|doc\|groff\|info\)\//d' "$f" || true; \
+    done; \
+    printf "path-include=/usr/share/man/*\npath-include=/usr/share/doc/*\npath-include=/usr/share/groff/*\npath-include=/usr/share/info/*\n" \
+      > /etc/dpkg/dpkg.cfg.d/99-include-docs
 
-# Step 2: Install Python and essential tools
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-venv \
-    postgresql-client \
-    locales \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Locales (prevents man warnings/truncation in some environments)
+RUN apt-get update && apt-get install -y --no-install-recommends locales \
+ && sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen \
+ && locale-gen
 
-# Step 3: Install man page packages
-RUN apt-get update && apt-get install -y \
-    man-db \
-    manpages \
-    manpages-dev \
-    manpages-posix \
-    manpages-posix-dev \
-    && rm -rf /var/lib/apt/lists/*
+# System packages + man tooling + (re)install core utils so manpages are present
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl git wget \
+      man-db groff-base less gzip bzip2 xz-utils \
+      manpages manpages-dev manpages-posix manpages-posix-dev \
+      python3 python3-pip postgresql-client \
+ && apt-get install -y --no-install-recommends --reinstall \
+      coreutils findutils diffutils grep sed gawk tar util-linux procps \
+      net-tools iproute2 openssh-client vim nano rsync \
+ && mandb -q \
+ && rm -rf /var/lib/apt/lists/*
 
-# Step 4: Install common command packages to ensure their man pages are available
-RUN apt-get update && apt-get install -y \
-    coreutils \
-    util-linux \
-    procps \
-    findutils \
-    diffutils \
-    grep \
-    sed \
-    gawk \
-    net-tools \
-    iproute2 \
-    curl \
-    wget \
-    openssh-client \
-    tar \
-    gzip \
-    bzip2 \
-    xz-utils \
-    zip \
-    unzip \
-    git \
-    vim \
-    nano \
-    less \
-    bash \
-    rsync \
-    && rm -rf /var/lib/apt/lists/*
-
-# Step 5: Rebuild man database
-RUN mandb --create
-
-# Generate locale
-RUN locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8
-ENV LANGUAGE=en_US:en
-ENV LC_ALL=en_US.UTF-8
-
-# Create working directory
 WORKDIR /app
 
-# Copy Python requirements
-COPY requirements-extractor.txt .
-RUN pip3 install --no-cache-dir -r requirements-extractor.txt
+# Python deps first (better cache behavior)
+# Use --break-system-packages for Ubuntu 24.04 (PEP 668)
+COPY backend/requirements-extractor.txt /tmp/requirements.txt
+RUN pip3 install --break-system-packages --no-cache-dir -r /tmp/requirements.txt
+RUN pip3 install --break-system-packages --no-cache-dir python-dotenv
 
-# Install python-dotenv
-RUN pip3 install python-dotenv
+# App code
+COPY backend/ /app/
 
-# Copy the extraction application
-COPY . /app/
-
-# Create directories for man pages
-RUN mkdir -p /usr/share/man /var/cache/man
-
-# Verify man pages installation (this will show in build logs)
-RUN echo "=== Man Pages Verification ===" && \
-    echo "Total man pages: $(find /usr/share/man -name '*.gz' | wc -l)" && \
-    echo "Sample commands with man pages:" && \
-    for cmd in ls grep curl git tar ps cat mkdir rm cp mv find sed awk; do \
-        if man -w $cmd >/dev/null 2>&1; then \
-            echo "  ✓ $cmd: $(man -w $cmd)"; \
-        else \
-            echo "  ✗ $cmd: NOT FOUND"; \
-        fi; \
-    done && \
-    echo "Man page sections:" && \
+# Build-time sanity checks: verify some core man pages actually exist
+RUN set -eux; \
+    echo "=== Man Pages Verification ==="; \
+    for c in ls grep curl git tar ps cat mkdir cp mv rm find sed awk; do \
+      if man -w "$c" >/dev/null 2>&1; then \
+        echo "✓ $c: $(man -w $c)"; \
+      else \
+        echo "✗ $c: NOT FOUND" && exit 1; \
+      fi; \
+    done; \
+    echo ""; \
+    echo "Total man pages available: $(find /usr/share/man -type f -name '*.gz' | wc -l)"; \
+    echo "Section breakdown:"; \
     for i in 1 2 3 4 5 6 7 8; do \
-        count=$(find /usr/share/man -name "*.${i}.gz" 2>/dev/null | wc -l); \
-        [ $count -gt 0 ] && echo "  Section $i: $count pages"; \
+      count=$(find /usr/share/man/man$i -type f -name "*.gz" 2>/dev/null | wc -l || echo 0); \
+      [ $count -gt 0 ] && echo "  Section $i: $count pages"; \
     done
 
-# Make the extractor script executable
+# Make extractor executable
 RUN chmod +x /app/app/workers/railway_extractor.py
 
-# Entry point for the extractor
+# Run the Railway wrapper
 CMD ["python3", "/app/app/workers/railway_extractor.py"]

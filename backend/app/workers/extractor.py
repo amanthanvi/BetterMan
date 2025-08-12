@@ -228,11 +228,11 @@ class ManPageExtractor:
         man_dirs = [
             '/usr/share/man',
             '/usr/local/share/man',
-            '/usr/local/man',
-            '/usr/man',
-            '/opt/man',
-            '/snap/man'
+            '/usr/local/man'
         ]
+        
+        # All possible man sections including subsections
+        sections = ['1', '2', '3', '4', '5', '6', '7', '8', 'n', 'l']
         
         for base_dir in man_dirs:
             if not os.path.exists(base_dir):
@@ -242,34 +242,55 @@ class ManPageExtractor:
             logger.info(f"Searching in {base_dir}")
             
             # Look for man sections (man1, man2, etc.)
-            for section_dir in Path(base_dir).glob('man*'):
+            for section in sections:
+                section_dir = Path(base_dir) / f'man{section}'
                 if not section_dir.is_dir():
                     continue
-                    
-                # Extract section number
-                section_match = re.match(r'man(\d+)', section_dir.name)
-                if not section_match:
-                    continue
-                    
-                section = int(section_match.group(1))
-                files_in_section = list(section_dir.glob('*.[0-9]*'))
-                if files_in_section:
-                    logger.info(f"Found {len(files_in_section)} files in section {section}")
                 
-                # Find all man pages in this section
-                for man_file in section_dir.glob('*.[0-9]*'):
-                    # Extract command name (remove .gz and section)
-                    name = man_file.stem
-                    if name.endswith(f'.{section}'):
-                        name = name[:-2]
+                # Find all man pages in this section (handle .gz and uncompressed)
+                patterns = [f'*.{section}', f'*.{section}.gz', f'*.{section}*']
+                files_found = []
+                for pattern in patterns:
+                    files_found.extend(section_dir.glob(pattern))
+                
+                if files_found:
+                    logger.info(f"Found {len(files_found)} files in section {section}")
+                
+                for man_file in files_found:
+                    # Extract command name properly
+                    name = man_file.name
                     
-                    man_pages.append((name, section))
+                    # Remove .gz extension if present
+                    if name.endswith('.gz'):
+                        name = name[:-3]
+                    
+                    # Extract the base name and section
+                    # Handle cases like: ls.1, git-log.1, python3.12.1
+                    match = re.match(r'^(.+?)\.(\d+\w*)$', name)
+                    if match:
+                        cmd_name = match.group(1)
+                        file_section = match.group(2)
+                        
+                        # Use the section from the filename if it's more specific
+                        if file_section.startswith(section):
+                            man_pages.append((cmd_name, file_section))
+                        else:
+                            man_pages.append((cmd_name, section))
         
         # Remove duplicates and sort
         man_pages = list(set(man_pages))
         man_pages.sort(key=lambda x: (x[0], x[1]))
         
-        logger.info(f"Discovered {len(man_pages)} man pages")
+        logger.info(f"Discovered {len(man_pages)} unique man pages")
+        
+        # Log sample of what we found
+        if man_pages:
+            common_cmds = ['ls', 'grep', 'curl', 'git', 'tar']
+            found_common = [f"{name}({sec})" for name, sec in man_pages 
+                          if name in common_cmds]
+            if found_common:
+                logger.info(f"Found common commands: {', '.join(found_common)}")
+        
         return man_pages
     
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
@@ -285,20 +306,51 @@ class ManPageExtractor:
             Parsed man page data or None if failed
         """
         try:
-            # Get raw man page content
+            # First try to read the man page directly using man command
+            # Use MANWIDTH=1000 to avoid wrapping, and pipe through col -bx to remove backspaces
+            cmd = f"MANWIDTH=1000 man {section} {name} 2>/dev/null | col -bx"
             result = subprocess.run(
-                ['man', str(section), name],
+                ['bash', '-c', cmd],
                 capture_output=True,
                 text=True,
                 timeout=10,
-                env={**os.environ, 'MANWIDTH': '80', 'LANG': 'C'}
+                env={**os.environ, 'LANG': 'en_US.UTF-8'}
             )
             
-            if result.returncode != 0:
-                return None
-            
             content = result.stdout
-            if not content:
+            
+            # If man command returns minimized message or empty, try reading file directly
+            if not content or "This system has been minimized" in content or result.returncode != 0:
+                # Try to find and read the man page file directly
+                man_file_paths = [
+                    f"/usr/share/man/man{section}/{name}.{section}.gz",
+                    f"/usr/share/man/man{section}/{name}.{section}",
+                    f"/usr/local/share/man/man{section}/{name}.{section}.gz",
+                    f"/usr/local/share/man/man{section}/{name}.{section}"
+                ]
+                
+                for man_path in man_file_paths:
+                    if os.path.exists(man_path):
+                        if man_path.endswith('.gz'):
+                            # Read compressed file
+                            cmd = f"zcat {man_path} | MANWIDTH=1000 man -l - 2>/dev/null | col -bx"
+                        else:
+                            # Read uncompressed file
+                            cmd = f"MANWIDTH=1000 man -l {man_path} 2>/dev/null | col -bx"
+                        
+                        result = subprocess.run(
+                            ['bash', '-c', cmd],
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                            env={**os.environ, 'LANG': 'en_US.UTF-8'}
+                        )
+                        
+                        if result.stdout and "This system has been minimized" not in result.stdout:
+                            content = result.stdout
+                            break
+            
+            if not content or "This system has been minimized" in content:
                 return None
             
             # Parse sections
