@@ -12,7 +12,8 @@
   "environments": {
     "extractor": {
       "build": {
-        "builder": "DOCKERFILE"
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "Dockerfile.extractor"
       },
       "deploy": {
         "cronSchedule": "0 3 * * *",
