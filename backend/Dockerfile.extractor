@@ -1,5 +1,5 @@
-# Use Debian base image which includes man pages by default
-FROM debian:bookworm
+# Use Ubuntu base image for better man page support
+FROM ubuntu:22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,6 +8,9 @@ ENV TZ=UTC
 ENV PYTHONPATH=/app:$PYTHONPATH
 # Enable man pages installation
 ENV MANPATH=/usr/local/man:/usr/local/share/man:/usr/share/man
+
+# Remove Ubuntu's minimization that strips man pages
+RUN yes | unminimize || true
 
 # Install Python and basic system dependencies
 RUN apt-get update && apt-get install -y \
@@ -24,11 +27,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install man page packages directly in the Dockerfile
-RUN apt-get update && apt-get install -y \
+# Install all packages first, then rebuild man database
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     manpages \
     manpages-dev \
     manpages-posix \
     manpages-posix-dev \
+    man-db \
+    && apt-get install -y \
     coreutils \
     util-linux \
     procps \
@@ -51,7 +58,8 @@ RUN apt-get update && apt-get install -y \
     nano \
     less \
     bash \
-    dash \
+    bash-doc \
+    && mandb --create \
     && rm -rf /var/lib/apt/lists/*
 
 
@@ -73,6 +81,10 @@ RUN pip3 install python-dotenv
 
 # Copy the entire backend app structure (needed for imports)
 COPY . /app/
+
+# Run debug script to check man pages
+COPY debug-man-pages.sh /tmp/debug-man-pages.sh
+RUN chmod +x /tmp/debug-man-pages.sh && /tmp/debug-man-pages.sh || true
 
 # Create directories for man pages
 RUN mkdir -p /usr/share/man /var/cache/man
