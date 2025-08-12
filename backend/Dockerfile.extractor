@@ -1,12 +1,17 @@
 # backend/Dockerfile.extractor
+# Version: 2.0 - Fixed man page extraction with dpkg exclusion removal
 FROM ubuntu:24.04
+
+# Force rebuild with timestamp
+ARG REBUILD_TIMESTAMP=1734023400
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
     LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    BUILD_VERSION="2.0-dpkg-fix"
 
 # --- Re-enable documentation/man pages BEFORE any installs ---
 # Ubuntu/Debian docker images exclude docs to save space.
@@ -48,6 +53,7 @@ COPY backend/ /app/
 
 # Build-time sanity checks: verify some core man pages actually exist
 RUN set -eux; \
+    echo "=== Build Version: ${BUILD_VERSION} ==="; \
     echo "=== Man Pages Verification ==="; \
     for c in ls grep curl git tar ps cat mkdir cp mv rm find sed awk; do \
       if man -w "$c" >/dev/null 2>&1; then \
