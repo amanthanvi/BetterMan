@@ -77,6 +77,21 @@ def install_system_packages():
         logger.info("Updating man database...")
         subprocess.run(['mandb'], capture_output=True, text=True)
         logger.info("Man database updated")
+        
+        # Verify installation - check what man pages are available
+        logger.info("Verifying man page installation...")
+        for cmd in ['ls', 'grep', 'curl', 'git', 'tar', 'ps']:
+            result = subprocess.run(['man', '-w', cmd], capture_output=True, text=True)
+            if result.returncode == 0:
+                logger.info(f"✓ Found man page for {cmd}: {result.stdout.strip()}")
+            else:
+                logger.warning(f"✗ Missing man page for {cmd}")
+                
+        # List sample man1 pages
+        result = subprocess.run(['ls', '/usr/share/man/man1/'], capture_output=True, text=True)
+        if result.returncode == 0:
+            files = result.stdout.split('\n')[:10]  # First 10 files
+            logger.info(f"Sample man1 pages: {', '.join(files)}")
             
     except subprocess.CalledProcessError as e:
         logger.error(f"Failed to install packages: {e}")
@@ -102,12 +117,9 @@ async def main():
     # Get Redis URL (optional)
     redis_url = os.environ.get('REDIS_URL')
     
-    # Install system packages if enabled
-    if os.environ.get('INSTALL_PACKAGES', 'false').lower() == 'true':
-        logger.info("Installing system packages...")
-        install_system_packages()
-    else:
-        logger.info("Skipping package installation (INSTALL_PACKAGES != true)")
+    # Always install system packages in the container
+    logger.info("Installing system packages...")
+    install_system_packages()
     
     # Determine extraction mode
     extraction_mode = os.environ.get('EXTRACTION_MODE', 'incremental')

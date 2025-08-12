@@ -21,14 +21,38 @@ RUN apt-get update && apt-get install -y \
     locales \
     ca-certificates \
     postgresql-client \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and run the man pages installation script
-COPY install-man-pages.sh /tmp/install-man-pages.sh
-RUN chmod +x /tmp/install-man-pages.sh && \
-    /tmp/install-man-pages.sh && \
-    rm /tmp/install-man-pages.sh
+# Install man page packages directly in the Dockerfile
+RUN apt-get update && apt-get install -y \
+    manpages \
+    manpages-dev \
+    manpages-posix \
+    manpages-posix-dev \
+    coreutils \
+    util-linux \
+    procps \
+    net-tools \
+    iproute2 \
+    findutils \
+    grep \
+    sed \
+    gawk \
+    diffutils \
+    tar \
+    gzip \
+    bzip2 \
+    xz-utils \
+    curl \
+    wget \
+    openssh-client \
+    git \
+    vim \
+    nano \
+    less \
+    bash \
+    dash \
+    && rm -rf /var/lib/apt/lists/*
 
 
 # Generate locale

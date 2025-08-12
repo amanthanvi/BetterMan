@@ -228,7 +228,10 @@ class ManPageExtractor:
         man_dirs = [
             '/usr/share/man',
             '/usr/local/share/man',
-            '/usr/local/man'
+            '/usr/local/man',
+            '/usr/man',
+            '/opt/man',
+            '/snap/man'
         ]
         
         for base_dir in man_dirs:
