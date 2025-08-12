@@ -1,67 +1,66 @@
-# Use Ubuntu base image for better man page support
-FROM ubuntu:22.04
+# Use Ubuntu 24.04 LTS for latest man page support
+FROM ubuntu:24.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV TZ=UTC
 ENV PYTHONPATH=/app:$PYTHONPATH
-# Enable man pages installation
-ENV MANPATH=/usr/local/man:/usr/local/share/man:/usr/share/man
 
-# Remove Ubuntu's minimization that strips man pages
-RUN yes | unminimize || true
+# Step 1: Unminimize Ubuntu to restore all man pages and documentation
+# This is the key step that restores man pages
+RUN yes | unminimize
 
-# Install Python and basic system dependencies
+# Step 2: Install Python and essential tools
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
-    man-db \
-    groff \
-    less \
-    gzip \
+    postgresql-client \
     locales \
     ca-certificates \
-    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Install man page packages directly in the Dockerfile
-# Install all packages first, then rebuild man database
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# Step 3: Install man page packages
+RUN apt-get update && apt-get install -y \
+    man-db \
     manpages \
     manpages-dev \
     manpages-posix \
     manpages-posix-dev \
-    man-db \
-    && apt-get install -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Step 4: Install common command packages to ensure their man pages are available
+RUN apt-get update && apt-get install -y \
     coreutils \
     util-linux \
     procps \
-    net-tools \
-    iproute2 \
     findutils \
+    diffutils \
     grep \
     sed \
     gawk \
-    diffutils \
+    net-tools \
+    iproute2 \
+    curl \
+    wget \
+    openssh-client \
     tar \
     gzip \
     bzip2 \
     xz-utils \
-    curl \
-    wget \
-    openssh-client \
+    zip \
+    unzip \
     git \
     vim \
     nano \
     less \
     bash \
-    bash-doc \
-    && mandb --create \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
 
+# Step 5: Rebuild man database
+RUN mandb --create
 
 # Generate locale
 RUN locale-gen en_US.UTF-8
@@ -72,28 +71,38 @@ ENV LC_ALL=en_US.UTF-8
 # Create working directory
 WORKDIR /app
 
-# Copy requirements first for better caching
+# Copy Python requirements
 COPY requirements-extractor.txt .
 RUN pip3 install --no-cache-dir -r requirements-extractor.txt
 
-# Install dotenv for environment variable handling
+# Install python-dotenv
 RUN pip3 install python-dotenv
 
-# Copy the entire backend app structure (needed for imports)
+# Copy the extraction application
 COPY . /app/
-
-# Run debug script to check man pages
-COPY debug-man-pages.sh /tmp/debug-man-pages.sh
-RUN chmod +x /tmp/debug-man-pages.sh && /tmp/debug-man-pages.sh || true
 
 # Create directories for man pages
 RUN mkdir -p /usr/share/man /var/cache/man
 
-# Set up man-db
-RUN mandb --create || true
+# Verify man pages installation (this will show in build logs)
+RUN echo "=== Man Pages Verification ===" && \
+    echo "Total man pages: $(find /usr/share/man -name '*.gz' | wc -l)" && \
+    echo "Sample commands with man pages:" && \
+    for cmd in ls grep curl git tar ps cat mkdir rm cp mv find sed awk; do \
+        if man -w $cmd >/dev/null 2>&1; then \
+            echo "  ✓ $cmd: $(man -w $cmd)"; \
+        else \
+            echo "  ✗ $cmd: NOT FOUND"; \
+        fi; \
+    done && \
+    echo "Man page sections:" && \
+    for i in 1 2 3 4 5 6 7 8; do \
+        count=$(find /usr/share/man -name "*.${i}.gz" 2>/dev/null | wc -l); \
+        [ $count -gt 0 ] && echo "  Section $i: $count pages"; \
+    done
 
 # Make the extractor script executable
 RUN chmod +x /app/app/workers/railway_extractor.py
 
-# Entry point for the extractor - use full path
+# Entry point for the extractor
 CMD ["python3", "/app/app/workers/railway_extractor.py"]
