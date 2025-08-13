@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Use backend search with filters
     const searchData = await backendClient.search(query, { 
       limit,
-      section: section || undefined 
+      ...(section && { section })
     })
 
     // Transform results to enhanced format

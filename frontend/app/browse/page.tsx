@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import { Navigation } from '@/components/layout/navigation';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { Search, Terminal, Command, Book, FileText, Settings, Shield } from 'lucide-react';
-import { backendClient } from '@/lib/api/backend-client';
+import { Search, Terminal, Command as CommandIcon, Book, FileText, Settings, Shield } from 'lucide-react';
+import { backendClient, type Command, type Category } from '@/lib/api/backend-client';
 
 export const metadata: Metadata = {
   title: 'Browse Commands | BetterMan',
@@ -20,15 +20,15 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
   'Library Functions': Book,
   'Special Files': FileText,
   'File Formats': FileText,
-  'Games': Command,
-  'Miscellaneous': Command,
+  'Games': CommandIcon,
+  'Miscellaneous': CommandIcon,
   'System Administration': Shield,
   'file-operations': FileText,
   'text-processing': Terminal,
   'network': Terminal,
   'development': Terminal,
-  'miscellaneous': Command,
-  'Other': Command,
+  'miscellaneous': CommandIcon,
+  'Other': CommandIcon,
 };
 
 // Category descriptions
@@ -51,9 +51,9 @@ const categoryDescriptions: Record<string, string> = {
 
 export default async function BrowsePage() {
   // Fetch data from backend
-  let commonCommands = [];
-  let allCommands = [];
-  let categories = [];
+  let commonCommands: Command[] = [];
+  let allCommands: Command[] = [];
+  let categories: Category[] = [];
   let stats = {
     total_pages: 0,
     total_categories: 0,
@@ -129,7 +129,7 @@ export default async function BrowsePage() {
           </div>
           <div className="card-glow rounded-lg border border-border/50 p-4">
             <div className="flex items-center gap-3">
-              <Command className="h-8 w-8 text-primary" />
+              <CommandIcon className="h-8 w-8 text-primary" />
               <div>
                 <p className="text-2xl font-bold">{commonCommands.length}</p>
                 <p className="text-sm text-muted-foreground">Common Commands</p>
@@ -169,7 +169,7 @@ export default async function BrowsePage() {
         {Object.entries(groupedCommands)
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([category, commands]) => {
-            const Icon = categoryIcons[category] || Command;
+            const Icon = categoryIcons[category] || CommandIcon;
             const categoryCount = categories.find(c => c.category === category)?.count || commands.length;
             
             return (

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Use backend search
     const searchData = await backendClient.search(query, { 
       limit,
-      section 
+      ...(section && { section })
     });
 
     // Transform backend results to match frontend format
