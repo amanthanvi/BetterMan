@@ -536,7 +536,88 @@
       0 0 0 6px hsl(var(--primary) / 0.5),
       0 0 20px hsl(var(--primary) / 0.2);
   }
+  
+  /* Man page specific styles */
+  
+  /* Section headers */
+  .man-section h2 {
+    @apply text-xl font-bold mb-4 text-primary uppercase tracking-wide;
+  }
+  
+  /* Section content */
+  .man-section-content {
+    @apply text-foreground/90 leading-relaxed;
+  }
+  
+  .man-section-content p {
+    @apply mb-4;
+  }
+  
+  /* Options and flags */
+  .option-flag,
+  .man-section-content .text-primary {
+    @apply text-primary font-mono font-semibold;
+  }
+  
+  /* File paths */
+  .man-section-content .text-accent {
+    @apply text-accent-foreground font-mono text-sm;
+  }
+  
+  /* Environment variables */
+  .man-section-content .text-warning {
+    @apply text-warning font-mono;
+  }
+  
+  /* Inline code */
+  .inline-code {
+    @apply px-1.5 py-0.5 rounded bg-muted text-sm font-mono;
+  }
+  
+  /* Code examples */
+  .code-example {
+    @apply bg-muted/50 border border-border rounded-lg p-4 my-4 overflow-x-auto;
+  }
+  
+  .code-example code {
+    @apply text-sm font-mono text-foreground;
+  }
+  
+  /* Man page links */
+  .man-page-link {
+    @apply text-primary underline hover:text-primary/80 transition-colors font-mono;
+  }
+  
+  /* Lists in man pages */
+  .man-section-content ul {
+    @apply list-disc list-inside space-y-1 ml-4 mb-4;
+  }
+  
+  .man-section-content ol {
+    @apply list-decimal list-inside space-y-1 ml-4 mb-4;
+  }
+  
+  /* Special formatting for OPTIONS section */
+  .man-section:has(h2:contains("OPTIONS")) .man-section-content {
+    @apply space-y-3;
+  }
+  
+  .man-section:has(h2:contains("OPTIONS")) .man-section-content p {
+    @apply ml-8 first:ml-0;
+  }
+  
+  /* Synopsis section */
+  .man-section:has(h2:contains("SYNOPSIS")) .man-section-content {
+    @apply font-mono bg-muted/30 p-4 rounded-lg border border-border/50;
+  }
+  
+  /* Examples section */
+  .man-section:has(h2:contains("EXAMPLES")) .man-section-content {
+    @apply space-y-4;
+  }
+  
+  /* See also section */
+  .man-section:has(h2:contains("SEE ALSO")) .man-section-content {
+    @apply flex flex-wrap gap-2;
+  }
 }
-
-/* Import man page specific styles */
-@import '../styles/man-page.css';
