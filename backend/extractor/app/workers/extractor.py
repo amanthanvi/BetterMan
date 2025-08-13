@@ -293,6 +293,17 @@ class ManPageExtractor:
         
         return man_pages
     
+    def _get_man_env(self):
+        """Get environment variables for man command to work in non-TTY."""
+        env = os.environ.copy()
+        env["MANPAGER"] = "cat"
+        env["PAGER"] = "cat" 
+        env["TERM"] = "xterm"
+        env["LANG"] = "C.UTF-8"
+        env["LC_ALL"] = "C.UTF-8"
+        env["MANWIDTH"] = "1000"
+        return env
+
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def parse_man_page(self, name: str, section: int) -> Optional[Dict[str, Any]]:
         """
@@ -306,15 +317,17 @@ class ManPageExtractor:
             Parsed man page data or None if failed
         """
         try:
-            # First try to read the man page directly using man command
-            # Use MANWIDTH=1000 to avoid wrapping, and pipe through col -bx to remove backspaces
-            cmd = f"MANWIDTH=1000 man {section} {name} 2>/dev/null | col -bx"
+            # Get proper environment for non-TTY execution
+            env = self._get_man_env()
+            
+            # First try to read the man page directly using man command with proper env
+            cmd = f"man {section} {name} 2>/dev/null | col -bx"
             result = subprocess.run(
                 ['bash', '-c', cmd],
                 capture_output=True,
                 text=True,
                 timeout=10,
-                env={**os.environ, 'LANG': 'en_US.UTF-8'}
+                env=env
             )
             
             content = result.stdout
@@ -333,17 +346,17 @@ class ManPageExtractor:
                     if os.path.exists(man_path):
                         if man_path.endswith('.gz'):
                             # Read compressed file
-                            cmd = f"zcat {man_path} | MANWIDTH=1000 man -l - 2>/dev/null | col -bx"
+                            cmd = f"zcat {man_path} | man -l - 2>/dev/null | col -bx"
                         else:
                             # Read uncompressed file
-                            cmd = f"MANWIDTH=1000 man -l {man_path} 2>/dev/null | col -bx"
+                            cmd = f"man -l {man_path} 2>/dev/null | col -bx"
                         
                         result = subprocess.run(
                             ['bash', '-c', cmd],
                             capture_output=True,
                             text=True,
                             timeout=10,
-                            env={**os.environ, 'LANG': 'en_US.UTF-8'}
+                            env=env
                         )
                         
                         if result.stdout and "This system has been minimized" not in result.stdout:

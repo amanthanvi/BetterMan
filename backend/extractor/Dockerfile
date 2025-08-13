@@ -66,8 +66,13 @@ RUN set -eux; \
     fi; \
     echo "SUCCESS: Found $total man pages!"
 
-# Set man pager to cat for easier parsing
-ENV MANPAGER=cat
+# Ensure man works in non-interactive cron environments
+ENV MANPAGER=cat \
+    PAGER=cat \
+    TERM=xterm \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    MANWIDTH=1000
 
 # Run the extractor
 CMD ["python3", "/app/app/workers/railway_extractor.py"]
