@@ -1,22 +1,24 @@
 # backend/src/api/search_routes.py
-"""API routes for search functionality."""
+"""API routes for search functionality with enhanced PostgreSQL capabilities."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
 import logging
 import json
+import time
 
-from ..db.session import get_db
+from ..db.postgres_connection import get_db
 from ..models.document import Document
+from ..search.postgres_search import PostgreSQLSearchEngine, SearchResult
 from ..search.unified_search import UnifiedSearchEngine as OptimizedSearchEngine
-# Removed imports for non-existent instant_search and fuzzy_search modules
-# Using UnifiedSearch for all search functionality
 from ..cache.cache_manager import CacheManager
 from ..errors import SearchError, ValidationError
 from ..config import get_settings
 from ..auth.dependencies import SuperUser, get_current_user_optional
+from ..analytics.tracker import AnalyticsTracker
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -25,18 +27,33 @@ settings = get_settings()
 router = APIRouter()
 
 
+class SearchRequest(BaseModel):
+    """Search request model."""
+    query: str = Field(..., min_length=1, max_length=200)
+    limit: int = Field(default=20, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+    categories: Optional[List[str]] = Field(default=None)
+    sections: Optional[List[str]] = Field(default=None)
+    fuzzy: bool = Field(default=True, description="Enable fuzzy matching")
+    fuzzy_threshold: float = Field(default=0.3, ge=0.1, le=1.0)
+
+
+class SearchResponse(BaseModel):
+    """Search response model."""
+    results: List[Dict[str, Any]]
+    total: int
+    query: str
+    took_ms: float
+    search_types: List[str]
+
+
+def get_postgres_search_engine(db: Session = Depends(get_db)) -> PostgreSQLSearchEngine:
+    """Get PostgreSQL search engine instance."""
+    return PostgreSQLSearchEngine(db)
+
+
 def get_search_engine(db: Session = Depends(get_db)) -> OptimizedSearchEngine:
     """Dependency to get an OptimizedSearchEngine instance."""
-    return OptimizedSearchEngine(db)
-
-
-def get_fuzzy_search_engine(db: Session = Depends(get_db)) -> OptimizedSearchEngine:
-    """Dependency to get a search engine instance."""
-    return OptimizedSearchEngine(db)
-
-
-def get_instant_search_engine(db: Session = Depends(get_db)) -> OptimizedSearchEngine:
-    """Dependency to get a search engine instance."""
     return OptimizedSearchEngine(db)
 
 
@@ -162,6 +179,118 @@ async def search_documents_legacy(
         search_engine=search_engine,
         db=db
     )
+
+
+@router.post("/enhanced", response_model=SearchResponse)
+async def enhanced_search(
+    request: SearchRequest,
+    postgres_engine: PostgreSQLSearchEngine = Depends(get_postgres_search_engine),
+    db: Session = Depends(get_db)
+):
+    """
+    Enhanced search with PostgreSQL full-text search and fuzzy matching.
+    
+    Features:
+    - Exact name matching (highest priority)
+    - PostgreSQL full-text search with ranking
+    - Fuzzy matching with trigram similarity
+    - Category and section filtering
+    - Relevance scoring and highlighting
+    """
+    start_time = time.time()
+    
+    try:
+        # Perform search
+        results, total = postgres_engine.search(
+            query=request.query,
+            limit=request.limit,
+            offset=request.offset,
+            categories=request.categories,
+            sections=request.sections,
+            fuzzy_threshold=request.fuzzy_threshold if request.fuzzy else 1.0
+        )
+        
+        # Track analytics
+        try:
+            tracker = AnalyticsTracker(db)
+            tracker.track_search(
+                query=request.query,
+                results_count=total,
+                filters={
+                    "categories": request.categories,
+                    "sections": request.sections
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to track search: {e}")
+        
+        # Format results
+        formatted_results = []
+        search_types = set()
+        
+        for result in results:
+            search_types.add(result.match_type)
+            formatted_results.append({
+                "id": result.id,
+                "name": result.name,
+                "section": result.section,
+                "title": result.title,
+                "description": result.description,
+                "category": result.category,
+                "score": result.score,
+                "highlights": result.highlights,
+                "match_type": result.match_type
+            })
+        
+        elapsed_ms = (time.time() - start_time) * 1000
+        
+        return SearchResponse(
+            results=formatted_results,
+            total=total,
+            query=request.query,
+            took_ms=elapsed_ms,
+            search_types=list(search_types)
+        )
+        
+    except Exception as e:
+        logger.error(f"Enhanced search error: {e}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
+@router.get("/autocomplete")
+async def autocomplete(
+    q: str = Query(..., min_length=1, max_length=50),
+    limit: int = Query(default=10, ge=1, le=20),
+    postgres_engine: PostgreSQLSearchEngine = Depends(get_postgres_search_engine)
+):
+    """Get command name autocomplete suggestions."""
+    try:
+        suggestions = postgres_engine.autocomplete(q, limit)
+        return {
+            "suggestions": suggestions,
+            "query": q
+        }
+    except Exception as e:
+        logger.error(f"Autocomplete error: {e}")
+        raise HTTPException(status_code=500, detail=f"Autocomplete failed: {str(e)}")
+
+
+@router.get("/similar/{command}")
+async def get_similar_commands(
+    command: str,
+    limit: int = Query(default=5, ge=1, le=10),
+    postgres_engine: PostgreSQLSearchEngine = Depends(get_postgres_search_engine)
+):
+    """Find commands similar to the given command using fuzzy matching."""
+    try:
+        similar = postgres_engine.get_similar_commands(command, limit)
+        return {
+            "command": command,
+            "similar": similar
+        }
+    except Exception as e:
+        logger.error(f"Similar commands error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to find similar commands: {str(e)}")
 
 
 @router.get("/suggest", response_model=Dict[str, Any])
