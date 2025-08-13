@@ -537,3 +537,6 @@
       0 0 20px hsl(var(--primary) / 0.2);
   }
 }
+
+/* Import man page specific styles */
+@import '../styles/man-page.css';

@@ -45,6 +45,7 @@ import 'prismjs/components/prism-bash'
 import 'prismjs/components/prism-shell-session'
 import type { EnhancedManPage, ManPageFlag, ManPageExample } from '@/lib/parser/enhanced-man-parser'
 import { getManPage } from '@/data/man-pages'
+import { formatManPageContent } from '@/lib/formatters/man-page-formatter'
 
 // Load Prism for syntax highlighting
 if (typeof window !== 'undefined') {
@@ -918,6 +919,12 @@ function SeeAlsoLink({ reference }: { reference: { name: string; section: number
 
 // Enhanced content formatting
 function formatEnhancedContent(content: string): string {
+  // Use the new formatter for raw man page content
+  if (typeof content === 'string' && content.includes('NAME\n') || content.includes('SYNOPSIS\n')) {
+    return formatManPageContent(content)
+  }
+  
+  // Fallback to simple formatting for other content
   let formatted = content
     // Convert double newlines to paragraphs
     .split('\n\n')

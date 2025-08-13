@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .cache.redis_simple import cache_result, get_cached, set_cached
 from .monitoring_simple import metrics, track_request
+from .search_enhanced import get_search
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -152,52 +153,27 @@ async def get_man_page(command: str, section: str):
     except Exception as e:
         return {"error": str(e)[:200]}, 500
 
-# Add simple search
+# Enhanced search with fuzzy matching
 @app.get("/api/search")
-async def search_man_pages(q: str = ""):
-    """Search man pages."""
-    import psycopg
-    
+async def search_man_pages(
+    q: str = "",
+    limit: int = 20,
+    section: str = None,
+    fuzzy: bool = True,
+    threshold: float = 0.3
+):
+    """Search man pages with fuzzy matching."""
     try:
-        db_url = os.environ.get('DATABASE_URL', '')
-        conn = psycopg.connect(db_url)
-        cur = conn.cursor()
-        
-        if q:
-            cur.execute("""
-                SELECT name, section, title, description, category
-                FROM man_pages 
-                WHERE name ILIKE %s OR title ILIKE %s OR description ILIKE %s
-                LIMIT 20
-            """, (f"%{q}%", f"%{q}%", f"%{q}%"))
-        else:
-            cur.execute("""
-                SELECT name, section, title, description, category
-                FROM man_pages 
-                WHERE is_common = true
-                LIMIT 20
-            """)
-        
-        results = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        return {
-            "query": q,
-            "results": [
-                {
-                    "name": r[0],
-                    "section": r[1],
-                    "title": r[2],
-                    "description": r[3][:200] if r[3] else None,
-                    "category": r[4]
-                }
-                for r in results
-            ],
-            "total": len(results)
-        }
-        
+        search = get_search()
+        return search.search(
+            query=q,
+            limit=limit,
+            section=section,
+            fuzzy=fuzzy,
+            threshold=threshold
+        )
     except Exception as e:
+        logger.error(f"Search error: {e}")
         return {"error": str(e)[:200]}, 500
 
 # Add list all commands endpoint
