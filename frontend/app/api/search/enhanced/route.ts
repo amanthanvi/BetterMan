@@ -1,138 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { EnhancedSearch } from '@/lib/search/enhanced-search'
-import { kv } from '@vercel/kv'
-
-// Initialize search engine
-let searchEngine: EnhancedSearch | null = null
-
-async function getSearchEngine(): Promise<EnhancedSearch> {
-  if (searchEngine) return searchEngine
-  
-  try {
-    // Try to load indexes from KV cache first
-    const cacheKey = 'search-index-v2'
-    const cachedData = await kv.get(cacheKey).catch(() => null)
-    
-    if (cachedData) {
-      searchEngine = new EnhancedSearch()
-      await searchEngine.initialize(cachedData as any)
-      return searchEngine
-    }
-  } catch (error) {
-    console.error('Failed to load cached search index:', error)
-  }
-  
-  // Load from static files
-  const [commands, invertedIndex, categoryIndex, complexityIndex] = await Promise.all([
-    import('@/data/indexes/command-index.json'),
-    import('@/data/indexes/inverted-index.json'),
-    import('@/data/indexes/category-index.json'),
-    import('@/data/indexes/complexity-index.json'),
-  ])
-  
-  searchEngine = new EnhancedSearch()
-  await searchEngine.initialize({
-    commands: commands.default,
-    invertedIndex: invertedIndex.default,
-    categoryIndex: categoryIndex.default,
-    complexityIndex: complexityIndex.default,
-  })
-  
-  // Cache the index data for future requests
-  try {
-    await kv.set('search-index-v2', {
-      commands: commands.default,
-      invertedIndex: invertedIndex.default,
-      categoryIndex: categoryIndex.default,
-      complexityIndex: complexityIndex.default,
-    }, { ex: 3600 }) // Cache for 1 hour
-  } catch (error) {
-    console.error('Failed to cache search index:', error)
-  }
-  
-  return searchEngine
-}
+import { backendClient } from '@/lib/api/backend-client'
 
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const query = searchParams.get('q') || ''
-    const section = searchParams.get('section')
-    const category = searchParams.get('category')
-    const complexity = searchParams.get('complexity') as any
-    const limit = parseInt(searchParams.get('limit') || '20')
-    const includeMatches = searchParams.get('matches') === 'true'
-    
-    if (!query || query.length < 2) {
-      return NextResponse.json({
-        results: [],
-        query: '',
-        total: 0,
-        searchTime: 0,
-      })
-    }
-    
-    const startTime = performance.now()
-    
-    // Get search engine
-    const engine = await getSearchEngine()
-    
-    // Perform search
-    const results = await engine.search({
-      query,
-      section: section ? parseInt(section) : undefined,
-      category: category || undefined,
-      complexity: complexity || undefined,
-      limit,
-      includeMatches,
+  const searchParams = request.nextUrl.searchParams
+  const query = searchParams.get('q') || ''
+  const category = searchParams.get('category')
+  const section = searchParams.get('section')
+  const complexity = searchParams.get('complexity')
+  const limit = parseInt(searchParams.get('limit') || '20')
+  const fuzzy = searchParams.get('fuzzy') !== 'false'
+  
+  if (!query) {
+    return NextResponse.json({ 
+      results: [], 
+      query: '', 
+      total: 0,
+      categories: [],
+      suggestions: []
     })
-    
-    const searchTime = performance.now() - startTime
-    
-    // Log search analytics
-    if (process.env.NODE_ENV === 'production') {
-      try {
-        await kv.hincrby('search-analytics', query.toLowerCase(), 1)
-        await kv.zadd('popular-searches', {
-          score: Date.now(),
-          member: query.toLowerCase(),
-        })
-      } catch (error) {
-        console.error('Failed to log search analytics:', error)
-      }
-    }
-    
-    return NextResponse.json({
-      results,
-      query,
-      total: results.length,
-      searchTime: Math.round(searchTime * 100) / 100,
-      strategies: [...new Set(results.map(r => r.searchStrategy))],
-    })
-  } catch (error) {
-    console.error('Search error:', error)
-    return NextResponse.json(
-      { error: 'Search failed', message: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
   }
-}
 
-// Suggestions endpoint
-export async function POST(request: NextRequest) {
   try {
-    const { prefix } = await request.json()
-    
-    if (!prefix || prefix.length < 2) {
-      return NextResponse.json({ suggestions: [] })
-    }
-    
-    const engine = await getSearchEngine()
-    const suggestions = await engine.getSuggestions(prefix, 10)
-    
-    return NextResponse.json({ suggestions })
+    // Use backend search with filters
+    const searchData = await backendClient.search(query, { 
+      limit,
+      section 
+    })
+
+    // Transform results to enhanced format
+    const results = searchData.results.map(result => ({
+      id: `${result.name}.${result.section}`,
+      name: result.name,
+      section: result.section,
+      title: result.title,
+      description: result.description || result.title,
+      category: result.category || 'User Commands',
+      snippet: result.snippet || result.description?.substring(0, 150) || result.title,
+      score: result.score || 0,
+      relevance: result.score || 1,
+      isCommon: false,
+      isExactMatch: result.score === 0,
+      complexity: complexity || 'basic',
+    }))
+
+    // Filter by category if specified
+    const filteredResults = category 
+      ? results.filter(r => r.category === category)
+      : results
+
+    // Get unique categories from results
+    const categories = [...new Set(results.map(r => r.category))]
+
+    return NextResponse.json({
+      results: filteredResults,
+      query,
+      total: filteredResults.length,
+      categories,
+      suggestions: [], // Backend doesn't provide suggestions yet
+      fuzzy,
+    })
   } catch (error) {
-    console.error('Suggestions error:', error)
-    return NextResponse.json({ suggestions: [] })
+    console.error('Enhanced search error:', error)
+    return NextResponse.json({
+      results: [],
+      query,
+      total: 0,
+      categories: [],
+      suggestions: [],
+      error: 'Search failed',
+    }, { status: 500 })
   }
 }
