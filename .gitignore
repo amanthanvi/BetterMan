@@ -19,10 +19,14 @@ dist/
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 .Python
 venv/
 env/
 .venv
+.pytest_cache/
+*.egg-info/
+pip-log.txt
 
 # Environment
 .env
@@ -50,3 +54,9 @@ yarn-error.log*
 *.db
 *.sqlite
 /data/
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+.next/cache/

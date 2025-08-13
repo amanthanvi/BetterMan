@@ -4,6 +4,8 @@ import os
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .cache.redis_simple import cache_result, get_cached, set_cached
+from .monitoring_simple import metrics, track_request
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -88,9 +90,15 @@ async def db_check():
 @app.get("/api/man/{command}/{section}")
 @app.get("/api/man/commands/{command}/{section}")
 async def get_man_page(command: str, section: str):
-    """Get a specific man page."""
+    """Get a specific man page with caching."""
     import psycopg
     import json
+    
+    # Try cache first
+    cache_key = f"man:{command}:{section}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
     
     try:
         db_url = os.environ.get('DATABASE_URL', '')
@@ -122,7 +130,7 @@ async def get_man_page(command: str, section: str):
             else:
                 content_data = {}
             
-            return {
+            result = {
                 "id": row[0],
                 "name": row[1],
                 "section": row[2],
@@ -133,6 +141,11 @@ async def get_man_page(command: str, section: str):
                 "category": row[7],
                 "is_common": row[9]
             }
+            
+            # Cache for 1 hour
+            set_cached(cache_key, result, ttl=3600)
+            
+            return result
         else:
             return {"error": "Man page not found"}, 404
             
@@ -243,6 +256,143 @@ async def list_commands(limit: int = 100, offset: int = 0, category: str = None)
         
     except Exception as e:
         return {"error": str(e)[:200]}, 500
+
+# Add common commands endpoint
+@app.get("/api/common")
+async def get_common_commands():
+    """Get common/popular commands."""
+    import psycopg
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        conn = psycopg.connect(db_url)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT name, section, title, description, category
+            FROM man_pages 
+            WHERE is_common = true OR name IN (
+                'ls', 'cd', 'grep', 'find', 'ssh', 'git', 'docker', 'curl',
+                'vim', 'cat', 'echo', 'mkdir', 'rm', 'cp', 'mv', 'chmod',
+                'ps', 'kill', 'tar', 'sed', 'awk', 'man', 'touch', 'head', 'tail'
+            )
+            ORDER BY name
+            LIMIT 50
+        """)
+        
+        results = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return {
+            "commands": [
+                {
+                    "name": r[0],
+                    "section": r[1],
+                    "title": r[2],
+                    "description": r[3][:200] if r[3] else None,
+                    "category": r[4]
+                }
+                for r in results
+            ]
+        }
+        
+    except Exception as e:
+        return {"error": str(e)[:200]}, 500
+
+# Add categories endpoint
+@app.get("/api/categories")
+async def get_categories():
+    """Get all available categories with counts."""
+    import psycopg
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        conn = psycopg.connect(db_url)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT category, COUNT(*) as count
+            FROM man_pages 
+            WHERE category IS NOT NULL
+            GROUP BY category
+            ORDER BY count DESC
+        """)
+        
+        results = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return {
+            "categories": [
+                {"category": r[0], "count": r[1]}
+                for r in results
+            ]
+        }
+        
+    except Exception as e:
+        return {"error": str(e)[:200]}, 500
+
+# Add stats endpoint
+@app.get("/api/stats")
+@track_request
+async def get_stats():
+    """Get database statistics."""
+    import psycopg
+    
+    # Try cache first
+    cache_key = "stats:db"
+    cached = get_cached(cache_key)
+    if cached:
+        metrics.record_cache_hit()
+        return cached
+    
+    metrics.record_cache_miss()
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        conn = psycopg.connect(db_url)
+        cur = conn.cursor()
+        
+        # Get total count
+        cur.execute("SELECT COUNT(*) FROM man_pages")
+        total = cur.fetchone()[0]
+        
+        # Get sections count
+        cur.execute("SELECT COUNT(DISTINCT section) FROM man_pages")
+        sections = cur.fetchone()[0]
+        
+        # Get categories count
+        cur.execute("SELECT COUNT(DISTINCT category) FROM man_pages WHERE category IS NOT NULL")
+        categories = cur.fetchone()[0]
+        
+        # Get common commands count
+        cur.execute("SELECT COUNT(*) FROM man_pages WHERE is_common = true")
+        common = cur.fetchone()[0]
+        
+        cur.close()
+        conn.close()
+        
+        result = {
+            "total_pages": total,
+            "total_sections": sections,
+            "total_categories": categories,
+            "common_commands": common
+        }
+        
+        # Cache for 5 minutes
+        set_cached(cache_key, result, ttl=300)
+        
+        return result
+        
+    except Exception as e:
+        return {"error": str(e)[:200]}, 500
+
+# Add metrics endpoint
+@app.get("/api/metrics")
+async def get_metrics():
+    """Get application metrics."""
+    return metrics.get_metrics()
 
 if __name__ == "__main__":
     import uvicorn

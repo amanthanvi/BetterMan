@@ -1,25 +1,17 @@
 import { Metadata } from 'next';
 import { Navigation } from '@/components/layout/navigation';
-import { manPageList } from '@/data/man-pages';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { Search, Terminal, Command, Book, FileText, Settings, Cloud, Shield } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Search, Terminal, Command, Book, FileText, Settings, Shield } from 'lucide-react';
+import { backendClient } from '@/lib/api/backend-client';
 
 export const metadata: Metadata = {
   title: 'Browse Commands | BetterMan',
   description: 'Browse all available Linux commands with enhanced documentation',
 };
 
-// Group commands by category
-const groupedCommands = manPageList.reduce((acc, page) => {
-  const category = page.category || 'Other';
-  if (!acc[category]) {
-    acc[category] = [];
-  }
-  acc[category].push(page);
-  return acc;
-}, {} as Record<string, typeof manPageList>);
+// Cache for 1 hour
+export const revalidate = 3600;
 
 // Category icons
 const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -31,6 +23,11 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
   'Games': Command,
   'Miscellaneous': Command,
   'System Administration': Shield,
+  'file-operations': FileText,
+  'text-processing': Terminal,
+  'network': Terminal,
+  'development': Terminal,
+  'miscellaneous': Command,
   'Other': Command,
 };
 
@@ -44,10 +41,51 @@ const categoryDescriptions: Record<string, string> = {
   'Games': 'Games and entertainment programs',
   'Miscellaneous': 'Miscellaneous documentation',
   'System Administration': 'Commands for system administration and maintenance',
+  'file-operations': 'Commands for working with files and directories',
+  'text-processing': 'Tools for processing and manipulating text',
+  'network': 'Networking utilities and commands',
+  'development': 'Development tools and compilers',
+  'miscellaneous': 'Various utility commands',
   'Other': 'Other documentation',
 };
 
-export default function BrowsePage() {
+export default async function BrowsePage() {
+  // Fetch data from backend
+  let commonCommands = [];
+  let allCommands = [];
+  let categories = [];
+  let stats = {
+    total_pages: 0,
+    total_categories: 0,
+    common_commands: 0,
+  };
+
+  try {
+    // Fetch all data in parallel
+    const [commonData, commandsData, categoriesData, statsData] = await Promise.all([
+      backendClient.getCommonCommands(),
+      backendClient.listCommands({ limit: 500 }), // Get first 500 for display
+      backendClient.getCategories(),
+      backendClient.getStats(),
+    ]);
+
+    commonCommands = commonData.commands || [];
+    allCommands = commandsData.commands || [];
+    categories = categoriesData.categories || [];
+    stats = statsData;
+  } catch (error) {
+    console.error('Error fetching browse data:', error);
+  }
+
+  // Group commands by category
+  const groupedCommands = allCommands.reduce((acc, command) => {
+    const category = command.category || 'Other';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(command);
+    return acc;
+  }, {} as Record<string, typeof allCommands>);
   return (
     <>
       <Navigation />
@@ -56,7 +94,7 @@ export default function BrowsePage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4 gradient-text">Browse Commands</h1>
           <p className="text-xl text-muted-foreground">
-            Explore {manPageList.length} Linux commands with enhanced documentation and interactive examples.
+            Explore {stats.total_pages.toLocaleString()} Linux commands with enhanced documentation and interactive examples.
           </p>
         </div>
 
@@ -66,7 +104,7 @@ export default function BrowsePage() {
             <div className="flex items-center gap-3">
               <Terminal className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">{manPageList.length}</p>
+                <p className="text-2xl font-bold">{stats.total_pages.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">Total Commands</p>
               </div>
             </div>
@@ -75,7 +113,7 @@ export default function BrowsePage() {
             <div className="flex items-center gap-3">
               <Book className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">{Object.keys(groupedCommands).length}</p>
+                <p className="text-2xl font-bold">{stats.total_categories}</p>
                 <p className="text-sm text-muted-foreground">Categories</p>
               </div>
             </div>
@@ -84,8 +122,8 @@ export default function BrowsePage() {
             <div className="flex items-center gap-3">
               <FileText className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">{manPageList.filter(p => p.examples && p.examples.length > 0).length}</p>
-                <p className="text-sm text-muted-foreground">With Examples</p>
+                <p className="text-2xl font-bold">{allCommands.length}</p>
+                <p className="text-sm text-muted-foreground">Displayed</p>
               </div>
             </div>
           </div>
@@ -93,7 +131,7 @@ export default function BrowsePage() {
             <div className="flex items-center gap-3">
               <Command className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">{manPageList.filter(p => p.isCommon).length}</p>
+                <p className="text-2xl font-bold">{commonCommands.length}</p>
                 <p className="text-sm text-muted-foreground">Common Commands</p>
               </div>
             </div>
@@ -101,35 +139,39 @@ export default function BrowsePage() {
         </div>
 
         {/* Common Commands Section */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-4">Common Commands</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {manPageList
-              .filter(page => page.isCommon)
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((page) => (
-                <Link key={`${page.name}.${page.section}`} href={`/docs/${page.name}`}>
-                  <div className="card-glow rounded-lg border border-border/50 p-4 hover:border-primary/50 transition-all hover:scale-105">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-mono font-medium text-primary">{page.name}</h3>
-                      <Badge variant="outline" className="text-xs">
-                        {page.section}
-                      </Badge>
+        {commonCommands.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">Common Commands</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {commonCommands
+                .slice(0, 24) // Show first 24 common commands
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((command) => (
+                  <Link key={`${command.name}.${command.section}`} href={`/docs/${command.name}`}>
+                    <div className="card-glow rounded-lg border border-border/50 p-4 hover:border-primary/50 transition-all hover:scale-105">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-mono font-medium text-primary">{command.name}</h3>
+                        <Badge variant="outline" className="text-xs">
+                          {command.section}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {command.title}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {page.title}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Categories */}
         {Object.entries(groupedCommands)
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([category, commands]) => {
             const Icon = categoryIcons[category] || Command;
+            const categoryCount = categories.find(c => c.category === category)?.count || commands.length;
+            
             return (
               <div key={category} className="mb-12">
                 <div className="flex items-center gap-3 mb-4">
@@ -137,61 +179,65 @@ export default function BrowsePage() {
                   <div>
                     <h2 className="text-2xl font-bold">{category}</h2>
                     <p className="text-sm text-muted-foreground">
-                      {categoryDescriptions[category]} ({commands.length} commands)
+                      {categoryDescriptions[category] || 'Various utility commands'} ({categoryCount} total, showing {commands.length})
                     </p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {commands
+                    .slice(0, 30) // Limit each category to 30 items for performance
                     .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((page) => (
-                      <Link key={`${page.name}.${page.section}`} href={`/docs/${page.name}`}>
+                    .map((command) => (
+                      <Link key={`${command.name}.${command.section}`} href={`/docs/${command.name}`}>
                         <div className="group relative overflow-hidden rounded-lg border border-border/50 p-4 hover:border-primary/50 transition-all">
                           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                           
                           <div className="relative">
                             <div className="flex items-start justify-between mb-2">
                               <h3 className="font-mono font-medium group-hover:text-primary transition-colors">
-                                {page.name}
+                                {command.name}
                               </h3>
-                              <div className="flex items-center gap-2">
-                                {page.isCommon && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Common
-                                  </Badge>
-                                )}
-                                <Badge variant="outline" className="text-xs">
-                                  Section {page.section}
-                                </Badge>
-                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                Section {command.section}
+                              </Badge>
                             </div>
                             
                             <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                              {page.title}
+                              {command.title}
                             </p>
                             
-                            {page.description && (
+                            {command.description && (
                               <p className="text-xs text-muted-foreground/80 line-clamp-2">
-                                {page.description}
+                                {command.description}
                               </p>
-                            )}
-                            
-                            {page.examples && page.examples.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-border/50">
-                                <p className="text-xs text-muted-foreground">
-                                  {page.examples.length} example{page.examples.length > 1 ? 's' : ''} available
-                                </p>
-                              </div>
                             )}
                           </div>
                         </div>
                       </Link>
                     ))}
                 </div>
+                
+                {categoryCount > commands.length && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {commands.length} of {categoryCount} commands in this category
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
+
+        {/* Note about total commands */}
+        {stats.total_pages > allCommands.length && (
+          <div className="mt-8 p-4 rounded-lg border border-border/50 bg-card/50">
+            <p className="text-sm text-muted-foreground text-center">
+              Showing {allCommands.length} of {stats.total_pages.toLocaleString()} total commands. 
+              Use the search feature to find specific commands.
+            </p>
+          </div>
+        )}
 
         {/* Search CTA */}
         <div className="mt-12 text-center">

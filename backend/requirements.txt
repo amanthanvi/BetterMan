@@ -81,3 +81,4 @@ websockets==14.1
 # Deployment
 gunicorn==20.1.0
 boto3==1.26.137
+psutil==5.9.8
