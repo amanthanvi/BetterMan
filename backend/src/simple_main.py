@@ -40,6 +40,140 @@ async def health_check():
         "environment": os.environ.get('ENVIRONMENT', 'unknown')
     }
 
+# Add database check endpoint
+@app.get("/db-check")
+async def db_check():
+    """Check if database has man pages."""
+    import psycopg2
+    from urllib.parse import urlparse
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        # Count man pages
+        cur.execute("SELECT COUNT(*) FROM man_pages")
+        count = cur.fetchone()[0]
+        
+        # Get sample commands
+        cur.execute("""
+            SELECT name, section, category 
+            FROM man_pages 
+            WHERE name IN ('ls', 'grep', 'curl', 'git', 'tar')
+            ORDER BY name
+            LIMIT 5
+        """)
+        samples = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return {
+            "status": "connected",
+            "man_pages_count": count,
+            "sample_commands": [
+                {"name": s[0], "section": s[1], "category": s[2]} 
+                for s in samples
+            ]
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)[:200]
+        }
+
+# Add simple man page retrieval
+@app.get("/api/man/{command}/{section}")
+async def get_man_page(command: str, section: str):
+    """Get a specific man page."""
+    import psycopg2
+    import json
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT id, name, section, title, description, synopsis, 
+                   content, category, meta_data, is_common
+            FROM man_pages 
+            WHERE name = %s AND section = %s
+            LIMIT 1
+        """, (command, section))
+        
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if row:
+            content_data = json.loads(row[6]) if row[6] else {}
+            return {
+                "id": row[0],
+                "name": row[1],
+                "section": row[2],
+                "title": row[3],
+                "description": row[4],
+                "synopsis": row[5],
+                "content": content_data.get('raw', ''),
+                "category": row[7],
+                "is_common": row[9]
+            }
+        else:
+            return {"error": "Man page not found"}, 404
+            
+    except Exception as e:
+        return {"error": str(e)[:200]}, 500
+
+# Add simple search
+@app.get("/api/search")
+async def search_man_pages(q: str = ""):
+    """Search man pages."""
+    import psycopg2
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        if q:
+            cur.execute("""
+                SELECT name, section, title, description, category
+                FROM man_pages 
+                WHERE name ILIKE %s OR title ILIKE %s OR description ILIKE %s
+                LIMIT 20
+            """, (f"%{q}%", f"%{q}%", f"%{q}%"))
+        else:
+            cur.execute("""
+                SELECT name, section, title, description, category
+                FROM man_pages 
+                WHERE is_common = true
+                LIMIT 20
+            """)
+        
+        results = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return {
+            "query": q,
+            "results": [
+                {
+                    "name": r[0],
+                    "section": r[1],
+                    "title": r[2],
+                    "description": r[3][:200] if r[3] else None,
+                    "category": r[4]
+                }
+                for r in results
+            ],
+            "total": len(results)
+        }
+        
+    except Exception as e:
+        return {"error": str(e)[:200]}, 500
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
