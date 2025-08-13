@@ -54,7 +54,7 @@ class EnhancedSearch:
                 with conn.cursor() as cur:
                     results = []
                     
-                    # First try exact match
+                    # First try exact match on name (highest priority)
                     exact_query = """
                         SELECT name, section, title, description, category,
                                1.0 as score
@@ -67,12 +67,34 @@ class EnhancedSearch:
                         exact_query += " AND section = %s"
                         params.append(section)
                     
-                    exact_query += " LIMIT %s"
+                    exact_query += " ORDER BY section LIMIT %s"
                     params.append(limit)
                     
                     cur.execute(exact_query, params)
                     exact_results = cur.fetchall()
                     results.extend(exact_results)
+                    
+                    # Then try prefix match on name (second priority)
+                    if len(results) < limit:
+                        prefix_query = """
+                            SELECT name, section, title, description, category,
+                                   0.9 as score
+                            FROM man_pages
+                            WHERE LOWER(name) LIKE LOWER(%s)
+                              AND LOWER(name) != LOWER(%s)
+                        """
+                        params = [query + '%', query]
+                        
+                        if section:
+                            prefix_query += " AND section = %s"
+                            params.append(section)
+                        
+                        prefix_query += " ORDER BY name, section LIMIT %s"
+                        params.append(limit - len(results))
+                        
+                        cur.execute(prefix_query, params)
+                        prefix_results = cur.fetchall()
+                        results.extend(prefix_results)
                     
                     # If we need more results and fuzzy is enabled
                     if len(results) < limit and fuzzy:
@@ -83,11 +105,11 @@ class EnhancedSearch:
                         fuzzy_query = """
                             SELECT DISTINCT ON (name, section)
                                    name, section, title, description, category,
-                                   GREATEST(
-                                       similarity(name, %s) * 1.0,  -- Highest weight for name match
-                                       similarity(title, %s) * 0.6,  -- Medium weight for title
-                                       similarity(COALESCE(description, ''), %s) * 0.3  -- Lower weight for description
-                                   ) as score
+                                   CASE 
+                                       WHEN name %% %s THEN similarity(name, %s) * 0.8
+                                       WHEN title %% %s THEN similarity(title, %s) * 0.5
+                                       ELSE similarity(COALESCE(description, ''), %s) * 0.3
+                                   END as score
                             FROM man_pages
                             WHERE (
                                 name %% %s OR 
@@ -95,18 +117,18 @@ class EnhancedSearch:
                                 COALESCE(description, '') %% %s
                             )
                         """
-                        params = [query] * 6
+                        params = [query] * 8  # Updated for new CASE statement
                         
                         if section:
                             fuzzy_query += " AND section = %s"
                             params.append(section)
                         
-                        # Exclude exact matches already found
-                        if exact_results:
-                            exact_names = [r[0] for r in exact_results]
-                            placeholders = ','.join(['%s'] * len(exact_names))
+                        # Exclude exact and prefix matches already found
+                        if results:
+                            existing_names = list(set(r[0] for r in results))
+                            placeholders = ','.join(['%s'] * len(existing_names))
                             fuzzy_query += f" AND name NOT IN ({placeholders})"
-                            params.extend(exact_names)
+                            params.extend(existing_names)
                         
                         fuzzy_query += """
                             ORDER BY name, section, score DESC
@@ -118,21 +140,26 @@ class EnhancedSearch:
                         fuzzy_results = cur.fetchall()
                         results.extend(fuzzy_results)
                     
-                    # Format results
+                    # Format results while preserving order
                     formatted_results = []
-                    for r in results:
-                        formatted_results.append({
-                            "name": r[0],
-                            "section": r[1],
-                            "title": r[2],
-                            "description": r[3][:200] if r[3] else None,
-                            "category": r[4],
-                            "score": float(r[5]) if len(r) > 5 else 1.0,
-                            "snippet": self._generate_snippet(r[3], query) if r[3] else None
-                        })
+                    seen = set()  # Track unique name-section combinations
                     
-                    # Sort by score
-                    formatted_results.sort(key=lambda x: x['score'], reverse=True)
+                    for r in results:
+                        key = (r[0], r[1])
+                        if key not in seen:
+                            seen.add(key)
+                            formatted_results.append({
+                                "name": r[0],
+                                "section": r[1],
+                                "title": r[2],
+                                "description": r[3][:200] if r[3] else None,
+                                "category": r[4],
+                                "score": float(r[5]) if len(r) > 5 else 1.0,
+                                "snippet": self._generate_snippet(r[3], query) if r[3] else None
+                            })
+                    
+                    # Sort by score (descending) then by name (ascending)
+                    formatted_results.sort(key=lambda x: (-x['score'], x['name']))
                     
                     return {
                         "query": query,

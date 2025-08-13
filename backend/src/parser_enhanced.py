@@ -130,44 +130,55 @@ class EnhancedManPageParser:
                 
                 for line in lines:
                     # Check if line starts with an option flag
-                    option_match = re.match(r'^\s*(-[\w\-]+(?:,\s*--[\w\-]+)?(?:\s*[\[=][\w\[\]]+\]?)?)', line)
+                    # Improved regex to better match option patterns
+                    option_match = re.match(r'^\s*((?:-[\w](?:\s+|,\s*)?)?(?:--[\w\-]+)?(?:[\[=]\S+\]?)?)', line)
                     
-                    if option_match:
+                    if option_match and option_match.group(1).startswith('-'):
                         # Save previous option if exists
                         if current_option:
+                            # Clean up the description before saving
+                            current_option['description'] = ' '.join(current_option['description'].split())
                             options.append(current_option)
                         
                         # Start new option
                         flag = option_match.group(1).strip()
-                        description = line[len(option_match.group(0)):].strip()
+                        remaining = line[len(option_match.group(0)):].strip()
                         
                         # Parse short and long flags
-                        parts = flag.split(',')
+                        parts = re.split(r',\s*|\s+', flag)
                         short_flag = None
                         long_flag = flag
                         
-                        if len(parts) == 2:
-                            short_flag = parts[0].strip()
-                            long_flag = parts[1].strip()
+                        for part in parts:
+                            if part.startswith('--'):
+                                long_flag = part
+                            elif part.startswith('-') and len(part) <= 3:
+                                short_flag = part
                         
                         current_option = {
-                            'flag': long_flag if ',' in flag else flag,
+                            'flag': long_flag,
                             'shortFlag': short_flag,
-                            'description': description,
+                            'description': remaining,
                             'argument': None
                         }
                         
-                        # Check for argument
-                        arg_match = re.search(r'[\[=]([\w\[\]]+)\]?', flag)
+                        # Check for argument in the flag
+                        arg_match = re.search(r'[\[=]([^\]]+)\]?', flag)
                         if arg_match:
                             current_option['argument'] = arg_match.group(1)
                     
                     elif current_option and line.strip():
                         # Continue description of current option
-                        current_option['description'] += ' ' + line.strip()
+                        # Add proper spacing
+                        if current_option['description']:
+                            current_option['description'] += ' ' + line.strip()
+                        else:
+                            current_option['description'] = line.strip()
                 
                 # Don't forget the last option
                 if current_option:
+                    # Clean up the description before saving
+                    current_option['description'] = ' '.join(current_option['description'].split())
                     options.append(current_option)
                 
                 break
@@ -235,8 +246,21 @@ class EnhancedManPageParser:
             if section['title'] == 'SYNOPSIS':
                 # Clean up the synopsis
                 synopsis = section['content'].strip()
-                # Remove excessive whitespace
-                synopsis = re.sub(r'\s+', ' ', synopsis)
+                # Preserve newlines between different command forms
+                synopsis = re.sub(r'\n\s*\n', '\n', synopsis)  # Remove empty lines
+                # Replace multiple spaces with single space (but preserve newlines)
+                lines = synopsis.split('\n')
+                cleaned_lines = []
+                for line in lines:
+                    # Clean each line individually to preserve structure
+                    cleaned_line = re.sub(r'\s+', ' ', line.strip())
+                    if cleaned_line:
+                        cleaned_lines.append(cleaned_line)
+                # Join with space or newline depending on content
+                if len(cleaned_lines) > 1:
+                    synopsis = '\n'.join(cleaned_lines)
+                else:
+                    synopsis = cleaned_lines[0] if cleaned_lines else ''
                 return synopsis
         return ''
     
