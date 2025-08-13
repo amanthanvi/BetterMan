@@ -93,6 +93,7 @@ def verify_man_ready():
         'mkdir', 'cp', 'mv', 'rm', 'find', 'sed', 'awk'
     ]
     missing = []
+    minimized = []
     
     for cmd in check_commands:
         result = subprocess.run(
@@ -103,8 +104,19 @@ def verify_man_ready():
         )
         if result.returncode != 0:
             missing.append(cmd)
+        elif "minimized" in result.stdout.lower():
+            # man -w returns the minimized message instead of path
+            minimized.append(cmd)
+            logger.warning(f"⚠ {cmd}: System minimized message returned")
         else:
             logger.info(f"✓ Found man page for {cmd}: {result.stdout.strip()}")
+    
+    if minimized:
+        logger.error(f"System still minimized for: {', '.join(minimized)}")
+        logger.error("The Docker image has not properly restored man pages!")
+        logger.error("This will cause all extractions to fail.")
+        # This is a critical error - the system is still minimized
+        raise RuntimeError("System is still minimized - man pages not restored. Check Dockerfile.")
     
     if missing:
         logger.error(f"Missing man pages for: {', '.join(missing)}")
