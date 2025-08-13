@@ -210,6 +210,7 @@ async def root():
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
         "docs": "/api/docs" if settings.DEBUG else None,
+        "deployment": "railway-refactor-2024-08-13",
     }
 
 
