@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .cache.redis_simple import cache_result, get_cached, set_cached
 from .monitoring_simple import metrics, track_request
 from .search_enhanced import get_search
+from .parser_enhanced import parse_man_page
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -131,16 +132,26 @@ async def get_man_page(command: str, section: str):
             else:
                 content_data = {}
             
+            # Get raw content
+            raw_content = content_data.get('raw', '')
+            
+            # Parse the raw content for structured data
+            parsed_content = parse_man_page(raw_content) if raw_content else {}
+            
             result = {
                 "id": row[0],
                 "name": row[1],
                 "section": row[2],
                 "title": row[3],
-                "description": row[4],
-                "synopsis": row[5],
-                "content": content_data.get('raw', ''),
+                "description": row[4] or parsed_content.get('description', ''),
+                "synopsis": row[5] or parsed_content.get('synopsis', ''),
+                "content": raw_content,
                 "category": row[7],
-                "is_common": row[9]
+                "is_common": row[9],
+                "sections": parsed_content.get('sections', []),
+                "options": parsed_content.get('options', []),
+                "examples": parsed_content.get('examples', []),
+                "see_also": parsed_content.get('see_also', [])
             }
             
             # Cache for 1 hour
@@ -160,7 +171,7 @@ async def search_man_pages(
     limit: int = 20,
     section: str = None,
     fuzzy: bool = True,
-    threshold: float = 0.3
+    threshold: float = 0.2
 ):
     """Search man pages with fuzzy matching."""
     try:

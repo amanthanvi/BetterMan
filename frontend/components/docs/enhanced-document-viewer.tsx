@@ -156,27 +156,6 @@ export function EnhancedDocumentViewer({ page }: EnhancedDocumentViewerProps) {
               </div>
             </div>
             
-            {/* Quick Actions */}
-            <div className="flex flex-col gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="hover-glow"
-                onClick={() => window.open(`man://${page.name}`, '_blank')}
-              >
-                <Terminal className="w-4 h-4 mr-2" />
-                Open in Terminal
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="hover-glow"
-                onClick={() => {/* TODO: Implement playground */}}
-              >
-                <Play className="w-4 h-4 mr-2" />
-                Try in Playground
-              </Button>
-            </div>
           </div>
         </motion.header>
 

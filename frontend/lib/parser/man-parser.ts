@@ -28,11 +28,13 @@ export interface ManPage {
   rawContent: string
   searchContent: string
   relatedCommands: string[]
-  examples: string[]
+  examples: any[] // Can be string[] or object[]
   category?: string
   isCommon?: boolean
   seeAlso?: SeeAlsoItem[]
   keywords?: string[]
+  options?: any[] // From backend parser
+  content?: string // Raw content from backend
 }
 
 export class ManPageParser {

@@ -1,6 +1,105 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
 @import 'tailwindcss';
 
+/* Man Page Specific Styles */
+.man-section {
+  @apply mb-8;
+}
+
+.man-section h2 {
+  @apply text-2xl font-bold mb-4 text-primary;
+}
+
+.man-section-content {
+  @apply text-foreground/90 leading-relaxed;
+}
+
+.man-section-content p {
+  @apply mb-4;
+}
+
+.man-section-content pre {
+  @apply bg-muted/50 p-4 rounded-lg overflow-x-auto mb-4;
+}
+
+.man-section-content code {
+  @apply font-mono text-sm;
+}
+
+.inline-code {
+  @apply px-1.5 py-0.5 rounded bg-muted text-sm font-mono text-primary;
+}
+
+.code-example {
+  @apply bg-muted/50 p-4 rounded-lg overflow-x-auto mb-4 border border-border/50;
+}
+
+.option-flag {
+  @apply text-primary font-mono font-semibold;
+}
+
+.option-item {
+  @apply mb-4 pl-4 border-l-2 border-primary/20 hover:border-primary/40 transition-colors;
+}
+
+.example-block {
+  @apply mb-6 p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-card/70 transition-colors;
+}
+
+.man-page-link {
+  @apply text-primary hover:text-primary/80 underline underline-offset-2 font-mono text-sm;
+}
+
+/* Enhanced typography for better readability */
+.prose-man {
+  @apply text-foreground/90 leading-relaxed;
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+  
+  h1 { @apply text-3xl mb-6; }
+  h2 { @apply text-2xl mb-4 mt-8; }
+  h3 { @apply text-xl mb-3 mt-6; }
+  h4 { @apply text-lg mb-2 mt-4; }
+  
+  p {
+    @apply mb-4 leading-7;
+  }
+  
+  ul, ol {
+    @apply mb-4 pl-6;
+  }
+  
+  ul {
+    @apply list-disc;
+  }
+  
+  ol {
+    @apply list-decimal;
+  }
+  
+  li {
+    @apply mb-1;
+  }
+  
+  blockquote {
+    @apply border-l-4 border-primary/50 pl-4 italic text-muted-foreground;
+  }
+  
+  strong {
+    @apply font-semibold text-foreground;
+  }
+  
+  em {
+    @apply italic;
+  }
+  
+  hr {
+    @apply border-border/50 my-8;
+  }
+}
+
 @layer base {
   :root {
     /* Premium Dark Theme - Ultra Modern Developer Experience */

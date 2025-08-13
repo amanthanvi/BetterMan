@@ -34,7 +34,7 @@ class EnhancedSearch:
         limit: int = 20,
         section: Optional[str] = None,
         fuzzy: bool = True,
-        threshold: float = 0.3
+        threshold: float = 0.2  # Lowered from 0.3 for better fuzzy matching
     ) -> Dict[str, Any]:
         """
         Search man pages with fuzzy matching support.
@@ -79,14 +79,14 @@ class EnhancedSearch:
                         # Set similarity threshold
                         cur.execute("SET pg_trgm.similarity_threshold = %s", (threshold,))
                         
-                        # Fuzzy search with similarity scoring
+                        # Fuzzy search with weighted similarity scoring
                         fuzzy_query = """
                             SELECT DISTINCT ON (name, section)
                                    name, section, title, description, category,
                                    GREATEST(
-                                       similarity(name, %s),
-                                       similarity(title, %s) * 0.8,
-                                       similarity(COALESCE(description, ''), %s) * 0.5
+                                       similarity(name, %s) * 1.0,  -- Highest weight for name match
+                                       similarity(title, %s) * 0.6,  -- Medium weight for title
+                                       similarity(COALESCE(description, ''), %s) * 0.3  -- Lower weight for description
                                    ) as score
                             FROM man_pages
                             WHERE (

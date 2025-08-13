@@ -31,14 +31,28 @@ export class ManPageFormatter {
   private static cleanContent(content: string): string {
     return content
       // Remove header/footer lines (e.g., "LS(1)    User Commands    LS(1)")
-      .replace(/^[A-Z]+\(\d+\)\s+.*?\s+[A-Z]+\(\d+\)$/gm, '')
+      .replace(/^[A-Z]+[\(\[]\d+[\)\]]\s+.*?\s+[A-Z]+[\(\[]\d+[\)\]]$/gm, '')
+      // Remove man page headers/footers with dates
+      .replace(/^\w+\s+\d{4}-\d{2}-\d{2}\s+.*$/gm, '')
+      // Remove groff escape sequences
+      .replace(/\\f[BIRP]/g, '') // Font changes
+      .replace(/\\&/g, '') // Zero-width space
+      .replace(/\\-/g, '-') // Hyphen
+      .replace(/\\'/g, "'") // Apostrophe
+      .replace(/\\"/g, '"') // Quote
+      .replace(/\\e/g, '\\') // Backslash
+      .replace(/\\\^/g, '') // Half-narrow space
+      .replace(/\\\|/g, '') // Sixth of em space
+      .replace(/\\0/g, ' ') // Digital space
+      .replace(/\\~/g, ' ') // Unbreakable space
+      .replace(/\.\\".*$/gm, '') // Comments
       // Remove excessive whitespace between sections
       .replace(/\n{3,}/g, '\n\n')
       // Clean up weird spacing in headers
       .replace(/^([A-Z\s]+)$/gm, (match) => {
         // Check if it's a section header (all caps, possibly with spaces)
         const cleaned = match.replace(/\s+/g, ' ').trim()
-        if (cleaned.match(/^[A-Z][A-Z\s]+$/)) {
+        if (cleaned.match(/^[A-Z][A-Z\s]*$/)) {
           return cleaned
         }
         return match
@@ -47,6 +61,10 @@ export class ManPageFormatter {
       .replace(/\f/g, '')
       // Normalize whitespace
       .replace(/[ \t]+/g, ' ')
+      // Remove leading/trailing whitespace from lines
+      .split('\n').map(line => line.trim()).join('\n')
+      // Remove empty lines at start/end
+      .replace(/^\n+|\n+$/g, '')
       .trim()
   }
   
@@ -142,17 +160,58 @@ export class ManPageFormatter {
    * Format OPTIONS section with proper structure
    */
   private static formatOptionsSection(title: string, content: string): FormattedSection {
-    // Match option patterns like "-a, --all" or "--option=VALUE"
-    const optionRegex = /^(\s*)(-[\w-]+(?:,\s*--[\w-]+)?(?:\[?=[\w\[\]]+\]?)?)/gm
+    // Split into individual option blocks
+    const lines = content.split('\n')
+    const options: string[] = []
+    let currentOption = ''
+    let inOption = false
     
-    const formattedContent = content
-      .replace(optionRegex, (match, indent, option) => {
-        return `${indent}<span class="option-flag">${this.escapeHtml(option)}</span>`
-      })
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      // Check if this line starts a new option (starts with - or --)
+      if (line.match(/^\s*-{1,2}[\w-]/)) {
+        if (currentOption) {
+          options.push(currentOption)
+        }
+        currentOption = line
+        inOption = true
+      } else if (inOption) {
+        // Continue the current option description
+        if (line.trim()) {
+          currentOption += '\n' + line
+        } else if (currentOption) {
+          // Empty line ends the option
+          options.push(currentOption)
+          currentOption = ''
+          inOption = false
+        }
+      }
+    }
+    
+    // Don't forget the last option
+    if (currentOption) {
+      options.push(currentOption)
+    }
+    
+    // Format each option
+    const formattedOptions = options.map(opt => {
+      const lines = opt.split('\n')
+      const firstLine = lines[0]
+      const description = lines.slice(1).join(' ').trim()
+      
+      // Extract the option flag(s)
+      const flagMatch = firstLine.match(/^\s*(.+?)\s*$/)
+      const flag = flagMatch ? flagMatch[1] : firstLine
+      
+      return `<div class="option-item mb-4 pl-4 border-l-2 border-primary/20">
+        <div class="font-mono text-primary font-semibold">${this.escapeHtml(flag)}</div>
+        ${description ? `<div class="text-sm mt-1 text-muted-foreground">${this.escapeHtml(description)}</div>` : ''}
+      </div>`
+    }).join('\n')
     
     return {
       title,
-      content: this.formatSectionContent(formattedContent)
+      content: `<div class="options-list">${formattedOptions}</div>`
     }
   }
   
@@ -160,42 +219,67 @@ export class ManPageFormatter {
    * Format EXAMPLES section with code blocks
    */
   private static formatExamplesSection(title: string, content: string): FormattedSection {
-    // Detect code examples (usually indented lines)
+    // Detect code examples (usually indented lines or lines starting with $)
     const lines = content.split('\n')
-    const formattedLines: string[] = []
-    let inCodeBlock = false
-    let codeLines: string[] = []
+    const examples: { description?: string; command: string }[] = []
+    let currentExample: { description?: string; command: string } | null = null
+    let collectingCommand = false
     
-    for (const line of lines) {
-      const isIndented = line.startsWith('       ') || line.startsWith('\t')
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      const nextLine = lines[i + 1]
       
-      if (isIndented && !inCodeBlock) {
-        // Start code block
-        inCodeBlock = true
-        codeLines = [line.trim()]
-      } else if (isIndented && inCodeBlock) {
-        // Continue code block
-        codeLines.push(line.trim())
-      } else if (!isIndented && inCodeBlock) {
-        // End code block
-        formattedLines.push(`<pre class="code-example"><code>${codeLines.join('\n')}</code></pre>`)
-        formattedLines.push(this.escapeHtml(line))
-        inCodeBlock = false
-        codeLines = []
-      } else {
-        // Regular text
-        formattedLines.push(this.escapeHtml(line))
+      // Check if this is a command line (starts with $ or is indented)
+      const isCommand = line.trim().startsWith('$') || line.trim().startsWith('#') || 
+                       (line.startsWith('       ') || line.startsWith('\t'))
+      
+      if (isCommand) {
+        const command = line.trim().replace(/^\$\s*/, '').replace(/^#\s*/, '')
+        if (currentExample && !collectingCommand) {
+          // This is a new command after a description
+          currentExample.command = command
+          collectingCommand = true
+        } else if (!currentExample) {
+          // Command without description
+          currentExample = { command }
+          collectingCommand = true
+        } else if (collectingCommand) {
+          // Multi-line command
+          currentExample.command += '\n' + command
+        }
+      } else if (line.trim() === '') {
+        // Empty line - end current example if we have one
+        if (currentExample && currentExample.command) {
+          examples.push(currentExample)
+          currentExample = null
+          collectingCommand = false
+        }
+      } else if (!collectingCommand && line.trim()) {
+        // This is a description
+        if (currentExample && currentExample.command) {
+          examples.push(currentExample)
+        }
+        currentExample = { description: line.trim(), command: '' }
+        collectingCommand = false
       }
     }
     
-    // Handle any remaining code block
-    if (inCodeBlock && codeLines.length > 0) {
-      formattedLines.push(`<pre class="code-example"><code>${codeLines.join('\n')}</code></pre>`)
+    // Don't forget the last example
+    if (currentExample && currentExample.command) {
+      examples.push(currentExample)
     }
+    
+    // Format the examples
+    const formattedExamples = examples.map((ex, idx) => `
+      <div class="example-block mb-6 p-4 rounded-lg border border-border/50 bg-card/50">
+        ${ex.description ? `<p class="text-sm mb-2">${this.escapeHtml(ex.description)}</p>` : ''}
+        <pre class="bg-muted/50 p-3 rounded overflow-x-auto"><code class="text-sm font-mono">${this.escapeHtml(ex.command)}</code></pre>
+      </div>
+    `).join('\n')
     
     return {
       title,
-      content: formattedLines.join('\n')
+      content: formattedExamples || '<p class="text-muted-foreground">No examples available.</p>'
     }
   }
   
@@ -250,6 +334,15 @@ export class ManPageFormatter {
    * Escape HTML special characters
    */
   private static escapeHtml(text: string): string {
+    // Check if we're in a Node/SSR environment
+    if (typeof document === 'undefined') {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+    }
     const div = document.createElement('div')
     div.textContent = text
     return div.innerHTML

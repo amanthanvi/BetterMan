@@ -6,11 +6,24 @@ import type { EnhancedManPage, ManPageFlag, ManPageExample } from '../parser/enh
  * This allows the enhanced viewer to work with both data structures
  */
 export function adaptManPageToEnhanced(page: Partial<ManPage> & Pick<ManPage, 'name' | 'section' | 'title'>): EnhancedManPage {
-  // Parse flags from OPTIONS section if available
-  const flags = parseFlags(page.sections?.find(s => s.title === 'OPTIONS')?.content || '')
+  // Use options from backend if available, otherwise parse from sections
+  const flags = page.options?.length ? 
+    page.options.map(opt => ({
+      flag: opt.flag,
+      shortFlag: opt.shortFlag || undefined,
+      description: opt.description,
+      argument: opt.argument || undefined
+    })) :
+    parseFlags(page.sections?.find(s => s.title === 'OPTIONS')?.content || '')
   
-  // Parse examples into enhanced format
-  const examples = parseExamples(page.examples || [])
+  // Use examples from backend if available, otherwise parse from existing examples
+  const examples = page.examples?.length ? 
+    page.examples.map(ex => ({
+      command: ex.command || ex,
+      description: ex.description || `Example usage`,
+      tags: extractExampleTags(ex.command || ex)
+    })) :
+    parseExamples(page.examples || [])
   
   // Extract metadata from content
   const metadata = {
