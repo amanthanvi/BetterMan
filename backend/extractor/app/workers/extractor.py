@@ -304,14 +304,13 @@ class ManPageExtractor:
         env["MANWIDTH"] = "1000"
         return env
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def parse_man_page(self, name: str, section: int) -> Optional[Dict[str, Any]]:
+    def parse_man_page(self, name: str, section: str) -> Optional[Dict[str, Any]]:
         """
         Parse a single man page using groff.
         
         Args:
             name: Command name
-            section: Man page section
+            section: Man page section (as string)
             
         Returns:
             Parsed man page data or None if failed
@@ -320,10 +319,13 @@ class ManPageExtractor:
             # Get proper environment for non-TTY execution
             env = self._get_man_env()
             
-            # First try to read the man page directly using man command with proper env
-            cmd = f"man {section} {name} 2>/dev/null | col -bx"
+            # Convert section to string if it's not already
+            section = str(section)
+            
+            # Use the same pattern that works in verify_man_ready()
+            # Run man command directly with -P flag for pager
             result = subprocess.run(
-                ['bash', '-c', cmd],
+                ["man", "-P", "cat", section, name],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -331,9 +333,14 @@ class ManPageExtractor:
             )
             
             content = result.stdout
+            stderr_output = result.stderr
             
             # If man command returns minimized message or empty, try reading file directly
             if not content or "This system has been minimized" in content or result.returncode != 0:
+                # Log the error for debugging
+                if result.returncode != 0 and stderr_output:
+                    logger.debug(f"Man command failed for {name}({section}): {stderr_output[:200]}")
+                
                 # Try to find and read the man page file directly
                 man_file_paths = [
                     f"/usr/share/man/man{section}/{name}.{section}.gz",
@@ -345,25 +352,34 @@ class ManPageExtractor:
                 for man_path in man_file_paths:
                     if os.path.exists(man_path):
                         if man_path.endswith('.gz'):
-                            # Read compressed file
-                            cmd = f"zcat {man_path} | man -l - 2>/dev/null | col -bx"
+                            # Use zcat to decompress and man -l to format
+                            result = subprocess.run(
+                                ["sh", "-c", f"zcat '{man_path}' | man -l -"],
+                                capture_output=True,
+                                text=True,
+                                timeout=10,
+                                env=env
+                            )
                         else:
-                            # Read uncompressed file
-                            cmd = f"man -l {man_path} 2>/dev/null | col -bx"
-                        
-                        result = subprocess.run(
-                            ['bash', '-c', cmd],
-                            capture_output=True,
-                            text=True,
-                            timeout=10,
-                            env=env
-                        )
+                            # Read uncompressed file directly with man -l
+                            result = subprocess.run(
+                                ["man", "-l", man_path],
+                                capture_output=True,
+                                text=True,
+                                timeout=10,
+                                env=env
+                            )
                         
                         if result.stdout and "This system has been minimized" not in result.stdout:
                             content = result.stdout
                             break
             
             if not content or "This system has been minimized" in content:
+                # Log why we're returning None
+                if not content:
+                    logger.debug(f"No content for {name}({section})")
+                else:
+                    logger.debug(f"System minimized message for {name}({section})")
                 return None
             
             # Parse sections
@@ -458,7 +474,7 @@ class ManPageExtractor:
             logger.warning(f"Timeout parsing {name}({section})")
             return None
         except Exception as e:
-            logger.error(f"Error parsing {name}({section}): {e}")
+            logger.error(f"Error parsing {name}({section}): {str(e)[:500]}")
             return None
     
     def store_to_database(self, man_pages: List[Dict[str, Any]]) -> int:
@@ -634,6 +650,7 @@ class ManPageExtractor:
             # Process in batches
             batch_size = 50
             parsed_pages = []
+            error_counts = {}  # Track unique errors
             
             for i in range(0, len(man_pages), batch_size):
                 batch = man_pages[i:i + batch_size]
@@ -647,18 +664,29 @@ class ManPageExtractor:
                             stats['skipped'] += 1
                             continue
                     
-                    # Parse the man page
-                    parsed = self.parse_man_page(name, section)
-                    
-                    if parsed:
-                        parsed_pages.append(parsed)
-                        stats['success'] += 1
+                    # Parse the man page with error tracking
+                    try:
+                        parsed = self.parse_man_page(name, section)
                         
-                        # Track categories
-                        category = parsed['category']
-                        stats['categories'][category] = stats['categories'].get(category, 0) + 1
-                    else:
+                        if parsed:
+                            parsed_pages.append(parsed)
+                            stats['success'] += 1
+                            
+                            # Track categories
+                            category = parsed['category']
+                            stats['categories'][category] = stats['categories'].get(category, 0) + 1
+                        else:
+                            stats['failed'] += 1
+                            error_msg = f"parse_man_page returned None for {name}({section})"
+                            error_counts[error_msg] = error_counts.get(error_msg, 0) + 1
+                    except Exception as e:
                         stats['failed'] += 1
+                        error_msg = str(e).split('\n')[0][:200]  # First line, max 200 chars
+                        error_counts[error_msg] = error_counts.get(error_msg, 0) + 1
+                        
+                        # Log first few full errors for debugging
+                        if stats['failed'] <= 5:
+                            logger.error(f"Failed to parse {name}({section}): {e}")
                 
                 # Store batch to database
                 if parsed_pages:
@@ -672,6 +700,12 @@ class ManPageExtractor:
             # Update search vectors
             logger.info("Updating search vectors...")
             self.update_search_vectors()
+            
+            # Log error summary
+            if error_counts:
+                logger.error("=== Top parse errors ===")
+                for error_msg, count in sorted(error_counts.items(), key=lambda x: -x[1])[:10]:
+                    logger.error(f"{count} occurrences: {error_msg}")
             
             # Save extraction metadata
             self._save_metadata(stats)
