@@ -120,10 +120,23 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def get_db() -> Session:
-    """Get database session for dependency injection."""
+    """Get database session for dependency injection with proper transaction handling."""
     db = SessionLocal()
     try:
         yield db
+        # Commit if no errors occurred
+        if db.is_active:
+            try:
+                db.commit()
+            except Exception as e:
+                logger.error(f"Error committing transaction: {e}")
+                db.rollback()
+                raise
+    except Exception as e:
+        # Rollback on any error
+        if db.is_active:
+            db.rollback()
+        raise
     finally:
         db.close()
 
