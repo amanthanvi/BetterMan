@@ -84,8 +84,9 @@ async def db_check():
             "error": str(e)[:200]
         }
 
-# Add simple man page retrieval
+# Add simple man page retrieval (support both URL patterns)
 @app.get("/api/man/{command}/{section}")
+@app.get("/api/man/commands/{command}/{section}")
 async def get_man_page(command: str, section: str):
     """Get a specific man page."""
     import psycopg
