@@ -44,7 +44,6 @@ import Prism from 'prismjs'
 import 'prismjs/components/prism-bash'
 import 'prismjs/components/prism-shell-session'
 import type { EnhancedManPage, ManPageFlag, ManPageExample } from '@/lib/parser/enhanced-man-parser'
-import { getManPage } from '@/data/man-pages'
 import { formatManPageContent } from '@/lib/formatters/man-page-formatter'
 
 // Load Prism for syntax highlighting
@@ -855,8 +854,9 @@ function CopyButton({ text }: { text: string }) {
 
 // See Also Link Component
 function SeeAlsoLink({ reference }: { reference: { name: string; section: number } }) {
-  // Check if the command exists in our data
-  const exists = getManPage(reference.name, reference.section) !== undefined
+  // For now, assume all links are valid since we're fetching from backend
+  // This avoids the deprecated getManPage call
+  const exists = true
   
   const content = (
     <motion.div

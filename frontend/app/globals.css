@@ -213,13 +213,13 @@
   :focus-visible {
     outline: 2px solid transparent;
     outline-offset: 2px;
-    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+    box-shadow: 0 0 0 2px theme('colors.background'), 0 0 0 4px theme('colors.ring');
   }
   
   /* Selection colors */
   ::selection {
-    background-color: hsl(var(--primary) / 0.3);
-    color: hsl(var(--primary-foreground));
+    background-color: theme('colors.primary' / 30%);
+    color: theme('colors.primary-foreground');
   }
   
   /* Smooth scrolling */
@@ -240,20 +240,20 @@
   }
   
   ::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted));
+    background-color: theme('colors.muted');
     border-radius: 9999px; /* rounded-full */
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-color: theme('colors.muted-foreground' / 50%);
   }
   
   /* Code blocks with syntax highlighting feel */
   .prose pre {
-    background-color: hsl(222, 47%, 9%);
-    border: 1px solid hsl(var(--border));
+    background-color: #0a1628;
+    border: 1px solid theme('colors.border');
     border-radius: 0.5rem; /* rounded-lg */
     padding: 1rem; /* p-4 */
     overflow-x: auto;
@@ -261,7 +261,7 @@
   }
   
   .prose code {
-    background-color: hsl(var(--muted) / 0.5);
+    background-color: theme('colors.muted' / 50%);
     padding-left: 0.375rem; /* px-1.5 */
     padding-right: 0.375rem; /* px-1.5 */
     padding-top: 0.125rem; /* py-0.5 */
@@ -282,9 +282,9 @@
   .card-gradient {
     background-image: linear-gradient(
       to bottom right,
-      hsl(var(--card)) 0%,
-      hsl(var(--card)) 50%,
-      hsl(var(--card) / 0.8) 100%
+      theme('colors.card') 0%,
+      theme('colors.card') 50%,
+      theme('colors.card' / 80%) 100%
     );
   }
   
@@ -293,8 +293,8 @@
     overflow: hidden;
     background: linear-gradient(
       135deg,
-      hsl(var(--card)) 0%,
-      hsl(var(--card) / 0.98) 100%
+      theme('colors.card') 0%,
+      theme('colors.card' / 98%) 100%
     );
   }
   
@@ -311,7 +311,7 @@
     transition-duration: 300ms;
     background: radial-gradient(
       circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-      hsl(var(--primary) / 0.15) 0%,
+      theme('colors.primary' / 15%) 0%,
       transparent 50%
     );
   }
@@ -327,44 +327,45 @@
   }
   
   .command-syntax .flag {
-    color: hsl(var(--primary));
+    color: theme('colors.primary');
     font-weight: 500; /* font-medium */
   }
   
   .command-syntax .argument {
-    color: hsl(var(--accent));
+    color: theme('colors.accent');
   }
   
   .command-syntax .optional {
-    color: hsl(var(--muted-foreground) / 0.7);
+    color: theme('colors.muted-foreground' / 70%);
     font-style: italic;
   }
   
   /* Search highlights */
   .search-highlight {
-    background-color: hsl(var(--warning) / 0.2);
-    color: hsl(var(--warning-foreground));
+    background-color: theme('colors.warning' / 20%);
+    color: theme('colors.warning-foreground');
     padding-left: 0.25rem; /* px-1 */
     padding-right: 0.25rem; /* px-1 */
     border-radius: 0.25rem; /* rounded */
-    box-shadow: 0 0 0 1px hsl(var(--warning) / 0.3);
+    box-shadow: 0 0 0 1px theme('colors.warning' / 30%);
   }
   
   /* Glass morphism effects */
   .glass {
-    background-color: hsl(var(--background) / 0.6);
-    backdrop-filter: blur(24px); /* backdrop-blur-xl */
-    border-color: hsl(var(--border) / 0.5);
+    background-color: rgb(15 23 42 / 0.6);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    border-color: rgb(30 41 59 / 0.5);
     background-image: linear-gradient(
       to bottom,
-      hsl(var(--background) / 0.8) 0%,
-      hsl(var(--background) / 0.6) 100%
+      rgb(15 23 42 / 0.8) 0%,
+      rgb(15 23 42 / 0.6) 100%
     );
   }
   
   /* Gradient text */
   .gradient-text {
-    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--secondary)));
+    background-image: linear-gradient(to right, #3b82f6, #06b6d4, #7c3aed);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -379,14 +380,24 @@
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 200ms;
     box-shadow: 
-      0 0 20px hsl(var(--primary) / 0.15),
-      0 0 40px hsl(var(--primary) / 0.1);
+      0 0 20px rgb(59 130 246 / 0.15),
+      0 0 40px rgb(59 130 246 / 0.1);
   }
   
   .btn-glow:hover {
     box-shadow: 
-      0 0 25px hsl(var(--primary) / 0.25),
-      0 0 50px hsl(var(--primary) / 0.15);
+      0 0 25px rgb(59 130 246 / 0.25),
+      0 0 50px rgb(59 130 246 / 0.15);
+  }
+  
+  /* Ensure hover-glow class works */
+  .hover-glow {
+    transition: all 0.3s ease;
+  }
+  
+  .hover-glow:hover {
+    box-shadow: 0 0 20px rgb(59 130 246 / 0.2);
+    transform: translateY(-2px);
   }
   
   /* Loading skeleton with shimmer */
@@ -402,13 +413,13 @@
   .skeleton {
     position: relative;
     overflow: hidden;
-    background-color: hsl(var(--muted));
+    background-color: theme('colors.muted');
     border-radius: 0.25rem; /* rounded */
     background: linear-gradient(
       90deg,
-      hsl(var(--muted)) 0%,
-      hsl(var(--muted) / 0.7) 50%,
-      hsl(var(--muted)) 100%
+      theme('colors.muted') 0%,
+      theme('colors.muted' / 70%) 50%,
+      theme('colors.muted') 100%
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite ease-in-out;
@@ -422,14 +433,10 @@
   .focus-ring:focus {
     outline: 2px solid transparent;
     outline-offset: 2px;
-    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
-  }
-  
-  .focus-ring:focus {
     box-shadow: 
-      0 0 0 2px hsl(var(--background)),
-      0 0 0 4px hsl(var(--ring)),
-      0 0 20px hsl(var(--ring) / 0.3);
+      0 0 0 2px theme('colors.background'),
+      0 0 0 4px theme('colors.ring'),
+      0 0 20px theme('colors.ring' / 30%);
   }
 }
 
@@ -516,8 +523,8 @@
   /* Grid patterns */
   .grid-pattern {
     background-image: 
-      linear-gradient(hsl(var(--border) / 0.3) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
+      linear-gradient(rgb(30 41 59 / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(30 41 59 / 0.3) 1px, transparent 1px);
     background-size: 50px 50px;
   }
   

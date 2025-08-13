@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getManPage } from '@/data/man-pages'
 
 export async function GET(
   request: NextRequest,
@@ -14,22 +13,7 @@ export async function GET(
   const section = parts[1] ? parseInt(parts[1]) : undefined
 
   try {
-    // Try to get from static data first
-    const staticPage = getManPage(name, section)
-    
-    if (staticPage) {
-      // Track page view (non-blocking)
-      const supabase = await createClient()
-      // Fire and forget analytics tracking
-      void supabase.from('analytics').insert({
-        event_type: 'page_view',
-        metadata: { name, section }
-      })
-      
-      return NextResponse.json(staticPage)
-    }
-
-    // If not in static data, try database
+    // Get from database directly (no more static data)
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('documents')
