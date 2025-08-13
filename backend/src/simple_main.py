@@ -44,12 +44,13 @@ async def health_check():
 @app.get("/db-check")
 async def db_check():
     """Check if database has man pages."""
-    import psycopg2
+    import psycopg
     from urllib.parse import urlparse
     
     try:
         db_url = os.environ.get('DATABASE_URL', '')
-        conn = psycopg2.connect(db_url)
+        # psycopg3 uses psycopg instead of psycopg2
+        conn = psycopg.connect(db_url)
         cur = conn.cursor()
         
         # Count man pages
@@ -87,12 +88,12 @@ async def db_check():
 @app.get("/api/man/{command}/{section}")
 async def get_man_page(command: str, section: str):
     """Get a specific man page."""
-    import psycopg2
+    import psycopg
     import json
     
     try:
         db_url = os.environ.get('DATABASE_URL', '')
-        conn = psycopg2.connect(db_url)
+        conn = psycopg.connect(db_url)
         cur = conn.cursor()
         
         cur.execute("""
@@ -130,11 +131,11 @@ async def get_man_page(command: str, section: str):
 @app.get("/api/search")
 async def search_man_pages(q: str = ""):
     """Search man pages."""
-    import psycopg2
+    import psycopg
     
     try:
         db_url = os.environ.get('DATABASE_URL', '')
-        conn = psycopg2.connect(db_url)
+        conn = psycopg.connect(db_url)
         cur = conn.cursor()
         
         if q:
@@ -169,6 +170,63 @@ async def search_man_pages(q: str = ""):
                 for r in results
             ],
             "total": len(results)
+        }
+        
+    except Exception as e:
+        return {"error": str(e)[:200]}, 500
+
+# Add list all commands endpoint
+@app.get("/api/man/commands")
+async def list_commands(limit: int = 100, offset: int = 0, category: str = None):
+    """List all available man page commands."""
+    import psycopg
+    
+    try:
+        db_url = os.environ.get('DATABASE_URL', '')
+        conn = psycopg.connect(db_url)
+        cur = conn.cursor()
+        
+        if category:
+            cur.execute("""
+                SELECT DISTINCT name, section, title, category
+                FROM man_pages 
+                WHERE category = %s
+                ORDER BY name
+                LIMIT %s OFFSET %s
+            """, (category, limit, offset))
+        else:
+            cur.execute("""
+                SELECT DISTINCT name, section, title, category
+                FROM man_pages 
+                ORDER BY name
+                LIMIT %s OFFSET %s
+            """, (limit, offset))
+        
+        results = cur.fetchall()
+        
+        # Get total count
+        if category:
+            cur.execute("SELECT COUNT(DISTINCT name) FROM man_pages WHERE category = %s", (category,))
+        else:
+            cur.execute("SELECT COUNT(DISTINCT name) FROM man_pages")
+        total = cur.fetchone()[0]
+        
+        cur.close()
+        conn.close()
+        
+        return {
+            "commands": [
+                {
+                    "name": r[0],
+                    "section": r[1],
+                    "title": r[2],
+                    "category": r[3]
+                }
+                for r in results
+            ],
+            "total": total,
+            "limit": limit,
+            "offset": offset
         }
         
     except Exception as e:
