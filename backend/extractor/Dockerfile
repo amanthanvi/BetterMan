@@ -72,7 +72,11 @@ ENV MANPAGER=cat \
     TERM=xterm \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
-    MANWIDTH=1000
+    MANWIDTH=1000 \
+    MAN_DISABLE_SECCOMP=1
+
+# Install col command if not present (needed for cleaning man output)
+RUN apt-get update && apt-get install -y --no-install-recommends bsdmainutils && rm -rf /var/lib/apt/lists/*
 
 # Run the extractor
 CMD ["python3", "/app/app/workers/railway_extractor.py"]

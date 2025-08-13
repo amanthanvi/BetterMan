@@ -36,6 +36,10 @@ def verify_man_ready():
     if not shutil.which("man"):
         raise RuntimeError("man command not found in PATH")
     
+    # Check col command exists (needed for cleaning output)
+    if not shutil.which("col"):
+        raise RuntimeError("col command not found in PATH")
+    
     # Set proper environment for non-TTY
     env = os.environ.copy()
     env["MANPAGER"] = "cat"
@@ -45,8 +49,10 @@ def verify_man_ready():
     env["LC_ALL"] = "C.UTF-8"
     env["MANWIDTH"] = "1000"
     
-    # Test runtime rendering
+    # Test runtime rendering with the exact same method we'll use in extraction
     logger.info("Testing runtime man rendering...")
+    
+    # Test 1: Direct man command with -P cat
     test = subprocess.run(
         ["man", "-P", "cat", "ls"],
         capture_output=True,
@@ -55,7 +61,32 @@ def verify_man_ready():
     )
     if test.returncode != 0 or len(test.stdout) < 50:
         raise RuntimeError(f"Runtime man rendering failed: rc={test.returncode}, stderr={test.stderr[:200]}")
-    logger.info("✓ Runtime man rendering works")
+    logger.info("✓ Runtime man rendering works with -P cat")
+    
+    # Test 2: Man piped through col (the way we actually parse)
+    try:
+        man_proc = subprocess.Popen(
+            ["man", "-P", "cat", "1", "ls"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env
+        )
+        col_proc = subprocess.Popen(
+            ["col", "-bx"],
+            stdin=man_proc.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env
+        )
+        man_proc.stdout.close()
+        output, _ = col_proc.communicate(timeout=5)
+        man_proc.wait(timeout=5)
+        
+        if man_proc.returncode != 0 or col_proc.returncode != 0 or len(output) < 50:
+            raise RuntimeError(f"Man|col pipeline failed: man_rc={man_proc.returncode}, col_rc={col_proc.returncode}")
+        logger.info("✓ Man|col pipeline works correctly")
+    except Exception as e:
+        raise RuntimeError(f"Man|col pipeline test failed: {e}")
     
     check_commands = [
         'ls', 'grep', 'curl', 'git', 'tar', 'ps', 'cat', 

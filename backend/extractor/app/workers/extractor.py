@@ -322,25 +322,43 @@ class ManPageExtractor:
             # Convert section to string if it's not already
             section = str(section)
             
-            # Use the same pattern that works in verify_man_ready()
-            # Run man command directly with -P flag for pager
-            result = subprocess.run(
+            # Run man command and pipe through col to clean formatting
+            # This two-step process ensures proper rendering
+            man_proc = subprocess.Popen(
                 ["man", "-P", "cat", section, name],
-                capture_output=True,
-                text=True,
-                timeout=10,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 env=env
             )
             
-            content = result.stdout
-            stderr_output = result.stderr
+            # Clean the output with col -bx to remove backspaces and overstrikes
+            col_proc = subprocess.Popen(
+                ["col", "-bx"],
+                stdin=man_proc.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env
+            )
             
-            # If man command returns minimized message or empty, try reading file directly
-            if not content or "This system has been minimized" in content or result.returncode != 0:
-                # Log the error for debugging
-                if result.returncode != 0 and stderr_output:
-                    logger.debug(f"Man command failed for {name}({section}): {stderr_output[:200]}")
+            # Close man's stdout to signal we're done reading
+            man_proc.stdout.close()
+            
+            # Get the cleaned output
+            content, col_stderr = col_proc.communicate(timeout=10)
+            man_proc.wait(timeout=10)
+            
+            # Decode the content
+            if isinstance(content, bytes):
+                content = content.decode('utf-8', errors='ignore')
+            
+            # Check for errors
+            if man_proc.returncode != 0 or col_proc.returncode != 0:
+                man_stderr = man_proc.stderr.read().decode('utf-8', errors='ignore') if man_proc.stderr else ""
+                if man_stderr and "No manual entry" not in man_stderr:
+                    logger.debug(f"Man failed for {name}({section}): {man_stderr[:200]}")
                 
+            # If man command returns minimized message or empty, try reading file directly
+            if not content or "This system has been minimized" in content or len(content) < 50:
                 # Try to find and read the man page file directly
                 man_file_paths = [
                     f"/usr/share/man/man{section}/{name}.{section}.gz",
@@ -351,28 +369,37 @@ class ManPageExtractor:
                 
                 for man_path in man_file_paths:
                     if os.path.exists(man_path):
-                        if man_path.endswith('.gz'):
-                            # Use zcat to decompress and man -l to format
-                            result = subprocess.run(
-                                ["sh", "-c", f"zcat '{man_path}' | man -l -"],
-                                capture_output=True,
-                                text=True,
-                                timeout=10,
-                                env=env
-                            )
-                        else:
-                            # Read uncompressed file directly with man -l
-                            result = subprocess.run(
+                        try:
+                            # Use man -l to read the file directly
+                            man_proc = subprocess.Popen(
                                 ["man", "-l", man_path],
-                                capture_output=True,
-                                text=True,
-                                timeout=10,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
                                 env=env
                             )
-                        
-                        if result.stdout and "This system has been minimized" not in result.stdout:
-                            content = result.stdout
-                            break
+                            
+                            # Clean with col
+                            col_proc = subprocess.Popen(
+                                ["col", "-bx"],
+                                stdin=man_proc.stdout,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                env=env
+                            )
+                            
+                            man_proc.stdout.close()
+                            content, _ = col_proc.communicate(timeout=10)
+                            man_proc.wait(timeout=10)
+                            
+                            if isinstance(content, bytes):
+                                content = content.decode('utf-8', errors='ignore')
+                            
+                            if content and "This system has been minimized" not in content and len(content) > 50:
+                                logger.debug(f"Successfully read {name}({section}) from file {man_path}")
+                                break
+                        except Exception as e:
+                            logger.debug(f"Failed to read {man_path}: {e}")
+                            continue
             
             if not content or "This system has been minimized" in content:
                 # Log why we're returning None
@@ -472,10 +499,12 @@ class ManPageExtractor:
             
         except subprocess.TimeoutExpired:
             logger.warning(f"Timeout parsing {name}({section})")
-            return None
+            raise RuntimeError(f"Timeout parsing {name}({section})")
         except Exception as e:
-            logger.error(f"Error parsing {name}({section}): {str(e)[:500]}")
-            return None
+            error_msg = f"Error parsing {name}({section}): {str(e)[:500]}"
+            logger.error(error_msg)
+            # Re-raise with cleaner message for error tracking
+            raise RuntimeError(f"Parse failed: {str(e).split(':')[0] if ':' in str(e) else str(e)[:100]}")
     
     def store_to_database(self, man_pages: List[Dict[str, Any]]) -> int:
         """
@@ -701,11 +730,16 @@ class ManPageExtractor:
             logger.info("Updating search vectors...")
             self.update_search_vectors()
             
-            # Log error summary
+            # Log error summary with more detail
             if error_counts:
                 logger.error("=== Top parse errors ===")
                 for error_msg, count in sorted(error_counts.items(), key=lambda x: -x[1])[:10]:
                     logger.error(f"{count} occurrences: {error_msg}")
+                
+                # Log some example failures for debugging
+                if stats['failed'] > 0:
+                    logger.error(f"Total failures: {stats['failed']} out of {stats['total']}")
+                    logger.error("Check that MANPAGER=cat and col command is available")
             
             # Save extraction metadata
             self._save_metadata(stats)
