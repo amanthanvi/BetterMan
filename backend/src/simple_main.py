@@ -110,7 +110,18 @@ async def get_man_page(command: str, section: str):
         conn.close()
         
         if row:
-            content_data = json.loads(row[6]) if row[6] else {}
+            # Handle content field - it might already be a dict or a JSON string
+            if row[6]:
+                if isinstance(row[6], dict):
+                    content_data = row[6]
+                else:
+                    try:
+                        content_data = json.loads(row[6])
+                    except (json.JSONDecodeError, TypeError):
+                        content_data = {"raw": str(row[6])}
+            else:
+                content_data = {}
+            
             return {
                 "id": row[0],
                 "name": row[1],
