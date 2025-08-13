@@ -197,6 +197,10 @@ app.include_router(api_router, prefix=settings.API_PREFIX)
 # Include authentication routes
 app.include_router(auth_router, prefix="/api")
 
+# Temporary debug endpoints
+from .debug_endpoint import debug_router
+app.include_router(debug_router, prefix="/debug", tags=["debug"])
+
 
 @app.get("/")
 async def root():
