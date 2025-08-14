@@ -98,8 +98,8 @@ class EnhancedSearch:
                     
                     # If we need more results and fuzzy is enabled
                     if len(results) < limit and fuzzy:
-                        # Set similarity threshold
-                        cur.execute("SET pg_trgm.similarity_threshold = %s", (threshold,))
+                        # Set similarity threshold - use direct value to avoid parameter substitution issues
+                        cur.execute(f"SET pg_trgm.similarity_threshold = {threshold}")
                         
                         # Fuzzy search with weighted similarity scoring
                         fuzzy_query = """
