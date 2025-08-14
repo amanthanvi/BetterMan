@@ -175,7 +175,10 @@ async def search_man_pages(
 ):
     """Search man pages with fuzzy matching."""
     try:
-        search = get_search()
+        db_url = os.environ.get('DATABASE_URL')
+        if not db_url:
+            return {"error": "Database URL not configured"}, 500
+        search = get_search(db_url)
         return search.search(
             query=q,
             limit=limit,
