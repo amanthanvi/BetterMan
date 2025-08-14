@@ -118,70 +118,85 @@ class EnhancedManPageParser:
         return sections
     
     def _extract_options(self, sections: List[Dict]) -> List[Dict[str, str]]:
-        """Extract options/flags from OPTIONS section."""
+        """Extract options/flags from OPTIONS or DESCRIPTION section."""
         options = []
         
+        # Look for OPTIONS section first, then fall back to DESCRIPTION
+        target_section = None
         for section in sections:
             if section['title'] == 'OPTIONS':
-                content = section['content']
-                # Parse individual options
-                lines = content.split('\n')
-                current_option = None
+                target_section = section
+                break
+            elif section['title'] == 'DESCRIPTION' and not target_section:
+                target_section = section
+        
+        if target_section:
+            content = target_section['content']
+            # Parse individual options
+            lines = content.split('\n')
+            current_option = None
                 
-                for line in lines:
-                    # Check if line starts with an option flag
-                    # Improved regex to better match option patterns
-                    option_match = re.match(r'^\s*((?:-[\w](?:\s+|,\s*)?)?(?:--[\w\-]+)?(?:[\[=]\S+\]?)?)', line)
+            for line in lines:
+                # Check if line starts with an option flag
+                # Match patterns like: "-a, --all" or "-B, --ignore-backups" or "--author"
+                option_match = re.match(r'^\s*(-[a-zA-Z](?:,?\s*--[\w\-]+)?|--[\w\-]+(?:=\S+)?)', line)
+                
+                if option_match:
+                    # Save previous option if exists
+                    if current_option:
+                        # Clean up the description before saving
+                        current_option['description'] = ' '.join(current_option['description'].split())
+                        options.append(current_option)
                     
-                    if option_match and option_match.group(1).startswith('-'):
-                        # Save previous option if exists
-                        if current_option:
-                            # Clean up the description before saving
-                            current_option['description'] = ' '.join(current_option['description'].split())
-                            options.append(current_option)
-                        
-                        # Start new option
-                        flag = option_match.group(1).strip()
-                        remaining = line[len(option_match.group(0)):].strip()
-                        
-                        # Parse short and long flags
-                        parts = re.split(r',\s*|\s+', flag)
-                        short_flag = None
-                        long_flag = flag
-                        
+                    # Start new option
+                    flag_text = option_match.group(1).strip()
+                    remaining = line[len(option_match.group(0)):].strip()
+                    
+                    # Parse short and long flags from patterns like "-a, --all"
+                    short_flag = None
+                    long_flag = None
+                    
+                    if ',' in flag_text:
+                        # Pattern like "-a, --all"
+                        parts = [p.strip() for p in flag_text.split(',')]
                         for part in parts:
                             if part.startswith('--'):
-                                long_flag = part
-                            elif part.startswith('-') and len(part) <= 3:
+                                long_flag = part.split('=')[0]  # Remove any =VALUE part
+                            elif part.startswith('-'):
                                 short_flag = part
-                        
-                        current_option = {
-                            'flag': long_flag,
-                            'shortFlag': short_flag,
-                            'description': remaining,
-                            'argument': None
-                        }
-                        
-                        # Check for argument in the flag
-                        arg_match = re.search(r'[\[=]([^\]]+)\]?', flag)
+                    else:
+                        # Single flag
+                        if flag_text.startswith('--'):
+                            long_flag = flag_text.split('=')[0]
+                        else:
+                            short_flag = flag_text
+                    
+                    current_option = {
+                        'flag': long_flag or short_flag,
+                        'shortFlag': short_flag if long_flag else None,
+                        'description': remaining,
+                        'argument': None
+                    }
+                    
+                    # Check for argument in the flag
+                    if '=' in flag_text:
+                        arg_match = re.search(r'=(\S+)', flag_text)
                         if arg_match:
                             current_option['argument'] = arg_match.group(1)
-                    
-                    elif current_option and line.strip():
-                        # Continue description of current option
-                        # Add proper spacing
-                        if current_option['description']:
-                            current_option['description'] += ' ' + line.strip()
-                        else:
-                            current_option['description'] = line.strip()
                 
-                # Don't forget the last option
-                if current_option:
-                    # Clean up the description before saving
-                    current_option['description'] = ' '.join(current_option['description'].split())
-                    options.append(current_option)
-                
-                break
+                elif current_option and line.strip():
+                    # Continue description of current option
+                    # Add proper spacing
+                    if current_option['description']:
+                        current_option['description'] += ' ' + line.strip()
+                    else:
+                        current_option['description'] = line.strip()
+            
+            # Don't forget the last option
+            if current_option:
+                # Clean up the description before saving
+                current_option['description'] = ' '.join(current_option['description'].split())
+                options.append(current_option)
         
         return options
     
