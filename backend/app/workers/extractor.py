@@ -358,41 +358,31 @@ class ManPageExtractor:
             if not content or "This system has been minimized" in content:
                 return None
             
-            # Try using enhanced parser first
-            enhanced_result = None
+            # Enhanced parse (preferred)
             try:
                 enhanced_result = enhanced_parse_man_page(content)
             except Exception as e:
                 logger.debug(f"Enhanced parser failed for {name}({section}): {e}")
+                enhanced_result = None
             
-            # Parse sections
-            parsed = {
-                'name': name,
-                'section': str(section),
-                'content': content,
-                'content_hash': self._calculate_hash(content),
-                'category': self._get_category(name),
-                'last_updated': datetime.now(timezone.utc)
-            }
-            
-            # Use enhanced parser results if available
             if enhanced_result:
-                parsed['title'] = enhanced_result.get('title', '')
-                parsed['synopsis'] = enhanced_result.get('synopsis', '')
-                parsed['description'] = enhanced_result.get('description', '')[:5000]
-                parsed['options'] = json.dumps(enhanced_result.get('options', []))
-                parsed['examples'] = json.dumps(enhanced_result.get('examples', []))
-                # Get see_also from sections
-                see_also = []
-                for section in enhanced_result.get('sections', []):
-                    if section.get('title') == 'SEE ALSO':
-                        see_also_text = section.get('content', '')
-                        refs = re.findall(r'(\w+)\((\d+)\)', see_also_text)
-                        for ref_name, ref_section in refs[:10]:
-                            see_also.append({'name': ref_name, 'section': int(ref_section)})
-                        break
-                parsed['see_also'] = json.dumps(see_also) if see_also else '[]'
-                return parsed
+                # compute a stable content hash
+                content_hash = hashlib.sha256(content.encode("utf-8", "ignore")).hexdigest()
+                return {
+                    "name": name,
+                    "section": str(section),
+                    "title": enhanced_result.get("title") or f"{name} - manual page",
+                    "synopsis": enhanced_result.get("synopsis") or "",
+                    "description": (enhanced_result.get("description") or "")[:8000],
+                    "summary": enhanced_result.get("summary") or "",
+                    "options": json.dumps(enhanced_result.get("options") or []),
+                    "examples": json.dumps(enhanced_result.get("examples") or []),
+                    "see_also": json.dumps(enhanced_result.get("see_also") or []),
+                    "content": content,  # raw content for future reference
+                    "content_hash": content_hash,
+                    "category": self._get_category(name),
+                    "last_updated": datetime.now(timezone.utc)
+                }
             
             # Fallback to regex parsing
             # Extract title

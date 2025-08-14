@@ -26,6 +26,19 @@ settings = get_settings()
 # Create router
 router = APIRouter()
 
+# Dependency for instant search engine
+def get_instant_search_engine():
+    """Get instant search engine instance - stub for now."""
+    try:
+        # Try to use the actual unified search engine
+        from ..search.unified_search import UnifiedSearchEngine
+        db = next(get_db())
+        return UnifiedSearchEngine(db)
+    except Exception as e:
+        logger.warning(f"Could not initialize instant search engine: {e}")
+        # Return a stub that won't break the endpoint
+        return OptimizedSearchEngine()
+
 
 class SearchRequest(BaseModel):
     """Search request model."""

@@ -1,348 +1,210 @@
-"""Enhanced man page parser for BetterMan API."""
-
+# backend/src/parser_enhanced.py
+from __future__ import annotations
 import re
-import json
-from typing import Dict, List, Any, Optional
-import logging
+from typing import Dict, List, Optional, Tuple
 
-logger = logging.getLogger(__name__)
+SECTION_RE = re.compile(r'^\s*([A-Z][A-Z0-9 _/-]{2,})\s*$', re.MULTILINE)
 
-class EnhancedManPageParser:
-    """Parse raw man page content into structured format."""
-    
-    # Common section headers in man pages
-    SECTION_HEADERS = [
-        'NAME', 'SYNOPSIS', 'DESCRIPTION', 'OPTIONS', 'ARGUMENTS',
-        'EXAMPLES', 'EXIT STATUS', 'RETURN VALUE', 'ERRORS',
-        'ENVIRONMENT', 'FILES', 'VERSIONS', 'CONFORMING TO',
-        'NOTES', 'BUGS', 'AUTHOR', 'AUTHORS', 'REPORTING BUGS',
-        'COPYRIGHT', 'SEE ALSO', 'HISTORY', 'AVAILABILITY',
-        'STANDARDS', 'COMMANDS', 'FUNCTIONS', 'LIBRARY', 'DIAGNOSTICS'
-    ]
-    
-    def __init__(self):
-        self.section_pattern = self._create_section_pattern()
-    
-    def _create_section_pattern(self):
-        """Create regex pattern for section headers."""
-        headers = '|'.join(self.SECTION_HEADERS)
-        return re.compile(f'^({headers})\\s*$', re.MULTILINE | re.IGNORECASE)
-    
-    def parse(self, raw_content: str) -> Dict[str, Any]:
-        """Parse raw man page content into structured format."""
-        if not raw_content:
-            return self._empty_result()
-        
-        # Clean the content first
-        cleaned = self._clean_content(raw_content)
-        
-        # Parse into sections
-        sections = self._parse_sections(cleaned)
-        
-        # Extract specific information
-        parsed = {
-            'sections': sections,
-            'options': self._extract_options(sections),
-            'examples': self._extract_examples(sections),
-            'synopsis': self._extract_synopsis(sections),
-            'description': self._extract_description(sections),
-            'see_also': self._extract_see_also(sections),
-            'parsed': True
-        }
-        
-        return parsed
-    
-    def _clean_content(self, content: str) -> str:
-        """Clean raw man page content."""
-        # Remove man page headers/footers (e.g., "LS(1)    User Commands    LS(1)")
-        content = re.sub(r'^[A-Z]+[\(\[][\d]+[\)\]]\s+.*?\s+[A-Z]+[\(\[][\d]+[\)\]]$', '', content, flags=re.MULTILINE)
-        
-        # Remove groff/troff escape sequences
-        content = re.sub(r'\\f[BIRP]', '', content)  # Font changes
-        content = re.sub(r'\\&', '', content)  # Zero-width space
-        content = content.replace('\\-', '-')  # Hyphen
-        content = content.replace("\\'", "'")  # Apostrophe
-        content = content.replace('\\"', '"')  # Quote
-        content = content.replace('\\e', '\\')  # Backslash
-        content = re.sub(r'\\\^', '', content)  # Half-narrow space
-        content = re.sub(r'\\\|', '', content)  # Sixth of em space
-        content = re.sub(r'\\0', ' ', content)  # Digital space
-        content = re.sub(r'\\~', ' ', content)  # Unbreakable space
-        content = re.sub(r'\.\\\".*$', '', content, flags=re.MULTILINE)  # Comments
-        
-        # Remove excessive whitespace
-        content = re.sub(r'\n{3,}', '\n\n', content)
-        content = re.sub(r'[ \t]+', ' ', content)
-        
-        # Clean up section headers
-        lines = content.split('\n')
-        cleaned_lines = []
-        for line in lines:
-            # Check if it's an all-caps header
-            stripped = line.strip()
-            if stripped and stripped.isupper() and len(stripped.split()) <= 3:
-                cleaned_lines.append(stripped)
-            else:
-                cleaned_lines.append(line)
-        
-        return '\n'.join(cleaned_lines).strip()
-    
-    def _parse_sections(self, content: str) -> List[Dict[str, str]]:
-        """Parse content into sections."""
-        sections = []
-        
-        # Split by section headers
-        parts = self.section_pattern.split(content)
-        
-        # Process each section
-        for i in range(1, len(parts), 2):
-            if i + 1 < len(parts):
-                title = parts[i].strip().upper()
-                content_text = parts[i + 1].strip()
-                
-                if title and content_text:
-                    sections.append({
-                        'title': title,
-                        'content': content_text,
-                        'id': title.lower().replace(' ', '-')
-                    })
-        
-        # If no sections found, treat entire content as description
-        if not sections and content.strip():
-            sections.append({
-                'title': 'DESCRIPTION',
-                'content': content.strip(),
-                'id': 'description'
-            })
-        
-        return sections
-    
-    def _extract_options(self, sections: List[Dict]) -> List[Dict[str, str]]:
-        """Extract options/flags from OPTIONS or DESCRIPTION section."""
-        options = []
-        
-        # Look for OPTIONS section first, then fall back to DESCRIPTION
-        target_section = None
-        for section in sections:
-            if section['title'] == 'OPTIONS':
-                target_section = section
-                break
-            elif section['title'] == 'DESCRIPTION' and not target_section:
-                target_section = section
-        
-        if target_section:
-            content = target_section['content']
-            # Parse individual options
-            lines = content.split('\n')
-            current_option = None
-                
-            for line in lines:
-                # Check if line starts with an option flag
-                # Match patterns like: "-a, --all" or "-B, --ignore-backups" or "--author"
-                option_match = re.match(r'^\s*(-[a-zA-Z](?:,?\s*--[\w\-]+)?|--[\w\-]+(?:=\S+)?)', line)
-                
-                if option_match:
-                    # Save previous option if exists
-                    if current_option:
-                        # Clean up the description before saving
-                        current_option['description'] = ' '.join(current_option['description'].split())
-                        options.append(current_option)
-                    
-                    # Start new option
-                    flag_text = option_match.group(1).strip()
-                    remaining = line[len(option_match.group(0)):].strip()
-                    
-                    # Parse short and long flags from patterns like "-a, --all"
-                    short_flag = None
-                    long_flag = None
-                    
-                    if ',' in flag_text:
-                        # Pattern like "-a, --all"
-                        parts = [p.strip() for p in flag_text.split(',')]
-                        for part in parts:
-                            if part.startswith('--'):
-                                long_flag = part.split('=')[0]  # Remove any =VALUE part
-                            elif part.startswith('-'):
-                                short_flag = part
-                    else:
-                        # Single flag
-                        if flag_text.startswith('--'):
-                            long_flag = flag_text.split('=')[0]
-                        else:
-                            short_flag = flag_text
-                    
-                    current_option = {
-                        'flag': long_flag or short_flag,
-                        'shortFlag': short_flag if long_flag else None,
-                        'description': remaining,
-                        'argument': None
-                    }
-                    
-                    # Check for argument in the flag
-                    if '=' in flag_text:
-                        arg_match = re.search(r'=(\S+)', flag_text)
-                        if arg_match:
-                            current_option['argument'] = arg_match.group(1)
-                
-                elif current_option and line.strip():
-                    # Continue description of current option
-                    # Add proper spacing
-                    if current_option['description']:
-                        current_option['description'] += ' ' + line.strip()
-                    else:
-                        current_option['description'] = line.strip()
-            
-            # Don't forget the last option
-            if current_option:
-                # Clean up the description before saving
-                current_option['description'] = ' '.join(current_option['description'].split())
-                options.append(current_option)
-        
-        return options
-    
-    def _extract_examples(self, sections: List[Dict]) -> List[Dict[str, str]]:
-        """Extract examples from EXAMPLES section."""
-        examples = []
-        
-        for section in sections:
-            if section['title'] == 'EXAMPLES':
-                content = section['content']
-                lines = content.split('\n')
-                
-                current_example = None
-                
-                for line in lines:
-                    # Check if line is a command (starts with $ or # or is indented)
-                    is_command = (line.strip().startswith('$') or 
-                                 line.strip().startswith('#') or
-                                 line.startswith('       ') or 
-                                 line.startswith('\t'))
-                    
-                    if is_command:
-                        command = line.strip()
-                        # Remove $ or # prefix
-                        command = re.sub(r'^[\$#]\s*', '', command)
-                        
-                        if current_example and not current_example.get('command'):
-                            current_example['command'] = command
-                        elif not current_example:
-                            current_example = {'command': command, 'description': ''}
-                        else:
-                            # Save previous example and start new one
-                            if current_example['command']:
-                                examples.append(current_example)
-                            current_example = {'command': command, 'description': ''}
-                    
-                    elif line.strip() and current_example:
-                        # This is a description
-                        if not current_example.get('command'):
-                            current_example['description'] = line.strip()
-                        else:
-                            # Save current and start new
-                            examples.append(current_example)
-                            current_example = {'description': line.strip(), 'command': ''}
-                    
-                    elif not line.strip() and current_example and current_example.get('command'):
-                        # Empty line ends current example
-                        examples.append(current_example)
-                        current_example = None
-                
-                # Don't forget the last example
-                if current_example and current_example.get('command'):
-                    examples.append(current_example)
-                
-                break
-        
-        return examples
-    
-    def _extract_synopsis(self, sections: List[Dict]) -> str:
-        """Extract synopsis from SYNOPSIS section."""
-        for section in sections:
-            if section['title'] == 'SYNOPSIS':
-                # Clean up the synopsis
-                synopsis = section['content'].strip()
-                # Preserve newlines between different command forms
-                synopsis = re.sub(r'\n\s*\n', '\n', synopsis)  # Remove empty lines
-                # Replace multiple spaces with single space (but preserve newlines)
-                lines = synopsis.split('\n')
-                cleaned_lines = []
-                for line in lines:
-                    # Clean each line individually to preserve structure
-                    cleaned_line = re.sub(r'\s+', ' ', line.strip())
-                    if cleaned_line:
-                        cleaned_lines.append(cleaned_line)
-                # Join with space or newline depending on content
-                if len(cleaned_lines) > 1:
-                    synopsis = '\n'.join(cleaned_lines)
+OPTION_HEAD_RE = re.compile(
+    r"""^
+        \s*
+        (?:                                   # typical forms:
+            (?P<both>-[A-Za-z](?:,\s*--[A-Za-z0-9][-\w]*)?)  # "-a, --all"
+          | (?P<long>--[A-Za-z0-9][-\w]*(?:=\S+)?)
+          | (?P<short>-[A-Za-z])
+        )
+        (?:\s{2,}|\s+$|$)                     # then at least some spacing or EOL
+    """,
+    re.VERBOSE,
+)
+
+SEE_ALSO_REF_RE = re.compile(r'\b([A-Za-z0-9_+-]+)\((\d+[a-z]*)\)')
+
+def _collapse_spaces(s: str) -> str:
+    return re.sub(r'[ \t]+', ' ', s.strip())
+
+def _normalize_synopsis(text: str) -> str:
+    # Keep separate forms on separate lines, collapse internal runs of spaces
+    lines = [ _collapse_spaces(l) for l in text.strip().splitlines() if l.strip() ]
+    return "\n".join(lines)
+
+def _split_sections(raw: str) -> List[Dict[str, str]]:
+    """Split by SH headings (NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES...)"""
+    parts = []
+    last = 0
+    for m in SECTION_RE.finditer(raw):
+        title = m.group(1).strip()
+        if last == 0 and m.start() != 0:
+            # body before first heading
+            pre = raw[:m.start()].strip()
+            if pre:
+                parts.append({"title": "BODY", "content": pre})
+        if parts:
+            parts[-1]["content"] = raw[last:m.start()].strip()
+        parts.append({"title": title, "content": ""})
+        last = m.end()
+    if parts:
+        parts[-1]["content"] = raw[last:].strip()
+    else:
+        parts.append({"title": "BODY", "content": raw.strip()})
+    return parts
+
+def _title_from_name_section(name_section_text: str) -> Tuple[str, str]:
+    """
+    NAME section is usually 'ls - list directory contents' or 'ls — list ...'
+    """
+    line = name_section_text.splitlines()[0] if name_section_text else ""
+    line = line.replace("—", "-")
+    if " - " in line:
+        name, title = line.split(" - ", 1)
+    else:
+        # Fallback: first token as name
+        tokens = line.split()
+        name, title = (tokens[0], " ".join(tokens[1:])) if tokens else ("", "")
+    return _collapse_spaces(name), _collapse_spaces(title)
+
+def _extract_summary(description: str, max_sentences: int = 3) -> str:
+    # Simple rule-based summary: first 2–3 sentences from DESCRIPTION
+    desc = re.sub(r'\s+', ' ', description.strip())
+    if not desc:
+        return ""
+    # end-of-sentence heuristic
+    sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z(])', desc)
+    return " ".join(sentences[:max_sentences]).strip()
+
+def _lines(text: str) -> List[str]:
+    return text.splitlines()
+
+def _collect_options_from_lines(lines: List[str]) -> List[Dict[str, Optional[str]]]:
+    """
+    Parse GNU/posix style options block, supporting:
+      - '-a, --all  description...'
+      - '--author   description...'
+      - '-T, --tabsize=COLS  description...'
+      - option description continuing on following indented lines
+    """
+    options: List[Dict[str, Optional[str]]] = []
+    cur = None
+
+    def flush():
+        nonlocal cur
+        if cur:
+            cur["description"] = _collapse_spaces(cur["description"])
+            options.append(cur)
+            cur = None
+
+    for raw in lines:
+        line = raw.rstrip()
+        if not line.strip():
+            # blank line → continue description paragraph boundary
+            if cur and cur["description"] and not cur["description"].endswith("\n"):
+                cur["description"] += " "
+            continue
+
+        m = OPTION_HEAD_RE.match(line)
+        if m:
+            # New option row
+            flush()
+            head = (m.group("both") or m.group("long") or m.group("short")).strip()
+            rest = line[m.end():].strip()
+
+            short_flag: Optional[str] = None
+            long_flag: Optional[str] = None
+            argument: Optional[str] = None
+
+            # split something like "-a, --all" or just "--color[=WHEN]" etc.
+            heads = [h.strip() for h in head.split(",")]
+            for h in heads:
+                if h.startswith("--"):
+                    # strip any "=ARG"
+                    base = h.split("=", 1)[0]
+                    long_flag = base
+                    if "=" in h:
+                        argument = h.split("=", 1)[1]
+                elif h.startswith("-"):
+                    short_flag = h
+
+            cur = {
+                "flag": long_flag or short_flag,
+                "shortFlag": short_flag if long_flag else None,
+                "argument": argument,
+                "description": rest,
+            }
+        else:
+            # continuation line: treat as description
+            if cur:
+                if cur["description"]:
+                    cur["description"] += " " + line.strip()
                 else:
-                    synopsis = cleaned_lines[0] if cleaned_lines else ''
-                return synopsis
-        return ''
-    
-    def _extract_description(self, sections: List[Dict]) -> str:
-        """Extract description from DESCRIPTION or NAME section."""
-        # Try NAME section first (usually has a brief description)
-        for section in sections:
-            if section['title'] == 'NAME':
-                content = section['content']
-                # Usually format is "command - description"
-                if ' - ' in content:
-                    return content.split(' - ', 1)[1].strip()
-        
-        # Fall back to DESCRIPTION section
-        for section in sections:
-            if section['title'] == 'DESCRIPTION':
-                # Get first paragraph as description
-                paragraphs = section['content'].split('\n\n')
-                if paragraphs:
-                    return paragraphs[0].strip()
-        
-        return ''
-    
-    def _extract_see_also(self, sections: List[Dict]) -> List[Dict[str, Any]]:
-        """Extract related commands from SEE ALSO section."""
-        see_also = []
-        
-        for section in sections:
-            if section['title'] == 'SEE ALSO':
-                content = section['content']
-                # Match man page references like "ls(1)" or "grep(1)"
-                matches = re.findall(r'(\w+)\((\d+)\)', content)
-                
-                for name, section_num in matches:
-                    see_also.append({
-                        'name': name,
-                        'section': int(section_num)
-                    })
-                
+                    cur["description"] = line.strip()
+
+    flush()
+    return options
+
+def _extract_options(sections: List[Dict[str, str]]) -> List[Dict[str, Optional[str]]]:
+    # Prefer explicit OPTIONS, else fall back to DESCRIPTION (GNU coreutils style)
+    target = None
+    for s in sections:
+        if s["title"] == "OPTIONS":
+            target = s["content"]
+            break
+    if target is None:
+        for s in sections:
+            if s["title"] == "DESCRIPTION":
+                target = s["content"]
                 break
-        
-        return see_also
-    
-    def _empty_result(self) -> Dict[str, Any]:
-        """Return empty parsed result."""
-        return {
-            'sections': [],
-            'options': [],
-            'examples': [],
-            'synopsis': '',
-            'description': '',
-            'see_also': [],
-            'parsed': False
-        }
+    if not target:
+        return []
+    return _collect_options_from_lines(_lines(target))
 
+def _extract_synopsis(sections: List[Dict[str, str]]) -> str:
+    for s in sections:
+        if s["title"] == "SYNOPSIS":
+            return _normalize_synopsis(s["content"])
+    return ""
 
-# Global parser instance
-_parser_instance = None
+def _extract_see_also(sections: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    for s in sections:
+        if s["title"] == "SEE ALSO":
+            refs = []
+            for name, sec in SEE_ALSO_REF_RE.findall(s["content"]):
+                refs.append({"name": name, "section": sec})
+            return refs[:30]
+    return []
 
-def get_parser() -> EnhancedManPageParser:
-    """Get or create the global parser instance."""
-    global _parser_instance
-    if _parser_instance is None:
-        _parser_instance = EnhancedManPageParser()
-    return _parser_instance
+def parse_man_page(raw_text: str) -> Dict:
+    """
+    Input: plain text from `man -l <file> | col -bx`
+    Output: structured page, deterministic and side-effect free.
+    """
+    sections = _split_sections(raw_text)
 
-def parse_man_page(raw_content: str) -> Dict[str, Any]:
-    """Parse raw man page content."""
-    parser = get_parser()
-    return parser.parse(raw_content)
+    # name/title
+    name, title = "", ""
+    for s in sections:
+        if s["title"] == "NAME":
+            name, title = _title_from_name_section(s["content"])
+            break
+
+    synopsis = _extract_synopsis(sections)
+    description = ""
+    for s in sections:
+        if s["title"] == "DESCRIPTION":
+            description = s["content"].strip()
+            break
+
+    options = _extract_options(sections)
+    summary = _extract_summary(description or title)
+    see_also = _extract_see_also(sections)
+
+    return {
+        "name": name,
+        "title": title,
+        "synopsis": synopsis,
+        "description": description,
+        "summary": summary,
+        "options": options,
+        "examples": [],            # can be filled from EXAMPLES section later
+        "see_also": see_also,
+        "sections": sections,      # keep for debugging/UX
+    }
