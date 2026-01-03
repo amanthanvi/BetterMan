@@ -2,8 +2,9 @@
 
 **Project:** BetterMan
 **Spec Version:** v0.1.0
-**Status:** Draft
+**Status:** Draft (Interview Complete)
 **Last Updated:** 2026-01-03 (EST)
+**Interview Status:** Completed - all open questions resolved
 
 ---
 
@@ -99,9 +100,10 @@
     -   Primary search input (expands on focus) and command palette hint (`Ctrl+K`).
     -   Theme toggle (light/dark/system).
 -   Main content area:
-    -   **Home:** search focus + quick section navigation + "popular commands" list.
-    -   **Search results:** list with name, section, short description, and match highlights.
+    -   **Home:** search focus + quick section navigation (no popular commands list - search-first approach).
+    -   **Search results:** list with name, section, short description, and match highlights. Show 20 results initially with "Load more" button.
     -   **Man page view:** title header, synopsis, metadata (source package if known), TOC, content, related section.
+    -   **Disambiguation page:** When URL like `/man/printf` matches multiple sections, show a full interstitial page listing all matching sections with descriptions for user selection.
 
 **Man page view structure**
 
@@ -119,6 +121,8 @@
 -   **Client-side routing** with stable, shareable URLs (no SSR requirement).
 -   Back button behavior must be correct for:
     -   search → page → related page → back.
+-   **History behavior:** Full history preserved. Home → Search → Page → Related requires 3 back presses to return home.
+-   **Scroll restoration:** Top on navigate to new page; restore previous scroll position on back navigation.
 
 ## Command Palette (Cmd/Ctrl+K)
 
@@ -135,6 +139,8 @@
 -   Query prefixes:
     -   `>` for actions only (optional in v0.1.0; if omitted, actions appear as top suggestions)
     -   `#` to jump to heading anchors in current page (only when in page view)
+-   **Escape sequences:** Use `\>` or `\#` to search literally for these characters.
+-   **Recent history:** On palette open (before user types), show last 5-10 visited pages and recent searches for quick access. History persisted in localStorage with option to clear.
 
 ## Keyboard Navigation Requirements (global)
 
@@ -143,6 +149,8 @@
 -   Focus order must be logical (header → sidebar → content).
 
 ### Shortcut List (v0.1.0)
+
+**Conflict handling:** Shortcuts only activate when no input/textarea is focused. This prevents conflicts with browser defaults and accessibility tools.
 
 -   **Cmd/Ctrl+K:** Open command palette
 -   **Esc:** Close palette / close drawers / dismiss dialogs
@@ -162,10 +170,12 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 ## Dark Mode + Responsive Rules
 
 -   Theme modes: Light, Dark, System.
--   Persist user choice in local storage.
+-   **Default:** System preference (respects `prefers-color-scheme` media query on first visit).
+-   Persist user choice in local storage after explicit selection.
 -   Contrast ratios must meet WCAG 2.2 AA.
 -   Responsive:
-    -   < 768px: sidebar becomes a drawer; header remains sticky; content uses larger line-height.
+    -   < 768px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
+        -   **Mobile TOC access:** Sticky header button toggles TOC drawer. Button is always visible for quick access during reading.
     -   768–1024px: compact sidebar; TOC collapsible.
     -   > 1024px: persistent sidebar and wide reading column with max line width (target 70–90 chars).
 
@@ -174,7 +184,7 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 -   Target **WCAG 2.2 AA**.
 -   Focus management:
     -   Command palette traps focus while open; returns focus to trigger element on close.
-    -   Route changes set focus to the primary heading (`h1`) for screen readers (without breaking scroll).
+    -   Route changes set focus to the primary heading (`h1`) for screen readers (without breaking scroll). This ensures screen reader users hear the page title immediately upon navigation.
 -   Reduced motion:
     -   Respect `prefers-reduced-motion`; disable non-essential animations.
 -   Semantic structure:
@@ -186,13 +196,19 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 
 ## Empty / Loading / Error States
 
--   **Loading:** skeleton for title + TOC + paragraphs; do not reflow excessively.
+-   **Loading:** Basic structure skeleton only (title bar, TOC placeholder, content area placeholder). Fast to render, avoid detailed mockups.
 -   **Empty search:** show tips and example queries.
 -   **No results:** suggest spelling fixes.
 -   **Missing page:** show:
     -   "Page not found"
     -   Suggested alternative sections (if name exists in another section)
     -   Link to search results for the name
+-   **Rollback URL handling:** If a URL points to a page that existed in a newer dataset but not after rollback, show "This page is temporarily unavailable" with context that it may return in a future update.
+-   **Error recovery (React error boundary):** When a component crashes, show:
+    -   "Something went wrong" message
+    -   "Retry this page" button
+    -   "Go to Home" button
+    -   Do not auto-retry; let user choose action.
 
 ## URL Scheme and Shareable Links
 
@@ -210,7 +226,8 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 
 **Canonicalization rules**
 
--   Normalize `name` to lowercase for routing but preserve display case.
+-   **Case insensitivity:** Accept any case in URLs (e.g., `/man/TAR/1` serves same as `/man/tar/1`). Normalize to lowercase internally for storage and lookup.
+-   Preserve display case in UI based on original man page data.
 
 ---
 
@@ -236,7 +253,8 @@ As a user, I want to open `man tar` in a browser and quickly understand usage an
     -   Monospace blocks for examples and preformatted text.
 -   Cross-references:
     -   Convert `foo(1)` style references to links if present in dataset.
--   Provide a "View source (roff)" toggle (read-only) only if licensing permits; otherwise omit (see Open Questions).
+    -   **Unresolved references:** Show as visually distinct disabled/gray text (not clickable) indicating the referenced page isn't available in the dataset.
+-   **Raw source:** Do not provide "View source (roff)" toggle. Only rendered content is shown. This avoids licensing redistribution concerns.
 
 ### Edge Cases
 
@@ -244,7 +262,9 @@ As a user, I want to open `man tar` in a browser and quickly understand usage an
 -   Page name includes special characters (`systemd.unit`, `git-commit`).
 -   Page contains uncommon roff macros or broken formatting.
 -   "NAME" section missing or malformed.
--   Very large pages (e.g., `bash(1)`).
+-   **Very large pages (e.g., `bash(1)`):** Render everything upfront with optimized React components. No virtualization or lazy loading for v0.1.0. Accept slightly slower initial render for simplicity.
+-   **Long TOC headings (50+ characters):** Truncate at ~40 characters with ellipsis (`...`); show full text on hover/focus.
+-   **ASCII art/diagrams:** Preserve in code blocks without syntax highlighting to maintain alignment.
 
 ### Acceptance Criteria
 
@@ -275,10 +295,13 @@ As an engineer, I want to type "chmod recursive" and immediately find the most r
 -   Query features:
     -   Prefix matching for command names (`tar` matches `tar`, `tarfile` if present)
     -   Typo tolerance (e.g., "chrmod" suggests `chmod`)
+    -   Flag search (`--recursive`) treated as general text search (no special OPTIONS handling)
 -   Search must be usable from:
     -   global header search
     -   command palette
     -   dedicated search page with filters
+-   **Debouncing:** 150ms debounce on search input. Short delay feels instant while preventing per-keystroke API requests.
+-   **Custom in-page search:** Provide custom search with highlights (not just browser Ctrl+F). Minimum 2 characters required before searching. Highlights matches and allows jump-between.
 
 ### Edge Cases
 
@@ -309,7 +332,7 @@ As a learner, I want to browse all section 1 "User Commands" and discover comman
 
 -   Section landing page shows:
     -   Section title (e.g., "1: User Commands")
-    -   Alphabetical grouping (A–Z, 0–9)
+    -   **Alphabetical groups with letter headers:** Group entries under A-Z headers with sticky letters for easy scanning. Enables users to quickly jump to specific letter range.
     -   Search-within-section
 -   Provide consistent section labels:
     -   Use standard man section mapping for display names.
@@ -345,6 +368,7 @@ As a user reading `curl(1)`, I want to quickly jump to related tools and configu
     -   Secondary: same-prefix heuristics (e.g., `git-*` pages) limited to avoid noise.
 -   Each related item shows `name(section)` + one-line description when available.
 -   Related list is deterministic for a given dataset release.
+-   **Collapsible full list:** Show 5 related items by default; expandable to show all. Provides balance between clean UI and complete information.
 
 ### Edge Cases
 
@@ -402,14 +426,11 @@ As a user, I want to copy a `bash` example from a man page and understand it qui
 
 ### Functional Requirements
 
--   Detect preformatted blocks and classify as:
-    -   shell-like commands (default)
-    -   config/INI-like
-    -   diff (if patterns match)
-    -   unknown → render monospace without highlighting
+-   **Highlight all code blocks:** Apply shell-like syntax highlighting to all preformatted blocks by default. Accept some false positives on config/data blocks for consistency. ASCII art/diagrams preserved in monospace without highlighting.
 -   Highlighting must be performed safely without executing any embedded content.
 -   Provide "Copy" button per code block:
     -   Copies plain text exactly as displayed (without line numbers).
+    -   **Copy feedback:** Button icon changes from copy to checkmark for 2 seconds, then reverts. No text or toast notification; minimal visual feedback.
 
 ### Edge Cases
 
@@ -459,6 +480,39 @@ As a keyboard-only user, I want to navigate search results and TOC without losin
 
 ---
 
+## 7.8 Option Highlighting (Interactive)
+
+### Description
+
+Click an option/flag in an "OPTIONS" section to highlight all occurrences of that option throughout the page content.
+
+### User Story
+
+As a user reading a complex man page, I want to click on `-r` in the OPTIONS table and see all mentions of `-r` highlighted throughout the page.
+
+### Functional Requirements
+
+-   When viewing a man page with an OPTIONS section:
+    -   Each option/flag in the OPTIONS section is clickable.
+    -   Clicking highlights all occurrences of that option in the page content.
+    -   Clicking again or clicking a different option clears previous highlights.
+-   Highlighting uses visual distinction (background color) but does not rely solely on color (also uses underline or border for accessibility).
+-   Works in conjunction with custom in-page search (search can highlight different things).
+
+### Edge Cases
+
+-   Options with multiple aliases (e.g., `-r, --recursive`): highlight all aliases.
+-   Options that appear in examples, warnings, or other sections.
+-   Very common options that appear many times (may need "N occurrences found" indicator).
+
+### Acceptance Criteria
+
+-   Clicking an option highlights its occurrences across the page.
+-   Highlights are accessible (not color-only).
+-   Feature works without JavaScript errors on all tested man pages.
+
+---
+
 # 8. Content Scope
 
 ## Content Source Strategy
@@ -486,6 +540,14 @@ For v0.1.0, ingest man pages from:
 -   Text processing (`vim`, `less`, `cat`, `head`, `tail`, etc.)
 
 **Target:** ~5,000–10,000 man pages covering the most commonly referenced commands and configuration files.
+
+## Supported Sections
+
+**Decision:** Standard sections 1–9 only for v0.1.0.
+
+-   Ignore non-standard suffixes like `3p` (POSIX), `n` (Tcl), `l` (local), etc.
+-   Simpler implementation covering 99% of typical use cases.
+-   Rationale: Reduces complexity in section navigation UI and search filtering.
 
 ## Update Cadence
 
@@ -515,18 +577,21 @@ For v0.1.0, ingest man pages from:
 
 ## Licensing / Compliance Strategy
 
+**Decision:** Maximum caution approach for licensing compliance.
+
 -   Many man pages are under GPL, BSD, MIT, or other licenses depending on package.
 -   v0.1.0 compliance approach:
+    -   **Store full license text** for any page under GPL, LGPL, or similar copyleft licenses. Linking alone is insufficient for some licenses.
     -   Store and display **license metadata** per man page when obtainable (from package metadata and/or embedded license files).
-    -   Provide an **Attribution / Licenses** page in the app listing:
+    -   Provide an **Attribution / Licenses** page in the app:
+        -   **Per-package grouping:** Group pages by source package; show license per package (e.g., 'tar' package is GPL-3.0).
         -   dataset release IDs
         -   packages included (manifest)
-        -   license references and notices where required
-    -   If a man page license requires including full text, link to the license text and/or include it in the attribution page when mandated.
+        -   Full license text for licenses that require it
 
 **Assumption**
 
--   Redistribution of man pages is permitted under their licenses when proper notices are provided. (See Open Questions for final legal confirmation.)
+-   Redistribution of man pages is permitted under their licenses when proper notices and full text are provided where required.
 
 ## Canonical Identity for a Man Page
 
@@ -608,12 +673,17 @@ Canonical ID format (conceptual):
     -   **Soft fail** for:
         -   parser cannot extract some structured fields (options table missing)
         -   unusual macro sections
+    -   **Parse warnings (mandoc warnings):**
+        -   **Flag but include:** If mandoc produces output with warnings, include the page but mark it in DB metadata with a `has_parse_warnings` flag.
+        -   Optionally show subtle 'Formatting may be incomplete' indicator in UI for affected pages.
+        -   Pages with warnings still count toward success rate for release validation.
 -   Failures are recorded with:
     -   file path
     -   error category
     -   sample excerpt (truncated)
 -   Release rule:
     -   If > 2% of pages hard-fail, ingestion fails and does not publish the update.
+    -   **Partial success allowed:** If >80% of pages succeed (including those with warnings), publish the dataset. Alert about failures for investigation but don't block release.
 
 ## Output Schema (Internal Document Model)
 
@@ -650,8 +720,8 @@ Inline node types:
 
 Derived structured fields:
 
--   `synopsis`: array of code-like lines
--   `options`: normalized list of `{flags, argument, description, anchorId}`
+-   `synopsis`: array of code-like lines rendered as plain monospace (no special formatting/coloring).
+-   `options`: **Preserve original structure** from man page without normalization. Do not attempt to merge `-a, --all` patterns or reformat. Store as extracted from source: `{flags, argument, description, anchorId}`
 -   `examples`: list of `{code_block_id, caption?}`
 -   `see_also`: list of `{name, section?, resolved_page_id?}`
 
@@ -664,7 +734,7 @@ Derived structured fields:
     -   Monospace, scrollable horizontally, copy button, syntax highlighting.
 -   `link`:
     -   Internal: route to man page.
-    -   External: open in new tab with clear indicator (optional); always safe URL scheme.
+    -   **External:** Allow external links with indicator. Open in new tab with external link icon. User knows they're leaving BetterMan. Only allow `http` and `https` schemes; strip unsafe schemes.
 
 ## XSS-Safe Rendering Strategy (Explicit)
 
@@ -722,7 +792,7 @@ Derived structured fields:
 
 Ranking score composed of:
 
-1. Exact match on `name` (highest boost)
+1. **Exact match on `name`: Overwhelming 10x boost.** Exact name match always wins regardless of other relevance. Query `ls` = `ls(1)` first, always.
 2. Prefix match on `name`
 3. Match in `NAME` one-line description
 4. Match in headings
@@ -740,6 +810,7 @@ Tie-breakers:
 -   Prefix: supported for name (`tar` matches `tar`, `tar-split` etc.).
 -   Fuzzy:
     -   Use trigram similarity on name/description when FTS score is low.
+    -   **Balanced threshold (0.3):** Standard pg_trgm default. Catches most typos with moderate noise. Not too aggressive, not too conservative.
 -   Synonyms:
     -   v0.1.0: minimal. Do not maintain a large synonym dictionary.
     -   Optional: treat hyphen/underscore variants as equivalent during normalization.
@@ -752,7 +823,7 @@ Tie-breakers:
 -   Caching:
     -   HTTP caching for GET endpoints with `ETag` and `Cache-Control: public, max-age=300` for immutable dataset release pages.
     -   Longer cache for static assets (1 year with content hashes).
-    -   No Redis in v0.1.0; rely on DB + CDN/browser caching.
+    -   **Redis on Railway** for rate limiting state (enables consistent rate limits across horizontal scaling). See Section 12 for architecture.
 
 ## Abuse Controls (Rate limiting, Bot Mitigation)
 
@@ -777,6 +848,7 @@ Tie-breakers:
 flowchart LR
   U[User Browser] -->|HTTPS| W[BetterMan Web Service]
   W -->|SQL over TLS| PG[(PostgreSQL)]
+  W -->|Rate Limit State| RD[(Redis)]
   subgraph W[Single Deployable Service]
     FE[SPA Static Assets]
     API[REST API]
@@ -784,24 +856,42 @@ flowchart LR
   FE <-->|fetch JSON| API
 ```
 
+**Deployment Platform:** Railway for all services (web, PostgreSQL, Redis).
+
 ## Frontend Architecture
 
--   React + TypeScript SPA
+**Stack Decisions:**
+-   **Runtime:** Node 20 LTS
+-   **Build Tool:** Vite
+-   **Framework:** React + TypeScript SPA
+-   **Router:** TanStack Router (type-safe routing with excellent TypeScript integration)
+-   **State Management:** TanStack Query for server state + React Context for UI state
+-   **Component Library:** Shadcn/ui (copy-paste components built on Radix + Tailwind)
+-   **CSS:** Tailwind v4
+-   **Testing:** Vitest + React Testing Library
+
 -   Routing:
     -   Client-side router with routes mirroring URL scheme in Section 6
     -   404 fallback served to SPA for deep links
 -   Data fetching:
-    -   Use a lightweight query/caching library (see below) or minimal custom fetch with in-memory cache.
-    -   Must support request cancellation on route changes.
+    -   TanStack Query for all API requests with built-in caching, deduplication, and request cancellation on route changes.
 -   Error boundaries:
-    -   Global error boundary to render a "Something went wrong" page without white-screen.
+    -   Global error boundary to render a "Something went wrong" page with Retry + Go Home options.
 -   Caching:
-    -   Browser HTTP cache + in-app memoization for recently viewed pages.
+    -   Browser HTTP cache + TanStack Query's in-memory cache for recently viewed pages.
 -   Performance:
     -   Code splitting by route (search vs page view).
-    -   Avoid rendering huge documents with expensive reflows; use efficient components.
+    -   Full render for large documents with optimized React components (no virtualization).
+    -   Return everything from API; rely on gzip compression for large JSONB payloads.
 
 ## Backend Architecture
+
+**Stack Decisions:**
+-   **Runtime:** Python 3.12
+-   **Framework:** FastAPI
+-   **Database Access:** SQLAlchemy 2.0 ORM (full ORM with type hints, async support)
+-   **Migrations:** Alembic
+-   **Testing:** pytest + httpx
 
 -   Single FastAPI service providing:
     -   Read-only public REST endpoints
@@ -811,7 +901,7 @@ flowchart LR
     -   `manpages`: retrieval, resolving references, related
     -   `search`: query parsing, ranking, suggestions
     -   `datasets`: metadata, release IDs
-    -   `security`: rate limiting, headers, CSP config
+    -   `security`: rate limiting (Redis-backed), headers, CSP config
     -   `observability`: logging, metrics, tracing hooks
 
 ## Background Jobs / Workers
@@ -838,18 +928,21 @@ flowchart LR
 
 -   **FastAPI**: Why necessary: fast, typed, production-ready API with minimal boilerplate. Alternative: Flask (less built-in validation) or no backend (client-only; rejected for search and dataset size).
 -   **PostgreSQL**: Why necessary: durable storage + FTS + indexing in one system. Alternative: SQLite (insufficient for multi-user production and FTS scale).
+-   **Redis**: Why necessary: rate limiting state that persists across horizontal scaling. Alternative: in-app rate limiting (doesn't scale) or DB-backed counters (adds latency).
 -   **mandoc** (ingestion): Why necessary: robust man/mdoc renderer for roff inputs. Alternative: groff/man2html (less consistent).
 -   **React + TypeScript**: Why necessary: component model + maintainability for complex rendering and keyboard UX. Alternative: Vue/Svelte (viable but not chosen per defaults).
+-   **TanStack Query + Router**: Why necessary: type-safe routing and server state management with excellent caching. Alternative: React Router + SWR (viable but less TypeScript integration).
+-   **Shadcn/ui**: Why necessary: accessible components with Radix primitives + Tailwind styling. Alternative: build from scratch (more work, a11y risk).
 -   **Syntax highlighting library** (e.g., highlight.js with limited languages): Why necessary: meet "syntax highlighting for examples" requirement. Alternative: Prism (similar trade-offs) or no highlighting (not acceptable).
--   **Error reporting** (e.g., Sentry): Why necessary: production visibility into frontend/backend crashes. Alternative: rely on logs only (slower debugging).
+-   **Error reporting**: Railway logging only for v0.1.0 (no Sentry). Rely on structured logs and Railway's log aggregation.
 
 ## Rejected Stack Choices (Explicit)
 
 -   **Elasticsearch/OpenSearch**: rejected due to extra infra, ops burden, and cost for v0.1.0; PostgreSQL FTS is sufficient.
--   **Redis**: rejected; caching can be achieved with HTTP caching and Postgres; rate limiting can be basic in-app for v0.1.0.
 -   **GraphQL**: rejected; REST endpoints are simpler, cache-friendly, and sufficient.
 -   **Microservices**: rejected; unnecessary complexity at current scope.
 -   **SSR/Next.js for SEO**: rejected; SEO indexing not required; CSR is simpler and faster to ship. (See SSR decision below.)
+-   **Sentry**: rejected for v0.1.0; rely on Railway logging. May add later if debugging becomes challenging.
 
 ---
 
@@ -984,17 +1077,20 @@ Example response (shape):
 
 ## Standard Error Envelope
 
+**Decision:** Minimal error detail (code + message only). No stack traces or internal details exposed.
+
 All errors return:
 
 ```json
 {
 	"error": {
 		"code": "string",
-		"message": "string",
-		"details": { "optional": "object" }
+		"message": "string"
 	}
 }
 ```
+
+No `details` object in production. Keep errors simple and user-friendly.
 
 Examples:
 
@@ -1155,7 +1251,11 @@ Normalized resolved relationships (for related commands):
 -   XSS:
     -   Safe document model rendering (no raw HTML injection).
     -   Strict URL sanitization for links.
-    -   CSP headers (script-src self; disallow inline scripts; object-src none).
+    -   **CSP headers:**
+        -   `script-src 'self'` - no inline scripts
+        -   `style-src 'self' 'unsafe-inline'` - allow inline styles for syntax highlighting libraries
+        -   `object-src 'none'`
+        -   Block scripts strictly; allow inline styles as common syntax highlighters require them.
 -   Injection:
     -   Parameterized queries only.
     -   Strict input validation for `name`, `section`, `limit`, `offset`.
@@ -1210,11 +1310,13 @@ Normalized resolved relationships (for related commands):
     -   `/api/v1/search`: P95 < 250 ms
     -   `/api/v1/man/...`: P95 < 150 ms
 -   Error rate: < 0.5% 5xx over 5-minute windows (excluding deploy windows).
+-   **Latency breach handling:** Alert on-call if P95 exceeds thresholds; investigate and fix manually. No automatic degradation or circuit breaker for v0.1.0.
 
 ## Performance Budgets
 
 -   Frontend:
-    -   Initial JS bundle (home route): <= 250 KB gz (target; enforce via CI budgets)
+    -   Initial JS bundle (home route): <= 250 KB gz (target)
+    -   **Bundle enforcement:** CI bot comments on PR with size diff; does not block merge. Gives visibility without being too strict.
     -   Route-based code splitting for man page renderer and highlighting
 -   Core Web Vitals (guidance; not SEO-driven but user experience):
     -   LCP < 2.5 s (repeat visits)
@@ -1310,7 +1412,9 @@ Scaling:
 
 ## Environments
 
--   **dev:** local developer environment with local Postgres
+-   **dev:** local developer environment
+    -   **Docker Compose primary:** PostgreSQL and Redis in containers; developers run app on host. Minimal host dependencies beyond Docker.
+    -   Local Postgres + Redis via `docker-compose.yml`
 -   **staging:** production-like deployment, separate DB, used for validation
 -   **prod:** public deployment
 
@@ -1342,19 +1446,27 @@ Staging and prod must be isolated:
 
 ### `update-docs.yml` (ingest/parse/validate/index/publish)
 
+**Decision:** Staging first, auto-promote.
+
 -   Scheduled monthly + manual dispatch
 -   Ingestion steps:
     -   resolve container image digest
     -   extract man sources
     -   run mandoc conversion + model conversion
-    -   validate success rate thresholds
-    -   upsert into staging DB first
+    -   validate success rate thresholds (>80% success required)
+    -   **Always write to staging DB first**
+-   Validation step:
+    -   Run automated validation against staging
+    -   Check parse success rates, search functionality, sample page renders
 -   Publish step:
-    -   after staging verification, upsert into prod DB (or promote by copying dataset release id pointer)
+    -   **Auto-promote if checks pass:** Copy dataset release to prod DB automatically
+    -   If validation fails, alert and do not promote
+    -   Keep previous release for rollback
 
 **Security note**
 
--   If GitHub Actions writes directly to prod DB, use a restricted DB role and rotate secrets. Prefer a promotion model via staging verification.
+-   Use restricted DB role with rotate secrets for prod writes.
+-   Staging verification provides safety gate before prod promotion.
 
 ## Branching / Releases / Tags / Rollback
 
@@ -1366,6 +1478,25 @@ Staging and prod must be isolated:
 -   Rollback:
     -   redeploy previous version
     -   dataset rollback supported by storing previous dataset release and a "current release" pointer
+
+## Project Structure
+
+**Decision:** Monorepo with pnpm workspaces.
+
+```
+/
+├── frontend/           # React SPA
+├── backend/            # FastAPI service
+├── shared/             # Shared types/constants (if needed)
+├── ingestion/          # Ingestion pipeline scripts
+├── docker-compose.yml  # Local dev services
+├── pnpm-workspace.yaml
+└── package.json
+```
+
+-   Single repo enables easier cross-cutting changes
+-   pnpm workspaces for dependency management
+-   Shared types between frontend/backend if TypeScript types are generated from OpenAPI
 
 ## Infrastructure-as-Code (Minimal stance)
 
@@ -1435,20 +1566,18 @@ Staging and prod must be isolated:
 
 ---
 
-# 20. Analytics & Feedback (Optional, privacy-respecting)
+# 20. Analytics & Feedback
 
-**Decision (v0.1.0):** Minimal analytics, opt-out by default where feasible.
+**Decision (v0.1.0):** No client analytics. Server metrics only.
 
--   Collect only aggregate, anonymous metrics:
-    -   page views by route template (not full URL with query)
-    -   search event count (without raw query text; store query length and whether results found)
-    -   performance timing (LCP buckets)
--   Sampling: 10% of sessions max.
--   Retention: 30 days.
--   Opt-out:
-    -   Provide a toggle "Anonymous analytics" default OFF (strict privacy stance), stored locally.
-
-If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on server metrics only (Open Question).
+-   Zero client-side tracking, cookies, or JavaScript analytics.
+-   Rely entirely on server-side metrics:
+    -   Request counts by route/status (from Railway logs)
+    -   Latency histograms by route
+    -   Rate limit rejections
+    -   Search query counts (without query text)
+-   Simplest and most private approach.
+-   May revisit in future versions if product insights are needed, but for v0.1.0 server metrics suffice.
 
 ---
 
@@ -1470,8 +1599,10 @@ If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on s
     - Section browse pages
     - SEE ALSO parsing + related panel
 5. **Week 7: Polish + Accessibility + Performance**
-    - Command palette
+    - Command palette with recent history
     - Syntax highlighting + copy
+    - **Option highlighting (interactive)**
+    - Custom in-page search with highlights
     - Keyboard nav and WCAG fixes
 6. **Week 8: Production hardening**
     - Rate limiting, CSP, error reporting, dashboards, runbooks
@@ -1483,14 +1614,16 @@ If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on s
 -   [ ] Man pages ingested and visible in UI
 -   [ ] Stable URLs and anchor links work and are shareable
 -   [ ] Search meets latency targets and relevance acceptance criteria
+-   [ ] Option highlighting feature works across tested pages
+-   [ ] Custom in-page search with highlighting works
 -   [ ] No unsafe raw HTML injection for man content (use safe React component rendering only)
 -   [ ] CSP enabled and verified in staging
--   [ ] Rate limiting enabled and tuned
+-   [ ] Rate limiting enabled and tuned (Redis-backed)
 -   [ ] Backups enabled and restore validated
--   [ ] Monitoring dashboards and alerts configured
+-   [ ] Monitoring dashboards and alerts configured (Railway logs)
 -   [ ] Accessibility: WCAG 2.2 AA baseline checks pass; keyboard-only flows validated
 -   [ ] Incident runbooks written and reviewed
--   [ ] Licenses/attribution page complete for shipped dataset
+-   [ ] Licenses/attribution page complete with full license text for copyleft licenses
 
 ---
 
@@ -1509,16 +1642,16 @@ If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on s
 
 ---
 
-# 23. Open Questions
+# 23. Open Questions (All Resolved)
 
-Prioritized:
+All open questions have been resolved through the interview process:
 
-1. **Licensing policy detail:** Are we allowed (and do we want) to expose "View raw roff source" publicly for all pages? If not, restrict to rendered content only.
-2. **Ingestion write path:** Should GitHub Actions write directly to prod DB, or should we require a gated "promote from staging" step that copies dataset releases?
-3. **Analytics stance:** Ship with no client analytics (server metrics only) vs minimal opt-in anonymous analytics?
-4. **Option highlighting feature:** Do we want interactive "click an option to highlight occurrences" in v0.1.0, or defer?
-5. **Supported sections:** Do we limit to sections 1–9 for v0.1.0, or include additional sections like `3p`, `n`, etc. where present?
-6. **External link handling:** Should external links be allowed at all (some man pages include URLs), or should we strip them and show plain text?
+1. **Licensing policy detail:** ✅ RESOLVED - Do not expose raw roff source. Only show rendered content to avoid redistribution concerns. Maximum caution approach with full license text stored.
+2. **Ingestion write path:** ✅ RESOLVED - Staging first, auto-promote. Write to staging DB first, run automated validation, auto-promote to prod if checks pass.
+3. **Analytics stance:** ✅ RESOLVED - No client analytics. Server metrics only via Railway logging. Zero client-side tracking.
+4. **Option highlighting feature:** ✅ RESOLVED - Yes, implement in v0.1.0. Click option to highlight all occurrences throughout the page.
+5. **Supported sections:** ✅ RESOLVED - Standard sections 1–9 only. Ignore non-standard suffixes like `3p`, `n`, `l`.
+6. **External link handling:** ✅ RESOLVED - Allow external links with indicator. Open in new tab with external link icon. User knows they're leaving.
 
 ---
 
@@ -1557,10 +1690,50 @@ Prioritized:
 
 ## Required Decisions Summary (for audit)
 
--   Search architecture: **Server-side** via PostgreSQL FTS + trigram.
--   Ingestion/update pipeline: **Monthly**, reproducible via pinned container digests + manifests; validated with failure thresholds.
+### Core Architecture
+-   Search architecture: **Server-side** via PostgreSQL FTS + trigram (0.3 threshold).
+-   Ingestion/update pipeline: **Monthly**, staging-first with auto-promote; >80% success allows partial publish.
 -   Man page identity: **Name + Section + Locale**; collisions resolved by explicit section scoping.
 -   Safe rendering: **Restricted document model**, no raw HTML injection; strict link sanitization.
--   Deployment topology: **Single service** (web+API) + **managed PostgreSQL**, with staging and prod separation.
+-   Deployment topology: **Single service** (web+API) + **managed PostgreSQL** + **Redis** on Railway.
 -   SSR usage: **No SSR** in v0.1.0; CSR SPA with stable URLs and server fallback routing.
 -   Distribution approach: **Distribution-agnostic** for v0.1.0; single source (Debian stable) as implementation detail.
+
+### Frontend Stack
+-   Build: **Vite**
+-   Framework: **React + TypeScript**
+-   Router: **TanStack Router**
+-   State: **TanStack Query + React Context**
+-   Components: **Shadcn/ui**
+-   CSS: **Tailwind v4**
+-   Testing: **Vitest + React Testing Library**
+-   Runtime: **Node 20 LTS**
+
+### Backend Stack
+-   Framework: **FastAPI**
+-   ORM: **SQLAlchemy 2.0**
+-   Migrations: **Alembic**
+-   Testing: **pytest + httpx**
+-   Runtime: **Python 3.12**
+
+### Key Feature Decisions
+-   Option highlighting: **Yes, in v0.1.0**
+-   Custom in-page search: **Yes, with highlights**
+-   Syntax highlighting: **All code blocks** (shell-like default)
+-   Raw source view: **No** (removed for licensing)
+-   Analytics: **None** (server metrics only)
+-   External links: **Allow with indicator**
+-   Sections supported: **1-9 only**
+
+### UX Decisions
+-   Theme default: **System preference**
+-   Mobile TOC: **Sticky header button**
+-   Mobile header: **Always visible** (no hide-on-scroll)
+-   Disambiguation: **Full interstitial page**
+-   Related commands: **Collapsible** (5 default, expand for all)
+-   Search results: **20 with load more**
+-   Copy feedback: **Icon change** (checkmark)
+
+### Project Structure
+-   Repository: **Monorepo** with pnpm workspaces
+-   Local dev: **Docker Compose** for services
