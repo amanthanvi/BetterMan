@@ -1,8 +1,8 @@
 # 1. Title / Version / Status
 
-**Project:** BetterMan  
-**Spec Version:** v0.1.0  
-**Status:** Draft  
+**Project:** BetterMan
+**Spec Version:** v0.1.0
+**Status:** Draft
 **Last Updated:** 2026-01-03 (EST)
 
 ---
@@ -11,15 +11,15 @@
 
 -   BetterMan is a fast, modern web interface for Linux man pages focused on readability, speed, and navigation.
 -   Anonymous, public, internet-facing web app (no accounts, no login) with stable shareable URLs.
--   Supports a defined set of popular Linux distros/versions (Ubuntu LTS, Debian stable, Fedora latest stable, Arch rolling snapshot, Alpine stable) with reproducible ingestion.
+-   Distribution-agnostic: presents a single, canonical set of man pages sourced from a stable reference (Debian stable) without exposing distribution details to users.
 -   Provides high-quality rendering (headings, anchors, options tables, examples) versus raw terminal `man`.
 -   Includes instant-feel search backed by a server-side index (PostgreSQL Full Text Search) with typo tolerance.
 -   Keyboard-first UX: command palette (Cmd/Ctrl+K), global shortcuts, and consistent focus management.
--   Related commands discovery from “SEE ALSO” and cross-references.
+-   Related commands discovery from "SEE ALSO" and cross-references.
 -   Safe rendering: no arbitrary HTML injection; XSS-resistant content pipeline.
 -   Production-ready v0.1.0 includes observability, rate limiting, backups, and a minimal deploy topology.
 
-**Done (v0.1.0) means:** users can reliably search and read man pages for supported distros/versions with fast load times, stable links, accessible UI, and production-grade security/ops.
+**Done (v0.1.0) means:** users can reliably search and read man pages with fast load times, stable links, accessible UI, and production-grade security/ops.
 
 ---
 
@@ -29,13 +29,13 @@
 
 -   Make man pages easier to read and navigate than terminal output.
 -   Make finding commands and flags fast (search-first).
--   Make links shareable and stable across time (versioned distro URLs).
+-   Make links shareable and stable across time.
 
 ## Engineering Goals (Performance / Reliability)
 
 -   P95 API latency for search under 250 ms at steady state.
 -   P95 man page fetch/render under 200 ms API-side (excluding network).
--   Frontend LCP target under 2.5 s on “Fast 3G / mid-tier mobile” for cached shell + first page view under 3.0 s.
+-   Frontend LCP target under 2.5 s on "Fast 3G / mid-tier mobile" for cached shell + first page view under 3.0 s.
 -   Zero XSS vulnerabilities from man content rendering.
 -   High availability for a single-region v0.1.0 deployment (99.9% monthly).
 
@@ -53,10 +53,11 @@
 -   No SEO-driven requirements (no SSR solely for crawlers; no sitemap/indexing work).
 -   No user-generated content (comments, edits, annotations).
 -   No offline native apps (desktop/mobile).
--   No full “terminal emulation” or interactive command execution.
+-   No full "terminal emulation" or interactive command execution.
 -   No guarantee of 100% perfect fidelity to every troff macro edge case; prioritize readability with high fidelity for common pages.
 -   No support for non-English locales in v0.1.0 (see content scope).
 -   No enterprise features (SAML, private datasets).
+-   No multi-distribution support in v0.1.0 (deferred to future versions).
 
 ---
 
@@ -65,27 +66,25 @@
 ## Personas
 
 1. **CLI Learner:** learning Linux commands; needs clearer examples and quick lookup.
-2. **Working Engineer/SRE:** frequently checks flags and “SYNOPSIS”; needs speed and keyboard navigation.
-3. **Support/On-call Engineer:** needs to quickly confirm correct usage across distros.
-4. **Educator/Writer:** wants shareable links to authoritative docs for a specific distro version.
-5. **Power User:** prefers command palette, deep links to sections, and cross-references.
+2. **Working Engineer/SRE:** frequently checks flags and "SYNOPSIS"; needs speed and keyboard navigation.
+3. **Educator/Writer:** wants shareable links to authoritative docs.
+4. **Power User:** prefers command palette, deep links to sections, and cross-references.
 
-## Primary User Flows (8–15)
+## Primary User Flows
 
 1. Open BetterMan and search for a command (`tar`) from the homepage search.
-2. Open a man page directly via URL `/ubuntu/24.04/man/tar/1`.
+2. Open a man page directly via URL `/man/tar/1`.
 3. Use Cmd/Ctrl+K to open command palette and jump to `ssh_config(5)`.
-4. Switch distro/version for the same page (e.g., Ubuntu 24.04 → Debian 13) and compare.
-5. Navigate by man section (1, 5, 8) and browse commands alphabetically.
-6. Jump within a page using a generated table of contents (TOC) and anchored headings.
-7. Click an option/flag in an “OPTIONS” table to highlight occurrences in the text (optional enhancement; see Open Questions).
-8. Click cross-references in “SEE ALSO” to open related pages.
-9. Copy a stable link to a specific section anchor (`#options`) and share it.
-10. Use keyboard to scroll, jump to next/previous section, and go back.
-11. Search for a flag or phrase within a page (“Find in page” integrated or browser-native).
-12. Handle missing page: show nearest matches and allow switching distro/version.
-13. View examples with syntax highlighting and copy-to-clipboard for code blocks.
-14. Use mobile: search, read, and navigate with a sticky header and readable typography.
+4. Navigate by man section (1, 5, 8) and browse commands alphabetically.
+5. Jump within a page using a generated table of contents (TOC) and anchored headings.
+6. Click an option/flag in an "OPTIONS" table to highlight occurrences in the text (optional enhancement; see Open Questions).
+7. Click cross-references in "SEE ALSO" to open related pages.
+8. Copy a stable link to a specific section anchor (`#options`) and share it.
+9. Use keyboard to scroll, jump to next/previous section, and go back.
+10. Search for a flag or phrase within a page ("Find in page" integrated or browser-native).
+11. Handle missing page: show nearest matches and suggestions.
+12. View examples with syntax highlighting and copy-to-clipboard for code blocks.
+13. Use mobile: search, read, and navigate with a sticky header and readable typography.
 
 ---
 
@@ -96,21 +95,20 @@
 **Global layout**
 
 -   Top app bar:
-    -   Brand (“BetterMan”) links to home.
+    -   Brand ("BetterMan") links to home.
     -   Primary search input (expands on focus) and command palette hint (`Ctrl+K`).
-    -   Distro/version selector (compact dropdown).
     -   Theme toggle (light/dark/system).
 -   Main content area:
-    -   **Home:** search focus + quick section navigation + “popular sections” list.
-    -   **Search results:** list with name, section, short description, distro badge, and match highlights.
-    -   **Man page view:** title header, synopsis, metadata (distro/version, source package if known), TOC, content, related section.
+    -   **Home:** search focus + quick section navigation + "popular commands" list.
+    -   **Search results:** list with name, section, short description, and match highlights.
+    -   **Man page view:** title header, synopsis, metadata (source package if known), TOC, content, related section.
 
 **Man page view structure**
 
 -   Header: `name(section)` + one-line description.
 -   Left sidebar (desktop) or collapsible drawer (mobile):
     -   TOC (headings).
-    -   Quick nav: “SYNOPSIS”, “DESCRIPTION”, “OPTIONS”, “EXAMPLES”, “SEE ALSO” when available.
+    -   Quick nav: "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES", "SEE ALSO" when available.
 -   Main article:
     -   Rendered content with clear typographic hierarchy.
     -   Inline cross-references become links.
@@ -121,7 +119,6 @@
 -   **Client-side routing** with stable, shareable URLs (no SSR requirement).
 -   Back button behavior must be correct for:
     -   search → page → related page → back.
--   Distro/version switching retains current page when available; otherwise routes to a “closest match” state.
 
 ## Command Palette (Cmd/Ctrl+K)
 
@@ -130,15 +127,13 @@
 -   Opens a modal overlay with:
     -   Input field (auto-focused).
     -   Result list (keyboard navigable).
--   Default mode: global search across man pages (scoped to current distro/version but can broaden).
+-   Default mode: global search across man pages.
 -   Supports actions:
-    -   “Go to man page…”
-    -   “Switch distro/version…”
-    -   “Go to section…”
-    -   “Toggle theme”
+    -   "Go to man page…"
+    -   "Go to section…"
+    -   "Toggle theme"
 -   Query prefixes:
     -   `>` for actions only (optional in v0.1.0; if omitted, actions appear as top suggestions)
-    -   `@` to switch distro/version (optional)
     -   `#` to jump to heading anchors in current page (only when in page view)
 
 ## Keyboard Navigation Requirements (global)
@@ -193,32 +188,29 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 
 -   **Loading:** skeleton for title + TOC + paragraphs; do not reflow excessively.
 -   **Empty search:** show tips and example queries.
--   **No results:** suggest spelling fixes and offer “search across all supported distros” toggle.
+-   **No results:** suggest spelling fixes.
 -   **Missing page:** show:
-    -   “Not found in this distro/version”
+    -   "Page not found"
     -   Suggested alternative sections (if name exists in another section)
-    -   Suggested alternative distros/versions where it exists
     -   Link to search results for the name
 
 ## URL Scheme and Shareable Links
 
 **Stable URL structure (required)**
 
--   Man page: `/{distro}/{version}/man/{name}/{section}`
-    -   Example: `/ubuntu/24.04/man/tar/1`
+-   Man page: `/man/{name}/{section}`
+    -   Example: `/man/tar/1`
 -   Man page without section (allowed only when unambiguous):
-    -   `/{distro}/{version}/man/{name}`
+    -   `/man/{name}`
     -   If ambiguous, redirect to a chooser page listing sections.
--   Section browse: `/{distro}/{version}/section/{sectionNumber}`
--   Search: `/{distro}/{version}/search?q=...`
+-   Section browse: `/section/{sectionNumber}`
+-   Search: `/search?q=...`
 -   Anchor links:
-    -   Use `#` fragments for headings/blocks, e.g. `/ubuntu/24.04/man/tar/1#options`
+    -   Use `#` fragments for headings/blocks, e.g. `/man/tar/1#options`
 
 **Canonicalization rules**
 
 -   Normalize `name` to lowercase for routing but preserve display case.
--   Always include exact `version` in shared links (no “latest” in canonical links).
--   Optional convenience alias: `/{distro}/latest/...` may redirect to the current supported version, but must not be presented as canonical.
 
 ---
 
@@ -236,7 +228,7 @@ As a user, I want to open `man tar` in a browser and quickly understand usage an
 
 ### Functional Requirements
 
--   Fetch and display a man page by `(distro, version, name, section, locale=en)`.
+-   Fetch and display a man page by `(name, section, locale=en)`.
 -   Show:
     -   Title `name(section)` and one-line description.
     -   TOC generated from headings.
@@ -244,19 +236,19 @@ As a user, I want to open `man tar` in a browser and quickly understand usage an
     -   Monospace blocks for examples and preformatted text.
 -   Cross-references:
     -   Convert `foo(1)` style references to links if present in dataset.
--   Provide a “View source (roff)” toggle (read-only) only if licensing permits; otherwise omit (see Open Questions).
+-   Provide a "View source (roff)" toggle (read-only) only if licensing permits; otherwise omit (see Open Questions).
 
 ### Edge Cases
 
 -   Page exists in multiple sections (e.g., `printf(1)` and `printf(3)`).
 -   Page name includes special characters (`systemd.unit`, `git-commit`).
 -   Page contains uncommon roff macros or broken formatting.
--   “NAME” section missing or malformed.
+-   "NAME" section missing or malformed.
 -   Very large pages (e.g., `bash(1)`).
 
 ### Acceptance Criteria
 
--   Given a valid URL for a supported distro/version/page, the UI renders within performance budgets and includes a TOC when headings exist.
+-   Given a valid URL for a supported page, the UI renders within performance budgets and includes a TOC when headings exist.
 -   Headings are linkable via stable anchors and do not change between deploys unless content changes.
 -   No raw HTML from man content is injected into the DOM unsanitized (see Section 10).
 
@@ -270,20 +262,19 @@ Provide fast server-side search across man pages with good ranking for command n
 
 ### User Story
 
-As an engineer, I want to type “chmod recursive” and immediately find the most relevant pages and sections.
+As an engineer, I want to type "chmod recursive" and immediately find the most relevant pages and sections.
 
 ### Functional Requirements
 
 -   Search endpoint supports:
     -   Query string `q`
-    -   Scope: `distro`, `version` (default current selection)
     -   Optional: `section` filter, `limit`, `offset`
 -   Result includes:
-    -   `name`, `section`, short description (from NAME), distro/version
+    -   `name`, `section`, short description (from NAME)
     -   Highlight snippets (plain text) for matches
 -   Query features:
     -   Prefix matching for command names (`tar` matches `tar`, `tarfile` if present)
-    -   Typo tolerance (e.g., “chrmod” suggests `chmod`)
+    -   Typo tolerance (e.g., "chrmod" suggests `chmod`)
 -   Search must be usable from:
     -   global header search
     -   command palette
@@ -299,7 +290,7 @@ As an engineer, I want to type “chmod recursive” and immediately find the mo
 ### Acceptance Criteria
 
 -   P95 search API latency under 250 ms with warm DB cache at target load (see Section 16).
--   Top 5 results for exact command name queries include that command first (e.g., `ls` returns `ls(1)` as #1 for the scoped distro/version).
+-   Top 5 results for exact command name queries include that command first (e.g., `ls` returns `ls(1)` as #1).
 -   Typo queries return helpful suggestions or corrected top results.
 
 ---
@@ -312,23 +303,23 @@ Enable browsing man pages by section (1–9, plus any supported extras) and alph
 
 ### User Story
 
-As a learner, I want to browse all section 1 “User Commands” and discover commands I didn’t know.
+As a learner, I want to browse all section 1 "User Commands" and discover commands I didn't know.
 
 ### Functional Requirements
 
 -   Section landing page shows:
-    -   Section title (e.g., “1: User Commands”)
+    -   Section title (e.g., "1: User Commands")
     -   Alphabetical grouping (A–Z, 0–9)
     -   Search-within-section
--   Provide consistent section labels across distros:
+-   Provide consistent section labels:
     -   Use standard man section mapping for display names.
 -   Support deep link to section pages.
 
 ### Edge Cases
 
--   Some distros include extra sections (`7`, `n`, `l`, etc.).
+-   Extra sections (`7`, `n`, `l`, etc.).
 -   Pages with non-letter starting characters.
--   Empty section for a distro/version (should be unlikely but must handle).
+-   Empty section (should be unlikely but must handle).
 
 ### Acceptance Criteria
 
@@ -341,7 +332,7 @@ As a learner, I want to browse all section 1 “User Commands” and discover co
 
 ### Description
 
-Show related commands derived from “SEE ALSO” and cross-reference signals.
+Show related commands derived from "SEE ALSO" and cross-reference signals.
 
 ### User Story
 
@@ -349,21 +340,21 @@ As a user reading `curl(1)`, I want to quickly jump to related tools and configu
 
 ### Functional Requirements
 
--   Display a “Related” panel on man page view:
-    -   Primary: parsed “SEE ALSO” references that resolve to known pages.
+-   Display a "Related" panel on man page view:
+    -   Primary: parsed "SEE ALSO" references that resolve to known pages.
     -   Secondary: same-prefix heuristics (e.g., `git-*` pages) limited to avoid noise.
 -   Each related item shows `name(section)` + one-line description when available.
 -   Related list is deterministic for a given dataset release.
 
 ### Edge Cases
 
--   “SEE ALSO” references pages not in dataset (different package set).
+-   "SEE ALSO" references pages not in dataset (different package set).
 -   References without sections.
 -   References to external URLs in content.
 
 ### Acceptance Criteria
 
--   When “SEE ALSO” exists and contains resolvable references, at least those appear in Related.
+-   When "SEE ALSO" exists and contains resolvable references, at least those appear in Related.
 -   Related links never produce broken navigation; if missing, they route to a missing-page UX with suggestions.
 
 ---
@@ -383,14 +374,14 @@ As a power user, I want to press Ctrl+K and open `systemd.service(5)` without to
 -   Opens with Cmd/Ctrl+K.
 -   Displays:
     -   search results (man pages)
-    -   action results (theme toggle, switch distro/version)
+    -   action results (theme toggle)
 -   Keyboard navigation: Up/Down, Enter to open, Esc to close.
 -   Remembers last used mode (optional).
 
 ### Edge Cases
 
 -   Palette opened on slow network: show loading state and cached recent results.
--   Query returns no results: show “Search all distros” option.
+-   Query returns no results: show helpful suggestions.
 
 ### Acceptance Criteria
 
@@ -417,7 +408,7 @@ As a user, I want to copy a `bash` example from a man page and understand it qui
     -   diff (if patterns match)
     -   unknown → render monospace without highlighting
 -   Highlighting must be performed safely without executing any embedded content.
--   Provide “Copy” button per code block:
+-   Provide "Copy" button per code block:
     -   Copies plain text exactly as displayed (without line numbers).
 
 ### Edge Cases
@@ -452,7 +443,7 @@ As a keyboard-only user, I want to navigate search results and TOC without losin
 -   TOC:
     -   Keyboard navigable list with Enter to jump
 -   Page:
-    -   “t” scroll to top
+    -   "t" scroll to top
     -   Focus outlines visible
 -   Ensure no focus loss on route changes.
 
@@ -463,61 +454,50 @@ As a keyboard-only user, I want to navigate search results and TOC without losin
 
 ### Acceptance Criteria
 
--   Full “search → open result → use TOC → open related → back” flow is possible without mouse.
+-   Full "search → open result → use TOC → open related → back" flow is possible without mouse.
 -   Meets WCAG 2.2 AA keyboard criteria.
 
 ---
 
-# 8. Supported Distros, Versions, and Content Scope
+# 8. Content Scope
 
-## Definition of “Most Common/Popular” (Operational)
+## Content Source Strategy
 
-For v0.1.0, “most common/popular” means:
+For v0.1.0, BetterMan is **distribution-agnostic** and presents a single, unified set of man pages.
 
--   Distros that are widely used across **desktop**, **server**, and **container** contexts, and
--   Have **official container images** suitable for reproducible extraction, and
--   Represent both **stable/LTS** and **fast-moving** ecosystems.
+**Source:** Debian stable (currently Debian 13 "trixie") as the canonical reference.
 
-## Supported Distros/Versions (v0.1.0)
+**Rationale:**
+-   Debian is a widely-used, stable base for many other distributions.
+-   Provides comprehensive coverage of standard Unix/Linux commands.
+-   Well-maintained with consistent packaging and documentation.
+-   Avoids exposing distribution complexity to users in v0.1.0.
 
-BetterMan will support the following dataset targets:
+**Note:** The internal source (Debian) is an implementation detail. Users interact with man pages without knowledge of or reference to any specific distribution.
 
-1. **Ubuntu 24.04 LTS** (`ubuntu:24.04`)
-2. **Ubuntu 22.04 LTS** (`ubuntu:22.04`)
-3. **Debian 13 (stable: trixie)** (`debian:13`)
-4. **Fedora 43** (`fedora:43`)
-5. **Arch Linux (rolling)** via monthly snapshot pinned by container image digest (`archlinux:latest@sha256:...` recorded at ingestion time)
-6. **Alpine Linux 3.23** (`alpine:3.23`)
+## Package Coverage
 
-**Justification**
+For v0.1.0, ingest man pages from:
+-   Core system utilities (`coreutils`, `util-linux`, `findutils`, `grep`, `sed`, `awk`, etc.)
+-   Networking tools (`curl`, `wget`, `ssh`, `rsync`, `netcat`, etc.)
+-   System administration (`systemd`, `journalctl`, `mount`, `fdisk`, etc.)
+-   Development tools (`git`, `make`, `gcc`, `gdb`, etc.)
+-   Common servers and services (`nginx`, `apache2`, `postgresql`, `mysql`, etc.)
+-   Text processing (`vim`, `less`, `cat`, `head`, `tail`, etc.)
 
--   Ubuntu LTS covers a large share of servers and cloud images and provides long-lived references.
--   Debian stable is a baseline for many servers and derivatives.
--   Fedora represents a fast-moving mainstream distro with up-to-date tooling.
--   Arch represents rolling-release documentation (often referenced by advanced users).
--   Alpine is extremely common in container environments and differs materially (BusyBox, musl).
+**Target:** ~5,000–10,000 man pages covering the most commonly referenced commands and configuration files.
 
-## Update Cadence and Keeping Current
+## Update Cadence
 
--   **Monthly** ingestion run (scheduled) for all supported targets.
+-   **Monthly** ingestion run (scheduled) to capture package updates.
 -   **Emergency** out-of-band ingestion allowed (security/event-driven).
 -   Each ingestion run produces a dataset version identifier:
     -   `dataset_release_id` (UTC timestamp + git SHA of ingestion pipeline + parser version).
--   For Fedora, when a new stable Fedora is released, the supported Fedora version for “latest stable” will be updated within **30 days**:
-    -   v0.1.0 supports Fedora 43 explicitly; subsequent minor releases may add Fedora 44 while keeping Fedora 43 for a deprecation window (see retention policy).
-
-## When Distros Disagree (Different Content for Same Command)
-
--   BetterMan treats pages as **distro-version-specific** documents.
--   UI defaults to a selected distro/version; users can switch to compare.
--   If a user opens `/ubuntu/24.04/man/rsync/1` and then switches to Debian 13:
-    -   If Debian has it, load Debian’s version.
-    -   If not, show a missing-page state and suggest closest alternatives (including other distros).
 
 ## Locale / i18n Stance
 
 -   v0.1.0 is **English-only**.
--   Ingestion uses locale `C.UTF-8` (or closest available) and prefers `en` man content when multiple locales exist.
+-   Ingestion uses locale `C.UTF-8` and extracts `en` man content only.
 -   Non-English man pages are out of scope for v0.1.0 (see future roadmap).
 
 ---
@@ -526,8 +506,8 @@ BetterMan will support the following dataset targets:
 
 ## Source of Truth (Reproducible Acquisition)
 
--   Man content is extracted from official distro container images for each target distro/version.
--   For each target, ingestion records:
+-   Man content is extracted from the official Debian stable container image.
+-   Ingestion records:
     -   Container image reference and resolved digest
     -   Installed package manifest (package name + version)
     -   Environment (locale, architecture)
@@ -539,7 +519,7 @@ BetterMan will support the following dataset targets:
 -   v0.1.0 compliance approach:
     -   Store and display **license metadata** per man page when obtainable (from package metadata and/or embedded license files).
     -   Provide an **Attribution / Licenses** page in the app listing:
-        -   distro/version dataset release IDs
+        -   dataset release IDs
         -   packages included (manifest)
         -   license references and notices where required
     -   If a man page license requires including full text, link to the license text and/or include it in the attribution page when mandated.
@@ -554,32 +534,28 @@ A man page is uniquely identified by:
 
 -   `name` (string; e.g., `tar`)
 -   `section` (string; e.g., `1`, `5`, `8`, `3p`)
--   `distro` (enum; e.g., `ubuntu`)
--   `distro_version` (string; e.g., `24.04`)
 -   `locale` (string; v0.1.0 fixed to `en`)
 -   Optional: `package_name` and `package_version` (for attribution and provenance)
 
 Canonical ID format (conceptual):
 
--   `{distro}:{version}:{locale}:{name}({section})`
+-   `{locale}:{name}({section})`
 
 ## Collision Handling
 
 -   Same `name` across sections:
-    -   Treated as distinct documents (must include `section` in canonical URL).
--   Same `name(section)` across distros/versions:
-    -   Treated as separate documents; UI offers switching.
--   Multiple source files mapping to same `name(section)` within a distro/version (rare):
+    -   Treated as distinct documents (must include `section` in canonical URL when ambiguous).
+-   Multiple source files mapping to same `name(section)` (rare):
     -   Choose the one provided by the package with higher priority:
         1. base system packages
         2. non-base packages
-    -   Record collision in ingestion report and mark as “resolved by priority”.
+    -   Record collision in ingestion report and mark as "resolved by priority".
     -   Keep the discarded candidates in an internal audit table (not user-facing) for debugging.
 
 ## Data Retention / Versioning Policy
 
 -   Keep at least **6 monthly dataset releases** in production (rolling window) OR **180 days**, whichever is larger.
--   For each supported distro/version, keep:
+-   Keep:
     -   The current dataset release (active)
     -   The previous dataset release (rollback)
 -   If storage becomes an issue, delete older full content blobs first while retaining metadata and release audit logs.
@@ -608,13 +584,11 @@ Canonical ID format (conceptual):
 
 ## Ingestion Mechanism
 
-For each supported distro/version target:
-
-1. Start from pinned container image.
-2. Install minimal packages required to access man pages (varies by distro):
-    - `man-db` or equivalent
+1. Start from pinned Debian stable container image.
+2. Install packages to expand man page coverage:
+    - `man-db`
     - core `manpages` packages
-    - (optional) common base utilities if container is too minimal
+    - common utilities packages
 3. Enumerate man page source files (typically under `/usr/share/man`).
 4. For each page:
     - Extract raw roff source (store hash; optionally store raw content if licensing permits)
@@ -635,12 +609,11 @@ For each supported distro/version target:
         -   parser cannot extract some structured fields (options table missing)
         -   unusual macro sections
 -   Failures are recorded with:
-    -   target distro/version
     -   file path
     -   error category
     -   sample excerpt (truncated)
 -   Release rule:
-    -   If > 2% of pages hard-fail for a target, ingestion fails and does not publish that target’s update.
+    -   If > 2% of pages hard-fail, ingestion fails and does not publish the update.
 
 ## Output Schema (Internal Document Model)
 
@@ -710,10 +683,10 @@ Derived structured fields:
 -   Default priority: **readability** while preserving semantic structure.
 -   Metrics:
     -   Parse success rate (% pages with non-empty title + blocks)
-    -   Structured extraction rate (options extracted when “OPTIONS” exists)
+    -   Structured extraction rate (options extracted when "OPTIONS" exists)
     -   Anchor stability (hash of heading text mapping)
 -   Testing:
-    -   Golden tests on a curated set of representative pages across distros (see Section 19).
+    -   Golden tests on a curated set of representative pages (see Section 19).
     -   Visual regression (optional; keep minimal for v0.1.0).
 
 ---
@@ -755,9 +728,6 @@ Ranking score composed of:
 4. Match in headings
 5. Match in body text
 6. Section preference (default order: 1, 8, 5, 7, 3, others; configurable)
-7. Distro preference:
-    - Prefer currently selected distro/version
-    - If “search all distros” is enabled, tie-break by distro family popularity order (Ubuntu, Debian, Fedora, Arch, Alpine) unless user selects otherwise
 
 Tie-breakers:
 
@@ -795,7 +765,7 @@ Tie-breakers:
     -   Reject extremely long queries (e.g., > 200 chars) with 400.
     -   Reject excessive offsets/limits.
 -   Optional (recommended) front-door protection:
-    -   Use the PaaS/DNS provider’s basic DDoS protection; avoid introducing dedicated WAF configuration unless needed.
+    -   Use the PaaS/DNS provider's basic DDoS protection; avoid introducing dedicated WAF configuration unless needed.
 
 ---
 
@@ -824,7 +794,7 @@ flowchart LR
     -   Use a lightweight query/caching library (see below) or minimal custom fetch with in-memory cache.
     -   Must support request cancellation on route changes.
 -   Error boundaries:
-    -   Global error boundary to render a “Something went wrong” page without white-screen.
+    -   Global error boundary to render a "Something went wrong" page without white-screen.
 -   Caching:
     -   Browser HTTP cache + in-app memoization for recently viewed pages.
 -   Performance:
@@ -840,7 +810,7 @@ flowchart LR
     -   `api`: routing, request validation, error envelope
     -   `manpages`: retrieval, resolving references, related
     -   `search`: query parsing, ranking, suggestions
-    -   `datasets`: distro/version metadata, release IDs
+    -   `datasets`: metadata, release IDs
     -   `security`: rate limiting, headers, CSP config
     -   `observability`: logging, metrics, tracing hooks
 
@@ -864,13 +834,13 @@ flowchart LR
 -   PostgreSQL FTS avoids introducing search infrastructure.
 -   Monthly ingestion avoids complex streaming updates.
 
-### Libraries/Tools (minimal) with “Why necessary” + alternatives
+### Libraries/Tools (minimal) with "Why necessary" + alternatives
 
 -   **FastAPI**: Why necessary: fast, typed, production-ready API with minimal boilerplate. Alternative: Flask (less built-in validation) or no backend (client-only; rejected for search and dataset size).
 -   **PostgreSQL**: Why necessary: durable storage + FTS + indexing in one system. Alternative: SQLite (insufficient for multi-user production and FTS scale).
 -   **mandoc** (ingestion): Why necessary: robust man/mdoc renderer for roff inputs. Alternative: groff/man2html (less consistent).
 -   **React + TypeScript**: Why necessary: component model + maintainability for complex rendering and keyboard UX. Alternative: Vue/Svelte (viable but not chosen per defaults).
--   **Syntax highlighting library** (e.g., highlight.js with limited languages): Why necessary: meet “syntax highlighting for examples” requirement. Alternative: Prism (similar trade-offs) or no highlighting (not acceptable).
+-   **Syntax highlighting library** (e.g., highlight.js with limited languages): Why necessary: meet "syntax highlighting for examples" requirement. Alternative: Prism (similar trade-offs) or no highlighting (not acceptable).
 -   **Error reporting** (e.g., Sentry): Why necessary: production visibility into frontend/backend crashes. Alternative: rely on logs only (slower debugging).
 
 ## Rejected Stack Choices (Explicit)
@@ -895,31 +865,27 @@ Base path:
 
 ## Endpoint List (High-level)
 
-### Distro/Version Metadata
+### Dataset Metadata
 
--   `GET /api/v1/datasets`
-    -   Returns supported distros/versions and current dataset release ids.
+-   `GET /api/v1/info`
+    -   Returns current dataset release info.
 
 Example response (shape):
 
 ```json
 {
-	"datasets": [
-		{
-			"distro": "ubuntu",
-			"version": "24.04",
-			"datasetReleaseId": "2026-01-01T00:00:00Z+abc123",
-			"locale": "en"
-		}
-	]
+	"datasetReleaseId": "2026-01-01T00:00:00Z+abc123",
+	"locale": "en",
+	"pageCount": 8542,
+	"lastUpdated": "2026-01-01T00:00:00Z"
 }
 ```
 
 ### Fetch Man Page
 
--   `GET /api/v1/man/{distro}/{version}/{name}`
+-   `GET /api/v1/man/{name}`
     -   If unambiguous, returns that page; if ambiguous, returns 409 with options.
--   `GET /api/v1/man/{distro}/{version}/{name}/{section}`
+-   `GET /api/v1/man/{name}/{section}`
 
 Response includes:
 
@@ -933,8 +899,6 @@ Example response (shape):
 {
 	"page": {
 		"id": "uuid-or-int",
-		"distro": "ubuntu",
-		"version": "24.04",
 		"locale": "en",
 		"name": "tar",
 		"section": "1",
@@ -960,7 +924,7 @@ Example response (shape):
 
 ### Related
 
--   `GET /api/v1/man/{distro}/{version}/{name}/{section}/related`
+-   `GET /api/v1/man/{name}/{section}/related`
 
 Example response (shape):
 
@@ -982,11 +946,9 @@ Example response (shape):
 -   `GET /api/v1/search`
     Query params:
 -   `q` (required)
--   `distro`, `version` (optional; if omitted, backend uses defaults configured in app)
 -   `section` (optional)
 -   `limit` (default 20, max 50)
 -   `offset` (default 0, max 5000)
--   `allDistros` (optional boolean; if true, search across all supported datasets)
 
 Example response (shape):
 
@@ -999,8 +961,6 @@ Example response (shape):
 			"section": "1",
 			"title": "chmod(1)",
 			"description": "change file mode bits",
-			"distro": "ubuntu",
-			"version": "24.04",
 			"highlights": ["... change the mode of each FILE to MODE ..."]
 		}
 	],
@@ -1012,7 +972,7 @@ Example response (shape):
 
 -   `GET /api/v1/sections`
     -   Returns supported sections with labels.
--   `GET /api/v1/section/{distro}/{version}/{section}`
+-   `GET /api/v1/section/{section}`
     -   Returns paginated listing.
 
 ## Pagination / Filtering / Sorting
@@ -1076,25 +1036,24 @@ Justification:
 
 ## Entities / Tables (High-level)
 
-### `datasets`
+### `dataset_releases`
 
 -   `id`
--   `distro` (enum-like text)
--   `version` (text)
--   `locale` (text, v0.1.0 always `en`)
 -   `dataset_release_id` (text)
+-   `locale` (text, v0.1.0 always `en`)
 -   `image_ref` (text)
 -   `image_digest` (text)
 -   `ingested_at` (timestamp)
 -   `package_manifest` (JSONB, optional but recommended)
--   Index: unique (`distro`, `version`, `locale`, `dataset_release_id`)
+-   `is_active` (boolean) — marks the current active release
+-   Index: unique (`dataset_release_id`)
 
 ### `man_pages`
 
-Represents a canonical page identity within a dataset (distro/version/locale).
+Represents a canonical page identity within a dataset.
 
 -   `id`
--   `dataset_id` (FK to datasets)
+-   `dataset_release_id` (FK to dataset_releases)
 -   `name` (text)
 -   `section` (text)
 -   `title` (text)
@@ -1104,7 +1063,7 @@ Represents a canonical page identity within a dataset (distro/version/locale).
 -   `source_package_version` (text, nullable)
 -   `content_sha256` (text; hash of raw roff or normalized content)
 -   Timestamps
--   Constraints: unique (`dataset_id`, `name`, `section`)
+-   Constraints: unique (`dataset_release_id`, `name`, `section`)
 
 ### `man_page_content`
 
@@ -1156,8 +1115,8 @@ Normalized resolved relationships (for related commands):
 ## Index Strategy
 
 -   `man_pages`:
-    -   btree on (`dataset_id`, `name`, `section`)
-    -   btree on (`dataset_id`, `section`, `name`) for section browse
+    -   btree on (`dataset_release_id`, `name`, `section`)
+    -   btree on (`dataset_release_id`, `section`, `name`) for section browse
 -   `man_page_search`:
     -   GIN index on `tsv`
     -   GIN or GIST trigram index on `name_norm` and `desc_norm` (requires `pg_trgm`)
@@ -1235,10 +1194,10 @@ Normalized resolved relationships (for related commands):
 ## License Compliance for Man Pages
 
 -   Provide a `/licenses` UI route:
-    -   Distro/version dataset release details
+    -   Dataset release details
     -   package manifest
     -   license notices
--   Maintain an internal compliance checklist per dataset target.
+-   Maintain an internal compliance checklist per dataset.
 
 ---
 
@@ -1284,11 +1243,9 @@ Scaling:
 ## Graceful Degradation
 
 -   If search is slow/unavailable:
-    -   show partial results or “search temporarily unavailable” with retry.
+    -   show partial results or "search temporarily unavailable" with retry.
 -   If page fetch fails:
     -   show cached page in client (if available) and allow retry.
--   If a dataset target is missing:
-    -   UI indicates unavailable and suggests supported alternatives.
 
 ---
 
@@ -1386,7 +1343,7 @@ Staging and prod must be isolated:
 ### `update-docs.yml` (ingest/parse/validate/index/publish)
 
 -   Scheduled monthly + manual dispatch
--   For each supported target:
+-   Ingestion steps:
     -   resolve container image digest
     -   extract man sources
     -   run mandoc conversion + model conversion
@@ -1408,7 +1365,7 @@ Staging and prod must be isolated:
     -   `v0.1.0` tag upon launch
 -   Rollback:
     -   redeploy previous version
-    -   dataset rollback supported by storing previous dataset release and a “current release” pointer per dataset
+    -   dataset rollback supported by storing previous dataset release and a "current release" pointer
 
 ## Infrastructure-as-Code (Minimal stance)
 
@@ -1437,7 +1394,6 @@ Staging and prod must be isolated:
 -   Core flows in a headless browser:
     -   home search → results → page view
     -   command palette open → select result
-    -   distro/version switch
     -   missing page flow
 
 ## Contract Tests
@@ -1448,7 +1404,7 @@ Staging and prod must be isolated:
 
 ## Golden Tests (Parsing/Rendering Fidelity)
 
--   Curate a representative suite of pages across distros:
+-   Curate a representative suite of pages:
     -   small/simple (e.g., `ls(1)`)
     -   large (`bash(1)`)
     -   mdoc-heavy (`ssh_config(5)`)
@@ -1490,7 +1446,7 @@ Staging and prod must be isolated:
 -   Sampling: 10% of sessions max.
 -   Retention: 30 days.
 -   Opt-out:
-    -   Provide a toggle “Anonymous analytics” default OFF (strict privacy stance), stored locally.
+    -   Provide a toggle "Anonymous analytics" default OFF (strict privacy stance), stored locally.
 
 If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on server metrics only (Open Question).
 
@@ -1504,7 +1460,7 @@ If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on s
     - Repo scaffold, CI, environments, basic API skeleton, DB schema v1
     - Basic SPA routing + layout + theme
 2. **Week 3–4: Ingestion MVP**
-    - Container-based extraction for Ubuntu 24.04 and Debian 13
+    - Container-based extraction from Debian stable
     - Parse to internal document model
     - Render man pages end-to-end
 3. **Week 5: Search MVP**
@@ -1524,17 +1480,17 @@ If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on s
 
 ## Definition of Done (Launch Checklist)
 
--   [ ] Supported distros/versions ingested and visible in UI
+-   [ ] Man pages ingested and visible in UI
 -   [ ] Stable URLs and anchor links work and are shareable
 -   [ ] Search meets latency targets and relevance acceptance criteria
--   [ ] No `dangerouslySetInnerHTML` (or equivalent raw HTML injection) for man content
+-   [ ] No unsafe raw HTML injection for man content (use safe React component rendering only)
 -   [ ] CSP enabled and verified in staging
 -   [ ] Rate limiting enabled and tuned
 -   [ ] Backups enabled and restore validated
 -   [ ] Monitoring dashboards and alerts configured
 -   [ ] Accessibility: WCAG 2.2 AA baseline checks pass; keyboard-only flows validated
 -   [ ] Incident runbooks written and reviewed
--   [ ] Licenses/attribution page complete for shipped datasets
+-   [ ] Licenses/attribution page complete for shipped dataset
 
 ---
 
@@ -1545,7 +1501,7 @@ If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on s
 2. **Parsing fidelity issues / broken pages**
     - Mitigation: golden test suite; ingestion failure thresholds; allow fallback rendering as plain text for specific pages (feature-flagged).
 3. **Search quality dissatisfaction**
-    - Mitigation: boost exact name matches; add trigram fallback; collect anonymous “no results” counts (if analytics enabled).
+    - Mitigation: boost exact name matches; add trigram fallback; collect anonymous "no results" counts (if analytics enabled).
 4. **Abuse/scraping leading to cost spikes**
     - Mitigation: aggressive caching; rate limiting; optional upstream protection; cap limits/offsets.
 5. **Dataset drift and reproducibility**
@@ -1557,13 +1513,12 @@ If analytics are deemed unnecessary for v0.1.0, ship with **none** and rely on s
 
 Prioritized:
 
-1. **Licensing policy detail:** Are we allowed (and do we want) to expose “View raw roff source” publicly for all pages? If not, restrict to rendered content only.
-2. **Ingestion write path:** Should GitHub Actions write directly to prod DB, or should we require a gated “promote from staging” step that copies dataset releases?
+1. **Licensing policy detail:** Are we allowed (and do we want) to expose "View raw roff source" publicly for all pages? If not, restrict to rendered content only.
+2. **Ingestion write path:** Should GitHub Actions write directly to prod DB, or should we require a gated "promote from staging" step that copies dataset releases?
 3. **Analytics stance:** Ship with no client analytics (server metrics only) vs minimal opt-in anonymous analytics?
-4. **Option highlighting feature:** Do we want interactive “click an option to highlight occurrences” in v0.1.0, or defer?
-5. **Arch ingestion source:** Is using `archlinux:latest` pinned by digest sufficient, or do we require Arch Linux Archive snapshots for stronger reproducibility?
-6. **Supported sections:** Do we limit to sections 1–9 for v0.1.0, or include additional sections like `3p`, `n`, etc. where present?
-7. **External link handling:** Should external links be allowed at all (some man pages include URLs), or should we strip them and show plain text?
+4. **Option highlighting feature:** Do we want interactive "click an option to highlight occurrences" in v0.1.0, or defer?
+5. **Supported sections:** Do we limit to sections 1–9 for v0.1.0, or include additional sections like `3p`, `n`, etc. where present?
+6. **External link handling:** Should external links be allowed at all (some man pages include URLs), or should we strip them and show plain text?
 
 ---
 
@@ -1574,13 +1529,13 @@ Prioritized:
 -   **Man page:** Unix manual page document, typically roff-based.
 -   **roff/troff:** Typesetting language family used for man pages.
 -   **mandoc:** A tool that parses and formats man/mdoc documents.
--   **Dataset release:** A versioned snapshot of ingested man content per distro/version.
+-   **Dataset release:** A versioned snapshot of ingested man content.
 -   **FTS:** Full Text Search.
 -   **TOC:** Table of Contents.
 
 ## Referenced Schemas (High level)
 
--   Internal Document Model: Section 10 “Output Schema”
+-   Internal Document Model: Section 10 "Output Schema"
 -   API Error Envelope: Section 13
 -   Canonical identity: Section 9
 
@@ -1604,7 +1559,8 @@ Prioritized:
 
 -   Search architecture: **Server-side** via PostgreSQL FTS + trigram.
 -   Ingestion/update pipeline: **Monthly**, reproducible via pinned container digests + manifests; validated with failure thresholds.
--   Multi-distro/version handling: **Distro-version-specific identity**; collisions resolved by explicit section and dataset scoping.
+-   Man page identity: **Name + Section + Locale**; collisions resolved by explicit section scoping.
 -   Safe rendering: **Restricted document model**, no raw HTML injection; strict link sanitization.
 -   Deployment topology: **Single service** (web+API) + **managed PostgreSQL**, with staging and prod separation.
 -   SSR usage: **No SSR** in v0.1.0; CSR SPA with stable URLs and server fallback routing.
+-   Distribution approach: **Distribution-agnostic** for v0.1.0; single source (Debian stable) as implementation detail.
