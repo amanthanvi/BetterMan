@@ -1,198 +1,62 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+.nyc_output
+
+# Next.js
+.next/
+out/
+
+# Production
+build/
+dist/
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-# lib/  # Commented out - we need our Next.js lib directory
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
+env/
+.venv
 .pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-*.pyc
-*.pyo
+*.egg-info/
+pip-log.txt
 
-# Virtual environments
-backend/venv/
-backend/env/
-backend/.venv/
-
-# Node.js / Frontend
-node_modules/
-frontend/node_modules/
-frontend/dist/
-frontend/dist-ssr/
-*.local
-.cache/
-.temp/
-.yarn/
-.pnp.*
-.yarn-integrity
-
-# Build outputs
-dist/
-build/
-out/
-.next/
-.nuxt/
-
-# Environment variables
+# Environment
 .env
-.env.*
-!.env.example
-!.env.development.example
-!.env.production.example
-*.env.local
-*.env.development.local
-*.env.test.local
-*.env.production.local
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Logs
-logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-backend/*.log
-frontend/*.log
 
-# Editor directories and files
-.idea/
-.vscode/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-*.sublime-workspace
-*.sublime-project
-.history/
-
-# OS specific
-.DS_Store
-Thumbs.db
-desktop.ini
-*.swp
-*~
-
-# Database files
+# Database
 *.db
-*.db-shm
-*.db-wal
 *.sqlite
-*.sqlite3
-data/*.db*
-backend/data/*.db*
-
-# Redis
-dump.rdb
-redis.log
-
-# Docker
-docker-compose.override.yml
-.dockerignore.local
-
-# Test and coverage
-coverage/
-.nyc_output/
-test-results/
-junit.xml
-coverage.xml
-*.cover
-.hypothesis/
+/data/
 
 # Temporary files
-tmp/
-temp/
 *.tmp
-*.temp
-.cache/
-backend/.cache/
-backend/generated_manpages/
-backend/data/
-
-# Security
-*.pem
-*.key
-*.crt
-*.csr
-*.p12
-*.pfx
-secrets/
-private/
-
-# Production build artifacts
-backend/static/
-frontend/build/
-
-# Generated files
-backend/generate_*.py
-backend/fix_*.py
-backend/add_*.py
-backend/test_*.py
-backend/load_*.py
-backend/docker_*.py
-backend/run_*.sh
-backend/load_via_docker.sh
-
-# Documentation build
-docs/_build/
-docs/.doctrees/
-
-# Monitoring
-monitoring/grafana/data/
-monitoring/prometheus/data/
-
-# Backups
-*.backup
 *.bak
-backups/
-
-# Package lock files (keep one or the other)
-# package-lock.json
-# yarn.lock
-
-# macOS
-.AppleDouble
-.LSOverride
-Icon
-._*
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-# Windows
-ehthumbs.db
-ehthumbs_vista.db
-*.stackdump
-[Dd]esktop.ini
-$RECYCLE.BIN/
-*.lnk
-
-# Linux
-.directory
-.Trash-*
-.nfs*
+*.old
+.next/cache/
