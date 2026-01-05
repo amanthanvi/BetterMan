@@ -1,4 +1,5 @@
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+import { createRootRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 
 function NotFound() {
   return (
@@ -25,6 +26,9 @@ export const rootRoute = createRootRoute({
 })
 
 function RootLayout() {
+  const navigate = useNavigate()
+  const [q, setQ] = useState('')
+
   return (
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
       <header className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] backdrop-blur">
@@ -32,7 +36,23 @@ function RootLayout() {
           <Link to="/" className="font-semibold tracking-tight">
             BetterMan
           </Link>
-          <div className="flex-1" />
+          <form
+            className="hidden flex-1 sm:block"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const query = q.trim()
+              if (!query) return
+              navigate({ to: '/search', search: { q: query } })
+            }}
+          >
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search commands…"
+              className="w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              aria-label="Search man pages"
+            />
+          </form>
           <div className="hidden text-xs text-[color:var(--bm-muted)] sm:block">
             <span className="rounded border border-[var(--bm-border)] px-2 py-1">
               Ctrl/⌘ K
@@ -47,4 +67,3 @@ function RootLayout() {
     </div>
   )
 }
-
