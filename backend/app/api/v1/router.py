@@ -1,8 +1,10 @@
 from fastapi import APIRouter
 
-from app.api.v1.routes import info, sections
+from app.api.v1.routes import info, man, search, sections
 
 router = APIRouter(prefix="/api/v1")
 
 router.include_router(info.router, tags=["info"])
+router.include_router(search.router, tags=["search"])
+router.include_router(man.router, tags=["man"])
 router.include_router(sections.router, tags=["sections"])
