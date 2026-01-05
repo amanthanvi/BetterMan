@@ -36,4 +36,4 @@ COPY --from=backend-deps /opt/venv /opt/venv
 COPY backend ./backend
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
-CMD ["sh", "-lc", "cd backend && python -m app.db.migrate && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "cd backend && /opt/venv/bin/python -m app.db.migrate && /opt/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
