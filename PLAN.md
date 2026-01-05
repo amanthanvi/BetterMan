@@ -23,19 +23,19 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 
 ### M0 — Repo scaffold + dev loop
 
-- [ ] Monorepo layout per `SPEC.md` Section 18
-- [ ] `README.md` (setup + golden commands)
-- [ ] `CONTRIBUTING.md`
-- [ ] `docker-compose.yml` for Postgres + Redis
-- [ ] Baseline CI (`.github/workflows/ci.yml`)
+- [x] Monorepo layout per `SPEC.md` Section 18
+- [x] `README.md` (setup + golden commands)
+- [x] `CONTRIBUTING.md`
+- [x] `docker-compose.yml` for Postgres + Redis
+- [x] Baseline CI (`.github/workflows/ci.yml`)
 
 ### M1 — Backend foundation (FastAPI + DB)
 
-- [ ] FastAPI app skeleton (health, error envelope, request ids)
-- [ ] SQLAlchemy models + Alembic migrations for Section 14 tables
-- [ ] Postgres extensions (`pg_trgm`)
-- [ ] Rate limiting (Redis) + abuse guards (Section 11)
-- [ ] Static asset serving + SPA fallback (single deployable service)
+- [x] FastAPI app skeleton (health, error envelope, request ids)
+- [x] SQLAlchemy models + Alembic migrations for Section 14 tables
+- [x] Postgres extensions (`pg_trgm`)
+- [x] Rate limiting (Redis) + abuse guards (Section 11)
+- [x] Static asset serving + SPA fallback (single deployable service)
 
 ### M2 — Ingestion pipeline (Debian stable → DB)
 
