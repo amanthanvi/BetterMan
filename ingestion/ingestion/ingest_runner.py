@@ -261,10 +261,16 @@ class _PageRow:
 
 def _filter_sources(sources: list[ManSource]) -> list[ManSource]:
     out: list[ManSource] = []
-    for src in sources:
+    seen: set[tuple[str, str]] = set()
+    for src in sorted(sources, key=lambda s: str(s.path)):
         name_norm = src.name.strip().lower()
         if not _NAME_RE.fullmatch(name_norm):
             continue
+
+        key = (name_norm, src.section)
+        if key in seen:
+            continue
+        seen.add(key)
         out.append(ManSource(path=src.path, name=name_norm, section=src.section))
     return out
 
