@@ -8,7 +8,7 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 
 ## Status
 
-- [ ] v0.1.0 shipped (tag `v0.1.0`)
+- [x] v0.1.0 shipped (tag `v0.1.0`)
 
 ## Golden Commands (kept current)
 
@@ -100,4 +100,4 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 - [x] `.github/workflows/ci.yml` (lint/test/build for FE/BE/ingestion)
 - [x] `.github/workflows/deploy.yml` (staging → promote) *(scaffold)*
 - [x] `.github/workflows/update-docs.yml` (monthly ingestion staging → validate → promote)
-- [ ] Tag `v0.1.0`
+- [x] Tag `v0.1.0`

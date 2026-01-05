@@ -15,7 +15,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 ## Status
 
-Implementation in progress on branch `refresh`. Execution plan: `PLAN.md`.
+`v0.1.0` shipped (tag `v0.1.0`) on branch `refresh`. Execution plan: `PLAN.md`.
 
 ## Golden commands
 
