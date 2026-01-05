@@ -55,5 +55,4 @@ jobs:
       - run: cd ingestion && uv sync --frozen
       - run: cd ingestion && uv run ruff check .
       - run: cd ingestion && uv run ruff format --check .
-      - run: cd ingestion && uv run python -m ingestion.cli ingest --sample
-
+      - run: cd ingestion && uv run python -m pytest
