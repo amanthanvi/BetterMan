@@ -5,7 +5,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import ManPage, ManPageContent
+from app.db.models import ManPage, ManPageContent, ManPageLink
 
 
 async def list_pages_by_name(
@@ -35,3 +35,15 @@ async def get_page_with_content(
     if row is None:
         return None
     return row[0], row[1]
+
+
+async def list_related_pages(session: AsyncSession, *, from_page_id: uuid.UUID) -> list[ManPage]:
+    result = await session.execute(
+        select(ManPage)
+        .join(ManPageLink, ManPageLink.to_page_id == ManPage.id)
+        .where(ManPageLink.from_page_id == from_page_id)
+        .where(ManPageLink.link_type.in_(["see_also", "xref"]))
+        .order_by(ManPageLink.link_type.asc(), ManPage.name.asc(), ManPage.section.asc())
+        .limit(50)
+    )
+    return list(result.scalars())
