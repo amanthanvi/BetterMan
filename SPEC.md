@@ -111,6 +111,7 @@
 -   Left sidebar (desktop) or collapsible drawer (mobile):
     -   TOC (headings).
         -   **Desktop behavior:** TOC is sticky (follows scroll and stays visible). If the TOC is longer than the viewport, it scrolls independently.
+    -   Find-in-page: sticky by default; user can hide/show it.
     -   Quick nav: "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES", "SEE ALSO" when available.
 -   Main article:
     -   Rendered content with clear typographic hierarchy.

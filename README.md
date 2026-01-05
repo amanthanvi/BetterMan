@@ -20,6 +20,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 ## UX notes
 
 - Desktop: the “On this page” table of contents stays sticky while you scroll.
+- Man page: “Find in page” stays sticky by default; users can hide/show it.
 - Mobile: TOC is available via the sticky header “TOC” button (drawer).
 
 ## Golden commands
