@@ -76,7 +76,7 @@ jobs:
 
       - name: Deploy web (Railway)
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
           RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
           RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
@@ -84,7 +84,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ -z "${RAILWAY_TOKEN:-}" ]]; then
+          if [[ -z "${RAILWAY_API_TOKEN:-}" ]]; then
             echo "Missing RAILWAY_TOKEN GitHub Actions secret."
             exit 1
           fi
