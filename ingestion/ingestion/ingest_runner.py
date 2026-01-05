@@ -23,6 +23,7 @@ from ingestion.mandoc_parser import parse_mandoc_html
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+\\-]*$")
+_MAN_HREF_RE = re.compile(r"^/man/(?P<name>[a-z0-9][a-z0-9._+\\-]*)(?:/(?P<section>[1-9]))?$")
 
 
 @dataclass(frozen=True)
@@ -123,6 +124,8 @@ def ingest(
                 False,
             ),
         )
+
+        _resolve_doc_links_and_see_also(pages=parsed_pages)
 
         for row in parsed_pages:
             cur.execute(
@@ -379,31 +382,143 @@ def _content_packages(*, sample: bool) -> list[str]:
     ]
 
 
+def _parse_man_href(href: str) -> tuple[str, str | None] | None:
+    match = _MAN_HREF_RE.match(href)
+    if not match:
+        return None
+    name = match.group("name").strip().lower()
+    section = match.group("section")
+    return name, (section.strip().lower() if section else None)
+
+
+def _iter_internal_doc_links(obj: object):
+    if isinstance(obj, list):
+        for item in obj:
+            yield from _iter_internal_doc_links(item)
+        return
+
+    if not isinstance(obj, dict):
+        return
+
+    if (
+        obj.get("type") == "link"
+        and obj.get("linkType") == "internal"
+        and isinstance(obj.get("href"), str)
+    ):
+        yield obj
+
+    for v in obj.values():
+        if isinstance(v, dict) or isinstance(v, list):
+            yield from _iter_internal_doc_links(v)
+
+
+def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
+    index: dict[tuple[str, str], str] = {(p.name, p.section): str(p.page_id) for p in pages}
+    by_name: dict[str, list[str]] = {}
+    for p in pages:
+        by_name.setdefault(p.name, []).append(p.section)
+
+    for page in pages:
+        from_id = str(page.page_id)
+
+        if page.see_also:
+            for ref in page.see_also:
+                name = str(ref.get("name") or "").strip().lower()
+                if not name:
+                    continue
+
+                raw_section = ref.get("section")
+                section: str | None = str(raw_section).strip().lower() if raw_section else None
+                section_resolved = section
+                if section_resolved is None:
+                    candidates = by_name.get(name, [])
+                    if len(candidates) == 1:
+                        section_resolved = candidates[0]
+                        ref["section"] = section_resolved
+
+                if section_resolved is None:
+                    continue
+
+                to_id = index.get((name, section_resolved))
+                if to_id is None or to_id == from_id:
+                    continue
+
+                ref["resolvedPageId"] = to_id
+
+        for link in _iter_internal_doc_links(page.doc):
+            href = link.get("href")
+            if not isinstance(href, str):
+                continue
+            parsed = _parse_man_href(href)
+            if parsed is None:
+                continue
+
+            name, section = parsed
+            candidates = by_name.get(name, [])
+
+            if section is None:
+                if not candidates:
+                    link["linkType"] = "unresolved"
+                continue
+
+            if (name, section) not in index:
+                link["linkType"] = "unresolved"
+
+
 def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
     index: dict[tuple[str, str], str] = {(p.name, p.section): str(p.page_id) for p in pages}
     by_name: dict[str, list[str]] = {}
     for p in pages:
         by_name.setdefault(p.name, []).append(p.section)
 
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, str]] = set()
     for page in pages:
         from_id = str(page.page_id)
-        for name, section in page.see_also_refs:
-            if not name:
+        if page.see_also:
+            for ref in page.see_also:
+                to_id = ref.get("resolvedPageId")
+                if not isinstance(to_id, str) or not to_id:
+                    continue
+                if to_id == from_id:
+                    continue
+
+                key = (from_id, to_id, "see_also")
+                if key in seen:
+                    continue
+                seen.add(key)
+                cur.execute(
+                    """
+                    INSERT INTO man_page_links (from_page_id, to_page_id, link_type)
+                    VALUES (%s::uuid, %s::uuid, %s)
+                    """,
+                    (from_id, to_id, "see_also"),
+                )
+
+        for link in _iter_internal_doc_links(page.doc):
+            href = link.get("href")
+            if not isinstance(href, str):
                 continue
-            section_resolved = section
-            if section_resolved is None:
-                candidates = by_name.get(name, [])
-                if len(candidates) == 1:
-                    section_resolved = candidates[0]
-            if section_resolved is None:
+            parsed = _parse_man_href(href)
+            if parsed is None:
                 continue
 
-            to_id = index.get((name, section_resolved))
+            name, section = parsed
+            candidates = by_name.get(name, [])
+            to_id: str | None = None
+
+            if section is None:
+                if len(candidates) == 1:
+                    to_id = index.get((name, candidates[0]))
+                else:
+                    # ambiguous, but still linkable via /man/{name}
+                    continue
+            else:
+                to_id = index.get((name, section))
+
             if to_id is None or to_id == from_id:
                 continue
 
-            key = (from_id, to_id)
+            key = (from_id, to_id, "xref")
             if key in seen:
                 continue
             seen.add(key)
@@ -412,7 +527,7 @@ def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
                 INSERT INTO man_page_links (from_page_id, to_page_id, link_type)
                 VALUES (%s::uuid, %s::uuid, %s)
                 """,
-                (from_id, to_id, "see_also"),
+                (from_id, to_id, "xref"),
             )
 
 

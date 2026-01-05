@@ -12,7 +12,20 @@ export function Toc({
   if (!items.length) return null
 
   return (
-    <nav aria-label="On this page" className="space-y-2 text-sm">
+    <nav
+      aria-label="On this page"
+      className="space-y-2 text-sm"
+      onKeyDown={(e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return
+        if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'j') {
+          e.preventDefault()
+          moveFocus(e.currentTarget, 1)
+        } else if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'k') {
+          e.preventDefault()
+          moveFocus(e.currentTarget, -1)
+        }
+      }}
+    >
       {showTitle ? (
         <div className="text-xs font-medium uppercase tracking-wider text-[color:var(--bm-muted)]">
           On this page
@@ -34,4 +47,14 @@ export function Toc({
       </ol>
     </nav>
   )
+}
+
+function moveFocus(container: HTMLElement, delta: number) {
+  const links = Array.from(container.querySelectorAll('a[href^="#"]')) as HTMLAnchorElement[]
+  if (!links.length) return
+
+  const active = document.activeElement
+  const idx = links.findIndex((l) => l === active)
+  const next = idx === -1 ? 0 : (idx + delta + links.length) % links.length
+  links[next]?.focus()
 }

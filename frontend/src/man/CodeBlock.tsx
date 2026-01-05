@@ -1,5 +1,6 @@
 import hljs from 'highlight.js/lib/core'
 import bash from 'highlight.js/lib/languages/bash'
+import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 hljs.registerLanguage('bash', bash)
@@ -36,6 +37,8 @@ export function CodeBlock({
     }
   }, [findQuery, optionRegex, text])
 
+  const highlightedNodes = useMemo(() => highlightedHtmlToReact(highlighted), [highlighted])
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text)
@@ -59,10 +62,57 @@ export function CodeBlock({
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
       <pre className="overflow-x-auto rounded-lg border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.6] p-4 text-sm leading-6">
-        <code className="hljs language-bash" dangerouslySetInnerHTML={{ __html: highlighted }} />
+        <code className="hljs language-bash">{highlightedNodes}</code>
       </pre>
     </div>
   )
+}
+
+function highlightedHtmlToReact(html: string): ReactNode[] {
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html')
+  const container = doc.body.firstElementChild
+  if (!container) return [html]
+  return Array.from(container.childNodes).map((n, idx) => nodeToReact(n, `r:${idx}`))
+}
+
+function nodeToReact(node: ChildNode, key: string): ReactNode {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? ''
+  if (node.nodeType !== Node.ELEMENT_NODE) return ''
+
+  const el = node as HTMLElement
+  const children = Array.from(el.childNodes).map((c, idx) => nodeToReact(c, `${key}:${idx}`))
+
+  if (el.tagName === 'SPAN') {
+    const className = filterClasses(el.className, (c) => c === 'hljs' || c.startsWith('hljs-'))
+    return (
+      <span key={key} className={className || undefined}>
+        {children}
+      </span>
+    )
+  }
+
+  if (el.tagName === 'MARK') {
+    const className = filterClasses(
+      el.className,
+      (c) => c === 'bm-mark' || c === 'bm-find' || c === 'bm-opt' || c === 'bm-find-active',
+    )
+    const attrs: { 'data-bm-find'?: ''; 'data-bm-opt'?: '' } = {}
+    if (el.hasAttribute('data-bm-find')) attrs['data-bm-find'] = ''
+    if (el.hasAttribute('data-bm-opt')) attrs['data-bm-opt'] = ''
+
+    return (
+      <mark key={key} className={className || undefined} {...attrs}>
+        {children}
+      </mark>
+    )
+  }
+
+  return <span key={key}>{el.textContent ?? ''}</span>
+}
+
+function filterClasses(raw: string, allow: (cls: string) => boolean) {
+  const classes = raw.split(/\s+/).map((c) => c.trim()).filter(Boolean)
+  return classes.filter(allow).join(' ')
 }
 
 function escapeHtml(text: string) {

@@ -80,7 +80,7 @@ export type InlineNode =
   | { type: 'code'; text: string }
   | { type: 'emphasis'; inlines: InlineNode[] }
   | { type: 'strong'; inlines: InlineNode[] }
-  | { type: 'link'; href: string; inlines: InlineNode[]; linkType: 'internal' | 'external' }
+  | { type: 'link'; href: string; inlines: InlineNode[]; linkType: 'internal' | 'external' | 'unresolved' }
 
 export type BlockNode =
   | { type: 'heading'; id: string; level: number; text: string }

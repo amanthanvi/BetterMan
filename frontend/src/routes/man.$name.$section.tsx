@@ -138,6 +138,7 @@ function ManPageView({
   content: ManPageContent
   relatedItems: SectionPage[]
 }) {
+  const toc = useToc()
   const [find, setFind] = useState('')
   const [activeFindIndex, setActiveFindIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
@@ -150,13 +151,15 @@ function ManPageView({
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
 
   const optionTerms = selectedOption ? parseOptionTerms(selectedOption.flags) : []
+  const showSidebar = toc.sidebarOpen && content.toc.length > 0
+  const scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 
   const scrollToFind = (idx: number) => {
     const marks = Array.from(document.querySelectorAll('mark[data-bm-find]')) as HTMLElement[]
     if (!marks.length) return
     const clamped = ((idx % marks.length) + marks.length) % marks.length
     const el = marks[clamped]
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
     if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
     el.classList.add('bm-find-active')
     activeMarkRef.current = el
@@ -291,10 +294,12 @@ function ManPageView({
         </div>
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="hidden lg:block">
-          <Toc items={content.toc} />
-        </aside>
+      <div className={`mt-8 grid gap-8 ${showSidebar ? 'lg:grid-cols-[16rem_minmax(0,1fr)]' : ''}`}>
+        {showSidebar ? (
+          <aside className="hidden lg:block">
+            <Toc items={content.toc} />
+          </aside>
+        ) : null}
 
         <article>
           {content.options?.length ? (
@@ -306,7 +311,7 @@ function ManPageView({
                   selectedAnchorId={selectedOption?.anchorId}
                   onSelect={(opt) => {
                     setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
-                    document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
                   }}
                 />
               </div>
@@ -327,7 +332,14 @@ function ManPageView({
           <ul className="mt-3 flex flex-wrap gap-2">
             {content.seeAlso.slice(0, 24).map((ref) => (
               <li key={`${ref.name}:${ref.section ?? ''}`}>
-                {ref.section ? (
+                {ref.section && !ref.resolvedPageId ? (
+                  <span
+                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.25] px-3 py-1 text-sm text-[color:var(--bm-muted)]"
+                    title="Not available in this dataset"
+                  >
+                    {ref.name}({ref.section})
+                  </span>
+                ) : ref.section ? (
                   <Link
                     to="/man/$name/$section"
                     params={{ name: ref.name, section: ref.section }}

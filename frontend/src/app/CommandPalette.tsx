@@ -47,6 +47,7 @@ type ActionItem = Extract<PaletteItem, { kind: 'action' }>
 type NavigateFn = (opts:
   | { to: '/'; replace?: boolean }
   | { to: '/search'; search: { q: string }; replace?: boolean }
+  | { to: '/section/$section'; params: { section: string }; replace?: boolean }
   | { to: '/man/$name/$section'; params: { name: string; section: string }; replace?: boolean }
 ) => void
 
@@ -81,6 +82,16 @@ export function CommandPalette({
 
   const close = () => onOpenChange(false)
 
+  const sectionActions: ActionItem[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((s) => ({
+    kind: 'action',
+    id: `action-section-${s}`,
+    label: `Go to section ${s}`,
+    run: () => {
+      navigate({ to: '/section/$section', params: { section: s } })
+      close()
+    },
+  }))
+
   const baseActions: ActionItem[] = [
     {
       kind: 'action',
@@ -98,6 +109,7 @@ export function CommandPalette({
         close()
       },
     },
+    ...sectionActions,
     {
       kind: 'action',
       id: 'action-clear-recent',
@@ -129,7 +141,8 @@ export function CommandPalette({
         title: t.title,
         level: t.level,
         run: () => {
-          document.getElementById(t.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+          document.getElementById(t.id)?.scrollIntoView({ behavior, block: 'start' })
           window.location.hash = t.id
           close()
         },
@@ -175,7 +188,7 @@ export function CommandPalette({
                   active?.run()
                 }
               }}
-              placeholder="Search… (use > for actions)"
+              placeholder="Search… (use > for actions, # for headings)"
               className="w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
               aria-label="Command palette input"
             />

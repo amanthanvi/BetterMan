@@ -183,11 +183,28 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx) {
               key={idx}
               href={inline.href}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="underline underline-offset-4 decoration-[color:var(--bm-accent)/0.6]"
             >
-              {renderInlines(inline.inlines, ctx)}
+              <span className="inline-flex items-center gap-1">
+                {renderInlines(inline.inlines, ctx)}
+                <span aria-hidden="true" className="text-xs text-[color:var(--bm-muted)]">
+                  ↗
+                </span>
+              </span>
+              <span className="sr-only"> (opens in new tab)</span>
             </a>
+          )
+        }
+        if (inline.linkType === 'unresolved') {
+          return (
+            <span
+              key={idx}
+              className="cursor-not-allowed text-[color:var(--bm-muted)] underline decoration-dotted decoration-[color:var(--bm-muted)/0.6] underline-offset-4"
+              title="Not available in this dataset"
+            >
+              {renderInlines(inline.inlines, ctx)}
+            </span>
           )
         }
         return (

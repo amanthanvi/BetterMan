@@ -35,7 +35,7 @@ class InlineLink(BaseModel):
     type: Literal["link"] = "link"
     href: str
     inlines: list[InlineNode]
-    linkType: Literal["internal", "external"]
+    linkType: Literal["internal", "external", "unresolved"]
 
     @staticmethod
     def _ensure_allowed_external(url: str) -> None:

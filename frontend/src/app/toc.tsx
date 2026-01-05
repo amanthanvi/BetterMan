@@ -7,6 +7,8 @@ type TocContextValue = {
   setItems: (items: TocItem[]) => void
   open: boolean
   setOpen: (open: boolean) => void
+  sidebarOpen: boolean
+  setSidebarOpen: (open: boolean) => void
 }
 
 const TocContext = createContext<TocContextValue | null>(null)
@@ -14,10 +16,11 @@ const TocContext = createContext<TocContextValue | null>(null)
 export function TocProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<TocItem[]>([])
   const [open, setOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const value = useMemo(
-    () => ({ items, setItems, open, setOpen }),
-    [items, open],
+    () => ({ items, setItems, open, setOpen, sidebarOpen, setSidebarOpen }),
+    [items, open, sidebarOpen],
   )
 
   return <TocContext.Provider value={value}>{children}</TocContext.Provider>
@@ -28,4 +31,3 @@ export function useToc(): TocContextValue {
   if (!ctx) throw new Error('useToc must be used within <TocProvider>')
   return ctx
 }
-

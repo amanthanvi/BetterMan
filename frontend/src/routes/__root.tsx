@@ -3,6 +3,7 @@ import { createRootRoute, Link, Outlet, useNavigate, useRouterState } from '@tan
 import { useEffect, useRef, useState } from 'react'
 
 import { CommandPalette } from '../app/CommandPalette'
+import { ErrorBoundary } from '../app/ErrorBoundary'
 import { TocProvider, useToc } from '../app/toc'
 import { ThemeProvider, useTheme } from '../app/theme'
 import { Toc } from '../man/Toc'
@@ -46,19 +47,48 @@ function RootLayoutInner() {
   const [q, setQ] = useState('')
   const [paletteOpen, setPaletteOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement | null>(null)
+  const lastRouteKeyRef = useRef<string | null>(null)
+  const scrollPositionsRef = useRef<Map<string, number>>(new Map())
+  const isPopRef = useRef(false)
   const toc = useToc()
   const theme = useTheme()
 
-  const locationKey = useRouterState({
-    select: (s) => `${s.location.pathname}${s.location.search}${s.location.hash}`,
+  const routeKey = useRouterState({
+    select: (s) => `${s.location.pathname}${s.location.search}`,
   })
+
+  useEffect(() => {
+    const onPop = () => {
+      isPopRef.current = true
+    }
+
+    const prev = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      window.history.scrollRestoration = prev
+    }
+  }, [])
+
+  useEffect(() => {
+    const prevKey = lastRouteKeyRef.current
+    if (prevKey) scrollPositionsRef.current.set(prevKey, window.scrollY)
+
+    const nextY = isPopRef.current ? scrollPositionsRef.current.get(routeKey) ?? 0 : 0
+    isPopRef.current = false
+    lastRouteKeyRef.current = routeKey
+
+    window.scrollTo({ top: nextY, left: 0, behavior: 'auto' })
+  }, [routeKey])
 
   useEffect(() => {
     const h1 = document.querySelector('main h1') as HTMLElement | null
     if (!h1) return
     if (!h1.hasAttribute('tabindex')) h1.setAttribute('tabindex', '-1')
     h1.focus({ preventScroll: true })
-  }, [locationKey])
+  }, [routeKey])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -85,7 +115,21 @@ function RootLayoutInner() {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'b' && toc.items.length) {
         e.preventDefault()
-        toc.setOpen(true)
+        if (window.matchMedia('(min-width: 1024px)').matches) {
+          toc.setSidebarOpen(!toc.sidebarOpen)
+        } else {
+          toc.setOpen(!toc.open)
+        }
+        return
+      }
+
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 't') {
+        e.preventDefault()
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        })
       }
     }
 
@@ -136,7 +180,7 @@ function RootLayoutInner() {
           {toc.items.length ? (
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8] sm:hidden"
+              className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8] lg:hidden"
               onClick={() => toc.setOpen(true)}
             >
               TOC
@@ -149,7 +193,9 @@ function RootLayoutInner() {
       {paletteOpen ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
 
       <main className="mx-auto max-w-6xl px-4 py-8">
-        <Outlet />
+        <ErrorBoundary key={routeKey}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       <footer className="border-t border-[var(--bm-border)]">
