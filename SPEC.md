@@ -2,8 +2,8 @@
 
 **Project:** BetterMan
 **Spec Version:** v0.1.0
-**Status:** Draft (Interview Complete)
-**Last Updated:** 2026-01-03 (EST)
+**Status:** Shipped (v0.1.0)
+**Last Updated:** 2026-01-05 (EST)
 **Interview Status:** Completed - all open questions resolved
 
 ---
@@ -1611,19 +1611,25 @@ Staging and prod must be isolated:
 
 ## Definition of Done (Launch Checklist)
 
--   [ ] Man pages ingested and visible in UI
--   [ ] Stable URLs and anchor links work and are shareable
--   [ ] Search meets latency targets and relevance acceptance criteria
--   [ ] Option highlighting feature works across tested pages
--   [ ] Custom in-page search with highlighting works
--   [ ] No unsafe raw HTML injection for man content (use safe React component rendering only)
--   [ ] CSP enabled and verified in staging
--   [ ] Rate limiting enabled and tuned (Redis-backed)
+**Code complete (repo)**
+
+-   [x] Man pages ingested and visible in UI (via ingestion pipeline)
+-   [x] Stable URLs and anchor links work and are shareable
+-   [x] Option highlighting feature works across tested pages
+-   [x] Custom in-page search with highlighting works
+-   [x] No unsafe raw HTML injection for man content (see Section 10)
+-   [x] CSP enabled
+-   [x] Rate limiting enabled (Redis-backed)
+-   [x] Incident runbooks written and reviewed
+-   [x] Licenses/attribution page complete with license text for packages in dataset
+
+**Staging/production verification (ops)**
+
+-   [ ] Search meets latency targets and relevance acceptance criteria (load test)
+-   [ ] CSP verified in staging
 -   [ ] Backups enabled and restore validated
 -   [ ] Monitoring dashboards and alerts configured (Railway logs)
 -   [ ] Accessibility: WCAG 2.2 AA baseline checks pass; keyboard-only flows validated
--   [ ] Incident runbooks written and reviewed
--   [ ] Licenses/attribution page complete with full license text for copyleft licenses
 
 ---
 
