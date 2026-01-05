@@ -17,7 +17,10 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 - `pnpm backend:test`
 - `pnpm frontend:dev`
 - `pnpm frontend:build`
-- `pnpm ingest:sample` (WIP)
+- `pnpm ingest:sample`
+- `pnpm ingest:run`
+- `pnpm ingest:lint`
+- `pnpm ingest:test`
 
 ## Milestones
 
@@ -39,24 +42,24 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 
 ### M2 — Ingestion pipeline (Debian stable → DB)
 
-- [ ] Debian stable container-based ingestion runner (Section 9/10)
-- [ ] `mandoc` render → safe internal document model JSON (no raw HTML)
-- [ ] Extract metadata: title/description/TOC/options/see_also/plain_text
+- [x] Debian stable container-based ingestion runner (Section 9/10)
+- [x] `mandoc` render → safe internal document model JSON (no raw HTML)
+- [x] Extract metadata: title/description/TOC/options/see_also/plain_text
 - [ ] Validation thresholds:
-  - [ ] publish allowed if `success_rate >= 80%` and `hard_fail_rate <= 2%`
-  - [ ] `has_parse_warnings` captured but does not block publish
+  - [x] publish allowed if `success_rate >= 80%` and `hard_fail_rate <= 2%`
+  - [x] `has_parse_warnings` captured but does not block publish
 - [ ] Dataset releases: staging-first flow (Section 18)
 - [ ] Golden tests for representative pages (Section 19)
 
 ### M3 — Core API (read-only) + search
 
-- [ ] `GET /api/v1/info`
-- [ ] `GET /api/v1/man/{name}` (409 ambiguous)
-- [ ] `GET /api/v1/man/{name}/{section}`
-- [ ] `GET /api/v1/man/{name}/{section}/related`
-- [ ] `GET /api/v1/search` (FTS + trigram; ranking rules Section 11)
-- [ ] `GET /api/v1/sections`
-- [ ] `GET /api/v1/section/{section}`
+- [x] `GET /api/v1/info`
+- [x] `GET /api/v1/man/{name}` (409 ambiguous)
+- [x] `GET /api/v1/man/{name}/{section}`
+- [x] `GET /api/v1/man/{name}/{section}/related`
+- [x] `GET /api/v1/search` (FTS + trigram; ranking rules Section 11)
+- [x] `GET /api/v1/sections`
+- [x] `GET /api/v1/section/{section}`
 - [ ] HTTP caching (ETag + Cache-Control) keyed to dataset release
 
 ### M4 — Frontend UX (SPA)

@@ -39,5 +39,7 @@ Implementation in progress on branch `refresh`. Execution plan: `PLAN.md`.
 
 ### Ingestion
 
-- `pnpm ingest:sample` — ingest a small sample set (WIP)
-- `pnpm ingest:run` — ingest full dataset (WIP)
+- `pnpm ingest:sample` — ingest a small sample set
+- `pnpm ingest:run` — ingest full dataset
+- `pnpm ingest:lint` — ruff check + format check
+- `pnpm ingest:test` — ingestion tests (pytest)
