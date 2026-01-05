@@ -8,8 +8,9 @@ import type { SearchResult } from '../api/types'
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../lib/recent'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { useTheme } from './theme'
+import { useToc } from './toc'
 
-type PaletteMode = 'search' | 'actions'
+type PaletteMode = 'search' | 'actions' | 'headings'
 
 type PaletteItem =
   | {
@@ -33,6 +34,13 @@ type PaletteItem =
       query: string
       run: () => void
     }
+  | {
+      kind: 'heading'
+      id: string
+      title: string
+      level: number
+      run: () => void
+    }
 
 type ActionItem = Extract<PaletteItem, { kind: 'action' }>
 
@@ -51,6 +59,7 @@ export function CommandPalette({
 }) {
   const theme = useTheme()
   const navigate = useNavigate()
+  const toc = useToc()
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const [input, setInput] = useState('')
@@ -106,6 +115,25 @@ export function CommandPalette({
       const q = parsed.text.trim().toLowerCase()
       if (!q) return baseActions
       return baseActions.filter((a) => a.label.toLowerCase().includes(q))
+    }
+
+    if (parsed.mode === 'headings') {
+      const q = parsed.text.trim().toLowerCase()
+      const matches = (q ? toc.items.filter((t) => t.title.toLowerCase().includes(q)) : toc.items).slice(
+        0,
+        30,
+      )
+      return matches.map((t) => ({
+        kind: 'heading',
+        id: `heading:${t.id}`,
+        title: t.title,
+        level: t.level,
+        run: () => {
+          document.getElementById(t.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          window.location.hash = t.id
+          close()
+        },
+      }))
     }
 
     const q = parsed.text.trim()
@@ -203,6 +231,7 @@ function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
   if (raw.startsWith('\\>')) return { mode: 'search', text: raw.slice(1) }
   if (raw.startsWith('\\#')) return { mode: 'search', text: raw.slice(1) }
   if (raw.startsWith('>')) return { mode: 'actions', text: raw.slice(1) }
+  if (raw.startsWith('#')) return { mode: 'headings', text: raw.slice(1) }
   return { mode: 'search', text: raw }
 }
 
@@ -266,5 +295,7 @@ function itemLabel(item: PaletteItem) {
       return `Search: ${item.query}`
     case 'page':
       return `${item.name}(${item.section})`
+    case 'heading':
+      return item.title
   }
 }
