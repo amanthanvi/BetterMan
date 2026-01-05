@@ -1,0 +1,103 @@
+name: update-dataset
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Monthly on the 1st at 05:00 UTC
+    - cron: "0 5 1 * *"
+
+concurrency:
+  group: update-dataset
+  cancel-in-progress: false
+
+jobs:
+  ingest_and_promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - run: pipx install uv
+      - run: cd ingestion && uv sync --frozen
+
+      - name: Ingest to staging DB
+        env:
+          INGEST_DATABASE_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
+          BETTERMAN_DEBIAN_IMAGE_REF: debian:trixie
+        run: cd ingestion && uv run python -m ingestion.cli ingest --activate
+
+      - name: Install Postgres client (pg_dump/psql)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Promote active dataset from staging to prod
+        env:
+          STAGING_DB_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
+          PROD_DB_URL: ${{ secrets.BETTERMAN_PROD_DATABASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${STAGING_DB_URL:-}" || -z "${PROD_DB_URL:-}" ]]; then
+            echo "Missing BETTERMAN_STAGING_DATABASE_URL / BETTERMAN_PROD_DATABASE_URL secrets."
+            exit 1
+          fi
+
+          row="$(psql "$STAGING_DB_URL" -t -A -c "SELECT id, dataset_release_id FROM dataset_releases WHERE is_active = TRUE ORDER BY ingested_at DESC LIMIT 1;")"
+          if [[ -z "$row" ]]; then
+            echo "No active dataset release found in staging."
+            exit 1
+          fi
+
+          release_uuid="${row%%|*}"
+          release_id="${row#*|}"
+          echo "Staging active release: $release_uuid ($release_id)"
+
+          exists="$(psql "$PROD_DB_URL" -t -A -c "SELECT COUNT(*) FROM dataset_releases WHERE dataset_release_id = '$release_id';")"
+          if [[ "${exists:-0}" != "0" ]]; then
+            echo "Release already present in prod, skipping copy."
+            exit 0
+          fi
+
+          dump_flags=(--data-only --no-owner --no-privileges --column-inserts)
+
+          {
+            echo "BEGIN;"
+
+            pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
+              --table=dataset_releases \
+              --where="id = '$release_uuid'::uuid"
+
+            pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
+              --table=licenses \
+              --where="id IN (SELECT license_id FROM man_page_license_map WHERE man_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid))"
+
+            pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
+              --table=man_pages \
+              --where="dataset_release_id = '$release_uuid'::uuid"
+
+            pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
+              --table=man_page_content \
+              --where="man_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid)"
+
+            pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
+              --table=man_page_search \
+              --where="man_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid)"
+
+            pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
+              --table=man_page_links \
+              --where="from_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid)"
+
+            pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
+              --table=man_page_license_map \
+              --where="man_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid)"
+
+            echo "COMMIT;"
+          } > promote.sql
+
+          psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -f promote.sql
+
+          psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -c "UPDATE dataset_releases SET is_active = FALSE WHERE locale = 'en' AND is_active = TRUE; UPDATE dataset_releases SET is_active = TRUE WHERE id = '$release_uuid'::uuid;"
+
