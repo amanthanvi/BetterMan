@@ -2,6 +2,8 @@ import type {
   AmbiguousOption,
   ApiErrorEnvelope,
   InfoResponse,
+  LicenseTextResponse,
+  LicensesResponse,
   ManPageResponse,
   RelatedResponse,
   SearchResponse,
@@ -92,6 +94,14 @@ export function listSection(
   return apiGet<SectionResponse>(`/api/v1/section/${encodeURIComponent(section)}${qs ? `?${qs}` : ''}`)
 }
 
+export function fetchLicenses(): Promise<LicensesResponse> {
+  return apiGet<LicensesResponse>('/api/v1/licenses')
+}
+
+export function fetchLicenseText(pkg: string): Promise<LicenseTextResponse> {
+  return apiGet<LicenseTextResponse>(`/api/v1/licenses/${encodeURIComponent(pkg)}`)
+}
+
 export type ManByNameResult =
   | { kind: 'page'; data: ManPageResponse }
   | { kind: 'ambiguous'; options: AmbiguousOption[] }
@@ -130,4 +140,3 @@ export function fetchRelated(name: string, section: string): Promise<RelatedResp
     `/api/v1/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}/related`,
   )
 }
-

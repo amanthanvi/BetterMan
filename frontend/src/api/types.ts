@@ -47,6 +47,28 @@ export type SectionResponse = {
   results: SectionPage[]
 }
 
+export type LicensePackage = {
+  name: string
+  version: string
+  hasLicenseText: boolean
+}
+
+export type LicensesResponse = {
+  datasetReleaseId: string
+  ingestedAt: string
+  imageRef: string
+  imageDigest: string
+  packageManifest: unknown | null
+  packages: LicensePackage[]
+}
+
+export type LicenseTextResponse = {
+  package: string
+  licenseId: string
+  licenseName: string
+  text: string
+}
+
 export type TocItem = {
   id: string
   title: string
@@ -126,4 +148,3 @@ export type AmbiguousPageResponse = ApiErrorEnvelope & {
 export type RelatedResponse = {
   items: SectionPage[]
 }
-

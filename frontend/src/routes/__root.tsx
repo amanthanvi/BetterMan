@@ -151,6 +151,15 @@ function RootLayoutInner() {
       <main className="mx-auto max-w-6xl px-4 py-8">
         <Outlet />
       </main>
+
+      <footer className="border-t border-[var(--bm-border)]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-xs text-[color:var(--bm-muted)]">
+          <div>BetterMan</div>
+          <Link to="/licenses" className="underline underline-offset-4">
+            Licenses
+          </Link>
+        </div>
+      </footer>
     </div>
   )
 }
