@@ -12,4 +12,3 @@ def _ensure_project_root_on_syspath() -> None:
 
 
 _ensure_project_root_on_syspath()
-
