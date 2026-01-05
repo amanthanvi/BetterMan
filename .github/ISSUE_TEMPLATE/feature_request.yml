@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest an idea or enhancement
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use-case
+      description: What problem are you trying to solve? Who is it for?
+      placeholder: Describe the use-case and why it matters.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen? Include UX/API ideas if relevant.
+      placeholder: Describe the desired behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Any alternatives or workarounds you've considered?
+    validations:
+      required: false
