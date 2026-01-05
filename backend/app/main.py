@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -11,6 +13,7 @@ from app.core.config import Settings
 from app.core.errors import APIError
 from app.core.logging import configure_logging
 from app.db.session import create_engine, create_session_maker
+from app.web.spa_static import SPAStaticFiles
 
 
 def create_app() -> FastAPI:
@@ -42,6 +45,10 @@ def create_app() -> FastAPI:
     async def healthz() -> dict[str, bool]:
         return {"ok": True}
 
+    @app.get("/api/{path:path}", include_in_schema=False)
+    async def _api_not_found(_path: str) -> JSONResponse:
+        raise APIError(status_code=404, code="NOT_FOUND", message="Not found")
+
     @app.on_event("shutdown")
     async def _shutdown() -> None:
         await db_engine.dispose()
@@ -57,6 +64,11 @@ def create_app() -> FastAPI:
             status_code=400,
             content={"error": {"code": "INVALID_REQUEST", "message": "Invalid request"}},
         )
+
+    if settings.serve_frontend:
+        dist_path = Path(settings.frontend_dist_dir)
+        if dist_path.exists() and dist_path.is_dir():
+            app.mount("/", SPAStaticFiles(directory=str(dist_path)), name="spa")
 
     return app
 
