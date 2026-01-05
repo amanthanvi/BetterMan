@@ -250,32 +250,29 @@ function ManPageView({
         ) : null}
 
         <article>
-          <div className="sticky top-16 z-10 mb-8">
-            <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3">
-              {findBarHidden ? (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-medium uppercase tracking-wider text-[color:var(--bm-muted)]">
-                    Find in page
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6]"
-                    onClick={() => {
-                      setFindBarHiddenPersisted(false)
-                      requestAnimationFrame(() => findInputRef.current?.focus())
-                    }}
-                  >
-                    Show
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      ref={findInputRef}
-                      value={find}
-                      onChange={(e) => {
-                        setFind(e.target.value)
+          <div className={`sticky top-16 z-10 ${findBarHidden ? 'mb-4' : 'mb-8'}`}>
+            {findBarHidden ? (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-1.5 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
+                  onClick={() => {
+                    setFindBarHiddenPersisted(false)
+                    requestAnimationFrame(() => findInputRef.current?.focus())
+                  }}
+                  aria-label="Show find in page"
+                >
+                  Find
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    ref={findInputRef}
+                    value={find}
+                    onChange={(e) => {
+                      setFind(e.target.value)
                         setActiveFindIndex(0)
                         if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
                         activeMarkRef.current = null
@@ -340,24 +337,23 @@ function ManPageView({
                     </button>
                   </div>
 
-                  {optionTerms.length ? (
-                    <div className="mt-3 flex items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
-                      <div>
-                        Highlighting options:{' '}
-                        <span className="font-mono text-[color:var(--bm-fg)]">{optionTerms.join(' ')}</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="underline underline-offset-4"
-                        onClick={() => setSelectedOption(null)}
-                      >
-                        Clear option highlights
-                      </button>
+                {optionTerms.length ? (
+                  <div className="mt-3 flex items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
+                    <div>
+                      Highlighting options:{' '}
+                      <span className="font-mono text-[color:var(--bm-fg)]">{optionTerms.join(' ')}</span>
                     </div>
-                  ) : null}
-                </>
-              )}
-            </div>
+                    <button
+                      type="button"
+                      className="underline underline-offset-4"
+                      onClick={() => setSelectedOption(null)}
+                    >
+                      Clear option highlights
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {content.options?.length ? (
