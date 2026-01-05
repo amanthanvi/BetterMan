@@ -1,0 +1,9 @@
+[phases.setup]
+nixPkgs = ["python3", "gcc", "nodejs", "pnpm"]
+
+[phases.build]
+cmds = ["pnpm install --frozen-lockfile", "pnpm -C frontend build"]
+
+[start]
+cmd = "cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+
