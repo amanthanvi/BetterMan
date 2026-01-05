@@ -1,8 +1,9 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { createRootRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createRootRoute, Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
 
 import { TocProvider, useToc } from '../app/toc'
+import { ThemeProvider, useTheme } from '../app/theme'
 import { Toc } from '../man/Toc'
 
 function NotFound() {
@@ -31,16 +32,64 @@ export const rootRoute = createRootRoute({
 
 function RootLayout() {
   return (
-    <TocProvider>
-      <RootLayoutInner />
-    </TocProvider>
+    <ThemeProvider>
+      <TocProvider>
+        <RootLayoutInner />
+      </TocProvider>
+    </ThemeProvider>
   )
 }
 
 function RootLayoutInner() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
+  const searchRef = useRef<HTMLInputElement | null>(null)
   const toc = useToc()
+  const theme = useTheme()
+
+  const locationKey = useRouterState({
+    select: (s) => `${s.location.pathname}${s.location.search}${s.location.hash}`,
+  })
+
+  useEffect(() => {
+    const h1 = document.querySelector('main h1') as HTMLElement | null
+    if (!h1) return
+    if (!h1.hasAttribute('tabindex')) h1.setAttribute('tabindex', '-1')
+    h1.focus({ preventScroll: true })
+  }, [locationKey])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(document.activeElement)) return
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        // command palette next
+        return
+      }
+
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '/') {
+        e.preventDefault()
+        searchRef.current?.focus()
+        searchRef.current?.select()
+        return
+      }
+
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        theme.cycle()
+        return
+      }
+
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'b' && toc.items.length) {
+        e.preventDefault()
+        toc.setOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [theme, toc])
 
   return (
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
@@ -59,6 +108,7 @@ function RootLayoutInner() {
             }}
           >
             <input
+              ref={searchRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search commands…"
@@ -71,6 +121,14 @@ function RootLayoutInner() {
               Ctrl/⌘ K
             </span>
           </div>
+          <button
+            type="button"
+            className="hidden items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8] sm:inline-flex"
+            onClick={() => theme.cycle()}
+            title={`Theme: ${theme.mode}`}
+          >
+            Theme
+          </button>
           {toc.items.length ? (
             <button
               type="button"
@@ -120,4 +178,13 @@ function TocDrawer() {
       </Dialog.Portal>
     </Dialog.Root>
   )
+}
+
+function isTypingTarget(el: Element | null) {
+  if (!el) return false
+  if (el instanceof HTMLInputElement) return !['button', 'checkbox', 'radio', 'range'].includes(el.type)
+  if (el instanceof HTMLTextAreaElement) return true
+  if (el instanceof HTMLSelectElement) return true
+  if (el instanceof HTMLElement) return el.isContentEditable
+  return false
 }
