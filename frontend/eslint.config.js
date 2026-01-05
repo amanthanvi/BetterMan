@@ -20,4 +20,10 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/routes/**/*.{ts,tsx}', 'src/router.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])
