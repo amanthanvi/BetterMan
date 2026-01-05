@@ -22,12 +22,20 @@ async def _table_exists(conn, name: str) -> bool:
     return res.scalar_one_or_none() is not None
 
 
+async def _alembic_version(conn) -> str | None:
+    if not await _table_exists(conn, "alembic_version"):
+        return None
+
+    res = await conn.execute(text("SELECT version_num FROM alembic_version LIMIT 1"))
+    return res.scalar_one_or_none()
+
+
 async def _should_stamp_head() -> bool:
     settings = Settings()
     engine = create_async_engine(settings.database_url, pool_pre_ping=True)
     try:
         async with engine.connect() as conn:
-            if await _table_exists(conn, "alembic_version"):
+            if await _alembic_version(conn):
                 return False
 
             existing = [await _table_exists(conn, table) for table in _EXPECTED_TABLES]
