@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request, Response
 from fastapi.params import Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,17 +11,31 @@ from app.db.models import ManPage
 from app.db.session import get_session
 from app.man.sections import SECTION_LABELS
 from app.security.deps import rate_limit_page
+from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_headers
 
 router = APIRouter()
 
 
 @router.get("/sections")
-async def list_sections(_: None = Depends(rate_limit_page)) -> list[dict[str, str]]:  # noqa: B008
+async def list_sections(
+    request: Request,
+    response: Response,
+    _: None = Depends(rate_limit_page),  # noqa: B008
+) -> list[dict[str, str]]:
+    cache_control = "public, max-age=86400"
+    etag = compute_weak_etag("sections", "v1")
+    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
+    if not_modified is not None:
+        return not_modified
+
+    set_cache_headers(response, etag=etag, cache_control=cache_control)
     return [{"section": section, "label": label} for section, label in SECTION_LABELS.items()]
 
 
 @router.get("/section/{section}")
 async def list_section(
+    request: Request,
+    response: Response,
     section: str,
     limit: int = Query(default=200, ge=1, le=500),
     offset: int = Query(default=0, ge=0, le=5000),
@@ -33,6 +47,18 @@ async def list_section(
         raise APIError(status_code=404, code="SECTION_NOT_FOUND", message="Section not found")
 
     release = await require_active_release(session)
+
+    cache_control = "public, max-age=300"
+    etag = compute_weak_etag(
+        "section",
+        release.dataset_release_id,
+        section,
+        str(limit),
+        str(offset),
+    )
+    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
+    if not_modified is not None:
+        return not_modified
 
     total = await session.scalar(
         select(func.count())
@@ -52,6 +78,7 @@ async def list_section(
         )
     ).scalars()
 
+    set_cache_headers(response, etag=etag, cache_control=cache_control)
     return {
         "section": section,
         "label": label,

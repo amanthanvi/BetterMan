@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request, Response
 from fastapi.params import Depends
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from app.datasets.active import require_active_release
 from app.db.models import ManPage, ManPageContent, ManPageSearch
 from app.db.session import get_session
 from app.security.deps import rate_limit_search
+from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_headers
 
 router = APIRouter()
 
@@ -20,6 +21,8 @@ def _normalize_query(q: str) -> str:
 
 @router.get("/search")
 async def search(
+    request: Request,
+    response: Response,
     q: str = Query(min_length=1, max_length=200),
     section: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
@@ -33,6 +36,19 @@ async def search(
 
     query_norm = query.lower()
     release = await require_active_release(session)
+
+    cache_control = "public, max-age=300"
+    etag = compute_weak_etag(
+        "search",
+        release.dataset_release_id,
+        query,
+        section or "",
+        str(limit),
+        str(offset),
+    )
+    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
+    if not_modified is not None:
+        return not_modified
 
     tsquery = func.websearch_to_tsquery("simple", query)
 
@@ -98,6 +114,7 @@ async def search(
         )
     ).scalars()
 
+    set_cache_headers(response, etag=etag, cache_control=cache_control)
     return {
         "query": query,
         "results": [
