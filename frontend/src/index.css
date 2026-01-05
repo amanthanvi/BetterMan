@@ -22,6 +22,21 @@
     color-scheme: light;
   }
 
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme]) {
+      --bm-bg: #0b0f12;
+      --bm-surface: #10171d;
+      --bm-fg: #e9e3d8;
+      --bm-muted: #9aa3ad;
+      --bm-border: #1d2a34;
+
+      --bm-accent: #2dd4bf;
+      --bm-accent-contrast: #052b25;
+
+      color-scheme: dark;
+    }
+  }
+
   html[data-theme='dark'] {
     --bm-bg: #0b0f12;
     --bm-surface: #10171d;
