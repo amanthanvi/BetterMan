@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -C frontend lint
+      - run: pnpm -C frontend build
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - run: pipx install uv
+      - run: cd backend && uv sync --frozen
+      - run: cd backend && uv run ruff check .
+      - run: cd backend && uv run ruff format --check .
+      - run: cd backend && uv run pytest
+
+  ingestion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - run: pipx install uv
+      - run: cd ingestion && uv sync --frozen
+      - run: cd ingestion && uv run ruff check .
+      - run: cd ingestion && uv run ruff format --check .
+      - run: cd ingestion && uv run python -m ingestion.cli ingest --sample
+
