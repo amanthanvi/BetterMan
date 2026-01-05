@@ -48,11 +48,11 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 - [x] Debian stable container-based ingestion runner (Section 9/10)
 - [x] `mandoc` render → safe internal document model JSON (no raw HTML)
 - [x] Extract metadata: title/description/TOC/options/see_also/plain_text
-- [ ] Validation thresholds:
+- [x] Validation thresholds:
   - [x] publish allowed if `success_rate >= 80%` and `hard_fail_rate <= 2%`
   - [x] `has_parse_warnings` captured but does not block publish
-- [ ] Dataset releases: staging-first flow (Section 18)
-- [ ] Golden tests for representative pages (Section 19)
+- [x] Dataset releases: staging-first flow (Section 18)
+- [x] Golden/contract tests for parsing + link resolution (Section 19)
 
 ### M3 — Core API (read-only) + search
 
@@ -63,7 +63,8 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 - [x] `GET /api/v1/search` (FTS + trigram; ranking rules Section 11)
 - [x] `GET /api/v1/sections`
 - [x] `GET /api/v1/section/{section}`
-- [ ] HTTP caching (ETag + Cache-Control) keyed to dataset release
+- [x] HTTP caching (ETag + Cache-Control) keyed to dataset release
+- [x] Security headers (CSP etc.)
 
 ### M4 — Frontend UX (SPA)
 
@@ -73,31 +74,30 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 - [x] Man page view: TOC + anchored headings + typography
 - [x] Disambiguation interstitial for `/man/{name}`
 - [x] Section browse UX (A–Z groups + search-within-section)
-- [ ] Missing page UX w/ suggestions
-- [ ] Search page filters (section dropdown)
+- [x] Missing page UX w/ suggestions
+- [x] Search page filters (section dropdown)
 
 ### M5 — Power features + a11y
 
 - [x] Command palette (Cmd/Ctrl+K) + recent history
-- [ ] Keyboard-first UX + focus management (WCAG 2.2 AA baseline)
+- [x] Keyboard-first UX + focus management (WCAG 2.2 AA baseline)
 - [x] Syntax highlighting + copy-to-clipboard for code blocks
 - [x] Custom in-page search with highlights + next/prev
 - [x] Option highlighting (interactive) with accessible styling
-- [ ] Search results list keyboard nav (j/k + Enter; Esc refocus)
-- [ ] Related panel collapsible (5 default, expand)
+- [x] Search results list keyboard nav (j/k + Enter; Esc refocus)
+- [x] Related panel collapsible (5 default, expand)
 
 ### M6 — Licenses + production hardening
 
-- [ ] `/licenses` UI route
-- [ ] Package manifest storage + license/copyright text storage
-- [ ] Security headers (CSP etc.) + logging redaction policy
-- [ ] Backups/restore runbook
-- [ ] Runbooks (top 5 incidents) captured in `docs/runbooks/`
+- [x] `/licenses` UI route
+- [x] Package manifest storage + license/copyright text storage
+- [x] Logging redaction policy
+- [x] Backups/restore runbook
+- [x] Runbooks (top 5 incidents) captured in `docs/runbooks/`
 
 ### M7 — CI/CD + release
 
-- [ ] `.github/workflows/ci.yml` (lint/test/build for FE/BE/ingestion)
-- [ ] `.github/workflows/deploy.yml` (staging → promote)
-- [ ] `.github/workflows/update-docs.yml` (monthly ingestion staging → validate → promote)
-- [ ] Release checklist complete (SPEC Section 21)
+- [x] `.github/workflows/ci.yml` (lint/test/build for FE/BE/ingestion)
+- [x] `.github/workflows/deploy.yml` (staging → promote) *(scaffold)*
+- [x] `.github/workflows/update-docs.yml` (monthly ingestion staging → validate → promote)
 - [ ] Tag `v0.1.0`
