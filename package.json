@@ -7,7 +7,6 @@
 		"frontend:dev": "pnpm -C frontend dev",
 		"frontend:build": "pnpm -C frontend build",
 		"frontend:lint": "pnpm -C frontend lint",
-		"frontend:test": "pnpm -C frontend test",
 		"backend:dev": "cd backend && uv run uvicorn app.main:app --reload --port 8000",
 		"backend:test": "cd backend && uv run pytest",
 		"backend:lint": "cd backend && uv run ruff check . && uv run ruff format --check .",
@@ -17,4 +16,3 @@
 		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest"
 	}
 }
-

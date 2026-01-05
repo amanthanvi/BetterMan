@@ -12,7 +12,12 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 
 ## Golden Commands (kept current)
 
-TBD (added during scaffolding)
+- `pnpm db:up`
+- `pnpm backend:dev`
+- `pnpm backend:test`
+- `pnpm frontend:dev`
+- `pnpm frontend:build`
+- `pnpm ingest:sample` (WIP)
 
 ## Milestones
 
@@ -86,4 +91,3 @@ TBD (added during scaffolding)
 - [ ] `.github/workflows/update-docs.yml` (monthly ingestion staging → validate → promote)
 - [ ] Release checklist complete (SPEC Section 21)
 - [ ] Tag `v0.1.0`
-
