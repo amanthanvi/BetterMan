@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from redis.asyncio import Redis, from_url
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import router as v1_router
@@ -23,6 +24,9 @@ def create_app() -> FastAPI:
     app.state.db_engine = db_engine
     app.state.db_sessionmaker = create_session_maker(db_engine)
 
+    redis: Redis = from_url(settings.redis_url)
+    app.state.redis = redis
+
     if settings.allow_cors_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -41,6 +45,7 @@ def create_app() -> FastAPI:
     @app.on_event("shutdown")
     async def _shutdown() -> None:
         await db_engine.dispose()
+        await redis.aclose()
 
     @app.exception_handler(APIError)
     async def _handle_api_error(_req: Request, exc: APIError) -> JSONResponse:

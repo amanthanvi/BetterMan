@@ -20,3 +20,6 @@ class Settings(BaseSettings):
     public_base_url: str | None = None
 
     allow_cors_origins: list[str] = []
+
+    rate_limit_search_per_minute: int = 60
+    rate_limit_page_per_minute: int = 300

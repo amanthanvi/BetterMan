@@ -10,6 +10,7 @@ from app.datasets.active import require_active_release
 from app.db.session import get_session
 from app.man.normalize import normalize_name, validate_name, validate_section
 from app.man.repository import get_page_with_content, list_pages_by_name
+from app.security.deps import rate_limit_page
 
 router = APIRouter()
 
@@ -17,6 +18,7 @@ router = APIRouter()
 @router.get("/man/{name}", response_model=None)
 async def get_man_by_name(
     name: str,
+    _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ):
     name_norm = normalize_name(name)
@@ -72,6 +74,7 @@ async def get_man_by_name(
 async def get_man_by_name_and_section(
     name: str,
     section: str,
+    _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> dict[str, object]:
     name_norm = normalize_name(name)

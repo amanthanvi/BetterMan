@@ -10,12 +10,13 @@ from app.datasets.active import require_active_release
 from app.db.models import ManPage
 from app.db.session import get_session
 from app.man.sections import SECTION_LABELS
+from app.security.deps import rate_limit_page
 
 router = APIRouter()
 
 
 @router.get("/sections")
-async def list_sections() -> list[dict[str, str]]:
+async def list_sections(_: None = Depends(rate_limit_page)) -> list[dict[str, str]]:  # noqa: B008
     return [{"section": section, "label": label} for section, label in SECTION_LABELS.items()]
 
 
@@ -24,6 +25,7 @@ async def list_section(
     section: str,
     limit: int = Query(default=200, ge=1, le=500),
     offset: int = Query(default=0, ge=0, le=5000),
+    _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> dict[str, object]:
     label = SECTION_LABELS.get(section)

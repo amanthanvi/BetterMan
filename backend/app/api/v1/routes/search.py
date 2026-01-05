@@ -9,6 +9,7 @@ from app.core.errors import APIError
 from app.datasets.active import require_active_release
 from app.db.models import ManPage, ManPageContent, ManPageSearch
 from app.db.session import get_session
+from app.security.deps import rate_limit_search
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ async def search(
     section: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0, le=5000),
+    _: None = Depends(rate_limit_search),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> dict[str, object]:
     query = _normalize_query(q)
