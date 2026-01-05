@@ -18,7 +18,10 @@ _EXPECTED_TABLES = [
 
 
 async def _table_exists(conn, name: str) -> bool:
-    res = await conn.execute(text("SELECT to_regclass(:table_name)"), {"table_name": f"public.{name}"})
+    res = await conn.execute(
+        text("SELECT to_regclass(:table_name)"),
+        {"table_name": f"public.{name}"},
+    )
     return res.scalar_one_or_none() is not None
 
 
