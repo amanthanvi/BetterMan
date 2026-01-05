@@ -48,7 +48,7 @@ function BlockView({ block, ctx }: { block: BlockNode; ctx: HighlightCtx }) {
       return (
         <Tag
           id={block.id}
-          className="scroll-mt-24 pt-6 text-[color:var(--bm-fg)] first:pt-0 data-[level=2]:text-xl data-[level=2]:font-semibold data-[level=3]:text-lg data-[level=3]:font-semibold data-[level=4]:text-base data-[level=4]:font-semibold"
+          className="scroll-mt-32 pt-6 text-[color:var(--bm-fg)] first:pt-0 data-[level=2]:text-xl data-[level=2]:font-semibold data-[level=3]:text-lg data-[level=3]:font-semibold data-[level=4]:text-base data-[level=4]:font-semibold"
           data-level={level}
         >
           <a href={`#${block.id}`} className="no-underline hover:underline">
@@ -93,7 +93,7 @@ function BlockView({ block, ctx }: { block: BlockNode; ctx: HighlightCtx }) {
             <div key={item.id ?? idx}>
               <dt
                 id={item.id ?? undefined}
-                className="scroll-mt-24 font-mono text-sm font-semibold text-[color:var(--bm-fg)]"
+                className="scroll-mt-32 font-mono text-sm font-semibold text-[color:var(--bm-fg)]"
               >
                 {renderInlines(item.termInlines, ctx)}
               </dt>

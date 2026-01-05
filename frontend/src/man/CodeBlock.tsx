@@ -51,7 +51,7 @@ export function CodeBlock({
   }
 
   return (
-    <div id={id ?? undefined} className="relative scroll-mt-24">
+    <div id={id ?? undefined} className="relative scroll-mt-32">
       <button
         type="button"
         className="absolute right-2 top-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-1.5 text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.8]"

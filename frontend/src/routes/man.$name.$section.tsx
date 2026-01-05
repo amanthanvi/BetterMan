@@ -13,6 +13,25 @@ import { OptionsTable } from '../man/OptionsTable'
 import { Toc } from '../man/Toc'
 import { rootRoute } from './__root'
 
+const FIND_BAR_KEY = 'bm-find-bar-hidden'
+
+function readStoredFindBarHidden(): boolean {
+  try {
+    return localStorage.getItem(FIND_BAR_KEY) === '1'
+  } catch {
+    // ignore
+  }
+  return false
+}
+
+function writeStoredFindBarHidden(hidden: boolean) {
+  try {
+    localStorage.setItem(FIND_BAR_KEY, hidden ? '1' : '0')
+  } catch {
+    // ignore
+  }
+}
+
 export const manByNameAndSectionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/man/$name/$section',
@@ -140,10 +159,12 @@ function ManPageView({
 }) {
   const toc = useToc()
   const [find, setFind] = useState('')
+  const [findBarHidden, setFindBarHidden] = useState(() => readStoredFindBarHidden())
   const [activeFindIndex, setActiveFindIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
   const [showAllRelated, setShowAllRelated] = useState(false)
   const activeMarkRef = useRef<HTMLElement | null>(null)
+  const findInputRef = useRef<HTMLInputElement | null>(null)
 
   const findQuery = find.trim()
   const findEnabled = findQuery.length >= 2
@@ -153,6 +174,10 @@ function ManPageView({
   const optionTerms = selectedOption ? parseOptionTerms(selectedOption.flags) : []
   const showSidebar = toc.sidebarOpen && content.toc.length > 0
   const scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+  const setFindBarHiddenPersisted = (hidden: boolean) => {
+    setFindBarHidden(hidden)
+    writeStoredFindBarHidden(hidden)
+  }
 
   const scrollToFind = (idx: number) => {
     const marks = Array.from(document.querySelectorAll('mark[data-bm-find]')) as HTMLElement[]
@@ -213,85 +238,6 @@ function ManPageView({
             </pre>
           </div>
         ) : null}
-
-        <div className="mt-6 rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              value={find}
-              onChange={(e) => {
-                setFind(e.target.value)
-                setActiveFindIndex(0)
-                if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-                activeMarkRef.current = null
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && matchCount) {
-                  e.preventDefault()
-                  scrollToFind(activeFindIndex)
-                }
-              }}
-              placeholder="Find in page… (min 2 chars)"
-              className="min-w-[16rem] flex-1 rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-              aria-label="Find in page"
-            />
-            <div className="text-xs text-[color:var(--bm-muted)]">
-              {matchCount ? (
-                <>
-                  {displayIndex + 1}/{matchCount}
-                </>
-              ) : findEnabled ? (
-                '0/0'
-              ) : (
-                '—'
-              )}
-            </div>
-            <button
-              type="button"
-              className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6] disabled:opacity-50"
-              onClick={goPrev}
-              disabled={!matchCount}
-            >
-              Prev
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6] disabled:opacity-50"
-              onClick={goNext}
-              disabled={!matchCount}
-            >
-              Next
-            </button>
-            {find ? (
-              <button
-                type="button"
-                className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6]"
-                onClick={() => {
-                  setFind('')
-                  setActiveFindIndex(0)
-                  if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-                  activeMarkRef.current = null
-                }}
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-
-          {optionTerms.length ? (
-            <div className="mt-3 flex items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
-              <div>
-                Highlighting options: <span className="font-mono text-[color:var(--bm-fg)]">{optionTerms.join(' ')}</span>
-              </div>
-              <button
-                type="button"
-                className="underline underline-offset-4"
-                onClick={() => setSelectedOption(null)}
-              >
-                Clear option highlights
-              </button>
-            </div>
-          ) : null}
-        </div>
       </header>
 
       <div className={`mt-8 grid gap-8 ${showSidebar ? 'lg:grid-cols-[16rem_minmax(0,1fr)]' : ''}`}>
@@ -304,6 +250,116 @@ function ManPageView({
         ) : null}
 
         <article>
+          <div className="sticky top-16 z-10 mb-8">
+            <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3">
+              {findBarHidden ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-medium uppercase tracking-wider text-[color:var(--bm-muted)]">
+                    Find in page
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6]"
+                    onClick={() => {
+                      setFindBarHiddenPersisted(false)
+                      requestAnimationFrame(() => findInputRef.current?.focus())
+                    }}
+                  >
+                    Show
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      ref={findInputRef}
+                      value={find}
+                      onChange={(e) => {
+                        setFind(e.target.value)
+                        setActiveFindIndex(0)
+                        if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+                        activeMarkRef.current = null
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && matchCount) {
+                          e.preventDefault()
+                          scrollToFind(activeFindIndex)
+                        }
+                      }}
+                      placeholder="Find in page… (min 2 chars)"
+                      className="min-w-[16rem] flex-1 rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                      aria-label="Find in page"
+                    />
+                    <div className="text-xs text-[color:var(--bm-muted)]">
+                      {matchCount ? (
+                        <>
+                          {displayIndex + 1}/{matchCount}
+                        </>
+                      ) : findEnabled ? (
+                        '0/0'
+                      ) : (
+                        '—'
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6] disabled:opacity-50"
+                      onClick={goPrev}
+                      disabled={!matchCount}
+                    >
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6] disabled:opacity-50"
+                      onClick={goNext}
+                      disabled={!matchCount}
+                    >
+                      Next
+                    </button>
+                    {find ? (
+                      <button
+                        type="button"
+                        className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6]"
+                        onClick={() => {
+                          setFind('')
+                          setActiveFindIndex(0)
+                          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+                          activeMarkRef.current = null
+                        }}
+                      >
+                        Clear
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6]"
+                      onClick={() => setFindBarHiddenPersisted(true)}
+                    >
+                      Hide
+                    </button>
+                  </div>
+
+                  {optionTerms.length ? (
+                    <div className="mt-3 flex items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
+                      <div>
+                        Highlighting options:{' '}
+                        <span className="font-mono text-[color:var(--bm-fg)]">{optionTerms.join(' ')}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="underline underline-offset-4"
+                        onClick={() => setSelectedOption(null)}
+                      >
+                        Clear option highlights
+                      </button>
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
+          </div>
+
           {content.options?.length ? (
             <section className="mb-10">
               <h2 className="text-sm font-semibold tracking-tight">Options</h2>
