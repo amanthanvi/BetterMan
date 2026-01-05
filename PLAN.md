@@ -13,10 +13,13 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 ## Golden Commands (kept current)
 
 - `pnpm db:up`
+- `pnpm db:down`
 - `pnpm backend:dev`
 - `pnpm backend:test`
+- `pnpm backend:lint`
 - `pnpm frontend:dev`
 - `pnpm frontend:build`
+- `pnpm frontend:lint`
 - `pnpm ingest:sample`
 - `pnpm ingest:run`
 - `pnpm ingest:lint`
@@ -64,20 +67,24 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 
 ### M4 — Frontend UX (SPA)
 
-- [ ] Vite + React + TS SPA
-- [ ] Routing + layouts per Section 6 URL scheme
-- [ ] Search results UX (20 + load more), empty/no-results states
-- [ ] Man page view: TOC + anchored headings + typography
-- [ ] Disambiguation interstitial for `/man/{name}`
+- [x] Vite + React + TS SPA
+- [x] Routing + layouts per Section 6 URL scheme
+- [x] Search results UX (20 + load more), empty/no-results states
+- [x] Man page view: TOC + anchored headings + typography
+- [x] Disambiguation interstitial for `/man/{name}`
+- [x] Section browse UX (A–Z groups + search-within-section)
 - [ ] Missing page UX w/ suggestions
+- [ ] Search page filters (section dropdown)
 
 ### M5 — Power features + a11y
 
-- [ ] Command palette (Cmd/Ctrl+K) + recent history
+- [x] Command palette (Cmd/Ctrl+K) + recent history
 - [ ] Keyboard-first UX + focus management (WCAG 2.2 AA baseline)
-- [ ] Syntax highlighting + copy-to-clipboard for code blocks
-- [ ] Custom in-page search with highlights + next/prev
-- [ ] Option highlighting (interactive) with accessible styling
+- [x] Syntax highlighting + copy-to-clipboard for code blocks
+- [x] Custom in-page search with highlights + next/prev
+- [x] Option highlighting (interactive) with accessible styling
+- [ ] Search results list keyboard nav (j/k + Enter; Esc refocus)
+- [ ] Related panel collapsible (5 default, expand)
 
 ### M6 — Licenses + production hardening
 
