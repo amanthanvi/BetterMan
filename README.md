@@ -19,7 +19,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 ## Deploy (Railway)
 
-- Auto-deploy: `.github/workflows/ci.yml` deploys after all jobs pass on pushes to `main` and `refresh`.
+- Auto-deploy: `.github/workflows/ci.yml` deploys after all jobs pass on pushes to `main`.
 - Manual deploy: `.github/workflows/deploy.yml` (workflow `deploy-railway`, input `ref`).
 - Requires `RAILWAY_TOKEN` GitHub Actions secret (exported to Railway CLI as `RAILWAY_API_TOKEN`).
 
@@ -55,3 +55,13 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - `pnpm ingest:run` — ingest full dataset
 - `pnpm ingest:lint` — ruff check + format check
 - `pnpm ingest:test` — ingestion tests (pytest)
+
+## Contributing
+
+- Read `CONTRIBUTING.md`.
+- Be kind: `CODE_OF_CONDUCT.md`.
+- Security issues: `SECURITY.md`.
+
+## License
+
+MIT — see `LICENSE`.
