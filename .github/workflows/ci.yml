@@ -62,7 +62,7 @@ jobs:
       - frontend
       - backend
       - ingestion
-    if: ${{ github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'refresh') }}
+    if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
