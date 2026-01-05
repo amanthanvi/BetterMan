@@ -14,6 +14,9 @@ def configure_logging() -> None:
         stream=sys.stdout,
     )
 
+    # Avoid leaking query strings in logs via default Uvicorn access logs.
+    logging.getLogger("uvicorn.access").disabled = True
+
     structlog.configure(
         processors=[
             structlog.processors.TimeStamper(fmt="iso", utc=True),

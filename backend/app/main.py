@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from time import perf_counter
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -12,9 +14,10 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.v1.router import router as v1_router
 from app.core.config import Settings
 from app.core.errors import APIError
-from app.core.logging import configure_logging
+from app.core.logging import configure_logging, get_logger
 from app.db.session import create_engine, create_session_maker
 from app.security.headers import SecurityHeadersMiddleware
+from app.security.request_ip import get_client_ip
 from app.web.spa_static import SPAStaticFiles
 
 
@@ -50,6 +53,28 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(v1_router)
+
+    @app.middleware("http")
+    async def _request_log(request: Request, call_next):
+        request_id = request.headers.get("x-request-id") or uuid4().hex
+        start = perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (perf_counter() - start) * 1000.0
+
+        response.headers.setdefault("X-Request-ID", request_id)
+
+        get_logger(
+            request_id=request_id,
+            ip=get_client_ip(request),
+        ).info(
+            "request",
+            method=request.method,
+            path=request.url.path,
+            status=response.status_code,
+            duration_ms=round(elapsed_ms, 2),
+        )
+
+        return response
 
     @app.get("/healthz")
     async def healthz() -> dict[str, bool]:
