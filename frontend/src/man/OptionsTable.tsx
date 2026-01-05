@@ -1,6 +1,14 @@
 import type { OptionItem } from '../api/types'
 
-export function OptionsTable({ options }: { options: OptionItem[] }) {
+export function OptionsTable({
+  options,
+  selectedAnchorId,
+  onSelect,
+}: {
+  options: OptionItem[]
+  selectedAnchorId?: string | null
+  onSelect?: (opt: OptionItem) => void
+}) {
   return (
     <div className="overflow-x-auto rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)]">
       <table className="w-full border-collapse text-left text-sm">
@@ -14,9 +22,18 @@ export function OptionsTable({ options }: { options: OptionItem[] }) {
         </thead>
         <tbody>
           {options.map((opt) => (
-            <tr key={opt.anchorId} className="odd:bg-[color:var(--bm-bg)/0.35]">
+            <tr
+              key={opt.anchorId}
+              className={`odd:bg-[color:var(--bm-bg)/0.35] ${
+                selectedAnchorId === opt.anchorId ? 'bg-[color:var(--bm-accent)/0.12]' : ''
+              }`}
+            >
               <td className="border-b border-[var(--bm-border)] px-3 py-2 align-top font-mono text-[color:var(--bm-fg)]">
-                <a href={`#${opt.anchorId}`} className="no-underline hover:underline">
+                <a
+                  href={`#${opt.anchorId}`}
+                  className="no-underline hover:underline"
+                  onClick={() => onSelect?.(opt)}
+                >
                   {opt.flags}
                   {opt.argument ? <span className="text-[color:var(--bm-muted)]"> {opt.argument}</span> : null}
                 </a>
@@ -31,4 +48,3 @@ export function OptionsTable({ options }: { options: OptionItem[] }) {
     </div>
   )
 }
-

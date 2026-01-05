@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { createRoute, Link } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useToc } from '../app/toc'
 import { fetchManByNameAndSection, fetchRelated } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
+import type { ManPage, ManPageContent, OptionItem, SectionPage } from '../api/types'
 import { recordRecentPage } from '../lib/recent'
 import { DocRenderer } from '../man/DocRenderer'
+import { countFindMatches, parseOptionTerms } from '../man/find'
 import { OptionsTable } from '../man/OptionsTable'
 import { Toc } from '../man/Toc'
 import { rootRoute } from './__root'
@@ -76,6 +78,64 @@ function ManByNameAndSectionPage() {
   const { page, content } = pageQuery.data
 
   return (
+    <ManPageView
+      key={page.id}
+      page={page}
+      content={content}
+      relatedItems={relatedQuery.data?.items ?? []}
+    />
+  )
+}
+
+function ManPageView({
+  page,
+  content,
+  relatedItems,
+}: {
+  page: ManPage
+  content: ManPageContent
+  relatedItems: SectionPage[]
+}) {
+  const [find, setFind] = useState('')
+  const [activeFindIndex, setActiveFindIndex] = useState(0)
+  const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
+  const activeMarkRef = useRef<HTMLElement | null>(null)
+
+  const findQuery = find.trim()
+  const findEnabled = findQuery.length >= 2
+  const matchCount = findEnabled ? countFindMatches(content.blocks, findQuery) : 0
+  const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
+
+  const optionTerms = selectedOption ? parseOptionTerms(selectedOption.flags) : []
+
+  const scrollToFind = (idx: number) => {
+    const marks = Array.from(document.querySelectorAll('mark[data-bm-find]')) as HTMLElement[]
+    if (!marks.length) return
+    const clamped = ((idx % marks.length) + marks.length) % marks.length
+    const el = marks[clamped]
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+    el.classList.add('bm-find-active')
+    activeMarkRef.current = el
+  }
+
+  const goPrev = () => {
+    const marks = Array.from(document.querySelectorAll('mark[data-bm-find]'))
+    if (!marks.length) return
+    const idx = (activeFindIndex - 1 + marks.length) % marks.length
+    setActiveFindIndex(idx)
+    scrollToFind(idx)
+  }
+
+  const goNext = () => {
+    const marks = Array.from(document.querySelectorAll('mark[data-bm-find]'))
+    if (!marks.length) return
+    const idx = (activeFindIndex + 1) % marks.length
+    setActiveFindIndex(idx)
+    scrollToFind(idx)
+  }
+
+  return (
     <div className="mx-auto max-w-6xl">
       <header className="border-b border-[var(--bm-border)] pb-6">
         <h1 className="text-3xl font-semibold tracking-tight">
@@ -107,6 +167,85 @@ function ManByNameAndSectionPage() {
             </pre>
           </div>
         ) : null}
+
+        <div className="mt-6 rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={find}
+              onChange={(e) => {
+                setFind(e.target.value)
+                setActiveFindIndex(0)
+                if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+                activeMarkRef.current = null
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && matchCount) {
+                  e.preventDefault()
+                  scrollToFind(activeFindIndex)
+                }
+              }}
+              placeholder="Find in page… (min 2 chars)"
+              className="min-w-[16rem] flex-1 rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              aria-label="Find in page"
+            />
+            <div className="text-xs text-[color:var(--bm-muted)]">
+              {matchCount ? (
+                <>
+                  {displayIndex + 1}/{matchCount}
+                </>
+              ) : findEnabled ? (
+                '0/0'
+              ) : (
+                '—'
+              )}
+            </div>
+            <button
+              type="button"
+              className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6] disabled:opacity-50"
+              onClick={goPrev}
+              disabled={!matchCount}
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6] disabled:opacity-50"
+              onClick={goNext}
+              disabled={!matchCount}
+            >
+              Next
+            </button>
+            {find ? (
+              <button
+                type="button"
+                className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6]"
+                onClick={() => {
+                  setFind('')
+                  setActiveFindIndex(0)
+                  if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+                  activeMarkRef.current = null
+                }}
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+
+          {optionTerms.length ? (
+            <div className="mt-3 flex items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
+              <div>
+                Highlighting options: <span className="font-mono text-[color:var(--bm-fg)]">{optionTerms.join(' ')}</span>
+              </div>
+              <button
+                type="button"
+                className="underline underline-offset-4"
+                onClick={() => setSelectedOption(null)}
+              >
+                Clear option highlights
+              </button>
+            </div>
+          ) : null}
+        </div>
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
@@ -119,12 +258,23 @@ function ManByNameAndSectionPage() {
             <section className="mb-10">
               <h2 className="text-sm font-semibold tracking-tight">Options</h2>
               <div className="mt-3">
-                <OptionsTable options={content.options} />
+                <OptionsTable
+                  options={content.options}
+                  selectedAnchorId={selectedOption?.anchorId}
+                  onSelect={(opt) => {
+                    setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
+                    document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }}
+                />
               </div>
             </section>
           ) : null}
 
-          <DocRenderer blocks={content.blocks} />
+          <DocRenderer
+            blocks={content.blocks}
+            findQuery={findEnabled ? findQuery : undefined}
+            optionTerms={optionTerms}
+          />
         </article>
       </div>
 
@@ -157,11 +307,11 @@ function ManByNameAndSectionPage() {
         </aside>
       ) : null}
 
-      {relatedQuery.data?.items?.length ? (
+      {relatedItems.length ? (
         <aside className="mt-10">
           <h2 className="text-sm font-semibold tracking-tight">Related</h2>
           <ul className="mt-3 flex flex-wrap gap-2">
-            {relatedQuery.data.items.slice(0, 12).map((item) => (
+            {relatedItems.slice(0, 12).map((item) => (
               <li key={`${item.name}:${item.section}`}>
                 <Link
                   to="/man/$name/$section"

@@ -73,4 +73,52 @@
   ::selection {
     background: color-mix(in srgb, var(--bm-accent) 35%, transparent);
   }
+
+  .hljs {
+    background: transparent;
+    color: var(--bm-fg);
+  }
+
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--bm-muted);
+    font-style: italic;
+  }
+
+  .hljs-keyword,
+  .hljs-built_in,
+  .hljs-literal,
+  .hljs-symbol {
+    color: color-mix(in srgb, var(--bm-accent) 70%, var(--bm-fg));
+    font-weight: 600;
+  }
+
+  .hljs-string,
+  .hljs-title,
+  .hljs-attr {
+    color: color-mix(in srgb, var(--bm-accent) 35%, var(--bm-fg));
+  }
+
+  .bm-mark {
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  .bm-opt {
+    background: color-mix(in srgb, var(--bm-accent) 18%, transparent);
+    color: var(--bm-fg);
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--bm-accent) 55%, transparent);
+  }
+
+  .bm-find {
+    background: rgba(253, 224, 71, 0.6);
+    color: var(--bm-fg);
+    box-shadow: inset 0 -1px 0 rgba(120, 113, 108, 0.55);
+  }
+
+  .bm-find-active {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--bm-accent) 45%, transparent),
+      inset 0 -1px 0 rgba(120, 113, 108, 0.55);
+  }
 }
