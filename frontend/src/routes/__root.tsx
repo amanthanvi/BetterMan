@@ -2,6 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { createRootRoute, Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
+import { CommandPalette } from '../app/CommandPalette'
 import { TocProvider, useToc } from '../app/toc'
 import { ThemeProvider, useTheme } from '../app/theme'
 import { Toc } from '../man/Toc'
@@ -43,6 +44,7 @@ function RootLayout() {
 function RootLayoutInner() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement | null>(null)
   const toc = useToc()
   const theme = useTheme()
@@ -64,7 +66,7 @@ function RootLayoutInner() {
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        // command palette next
+        setPaletteOpen(true)
         return
       }
 
@@ -116,11 +118,13 @@ function RootLayoutInner() {
               aria-label="Search man pages"
             />
           </form>
-          <div className="hidden text-xs text-[color:var(--bm-muted)] sm:block">
-            <span className="rounded border border-[var(--bm-border)] px-2 py-1">
-              Ctrl/⌘ K
-            </span>
-          </div>
+          <button
+            type="button"
+            className="hidden rounded border border-[var(--bm-border)] bg-[var(--bm-surface)] px-2 py-1 text-xs text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.8] sm:block"
+            onClick={() => setPaletteOpen(true)}
+          >
+            Ctrl/⌘ K
+          </button>
           <button
             type="button"
             className="hidden items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8] sm:inline-flex"
@@ -142,6 +146,7 @@ function RootLayoutInner() {
       </header>
 
       <TocDrawer />
+      {paletteOpen ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         <Outlet />

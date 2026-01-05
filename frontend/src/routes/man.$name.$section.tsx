@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { useToc } from '../app/toc'
 import { fetchManByNameAndSection, fetchRelated } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
+import { recordRecentPage } from '../lib/recent'
 import { DocRenderer } from '../man/DocRenderer'
 import { OptionsTable } from '../man/OptionsTable'
 import { Toc } from '../man/Toc'
@@ -33,11 +34,24 @@ function ManByNameAndSectionPage() {
   })
 
   const tocItems = pageQuery.data?.content.toc
+  const recentId = pageQuery.data?.page.id
+  const recentName = pageQuery.data?.page.name
+  const recentSection = pageQuery.data?.page.section
+  const recentDescription = pageQuery.data?.page.description
 
   useEffect(() => {
     setItems(tocItems ?? [])
     return () => setItems([])
   }, [setItems, tocItems])
+
+  useEffect(() => {
+    if (!recentId || !recentName || !recentSection) return
+    recordRecentPage({
+      name: recentName,
+      section: recentSection,
+      description: recentDescription,
+    })
+  }, [recentDescription, recentId, recentName, recentSection])
 
   if (pageQuery.isLoading) {
     return <div className="text-sm text-[color:var(--bm-muted)]">Loading…</div>

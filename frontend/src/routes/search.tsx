@@ -6,6 +6,7 @@ import { search } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import type { SearchResult } from '../api/types'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
+import { recordRecentSearch } from '../lib/recent'
 import { rootRoute } from './__root'
 
 export const searchRoute = createRoute({
@@ -124,7 +125,7 @@ function SearchPage() {
         <div className="mt-8">
           <ol className="space-y-3">
             {allResults.map((r) => (
-              <SearchResultRow key={`${r.name}:${r.section}`} result={r} />
+              <SearchResultRow key={`${r.name}:${r.section}`} result={r} query={query} />
             ))}
           </ol>
 
@@ -146,7 +147,7 @@ function SearchPage() {
   )
 }
 
-function SearchResultRow({ result }: { result: SearchResult }) {
+function SearchResultRow({ result, query }: { result: SearchResult; query: string }) {
   return (
     <li className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4">
       <div className="flex items-start justify-between gap-4">
@@ -155,6 +156,7 @@ function SearchResultRow({ result }: { result: SearchResult }) {
             to="/man/$name/$section"
             params={{ name: result.name, section: result.section }}
             className="font-semibold tracking-tight"
+            onClick={() => recordRecentSearch(query)}
           >
             {result.name}({result.section})
           </Link>
