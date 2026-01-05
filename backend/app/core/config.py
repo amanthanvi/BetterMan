@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "staging", "prod"] = "dev"
 
-    database_url: str = "postgresql+asyncpg://betterman:betterman@localhost:5432/betterman"
+    database_url: str = "postgresql+asyncpg://betterman:betterman@localhost:54320/betterman"
     redis_url: str = "redis://localhost:6379/0"
 
     public_base_url: str | None = None

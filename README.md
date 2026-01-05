@@ -23,6 +23,7 @@ Implementation in progress on branch `refresh`. Execution plan: `PLAN.md`.
 
 - `pnpm db:up` — start Postgres + Redis (Docker)
 - `pnpm db:down` — stop services
+  - Postgres exposed on `localhost:54320`
 
 ### Backend
 
