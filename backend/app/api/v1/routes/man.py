@@ -54,6 +54,10 @@ async def get_man_by_name(
         raise APIError(status_code=404, code="PAGE_NOT_FOUND", message="Page not found")
 
     man_page, content = page_with_content
+    content_payload = dict(content.doc)
+    content_payload["synopsis"] = content.synopsis
+    content_payload["options"] = content.options
+    content_payload["seeAlso"] = content.see_also
     return {
         "page": {
             "id": str(man_page.id),
@@ -66,7 +70,7 @@ async def get_man_by_name(
             "sourcePackageVersion": man_page.source_package_version,
             "datasetReleaseId": release.dataset_release_id,
         },
-        "content": content.doc,
+        "content": content_payload,
     }
 
 
@@ -90,6 +94,10 @@ async def get_man_by_name_and_section(
         raise APIError(status_code=404, code="PAGE_NOT_FOUND", message="Page not found")
 
     man_page, content = page_with_content
+    content_payload = dict(content.doc)
+    content_payload["synopsis"] = content.synopsis
+    content_payload["options"] = content.options
+    content_payload["seeAlso"] = content.see_also
     return {
         "page": {
             "id": str(man_page.id),
@@ -102,7 +110,7 @@ async def get_man_by_name_and_section(
             "sourcePackageVersion": man_page.source_package_version,
             "datasetReleaseId": release.dataset_release_id,
         },
-        "content": content.doc,
+        "content": content_payload,
     }
 
 
