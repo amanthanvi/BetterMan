@@ -1,8 +1,11 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { createRoute, Link } from '@tanstack/react-router'
+import { useState } from 'react'
 
-import { listSection } from '../api/client'
+import { listSection, search } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
+import type { SectionPage as SectionPageItem } from '../api/types'
+import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { rootRoute } from './__root'
 
 export const sectionRoute = createRoute({
@@ -13,9 +16,12 @@ export const sectionRoute = createRoute({
 
 function SectionPage() {
   const { section } = sectionRoute.useParams()
+  const [q, setQ] = useState('')
+  const debounced = useDebouncedValue(q, 150).trim()
+
   const limit = 200
 
-  const q = useInfiniteQuery({
+  const browseQuery = useInfiniteQuery({
     queryKey: queryKeys.section(section),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
@@ -27,11 +33,30 @@ function SectionPage() {
     },
   })
 
-  if (q.isLoading) {
+  const searchLimit = 50
+  const searchQuery = useInfiniteQuery({
+    queryKey: queryKeys.search(debounced, section),
+    enabled: debounced.length > 0,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      search({
+        q: debounced,
+        section,
+        limit: searchLimit,
+        offset: typeof pageParam === 'number' ? pageParam : 0,
+      }),
+    getNextPageParam: (lastPage, pages) => {
+      if (lastPage.results.length < searchLimit) return undefined
+      const nextOffset = pages.reduce((sum, page) => sum + page.results.length, 0)
+      return nextOffset >= 5000 ? undefined : nextOffset
+    },
+  })
+
+  if (browseQuery.isLoading) {
     return <div className="text-sm text-[color:var(--bm-muted)]">Loading…</div>
   }
 
-  if (q.isError) {
+  if (browseQuery.isError) {
     return (
       <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
         Section not found.
@@ -39,12 +64,14 @@ function SectionPage() {
     )
   }
 
-  if (!q.data) {
+  if (!browseQuery.data) {
     return <div className="text-sm text-[color:var(--bm-muted)]">Loading…</div>
   }
 
-  const first = q.data.pages[0]
-  const results = q.data.pages.flatMap((p) => p.results)
+  const first = browseQuery.data.pages[0]
+  const results = browseQuery.data.pages.flatMap((p) => p.results)
+
+  const grouped = groupByLetter(results)
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -57,33 +84,117 @@ function SectionPage() {
         </p>
       </header>
 
-      <ol className="mt-8 columns-1 gap-6 sm:columns-2">
-        {results.map((r) => (
-          <li key={`${r.name}:${r.section}`} className="break-inside-avoid py-1">
-            <Link
-              to="/man/$name/$section"
-              params={{ name: r.name, section: r.section }}
-              className="font-medium tracking-tight"
-            >
-              {r.name}({r.section})
-            </Link>
-            <div className="mt-0.5 text-xs text-[color:var(--bm-muted)]">{r.description}</div>
-          </li>
-        ))}
-      </ol>
+      <div className="mt-6">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search within section…"
+          className="w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+          aria-label="Search within section"
+        />
+      </div>
 
-      {q.hasNextPage ? (
+      {debounced.length > 0 ? (
         <div className="mt-8">
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
-            onClick={() => q.fetchNextPage()}
-            disabled={q.isFetchingNextPage}
-          >
-            {q.isFetchingNextPage ? 'Loading…' : 'Load more'}
-          </button>
+          {searchQuery.isLoading ? (
+            <div className="text-sm text-[color:var(--bm-muted)]">Searching…</div>
+          ) : searchQuery.isError ? (
+            <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+              Search failed.
+            </div>
+          ) : (
+            <>
+              {searchQuery.data?.pages.flatMap((p) => p.results).length ? (
+                <ol className="space-y-2">
+                  {searchQuery.data?.pages.flatMap((p) => p.results).map((r) => (
+                    <li
+                      key={`${r.name}:${r.section}`}
+                      className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3"
+                    >
+                      <Link
+                        to="/man/$name/$section"
+                        params={{ name: r.name, section: r.section }}
+                        className="font-semibold tracking-tight"
+                      >
+                        {r.name}({r.section})
+                      </Link>
+                      <div className="mt-1 text-sm text-[color:var(--bm-muted)]">{r.description}</div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+                  No results.
+                </div>
+              )}
+
+              {searchQuery.hasNextPage ? (
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
+                    onClick={() => searchQuery.fetchNextPage()}
+                    disabled={searchQuery.isFetchingNextPage}
+                  >
+                    {searchQuery.isFetchingNextPage ? 'Loading…' : 'Load more'}
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-8 space-y-8">
+          {grouped.map(([letter, items]) => (
+            <section key={letter} aria-label={`Letter ${letter}`}>
+              <div className="sticky top-16 z-10 -mx-4 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] px-4 py-2 text-xs font-semibold text-[color:var(--bm-muted)] backdrop-blur">
+                {letter}
+              </div>
+              <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {items.map((r) => (
+                  <li key={`${r.name}:${r.section}`} className="rounded border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3">
+                    <Link
+                      to="/man/$name/$section"
+                      params={{ name: r.name, section: r.section }}
+                      className="font-semibold tracking-tight"
+                    >
+                      {r.name}({r.section})
+                    </Link>
+                    <div className="mt-1 text-xs text-[color:var(--bm-muted)]">{r.description}</div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+
+          {browseQuery.hasNextPage ? (
+            <div className="mt-2">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
+                onClick={() => browseQuery.fetchNextPage()}
+                disabled={browseQuery.isFetchingNextPage}
+              >
+                {browseQuery.isFetchingNextPage ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
     </div>
   )
+}
+
+function groupByLetter(items: SectionPageItem[]) {
+  const groups = new Map<string, SectionPageItem[]>()
+  for (const item of items) {
+    const first = (item.name[0] ?? '').toUpperCase()
+    const letter = first >= 'A' && first <= 'Z' ? first : '#'
+    const list = groups.get(letter) ?? []
+    list.push(item)
+    groups.set(letter, list)
+  }
+
+  return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b))
 }
