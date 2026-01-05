@@ -17,6 +17,6 @@ venv/
 # Env / tooling
 .env
 .env.*
+!.env.example
 .idea/
 .vscode/
-
