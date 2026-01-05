@@ -94,4 +94,3 @@ def test_resolve_doc_links_marks_missing_xrefs_unresolved() -> None:
     resolved = {r["name"]: r.get("resolvedPageId") for r in (foo.see_also or [])}
     assert resolved["bar"] == str(bar_id)
     assert resolved["missing"] is None
-
