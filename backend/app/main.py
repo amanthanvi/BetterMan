@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -13,6 +14,7 @@ from app.core.config import Settings
 from app.core.errors import APIError
 from app.core.logging import configure_logging
 from app.db.session import create_engine, create_session_maker
+from app.security.headers import SecurityHeadersMiddleware
 from app.web.spa_static import SPAStaticFiles
 
 
@@ -20,15 +22,23 @@ def create_app() -> FastAPI:
     configure_logging()
     settings = Settings()
 
-    app = FastAPI(title="BetterMan API", version="0.1.0")
+    db_engine = create_engine(settings)
+    redis: Redis = from_url(settings.redis_url)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        yield
+        await db_engine.dispose()
+        await redis.aclose()
+
+    app = FastAPI(title="BetterMan API", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
 
-    db_engine = create_engine(settings)
     app.state.db_engine = db_engine
     app.state.db_sessionmaker = create_session_maker(db_engine)
-
-    redis: Redis = from_url(settings.redis_url)
     app.state.redis = redis
+
+    app.add_middleware(SecurityHeadersMiddleware, env=settings.env)
 
     if settings.allow_cors_origins:
         app.add_middleware(
@@ -48,11 +58,6 @@ def create_app() -> FastAPI:
     @app.get("/api/{path:path}", include_in_schema=False)
     async def _api_not_found(_path: str) -> JSONResponse:
         raise APIError(status_code=404, code="NOT_FOUND", message="Not found")
-
-    @app.on_event("shutdown")
-    async def _shutdown() -> None:
-        await db_engine.dispose()
-        await redis.aclose()
 
     @app.exception_handler(APIError)
     async def _handle_api_error(_req: Request, exc: APIError) -> JSONResponse:
