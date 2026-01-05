@@ -1,5 +1,9 @@
+import * as Dialog from '@radix-ui/react-dialog'
 import { createRootRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+
+import { TocProvider, useToc } from '../app/toc'
+import { Toc } from '../man/Toc'
 
 function NotFound() {
   return (
@@ -26,8 +30,17 @@ export const rootRoute = createRootRoute({
 })
 
 function RootLayout() {
+  return (
+    <TocProvider>
+      <RootLayoutInner />
+    </TocProvider>
+  )
+}
+
+function RootLayoutInner() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
+  const toc = useToc()
 
   return (
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
@@ -58,12 +71,53 @@ function RootLayout() {
               Ctrl/⌘ K
             </span>
           </div>
+          {toc.items.length ? (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8] sm:hidden"
+              onClick={() => toc.setOpen(true)}
+            >
+              TOC
+            </button>
+          ) : null}
         </div>
       </header>
+
+      <TocDrawer />
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         <Outlet />
       </main>
     </div>
+  )
+}
+
+function TocDrawer() {
+  const toc = useToc()
+
+  return (
+    <Dialog.Root open={toc.open} onOpenChange={toc.setOpen}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
+        <Dialog.Content className="fixed inset-y-0 left-0 z-40 w-[min(90vw,24rem)] overflow-y-auto border-r border-[var(--bm-border)] bg-[var(--bm-bg)] p-4 shadow-xl">
+          <div className="flex items-center justify-between">
+            <Dialog.Title className="text-sm font-semibold tracking-tight">
+              Table of contents
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
+              >
+                Close
+              </button>
+            </Dialog.Close>
+          </div>
+          <div className="mt-4">
+            <Toc items={toc.items} showTitle={false} onNavigate={() => toc.setOpen(false)} />
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }

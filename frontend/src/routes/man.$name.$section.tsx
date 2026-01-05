@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { createRoute, Link } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
+import { useToc } from '../app/toc'
 import { fetchManByNameAndSection, fetchRelated } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import { DocRenderer } from '../man/DocRenderer'
@@ -17,6 +19,7 @@ export const manByNameAndSectionRoute = createRoute({
 function ManByNameAndSectionPage() {
   const { name, section } = manByNameAndSectionRoute.useParams()
   const nameNorm = name.toLowerCase()
+  const { setItems } = useToc()
 
   const pageQuery = useQuery({
     queryKey: queryKeys.man(nameNorm, section),
@@ -28,6 +31,13 @@ function ManByNameAndSectionPage() {
     queryFn: () => fetchRelated(nameNorm, section),
     enabled: pageQuery.isSuccess,
   })
+
+  const tocItems = pageQuery.data?.content.toc
+
+  useEffect(() => {
+    setItems(tocItems ?? [])
+    return () => setItems([])
+  }, [setItems, tocItems])
 
   if (pageQuery.isLoading) {
     return <div className="text-sm text-[color:var(--bm-muted)]">Loading…</div>
