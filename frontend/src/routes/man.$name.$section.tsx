@@ -297,7 +297,9 @@ function ManPageView({
       <div className={`mt-8 grid gap-8 ${showSidebar ? 'lg:grid-cols-[16rem_minmax(0,1fr)]' : ''}`}>
         {showSidebar ? (
           <aside className="hidden lg:block">
-            <Toc items={content.toc} />
+            <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2">
+              <Toc items={content.toc} />
+            </div>
           </aside>
         ) : null}
 
