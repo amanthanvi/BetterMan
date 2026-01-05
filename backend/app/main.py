@@ -9,6 +9,7 @@ from app.api.v1.router import router as v1_router
 from app.core.config import Settings
 from app.core.errors import APIError
 from app.core.logging import configure_logging
+from app.db.session import create_engine, create_session_maker
 
 
 def create_app() -> FastAPI:
@@ -16,6 +17,11 @@ def create_app() -> FastAPI:
     settings = Settings()
 
     app = FastAPI(title="BetterMan API", version="0.1.0")
+    app.state.settings = settings
+
+    db_engine = create_engine(settings)
+    app.state.db_engine = db_engine
+    app.state.db_sessionmaker = create_session_maker(db_engine)
 
     if settings.allow_cors_origins:
         app.add_middleware(
@@ -31,6 +37,10 @@ def create_app() -> FastAPI:
     @app.get("/healthz")
     async def healthz() -> dict[str, bool]:
         return {"ok": True}
+
+    @app.on_event("shutdown")
+    async def _shutdown() -> None:
+        await db_engine.dispose()
 
     @app.exception_handler(APIError)
     async def _handle_api_error(_req: Request, exc: APIError) -> JSONResponse:
