@@ -7,6 +7,7 @@ import { ErrorBoundary } from '../app/ErrorBoundary'
 import { TocProvider, useToc } from '../app/toc'
 import { ThemeProvider, useTheme } from '../app/theme'
 import { Toc } from '../man/Toc'
+import markUrl from '/betterman-mark.svg?url'
 
 function NotFound() {
   return (
@@ -141,7 +142,16 @@ function RootLayoutInner() {
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
       <header className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <Link to="/" className="font-semibold tracking-tight">
+          <Link to="/" className="inline-flex items-center gap-2 font-semibold tracking-tight">
+            <img
+              src={markUrl}
+              alt=""
+              className="size-6"
+              width={24}
+              height={24}
+              loading="eager"
+              decoding="async"
+            />
             BetterMan
           </Link>
           <form
