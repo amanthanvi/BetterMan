@@ -17,6 +17,12 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 `v0.1.0` shipped (tag `v0.1.0`) on branch `refresh`. Execution plan: `PLAN.md`.
 
+## Deploy (Railway)
+
+- Auto-deploy: `.github/workflows/deploy.yml` runs after `ci` succeeds on pushes to `main` and `refresh`.
+- Manual deploy: run the `deploy-railway` workflow (input `ref`).
+- Requires `RAILWAY_TOKEN` GitHub Actions secret.
+
 ## UX notes
 
 - Desktop: the “On this page” table of contents stays sticky while you scroll.

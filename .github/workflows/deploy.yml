@@ -1,45 +1,57 @@
-name: deploy
+name: deploy-railway
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows:
+      - ci
+    types:
+      - completed
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Target environment"
-        required: true
-        type: choice
-        options:
-          - staging
-          - prod
+      ref:
+        description: "Git ref (branch, tag, SHA) to deploy"
+        required: false
+        default: main
 
 concurrency:
-  group: deploy-${{ inputs.environment }}
-  cancel-in-progress: false
+  group: deploy-railway-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  deploy:
+  deploy_web:
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'refresh')
+        )
+      }}
     runs-on: ubuntu-latest
     env:
-      DEPLOY_ENV: ${{ github.event_name == 'push' && 'staging' || inputs.environment }}
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
+      RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
+      RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
         with:
-          version: 10.27.0
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.ref }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm -C frontend build
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
 
-      - name: Deploy (placeholder)
-        run: |
-          echo "Deploy workflow scaffold."
-          echo "Wire this to Railway (or your target platform) with environment-specific secrets."
-          echo "DEPLOY_ENV=$DEPLOY_ENV"
+      - name: Link project
+        run: railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_ID" --service "$RAILWAY_SERVICE_ID"
+
+      - name: Deploy web
+        run: railway up --ci --service "$RAILWAY_SERVICE_ID" --environment "$RAILWAY_ENVIRONMENT_ID"
