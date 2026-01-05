@@ -1,11 +1,6 @@
 name: deploy-railway
 
 on:
-  workflow_run:
-    workflows:
-      - ci
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       ref:
@@ -14,24 +9,14 @@ on:
         default: main
 
 concurrency:
-  group: deploy-railway-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
-  cancel-in-progress: true
+  group: deploy-railway-${{ inputs.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
   deploy_web:
-    if: >-
-      ${{
-        github.event_name == 'workflow_dispatch' ||
-        (
-          github.event_name == 'workflow_run' &&
-          github.event.workflow_run.conclusion == 'success' &&
-          github.event.workflow_run.event == 'push' &&
-          (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'refresh')
-        )
-      }}
     runs-on: ubuntu-latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -41,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.ref }}
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-node@v4
         with:

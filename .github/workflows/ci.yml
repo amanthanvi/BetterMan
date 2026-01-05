@@ -56,3 +56,44 @@ jobs:
       - run: cd ingestion && uv run ruff check .
       - run: cd ingestion && uv run ruff format --check .
       - run: cd ingestion && uv run python -m pytest
+
+  deploy_railway:
+    needs:
+      - frontend
+      - backend
+      - ingestion
+    if: ${{ github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'refresh') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy web (Railway)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
+          RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
+          RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${RAILWAY_TOKEN:-}" ]]; then
+            echo "Missing RAILWAY_TOKEN GitHub Actions secret."
+            exit 1
+          fi
+
+          railway link \
+            --project "$RAILWAY_PROJECT_ID" \
+            --environment "$RAILWAY_ENVIRONMENT_ID" \
+            --service "$RAILWAY_SERVICE_ID"
+
+          railway up --ci \
+            --service "$RAILWAY_SERVICE_ID" \
+            --environment "$RAILWAY_ENVIRONMENT_ID"
