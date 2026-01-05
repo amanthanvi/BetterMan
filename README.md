@@ -17,6 +17,11 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 `v0.1.0` shipped (tag `v0.1.0`) on branch `refresh`. Execution plan: `PLAN.md`.
 
+## UX notes
+
+- Desktop: the “On this page” table of contents stays sticky while you scroll.
+- Mobile: TOC is available via the sticky header “TOC” button (drawer).
+
 ## Golden commands
 
 ### Local services

@@ -110,6 +110,7 @@
 -   Header: `name(section)` + one-line description.
 -   Left sidebar (desktop) or collapsible drawer (mobile):
     -   TOC (headings).
+        -   **Desktop behavior:** TOC is sticky (follows scroll and stays visible). If the TOC is longer than the viewport, it scrolls independently.
     -   Quick nav: "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES", "SEE ALSO" when available.
 -   Main article:
     -   Rendered content with clear typographic hierarchy.
@@ -177,7 +178,7 @@ If optional shortcuts are not implemented, they must not be documented in UI.
     -   < 768px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
         -   **Mobile TOC access:** Sticky header button toggles TOC drawer. Button is always visible for quick access during reading.
     -   768–1024px: compact sidebar; TOC collapsible.
-    -   > 1024px: persistent sidebar and wide reading column with max line width (target 70–90 chars).
+    -   > 1024px: persistent sidebar (sticky TOC) and wide reading column with max line width (target 70–90 chars).
 
 ## Accessibility Requirements
 
