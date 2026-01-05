@@ -3,7 +3,7 @@ import { createRoute, Link } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
 import { useToc } from '../app/toc'
-import { fetchManByNameAndSection, fetchRelated } from '../api/client'
+import { ApiHttpError, fetchManByName, fetchManByNameAndSection, fetchRelated } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import type { ManPage, ManPageContent, OptionItem, SectionPage } from '../api/types'
 import { recordRecentPage } from '../lib/recent'
@@ -27,6 +27,13 @@ function ManByNameAndSectionPage() {
   const pageQuery = useQuery({
     queryKey: queryKeys.man(nameNorm, section),
     queryFn: () => fetchManByNameAndSection(nameNorm, section),
+  })
+
+  const alternativesQuery = useQuery({
+    queryKey: ['manAlternatives', nameNorm],
+    enabled: pageQuery.isError && pageQuery.error instanceof ApiHttpError && pageQuery.error.status === 404,
+    queryFn: () => fetchManByName(nameNorm),
+    retry: false,
   })
 
   const relatedQuery = useQuery({
@@ -60,13 +67,48 @@ function ManByNameAndSectionPage() {
   }
 
   if (pageQuery.isError) {
+    const alt = alternativesQuery.data
     return (
       <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
-        Page not found.{' '}
-        <Link to="/search" search={{ q: name }} className="underline underline-offset-4">
-          Search for “{name}”
-        </Link>
-        .
+        <div className="font-medium text-[color:var(--bm-fg)]">Page not found.</div>
+        {alternativesQuery.isLoading ? (
+          <div className="mt-2">Looking for alternatives…</div>
+        ) : alt?.kind === 'ambiguous' && alt.options.length ? (
+          <div className="mt-2 space-y-2">
+            <div>Available sections:</div>
+            <ul className="flex flex-wrap gap-2">
+              {alt.options.map((opt) => (
+                <li key={opt.section}>
+                  <Link
+                    to="/man/$name/$section"
+                    params={{ name: nameNorm, section: opt.section }}
+                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[var(--bm-bg)/0.4] px-3 py-1 text-sm hover:bg-[color:var(--bm-bg)/0.6]"
+                  >
+                    {nameNorm}({opt.section})
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : alt?.kind === 'page' ? (
+          <div className="mt-2">
+            Found{' '}
+            <Link
+              to="/man/$name/$section"
+              params={{ name: alt.data.page.name, section: alt.data.page.section }}
+              className="underline underline-offset-4"
+            >
+              {alt.data.page.name}({alt.data.page.section})
+            </Link>{' '}
+            instead.
+          </div>
+        ) : null}
+        <div className="mt-3">
+          <Link to="/search" search={{ q: nameNorm }} className="underline underline-offset-4">
+            Search for “{nameNorm}”
+          </Link>
+          .
+        </div>
       </div>
     )
   }
@@ -99,6 +141,7 @@ function ManPageView({
   const [find, setFind] = useState('')
   const [activeFindIndex, setActiveFindIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
+  const [showAllRelated, setShowAllRelated] = useState(false)
   const activeMarkRef = useRef<HTMLElement | null>(null)
 
   const findQuery = find.trim()
@@ -311,7 +354,7 @@ function ManPageView({
         <aside className="mt-10">
           <h2 className="text-sm font-semibold tracking-tight">Related</h2>
           <ul className="mt-3 flex flex-wrap gap-2">
-            {relatedItems.slice(0, 12).map((item) => (
+            {(showAllRelated ? relatedItems : relatedItems.slice(0, 5)).map((item) => (
               <li key={`${item.name}:${item.section}`}>
                 <Link
                   to="/man/$name/$section"
@@ -323,6 +366,17 @@ function ManPageView({
               </li>
             ))}
           </ul>
+          {relatedItems.length > 5 ? (
+            <div className="mt-3">
+              <button
+                type="button"
+                className="text-sm underline underline-offset-4"
+                onClick={() => setShowAllRelated((v) => !v)}
+              >
+                {showAllRelated ? 'Show fewer' : `Show all (${relatedItems.length})`}
+              </button>
+            </div>
+          ) : null}
         </aside>
       ) : null}
     </div>
