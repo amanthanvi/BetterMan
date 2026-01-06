@@ -1,5 +1,13 @@
 # Security Policy
 
+## Automated scanning
+
+This repo uses GitHub-native security tooling:
+
+- Code scanning: CodeQL (`.github/workflows/codeql.yml`) and OSSF Scorecards (`.github/workflows/scorecards.yml`).
+- Dependency updates + security updates: Dependabot (`.github/dependabot.yml`).
+- Secrets: GitHub secret scanning + push protection.
+
 ## Reporting a vulnerability
 
 Please do **not** open a public GitHub issue for security reports.

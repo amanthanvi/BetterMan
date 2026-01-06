@@ -8,6 +8,7 @@ Thanks for contributing! This repo is bootstrapping from `SPEC.md`.
 - Update `SPEC.md` when behavior/API decisions change.
 - Prefer adding tests alongside bug fixes where practical.
 - Use Conventional Commits for PR titles and commit messages (e.g. `feat: …`, `fix: …`, `docs: …`).
+- Expect CI + security checks to run on PRs (lint/test/build, dependency review, CodeQL).
 
 ## How to contribute
 

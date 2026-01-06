@@ -98,6 +98,9 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 ### M7 — CI/CD + release
 
 - [x] `.github/workflows/ci.yml` (lint/test/build for FE/BE/ingestion)
+- [x] `.github/workflows/codeql.yml` (CodeQL code scanning)
+- [x] `.github/workflows/scorecards.yml` (OSSF Scorecards)
 - [x] `.github/workflows/deploy.yml` (staging → promote) *(scaffold)*
 - [x] `.github/workflows/update-docs.yml` (monthly ingestion staging → validate → promote)
+- [x] `.github/dependabot.yml` (dependency update PRs)
 - [x] Tag `v0.1.0`
