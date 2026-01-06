@@ -3,7 +3,7 @@
 **Project:** BetterMan
 **Spec Version:** v0.1.0
 **Status:** Shipped (v0.1.0)
-**Last Updated:** 2026-01-05 (EST)
+**Last Updated:** 2026-01-06 (EST)
 **Interview Status:** Completed - all open questions resolved
 
 ---
@@ -1435,7 +1435,26 @@ Staging and prod must be isolated:
 -   Run unit + integration tests
 -   Build frontend assets (production build)
 -   Build backend (container build or artifact)
+-   Dependency review for PRs (block vulnerable dependency additions)
 -   Enforce bundle size budget checks
+
+### `codeql.yml` (code scanning)
+
+-   CodeQL analysis for Python + JavaScript/TypeScript
+-   Runs on PRs, pushes to `main`, and a weekly schedule
+
+### `scorecards.yml` (security posture)
+
+-   OSSF Scorecards (SARIF uploaded to GitHub code scanning)
+-   Runs on pushes to `main` and a weekly schedule
+
+### `dependabot.yml` (dependency updates)
+
+-   Weekly dependency update PRs for:
+    -   GitHub Actions workflows
+    -   Frontend npm dependencies
+    -   Backend + ingestion uv lockfiles
+    -   Docker base images
 
 ### `deploy.yml` (deploy/promote/rollback)
 

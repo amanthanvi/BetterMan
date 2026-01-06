@@ -23,6 +23,12 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - Manual deploy: `.github/workflows/deploy.yml` (workflow `deploy-railway`, input `ref`).
 - Requires `RAILWAY_TOKEN` GitHub Actions secret (exported to Railway CLI as `RAILWAY_API_TOKEN`).
 
+## Security / Quality (CI)
+
+- Required PR checks for `main`: `frontend`, `backend`, `ingestion`, `dependency_review`.
+- Code scanning: `.github/workflows/codeql.yml` (CodeQL) + `.github/workflows/scorecards.yml` (OSSF Scorecards → SARIF).
+- Dependency updates: `.github/dependabot.yml` (GitHub Actions, frontend npm, backend/ingestion uv, Dockerfile base images).
+
 ## UX notes
 
 - Desktop: the “On this page” table of contents stays sticky while you scroll.
