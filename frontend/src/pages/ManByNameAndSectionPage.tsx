@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToc } from '../app/toc'
 import { ApiHttpError, fetchManByName, fetchManByNameAndSection, fetchRelated } from '../api/client'
@@ -164,12 +164,28 @@ function ManPageView({
   const [copiedLink, setCopiedLink] = useState(false)
   const copyTimeoutRef = useRef<number | null>(null)
 
-  const findQuery = find.trim()
+  const rawFindQuery = find.trim()
+  const deferredFindQuery = useDeferredValue(rawFindQuery)
+  const findQuery = rawFindQuery.length >= 2 ? deferredFindQuery : ''
   const findEnabled = findQuery.length >= 2
-  const matchCount = findEnabled ? countFindMatches(content.blocks, findQuery) : 0
+  const matchCount = useMemo(
+    () => (findEnabled ? countFindMatches(content.blocks, findQuery) : 0),
+    [content.blocks, findEnabled, findQuery],
+  )
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
+  const findCountLabel =
+    rawFindQuery.length < 2
+      ? '—'
+      : findQuery !== rawFindQuery
+        ? '…'
+        : matchCount
+          ? `${displayIndex + 1}/${matchCount}`
+          : '0/0'
 
-  const optionTerms = selectedOption ? parseOptionTerms(selectedOption.flags) : []
+  const optionTerms = useMemo(
+    () => (selectedOption ? parseOptionTerms(selectedOption.flags) : []),
+    [selectedOption],
+  )
   const showSidebar = toc.sidebarOpen
   const scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
   const setFindBarHiddenPersisted = (hidden: boolean) => {
@@ -390,7 +406,7 @@ function ManPageView({
 
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
                         <div className="font-mono">
-                          {matchCount ? `${displayIndex + 1}/${matchCount}` : findEnabled ? '0/0' : '—'}
+                          {findCountLabel}
                         </div>
                         <div className="flex items-center gap-2">
                           <button
@@ -475,7 +491,7 @@ function ManPageView({
                     aria-label="Find in page"
                   />
                   <div className="font-mono text-xs text-[color:var(--bm-muted)]">
-                    {matchCount ? `${displayIndex + 1}/${matchCount}` : findEnabled ? '0/0' : '—'}
+                    {findCountLabel}
                   </div>
                   <button
                     type="button"
