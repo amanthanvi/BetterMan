@@ -1,9 +1,21 @@
-import hljs from 'highlight.js/lib/core'
-import bash from 'highlight.js/lib/languages/bash'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-hljs.registerLanguage('bash', bash)
+let hljsPromise: Promise<unknown> | null = null
+
+async function loadHljs(): Promise<unknown> {
+  if (!hljsPromise) {
+    hljsPromise = Promise.all([
+      import('highlight.js/lib/core'),
+      import('highlight.js/lib/languages/bash'),
+    ]).then(([core, bash]) => {
+      core.default.registerLanguage('bash', bash.default)
+      return core.default
+    })
+  }
+
+  return hljsPromise
+}
 
 export function CodeBlock({
   id,
@@ -17,6 +29,7 @@ export function CodeBlock({
   optionRegex?: RegExp
 }) {
   const [copied, setCopied] = useState(false)
+  const [html, setHtml] = useState(() => applyMarkers(escapeHtml(buildMarkedText(text, { findQuery, optionRegex }))))
   const timeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -25,19 +38,33 @@ export function CodeBlock({
     }
   }, [])
 
-  const highlighted = useMemo(() => {
+  useEffect(() => {
     const markedText = buildMarkedText(text, { findQuery, optionRegex })
     const fallback = applyMarkers(escapeHtml(markedText))
-    if (!shouldHighlight(text)) return fallback
-    try {
-      const html = hljs.highlight(markedText, { language: 'bash', ignoreIllegals: true }).value
-      return applyMarkers(html)
-    } catch {
-      return fallback
+    setHtml(fallback)
+
+    if (!shouldHighlight(text)) return
+
+    let cancelled = false
+    void loadHljs().then((hljs) => {
+      if (cancelled) return
+      try {
+        const next = (hljs as { highlight: (t: string, o: unknown) => { value: string } }).highlight(markedText, {
+          language: 'bash',
+          ignoreIllegals: true,
+        }).value
+        setHtml(applyMarkers(next))
+      } catch {
+        // keep fallback
+      }
+    })
+
+    return () => {
+      cancelled = true
     }
   }, [findQuery, optionRegex, text])
 
-  const highlightedNodes = useMemo(() => highlightedHtmlToReact(highlighted), [highlighted])
+  const highlightedNodes = useMemo(() => highlightedHtmlToReact(html), [html])
 
   const copy = async () => {
     try {
