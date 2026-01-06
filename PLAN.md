@@ -9,7 +9,7 @@ Living execution plan for shipping `v0.1.1` from `SPEC.md`.
 ## Status
 
 - [x] v0.1.0 shipped (tag `v0.1.0`)
-- [ ] v0.1.1 in progress
+- [x] v0.1.1 shipped (tag `v0.1.1`)
 
 ## Golden Commands (kept current)
 
@@ -30,14 +30,14 @@ Living execution plan for shipping `v0.1.1` from `SPEC.md`.
 
 ### M8 — Frontend overhaul (design + perf) for v0.1.1
 
-- [ ] Update `SPEC.md` v0.1.1 delta + acceptance criteria
-- [ ] New visual system (tokens, typography, motion) + self-hosted fonts
-- [ ] Layout refresh: header/footer, spacing, navigation affordances
-- [ ] “User-friendly” info surfaces (dataset freshness, page counts, metadata)
-- [ ] Man page “Navigator” rail: sticky TOC + sticky Find + quick jumps + scroll-spy
-- [ ] Performance: route-level code splitting + lazy highlight.js + debounced Find highlighting
-- [ ] Validate: `pnpm frontend:lint` + `pnpm frontend:build`
-- [ ] Tag `v0.1.1`
+- [x] Update `SPEC.md` v0.1.1 delta + acceptance criteria
+- [x] New visual system (tokens, typography, motion) + self-hosted fonts
+- [x] Layout refresh: header/footer, spacing, navigation affordances
+- [x] “User-friendly” info surfaces (dataset freshness, page counts, metadata)
+- [x] Man page “Navigator” rail: sticky TOC + sticky Find + quick jumps + scroll-spy
+- [x] Performance: route-level code splitting + lazy highlight.js + debounced Find highlighting
+- [x] Validate: `pnpm frontend:lint` + `pnpm frontend:build`
+- [x] Tag `v0.1.1`
 
 ### M0 — Repo scaffold + dev loop
 

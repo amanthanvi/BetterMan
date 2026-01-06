@@ -2,7 +2,7 @@
 
 **Project:** BetterMan
 **Spec Version:** v0.1.1
-**Status:** In progress (target `v0.1.1`; `v0.1.0` shipped)
+**Status:** Shipped (tag `v0.1.1`; `v0.1.0` shipped)
 **Last Updated:** 2026-01-06 (EST)
 **Interview Status:** Completed - all open questions resolved
 
@@ -889,7 +889,7 @@ flowchart LR
 -   Caching:
     -   Browser HTTP cache + TanStack Query's in-memory cache for recently viewed pages.
 -   Performance:
-    -   Route-level code splitting (target v0.1.1).
+    -   Route-level code splitting.
     -   Full render for large documents with optimized React components (no virtualization).
     -   Return everything from API; rely on gzip compression for large JSONB payloads.
 
