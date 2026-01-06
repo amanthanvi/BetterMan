@@ -1,8 +1,8 @@
 # 1. Title / Version / Status
 
 **Project:** BetterMan
-**Spec Version:** v0.1.0
-**Status:** Shipped (v0.1.0)
+**Spec Version:** v0.1.1
+**Status:** In progress (target `v0.1.1`; `v0.1.0` shipped)
 **Last Updated:** 2026-01-06 (EST)
 **Interview Status:** Completed - all open questions resolved
 
@@ -21,6 +21,13 @@
 -   Production-ready v0.1.0 includes observability, rate limiting, backups, and a minimal deploy topology.
 
 **Done (v0.1.0) means:** users can reliably search and read man pages with fast load times, stable links, accessible UI, and production-grade security/ops.
+
+**v0.1.1 focus:** a frontend design and performance refresh:
+
+-   More “manual-like” reading experience: stronger typography, spacing, and layout rhythm.
+-   Sticky “Navigator” rail that keeps TOC + Find + quick jumps in view (with hide controls).
+-   More user-friendly information presentation (dataset freshness, page counts, page metadata).
+-   Performance: route-level code splitting + lazy-load heavy client code (e.g. syntax highlighting) and avoid expensive re-renders while typing.
 
 ---
 
@@ -868,9 +875,9 @@ flowchart LR
 -   **Framework:** React + TypeScript SPA
 -   **Router:** TanStack Router (type-safe routing with excellent TypeScript integration)
 -   **State Management:** TanStack Query for server state + React Context for UI state
--   **Component Library:** Shadcn/ui (copy-paste components built on Radix + Tailwind)
+-   **Component Primitives:** Radix UI (selectively, e.g. Dialog) + small custom UI primitives
 -   **CSS:** Tailwind v4
--   **Testing:** Vitest + React Testing Library
+-   **Testing:** TBD (no frontend unit test runner in v0.1.0)
 
 -   Routing:
     -   Client-side router with routes mirroring URL scheme in Section 6
@@ -882,7 +889,7 @@ flowchart LR
 -   Caching:
     -   Browser HTTP cache + TanStack Query's in-memory cache for recently viewed pages.
 -   Performance:
-    -   Code splitting by route (search vs page view).
+    -   Route-level code splitting (target v0.1.1).
     -   Full render for large documents with optimized React components (no virtualization).
     -   Return everything from API; rely on gzip compression for large JSONB payloads.
 

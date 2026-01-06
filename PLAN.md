@@ -1,6 +1,6 @@
-# BetterMan — PLAN (v0.1.0)
+# BetterMan — PLAN (v0.1.1)
 
-Living execution plan for shipping `v0.1.0` from `SPEC.md`.
+Living execution plan for shipping `v0.1.1` from `SPEC.md`.
 
 - Branch: `main` (commit + push frequently)
 - Principle: small/medium diffs; no drive‑by refactors
@@ -9,6 +9,7 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 ## Status
 
 - [x] v0.1.0 shipped (tag `v0.1.0`)
+- [ ] v0.1.1 in progress
 
 ## Golden Commands (kept current)
 
@@ -26,6 +27,17 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 - `pnpm ingest:test`
 
 ## Milestones
+
+### M8 — Frontend overhaul (design + perf) for v0.1.1
+
+- [ ] Update `SPEC.md` v0.1.1 delta + acceptance criteria
+- [ ] New visual system (tokens, typography, motion) + self-hosted fonts
+- [ ] Layout refresh: header/footer, spacing, navigation affordances
+- [ ] “User-friendly” info surfaces (dataset freshness, page counts, metadata)
+- [ ] Man page “Navigator” rail: sticky TOC + sticky Find + quick jumps + scroll-spy
+- [ ] Performance: route-level code splitting + lazy highlight.js + debounced Find highlighting
+- [ ] Validate: `pnpm frontend:lint` + `pnpm frontend:build`
+- [ ] Tag `v0.1.1`
 
 ### M0 — Repo scaffold + dev loop
 
