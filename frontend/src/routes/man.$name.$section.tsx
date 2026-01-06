@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createRoute, Link } from '@tanstack/react-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToc } from '../app/toc'
 import { ApiHttpError, fetchManByName, fetchManByNameAndSection, fetchRelated } from '../api/client'
@@ -164,7 +164,11 @@ function ManPageView({
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
   const [showAllRelated, setShowAllRelated] = useState(false)
   const activeMarkRef = useRef<HTMLElement | null>(null)
-  const findInputRef = useRef<HTMLInputElement | null>(null)
+  const findInputDesktopRef = useRef<HTMLInputElement | null>(null)
+  const findInputMobileRef = useRef<HTMLInputElement | null>(null)
+  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
+  const [copiedLink, setCopiedLink] = useState(false)
+  const copyTimeoutRef = useRef<number | null>(null)
 
   const findQuery = find.trim()
   const findEnabled = findQuery.length >= 2
@@ -172,12 +176,78 @@ function ManPageView({
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
 
   const optionTerms = selectedOption ? parseOptionTerms(selectedOption.flags) : []
-  const showSidebar = toc.sidebarOpen && content.toc.length > 0
+  const showSidebar = toc.sidebarOpen
   const scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
   const setFindBarHiddenPersisted = (hidden: boolean) => {
     setFindBarHidden(hidden)
     writeStoredFindBarHidden(hidden)
   }
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current != null) window.clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    setActiveHeadingId(content.toc[0]?.id ?? null)
+
+    const ids = content.toc.map((t) => t.id).filter(Boolean)
+    const els = ids
+      .map((id) => document.getElementById(id))
+      .filter(Boolean) as HTMLElement[]
+
+    if (!els.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting)
+        if (!visible.length) return
+        visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        const next = (visible[0]?.target as HTMLElement | undefined)?.id
+        if (next) setActiveHeadingId(next)
+      },
+      {
+        root: null,
+        threshold: [0, 1],
+        rootMargin: '-20% 0px -70% 0px',
+      },
+    )
+
+    for (const el of els) observer.observe(el)
+    return () => observer.disconnect()
+  }, [content.toc, page.id])
+
+  const focusFindInput = () => {
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches
+    const el = isDesktop ? findInputDesktopRef.current : findInputMobileRef.current
+    el?.focus()
+    el?.select()
+  }
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setCopiedLink(true)
+      if (copyTimeoutRef.current != null) window.clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = window.setTimeout(() => setCopiedLink(false), 2000)
+    } catch {
+      // ignore
+    }
+  }
+
+  const quickJumps = useMemo(() => {
+    const hay = content.toc.filter((t) => t.level === 2)
+    const wanted = ['synopsis', 'description', 'options', 'examples', 'see also', 'see-also']
+
+    const out: Array<{ id: string; title: string }> = []
+    for (const w of wanted) {
+      const hit = hay.find((t) => t.title.toLowerCase().includes(w))
+      if (hit && !out.some((x) => x.id === hit.id)) out.push({ id: hit.id, title: hit.title })
+    }
+
+    return out.slice(0, 6)
+  }, [content.toc])
 
   const scrollToFind = (idx: number) => {
     const marks = Array.from(document.querySelectorAll('mark[data-bm-find]')) as HTMLElement[]
@@ -208,157 +278,278 @@ function ManPageView({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <header className="border-b border-[var(--bm-border)] pb-6">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {page.name}({page.section})
-        </h1>
-        <p className="mt-2 text-base text-[color:var(--bm-muted)]">{page.description}</p>
-
-        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[color:var(--bm-muted)]">
-          {page.sourcePackage ? (
+      <header className="rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-6 shadow-sm backdrop-blur">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              Package: <span className="text-[color:var(--bm-fg)]">{page.sourcePackage}</span>
-              {page.sourcePackageVersion ? (
-                <span className="text-[color:var(--bm-muted)]"> {page.sourcePackageVersion}</span>
-              ) : null}
+              <h1 className="font-mono text-4xl font-semibold leading-[1.05] tracking-tight">
+                {page.name}({page.section})
+              </h1>
+              <p className="mt-3 max-w-[70ch] text-base text-[color:var(--bm-muted)]">
+                {page.description}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+              onClick={copyLink}
+              aria-label="Copy link to clipboard"
+              title={copiedLink ? 'Copied' : 'Copy link'}
+            >
+              {copiedLink ? 'Copied' : 'Copy link'}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--bm-muted)]">
+            {page.sourcePackage ? (
+              <span className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
+                pkg {page.sourcePackage}
+                {page.sourcePackageVersion ? `@${page.sourcePackageVersion}` : ''}
+              </span>
+            ) : null}
+            <span className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
+              dataset {page.datasetReleaseId}
+            </span>
+          </div>
+
+          {content.synopsis?.length ? (
+            <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.25] p-4">
+              <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Synopsis</div>
+              <pre className="mt-3 overflow-x-auto rounded-xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] p-4 text-sm leading-6">
+                <code>{content.synopsis.join('\n')}</code>
+              </pre>
             </div>
           ) : null}
-          <div>
-            Dataset: <span className="text-[color:var(--bm-fg)]">{page.datasetReleaseId}</span>
-          </div>
         </div>
-
-        {content.synopsis?.length ? (
-          <div className="mt-5">
-            <div className="text-xs font-medium uppercase tracking-wider text-[color:var(--bm-muted)]">
-              Synopsis
-            </div>
-            <pre className="mt-2 overflow-x-auto rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm leading-6">
-              <code>{content.synopsis.join('\n')}</code>
-            </pre>
-          </div>
-        ) : null}
       </header>
 
-      <div className={`mt-8 grid gap-8 ${showSidebar ? 'lg:grid-cols-[16rem_minmax(0,1fr)]' : ''}`}>
+      <div className={`mt-10 grid gap-10 ${showSidebar ? 'lg:grid-cols-[19rem_minmax(0,1fr)]' : ''}`}>
         {showSidebar ? (
           <aside className="hidden lg:block">
             <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2">
-              <Toc items={content.toc} />
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
+                  <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Navigator</div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {quickJumps.map((j) => (
+                      <a
+                        key={j.id}
+                        href={`#${j.id}`}
+                        className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs hover:bg-[color:var(--bm-bg)/0.55]"
+                      >
+                        {j.title}
+                      </a>
+                    ))}
+                    {!quickJumps.length ? (
+                      <span className="text-sm text-[color:var(--bm-muted)]">—</span>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Find</div>
+                    {findBarHidden ? (
+                      <button
+                        type="button"
+                        className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                        onClick={() => {
+                          setFindBarHiddenPersisted(false)
+                          requestAnimationFrame(() => focusFindInput())
+                        }}
+                      >
+                        Show
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                        onClick={() => setFindBarHiddenPersisted(true)}
+                      >
+                        Hide
+                      </button>
+                    )}
+                  </div>
+
+                  {!findBarHidden ? (
+                    <div className="mt-3 space-y-3">
+                      <input
+                        ref={findInputDesktopRef}
+                        value={find}
+                        onChange={(e) => {
+                          setFind(e.target.value)
+                          setActiveFindIndex(0)
+                          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+                          activeMarkRef.current = null
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && matchCount) {
+                            e.preventDefault()
+                            scrollToFind(activeFindIndex)
+                          }
+                        }}
+                        placeholder="Find in page…"
+                        className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                        aria-label="Find in page"
+                      />
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
+                        <div className="font-mono">
+                          {matchCount ? `${displayIndex + 1}/${matchCount}` : findEnabled ? '0/0' : '—'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
+                            onClick={goPrev}
+                            disabled={!matchCount}
+                          >
+                            Prev
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
+                            onClick={goNext}
+                            disabled={!matchCount}
+                          >
+                            Next
+                          </button>
+                          {find ? (
+                            <button
+                              type="button"
+                              className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                              onClick={() => {
+                                setFind('')
+                                setActiveFindIndex(0)
+                                if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+                                activeMarkRef.current = null
+                              }}
+                            >
+                              Clear
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
+                  <Toc items={content.toc} activeId={activeHeadingId} />
+                </div>
+              </div>
             </div>
           </aside>
         ) : null}
 
-        <article>
-          <div className={`sticky top-16 z-10 ${findBarHidden ? 'mb-4' : 'mb-8'}`}>
+        <article className="min-w-0">
+          <div className={`sticky top-16 z-10 lg:hidden ${findBarHidden ? 'mb-4' : 'mb-8'}`}>
             {findBarHidden ? (
               <div className="flex justify-end">
                 <button
                   type="button"
-                  className="rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-1.5 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
+                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
                   onClick={() => {
                     setFindBarHiddenPersisted(false)
-                    requestAnimationFrame(() => findInputRef.current?.focus())
+                    requestAnimationFrame(() => focusFindInput())
                   }}
-                  aria-label="Show find in page"
                 >
                   Find
                 </button>
               </div>
             ) : (
-              <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3">
+              <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-3 shadow-sm backdrop-blur">
                 <div className="flex flex-wrap items-center gap-2">
                   <input
-                    ref={findInputRef}
+                    ref={findInputMobileRef}
                     value={find}
                     onChange={(e) => {
                       setFind(e.target.value)
+                      setActiveFindIndex(0)
+                      if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+                      activeMarkRef.current = null
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && matchCount) {
+                        e.preventDefault()
+                        scrollToFind(activeFindIndex)
+                      }
+                    }}
+                    placeholder="Find in page…"
+                    className="min-w-[14rem] flex-1 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                    aria-label="Find in page"
+                  />
+                  <div className="font-mono text-xs text-[color:var(--bm-muted)]">
+                    {matchCount ? `${displayIndex + 1}/${matchCount}` : findEnabled ? '0/0' : '—'}
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
+                    onClick={goPrev}
+                    disabled={!matchCount}
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
+                    onClick={goNext}
+                    disabled={!matchCount}
+                  >
+                    Next
+                  </button>
+                  {find ? (
+                    <button
+                      type="button"
+                      className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                      onClick={() => {
+                        setFind('')
                         setActiveFindIndex(0)
                         if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
                         activeMarkRef.current = null
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && matchCount) {
-                          e.preventDefault()
-                          scrollToFind(activeFindIndex)
-                        }
-                      }}
-                      placeholder="Find in page… (min 2 chars)"
-                      className="min-w-[16rem] flex-1 rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                      aria-label="Find in page"
-                    />
-                    <div className="text-xs text-[color:var(--bm-muted)]">
-                      {matchCount ? (
-                        <>
-                          {displayIndex + 1}/{matchCount}
-                        </>
-                      ) : findEnabled ? (
-                        '0/0'
-                      ) : (
-                        '—'
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6] disabled:opacity-50"
-                      onClick={goPrev}
-                      disabled={!matchCount}
                     >
-                      Prev
+                      Clear
                     </button>
-                    <button
-                      type="button"
-                      className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6] disabled:opacity-50"
-                      onClick={goNext}
-                      disabled={!matchCount}
-                    >
-                      Next
-                    </button>
-                    {find ? (
-                      <button
-                        type="button"
-                        className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6]"
-                        onClick={() => {
-                          setFind('')
-                          setActiveFindIndex(0)
-                          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-                          activeMarkRef.current = null
-                        }}
-                      >
-                        Clear
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="rounded-md border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.6]"
-                      onClick={() => setFindBarHiddenPersisted(true)}
-                    >
-                      Hide
-                    </button>
-                  </div>
-
-                {optionTerms.length ? (
-                  <div className="mt-3 flex items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
-                    <div>
-                      Highlighting options:{' '}
-                      <span className="font-mono text-[color:var(--bm-fg)]">{optionTerms.join(' ')}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="underline underline-offset-4"
-                      onClick={() => setSelectedOption(null)}
-                    >
-                      Clear option highlights
-                    </button>
-                  </div>
-                ) : null}
+                  ) : null}
+                  <button
+                    type="button"
+                    className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                    onClick={() => setFindBarHiddenPersisted(true)}
+                  >
+                    Hide
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
+          {optionTerms.length ? (
+            <div className="mb-8 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm backdrop-blur">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">
+                    Highlighting options
+                  </div>
+                  <div className="mt-2 font-mono text-sm text-[color:var(--bm-fg)]">
+                    {optionTerms.join(' ')}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                  onClick={() => setSelectedOption(null)}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {content.options?.length ? (
             <section className="mb-10">
-              <h2 className="text-sm font-semibold tracking-tight">Options</h2>
+              <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Options</h2>
               <div className="mt-3">
                 <OptionsTable
                   options={content.options}
@@ -382,7 +573,7 @@ function ManPageView({
 
       {content.seeAlso?.length ? (
         <aside className="mt-10">
-          <h2 className="text-sm font-semibold tracking-tight">See also</h2>
+          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">See also</h2>
           <ul className="mt-3 flex flex-wrap gap-2">
             {content.seeAlso.slice(0, 24).map((ref) => (
               <li key={`${ref.name}:${ref.section ?? ''}`}>
@@ -397,7 +588,7 @@ function ManPageView({
                   <Link
                     to="/man/$name/$section"
                     params={{ name: ref.name, section: ref.section }}
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.8]"
+                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
                   >
                     {ref.name}({ref.section})
                   </Link>
@@ -405,7 +596,7 @@ function ManPageView({
                   <Link
                     to="/man/$name"
                     params={{ name: ref.name }}
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.8]"
+                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
                   >
                     {ref.name}
                   </Link>
@@ -418,14 +609,14 @@ function ManPageView({
 
       {relatedItems.length ? (
         <aside className="mt-10">
-          <h2 className="text-sm font-semibold tracking-tight">Related</h2>
+          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Related</h2>
           <ul className="mt-3 flex flex-wrap gap-2">
             {(showAllRelated ? relatedItems : relatedItems.slice(0, 5)).map((item) => (
               <li key={`${item.name}:${item.section}`}>
                 <Link
                   to="/man/$name/$section"
                   params={{ name: item.name, section: item.section }}
-                  className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.8]"
+                  className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
                 >
                   {item.name}({item.section})
                 </Link>
