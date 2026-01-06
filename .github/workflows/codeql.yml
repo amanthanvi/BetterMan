@@ -46,7 +46,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
-          build-mode: manual
+          build-mode: none
           queries: security-extended,security-and-quality
 
       - uses: pnpm/action-setup@v4
@@ -59,7 +59,6 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -C frontend build
 
       - name: Analyze
         uses: github/codeql-action/analyze@v3
