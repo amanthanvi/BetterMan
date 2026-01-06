@@ -33,7 +33,19 @@ jobs:
           node-version: 20
 
       - name: Install Railway CLI
-        run: npm install -g @railway/cli
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in 1 2 3 4 5; do
+            echo "Installing Railway CLI (attempt $attempt/5)…"
+            if npm install -g @railway/cli; then
+              break
+            fi
+            sleep $((attempt * 10))
+          done
+
+          railway --version
 
       - name: Link project
         run: railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_ID" --service "$RAILWAY_SERVICE_ID"
