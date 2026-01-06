@@ -54,14 +54,14 @@ export function CodeBlock({
     <div id={id ?? undefined} className="relative scroll-mt-32">
       <button
         type="button"
-        className="absolute right-2 top-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-1.5 text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.8]"
+        className="absolute right-3 top-3 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.85] p-2 text-[color:var(--bm-muted)] shadow-sm hover:bg-[color:var(--bm-surface)]"
         onClick={copy}
         aria-label="Copy code block"
         title={copied ? 'Copied' : 'Copy'}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
-      <pre className="overflow-x-auto rounded-lg border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.6] p-4 text-sm leading-6">
+      <pre className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] p-5 text-sm leading-7 shadow-sm">
         <code className="hljs language-bash">{highlightedNodes}</code>
       </pre>
     </div>
