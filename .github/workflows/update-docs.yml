@@ -10,6 +10,9 @@ concurrency:
   group: update-dataset
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   ingest_and_promote:
     runs-on: ubuntu-latest
