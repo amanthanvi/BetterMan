@@ -51,7 +51,7 @@ function LicensesPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <header className="border-b border-[var(--bm-border)] pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Licenses</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Licenses</h1>
         <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
           Attribution and license notices for the current dataset release.
         </p>
@@ -70,7 +70,7 @@ function LicensesPage() {
           <summary className="cursor-pointer text-sm font-medium text-[color:var(--bm-fg)]">
             Package manifest
           </summary>
-          <pre className="mt-3 overflow-x-auto rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3 text-xs leading-5 text-[color:var(--bm-muted)]">
+          <pre className="mt-3 overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-xs leading-5 text-[color:var(--bm-muted)] shadow-sm">
             {JSON.stringify(data.packageManifest, null, 2)}
           </pre>
         </details>
@@ -82,10 +82,10 @@ function LicensesPage() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter packages…"
-            className="w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Filter packages"
           />
-          <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)]">
+          <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] shadow-sm">
             <ul className="max-h-[70vh] overflow-y-auto p-2">
               {packages.map((p) => (
                 <LicensePackageRow
@@ -101,13 +101,13 @@ function LicensesPage() {
 
         <section className="min-h-[18rem]">
           {!selected ? (
-            <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+            <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
               Select a package to view its license text.
             </div>
           ) : licenseQuery.isLoading ? (
             <div className="text-sm text-[color:var(--bm-muted)]">Loading license text…</div>
           ) : licenseQuery.isError || !licenseQuery.data ? (
-            <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+            <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
               Failed to load license text.
             </div>
           ) : (
@@ -118,7 +118,7 @@ function LicensesPage() {
                 </h2>
                 <div className="text-xs text-[color:var(--bm-muted)]">{licenseQuery.data.licenseId}</div>
               </div>
-              <pre className="mt-3 max-h-[70vh] overflow-auto rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-xs leading-5 text-[color:var(--bm-muted)]">
+              <pre className="mt-3 max-h-[70vh] overflow-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-xs leading-5 text-[color:var(--bm-muted)] shadow-sm">
                 {licenseQuery.data.text}
               </pre>
             </div>
@@ -158,4 +158,3 @@ function LicensePackageRow({
     </li>
   )
 }
-
