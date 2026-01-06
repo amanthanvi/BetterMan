@@ -29,7 +29,12 @@ export function CodeBlock({
   optionRegex?: RegExp
 }) {
   const [copied, setCopied] = useState(false)
-  const [html, setHtml] = useState(() => applyMarkers(escapeHtml(buildMarkedText(text, { findQuery, optionRegex }))))
+  const markedText = useMemo(
+    () => buildMarkedText(text, { findQuery, optionRegex }),
+    [findQuery, optionRegex, text],
+  )
+  const fallbackHtml = useMemo(() => applyMarkers(escapeHtml(markedText)), [markedText])
+  const [highlighted, setHighlighted] = useState<{ source: string; html: string } | null>(null)
   const timeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -39,10 +44,6 @@ export function CodeBlock({
   }, [])
 
   useEffect(() => {
-    const markedText = buildMarkedText(text, { findQuery, optionRegex })
-    const fallback = applyMarkers(escapeHtml(markedText))
-    setHtml(fallback)
-
     if (!shouldHighlight(text)) return
 
     let cancelled = false
@@ -53,7 +54,7 @@ export function CodeBlock({
           language: 'bash',
           ignoreIllegals: true,
         }).value
-        setHtml(applyMarkers(next))
+        setHighlighted({ source: markedText, html: applyMarkers(next) })
       } catch {
         // keep fallback
       }
@@ -62,8 +63,9 @@ export function CodeBlock({
     return () => {
       cancelled = true
     }
-  }, [findQuery, optionRegex, text])
+  }, [markedText, text])
 
+  const html = highlighted?.source === markedText ? highlighted.html : fallbackHtml
   const highlightedNodes = useMemo(() => highlightedHtmlToReact(html), [html])
 
   const copy = async () => {

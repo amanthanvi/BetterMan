@@ -161,6 +161,7 @@ function ManPageView({
   const findInputDesktopRef = useRef<HTMLInputElement | null>(null)
   const findInputMobileRef = useRef<HTMLInputElement | null>(null)
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
+  const activeTocId = activeHeadingId ?? content.toc[0]?.id ?? null
   const [copiedLink, setCopiedLink] = useState(false)
   const copyTimeoutRef = useRef<number | null>(null)
 
@@ -200,8 +201,6 @@ function ManPageView({
   }, [])
 
   useEffect(() => {
-    setActiveHeadingId(content.toc[0]?.id ?? null)
-
     const ids = content.toc.map((t) => t.id).filter(Boolean)
     const els = ids
       .map((id) => document.getElementById(id))
@@ -446,7 +445,7 @@ function ManPageView({
                 </div>
 
                 <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
-                  <Toc items={content.toc} activeId={activeHeadingId} />
+                  <Toc items={content.toc} activeId={activeTocId} />
                 </div>
               </div>
             </div>
