@@ -1,9 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQuery } from '@tanstack/react-query'
 import { createRootRoute, Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 
-import { CommandPalette } from '../app/CommandPalette'
 import { ErrorBoundary } from '../app/ErrorBoundary'
 import { TocProvider, useToc } from '../app/toc'
 import { ThemeProvider, useTheme } from '../app/theme'
@@ -12,6 +11,10 @@ import { queryKeys } from '../api/queryKeys'
 import { formatRelativeTime } from '../lib/time'
 import { Toc } from '../man/Toc'
 import markUrl from '/betterman-mark.svg?url'
+
+const LazyCommandPalette = lazy(() =>
+  import('../app/CommandPalette').then((m) => ({ default: m.CommandPalette })),
+)
 
 function NotFound() {
   return (
@@ -229,7 +232,11 @@ function RootLayoutInner() {
       </header>
 
       <TocDrawer />
-      {paletteOpen ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
+      {paletteOpen ? (
+        <Suspense fallback={null}>
+          <LazyCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+        </Suspense>
+      ) : null}
 
       <main className="mx-auto max-w-6xl px-4 py-10">
         <ErrorBoundary key={routeKey}>
