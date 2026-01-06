@@ -74,22 +74,21 @@ function SectionPage() {
   const grouped = groupByLetter(results)
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-5xl">
       <header className="border-b border-[var(--bm-border)] pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Section {first.section} <span className="text-[color:var(--bm-muted)]">— {first.label}</span>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Section <span className="font-mono">{first.section}</span>{' '}
+          <span className="text-[color:var(--bm-muted)]">— {first.label}</span>
         </h1>
-        <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
-          {first.total.toLocaleString()} pages
-        </p>
+        <p className="mt-2 text-sm text-[color:var(--bm-muted)]">{first.total.toLocaleString()} pages</p>
       </header>
 
-      <div className="mt-6">
+      <div className="mt-6 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search within section…"
-          className="w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+          className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
           aria-label="Search within section"
         />
       </div>
@@ -109,12 +108,12 @@ function SectionPage() {
                   {searchQuery.data?.pages.flatMap((p) => p.results).map((r) => (
                     <li
                       key={`${r.name}:${r.section}`}
-                      className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3"
+                      className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm"
                     >
                       <Link
                         to="/man/$name/$section"
                         params={{ name: r.name, section: r.section }}
-                        className="font-semibold tracking-tight"
+                        className="font-mono text-base font-semibold tracking-tight"
                       >
                         {r.name}({r.section})
                       </Link>
@@ -123,7 +122,7 @@ function SectionPage() {
                   ))}
                 </ol>
               ) : (
-                <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+                <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
                   No results.
                 </div>
               )}
@@ -132,7 +131,7 @@ function SectionPage() {
                 <div className="mt-6">
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
+                    className="inline-flex items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
                     onClick={() => searchQuery.fetchNextPage()}
                     disabled={searchQuery.isFetchingNextPage}
                   >
@@ -147,16 +146,19 @@ function SectionPage() {
         <div className="mt-8 space-y-8">
           {grouped.map(([letter, items]) => (
             <section key={letter} aria-label={`Letter ${letter}`}>
-              <div className="sticky top-16 z-10 -mx-4 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] px-4 py-2 text-xs font-semibold text-[color:var(--bm-muted)] backdrop-blur">
+              <div className="sticky top-16 z-10 -mx-4 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] px-4 py-2 font-mono text-xs tracking-wide text-[color:var(--bm-muted)] backdrop-blur">
                 {letter}
               </div>
               <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {items.map((r) => (
-                  <li key={`${r.name}:${r.section}`} className="rounded border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3">
+                  <li
+                    key={`${r.name}:${r.section}`}
+                    className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm"
+                  >
                     <Link
                       to="/man/$name/$section"
                       params={{ name: r.name, section: r.section }}
-                      className="font-semibold tracking-tight"
+                      className="font-mono text-base font-semibold tracking-tight"
                     >
                       {r.name}({r.section})
                     </Link>
@@ -171,7 +173,7 @@ function SectionPage() {
             <div className="mt-2">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
+                className="inline-flex items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
                 onClick={() => browseQuery.fetchNextPage()}
                 disabled={browseQuery.isFetchingNextPage}
               >

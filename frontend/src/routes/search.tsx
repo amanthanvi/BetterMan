@@ -75,17 +75,22 @@ function SearchPage() {
   const suggestions = resultsQuery.data?.pages[0]?.suggestions ?? []
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
-          <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
-            Fast lookup across the current dataset.
-          </p>
+    <div className="mx-auto max-w-5xl">
+      <header className="flex flex-col gap-2 border-b border-[var(--bm-border)] pb-6">
+        <h1 className="text-3xl font-semibold tracking-tight">Search</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[color:var(--bm-muted)]">
+          <div>Fast lookup across the current dataset.</div>
+          {query.length ? (
+            <div className="font-mono text-xs">
+              {sectionFilter ? `section ${sectionFilter} · ` : ''}
+              {allResults.length.toLocaleString()} results loaded
+              {resultsQuery.hasNextPage ? '+' : ''}
+            </div>
+          ) : null}
         </div>
-      </div>
+      </header>
 
-      <div className="mt-6">
+      <div className="mt-6 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
         <div className="flex flex-wrap items-center gap-2">
           <input
             ref={inputRef}
@@ -106,7 +111,7 @@ function SearchPage() {
               }
             }}
             placeholder="Type a command…"
-            className="min-w-[16rem] flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="min-w-[16rem] flex-1 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Search man pages"
             autoFocus
           />
@@ -120,7 +125,7 @@ function SearchPage() {
                 replace: true,
               })
             }}
-            className="h-[2.5rem] rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="h-[3rem] rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Filter by section"
           >
             <option value="">All sections</option>
@@ -131,10 +136,17 @@ function SearchPage() {
             ))}
           </select>
         </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--bm-muted)]">
+          <span className="font-mono">Keys:</span>
+          <span className="font-mono">↑/↓</span> navigate
+          <span className="font-mono">j/k</span> navigate
+          <span className="font-mono">Esc</span> back to input
+        </div>
       </div>
 
       {query.length === 0 ? (
-        <div className="mt-8 rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+        <div className="mt-8 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
           Try <span className="font-medium text-[var(--bm-fg)]">tar</span>,{' '}
           <span className="font-medium text-[var(--bm-fg)]">ssh</span>, or{' '}
           <span className="font-medium text-[var(--bm-fg)]">systemd.unit</span>.
@@ -142,7 +154,7 @@ function SearchPage() {
       ) : resultsQuery.isLoading ? (
         <div className="mt-8 text-sm text-[color:var(--bm-muted)]">Searching…</div>
       ) : resultsQuery.isError ? (
-        <div className="mt-8 rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+        <div className="mt-8 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
           Search failed.{' '}
           <button
             type="button"
@@ -153,7 +165,7 @@ function SearchPage() {
           </button>
         </div>
       ) : allResults.length === 0 ? (
-        <div className="mt-8 rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+        <div className="mt-8 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
           No results.
             {suggestions.length ? (
               <>
@@ -213,7 +225,7 @@ function SearchPage() {
             <div className="mt-6">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.8]"
+                className="inline-flex items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
                 onClick={() => resultsQuery.fetchNextPage()}
                 disabled={resultsQuery.isFetchingNextPage}
               >
@@ -244,7 +256,7 @@ function SearchResultRow({
 }) {
   return (
     <li
-      className={`rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 ${
+      className={`rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm ${
         active ? 'ring-2 ring-[color:var(--bm-accent)/0.35]' : ''
       }`}
     >
@@ -254,7 +266,7 @@ function SearchResultRow({
             ref={bindRef}
             to="/man/$name/$section"
             params={{ name: result.name, section: result.section }}
-            className="font-semibold tracking-tight"
+            className="font-mono text-base font-semibold tracking-tight"
             onClick={() => recordRecentSearch(query)}
             onFocus={onFocus}
             onKeyDown={onKeyDown}
@@ -308,7 +320,7 @@ function HighlightText({ text }: { text: string }) {
         p.kind === 'mark' ? (
           <mark
             key={idx}
-            className="rounded bg-[color:var(--bm-accent)/0.18] px-1 py-0.5 text-[color:var(--bm-fg)]"
+            className="bm-mark bm-opt"
           >
             {p.value}
           </mark>
