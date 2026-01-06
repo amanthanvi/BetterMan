@@ -2,7 +2,7 @@
 
 Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 
-- Branch: `refresh` (commit + push frequently)
+- Branch: `main` (commit + push frequently)
 - Principle: small/medium diffs; no drive‑by refactors
 - Source of truth: `SPEC.md` (updated when reality changes)
 
