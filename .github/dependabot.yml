@@ -16,6 +16,7 @@ updates:
       time: "06:30"
       timezone: "Etc/UTC"
 
+  # Python (uv.lock)
   - package-ecosystem: "uv"
     directory: "/backend"
     schedule:
@@ -39,4 +40,3 @@ updates:
       day: "monday"
       time: "06:30"
       timezone: "Etc/UTC"
-
