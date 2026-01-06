@@ -10,12 +10,15 @@ on:
 permissions:
   actions: read
   contents: read
-  id-token: write
-  security-events: write
 
 jobs:
   scorecards:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      security-events: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
