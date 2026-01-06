@@ -1,78 +1,76 @@
-"""Alembic environment configuration for BetterMan."""
+# ruff: noqa: E402
 
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from alembic import context
-import os
+from __future__ import annotations
+
+import asyncio
 import sys
+from logging.config import fileConfig
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
-# Import models and configuration
-from src.models.postgres_models import Base
-from src.config import get_settings
+from alembic import context
 
-# this is the Alembic Config object
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.core.config import Settings
+
+# Ensure models are registered on the metadata.
+from app.db import models as _models  # noqa: F401
+from app.db.base import Base
+
 config = context.config
 
-# Interpret the config file for Python logging
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Add your model's MetaData object here for 'autogenerate' support
 target_metadata = Base.metadata
 
-# Get database URL from environment or settings
-settings = get_settings()
-database_url = os.environ.get('DATABASE_URL', settings.DATABASE_URL)
 
-# Handle Railway PostgreSQL URL format for psycopg3
-if database_url.startswith('postgresql://') and '+' not in database_url:
-    # Convert to psycopg3 format for SQLAlchemy
-    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://')
-
-config.set_main_option('sqlalchemy.url', database_url)
+def _get_database_url() -> str:
+    return Settings().database_url
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = _get_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    configuration = config.get_section(config.config_ini_section)
-    configuration['sqlalchemy.url'] = database_url
-    
-    connectable = engine_from_config(
+def do_run_migrations(connection) -> None:  # type: ignore[no-untyped-def]
+    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def run_migrations_online() -> None:
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = _get_database_url()
+
+    connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata
-        )
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
 
-        with context.begin_transaction():
-            context.run_migrations()
+    await connectable.dispose()
 
 
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    run_migrations_online()
+    asyncio.run(run_migrations_online())

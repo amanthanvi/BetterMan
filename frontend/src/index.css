@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bm-bg: #fbf7ef;
+    --bm-surface: #ffffff;
+    --bm-fg: #161616;
+    --bm-muted: #5f5b55;
+    --bm-border: #e8dfcf;
+
+    --bm-accent: #0f766e;
+    --bm-accent-contrast: #f6fffd;
+
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    background: var(--bm-bg);
+    color: var(--bm-fg);
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme]) {
+      --bm-bg: #0b0f12;
+      --bm-surface: #10171d;
+      --bm-fg: #e9e3d8;
+      --bm-muted: #9aa3ad;
+      --bm-border: #1d2a34;
+
+      --bm-accent: #2dd4bf;
+      --bm-accent-contrast: #052b25;
+
+      color-scheme: dark;
+    }
+  }
+
+  html[data-theme='dark'] {
+    --bm-bg: #0b0f12;
+    --bm-surface: #10171d;
+    --bm-fg: #e9e3d8;
+    --bm-muted: #9aa3ad;
+    --bm-border: #1d2a34;
+
+    --bm-accent: #2dd4bf;
+    --bm-accent-contrast: #052b25;
+
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    font-family:
+      'IBM Plex Sans',
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      sans-serif;
+    line-height: 1.55;
+  }
+
+  code,
+  pre {
+    font-family:
+      'IBM Plex Mono',
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      'Liberation Mono',
+      monospace;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--bm-accent) 35%, transparent);
+  }
+
+  .hljs {
+    background: transparent;
+    color: var(--bm-fg);
+  }
+
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--bm-muted);
+    font-style: italic;
+  }
+
+  .hljs-keyword,
+  .hljs-built_in,
+  .hljs-literal,
+  .hljs-symbol {
+    color: color-mix(in srgb, var(--bm-accent) 70%, var(--bm-fg));
+    font-weight: 600;
+  }
+
+  .hljs-string,
+  .hljs-title,
+  .hljs-attr {
+    color: color-mix(in srgb, var(--bm-accent) 35%, var(--bm-fg));
+  }
+
+  .bm-mark {
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.25rem;
+  }
+
+  .bm-opt {
+    background: color-mix(in srgb, var(--bm-accent) 18%, transparent);
+    color: var(--bm-fg);
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--bm-accent) 55%, transparent);
+  }
+
+  .bm-find {
+    background: rgba(253, 224, 71, 0.6);
+    color: var(--bm-fg);
+    box-shadow: inset 0 -1px 0 rgba(120, 113, 108, 0.55);
+  }
+
+  .bm-find-active {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--bm-accent) 45%, transparent),
+      inset 0 -1px 0 rgba(120, 113, 108, 0.55);
+  }
+}

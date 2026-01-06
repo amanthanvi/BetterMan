@@ -1,0 +1,21 @@
+# Contributing
+
+Thanks for contributing! This repo is bootstrapping from `SPEC.md`.
+
+## Rules of engagement
+
+- Keep diffs small/medium and scoped.
+- Update `SPEC.md` when behavior/API decisions change.
+- Prefer adding tests alongside bug fixes where practical.
+- Use Conventional Commits for PR titles and commit messages (e.g. `feat: …`, `fix: …`, `docs: …`).
+
+## How to contribute
+
+1. Open an issue (bug/feature) or start a discussion if you’re not sure yet.
+2. Fork + branch from `main`.
+3. Make focused changes with tests/docs where relevant.
+4. Open a PR. Please fill out the PR template.
+
+## Commands
+
+See `README.md` → “Golden commands”.

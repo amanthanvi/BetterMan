@@ -1,90 +1,99 @@
-name: CI
+name: ci
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
-  workflow_call:
+  push:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   frontend:
-    name: Frontend CI (Next.js)
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run linting
-        run: npm run lint
-      
-      - name: Type check
-        run: npm run type-check
-      
-      - name: Run tests
-        run: npm test -- --passWithNoTests
-      
-      - name: Build application
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
-          NEXT_PUBLIC_API_ENABLED: true
+          version: 10.27.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -C frontend lint
+      - run: pnpm -C frontend build
 
   backend:
-    name: Backend CI
     runs-on: ubuntu-latest
-    
-    services:
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-    
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
-      
-      - name: Install dependencies
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install black ruff
-      
-      - name: Format code
-        working-directory: backend
-        run: python -m black src/
-      
-      - name: Run linting
-        working-directory: backend
-        run: python -m ruff check src/ --fix
-      
-      - name: Run tests
-        working-directory: backend
-        run: |
-          python -m pytest tests/ -v --cov=src --cov-report=term-missing || echo "Tests passed with warnings"
+          python-version: 3.12
+
+      - run: pipx install uv
+      - run: cd backend && uv sync --frozen
+      - run: cd backend && uv run ruff check .
+      - run: cd backend && uv run ruff format --check .
+      - run: cd backend && uv run pytest
+
+  ingestion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - run: pipx install uv
+      - run: cd ingestion && uv sync --frozen
+      - run: cd ingestion && uv run ruff check .
+      - run: cd ingestion && uv run ruff format --check .
+      - run: cd ingestion && uv run python -m pytest
+
+  deploy_railway:
+    needs:
+      - frontend
+      - backend
+      - ingestion
+    if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy web (Railway)
         env:
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ADMIN_TOKEN: test-token
-          BACKEND_CORS_ORIGINS: '["http://localhost:3000"]'
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
+          RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
+          RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${RAILWAY_API_TOKEN:-}" ]]; then
+            echo "Missing RAILWAY_TOKEN GitHub Actions secret."
+            exit 1
+          fi
+
+          railway link \
+            --project "$RAILWAY_PROJECT_ID" \
+            --environment "$RAILWAY_ENVIRONMENT_ID" \
+            --service "$RAILWAY_SERVICE_ID"
+
+          railway up --ci \
+            --service "$RAILWAY_SERVICE_ID" \
+            --environment "$RAILWAY_ENVIRONMENT_ID"
