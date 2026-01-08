@@ -1,6 +1,6 @@
-# BetterMan — PLAN (v0.1.0)
+# BetterMan — PLAN (v0.1.2)
 
-Living execution plan for shipping `v0.1.0` from `SPEC.md`.
+Living execution plan for shipping `v0.1.2` from `SPEC.md`.
 
 - Branch: `main` (commit + push frequently)
 - Principle: small/medium diffs; no drive‑by refactors
@@ -9,6 +9,8 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 ## Status
 
 - [x] v0.1.0 shipped (tag `v0.1.0`)
+- [x] v0.1.1 shipped (tag `v0.1.1`)
+- [x] v0.1.2 shipped (tag `v0.1.2`)
 
 ## Golden Commands (kept current)
 
@@ -26,6 +28,25 @@ Living execution plan for shipping `v0.1.0` from `SPEC.md`.
 - `pnpm ingest:test`
 
 ## Milestones
+
+### M9 — Content coverage (dataset + sections) for v0.1.2
+
+- [x] Support extended man sections in URLs/API (e.g. `1ssl`, `3p`)
+- [x] Expand dataset substantially (staging ingest + promote to prod via `update-dataset`)
+- [x] Fix section labels (no duplicate `1 1: ...` rendering)
+- [x] Home page simplified (less visually busy)
+- [x] Tag `v0.1.2`
+
+### M8 — Frontend overhaul (design + perf) for v0.1.1
+
+- [x] Update `SPEC.md` v0.1.1 delta + acceptance criteria
+- [x] New visual system (tokens, typography, motion) + self-hosted fonts
+- [x] Layout refresh: header/footer, spacing, navigation affordances
+- [x] “User-friendly” info surfaces (dataset freshness, page counts, metadata)
+- [x] Man page “Navigator” rail: sticky TOC + sticky Find + quick jumps + scroll-spy
+- [x] Performance: route-level code splitting + lazy highlight.js + debounced Find highlighting
+- [x] Validate: `pnpm frontend:lint` + `pnpm frontend:build`
+- [x] Tag `v0.1.1`
 
 ### M0 — Repo scaffold + dev loop
 

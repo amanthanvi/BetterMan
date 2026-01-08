@@ -26,7 +26,7 @@ export function DocRenderer({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {blocks.map((block, idx) => (
         <BlockView key={blockKey(block, idx)} block={block} ctx={ctx} />
       ))}
@@ -48,7 +48,7 @@ function BlockView({ block, ctx }: { block: BlockNode; ctx: HighlightCtx }) {
       return (
         <Tag
           id={block.id}
-          className="scroll-mt-32 pt-6 text-[color:var(--bm-fg)] first:pt-0 data-[level=2]:text-xl data-[level=2]:font-semibold data-[level=3]:text-lg data-[level=3]:font-semibold data-[level=4]:text-base data-[level=4]:font-semibold"
+          className="scroll-mt-32 pt-8 text-[color:var(--bm-fg)] first:pt-0 data-[level=2]:text-2xl data-[level=2]:font-semibold data-[level=2]:tracking-tight data-[level=3]:text-xl data-[level=3]:font-semibold data-[level=3]:tracking-tight data-[level=4]:text-base data-[level=4]:font-semibold"
           data-level={level}
         >
           <a href={`#${block.id}`} className="no-underline hover:underline">
@@ -60,7 +60,7 @@ function BlockView({ block, ctx }: { block: BlockNode; ctx: HighlightCtx }) {
 
     case 'paragraph':
       return (
-        <p className="text-sm leading-7 text-[color:var(--bm-fg)]">
+        <p className="text-[15px] leading-8 text-[color:var(--bm-fg)]">
           {renderInlines(block.inlines, ctx)}
         </p>
       )
@@ -69,7 +69,7 @@ function BlockView({ block, ctx }: { block: BlockNode; ctx: HighlightCtx }) {
       const ListTag = (block.ordered ? 'ol' : 'ul') as 'ul'
       return (
         <ListTag
-          className={`ml-6 space-y-2 text-sm leading-7 text-[color:var(--bm-fg)] ${
+          className={`ml-6 space-y-2 text-[15px] leading-8 text-[color:var(--bm-fg)] ${
             block.ordered ? 'list-decimal' : 'list-disc'
           }`}
         >
@@ -97,7 +97,7 @@ function BlockView({ block, ctx }: { block: BlockNode; ctx: HighlightCtx }) {
               >
                 {renderInlines(item.termInlines, ctx)}
               </dt>
-              <dd className="mt-2 space-y-2 pl-4 text-sm text-[color:var(--bm-muted)]">
+              <dd className="mt-2 space-y-2 pl-4 text-[15px] leading-8 text-[color:var(--bm-fg)]">
                 {item.definitionBlocks.map((child, childIdx) => (
                   <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} />
                 ))}
@@ -119,8 +119,8 @@ function BlockView({ block, ctx }: { block: BlockNode; ctx: HighlightCtx }) {
 
     case 'table':
       return (
-        <div className="overflow-x-auto rounded-lg border border-[var(--bm-border)]">
-          <table className="w-full border-collapse text-left text-sm">
+        <div className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] shadow-sm">
+          <table className="w-full border-collapse text-left text-[15px]">
             <thead className="bg-[color:var(--bm-bg)/0.7] text-[color:var(--bm-muted)]">
               <tr>
                 {block.headers.map((h, idx) => (
