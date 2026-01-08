@@ -26,3 +26,5 @@ class Settings(BaseSettings):
 
     serve_frontend: bool = True
     frontend_dist_dir: str = "../frontend/dist"
+
+    csp_enabled: bool = True

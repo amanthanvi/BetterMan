@@ -73,11 +73,11 @@ Goal: **type-safety with minimal churn / risk** (preserve current response shape
 
 ### M14 — Security hardening (CSP nonces + rate limit fallback)
 
-- [ ] Implement per-request CSP nonces in FastAPI middleware
-- [ ] Inject nonce into SPA HTML response (server-served `index.html`)
-- [ ] Remove `'unsafe-inline'` from CSP:
+- [x] Implement per-request CSP nonces in FastAPI middleware
+- [x] Inject nonce into SPA HTML response (server-served `index.html`)
+- [x] Remove `'unsafe-inline'` from CSP:
   - remove React `style={{…}}` usage (e.g., `frontend/src/man/Toc.tsx`) and any other inline-style usage
-- [ ] Implement in-memory rate limit fallback when Redis is unavailable (per-process), with tests
+- [x] Implement in-memory rate limit fallback when Redis is unavailable (per-process), with tests
 
 ### M15 — Performance + caching
 

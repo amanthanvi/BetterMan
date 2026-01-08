@@ -1409,6 +1409,9 @@ Benefits:
 -   Per-request nonces prevent replay attacks
 -   Aligns with modern CSP best practices
 
+Rollback:
+-   Set `CSP_ENABLED=false` to disable CSP header injection (emergency only)
+
 ## Input Validation (v0.2.0)
 
 **Decision:** Enable Pydantic v2 strict mode on all request models.
@@ -2227,7 +2230,7 @@ Each phase can be rolled back independently:
 
 -   **Testing:** Remove test files; no production impact
 -   **Type generation:** Revert to manual types; no runtime change
--   **CSP nonces:** Revert to previous CSP policy via env var
+-   **CSP nonces:** Set `CSP_ENABLED=false` (emergency only)
 -   **Virtualization:** Disable via feature flag; fall back to full render
 -   **UX features:** Disable via feature flags if needed
 

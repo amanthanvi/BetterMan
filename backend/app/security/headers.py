@@ -10,7 +10,7 @@ def generate_csp_nonce() -> str:
     return secrets.token_urlsafe(16)
 
 
-def build_csp(*, nonce: str) -> str:
+def build_csp(*, nonce: str, upgrade_insecure_requests: bool = False) -> str:
     # Keep this strict: no inline scripts, no external CDNs.
     directives = [
         "default-src 'self'",
@@ -23,6 +23,8 @@ def build_csp(*, nonce: str) -> str:
         "font-src 'self'",
         "connect-src 'self'",
     ]
+    if upgrade_insecure_requests:
+        directives.append("upgrade-insecure-requests")
     return "; ".join(directives)
 
 
@@ -45,18 +47,21 @@ def _get_header(headers: list[tuple[bytes, bytes]], key: bytes) -> bytes | None:
 
 
 class SecurityHeadersMiddleware:
-    def __init__(self, app: ASGIApp, *, env: str):
+    def __init__(self, app: ASGIApp, *, env: str, csp_enabled: bool = True):
         self._app = app
         self._env = env
+        self._csp_enabled = csp_enabled
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self._app(scope, receive, send)
             return
 
-        nonce = generate_csp_nonce()
-        scope["csp_nonce"] = nonce
-        scope.setdefault("state", {})["csp_nonce"] = nonce
+        nonce: str | None = None
+        if self._csp_enabled:
+            nonce = generate_csp_nonce()
+            scope["csp_nonce"] = nonce
+            scope.setdefault("state", {})["csp_nonce"] = nonce
 
         async def send_wrapper(message: Message) -> None:
             if message["type"] != "http.response.start":
@@ -83,13 +88,18 @@ class SecurityHeadersMiddleware:
 
             content_type = _get_header(headers, b"content-type") or b""
             path = scope.get("path", "")
-            if b"text/html" in content_type and not path.startswith(
-                ("/docs", "/redoc", "/openapi")
+            if (
+                nonce is not None
+                and b"text/html" in content_type
+                and not path.startswith(("/docs", "/redoc", "/openapi"))
             ):
                 _setdefault_header(
                     headers,
                     b"content-security-policy",
-                    build_csp(nonce=nonce).encode("utf-8"),
+                    build_csp(
+                        nonce=nonce,
+                        upgrade_insecure_requests=self._env == "prod",
+                    ).encode("utf-8"),
                 )
 
             await send(message)

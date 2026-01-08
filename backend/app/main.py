@@ -52,7 +52,11 @@ def create_app() -> FastAPI:
     app.state.db_sessionmaker = create_session_maker(db_engine)
     app.state.redis = redis
 
-    app.add_middleware(SecurityHeadersMiddleware, env=settings.env)
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        env=settings.env,
+        csp_enabled=settings.csp_enabled,
+    )
 
     if settings.allow_cors_origins:
         app.add_middleware(
