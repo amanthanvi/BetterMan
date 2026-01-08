@@ -337,7 +337,7 @@ def _xref_to_href(label: str) -> tuple[str | None, str]:
     section = match.group("section").strip().lower()
     if not name:
         return None, "internal"
-    if re.fullmatch(r"[1-9]", section):
+    if re.fullmatch(r"[1-9][a-z0-9]*", section):
         return f"/man/{name}/{section}", "internal"
     return f"/man/{name}", "internal"
 
@@ -419,7 +419,7 @@ def _extract_see_also(manual_text: Tag) -> list[SeeAlsoRef] | None:
         sec = match.group("section").strip().lower()
         if not name:
             continue
-        if not re.fullmatch(r"[1-9]", sec):
+        if not re.fullmatch(r"[1-9][a-z0-9]*", sec):
             sec = ""
         refs.append(SeeAlsoRef(name=name, section=sec or None))
 
