@@ -1,9 +1,9 @@
-# BetterMan — PLAN (v0.1.2)
+# BetterMan — PLAN (v0.2.0)
 
-Living execution plan for shipping `v0.1.2` from `SPEC.md`.
+Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 
-- Branch: `main` (commit + push frequently)
-- Principle: small/medium diffs; no drive‑by refactors
+- Branch: `main` (small/medium diffs; commit + push frequently)
+- Principle: fix root causes; no drive‑by refactors
 - Source of truth: `SPEC.md` (updated when reality changes)
 
 ## Status
@@ -11,8 +11,9 @@ Living execution plan for shipping `v0.1.2` from `SPEC.md`.
 - [x] v0.1.0 shipped (tag `v0.1.0`)
 - [x] v0.1.1 shipped (tag `v0.1.1`)
 - [x] v0.1.2 shipped (tag `v0.1.2`)
+- [ ] v0.2.0 shipped (tag `v0.2.0`)
 
-## Golden Commands (kept current)
+## Golden Commands (current; proven)
 
 - `pnpm db:up`
 - `pnpm db:down`
@@ -27,101 +28,69 @@ Living execution plan for shipping `v0.1.2` from `SPEC.md`.
 - `pnpm ingest:lint`
 - `pnpm ingest:test`
 
-## Milestones
+## Milestones (v0.2.0)
 
-### M9 — Content coverage (dataset + sections) for v0.1.2
+### M10 — Docs alignment + planning
 
-- [x] Support extended man sections in URLs/API (e.g. `1ssl`, `3p`)
-- [x] Expand dataset substantially (staging ingest + promote to prod via `update-dataset`)
-- [x] Fix section labels (no duplicate `1 1: ...` rendering)
-- [x] Home page simplified (less visually busy)
-- [x] Tag `v0.1.2`
+- [x] Update `SPEC.md` runtime versions to match repo/CI/Docker (Node 25, Python 3.14)
+- [ ] Keep `README.md` / `SECURITY.md` / `CONTRIBUTING.md` current as new scripts + checks land
 
-### M8 — Frontend overhaul (design + perf) for v0.1.1
+### M11 — Frontend unit tests (Vitest + Testing Library)
 
-- [x] Update `SPEC.md` v0.1.1 delta + acceptance criteria
-- [x] New visual system (tokens, typography, motion) + self-hosted fonts
-- [x] Layout refresh: header/footer, spacing, navigation affordances
-- [x] “User-friendly” info surfaces (dataset freshness, page counts, metadata)
-- [x] Man page “Navigator” rail: sticky TOC + sticky Find + quick jumps + scroll-spy
-- [x] Performance: route-level code splitting + lazy highlight.js + debounced Find highlighting
-- [x] Validate: `pnpm frontend:lint` + `pnpm frontend:build`
-- [x] Tag `v0.1.1`
+- [ ] Add Vitest + Testing Library + jsdom config under `frontend/`
+- [ ] Add `frontend` test scripts (then wire into root `pnpm` scripts)
+- [ ] Add initial tests for the highest-risk UI logic:
+  - TOC keyboard navigation + active-state behavior
+  - Find-in-page highlighting + next/prev navigation logic
+  - URL/section normalization edge cases
+- [ ] Update `.github/workflows/ci.yml` to run frontend unit tests
 
-### M0 — Repo scaffold + dev loop
+### M12 — E2E + accessibility (Playwright + axe-core)
 
-- [x] Monorepo layout per `SPEC.md` Section 18
-- [x] `README.md` (setup + golden commands)
-- [x] `CONTRIBUTING.md`
-- [x] `docker-compose.yml` for Postgres + Redis
-- [x] Baseline CI (`.github/workflows/ci.yml`)
+- [ ] Add Playwright project under `frontend/e2e/`
+- [ ] Add minimal deterministic E2E seed dataset (small DB seed) for CI
+- [ ] Implement 10–15 “critical flow” E2E tests per `SPEC.md`:
+  - Home → Search → Page
+  - Command palette search → open result
+  - TOC navigation + scroll-spy
+  - Find-in-page
+  - Missing page UX
+  - Theme persistence
+- [ ] Add axe-core checks; fail CI on critical + serious violations
+- [ ] Update `.github/workflows/ci.yml` to run E2E + a11y checks
 
-### M1 — Backend foundation (FastAPI + DB)
+### M13 — API contract: OpenAPI quality + TypeScript type generation
 
-- [x] FastAPI app skeleton (health, error envelope, request ids)
-- [x] SQLAlchemy models + Alembic migrations for Section 14 tables
-- [x] Postgres extensions (`pg_trgm`)
-- [x] Rate limiting (Redis) + abuse guards (Section 11)
-- [x] Static asset serving + SPA fallback (single deployable service)
+Goal: **type-safety with minimal churn / risk** (preserve current response shapes; avoid downtime).
 
-### M2 — Ingestion pipeline (Debian stable → DB)
+- [ ] Add Pydantic response models for all public endpoints (match existing JSON keys)
+- [ ] Make OpenAPI stable + useful (examples where needed)
+- [ ] Generate OpenAPI JSON during CI
+- [ ] Generate TypeScript types from OpenAPI (lowest-risk approach):
+  - Generate `paths` types via `openapi-typescript`
+  - Export stable named aliases used by the app (so `frontend/src/api/client.ts` churn stays small)
+  - Update `SPEC.md` if the exact generated file name differs from the current “`types.ts` is generated” wording
+- [ ] CI check: fail if generated types are out of date
 
-- [x] Debian stable container-based ingestion runner (Section 9/10)
-- [x] `mandoc` render → safe internal document model JSON (no raw HTML)
-- [x] Extract metadata: title/description/TOC/options/see_also/plain_text
-- [x] Validation thresholds:
-  - [x] publish allowed if `success_rate >= 80%` and `hard_fail_rate <= 2%`
-  - [x] `has_parse_warnings` captured but does not block publish
-- [x] Dataset releases: staging-first flow (Section 18)
-- [x] Golden/contract tests for parsing + link resolution (Section 19)
+### M14 — Security hardening (CSP nonces + rate limit fallback)
 
-### M3 — Core API (read-only) + search
+- [ ] Implement per-request CSP nonces in FastAPI middleware
+- [ ] Inject nonce into SPA HTML response (server-served `index.html`)
+- [ ] Remove `'unsafe-inline'` from CSP:
+  - remove React `style={{…}}` usage (e.g., `frontend/src/man/Toc.tsx`) and any other inline-style usage
+- [ ] Implement in-memory rate limit fallback when Redis is unavailable (per-process), with tests
 
-- [x] `GET /api/v1/info`
-- [x] `GET /api/v1/man/{name}` (409 ambiguous)
-- [x] `GET /api/v1/man/{name}/{section}`
-- [x] `GET /api/v1/man/{name}/{section}/related`
-- [x] `GET /api/v1/search` (FTS + trigram; ranking rules Section 11)
-- [x] `GET /api/v1/sections`
-- [x] `GET /api/v1/section/{section}`
-- [x] HTTP caching (ETag + Cache-Control) keyed to dataset release
-- [x] Security headers (CSP etc.)
+### M15 — Performance + caching
 
-### M4 — Frontend UX (SPA)
+- [ ] TanStack Virtual for large man pages (100+ blocks threshold), preserving anchors + deep links
+- [ ] highlight.js optimization: lazy-load only common languages (bash, shell, python, c, makefile)
+- [ ] Bundle size visibility in CI (warn-only; does not block merges)
+- [ ] Granular ETags for man endpoints: `content_sha256 + dataset_release_id`
 
-- [x] Vite + React + TS SPA
-- [x] Routing + layouts per Section 6 URL scheme
-- [x] Search results UX (20 + load more), empty/no-results states
-- [x] Man page view: TOC + anchored headings + typography
-- [x] Disambiguation interstitial for `/man/{name}`
-- [x] Section browse UX (A–Z groups + search-within-section)
-- [x] Missing page UX w/ suggestions
-- [x] Search page filters (section dropdown)
+### M16 — UX polish + architecture + release
 
-### M5 — Power features + a11y
-
-- [x] Command palette (Cmd/Ctrl+K) + recent history
-- [x] Keyboard-first UX + focus management (WCAG 2.2 AA baseline)
-- [x] Syntax highlighting + copy-to-clipboard for code blocks
-- [x] Custom in-page search with highlights + next/prev
-- [x] Option highlighting (interactive) with accessible styling
-- [x] Search results list keyboard nav (j/k + Enter; Esc refocus)
-- [x] Related panel collapsible (5 default, expand)
-
-### M6 — Licenses + production hardening
-
-- [x] `/licenses` UI route
-- [x] Package manifest storage + license/copyright text storage
-- [x] Logging redaction policy
-- [x] Backups/restore runbook
-- [x] Runbooks (top 5 incidents) captured in `docs/runbooks/`
-
-### M7 — CI/CD + release
-
-- [x] `.github/workflows/ci.yml` (lint/test/build for FE/BE/ingestion)
-- [x] `.github/workflows/codeql.yml` (CodeQL code scanning)
-- [x] `.github/workflows/scorecards.yml` (OSSF Scorecards)
-- [x] `.github/workflows/deploy.yml` (staging → promote) *(scaffold)*
-- [x] `.github/workflows/update-docs.yml` (monthly ingestion staging → validate → promote)
-- [x] `.github/dependabot.yml` (dependency update PRs)
-- [x] Tag `v0.1.0`
+- [ ] Find-in-page keybindings: Enter → next match, Shift+Enter → previous (desktop + mobile)
+- [ ] Print styles (`@media print`) hide navigation, preserve content layout
+- [ ] Decompose man page view into components + extract domain hooks (keep behavior identical; add tests)
+- [ ] CI green on `main` (including deploy-to-Railway workflow); verify Railway deploy is healthy
+- [ ] Update docs + bump version strings; tag `v0.2.0`

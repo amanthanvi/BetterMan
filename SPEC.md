@@ -926,7 +926,7 @@ flowchart LR
 ## Frontend Architecture
 
 **Stack Decisions:**
--   **Runtime:** Node 20 LTS
+-   **Runtime:** Node 25
 -   **Build Tool:** Vite
 -   **Framework:** React + TypeScript SPA
 -   **Router:** TanStack Router (type-safe routing with excellent TypeScript integration)
@@ -981,7 +981,7 @@ Extract data fetching and state logic into reusable hooks:
 ## Backend Architecture
 
 **Stack Decisions:**
--   **Runtime:** Python 3.12
+-   **Runtime:** Python 3.14
 -   **Framework:** FastAPI
 -   **Database Access:** SQLAlchemy 2.0 ORM (full ORM with type hints, async support)
 -   **Migrations:** Alembic
@@ -2109,7 +2109,7 @@ All open questions have been resolved through the interview process:
 -   Linting: **ESLint**
 -   Testing (v0.2.0): **Vitest + Testing Library** (unit), **Playwright** (E2E), **axe-core** (a11y)
 -   Virtualization (v0.2.0): **TanStack Virtual** (100+ blocks threshold)
--   Runtime: **Node 20 LTS**
+-   Runtime: **Node 25**
 
 ### Backend Stack
 -   Framework: **FastAPI**
@@ -2117,7 +2117,7 @@ All open questions have been resolved through the interview process:
 -   Migrations: **Alembic**
 -   Testing: **pytest + httpx**
 -   Validation (v0.2.0): **Pydantic v2 strict mode** on request models
--   Runtime: **Python 3.12**
+-   Runtime: **Python 3.14**
 
 ### Key Feature Decisions
 -   Option highlighting: **Yes, in v0.1.0**
