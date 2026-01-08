@@ -3,7 +3,7 @@
 FROM node:25-bookworm-slim AS frontend-build
 WORKDIR /app
 
-RUN corepack enable
+RUN npm install -g pnpm@10.27.0
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json frontend/package.json
