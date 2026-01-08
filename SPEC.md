@@ -1070,8 +1070,10 @@ Base path:
 **Decision:** Generate TypeScript types from OpenAPI spec.
 
 -   **Library:** `openapi-typescript` - lightweight, generates clean TypeScript types
--   **Timing:** Generate types during CI build step, commit to repo
--   **Output:** `frontend/src/api/types.ts` - auto-generated, do not edit manually
+-   **Timing:** Generate types during CI, fail if the generated output is out of date
+-   **Outputs:**
+    -   `frontend/src/api/openapi.gen.ts` — auto-generated (committed), do not edit manually
+    -   `frontend/src/api/types.ts` — stable named aliases used by the app (thin wrapper around `openapi.gen.ts`)
 -   **Benefit:** Zero runtime type errors from API mismatches
 
 ## Endpoint List (High-level)
@@ -1628,7 +1630,7 @@ Staging and prod must be isolated:
 -   Build backend (container build or artifact)
 -   Dependency review for PRs (block vulnerable dependency additions)
 -   **Bundle size reporting (v0.2.0):** Comment on PR with size diff
--   **Generate API types (v0.2.0):** Run openapi-typescript, commit if changed
+-   **API contract check (v0.2.0):** Export OpenAPI + run openapi-typescript; fail if generated types differ
 
 ### `codeql.yml` (code scanning)
 
@@ -1702,7 +1704,8 @@ Staging and prod must be isolated:
 ├── frontend/           # React SPA
 │   ├── src/
 │   │   ├── api/
-│   │   │   └── types.ts    # Auto-generated from OpenAPI (v0.2.0)
+│   │   │   ├── openapi.gen.ts  # Auto-generated from OpenAPI (v0.2.0)
+│   │   │   └── types.ts        # Stable aliases used by app
 │   │   ├── components/
 │   │   │   ├── ManPageView/
 │   │   │   │   ├── ManPageView.tsx

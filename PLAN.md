@@ -62,14 +62,14 @@ Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 
 Goal: **type-safety with minimal churn / risk** (preserve current response shapes; avoid downtime).
 
-- [ ] Add Pydantic response models for all public endpoints (match existing JSON keys)
-- [ ] Make OpenAPI stable + useful (examples where needed)
-- [ ] Generate OpenAPI JSON during CI
-- [ ] Generate TypeScript types from OpenAPI (lowest-risk approach):
+- [x] Add Pydantic response models for all public endpoints (match existing JSON keys)
+- [x] Make OpenAPI stable + useful (discriminated unions for doc model)
+- [x] Generate OpenAPI JSON during CI
+- [x] Generate TypeScript types from OpenAPI (lowest-risk approach):
   - Generate `paths` types via `openapi-typescript`
   - Export stable named aliases used by the app (so `frontend/src/api/client.ts` churn stays small)
-  - Update `SPEC.md` if the exact generated file name differs from the current “`types.ts` is generated” wording
-- [ ] CI check: fail if generated types are out of date
+  - Update `SPEC.md` for `openapi.gen.ts` output + `types.ts` alias layer
+- [x] CI check: fail if generated types are out of date
 
 ### M14 — Security hardening (CSP nonces + rate limit fallback)
 

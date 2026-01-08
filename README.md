@@ -33,9 +33,10 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 ## Security / Quality (CI)
 
-- Required PR checks for `main`: `frontend`, `backend`, `ingestion`, `dependency_review`.
+- Required PR checks for `main`: `dependency_review`, `frontend`, `backend`, `ingestion`, `api_types`, `e2e`.
 - Code scanning: `.github/workflows/codeql.yml` (CodeQL) + `.github/workflows/scorecards.yml` (OSSF Scorecards → SARIF).
 - Dependency updates: `.github/dependabot.yml` (GitHub Actions, frontend npm, backend/ingestion uv, Dockerfile base images).
+- API contract: `frontend/src/api/openapi.gen.ts` is generated from backend OpenAPI and enforced in CI.
 
 ## UX notes
 
