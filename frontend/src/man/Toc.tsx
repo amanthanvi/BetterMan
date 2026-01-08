@@ -2,10 +2,12 @@ import type { TocItem } from '../api/types'
 
 export function Toc({
   items,
+  activeId,
   onNavigate,
   showTitle = true,
 }: {
   items: TocItem[]
+  activeId?: string | null
   onNavigate?: () => void
   showTitle?: boolean
 }) {
@@ -27,7 +29,7 @@ export function Toc({
       }}
     >
       {showTitle ? (
-        <div className="text-xs font-medium uppercase tracking-wider text-[color:var(--bm-muted)]">
+        <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">
           On this page
         </div>
       ) : null}
@@ -37,10 +39,22 @@ export function Toc({
             <a
               href={`#${item.id}`}
               onClick={() => onNavigate?.()}
-              className="block rounded px-2 py-1 no-underline hover:bg-[color:var(--bm-surface)/0.8] hover:text-[color:var(--bm-fg)]"
+              className={`group block rounded-xl px-2 py-1.5 no-underline transition ${
+                activeId === item.id
+                  ? 'bg-[color:var(--bm-accent)/0.12] text-[color:var(--bm-fg)]'
+                  : 'hover:bg-[color:var(--bm-bg)/0.5] hover:text-[color:var(--bm-fg)]'
+              }`}
               style={{ paddingLeft: `${Math.min(5, Math.max(0, item.level - 2)) * 0.75 + 0.5}rem` }}
             >
-              {item.title.length > 44 ? `${item.title.slice(0, 44)}…` : item.title}
+              <span className="inline-flex items-baseline gap-2">
+                <span
+                  aria-hidden="true"
+                  className={`h-[0.55rem] w-[0.35rem] rounded-full border border-[var(--bm-border)] ${
+                    activeId === item.id ? 'bg-[var(--bm-accent)]' : 'bg-[color:var(--bm-bg)/0.4] opacity-0 group-hover:opacity-100'
+                  }`}
+                />
+                <span>{item.title.length > 44 ? `${item.title.slice(0, 44)}…` : item.title}</span>
+              </span>
             </a>
           </li>
         ))}

@@ -20,10 +20,13 @@ from ingestion.doc_model import OptionItem, SeeAlsoRef
 from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import render_html
 from ingestion.mandoc_parser import parse_mandoc_html
+from ingestion.package_set import FULL_PACKAGE_SET
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+\\-]*$")
-_MAN_HREF_RE = re.compile(r"^/man/(?P<name>[a-z0-9][a-z0-9._+\\-]*)(?:/(?P<section>[1-9]))?$")
+_MAN_HREF_RE = re.compile(
+    r"^/man/(?P<name>[a-z0-9][a-z0-9._+\\-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
+)
 
 
 @dataclass(frozen=True)
@@ -353,33 +356,14 @@ def _content_packages(*, sample: bool) -> list[str]:
             "tar",
         ]
 
-    return [
-        *base,
-        "manpages",
-        "bash",
-        "coreutils",
-        "util-linux",
-        "findutils",
-        "grep",
-        "sed",
-        "gawk",
-        "curl",
-        "wget",
-        "openssh-client",
-        "rsync",
-        "netcat-openbsd",
-        "systemd",
-        "vim",
-        "less",
-        "git",
-        "make",
-        "gcc",
-        "gdb",
-        "nginx",
-        "apache2",
-        "postgresql-client",
-        "default-mysql-client",
-    ]
+    out: list[str] = []
+    seen: set[str] = set()
+    for pkg in [*base, *FULL_PACKAGE_SET]:
+        if pkg in seen:
+            continue
+        seen.add(pkg)
+        out.append(pkg)
+    return out
 
 
 def _parse_man_href(href: str) -> tuple[str, str | None] | None:
