@@ -9,6 +9,7 @@
 		"lint": "eslint .",
 		"test": "vitest run --config vitest.config.ts",
 		"test:watch": "vitest --config vitest.config.ts",
+		"e2e": "playwright test --config playwright.config.ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {
@@ -23,7 +24,9 @@
 		"tailwindcss": "^4.1.18"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.11.0",
 		"@eslint/js": "^9.39.1",
+		"@playwright/test": "^1.57.0",
 		"@tanstack/react-query-devtools": "^5.91.2",
 		"@tanstack/router-devtools": "^1.145.7",
 		"@testing-library/jest-dom": "^6.9.1",

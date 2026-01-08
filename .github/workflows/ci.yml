@@ -76,11 +76,98 @@ jobs:
       - run: cd ingestion && uv run ruff format --check .
       - run: cd ingestion && uv run python -m pytest
 
+  e2e:
+    needs:
+      - frontend
+      - backend
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: betterman
+          POSTGRES_PASSWORD: betterman
+          POSTGRES_DB: betterman
+        ports:
+          - 54320:5432
+        options: >-
+          --health-cmd="pg_isready -U betterman -d betterman"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        with:
+          version: 10.27.0
+
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v4
+        with:
+          node-version: 25
+          cache: pnpm
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v5
+        with:
+          python-version: 3.14
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm -C frontend exec playwright install --with-deps chromium
+
+      - run: pipx install uv
+      - run: cd backend && uv sync --frozen
+
+      - name: Migrate + seed DB
+        env:
+          BETTERMAN_E2E_SEED: "1"
+        run: |
+          set -euo pipefail
+          cd backend
+          uv run python -m app.db.migrate
+          uv run python scripts/seed_e2e.py
+
+      - name: Start backend (serves SPA + API)
+        run: |
+          set -euo pipefail
+
+          pnpm -C frontend build
+
+          cd backend
+          nohup uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/betterman-e2e.log 2>&1 &
+
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Timed out waiting for backend"
+          tail -n 200 /tmp/betterman-e2e.log || true
+          exit 1
+
+      - name: Run Playwright E2E + a11y
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        run: pnpm -C frontend e2e
+
   deploy_railway:
     needs:
       - frontend
       - backend
       - ingestion
+      - e2e
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     steps:

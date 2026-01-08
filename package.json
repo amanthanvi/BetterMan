@@ -8,6 +8,7 @@
 		"frontend:build": "pnpm -C frontend build",
 		"frontend:lint": "pnpm -C frontend lint",
 		"frontend:test": "pnpm -C frontend test",
+		"frontend:e2e": "pnpm -C frontend e2e",
 		"backend:dev": "cd backend && uv run uvicorn app.main:app --reload --port 8000",
 		"backend:test": "cd backend && uv run pytest",
 		"backend:lint": "cd backend && uv run ruff check . && uv run ruff format --check .",

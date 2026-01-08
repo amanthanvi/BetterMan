@@ -37,27 +37,26 @@ Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 
 ### M11 — Frontend unit tests (Vitest + Testing Library)
 
-- [ ] Add Vitest + Testing Library + jsdom config under `frontend/`
-- [ ] Add `frontend` test scripts (then wire into root `pnpm` scripts)
-- [ ] Add initial tests for the highest-risk UI logic:
+- [x] Add Vitest + Testing Library + jsdom config under `frontend/`
+- [x] Add `frontend` test scripts (then wire into root `pnpm` scripts)
+- [x] Add initial tests for the highest-risk UI logic:
   - TOC keyboard navigation + active-state behavior
   - Find-in-page highlighting + next/prev navigation logic
-  - URL/section normalization edge cases
-- [ ] Update `.github/workflows/ci.yml` to run frontend unit tests
+- [x] Update `.github/workflows/ci.yml` to run frontend unit tests
 
 ### M12 — E2E + accessibility (Playwright + axe-core)
 
-- [ ] Add Playwright project under `frontend/e2e/`
-- [ ] Add minimal deterministic E2E seed dataset (small DB seed) for CI
-- [ ] Implement 10–15 “critical flow” E2E tests per `SPEC.md`:
+- [x] Add Playwright project under `frontend/e2e/`
+- [x] Add minimal deterministic E2E seed dataset (small DB seed) for CI
+- [x] Implement 10–15 “critical flow” E2E tests per `SPEC.md`:
   - Home → Search → Page
   - Command palette search → open result
   - TOC navigation + scroll-spy
   - Find-in-page
   - Missing page UX
   - Theme persistence
-- [ ] Add axe-core checks; fail CI on critical + serious violations
-- [ ] Update `.github/workflows/ci.yml` to run E2E + a11y checks
+- [x] Add axe-core checks; fail CI on critical + serious violations
+- [x] Update `.github/workflows/ci.yml` to run E2E + a11y checks
 
 ### M13 — API contract: OpenAPI quality + TypeScript type generation
 
