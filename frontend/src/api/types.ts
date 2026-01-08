@@ -1,150 +1,34 @@
-export type ApiErrorEnvelope = {
-  error: {
-    code: string
-    message: string
-  }
-}
+import type { components } from './openapi.gen'
 
-export type InfoResponse = {
-  datasetReleaseId: string
-  locale: string
-  pageCount: number
-  lastUpdated: string
-}
+type Schemas = components['schemas']
 
-export type SearchResult = {
-  name: string
-  section: string
-  title: string
-  description: string
-  highlights: string[]
-}
+export type ApiErrorEnvelope = { error: Schemas['ErrorDetail'] }
 
-export type SearchResponse = {
-  query: string
-  results: SearchResult[]
-  suggestions: string[]
-}
+export type InfoResponse = Schemas['InfoResponse']
 
-export type SectionLabel = {
-  section: string
-  label: string
-}
+export type SearchResult = Schemas['SearchResult']
+export type SearchResponse = Schemas['SearchResponse']
 
-export type SectionPage = {
-  name: string
-  section: string
-  title: string
-  description: string
-}
+export type SectionLabel = Schemas['SectionLabel']
+export type SectionPage = Schemas['SectionPage']
+export type SectionResponse = Schemas['SectionResponse']
 
-export type SectionResponse = {
-  section: string
-  label: string
-  limit: number
-  offset: number
-  total: number
-  results: SectionPage[]
-}
+export type LicensePackage = Schemas['LicensePackage']
+export type LicensesResponse = Schemas['LicensesResponse']
+export type LicenseTextResponse = Schemas['LicenseTextResponse']
 
-export type LicensePackage = {
-  name: string
-  version: string
-  hasLicenseText: boolean
-}
+export type TocItem = Schemas['TocItem']
+export type InlineNode = Schemas['InlineNode']
+export type BlockNode = Schemas['BlockNode']
 
-export type LicensesResponse = {
-  datasetReleaseId: string
-  ingestedAt: string
-  imageRef: string
-  imageDigest: string
-  packageManifest: unknown | null
-  packages: LicensePackage[]
-}
+export type OptionItem = Schemas['OptionItem']
+export type SeeAlsoRef = Schemas['SeeAlsoRef']
 
-export type LicenseTextResponse = {
-  package: string
-  licenseId: string
-  licenseName: string
-  text: string
-}
+export type ManPage = Schemas['ManPage']
+export type ManPageContent = Schemas['ManPageContent']
+export type DocumentModel = Pick<ManPageContent, 'toc' | 'blocks'>
+export type ManPageResponse = Schemas['ManPageResponse']
 
-export type TocItem = {
-  id: string
-  title: string
-  level: number
-}
-
-export type InlineNode =
-  | { type: 'text'; text: string }
-  | { type: 'code'; text: string }
-  | { type: 'emphasis'; inlines: InlineNode[] }
-  | { type: 'strong'; inlines: InlineNode[] }
-  | { type: 'link'; href: string; inlines: InlineNode[]; linkType: 'internal' | 'external' | 'unresolved' }
-
-export type BlockNode =
-  | { type: 'heading'; id: string; level: number; text: string }
-  | { type: 'paragraph'; inlines: InlineNode[] }
-  | { type: 'list'; ordered: boolean; items: BlockNode[][] }
-  | {
-      type: 'definition_list'
-      items: { id?: string | null; termInlines: InlineNode[]; definitionBlocks: BlockNode[] }[]
-    }
-  | { type: 'code_block'; text: string; languageHint?: string | null; id?: string | null }
-  | { type: 'table'; headers: string[]; rows: string[][] }
-  | { type: 'horizontal_rule' }
-
-export type DocumentModel = {
-  toc: TocItem[]
-  blocks: BlockNode[]
-}
-
-export type OptionItem = {
-  flags: string
-  argument?: string | null
-  description: string
-  anchorId: string
-}
-
-export type SeeAlsoRef = {
-  name: string
-  section?: string | null
-  resolvedPageId?: string | null
-}
-
-export type ManPage = {
-  id: string
-  locale: string
-  name: string
-  section: string
-  title: string
-  description: string
-  sourcePackage?: string | null
-  sourcePackageVersion?: string | null
-  datasetReleaseId: string
-}
-
-export type ManPageContent = DocumentModel & {
-  synopsis?: string[]
-  options?: OptionItem[]
-  seeAlso?: SeeAlsoRef[]
-}
-
-export type ManPageResponse = {
-  page: ManPage
-  content: ManPageContent
-}
-
-export type AmbiguousOption = {
-  section: string
-  title: string
-  description: string
-}
-
-export type AmbiguousPageResponse = ApiErrorEnvelope & {
-  options: AmbiguousOption[]
-}
-
-export type RelatedResponse = {
-  items: SectionPage[]
-}
+export type AmbiguousOption = Schemas['AmbiguousOption']
+export type AmbiguousPageResponse = Schemas['AmbiguousPageResponse']
+export type RelatedResponse = Schemas['RelatedResponse']
