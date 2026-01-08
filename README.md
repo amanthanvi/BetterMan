@@ -63,6 +63,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - `pnpm frontend:dev` — Vite dev server
 - `pnpm frontend:build` — production build
 - `pnpm frontend:lint` — eslint
+- `pnpm frontend:test` — unit tests (Vitest)
 
 ### Ingestion
 

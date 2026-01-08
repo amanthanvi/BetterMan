@@ -7,6 +7,8 @@
 		"dev": "vite",
 		"build": "tsc -b && vite build",
 		"lint": "eslint .",
+		"test": "vitest run --config vitest.config.ts",
+		"test:watch": "vitest --config vitest.config.ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {
@@ -24,6 +26,9 @@
 		"@eslint/js": "^9.39.1",
 		"@tanstack/react-query-devtools": "^5.91.2",
 		"@tanstack/router-devtools": "^1.145.7",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.1",
+		"@testing-library/user-event": "^14.6.1",
 		"@types/node": "^25.0.3",
 		"@types/react": "^19.2.5",
 		"@types/react-dom": "^19.2.3",
@@ -32,8 +37,10 @@
 		"eslint-plugin-react-hooks": "^7.0.1",
 		"eslint-plugin-react-refresh": "^0.4.24",
 		"globals": "^17.0.0",
+		"jsdom": "^27.4.0",
 		"typescript": "~5.9.3",
 		"typescript-eslint": "^8.46.4",
-		"vite": "^7.3.1"
+		"vite": "^7.3.1",
+		"vitest": "^4.0.16"
 	}
 }
