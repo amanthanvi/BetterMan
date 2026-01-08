@@ -20,11 +20,18 @@ class PostgresDsn:
 
 def parse_postgres_dsn(database_url: str) -> PostgresDsn:
     url = database_url.strip()
+    for prefix in ("postgresql+asyncpg://", "postgresql://", "postgres://"):
+        idx = url.find(prefix)
+        if idx > 0:
+            url = url[idx:]
+            break
     url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
 
     parsed = urlparse(url)
     if parsed.scheme not in {"postgresql", "postgres"}:
-        raise ValueError("DATABASE_URL must start with postgresql:// or postgres://")
+        raise ValueError(
+            f"DATABASE_URL must start with postgresql:// or postgres:// (got scheme={parsed.scheme!r})"
+        )
 
     if not parsed.hostname:
         raise ValueError("DATABASE_URL missing hostname")
