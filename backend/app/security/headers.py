@@ -1,19 +1,24 @@
 from __future__ import annotations
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.types import ASGIApp
+import secrets
+
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
-def build_csp() -> str:
+def generate_csp_nonce() -> str:
+    # CSP nonces should be unpredictable; URL-safe base64 is acceptable here.
+    return secrets.token_urlsafe(16)
+
+
+def build_csp(*, nonce: str) -> str:
     # Keep this strict: no inline scripts, no external CDNs.
     directives = [
         "default-src 'self'",
         "base-uri 'self'",
         "frame-ancestors 'none'",
         "object-src 'none'",
-        "script-src 'self'",
-        "style-src 'self' 'unsafe-inline'",
+        f"script-src 'self' 'nonce-{nonce}'",
+        f"style-src 'self' 'nonce-{nonce}'",
         "img-src 'self' data:",
         "font-src 'self'",
         "connect-src 'self'",
@@ -21,31 +26,72 @@ def build_csp() -> str:
     return "; ".join(directives)
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+def _setdefault_header(headers: list[tuple[bytes, bytes]], key: bytes, value: bytes) -> None:
+    key_lower = key.lower()
+    for k, _v in headers:
+        if k.lower() == key_lower:
+            return
+
+    headers.append((key, value))
+
+
+def _get_header(headers: list[tuple[bytes, bytes]], key: bytes) -> bytes | None:
+    key_lower = key.lower()
+    for k, v in headers:
+        if k.lower() == key_lower:
+            return v
+
+    return None
+
+
+class SecurityHeadersMiddleware:
     def __init__(self, app: ASGIApp, *, env: str):
-        super().__init__(app)
+        self._app = app
         self._env = env
-        self._csp = build_csp()
 
-    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
-        response = await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self._app(scope, receive, send)
+            return
 
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        response.headers.setdefault("X-Frame-Options", "DENY")
-        response.headers.setdefault(
-            "Permissions-Policy",
-            "camera=(), microphone=(), geolocation=(), payment=()",
-        )
+        nonce = generate_csp_nonce()
+        scope["csp_nonce"] = nonce
+        scope.setdefault("state", {})["csp_nonce"] = nonce
 
-        if self._env == "prod":
-            response.headers.setdefault(
-                "Strict-Transport-Security",
-                "max-age=31536000; includeSubDomains",
+        async def send_wrapper(message: Message) -> None:
+            if message["type"] != "http.response.start":
+                await send(message)
+                return
+
+            headers = message.setdefault("headers", [])
+
+            _setdefault_header(headers, b"x-content-type-options", b"nosniff")
+            _setdefault_header(headers, b"referrer-policy", b"strict-origin-when-cross-origin")
+            _setdefault_header(headers, b"x-frame-options", b"DENY")
+            _setdefault_header(
+                headers,
+                b"permissions-policy",
+                b"camera=(), microphone=(), geolocation=(), payment=()",
             )
 
-        content_type = response.headers.get("content-type", "")
-        if "text/html" in content_type:
-            response.headers.setdefault("Content-Security-Policy", self._csp)
+            if self._env == "prod":
+                _setdefault_header(
+                    headers,
+                    b"strict-transport-security",
+                    b"max-age=31536000; includeSubDomains",
+                )
 
-        return response
+            content_type = _get_header(headers, b"content-type") or b""
+            path = scope.get("path", "")
+            if b"text/html" in content_type and not path.startswith(
+                ("/docs", "/redoc", "/openapi")
+            ):
+                _setdefault_header(
+                    headers,
+                    b"content-security-policy",
+                    build_csp(nonce=nonce).encode("utf-8"),
+                )
+
+            await send(message)
+
+        await self._app(scope, receive, send_wrapper)

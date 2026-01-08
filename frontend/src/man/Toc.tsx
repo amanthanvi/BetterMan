@@ -1,5 +1,14 @@
 import type { TocItem } from '../api/types'
 
+const TOC_INDENT_CLASSES = [
+  'pl-[0.5rem]',
+  'pl-[1.25rem]',
+  'pl-[2rem]',
+  'pl-[2.75rem]',
+  'pl-[3.5rem]',
+  'pl-[4.25rem]',
+] as const
+
 export function Toc({
   items,
   activeId,
@@ -39,12 +48,11 @@ export function Toc({
             <a
               href={`#${item.id}`}
               onClick={() => onNavigate?.()}
-              className={`group block rounded-xl px-2 py-1.5 no-underline transition ${
+              className={`group block rounded-xl py-1.5 pr-2 no-underline transition ${
                 activeId === item.id
                   ? 'bg-[color:var(--bm-accent)/0.12] text-[color:var(--bm-fg)]'
                   : 'hover:bg-[color:var(--bm-bg)/0.5] hover:text-[color:var(--bm-fg)]'
-              }`}
-              style={{ paddingLeft: `${Math.min(5, Math.max(0, item.level - 2)) * 0.75 + 0.5}rem` }}
+              } ${TOC_INDENT_CLASSES[Math.min(5, Math.max(0, item.level - 2))]}`}
             >
               <span className="inline-flex items-baseline gap-2">
                 <span
