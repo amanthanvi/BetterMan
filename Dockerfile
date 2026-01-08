@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:20-bookworm-slim AS frontend-build
+FROM node:25-bookworm-slim AS frontend-build
 WORKDIR /app
 
 RUN corepack enable
@@ -14,7 +14,7 @@ COPY frontend ./frontend
 RUN pnpm -C frontend build
 
 
-FROM python:3.12-slim-bookworm AS backend-deps
+FROM python:3.14-slim-bookworm AS backend-deps
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
@@ -26,7 +26,7 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --no-dev --frozen --no-install-project --active
 
 
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
