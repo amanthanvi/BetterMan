@@ -96,7 +96,7 @@ jobs:
 
           for attempt in 1 2 3 4 5; do
             echo "Installing Railway CLI (attempt $attempt/5)…"
-            if npm install -g @railway/cli@4.18.0; then
+            if npm install -g @railway/cli@4.17.1; then
               break
             fi
             sleep $((attempt * 10))
