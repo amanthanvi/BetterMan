@@ -11,6 +11,7 @@ _SECTION_RE = re.compile(r"^[1-9][a-z0-9]*$")
 def normalize_name(name: str) -> str:
     return name.strip().lower()
 
+
 def normalize_section(section: str) -> str:
     return section.strip().lower()
 

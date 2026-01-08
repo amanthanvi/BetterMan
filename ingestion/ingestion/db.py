@@ -32,7 +32,8 @@ def parse_postgres_dsn(database_url: str) -> PostgresDsn:
     parsed = urlparse(url)
     if parsed.scheme not in {"postgresql", "postgres"}:
         raise ValueError(
-            f"DATABASE_URL must start with postgresql:// or postgres:// (got scheme={parsed.scheme!r})"
+            "DATABASE_URL must start with postgresql:// or postgres:// "
+            f"(got scheme={parsed.scheme!r})"
         )
 
     if not parsed.hostname:

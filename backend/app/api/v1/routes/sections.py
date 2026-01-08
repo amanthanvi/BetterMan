@@ -35,9 +35,7 @@ async def list_sections(
     set_cache_headers(response, etag=etag, cache_control=cache_control)
     sections = (
         await session.execute(
-            select(ManPage.section)
-            .where(ManPage.dataset_release_id == release.id)
-            .distinct()
+            select(ManPage.section).where(ManPage.dataset_release_id == release.id).distinct()
         )
     ).scalars()
     values = sorted({s for s in sections if isinstance(s, str) and s}, key=_section_sort_key)

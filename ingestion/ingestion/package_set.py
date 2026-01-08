@@ -33,4 +33,3 @@ FULL_PACKAGE_SET: list[str] = [
     "postgresql-client",
     "default-mysql-client",
 ]
-
