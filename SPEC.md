@@ -1,9 +1,9 @@
 # 1. Title / Version / Status
 
 **Project:** BetterMan
-**Spec Version:** v0.1.0
-**Status:** Shipped (v0.1.0)
-**Last Updated:** 2026-01-06 (EST)
+**Spec Version:** v0.1.2
+**Status:** Shipped (tag `v0.1.2`; `v0.1.1` shipped, `v0.1.0` shipped)
+**Last Updated:** 2026-01-08 (EST)
 **Interview Status:** Completed - all open questions resolved
 
 ---
@@ -21,6 +21,12 @@
 -   Production-ready v0.1.0 includes observability, rate limiting, backups, and a minimal deploy topology.
 
 **Done (v0.1.0) means:** users can reliably search and read man pages with fast load times, stable links, accessible UI, and production-grade security/ops.
+
+**v0.1.2 focus:** content coverage + compatibility:
+
+-   Greatly expanded dataset (thousands of man pages; includes Debian’s `manpages` / `manpages-dev`).
+-   Extended man sections in URLs/API (e.g. `1ssl`, `3p`) for man7/die.net-style coverage.
+-   Cleaner, calmer home page and deduped section labeling in “Browse”.
 
 ---
 
@@ -43,7 +49,7 @@
 ## Operational Goals
 
 -   Reproducible ingestion: any published dataset can be rebuilt from recorded inputs (container image digests + package manifests + parser version).
--   A single deployable service for web+API, plus managed PostgreSQL; staging and prod isolated.
+-   A single deployable service for web+API, plus managed PostgreSQL. Dataset releases promote staging → prod (staging/prod isolation is the target posture; early setups may temporarily share a DB).
 -   Simple incident response with clear runbooks and metrics/alerts.
 
 ---
@@ -217,11 +223,11 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 **Stable URL structure (required)**
 
 -   Man page: `/man/{name}/{section}`
-    -   Example: `/man/tar/1`
+    -   Examples: `/man/tar/1`, `/man/openssl/1ssl`, `/man/printf/3p`
 -   Man page without section (allowed only when unambiguous):
     -   `/man/{name}`
     -   If ambiguous, redirect to a chooser page listing sections.
--   Section browse: `/section/{sectionNumber}`
+-   Section browse: `/section/{section}`
 -   Search: `/search?q=...`
 -   Anchor links:
     -   Use `#` fragments for headings/blocks, e.g. `/man/tar/1#options`
@@ -541,15 +547,15 @@ For v0.1.0, ingest man pages from:
 -   Common servers and services (`nginx`, `apache2`, `postgresql`, `mysql`, etc.)
 -   Text processing (`vim`, `less`, `cat`, `head`, `tail`, etc.)
 
-**Target:** ~5,000–10,000 man pages covering the most commonly referenced commands and configuration files.
+**Target:** ~5,000–10,000 man pages covering the most commonly referenced commands and configuration files. (v0.1.2 is already in the ~4k–5k range and continues to expand.)
 
 ## Supported Sections
 
-**Decision:** Standard sections 1–9 only for v0.1.0.
+**Decision:** Support extended section strings matching `^[1-9][a-z0-9]*$` (e.g. `1`, `3p`, `1ssl`, `3ssl`).
 
--   Ignore non-standard suffixes like `3p` (POSIX), `n` (Tcl), `l` (local), etc.
--   Simpler implementation covering 99% of typical use cases.
--   Rationale: Reduces complexity in section navigation UI and search filtering.
+-   Treat the first digit as the base section (1–9); preserve the suffix as part of the page identity.
+-   Section browse and search filters accept extended sections (not digits-only).
+-   UI section labels are derived from base section labels with known suffix mappings (e.g. `p` → POSIX, `ssl` → OpenSSL).
 
 ## Update Cadence
 
@@ -868,9 +874,9 @@ flowchart LR
 -   **Framework:** React + TypeScript SPA
 -   **Router:** TanStack Router (type-safe routing with excellent TypeScript integration)
 -   **State Management:** TanStack Query for server state + React Context for UI state
--   **Component Library:** Shadcn/ui (copy-paste components built on Radix + Tailwind)
+-   **Component Primitives:** Radix UI (selectively, e.g. Dialog) + small custom UI primitives
 -   **CSS:** Tailwind v4
--   **Testing:** Vitest + React Testing Library
+-   **Testing:** TBD (no frontend unit test runner in v0.1.0)
 
 -   Routing:
     -   Client-side router with routes mirroring URL scheme in Section 6
@@ -882,7 +888,7 @@ flowchart LR
 -   Caching:
     -   Browser HTTP cache + TanStack Query's in-memory cache for recently viewed pages.
 -   Performance:
-    -   Code splitting by route (search vs page view).
+    -   Route-level code splitting.
     -   Full render for large documents with optimized React components (no virtualization).
     -   Return everything from API; rely on gzip compression for large JSONB payloads.
 
@@ -1417,7 +1423,7 @@ Scaling:
 -   **dev:** local developer environment
     -   **Docker Compose primary:** PostgreSQL and Redis in containers; developers run app on host. Minimal host dependencies beyond Docker.
     -   Local Postgres + Redis via `docker-compose.yml`
--   **staging:** production-like deployment, separate DB, used for validation
+-   **staging:** production-like deployment (ideally separate DB), used for validation
 -   **prod:** public deployment
 
 Staging and prod must be isolated:
@@ -1425,6 +1431,8 @@ Staging and prod must be isolated:
 -   separate DB instances
 -   separate secrets
 -   separate dataset releases (publish to staging first)
+
+**Note:** `update-dataset` in GitHub Actions uses `BETTERMAN_STAGING_DATABASE_URL` and `BETTERMAN_PROD_DATABASE_URL`. Small deployments may temporarily point both at the same Postgres instance, but isolating staging/prod is strongly recommended.
 
 ## GitHub Actions Workflows (Responsibilities)
 
@@ -1730,10 +1738,11 @@ All open questions have been resolved through the interview process:
 -   Build: **Vite**
 -   Framework: **React + TypeScript**
 -   Router: **TanStack Router**
--   State: **TanStack Query + React Context**
--   Components: **Shadcn/ui**
--   CSS: **Tailwind v4**
--   Testing: **Vitest + React Testing Library**
+-   Data: **TanStack Query**
+-   UI primitives: **Radix UI** (selectively, e.g. Dialog)
+-   CSS: **Tailwind CSS v4**
+-   Linting: **ESLint**
+-   Testing: *(none yet)*
 -   Runtime: **Node 20 LTS**
 
 ### Backend Stack
@@ -1750,7 +1759,7 @@ All open questions have been resolved through the interview process:
 -   Raw source view: **No** (removed for licensing)
 -   Analytics: **None** (server metrics only)
 -   External links: **Allow with indicator**
--   Sections supported: **1-9 only**
+-   Sections supported: **`^[1-9][a-z0-9]*$`** (e.g. `3p`, `1ssl`)
 
 ### UX Decisions
 -   Theme default: **System preference**

@@ -9,6 +9,7 @@ from app.core.errors import APIError
 from app.datasets.active import require_active_release
 from app.db.models import ManPage, ManPageContent, ManPageSearch
 from app.db.session import get_session
+from app.man.normalize import normalize_section, validate_section
 from app.security.deps import rate_limit_search
 from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_headers
 
@@ -35,6 +36,10 @@ async def search(
         raise APIError(status_code=400, code="INVALID_QUERY", message="Query is required")
 
     query_norm = query.lower()
+    section_norm = None
+    if section is not None:
+        section_norm = normalize_section(section)
+        validate_section(section_norm)
     release = await require_active_release(session)
 
     cache_control = "public, max-age=300"
@@ -42,7 +47,7 @@ async def search(
         "search",
         release.dataset_release_id,
         query,
-        section or "",
+        section_norm or "",
         str(limit),
         str(offset),
     )
@@ -70,8 +75,8 @@ async def search(
         | (similarity_best > 0.3),
     ]
 
-    if section is not None:
-        where_clauses.append(ManPage.section == section)
+    if section_norm is not None:
+        where_clauses.append(ManPage.section == section_norm)
 
     headline_opts = "MaxFragments=2, MinWords=3, MaxWords=15, StartSel=⟪, StopSel=⟫"
 
