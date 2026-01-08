@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:20-bookworm-slim AS frontend-build
+FROM node:25-bookworm-slim AS frontend-build
 WORKDIR /app
 
 RUN corepack enable
