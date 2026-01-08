@@ -76,6 +76,41 @@ jobs:
       - run: cd ingestion && uv run ruff format --check .
       - run: cd ingestion && uv run python -m pytest
 
+  api_types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        with:
+          version: 10.27.0
+
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v4
+        with:
+          node-version: 25
+          cache: pnpm
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v5
+        with:
+          python-version: 3.14
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pipx install uv
+      - run: cd backend && uv sync --frozen
+
+      - name: OpenAPI types are up to date
+        run: |
+          set -euo pipefail
+
+          cd backend
+          uv run python scripts/export_openapi.py /tmp/betterman-openapi.json
+
+          cd ..
+          pnpm -C frontend exec openapi-typescript /tmp/betterman-openapi.json --output src/api/openapi.gen.ts
+
+          git diff --exit-code frontend/src/api/openapi.gen.ts
+
   e2e:
     needs:
       - frontend
@@ -167,6 +202,7 @@ jobs:
       - frontend
       - backend
       - ingestion
+      - api_types
       - e2e
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
     runs-on: ubuntu-latest
