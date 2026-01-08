@@ -5,6 +5,7 @@ from fastapi.params import Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas import SectionLabel, SectionResponse
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
 from app.db.models import ManPage
@@ -17,13 +18,13 @@ from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_
 router = APIRouter()
 
 
-@router.get("/sections")
+@router.get("/sections", response_model=list[SectionLabel])
 async def list_sections(
     request: Request,
     response: Response,
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> list[dict[str, str]]:
+) -> list[SectionLabel] | Response:
     release = await require_active_release(session)
 
     cache_control = "public, max-age=300"
@@ -42,7 +43,7 @@ async def list_sections(
     return [{"section": section, "label": _section_label(section)} for section in values]
 
 
-@router.get("/section/{section}")
+@router.get("/section/{section}", response_model=SectionResponse)
 async def list_section(
     request: Request,
     response: Response,
@@ -51,7 +52,7 @@ async def list_section(
     offset: int = Query(default=0, ge=0, le=5000),
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict[str, object]:
+) -> SectionResponse | Response:
     section_norm = normalize_section(section)
     validate_section(section_norm)
 
@@ -91,13 +92,13 @@ async def list_section(
     ).scalars()
 
     set_cache_headers(response, etag=etag, cache_control=cache_control)
-    return {
-        "section": section_norm,
-        "label": label,
-        "limit": limit,
-        "offset": offset,
-        "total": int(total or 0),
-        "results": [
+    return SectionResponse(
+        section=section_norm,
+        label=label,
+        limit=limit,
+        offset=offset,
+        total=int(total or 0),
+        results=[
             {
                 "name": page.name,
                 "section": page.section,
@@ -106,7 +107,7 @@ async def list_section(
             }
             for page in pages
         ],
-    }
+    )
 
 
 def _section_sort_key(section: str) -> tuple[int, int, str]:

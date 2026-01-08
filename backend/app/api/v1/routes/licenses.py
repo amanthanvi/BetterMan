@@ -7,6 +7,7 @@ from fastapi.params import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas import LicensesResponse, LicenseTextResponse
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
 from app.db.models import License, ManPage, ManPageLicenseMap
@@ -19,13 +20,13 @@ router = APIRouter()
 _PKG_RE = re.compile(r"^[a-z0-9][a-z0-9+.-]*$")
 
 
-@router.get("/licenses")
+@router.get("/licenses", response_model=LicensesResponse)
 async def list_licenses(
     request: Request,
     response: Response,
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict[str, object]:
+) -> LicensesResponse | Response:
     release = await require_active_release(session)
 
     cache_control = "public, max-age=300"
@@ -71,24 +72,24 @@ async def list_licenses(
     manifest_packages.sort(key=lambda p: p["name"])
 
     set_cache_headers(response, etag=etag, cache_control=cache_control)
-    return {
-        "datasetReleaseId": release.dataset_release_id,
-        "ingestedAt": release.ingested_at.isoformat(),
-        "imageRef": release.image_ref,
-        "imageDigest": release.image_digest,
-        "packageManifest": manifest,
-        "packages": manifest_packages,
-    }
+    return LicensesResponse(
+        datasetReleaseId=release.dataset_release_id,
+        ingestedAt=release.ingested_at.isoformat(),
+        imageRef=release.image_ref,
+        imageDigest=release.image_digest,
+        packageManifest=manifest,
+        packages=manifest_packages,
+    )
 
 
-@router.get("/licenses/{package}")
+@router.get("/licenses/{package}", response_model=LicenseTextResponse)
 async def get_license(
     request: Request,
     response: Response,
     package: str,
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict[str, object]:
+) -> LicenseTextResponse | Response:
     pkg = package.strip().lower()
     if not _PKG_RE.fullmatch(pkg):
         raise APIError(status_code=400, code="INVALID_PACKAGE", message="Invalid package name")
@@ -116,9 +117,9 @@ async def get_license(
         raise APIError(status_code=404, code="LICENSE_NOT_FOUND", message="License not found")
 
     set_cache_headers(response, etag=etag, cache_control=cache_control)
-    return {
-        "package": pkg,
-        "licenseId": row.license_id,
-        "licenseName": row.license_name,
-        "text": row.license_text or "",
-    }
+    return LicenseTextResponse(
+        package=pkg,
+        licenseId=row.license_id,
+        licenseName=row.license_name,
+        text=row.license_text or "",
+    )

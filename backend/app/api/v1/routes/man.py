@@ -5,6 +5,7 @@ from fastapi.params import Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas import AmbiguousPageResponse, ManPageResponse, RelatedResponse
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
 from app.db.session import get_session
@@ -16,14 +17,18 @@ from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_
 router = APIRouter()
 
 
-@router.get("/man/{name}", response_model=None)
+@router.get(
+    "/man/{name}",
+    response_model=ManPageResponse,
+    responses={409: {"model": AmbiguousPageResponse}},
+)
 async def get_man_by_name(
     request: Request,
     response: Response,
     name: str,
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-):
+) -> ManPageResponse | AmbiguousPageResponse | Response:
     name_norm = normalize_name(name)
     validate_name(name_norm)
 
@@ -104,7 +109,7 @@ async def get_man_by_name(
     }
 
 
-@router.get("/man/{name}/{section}")
+@router.get("/man/{name}/{section}", response_model=ManPageResponse)
 async def get_man_by_name_and_section(
     request: Request,
     response: Response,
@@ -112,7 +117,7 @@ async def get_man_by_name_and_section(
     section: str,
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict[str, object]:
+) -> ManPageResponse | Response:
     name_norm = normalize_name(name)
     validate_name(name_norm)
     section_norm = normalize_section(section)
@@ -161,7 +166,7 @@ async def get_man_by_name_and_section(
     }
 
 
-@router.get("/man/{name}/{section}/related")
+@router.get("/man/{name}/{section}/related", response_model=RelatedResponse)
 async def get_related(
     request: Request,
     response: Response,
@@ -169,7 +174,7 @@ async def get_related(
     section: str,
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict[str, object]:
+) -> RelatedResponse | Response:
     name_norm = normalize_name(name)
     validate_name(name_norm)
     section_norm = normalize_section(section)

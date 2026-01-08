@@ -5,6 +5,7 @@ from fastapi.params import Depends
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas import SearchResponse
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
 from app.db.models import ManPage, ManPageContent, ManPageSearch
@@ -20,7 +21,7 @@ def _normalize_query(q: str) -> str:
     return " ".join(q.strip().split())
 
 
-@router.get("/search")
+@router.get("/search", response_model=SearchResponse)
 async def search(
     request: Request,
     response: Response,
@@ -30,7 +31,7 @@ async def search(
     offset: int = Query(default=0, ge=0, le=5000),
     _: None = Depends(rate_limit_search),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict[str, object]:
+) -> SearchResponse | Response:
     query = _normalize_query(q)
     if not query:
         raise APIError(status_code=400, code="INVALID_QUERY", message="Query is required")
@@ -120,9 +121,9 @@ async def search(
     ).scalars()
 
     set_cache_headers(response, etag=etag, cache_control=cache_control)
-    return {
-        "query": query,
-        "results": [
+    return SearchResponse(
+        query=query,
+        results=[
             {
                 "name": row.name,
                 "section": row.section,
@@ -132,5 +133,5 @@ async def search(
             }
             for row in results
         ],
-        "suggestions": list(dict.fromkeys(suggestions)),
-    }
+        suggestions=list(dict.fromkeys(suggestions)),
+    )
