@@ -30,7 +30,7 @@ jobs:
 
       - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v4
         with:
-          node-version: 20
+          node-version: 25
 
       - name: Install Railway CLI
         shell: bash
@@ -39,7 +39,7 @@ jobs:
 
           for attempt in 1 2 3 4 5; do
             echo "Installing Railway CLI (attempt $attempt/5)…"
-            if npm install -g @railway/cli; then
+            if npm install -g @railway/cli@4.18.0; then
               break
             fi
             sleep $((attempt * 10))
@@ -52,3 +52,32 @@ jobs:
 
       - name: Deploy web
         run: railway up --ci --service "$RAILWAY_SERVICE_ID" --environment "$RAILWAY_ENVIRONMENT_ID"
+
+      - name: Wait for deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Waiting for Railway deployment to reach SUCCESS…"
+          for attempt in {1..60}; do
+            info="$(railway service status --json --service "$RAILWAY_SERVICE_ID" --environment "$RAILWAY_ENVIRONMENT_ID")"
+            status="$(echo "$info" | jq -r '.status // empty')"
+            stopped="$(echo "$info" | jq -r '.stopped // empty')"
+            deployment_id="$(echo "$info" | jq -r '.deploymentId // empty')"
+
+            echo "[$attempt/60] status=${status} stopped=${stopped} deploymentId=${deployment_id}"
+
+            if [[ "$status" == "SUCCESS" && "$stopped" == "false" ]]; then
+              exit 0
+            fi
+
+            if [[ "$status" == "FAILURE" || "$status" == "ERROR" ]]; then
+              echo "Railway deployment failed"
+              exit 1
+            fi
+
+            sleep 5
+          done
+
+          echo "Timed out waiting for Railway deployment"
+          exit 1
