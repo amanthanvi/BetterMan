@@ -16,7 +16,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ingest.add_argument("--sample", action="store_true", help="Ingest a small sample set")
     ingest.add_argument(
         "--activate",
-        default=True,
+        default=None,
         action=argparse.BooleanOptionalAction,
         help="Mark the dataset release as active after ingestion",
     )
@@ -30,10 +30,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.cmd == "ingest":
+        activate = bool(args.activate) if args.activate is not None else (not args.sample)
         if args.in_container:
-            return _run_ingest_in_container(sample=args.sample, activate=args.activate)
+            return _run_ingest_in_container(sample=args.sample, activate=activate)
 
-        return run_ingest_container(sample=args.sample, activate=args.activate)
+        return run_ingest_container(sample=args.sample, activate=activate)
 
     raise AssertionError("unreachable")
 

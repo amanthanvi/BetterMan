@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
 from app.db.session import get_session
-from app.man.normalize import normalize_name, validate_name, validate_section
+from app.man.normalize import normalize_name, normalize_section, validate_name, validate_section
 from app.man.repository import get_page_with_content, list_pages_by_name, list_related_pages
 from app.security.deps import rate_limit_page
 from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_headers
@@ -115,7 +115,8 @@ async def get_man_by_name_and_section(
 ) -> dict[str, object]:
     name_norm = normalize_name(name)
     validate_name(name_norm)
-    validate_section(section)
+    section_norm = normalize_section(section)
+    validate_section(section_norm)
 
     release = await require_active_release(session)
 
@@ -124,14 +125,14 @@ async def get_man_by_name_and_section(
         "man-by-name-section",
         release.dataset_release_id,
         name_norm,
-        section,
+        section_norm,
     )
     not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
     if not_modified is not None:
         return not_modified
 
     page_with_content = await get_page_with_content(
-        session, release_id=release.id, name=name_norm, section=section
+        session, release_id=release.id, name=name_norm, section=section_norm
     )
 
     if page_with_content is None:
@@ -171,7 +172,8 @@ async def get_related(
 ) -> dict[str, object]:
     name_norm = normalize_name(name)
     validate_name(name_norm)
-    validate_section(section)
+    section_norm = normalize_section(section)
+    validate_section(section_norm)
 
     release = await require_active_release(session)
     cache_control = "public, max-age=300"
@@ -179,14 +181,14 @@ async def get_related(
         "related",
         release.dataset_release_id,
         name_norm,
-        section,
+        section_norm,
     )
     not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
     if not_modified is not None:
         return not_modified
 
     page_with_content = await get_page_with_content(
-        session, release_id=release.id, name=name_norm, section=section
+        session, release_id=release.id, name=name_norm, section=section_norm
     )
 
     if page_with_content is None:

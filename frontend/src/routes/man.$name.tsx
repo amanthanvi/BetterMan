@@ -53,8 +53,8 @@ function ManByNamePage() {
   const options = query.data?.options ?? []
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
+    <div className="mx-auto max-w-5xl">
+      <h1 className="font-mono text-3xl font-semibold tracking-tight">{name}</h1>
       <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
         Multiple sections match this name. Pick one:
       </p>
@@ -63,12 +63,12 @@ function ManByNamePage() {
         {options.map((opt) => (
           <li
             key={opt.section}
-            className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4"
+            className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm"
           >
             <Link
               to="/man/$name/$section"
               params={{ name, section: opt.section }}
-              className="font-semibold tracking-tight"
+              className="font-mono text-base font-semibold tracking-tight"
             >
               {name}({opt.section})
             </Link>
@@ -79,4 +79,3 @@ function ManByNamePage() {
     </div>
   )
 }
-

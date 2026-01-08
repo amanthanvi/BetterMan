@@ -10,9 +10,9 @@ export function OptionsTable({
   onSelect?: (opt: OptionItem) => void
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)]">
-      <table className="w-full border-collapse text-left text-sm">
-        <thead className="bg-[color:var(--bm-bg)/0.7] text-[color:var(--bm-muted)]">
+    <div className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] shadow-sm">
+      <table className="w-full border-collapse text-left text-[15px]">
+        <thead className="bg-[color:var(--bm-bg)/0.6] text-[color:var(--bm-muted)]">
           <tr>
             <th className="w-[28ch] border-b border-[var(--bm-border)] px-3 py-2 font-medium">
               Flag
@@ -24,7 +24,7 @@ export function OptionsTable({
           {options.map((opt) => (
             <tr
               key={opt.anchorId}
-              className={`odd:bg-[color:var(--bm-bg)/0.35] ${
+              className={`odd:bg-[color:var(--bm-bg)/0.25] ${
                 selectedAnchorId === opt.anchorId ? 'bg-[color:var(--bm-accent)/0.12]' : ''
               }`}
             >
