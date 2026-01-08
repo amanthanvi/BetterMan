@@ -10,7 +10,7 @@ Living execution plan for shipping `v0.1.2` from `SPEC.md`.
 
 - [x] v0.1.0 shipped (tag `v0.1.0`)
 - [x] v0.1.1 shipped (tag `v0.1.1`)
-- [ ] v0.1.2 shipped (tag `v0.1.2`)
+- [x] v0.1.2 shipped (tag `v0.1.2`)
 
 ## Golden Commands (kept current)
 
@@ -35,7 +35,7 @@ Living execution plan for shipping `v0.1.2` from `SPEC.md`.
 - [x] Expand dataset substantially (staging ingest + promote to prod via `update-dataset`)
 - [x] Fix section labels (no duplicate `1 1: ...` rendering)
 - [x] Home page simplified (less visually busy)
-- [ ] Tag `v0.1.2`
+- [x] Tag `v0.1.2`
 
 ### M8 — Frontend overhaul (design + perf) for v0.1.1
 

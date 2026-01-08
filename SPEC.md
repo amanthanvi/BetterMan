@@ -2,7 +2,7 @@
 
 **Project:** BetterMan
 **Spec Version:** v0.1.2
-**Status:** In progress (target tag `v0.1.2`; `v0.1.1` shipped, `v0.1.0` shipped)
+**Status:** Shipped (tag `v0.1.2`; `v0.1.1` shipped, `v0.1.0` shipped)
 **Last Updated:** 2026-01-08 (EST)
 **Interview Status:** Completed - all open questions resolved
 
