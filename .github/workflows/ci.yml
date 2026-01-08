@@ -94,19 +94,31 @@ jobs:
         run: |
           set -euo pipefail
 
-          for attempt in 1 2 3 4 5; do
-            echo "Installing Railway CLI (attempt $attempt/5)…"
-            if npm install -g @railway/cli@4.17.1; then
+          export RAILWAY_VERSION="4.18.1"
+
+          mkdir -p "$HOME/.local/bin"
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          for attempt in 1 2 3; do
+            echo "Installing Railway CLI v${RAILWAY_VERSION} (attempt $attempt/3)…"
+            if curl -fsSL https://railway.app/install.sh | bash -s -- -y -b "$HOME/.local/bin"; then
               break
             fi
             sleep $((attempt * 10))
           done
+
+          if ! command -v railway >/dev/null 2>&1; then
+            echo "Railway install.sh failed; falling back to npm @railway/cli@4.17.1" >&2
+            npm install -g @railway/cli@4.17.1
+          fi
 
           railway --version
 
       - name: Deploy web (Railway)
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_WORKSPACE_ID: ed8a9f0d-ab1b-48a4-a7a1-86a95b0e5f18
           RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
           RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
           RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
@@ -120,6 +132,7 @@ jobs:
           fi
 
           railway link \
+            --workspace "$RAILWAY_WORKSPACE_ID" \
             --project "$RAILWAY_PROJECT_ID" \
             --environment "$RAILWAY_ENVIRONMENT_ID" \
             --service "$RAILWAY_SERVICE_ID"
