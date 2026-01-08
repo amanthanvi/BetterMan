@@ -1,9 +1,21 @@
-import hljs from 'highlight.js/lib/core'
-import bash from 'highlight.js/lib/languages/bash'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-hljs.registerLanguage('bash', bash)
+let hljsPromise: Promise<unknown> | null = null
+
+async function loadHljs(): Promise<unknown> {
+  if (!hljsPromise) {
+    hljsPromise = Promise.all([
+      import('highlight.js/lib/core'),
+      import('highlight.js/lib/languages/bash'),
+    ]).then(([core, bash]) => {
+      core.default.registerLanguage('bash', bash.default)
+      return core.default
+    })
+  }
+
+  return hljsPromise
+}
 
 export function CodeBlock({
   id,
@@ -17,6 +29,12 @@ export function CodeBlock({
   optionRegex?: RegExp
 }) {
   const [copied, setCopied] = useState(false)
+  const markedText = useMemo(
+    () => buildMarkedText(text, { findQuery, optionRegex }),
+    [findQuery, optionRegex, text],
+  )
+  const fallbackHtml = useMemo(() => applyMarkers(escapeHtml(markedText)), [markedText])
+  const [highlighted, setHighlighted] = useState<{ source: string; html: string } | null>(null)
   const timeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -25,19 +43,30 @@ export function CodeBlock({
     }
   }, [])
 
-  const highlighted = useMemo(() => {
-    const markedText = buildMarkedText(text, { findQuery, optionRegex })
-    const fallback = applyMarkers(escapeHtml(markedText))
-    if (!shouldHighlight(text)) return fallback
-    try {
-      const html = hljs.highlight(markedText, { language: 'bash', ignoreIllegals: true }).value
-      return applyMarkers(html)
-    } catch {
-      return fallback
-    }
-  }, [findQuery, optionRegex, text])
+  useEffect(() => {
+    if (!shouldHighlight(text)) return
 
-  const highlightedNodes = useMemo(() => highlightedHtmlToReact(highlighted), [highlighted])
+    let cancelled = false
+    void loadHljs().then((hljs) => {
+      if (cancelled) return
+      try {
+        const next = (hljs as { highlight: (t: string, o: unknown) => { value: string } }).highlight(markedText, {
+          language: 'bash',
+          ignoreIllegals: true,
+        }).value
+        setHighlighted({ source: markedText, html: applyMarkers(next) })
+      } catch {
+        // keep fallback
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [markedText, text])
+
+  const html = highlighted?.source === markedText ? highlighted.html : fallbackHtml
+  const highlightedNodes = useMemo(() => highlightedHtmlToReact(html), [html])
 
   const copy = async () => {
     try {
@@ -54,14 +83,14 @@ export function CodeBlock({
     <div id={id ?? undefined} className="relative scroll-mt-32">
       <button
         type="button"
-        className="absolute right-2 top-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-1.5 text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.8]"
+        className="absolute right-3 top-3 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.85] p-2 text-[color:var(--bm-muted)] shadow-sm hover:bg-[color:var(--bm-surface)]"
         onClick={copy}
         aria-label="Copy code block"
         title={copied ? 'Copied' : 'Copy'}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
-      <pre className="overflow-x-auto rounded-lg border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.6] p-4 text-sm leading-6">
+      <pre className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] p-5 text-sm leading-7 shadow-sm">
         <code className="hljs language-bash">{highlightedNodes}</code>
       </pre>
     </div>
