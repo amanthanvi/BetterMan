@@ -1,10 +1,10 @@
 # 1. Title / Version / Status
 
 **Project:** BetterMan
-**Spec Version:** v0.1.2
-**Status:** Shipped (tag `v0.1.2`; `v0.1.1` shipped, `v0.1.0` shipped)
+**Spec Version:** v0.2.0
+**Status:** In Development (v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
 **Last Updated:** 2026-01-08 (EST)
-**Interview Status:** Completed - all open questions resolved
+**Interview Status:** Completed - all v0.2.0 decisions resolved
 
 ---
 
@@ -24,9 +24,18 @@
 
 **v0.1.2 focus:** content coverage + compatibility:
 
--   Greatly expanded dataset (thousands of man pages; includes Debian’s `manpages` / `manpages-dev`).
+-   Greatly expanded dataset (thousands of man pages; includes Debian's `manpages` / `manpages-dev`).
 -   Extended man sections in URLs/API (e.g. `1ssl`, `3p`) for man7/die.net-style coverage.
--   Cleaner, calmer home page and deduped section labeling in “Browse”.
+-   Cleaner, calmer home page and deduped section labeling in "Browse".
+
+**v0.2.0 focus:** quality, testing, performance, and developer experience:
+
+-   Comprehensive testing infrastructure (Vitest, Playwright, axe-core)
+-   Type-safe API contracts via OpenAPI + TypeScript generation
+-   Performance optimizations (virtualization for large pages, bundle optimization)
+-   Enhanced security (CSP nonces, Pydantic strict mode)
+-   UX polish (Find-in-page improvements, print styles, TOC scroll-spy)
+-   Component architecture improvements (decomposition, domain hooks)
 
 ---
 
@@ -46,6 +55,13 @@
 -   Zero XSS vulnerabilities from man content rendering.
 -   High availability for a single-region v0.1.0 deployment (99.9% monthly).
 
+## Engineering Goals (v0.2.0 Additions)
+
+-   **Test Coverage:** Frontend unit tests with Vitest, E2E with Playwright, accessibility with axe-core.
+-   **Type Safety:** Zero runtime type errors from API mismatches via OpenAPI-generated types.
+-   **Bundle Size:** Initial JS bundle (home route) <= 250 KB gz with CI visibility.
+-   **Virtualization:** Large pages (100+ blocks) render smoothly without jank.
+
 ## Operational Goals
 
 -   Reproducible ingestion: any published dataset can be rebuilt from recorded inputs (container image digests + package manifests + parser version).
@@ -54,7 +70,7 @@
 
 ---
 
-# 4. Non‑Goals
+# 4. Non-Goals
 
 -   No user accounts, authentication, profiles, favorites, or history in v0.1.0.
 -   No SEO-driven requirements (no SSR solely for crawlers; no sitemap/indexing work).
@@ -92,6 +108,7 @@
 11. Handle missing page: show nearest matches and suggestions.
 12. View examples with syntax highlighting and copy-to-clipboard for code blocks.
 13. Use mobile: search, read, and navigate with a sticky header and readable typography.
+14. **Print a man page** with clean, navigation-free layout (v0.2.0).
 
 ---
 
@@ -117,7 +134,9 @@
 -   Left sidebar (desktop) or collapsible drawer (mobile):
     -   TOC (headings).
         -   **Desktop behavior:** TOC is sticky (follows scroll and stays visible). If the TOC is longer than the viewport, it scrolls independently.
+        -   **Scroll-spy (v0.2.0):** Use IntersectionObserver API for accurate active heading detection, performant even on large pages.
     -   Find-in-page: sticky by default; user can hide/show it.
+        -   **Match navigation (v0.2.0):** Show "3 of 15 matches" indicator with Enter (next) and Shift+Enter (previous) keyboard navigation.
     -   Quick nav: "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES", "SEE ALSO" when available.
 -   Main article:
     -   Rendered content with clear typographic hierarchy.
@@ -173,6 +192,11 @@
 -   **b:** Toggle sidebar (desktop) / open TOC drawer (mobile)
 -   **d:** Toggle theme (light/dark/system cycle)
 
+### Find-in-page Shortcuts (v0.2.0)
+
+-   **Enter:** Jump to next match (when find input focused)
+-   **Shift+Enter:** Jump to previous match (when find input focused)
+
 If optional shortcuts are not implemented, they must not be documented in UI.
 
 ## Dark Mode + Responsive Rules
@@ -186,6 +210,16 @@ If optional shortcuts are not implemented, they must not be documented in UI.
         -   **Mobile TOC access:** Sticky header button toggles TOC drawer. Button is always visible for quick access during reading.
     -   768–1024px: compact sidebar; TOC collapsible.
     -   > 1024px: persistent sidebar (sticky TOC) and wide reading column with max line width (target 70–90 chars).
+
+## Print Styles (v0.2.0)
+
+**Decision:** CSS print styles only - zero runtime cost.
+
+When `@media print` is active:
+-   **Hide all navigation:** Header, TOC sidebar, command palette, theme toggle, find-in-page - show only man page content.
+-   **Code blocks:** Preserve with monospace font, use `page-break-inside: avoid` to keep blocks intact.
+-   **Syntax highlighting:** Removed for print - plain monospace saves ink, better on B&W printers.
+-   **Typography:** Optimized for paper - appropriate margins, readable font sizes.
 
 ## Accessibility Requirements
 
@@ -207,6 +241,7 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 -   **Loading:** Basic structure skeleton only (title bar, TOC placeholder, content area placeholder). Fast to render, avoid detailed mockups.
 -   **Empty search:** show tips and example queries.
 -   **No results:** suggest spelling fixes.
+    -   **Trigram suggestions (v0.2.0):** Show top 3 trigram-similar command names when FTS returns few results.
 -   **Missing page:** show:
     -   "Page not found"
     -   Suggested alternative sections (if name exists in another section)
@@ -270,9 +305,19 @@ As a user, I want to open `man tar` in a browser and quickly understand usage an
 -   Page name includes special characters (`systemd.unit`, `git-commit`).
 -   Page contains uncommon roff macros or broken formatting.
 -   "NAME" section missing or malformed.
--   **Very large pages (e.g., `bash(1)`):** Render everything upfront with optimized React components. No virtualization or lazy loading for v0.1.0. Accept slightly slower initial render for simplicity.
+-   **Very large pages (e.g., `bash(1)`):**
+    -   v0.1.x: Render everything upfront with optimized React components.
+    -   **v0.2.0:** Use TanStack Virtual for pages with 100+ content blocks. Virtualize content rendering for smooth scrolling.
 -   **Long TOC headings (50+ characters):** Truncate at ~40 characters with ellipsis (`...`); show full text on hover/focus.
 -   **ASCII art/diagrams:** Preserve in code blocks without syntax highlighting to maintain alignment.
+
+### Virtualization Details (v0.2.0)
+
+**Decision:** Use TanStack Virtual for large page rendering.
+
+-   **Threshold:** Pages with 100+ content blocks are virtualized; smaller pages render fully.
+-   **Anchor links in virtualized content:** URL `#anchor` scrolls to approximate position, then renders target section and fine-tunes scroll to exact heading.
+-   **Library:** `@tanstack/react-virtual` - aligns with existing TanStack ecosystem (Router, Query).
 
 ### Acceptance Criteria
 
@@ -310,6 +355,7 @@ As an engineer, I want to type "chmod recursive" and immediately find the most r
     -   dedicated search page with filters
 -   **Debouncing:** 150ms debounce on search input. Short delay feels instant while preventing per-keystroke API requests.
 -   **Custom in-page search:** Provide custom search with highlights (not just browser Ctrl+F). Minimum 2 characters required before searching. Highlights matches and allows jump-between.
+-   **Trigram suggestions (v0.2.0):** When FTS returns few/no results, display top 3 trigram-similar command names as "Did you mean..." suggestions.
 
 ### Edge Cases
 
@@ -435,6 +481,7 @@ As a user, I want to copy a `bash` example from a man page and understand it qui
 ### Functional Requirements
 
 -   **Highlight all code blocks:** Apply shell-like syntax highlighting to all preformatted blocks by default. Accept some false positives on config/data blocks for consistency. ASCII art/diagrams preserved in monospace without highlighting.
+-   **Language optimization (v0.2.0):** Import only common languages (bash, shell, python, c, makefile) - covers 90%+ of man page examples while minimizing bundle size.
 -   Highlighting must be performed safely without executing any embedded content.
 -   Provide "Copy" button per code block:
     -   Copies plain text exactly as displayed (without line numbers).
@@ -830,8 +877,18 @@ Tie-breakers:
     -   Page fetch: P50 < 50 ms, P95 < 150 ms
 -   Caching:
     -   HTTP caching for GET endpoints with `ETag` and `Cache-Control: public, max-age=300` for immutable dataset release pages.
+    -   **Granular ETags (v0.2.0):** ETag based on `content_sha256 + dataset_release_id` - changes when content or dataset changes, maximizing cache hits.
     -   Longer cache for static assets (1 year with content hashes).
     -   **Redis on Railway** for rate limiting state (enables consistent rate limits across horizontal scaling). See Section 12 for architecture.
+
+## Search Query Optimization (v0.2.0)
+
+**Decision:** Focus on query plan analysis for the search ranking query.
+
+-   Analyze `EXPLAIN ANALYZE` output for the complex search CTE
+-   Ensure index-only scans where possible
+-   Optimize CTE usage and join patterns
+-   Target: maintain P95 < 250ms as dataset grows
 
 ## Abuse Controls (Rate limiting, Bot Mitigation)
 
@@ -876,7 +933,8 @@ flowchart LR
 -   **State Management:** TanStack Query for server state + React Context for UI state
 -   **Component Primitives:** Radix UI (selectively, e.g. Dialog) + small custom UI primitives
 -   **CSS:** Tailwind v4
--   **Testing:** TBD (no frontend unit test runner in v0.1.0)
+-   **Testing (v0.2.0):** Vitest + Testing Library for unit/component tests
+-   **Virtualization (v0.2.0):** TanStack Virtual for large pages
 
 -   Routing:
     -   Client-side router with routes mirroring URL scheme in Section 6
@@ -889,8 +947,36 @@ flowchart LR
     -   Browser HTTP cache + TanStack Query's in-memory cache for recently viewed pages.
 -   Performance:
     -   Route-level code splitting.
-    -   Full render for large documents with optimized React components (no virtualization).
+    -   **v0.2.0:** TanStack Virtual for large documents (100+ blocks).
     -   Return everything from API; rely on gzip compression for large JSONB payloads.
+
+## Component Architecture (v0.2.0)
+
+**Decision:** Decompose large components and extract domain hooks.
+
+### Component Decomposition
+
+Split `ManPageView` into focused components:
+-   `ManPageHeader` - Title, description, metadata
+-   `ManPageTOC` - Table of contents with scroll-spy
+-   `ManPageContent` - Main content rendering (virtualized for large pages)
+-   `ManPageRelated` - Related commands panel
+
+### Domain Hooks
+
+Extract data fetching and state logic into reusable hooks:
+-   `useManPage(name, section)` - Fetch and cache man page data
+-   `useSearch(query, options)` - Search with debouncing and suggestions
+-   `useTOC(headings)` - TOC state with scroll-spy via IntersectionObserver
+-   `useFindInPage(content)` - Find-in-page state and match navigation
+
+### Test Organization
+
+**Decision:** Co-locate tests with components.
+
+-   `ComponentName.test.tsx` next to `ComponentName.tsx`
+-   Easy to find, clear ownership
+-   Domain hooks tested independently
 
 ## Backend Architecture
 
@@ -900,6 +986,7 @@ flowchart LR
 -   **Database Access:** SQLAlchemy 2.0 ORM (full ORM with type hints, async support)
 -   **Migrations:** Alembic
 -   **Testing:** pytest + httpx
+-   **Validation (v0.2.0):** Pydantic v2 strict mode on all request models
 
 -   Single FastAPI service providing:
     -   Read-only public REST endpoints
@@ -940,8 +1027,11 @@ flowchart LR
 -   **mandoc** (ingestion): Why necessary: robust man/mdoc renderer for roff inputs. Alternative: groff/man2html (less consistent).
 -   **React + TypeScript**: Why necessary: component model + maintainability for complex rendering and keyboard UX. Alternative: Vue/Svelte (viable but not chosen per defaults).
 -   **TanStack Query + Router**: Why necessary: type-safe routing and server state management with excellent caching. Alternative: React Router + SWR (viable but less TypeScript integration).
--   **Shadcn/ui**: Why necessary: accessible components with Radix primitives + Tailwind styling. Alternative: build from scratch (more work, a11y risk).
--   **Syntax highlighting library** (e.g., highlight.js with limited languages): Why necessary: meet "syntax highlighting for examples" requirement. Alternative: Prism (similar trade-offs) or no highlighting (not acceptable).
+-   **TanStack Virtual (v0.2.0)**: Why necessary: efficient rendering of large man pages (bash has 6000+ lines). Alternative: react-window (less flexible for variable-height content).
+-   **Radix UI**: Why necessary: accessible components with Radix primitives + Tailwind styling. Alternative: build from scratch (more work, a11y risk).
+-   **highlight.js** (with limited languages): Why necessary: meet "syntax highlighting for examples" requirement. Alternative: Prism (similar trade-offs) or no highlighting (not acceptable).
+-   **Vitest (v0.2.0)**: Why necessary: fast test runner that integrates with Vite build system. Alternative: Jest (slower, worse Vite integration).
+-   **Playwright (v0.2.0)**: Why necessary: cross-browser E2E testing with excellent DX. Alternative: Cypress (Chrome-focused, slower parallel runs).
 -   **Error reporting**: Railway logging only for v0.1.0 (no Sentry). Rely on structured logs and Railway's log aggregation.
 
 ## Rejected Stack Choices (Explicit)
@@ -951,6 +1041,8 @@ flowchart LR
 -   **Microservices**: rejected; unnecessary complexity at current scope.
 -   **SSR/Next.js for SEO**: rejected; SEO indexing not required; CSR is simpler and faster to ship. (See SSR decision below.)
 -   **Sentry**: rejected for v0.1.0; rely on Railway logging. May add later if debugging becomes challenging.
+-   **Jest**: rejected for v0.2.0; Vitest integrates better with Vite build system.
+-   **Cypress**: rejected for v0.2.0; Playwright offers better cross-browser support and faster parallel execution.
 
 ---
 
@@ -963,6 +1055,24 @@ flowchart LR
 Base path:
 
 -   `/api/v1`
+
+## OpenAPI Documentation (v0.2.0)
+
+**Decision:** Auto-generated OpenAPI spec with examples.
+
+-   FastAPI auto-generates OpenAPI spec from route decorators
+-   Add response examples and descriptions in route decorators
+-   Expose `/docs` (Swagger UI) and `/redoc` endpoints in staging/dev environments
+-   Export OpenAPI JSON during CI for contract testing and type generation
+
+## Type Generation (v0.2.0)
+
+**Decision:** Generate TypeScript types from OpenAPI spec.
+
+-   **Library:** `openapi-typescript` - lightweight, generates clean TypeScript types
+-   **Timing:** Generate types during CI build step, commit to repo
+-   **Output:** `frontend/src/api/types.ts` - auto-generated, do not edit manually
+-   **Benefit:** Zero runtime type errors from API mismatches
 
 ## Endpoint List (High-level)
 
@@ -1259,13 +1369,15 @@ Normalized resolved relationships (for related commands):
 -   XSS:
     -   Safe document model rendering (no raw HTML injection).
     -   Strict URL sanitization for links.
-    -   **CSP headers:**
-        -   `script-src 'self'` - no inline scripts
-        -   `style-src 'self' 'unsafe-inline'` - allow inline styles for syntax highlighting libraries
+    -   **CSP headers (v0.2.0 - Strict with Nonces):**
+        -   `script-src 'self' 'nonce-{random}'` - no inline scripts without nonce
+        -   `style-src 'self' 'nonce-{random}'` - no inline styles without nonce
         -   `object-src 'none'`
-        -   Block scripts strictly; allow inline styles as common syntax highlighters require them.
+        -   `upgrade-insecure-requests`
+        -   Nonces generated per-request in FastAPI middleware, injected into HTML response and CSP header.
 -   Injection:
     -   Parameterized queries only.
+    -   **Pydantic strict mode (v0.2.0):** Enable strict validation on all API request models, reject invalid types.
     -   Strict input validation for `name`, `section`, `limit`, `offset`.
 -   SSRF:
     -   In v0.1.0 ingestion runs offline in CI; backend does not fetch external content.
@@ -1273,11 +1385,56 @@ Normalized resolved relationships (for related commands):
     -   Pin key dependencies.
     -   Enable dependency scanning (Section 19).
     -   Ingestion records container digests; only use official images.
+    -   **Quarterly dependency audit (v0.2.0):** Review security advisories, license compatibility, and bundle impact of major dependencies.
 -   Abuse:
     -   Rate limiting (Section 11).
     -   Cache aggressively.
 -   Integrity:
     -   Dataset release IDs and digests stored; ingestion requires signed CI secrets.
+
+## CSP Nonce Implementation (v0.2.0)
+
+**Decision:** Generate nonces per-request in FastAPI middleware.
+
+Implementation:
+1. Middleware generates cryptographically random nonce for each request
+2. Nonce injected into HTML template served for SPA
+3. Same nonce included in `Content-Security-Policy` header
+4. Any inline scripts/styles must include matching nonce attribute
+
+Benefits:
+-   Eliminates `'unsafe-inline'` from CSP
+-   Per-request nonces prevent replay attacks
+-   Aligns with modern CSP best practices
+
+## Input Validation (v0.2.0)
+
+**Decision:** Enable Pydantic v2 strict mode on all request models.
+
+Scope:
+-   All API request bodies
+-   All query parameters
+-   Path parameters validated via custom validators
+
+Benefits:
+-   Reject invalid types at API boundary
+-   Stricter path/name validation prevents injection attempts
+-   Clear error messages for malformed requests
+
+## Rate Limit Resilience (v0.2.0)
+
+**Decision:** In-memory fallback when Redis is unavailable.
+
+Behavior:
+-   Normal operation: Redis-backed rate limiting across all instances
+-   Redis unavailable: Fall back to in-memory rate limiting per-process
+-   Same rate limits apply (may allow 2x total if 2 instances running, acceptable tradeoff)
+-   Log warning when falling back, alert if prolonged
+
+Benefits:
+-   Service remains protected even during Redis outages
+-   No requests fail solely due to rate limit backend issues
+-   Maintains security posture during degraded state
 
 ## Secrets Management
 
@@ -1298,6 +1455,20 @@ Normalized resolved relationships (for related commands):
 -   Retention:
     -   Application logs: 14 days (minimum), with longer retention only if necessary for security.
     -   Error traces: 30 days.
+
+## Dependency Auditing (v0.2.0)
+
+**Decision:** Weekly Dependabot + quarterly manual audit.
+
+Weekly (automated):
+-   Dependabot PRs for all dependency types
+-   CI runs security checks on updates
+
+Quarterly (manual):
+-   Review CVE advisories for all dependencies
+-   Check license compatibility for new/updated deps
+-   Analyze bundle size impact of major dependencies
+-   Document findings in security review log
 
 ## License Compliance for Man Pages
 
@@ -1324,15 +1495,25 @@ Normalized resolved relationships (for related commands):
 
 -   Frontend:
     -   Initial JS bundle (home route): <= 250 KB gz (target)
-    -   **Bundle enforcement:** CI bot comments on PR with size diff; does not block merge. Gives visibility without being too strict.
+    -   **Bundle enforcement (v0.2.0):** CI comments on PR with size diff and percentage change; warns but does not block merge. Gives visibility without being too strict.
     -   Route-based code splitting for man page renderer and highlighting
 -   Core Web Vitals (guidance; not SEO-driven but user experience):
     -   LCP < 2.5 s (repeat visits)
     -   INP reasonable (avoid heavy main-thread work on render)
 
+## Performance Targets (v0.2.0)
+
+New performance targets for v0.2.0 features:
+
+-   **Virtualization overhead:** < 50ms additional render time for virtualized pages vs full render
+-   **E2E test execution:** < 5 minutes for full critical flows suite
+-   **Type generation:** < 30 seconds during CI build
+-   **Bundle size increase:** < 20KB gz for v0.2.0 features (virtualization, testing utils excluded from prod)
+
 ## Caching Layers
 
 -   Browser: ETag and max-age for stable content.
+-   **Granular ETags (v0.2.0):** ETags based on `content_sha256 + dataset_release_id` for man pages - more cache hits when content unchanged across dataset updates.
 -   CDN/Edge: cache GET responses where safe.
 -   API: avoid in-memory caches that cause correctness issues; minimal memoization allowed.
 -   DB: rely on Postgres caches; keep indexes optimized.
@@ -1440,11 +1621,14 @@ Staging and prod must be isolated:
 
 -   Install dependencies
 -   Run type checks and linting
--   Run unit + integration tests
+-   Run unit + integration tests (backend: pytest, frontend: Vitest)
+-   **Run E2E tests (v0.2.0):** Playwright critical flows
+-   **Run accessibility tests (v0.2.0):** axe-core checks
 -   Build frontend assets (production build)
 -   Build backend (container build or artifact)
 -   Dependency review for PRs (block vulnerable dependency additions)
--   Enforce bundle size budget checks
+-   **Bundle size reporting (v0.2.0):** Comment on PR with size diff
+-   **Generate API types (v0.2.0):** Run openapi-typescript, commit if changed
 
 ### `codeql.yml` (code scanning)
 
@@ -1504,6 +1688,7 @@ Staging and prod must be isolated:
     -   short-lived feature branches
 -   Release tags:
     -   `v0.1.0` tag upon launch
+    -   `v0.2.0` tag for quality/testing milestone
 -   Rollback:
     -   redeploy previous version
     -   dataset rollback supported by storing previous dataset release and a "current release" pointer
@@ -1515,6 +1700,25 @@ Staging and prod must be isolated:
 ```
 /
 ├── frontend/           # React SPA
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── types.ts    # Auto-generated from OpenAPI (v0.2.0)
+│   │   ├── components/
+│   │   │   ├── ManPageView/
+│   │   │   │   ├── ManPageView.tsx
+│   │   │   │   ├── ManPageView.test.tsx  # Co-located test (v0.2.0)
+│   │   │   │   ├── ManPageHeader.tsx
+│   │   │   │   ├── ManPageTOC.tsx
+│   │   │   │   ├── ManPageContent.tsx
+│   │   │   │   └── ManPageRelated.tsx
+│   │   │   └── ...
+│   │   ├── hooks/
+│   │   │   ├── useManPage.ts
+│   │   │   ├── useSearch.ts
+│   │   │   ├── useTOC.ts
+│   │   │   └── useFindInPage.ts
+│   │   └── ...
+│   └── e2e/            # Playwright E2E tests (v0.2.0)
 ├── backend/            # FastAPI service
 ├── shared/             # Shared types/constants (if needed)
 ├── ingestion/          # Ingestion pipeline scripts
@@ -1525,7 +1729,7 @@ Staging and prod must be isolated:
 
 -   Single repo enables easier cross-cutting changes
 -   pnpm workspaces for dependency management
--   Shared types between frontend/backend if TypeScript types are generated from OpenAPI
+-   **TypeScript types generated from OpenAPI (v0.2.0)**
 
 ## Infrastructure-as-Code (Minimal stance)
 
@@ -1537,11 +1741,26 @@ Staging and prod must be isolated:
 
 # 19. Testing Strategy
 
+## Overview (v0.2.0 Enhancements)
+
+Testing strategy significantly expanded for v0.2.0 with comprehensive frontend testing.
+
 ## Unit Tests
 
+### Backend (existing)
 -   Parsing/model conversion utilities (ingestion pipeline)
 -   Search query normalization and ranking logic
 -   Link resolution rules
+-   **Framework:** pytest + httpx
+
+### Frontend (v0.2.0)
+-   **Framework:** Vitest + Testing Library
+-   **Organization:** Co-located with components (`ComponentName.test.tsx` next to `ComponentName.tsx`)
+-   **Scope:**
+    -   Domain hooks (useManPage, useSearch, useTOC, useFindInPage)
+    -   Utility functions (URL normalization, text processing)
+    -   Component rendering and interactions
+-   **Coverage targets:** Focus on business logic, not implementation details
 
 ## Integration Tests
 
@@ -1549,17 +1768,31 @@ Staging and prod must be isolated:
 -   Search correctness (name exact match, prefix, fuzzy)
 -   Man page retrieval and ambiguity behavior
 
-## E2E Tests
+## E2E Tests (v0.2.0)
 
--   Core flows in a headless browser:
-    -   home search → results → page view
-    -   command palette open → select result
-    -   missing page flow
+**Decision:** Playwright for critical flows only.
+
+**Framework:** Playwright
+
+**Scope:** 10-15 tests covering critical user flows:
+-   Home → Search → Results → Page view
+-   Command palette open → search → select result
+-   TOC navigation and scroll-spy
+-   Find-in-page functionality
+-   Mobile responsive behavior
+-   404 / missing page handling
+-   Theme toggle persistence
+
+**Configuration:**
+-   Run in CI on every PR
+-   Single browser (Chromium) for speed; cross-browser testing deferred
+-   Parallel execution for faster CI
 
 ## Contract Tests
 
 -   Frontend ↔ API schema compatibility:
-    -   ensure required fields exist and types are stable for v0.1.0
+    -   **OpenAPI type generation (v0.2.0):** Types generated from OpenAPI spec ensure compile-time compatibility
+    -   ensure required fields exist and types are stable
     -   snapshot test JSON shapes
 
 ## Golden Tests (Parsing/Rendering Fidelity)
@@ -1581,10 +1814,19 @@ Staging and prod must be isolated:
 -   Page fetch test:
     -   ensure no N+1 queries for related links
 
-## Accessibility Tests
+## Accessibility Tests (v0.2.0)
 
--   Automated checks (axe or equivalent) on key pages
--   Manual keyboard-only testing checklist for each release
+**Decision:** axe-core in CI, fail on critical + serious violations.
+
+**Implementation:**
+-   Integrate axe-core with Playwright E2E tests
+-   Run accessibility checks on key pages:
+    -   Home page
+    -   Search results
+    -   Man page view (small and large)
+    -   Command palette open state
+-   **Failure threshold:** Critical and Serious violations fail CI; Minor issues logged as warnings
+-   Manual keyboard-only testing checklist for each release (maintained separately)
 
 ## Security Testing Basics
 
@@ -1612,7 +1854,7 @@ Staging and prod must be isolated:
 
 # 21. Milestones & Delivery Plan
 
-## Phased Plan (v0.1.0)
+## Phased Plan (v0.1.0) - COMPLETED
 
 1. **Week 1–2: Foundations**
     - Repo scaffold, CI, environments, basic API skeleton, DB schema v1
@@ -1638,7 +1880,44 @@ Staging and prod must be isolated:
     - Staging soak + load tests + rollback drills
     - Cut `v0.1.0` tag and launch
 
-## Definition of Done (Launch Checklist)
+## Phased Plan (v0.2.0)
+
+**Phase 1: Testing Infrastructure**
+1. Set up Vitest with Testing Library
+2. Add co-located tests for existing components
+3. Extract and test domain hooks
+4. Set up Playwright for E2E
+5. Implement critical flow E2E tests
+6. Add axe-core accessibility testing
+
+**Phase 2: Type Safety & API**
+1. Configure OpenAPI export in FastAPI
+2. Set up openapi-typescript generation in CI
+3. Update frontend to use generated types
+4. Enable Pydantic strict mode on request models
+5. Add response examples to API routes
+
+**Phase 3: Security Hardening**
+1. Implement CSP nonce generation in middleware
+2. Update frontend to support nonce-based CSP
+3. Add in-memory rate limit fallback
+4. Configure quarterly dependency audit process
+
+**Phase 4: Performance & UX**
+1. Implement TanStack Virtual for large pages
+2. Optimize highlight.js to common languages only
+3. Add bundle size CI reporting
+4. Implement granular ETags
+5. Add Find-in-page match count and navigation
+6. Implement TOC scroll-spy with IntersectionObserver
+7. Add CSS print styles
+
+**Phase 5: Component Architecture**
+1. Decompose ManPageView into sub-components
+2. Extract domain hooks
+3. Add tests for new components/hooks
+
+## Definition of Done (v0.1.0 Launch Checklist) - COMPLETED
 
 **Code complete (repo)**
 
@@ -1660,6 +1939,51 @@ Staging and prod must be isolated:
 -   [ ] Monitoring dashboards and alerts configured (Railway logs)
 -   [ ] Accessibility: WCAG 2.2 AA baseline checks pass; keyboard-only flows validated
 
+## Definition of Done (v0.2.0 Launch Checklist)
+
+**Testing Infrastructure**
+
+-   [ ] Vitest configured with Testing Library
+-   [ ] Domain hooks have unit tests
+-   [ ] Key components have co-located tests
+-   [ ] Playwright E2E tests for critical flows (10-15 tests)
+-   [ ] axe-core accessibility tests integrated in CI
+-   [ ] CI fails on critical/serious a11y violations
+
+**Type Safety**
+
+-   [ ] OpenAPI spec exported during CI
+-   [ ] TypeScript types generated from OpenAPI
+-   [ ] Frontend uses generated types for API calls
+-   [ ] Pydantic strict mode enabled on all request models
+
+**Security**
+
+-   [ ] CSP nonces implemented (no 'unsafe-inline')
+-   [ ] In-memory rate limit fallback working
+-   [ ] Quarterly dependency audit process documented
+-   [ ] First audit completed
+
+**Performance**
+
+-   [ ] TanStack Virtual working for large pages (bash, etc.)
+-   [ ] highlight.js bundle optimized (common languages only)
+-   [ ] Bundle size CI comments working
+-   [ ] Granular ETags implemented
+
+**UX Polish**
+
+-   [ ] Find-in-page shows match count and position
+-   [ ] Find-in-page supports Enter/Shift+Enter navigation
+-   [ ] TOC scroll-spy uses IntersectionObserver
+-   [ ] Print styles hide navigation, preserve content
+
+**Component Architecture**
+
+-   [ ] ManPageView decomposed into sub-components
+-   [ ] Domain hooks extracted and tested
+-   [ ] Tests co-located with components
+
 ---
 
 # 22. Risks & Mitigations
@@ -1674,6 +1998,12 @@ Staging and prod must be isolated:
     - Mitigation: aggressive caching; rate limiting; optional upstream protection; cap limits/offsets.
 5. **Dataset drift and reproducibility**
     - Mitigation: record container digests and manifests; version dataset releases; keep rollback releases.
+6. **v0.2.0: Virtualization complexity**
+    - Mitigation: Only virtualize pages with 100+ blocks; maintain non-virtualized path for smaller pages; thorough E2E testing of anchor links in virtualized content.
+7. **v0.2.0: CSP nonce implementation breaks existing functionality**
+    - Mitigation: Test thoroughly in staging; have rollback plan to previous CSP policy.
+8. **v0.2.0: Type generation adds CI complexity**
+    - Mitigation: Generate types during CI, fail fast on schema mismatches; document regeneration process.
 
 ---
 
@@ -1685,8 +2015,37 @@ All open questions have been resolved through the interview process:
 2. **Ingestion write path:** ✅ RESOLVED - Staging first, auto-promote. Write to staging DB first, run automated validation, auto-promote to prod if checks pass.
 3. **Analytics stance:** ✅ RESOLVED - No client analytics. Server metrics only via Railway logging. Zero client-side tracking.
 4. **Option highlighting feature:** ✅ RESOLVED - Yes, implement in v0.1.0. Click option to highlight all occurrences throughout the page.
-5. **Supported sections:** ✅ RESOLVED - Standard sections 1–9 only. Ignore non-standard suffixes like `3p`, `n`, `l`.
+5. **Supported sections:** ✅ RESOLVED - Extended sections matching `^[1-9][a-z0-9]*$` (e.g. `3p`, `1ssl`).
 6. **External link handling:** ✅ RESOLVED - Allow external links with indicator. Open in new tab with external link icon. User knows they're leaving.
+
+## v0.2.0 Decisions (All Resolved)
+
+7. **Frontend testing approach:** ✅ RESOLVED - Vitest + Testing Library for unit/component tests.
+8. **E2E testing framework:** ✅ RESOLVED - Playwright for critical flows only (10-15 tests).
+9. **Type generation:** ✅ RESOLVED - OpenAPI + openapi-typescript, generated during CI build.
+10. **CSP hardening level:** ✅ RESOLVED - Strict with nonces, generated in FastAPI middleware.
+11. **Large page rendering:** ✅ RESOLVED - TanStack Virtual for pages with 100+ blocks.
+12. **Virtualization anchor handling:** ✅ RESOLVED - Scroll to approximate position, render target, fine-tune.
+13. **Accessibility testing scope:** ✅ RESOLVED - axe-core in CI, fail on critical + serious violations.
+14. **Print support level:** ✅ RESOLVED - CSS print styles only (zero runtime cost).
+15. **Find-in-page enhancements:** ✅ RESOLVED - Match count + navigation with Enter/Shift+Enter.
+16. **TOC scroll-spy implementation:** ✅ RESOLVED - IntersectionObserver API.
+17. **Input validation scope:** ✅ RESOLVED - Pydantic strict mode on all request models.
+18. **Bundle size enforcement:** ✅ RESOLVED - CI comments with soft warn, does not block merge.
+19. **Rate limit fallback:** ✅ RESOLVED - In-memory fallback with same limits per-process.
+20. **Dependency auditing:** ✅ RESOLVED - Weekly Dependabot + quarterly manual audit (security, license, size).
+21. **Component decomposition:** ✅ RESOLVED - Split ManPageView into sections, extract domain hooks.
+22. **highlight.js optimization:** ✅ RESOLVED - Common languages only (bash, shell, python, c, makefile).
+23. **Test organization:** ✅ RESOLVED - Co-located with components.
+24. **ETag granularity:** ✅ RESOLVED - Content SHA + dataset release ID.
+25. **Search query optimization:** ✅ RESOLVED - Query plan analysis focus.
+26. **OpenAPI documentation level:** ✅ RESOLVED - Auto-generated + examples.
+27. **Hook extraction scope:** ✅ RESOLVED - Domain hooks (useManPage, useSearch, useTOC, useFindInPage).
+28. **Print code block handling:** ✅ RESOLVED - Preserve with page-break-inside: avoid.
+29. **A11y violation severity:** ✅ RESOLVED - Critical + serious fail CI, minor as warnings.
+30. **Type generation timing:** ✅ RESOLVED - CI build step, commit to repo.
+31. **Version target:** ✅ RESOLVED - v0.2.0 (new minor version).
+32. **Migration approach:** ✅ RESOLVED - Phased approach documented.
 
 ---
 
@@ -1700,6 +2059,10 @@ All open questions have been resolved through the interview process:
 -   **Dataset release:** A versioned snapshot of ingested man content.
 -   **FTS:** Full Text Search.
 -   **TOC:** Table of Contents.
+-   **CSP:** Content Security Policy.
+-   **Nonce:** Number used once - cryptographic token for CSP.
+-   **E2E:** End-to-end (testing).
+-   **a11y:** Accessibility (numeronym).
 
 ## Referenced Schemas (High level)
 
@@ -1707,19 +2070,21 @@ All open questions have been resolved through the interview process:
 -   API Error Envelope: Section 13
 -   Canonical identity: Section 9
 
-## Keyboard Shortcuts Table (v0.1.0)
+## Keyboard Shortcuts Table (v0.1.0 + v0.2.0)
 
-| Shortcut   | Context             | Action                      |
-| ---------- | ------------------- | --------------------------- |
-| Cmd/Ctrl+K | Global              | Open command palette        |
-| Esc        | Global/Modal        | Close modal/drawer, dismiss |
-| /          | Global              | Focus search input          |
-| j / k      | Lists (results/TOC) | Move selection down/up      |
-| Enter      | Lists               | Activate selection          |
-| t          | Page view           | Scroll to top               |
-| b          | Page view           | Toggle TOC sidebar/drawer   |
-| d          | Global              | Toggle theme (cycle)        |
-| Alt+Left   | Browser             | Back                        |
+| Shortcut      | Context             | Action                        |
+| ------------- | ------------------- | ----------------------------- |
+| Cmd/Ctrl+K    | Global              | Open command palette          |
+| Esc           | Global/Modal        | Close modal/drawer, dismiss   |
+| /             | Global              | Focus search input            |
+| j / k         | Lists (results/TOC) | Move selection down/up        |
+| Enter         | Lists               | Activate selection            |
+| Enter         | Find-in-page        | Jump to next match (v0.2.0)   |
+| Shift+Enter   | Find-in-page        | Jump to previous match (v0.2.0) |
+| t             | Page view           | Scroll to top                 |
+| b             | Page view           | Toggle TOC sidebar/drawer     |
+| d             | Global              | Toggle theme (cycle)          |
+| Alt+Left      | Browser             | Back                          |
 
 ---
 
@@ -1742,7 +2107,8 @@ All open questions have been resolved through the interview process:
 -   UI primitives: **Radix UI** (selectively, e.g. Dialog)
 -   CSS: **Tailwind CSS v4**
 -   Linting: **ESLint**
--   Testing: *(none yet)*
+-   Testing (v0.2.0): **Vitest + Testing Library** (unit), **Playwright** (E2E), **axe-core** (a11y)
+-   Virtualization (v0.2.0): **TanStack Virtual** (100+ blocks threshold)
 -   Runtime: **Node 20 LTS**
 
 ### Backend Stack
@@ -1750,16 +2116,20 @@ All open questions have been resolved through the interview process:
 -   ORM: **SQLAlchemy 2.0**
 -   Migrations: **Alembic**
 -   Testing: **pytest + httpx**
+-   Validation (v0.2.0): **Pydantic v2 strict mode** on request models
 -   Runtime: **Python 3.12**
 
 ### Key Feature Decisions
 -   Option highlighting: **Yes, in v0.1.0**
 -   Custom in-page search: **Yes, with highlights**
+-   Find-in-page navigation (v0.2.0): **Match count + Enter/Shift+Enter**
 -   Syntax highlighting: **All code blocks** (shell-like default)
+-   highlight.js optimization (v0.2.0): **Common languages only** (bash, shell, python, c, makefile)
 -   Raw source view: **No** (removed for licensing)
 -   Analytics: **None** (server metrics only)
 -   External links: **Allow with indicator**
 -   Sections supported: **`^[1-9][a-z0-9]*$`** (e.g. `3p`, `1ssl`)
+-   Print support (v0.2.0): **CSS print styles only**
 
 ### UX Decisions
 -   Theme default: **System preference**
@@ -1769,7 +2139,97 @@ All open questions have been resolved through the interview process:
 -   Related commands: **Collapsible** (5 default, expand for all)
 -   Search results: **20 with load more**
 -   Copy feedback: **Icon change** (checkmark)
+-   TOC scroll-spy (v0.2.0): **IntersectionObserver**
+
+### Security Decisions (v0.2.0)
+-   CSP: **Strict with nonces**, generated in FastAPI middleware
+-   Input validation: **Pydantic strict mode** on all request models
+-   Rate limit fallback: **In-memory per-process**, same limits
+-   Dependency auditing: **Weekly Dependabot + quarterly manual** (security, license, size)
+
+### Testing Decisions (v0.2.0)
+-   Frontend unit: **Vitest + Testing Library**, co-located tests
+-   E2E: **Playwright**, critical flows only (10-15 tests)
+-   Accessibility: **axe-core in CI**, fail on critical + serious
+-   Type generation: **openapi-typescript**, CI build step
 
 ### Project Structure
 -   Repository: **Monorepo** with pnpm workspaces
 -   Local dev: **Docker Compose** for services
+-   Type sharing (v0.2.0): **OpenAPI-generated TypeScript types**
+-   Component architecture (v0.2.0): **Decomposed components + domain hooks**
+
+---
+
+# 25. Migration & Upgrade Path (v0.2.0)
+
+## Overview
+
+v0.2.0 is a **non-breaking** release focused on quality, testing, and developer experience. All changes are additive or internal improvements.
+
+## Breaking Changes
+
+**None.** v0.2.0 maintains full backwards compatibility with v0.1.x.
+
+## Phased Implementation Order
+
+Recommended order for implementing v0.2.0 changes:
+
+### Phase 1: Testing Foundation (Low Risk)
+1. Add Vitest configuration
+2. Write tests for existing code
+3. Add Playwright for E2E
+4. Integrate axe-core
+
+*Rationale: Testing infrastructure has zero production impact.*
+
+### Phase 2: Type Safety (Low Risk)
+1. Export OpenAPI spec
+2. Generate TypeScript types
+3. Update frontend to use types
+4. Enable Pydantic strict mode
+
+*Rationale: Compile-time only; no runtime behavior change.*
+
+### Phase 3: Security Hardening (Medium Risk)
+1. Implement CSP nonces
+2. Add rate limit fallback
+3. First dependency audit
+
+*Rationale: CSP changes require careful testing; fallback is defensive.*
+
+### Phase 4: Performance (Medium Risk)
+1. TanStack Virtual implementation
+2. highlight.js optimization
+3. Granular ETags
+
+*Rationale: Virtualization changes rendering behavior; requires E2E validation.*
+
+### Phase 5: UX Polish (Low Risk)
+1. Find-in-page enhancements
+2. TOC scroll-spy improvements
+3. Print styles
+
+*Rationale: Additive UX features with no breaking changes.*
+
+### Phase 6: Architecture (Low Risk)
+1. Component decomposition
+2. Hook extraction
+
+*Rationale: Internal refactoring; behavior unchanged.*
+
+## Rollback Plan
+
+Each phase can be rolled back independently:
+
+-   **Testing:** Remove test files; no production impact
+-   **Type generation:** Revert to manual types; no runtime change
+-   **CSP nonces:** Revert to previous CSP policy via env var
+-   **Virtualization:** Disable via feature flag; fall back to full render
+-   **UX features:** Disable via feature flags if needed
+
+## Version Compatibility
+
+-   v0.2.0 API is fully compatible with v0.1.x clients
+-   v0.2.0 frontend is fully compatible with v0.1.x API
+-   Dataset format unchanged between v0.1.x and v0.2.0
