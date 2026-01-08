@@ -25,6 +25,8 @@ def parse_postgres_dsn(database_url: str) -> PostgresDsn:
         if idx > 0:
             url = url[idx:]
             break
+    if url.startswith("//"):
+        url = f"postgresql:{url}"
     url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
 
     parsed = urlparse(url)
