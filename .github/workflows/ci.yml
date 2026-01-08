@@ -145,7 +145,7 @@ jobs:
           for attempt in {1..60}; do
             info="$(railway service status --json --service "$RAILWAY_SERVICE_ID" --environment "$RAILWAY_ENVIRONMENT_ID")"
             status="$(echo "$info" | jq -r '.status // empty')"
-            stopped="$(echo "$info" | jq -r '.stopped // empty')"
+            stopped="$(echo "$info" | jq -r '.stopped')"
             deployment_id="$(echo "$info" | jq -r '.deploymentId // empty')"
 
             echo "[$attempt/60] status=${status} stopped=${stopped} deploymentId=${deployment_id}"
