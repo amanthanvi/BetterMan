@@ -34,7 +34,18 @@ def create_app() -> FastAPI:
         await db_engine.dispose()
         await redis.aclose()
 
-    app = FastAPI(title="BetterMan API", version="0.1.0", lifespan=lifespan)
+    docs_url = None if settings.env == "prod" else "/docs"
+    redoc_url = None if settings.env == "prod" else "/redoc"
+    openapi_url = None if settings.env == "prod" else "/openapi.json"
+
+    app = FastAPI(
+        title="BetterMan API",
+        version="0.1.0",
+        lifespan=lifespan,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
+    )
     app.state.settings = settings
 
     app.state.db_engine = db_engine

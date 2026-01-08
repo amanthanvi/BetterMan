@@ -29,7 +29,7 @@ async def test_csp_nonce_is_set_and_injected(tmp_path: Path) -> None:
     assert csp
     assert "unsafe-inline" not in csp
 
-    m = re.search(r"nonce-([^'\\s;]+)", csp)
+    m = re.search(r"nonce-([^'\s;]+)", csp)
     assert m
     nonce = m.group(1)
 
