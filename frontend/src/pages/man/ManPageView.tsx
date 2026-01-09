@@ -219,7 +219,7 @@ export function ManPageView({
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="font-mono text-4xl font-semibold leading-[1.05] tracking-tight">
+              <h1 className="break-words font-mono text-3xl font-semibold leading-[1.05] tracking-tight sm:text-4xl">
                 {page.name}({page.section})
               </h1>
               <p className="mt-3 max-w-[70ch] text-base text-[color:var(--bm-muted)]">
@@ -240,12 +240,12 @@ export function ManPageView({
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--bm-muted)]">
             {page.sourcePackage ? (
-              <span className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
+              <span className="min-w-0 max-w-full break-words rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
                 pkg {page.sourcePackage}
                 {page.sourcePackageVersion ? `@${page.sourcePackageVersion}` : ''}
               </span>
             ) : null}
-            <span className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
+            <span className="min-w-0 max-w-full break-words rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
               dataset {page.datasetReleaseId}
             </span>
           </div>

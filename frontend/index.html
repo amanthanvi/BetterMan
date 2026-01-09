@@ -25,6 +25,20 @@
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f1e6" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0d10" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      ;(() => {
+        try {
+          const stored = localStorage.getItem('bm-theme')
+          if (stored === 'dark' || stored === 'light') {
+            document.documentElement.dataset.theme = stored
+          } else {
+            document.documentElement.removeAttribute('data-theme')
+          }
+        } catch {
+          // ignore
+        }
+      })()
+    </script>
     <title>BetterMan</title>
   </head>
   <body>

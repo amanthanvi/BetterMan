@@ -68,14 +68,14 @@
   html {
     color: var(--bm-fg);
     color-scheme: light;
-    background:
-      radial-gradient(
-          circle at 1px 1px,
-          color-mix(in srgb, var(--bm-fg) 7%, transparent) 1px,
-          transparent 0
-        )
-        0 0 / 16px 16px,
-      linear-gradient(var(--bm-bg), var(--bm-bg));
+    background-color: var(--bm-bg);
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--bm-fg) 7%, transparent) 1px,
+      transparent 0
+    );
+    background-size: 16px 16px;
+    background-position: 0 0;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -91,14 +91,14 @@
       --bm-accent-contrast: #1b0c0a;
 
       color-scheme: dark;
-      background:
-        radial-gradient(
-            circle at 1px 1px,
-            color-mix(in srgb, var(--bm-fg) 6%, transparent) 1px,
-            transparent 0
-          )
-          0 0 / 16px 16px,
-        linear-gradient(var(--bm-bg), var(--bm-bg));
+      background-color: var(--bm-bg);
+      background-image: radial-gradient(
+        circle at 1px 1px,
+        color-mix(in srgb, var(--bm-fg) 6%, transparent) 1px,
+        transparent 0
+      );
+      background-size: 16px 16px;
+      background-position: 0 0;
     }
   }
 
@@ -114,14 +114,14 @@
     --bm-accent-contrast: #1b0c0a;
 
     color-scheme: dark;
-    background:
-      radial-gradient(
-          circle at 1px 1px,
-          color-mix(in srgb, var(--bm-fg) 6%, transparent) 1px,
-          transparent 0
-        )
-        0 0 / 16px 16px,
-      linear-gradient(var(--bm-bg), var(--bm-bg));
+    background-color: var(--bm-bg);
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--bm-fg) 6%, transparent) 1px,
+      transparent 0
+    );
+    background-size: 16px 16px;
+    background-position: 0 0;
   }
 
   body {
@@ -129,6 +129,16 @@
     font-family: var(--font-serif);
     line-height: 1.65;
     letter-spacing: 0.01em;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html,
+    body,
+    body * {
+      transition-property: color, background-color, border-color, fill, stroke;
+      transition-duration: 150ms;
+      transition-timing-function: ease-out;
+    }
   }
 
   code,
