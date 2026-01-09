@@ -9,3 +9,7 @@ Runbooks referenced by `SPEC.md` Section 17.
 - `docs/runbooks/bad-ingestion-release.md`
 - `docs/runbooks/backups-restore.md`
 - `docs/runbooks/logging-redaction.md`
+- `docs/runbooks/csp-violations.md`
+- `docs/runbooks/railway-ops.md`
+- `docs/runbooks/e2e-debug.md`
+- `docs/runbooks/type-gen.md`
