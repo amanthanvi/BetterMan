@@ -77,7 +77,7 @@ async def get_man_by_name(
         raise APIError(status_code=404, code="PAGE_NOT_FOUND", message="Page not found")
 
     man_page, content = page_with_content
-    etag = compute_weak_etag("man-by-name", release.dataset_release_id, content.content_sha256)
+    etag = compute_weak_etag("man-by-name", release.dataset_release_id, man_page.content_sha256)
     not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
     if not_modified is not None:
         return not_modified
@@ -132,7 +132,7 @@ async def get_man_by_name_and_section(
     etag = compute_weak_etag(
         "man-by-name-section",
         release.dataset_release_id,
-        content.content_sha256,
+        man_page.content_sha256,
     )
     not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
     if not_modified is not None:
