@@ -10,7 +10,6 @@ from starlette.types import Scope
 
 _FINGERPRINTED_ASSET_RE = re.compile(r"^assets/.+-[A-Za-z0-9]{8,}\\.[A-Za-z0-9]+$")
 _SCRIPT_TAG_RE = re.compile(r"<script(?![^>]*\\snonce=)", flags=re.IGNORECASE)
-_STYLE_TAG_RE = re.compile(r"<style(?![^>]*\\snonce=)", flags=re.IGNORECASE)
 
 
 class SPAStaticFiles(StaticFiles):
@@ -23,7 +22,6 @@ class SPAStaticFiles(StaticFiles):
         nonce = scope.get("csp_nonce") or (scope.get("state") or {}).get("csp_nonce")
         if nonce:
             html = _SCRIPT_TAG_RE.sub(f'<script nonce="{nonce}"', html)
-            html = _STYLE_TAG_RE.sub(f'<style nonce="{nonce}"', html)
 
         res = HTMLResponse(html)
         res.headers.setdefault("Cache-Control", "no-cache")

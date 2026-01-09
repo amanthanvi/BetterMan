@@ -18,7 +18,7 @@ def build_csp(*, nonce: str, upgrade_insecure_requests: bool = False) -> str:
         "frame-ancestors 'none'",
         "object-src 'none'",
         f"script-src 'self' 'nonce-{nonce}'",
-        f"style-src 'self' 'nonce-{nonce}'",
+        "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data:",
         "font-src 'self'",
         "connect-src 'self'",

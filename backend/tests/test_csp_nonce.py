@@ -27,7 +27,8 @@ async def test_csp_nonce_is_set_and_injected(tmp_path: Path) -> None:
 
     csp = res.headers.get("content-security-policy")
     assert csp
-    assert "unsafe-inline" not in csp
+    assert "script-src 'self' 'nonce-" in csp
+    assert "style-src 'self' 'unsafe-inline'" in csp
 
     m = re.search(r"nonce-([^'\s;]+)", csp)
     assert m
