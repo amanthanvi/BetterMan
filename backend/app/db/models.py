@@ -25,6 +25,7 @@ class DatasetRelease(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     dataset_release_id: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     locale: Mapped[str] = mapped_column(String, nullable=False, default="en")
+    distro: Mapped[str] = mapped_column(String, nullable=False, default="debian")
 
     image_ref: Mapped[str] = mapped_column(String, nullable=False)
     image_digest: Mapped[str] = mapped_column(String, nullable=False)
