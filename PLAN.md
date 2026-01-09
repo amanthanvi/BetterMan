@@ -11,7 +11,7 @@ Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 - [x] v0.1.0 shipped (tag `v0.1.0`)
 - [x] v0.1.1 shipped (tag `v0.1.1`)
 - [x] v0.1.2 shipped (tag `v0.1.2`)
-- [ ] v0.2.0 shipped (tag `v0.2.0`)
+- [x] v0.2.0 shipped (tag `v0.2.0`)
 
 ## Golden Commands (current; proven)
 
@@ -25,6 +25,7 @@ Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 - `pnpm frontend:bundle:report`
 - `pnpm frontend:lint`
 - `pnpm frontend:test`
+- `pnpm frontend:e2e`
 - `pnpm ingest:sample`
 - `pnpm ingest:run`
 - `pnpm ingest:lint`
@@ -35,7 +36,7 @@ Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 ### M10 — Docs alignment + planning
 
 - [x] Update `SPEC.md` runtime versions to match repo/CI/Docker (Node 25, Python 3.14)
-- [ ] Keep `README.md` / `SECURITY.md` / `CONTRIBUTING.md` current as new scripts + checks land
+- [x] Keep `README.md` / `SECURITY.md` / `CONTRIBUTING.md` current as new scripts + checks land
 
 ### M11 — Frontend unit tests (Vitest + Testing Library)
 
@@ -93,5 +94,5 @@ Goal: **type-safety with minimal churn / risk** (preserve current response shape
 - [x] Find-in-page keybindings: Enter → next match, Shift+Enter → previous (desktop + mobile)
 - [x] Print styles (`@media print`) hide navigation, preserve content layout
 - [x] Decompose man page view into components + extract domain hooks (keep behavior identical; add tests)
-- [ ] CI green on `main` (including deploy-to-Railway workflow); verify Railway deploy is healthy
-- [ ] Update docs + bump version strings; tag `v0.2.0`
+- [x] CI green on `main` (including deploy-to-Railway workflow); verify Railway deploy is healthy
+- [x] Update docs + bump version strings; tag `v0.2.0`
