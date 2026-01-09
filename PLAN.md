@@ -48,13 +48,13 @@ Living execution plan for shipping `v0.3.0` from `SPEC.md`.
 
 ### M23 — SEO foundation (no SSR)
 
-- [ ] Add static base meta to `frontend/index.html` (title/description/og basics)
-- [ ] Add `react-helmet-async` + `HelmetProvider` at app root
-- [ ] Per-route `<Helmet>` meta (home/search/section/man/licenses) + canonical links
-- [ ] Man pages: TechArticle JSON‑LD (minimal fields; safe stringification)
-- [ ] Backend: `GET /robots.txt` (disallow `/api/`, include sitemap index)
-- [ ] Backend: `GET /sitemap.xml` (index) + `GET /sitemap-<distro>.xml` (per distro)
-- [ ] E2E: sitemap + robots smoke (valid XML, contains at least one known URL)
+- [x] Add static base meta to `frontend/index.html` (title/description/og basics)
+- [x] Add `react-helmet-async` + `HelmetProvider` at app root
+- [x] Per-route `<Helmet>` meta (home/search/section/man/licenses) + canonical links
+- [x] Man pages: TechArticle JSON‑LD (minimal fields; safe stringification)
+- [x] Backend: `GET /robots.txt` (disallow `/api/`, include sitemap index)
+- [x] Backend: `GET /sitemap.xml` (index) + `GET /sitemap-<distro>.xml` (per distro)
+- [x] E2E: sitemap + robots smoke (valid XML, contains at least one known URL)
 
 ### M24 — Multi‑distribution DB + ingestion (Debian + Ubuntu + Fedora)
 
