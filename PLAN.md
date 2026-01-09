@@ -33,96 +33,65 @@ Living execution plan for shipping `v0.3.0` from `SPEC.md`.
 - `pnpm ingest:lint`
 - `pnpm ingest:test`
 
-## Milestones (v0.2.1)
+## v0.3.0 Milestones
 
-### M17 — CSP policy refinement (scripts strict, styles relaxed)
+### M22 — Performance audit (gates all other v0.3.0 work)
 
-- [x] Update CSP `style-src` to include `'unsafe-inline'` (TanStack Virtual needs inline `style=""`)
-- [x] Keep script nonces strict (`script-src 'nonce-…'`)
-- [x] Update CSP-related tests
-- [x] Verify CSP in prod (no unexpected violations)
+- [ ] Create `docs/performance-audit-v030.md` (baseline + methodology + deltas)
+- [ ] Lighthouse baselines (home, search, man page; mobile + desktop)
+- [ ] Chrome DevTools perf traces (page load + long-page scroll)
+- [ ] React Profiler (virtualized man page scroll / re-render hotspots)
+- [ ] Railway metrics review (CPU/mem + response times)
+- [ ] Fix top 1–3 root causes (evidence-driven; keep diffs small)
+- [ ] Re-run the same measurements; record improvements
 
-### M18 — Visual polish (targeted)
+### M23 — SEO foundation (no SSR)
 
-- [x] Add 150ms theme transition for background/text colors
-- [x] Respect `prefers-reduced-motion` (no theme animation when reduced motion preferred)
-- [x] Avoid “first paint” theme animation (no flash/animate on initial load)
-- [x] Fix mobile header overflow (metadata tags wrapping/overflow on narrow screens)
-- [x] Typography/contrast review (code blocks + small labels + syntax highlighting in both themes)
+- [ ] Add static base meta to `frontend/index.html` (title/description/og basics)
+- [ ] Add `react-helmet-async` + `HelmetProvider` at app root
+- [ ] Per-route `<Helmet>` meta (home/search/section/man/licenses) + canonical links
+- [ ] Man pages: TechArticle JSON‑LD (minimal fields; safe stringification)
+- [ ] Backend: `GET /robots.txt` (disallow `/api/`, include sitemap index)
+- [ ] Backend: `GET /sitemap.xml` (index) + `GET /sitemap-<distro>.xml` (per distro)
+- [ ] E2E: sitemap + robots smoke (valid XML, contains at least one known URL)
 
-### M19 — Performance tuning (evidence + low-risk tweaks only)
+### M24 — Multi‑distribution DB + ingestion (Debian + Ubuntu + Fedora)
 
-- [x] Run `EXPLAIN ANALYZE` on the `/search` query and document findings
-- [x] Review HTTP cache TTLs and only adjust if clearly safe
-- [x] Review bundle report (`pnpm frontend:bundle:report`) and confirm target stays met
+**Design choice (low-risk, incremental):** dataset releases are distro-scoped.
 
-### M20 — Operational runbooks
+- DB:
+  - [ ] Alembic migration: add `dataset_releases.distro` (`debian|ubuntu|fedora`, default `debian`)
+  - [ ] Alembic migration: allow one active release per `(locale, distro)` (replace old locale-only active constraint)
+  - [ ] Backfill existing rows to `debian`
+- Ingestion:
+  - [ ] Add `--distro` flag and distro-aware dataset release IDs (avoid collisions)
+  - [ ] Debian + Ubuntu: apt-based ingest (reuse dpkg tooling)
+  - [ ] Fedora: dnf-based ingest + rpm manifest capture
+  - [ ] Keep pipelines independent (one distro failing doesn’t block others)
+  - [ ] Tests: distro selection + dataset release IDs + manifest shape
+- Ops:
+  - [ ] Update `.github/workflows/update-docs.yml` to ingest+promote per distro
 
-- [x] Add `docs/runbooks/csp-violations.md`
-- [x] Add `docs/runbooks/railway-ops.md`
-- [x] Add `docs/runbooks/e2e-debug.md`
-- [x] Add `docs/runbooks/type-gen.md`
-- [x] Update `docs/runbooks/README.md` list
+### M25 — Multi‑distribution API + frontend
 
-### M21 — Release
-
-- [x] CI green on `main` (including Railway deploy workflow)
-- [x] Deploy healthy (manual spot-check of `/healthz` + one real page load)
-- [x] Update `SPEC.md` / `README.md` / `PLAN.md` statuses to "shipped"
-- [x] Tag `v0.2.1`
-
-## Milestones (v0.3.0)
-
-### M22 — Performance Audit (Phase 1, blocks all other work)
-
-- [ ] Run Lighthouse CI on key pages (home, search results, man page)
-- [ ] Profile with Chrome DevTools (LCP, TBT, CLS)
-- [ ] Profile React renders (React DevTools Profiler)
-- [ ] Investigate TanStack Virtual jank on long man pages
-- [ ] Review Railway metrics (response times, memory)
-- [ ] Document findings in `docs/performance-audit-v030.md`
-- [ ] Fix critical issues (LCP > 2.5s, jank, memory leaks)
-- [ ] Re-run profiling to confirm improvements
-
-### M23 — SEO Foundation (Phase 2)
-
-- [ ] Add `react-helmet-async` for client-side meta tags
-- [ ] Implement per-page meta tags (title, description, canonical)
-- [ ] Add JSON-LD structured data (TechArticle schema, minimal fields)
-- [ ] Create sitemap index architecture (`/sitemap-index.xml`)
-- [ ] Implement per-distribution sitemap generation (scheduled, not on-demand)
-- [ ] Add `robots.txt` (allow all, reference sitemap index)
-- [ ] E2E tests for sitemap validation
-- [ ] Verify in Google Search Console (after deploy)
-
-### M24 — Multi-Distribution Ingestion (Phase 3a)
-
-- [ ] Design `distributions` table schema (id, name, slug, priority)
-- [ ] Add `distribution_id` FK to `man_pages` table
-- [ ] Create parallel ingestion pipelines (Debian, Ubuntu, Fedora)
-- [ ] Implement deduplication strategy (same content across distros)
-- [ ] Update ingestion CLI for distro selection (`--distro debian`)
-- [ ] Seed initial distributions (Debian default, Ubuntu, Fedora)
-- [ ] Ingestion tests for multi-distro pipeline
-- [ ] Run full ingest for all three distributions
-
-### M25 — Multi-Distribution Frontend (Phase 3b)
-
-- [ ] Add distribution context/state (global default: Debian)
-- [ ] Implement distribution selector component (header dropdown)
-- [ ] Add per-page distribution override UI
-- [ ] Update URL scheme (`?distro=ubuntu` query param)
-- [ ] Update search to filter by distribution
-- [ ] Update man page view to show distribution badge
-- [ ] Persist distribution preference (localStorage)
-- [ ] E2E tests for distribution selector
+- Backend API:
+  - [ ] Add optional `?distro=` query param to relevant endpoints
+  - [ ] Default behavior remains Debian when `?distro` omitted (existing URLs unchanged)
+  - [ ] Expose page “variants” info so UI only shows per-page selector when useful
+  - [ ] Regenerate OpenAPI + commit `frontend/src/api/openapi.gen.ts`
+- Frontend:
+  - [ ] Store global distro preference (localStorage) + apply to API requests
+  - [ ] Header distro selector (always available) + per-page override (only when variants exist)
+  - [ ] Ensure “copy link” preserves `?distro=` when non-default
+- E2E:
+  - [ ] Distro switch changes content (or shows “no differences” when identical)
 
 ### M26 — Release v0.3.0
 
-- [ ] CI green on `main`
-- [ ] Performance metrics meet targets (LCP < 2.5s, no jank)
-- [ ] Sitemap validates and is indexable
-- [ ] Multi-distro content live (Debian + Ubuntu + Fedora)
-- [ ] Deploy healthy (spot-check all three distros)
-- [ ] Update `SPEC.md` / `README.md` / `PLAN.md` statuses
+- [ ] CI green on `main` (including `deploy_railway`)
+- [ ] Performance targets met + documented (M22)
+- [ ] SEO endpoints live (`/robots.txt`, `/sitemap.xml`, per-distro sitemaps)
+- [ ] Multi-distro content live (Debian + Ubuntu + Fedora ingested + active)
+- [ ] Runbooks updated for multi-distro ops
+- [ ] Update `SPEC.md` / `README.md` / `PLAN.md` statuses to shipped
 - [ ] Tag `v0.3.0`
