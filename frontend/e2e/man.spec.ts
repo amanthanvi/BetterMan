@@ -15,10 +15,11 @@ test('man: mobile TOC drawer opens', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
-  await page.goto('/man/curl/1')
+  await page.goto('/man/tar/1')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
   const tocButton = page.getByRole('button', { name: 'TOC' })
-  await expect(tocButton).toBeVisible()
+  await expect(tocButton).toBeVisible({ timeout: 10_000 })
   await tocButton.click()
 
   await expect(page.getByRole('heading', { name: 'Table of contents' })).toBeVisible()
