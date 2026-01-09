@@ -47,6 +47,22 @@ test('man: extended section URLs work', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /openssl\(1ssl\)/i })).toBeVisible()
 })
 
+test('man: distro variant selector swaps content', async ({ page }) => {
+  await page.goto('/man/tar/1?distro=debian')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+
+  const marker = page.getByText(
+    'Ubuntu variant: this page is intentionally different for E2E testing.',
+  )
+  await expect(marker).toHaveCount(0)
+
+  const variantSelect = page.getByLabel('Select distribution variant')
+  await expect(variantSelect).toBeVisible()
+  await variantSelect.selectOption('ubuntu')
+
+  await expect(marker).toBeVisible()
+})
+
 test('man: ambiguous by-name route renders picker', async ({ page }) => {
   await page.goto('/man/printf')
   await expect(page.getByRole('heading', { name: 'printf' })).toBeVisible()

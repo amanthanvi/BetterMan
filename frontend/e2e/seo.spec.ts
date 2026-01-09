@@ -28,6 +28,5 @@ test('seo: man pages emit JSON-LD with CSP nonce', async ({ page }) => {
 
   const jsonLd = page.locator('head script[type="application/ld+json"][nonce]')
   await expect(jsonLd).toHaveCount(1)
-  await expect(jsonLd).toContainText('"@type":"TechArticle"')
+  expect((await jsonLd.textContent()) ?? '').toContain('"@type":"TechArticle"')
 })
-
