@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-FULL_PACKAGE_SET: list[str] = [
+FULL_PACKAGE_SET_DEBIAN: list[str] = [
     "manpages",
     "manpages-dev",
     "bash",
@@ -33,3 +33,44 @@ FULL_PACKAGE_SET: list[str] = [
     "postgresql-client",
     "default-mysql-client",
 ]
+
+FULL_PACKAGE_SET_UBUNTU: list[str] = FULL_PACKAGE_SET_DEBIAN
+
+FULL_PACKAGE_SET_FEDORA: list[str] = [
+    "man-pages",
+    "bash",
+    "coreutils",
+    "util-linux",
+    "findutils",
+    "grep",
+    "sed",
+    "gawk",
+    "curl",
+    "wget",
+    "openssh-clients",
+    "rsync",
+    "systemd",
+    "vim-enhanced",
+    "less",
+    "git",
+    "make",
+    "gcc",
+    "gdb",
+    "nginx",
+    "httpd",
+    "openssl",
+    "openssl-devel",
+    "python3",
+    "perl",
+    "iproute",
+    "procps-ng",
+    "postgresql",
+]
+
+FULL_PACKAGE_SET_BY_DISTRO: dict[str, list[str]] = {
+    "debian": FULL_PACKAGE_SET_DEBIAN,
+    "ubuntu": FULL_PACKAGE_SET_UBUNTU,
+    "fedora": FULL_PACKAGE_SET_FEDORA,
+}
+
+FULL_PACKAGE_SET: list[str] = FULL_PACKAGE_SET_DEBIAN

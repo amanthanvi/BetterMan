@@ -11,16 +11,31 @@ from pathlib import Path
 from ingestion.db import connect, json_dumps, uuid4
 from ingestion.debian import (
     apt_install,
-    build_manpath_to_package,
     dpkg_arch,
     dpkg_packages,
-    mandoc_pkg_version,
+)
+from ingestion.debian import (
+    build_manpath_to_package as build_manpath_to_package_dpkg,
+)
+from ingestion.debian import (
+    mandoc_pkg_version as mandoc_pkg_version_dpkg,
 )
 from ingestion.doc_model import OptionItem, SeeAlsoRef
+from ingestion.fedora import (
+    build_manpath_to_package as build_manpath_to_package_rpm,
+)
+from ingestion.fedora import (
+    dnf_install,
+    rpm_arch,
+    rpm_packages,
+)
+from ingestion.fedora import (
+    mandoc_pkg_version as mandoc_pkg_version_rpm,
+)
 from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import render_html
 from ingestion.mandoc_parser import parse_mandoc_html
-from ingestion.package_set import FULL_PACKAGE_SET
+from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+\\-]*$")
@@ -47,21 +62,37 @@ def ingest(
     image_digest: str,
     git_sha: str,
     locale: str = "en",
+    distro: str = "debian",
 ) -> IngestResult:
-    requested = _content_packages(sample=sample)
-    apt_install(requested)
+    requested = _content_packages(sample=sample, distro=distro)
+    if distro in {"debian", "ubuntu"}:
+        apt_install(requested)
+    elif distro == "fedora":
+        dnf_install(requested)
+    else:
+        raise RuntimeError(f"unsupported distro: {distro}")
 
     man_root = Path("/usr/share/man")
     sources = _filter_sources(scan_man_sources(man_root, sample=sample))
 
-    packages = dpkg_packages()
-    arch = dpkg_arch()
-    mandoc_version = mandoc_pkg_version(packages)
+    if distro in {"debian", "ubuntu"}:
+        packages = dpkg_packages()
+        arch = dpkg_arch()
+        mandoc_version = mandoc_pkg_version_dpkg(packages)
+        manpath_to_pkg = build_manpath_to_package_dpkg()
+    else:
+        packages = rpm_packages()
+        arch = rpm_arch()
+        mandoc_version = mandoc_pkg_version_rpm(packages)
+        manpath_to_pkg = build_manpath_to_package_rpm([src.path for src in sources])
 
-    dataset_release_id = _build_dataset_release_id(git_sha=git_sha, mandoc_version=mandoc_version)
+    dataset_release_id = _build_dataset_release_id(
+        git_sha=git_sha, mandoc_version=mandoc_version, distro=distro
+    )
     package_manifest = {
         "imageRef": image_ref,
         "imageDigest": image_digest,
+        "distro": distro,
         "locale": "C.UTF-8",
         "arch": arch,
         "requestedPackages": requested,
@@ -71,8 +102,6 @@ def ingest(
         "mandocPackageVersion": mandoc_version,
         "generatedAt": datetime.now(tz=UTC).isoformat(),
     }
-
-    manpath_to_pkg = build_manpath_to_package()
 
     parsed_pages: list[_PageRow] = []
     hard_failed = 0
@@ -109,18 +138,20 @@ def ingest(
                     id,
                     dataset_release_id,
                     locale,
+                    distro,
                     image_ref,
                     image_digest,
                     package_manifest,
                     is_active
                 )
             VALUES
-                (%s::uuid, %s, %s, %s, %s, %s::jsonb, %s)
+                (%s::uuid, %s, %s, %s, %s, %s, %s::jsonb, %s)
             """,
             (
                 str(release_uuid),
                 dataset_release_id,
                 locale,
+                distro,
                 image_ref,
                 image_digest,
                 json_dumps(package_manifest),
@@ -213,9 +244,9 @@ def ingest(
                 """
                 UPDATE dataset_releases
                 SET is_active = FALSE
-                WHERE locale = %s AND is_active = TRUE
+                WHERE locale = %s AND distro = %s AND is_active = TRUE
                 """,
-                (locale,),
+                (locale, distro),
             )
             cur.execute(
                 "UPDATE dataset_releases SET is_active = TRUE WHERE id = %s::uuid",
@@ -337,16 +368,25 @@ def _read_bytes(path: Path) -> bytes:
     return path.read_bytes()
 
 
-def _build_dataset_release_id(*, git_sha: str, mandoc_version: str | None) -> str:
+def _build_dataset_release_id(*, git_sha: str, mandoc_version: str | None, distro: str) -> str:
     ts = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     mandoc_part = f"mandoc:{mandoc_version}" if mandoc_version else "mandoc:unknown"
     sha = git_sha or "unknown"
-    return f"{ts}+{sha}+{mandoc_part}"
+    return f"{ts}+{distro}+{sha}+{mandoc_part}"
 
 
-def _content_packages(*, sample: bool) -> list[str]:
+def _content_packages(*, sample: bool, distro: str) -> list[str]:
     base = ["mandoc", "man-db"]
     if sample:
+        if distro == "fedora":
+            return [
+                *base,
+                "bash",
+                "coreutils",
+                "curl",
+                "openssh-clients",
+                "tar",
+            ]
         return [
             *base,
             "bash",
@@ -358,7 +398,8 @@ def _content_packages(*, sample: bool) -> list[str]:
 
     out: list[str] = []
     seen: set[str] = set()
-    for pkg in [*base, *FULL_PACKAGE_SET]:
+    pkg_set = FULL_PACKAGE_SET_BY_DISTRO.get(distro) or FULL_PACKAGE_SET_BY_DISTRO["debian"]
+    for pkg in [*base, *pkg_set]:
         if pkg in seen:
             continue
         seen.add(pkg)

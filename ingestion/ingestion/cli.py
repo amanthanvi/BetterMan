@@ -13,6 +13,12 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     ingest = sub.add_parser("ingest", help="Ingest man pages into Postgres")
+    ingest.add_argument(
+        "--distro",
+        choices=["debian", "ubuntu", "fedora"],
+        default="debian",
+        help="Distribution to ingest (affects base image and package manager)",
+    )
     ingest.add_argument("--sample", action="store_true", help="Ingest a small sample set")
     ingest.add_argument(
         "--activate",
@@ -32,14 +38,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "ingest":
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
         if args.in_container:
-            return _run_ingest_in_container(sample=args.sample, activate=activate)
+            return _run_ingest_in_container(
+                sample=args.sample,
+                activate=activate,
+                distro=args.distro,
+            )
 
-        return run_ingest_container(sample=args.sample, activate=activate)
+        return run_ingest_container(sample=args.sample, activate=activate, distro=args.distro)
 
     raise AssertionError("unreachable")
 
 
-def _run_ingest_in_container(*, sample: bool, activate: bool) -> int:
+def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> int:
     database_url = os.environ.get("INGEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
     if not database_url:
         database_url = "postgresql://betterman:betterman@postgres:5432/betterman"
@@ -60,6 +70,7 @@ def _run_ingest_in_container(*, sample: bool, activate: bool) -> int:
             image_ref=image_ref,
             image_digest=image_digest,
             git_sha=git_sha,
+            distro=distro,
         )
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)

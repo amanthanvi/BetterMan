@@ -6,11 +6,25 @@ import subprocess
 from pathlib import Path
 
 
-def run_ingest_container(*, sample: bool, activate: bool) -> int:
+def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
     repo_root = Path(__file__).resolve().parents[2]
     ingestion_dir = repo_root / "ingestion"
 
-    image_ref = os.environ.get("BETTERMAN_DEBIAN_IMAGE_REF", "debian:trixie")
+    default_images = {
+        "debian": "debian:trixie",
+        "ubuntu": "ubuntu:24.04",
+        "fedora": "fedora:41",
+    }
+    image_env = {
+        "debian": "BETTERMAN_DEBIAN_IMAGE_REF",
+        "ubuntu": "BETTERMAN_UBUNTU_IMAGE_REF",
+        "fedora": "BETTERMAN_FEDORA_IMAGE_REF",
+    }
+
+    if distro not in default_images or distro not in image_env:
+        raise RuntimeError(f"unsupported distro: {distro}")
+
+    image_ref = os.environ.get(image_env[distro], default_images[distro])
     subprocess.run(["docker", "pull", image_ref], check=True)
     repodigest = subprocess.check_output(
         ["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", image_ref],
@@ -52,24 +66,35 @@ def run_ingest_container(*, sample: bool, activate: bool) -> int:
     if network:
         cmd.extend(["--network", network])
 
-    args = ["ingest", "--in-container"]
+    args = ["ingest", "--in-container", "--distro", distro]
     if sample:
         args.append("--sample")
     args.append("--activate" if activate else "--no-activate")
 
     runner_cmd = shlex.join(["/opt/venv/bin/python", "-m", "ingestion.cli", *args])
-    inner = (
-        "set -euo pipefail; "
-        "export DEBIAN_FRONTEND=noninteractive; "
-        "mkdir -p /work; "
-        "cp -R /src/. /work; "
-        "apt-get update -qq; "
-        "apt-get install -y -qq --no-install-recommends "
-        "python3 python3-venv ca-certificates >/dev/null; "
-        "python3 -m venv /opt/venv; "
-        "/opt/venv/bin/pip install -q /work; "
-        f"{runner_cmd}"
-    )
+    if distro in {"debian", "ubuntu"}:
+        inner = (
+            "set -euo pipefail; "
+            "export DEBIAN_FRONTEND=noninteractive; "
+            "mkdir -p /work; "
+            "cp -R /src/. /work; "
+            "apt-get update -qq; "
+            "apt-get install -y -qq --no-install-recommends "
+            "python3 python3-venv ca-certificates >/dev/null; "
+            "python3 -m venv /opt/venv; "
+            "/opt/venv/bin/pip install -q /work; "
+            f"{runner_cmd}"
+        )
+    else:
+        inner = (
+            "set -euo pipefail; "
+            "mkdir -p /work; "
+            "cp -R /src/. /work; "
+            "dnf -y -q install python3 python3-pip ca-certificates >/dev/null; "
+            "python3 -m venv /opt/venv; "
+            "/opt/venv/bin/pip install -q /work; "
+            f"{runner_cmd}"
+        )
 
     cmd.extend([image_ref, "sh", "-lc", inner])
     proc = subprocess.run(cmd, check=False)
