@@ -1734,6 +1734,11 @@ Detailed step-by-step runbooks located in `docs/runbooks/`:
     - Commit the regenerated `openapi.gen.ts`
     - If Pydantic models changed, verify TypeScript types are correct
 
+10. **Multi-distro operations** (`docs/runbooks/multi-distro-ops.md`)
+    - Check `/api/v1/info` per distro (`?distro=ubuntu|fedora`)
+    - Trigger monthly ingest + promotion (`update-dataset` workflow)
+    - Verify per-distro sitemap endpoints are live (`/sitemap-<distro>.xml`)
+
 ---
 
 # 18. CI/CD & Environments
