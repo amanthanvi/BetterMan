@@ -70,16 +70,6 @@ async def get_man_by_name(
         return res
 
     page = pages[0]
-    etag = compute_weak_etag(
-        "man-by-name",
-        release.dataset_release_id,
-        name_norm,
-        page.section,
-    )
-    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
-    if not_modified is not None:
-        return not_modified
-
     page_with_content = await get_page_with_content(
         session, release_id=release.id, name=name_norm, section=page.section
     )
@@ -87,6 +77,11 @@ async def get_man_by_name(
         raise APIError(status_code=404, code="PAGE_NOT_FOUND", message="Page not found")
 
     man_page, content = page_with_content
+    etag = compute_weak_etag("man-by-name", release.dataset_release_id, content.content_sha256)
+    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
+    if not_modified is not None:
+        return not_modified
+
     content_payload = dict(content.doc)
     content_payload["synopsis"] = content.synopsis
     content_payload["options"] = content.options
@@ -126,16 +121,6 @@ async def get_man_by_name_and_section(
     release = await require_active_release(session)
 
     cache_control = "public, max-age=300"
-    etag = compute_weak_etag(
-        "man-by-name-section",
-        release.dataset_release_id,
-        name_norm,
-        section_norm,
-    )
-    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
-    if not_modified is not None:
-        return not_modified
-
     page_with_content = await get_page_with_content(
         session, release_id=release.id, name=name_norm, section=section_norm
     )
@@ -144,6 +129,15 @@ async def get_man_by_name_and_section(
         raise APIError(status_code=404, code="PAGE_NOT_FOUND", message="Page not found")
 
     man_page, content = page_with_content
+    etag = compute_weak_etag(
+        "man-by-name-section",
+        release.dataset_release_id,
+        content.content_sha256,
+    )
+    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
+    if not_modified is not None:
+        return not_modified
+
     content_payload = dict(content.doc)
     content_payload["synopsis"] = content.synopsis
     content_payload["options"] = content.options
