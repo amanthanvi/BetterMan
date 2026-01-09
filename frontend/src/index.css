@@ -203,4 +203,76 @@
       0 0 0 2px color-mix(in srgb, var(--bm-accent) 42%, transparent),
       inset 0 -1px 0 color-mix(in srgb, var(--bm-border) 70%, transparent);
   }
+
+  @media print {
+    :root {
+      --bm-bg: #ffffff;
+      --bm-surface: #ffffff;
+      --bm-surface-2: #ffffff;
+      --bm-fg: #000000;
+      --bm-muted: #333333;
+      --bm-border: #cfcfcf;
+      --bm-accent: #000000;
+      --bm-accent-contrast: #ffffff;
+    }
+
+    html {
+      background: #ffffff !important;
+      color-scheme: light;
+    }
+
+    body {
+      background: #ffffff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    [data-bm-app-header],
+    [data-bm-app-footer],
+    [data-bm-sidebar],
+    [data-bm-findbar],
+    [role='dialog'] {
+      display: none !important;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      display: none !important;
+    }
+
+    main {
+      max-width: none !important;
+      padding: 0 !important;
+    }
+
+    a {
+      text-decoration: underline;
+    }
+
+    pre,
+    table {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    h1,
+    h2,
+    h3 {
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    .bm-mark {
+      padding: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+
+    .bm-opt,
+    .bm-find {
+      background: transparent !important;
+    }
+  }
 }

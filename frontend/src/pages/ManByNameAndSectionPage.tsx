@@ -376,7 +376,7 @@ function ManPageView({
 
       <div className={`mt-10 grid gap-10 ${showSidebar ? 'lg:grid-cols-[19rem_minmax(0,1fr)]' : ''}`}>
         {showSidebar ? (
-          <aside className="hidden lg:block">
+          <aside data-bm-sidebar className="hidden lg:block">
             <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2">
               <div className="space-y-4">
                 <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
@@ -509,7 +509,7 @@ function ManPageView({
         ) : null}
 
         <article className="min-w-0">
-          <div className={`sticky top-16 z-10 lg:hidden ${findBarHidden ? 'mb-4' : 'mb-8'}`}>
+          <div data-bm-findbar className={`sticky top-16 z-10 lg:hidden ${findBarHidden ? 'mb-4' : 'mb-8'}`}>
             {findBarHidden ? (
               <div className="flex justify-end">
                 <button

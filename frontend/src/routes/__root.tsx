@@ -156,7 +156,10 @@ function RootLayoutInner() {
 
   return (
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
-      <header className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] backdrop-blur">
+      <header
+        data-bm-app-header
+        className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] backdrop-blur"
+      >
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <Link
             to="/"
@@ -244,7 +247,7 @@ function RootLayoutInner() {
         </ErrorBoundary>
       </main>
 
-      <footer className="border-t border-[var(--bm-border)]">
+      <footer data-bm-app-footer className="border-t border-[var(--bm-border)]">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-[color:var(--bm-muted)] sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
             <div className="text-[color:var(--bm-fg)]">BetterMan</div>
