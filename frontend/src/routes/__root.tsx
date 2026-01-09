@@ -240,15 +240,17 @@ function RootLayoutInner() {
           >
             Theme
           </button>
-          {toc.items.length ? (
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] lg:hidden"
-              onClick={() => toc.setOpen(true)}
-            >
-              TOC
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] lg:hidden ${
+              toc.items.length ? '' : 'invisible pointer-events-none'
+            }`}
+            onClick={() => toc.setOpen(true)}
+            tabIndex={toc.items.length ? 0 : -1}
+            aria-hidden={!toc.items.length}
+          >
+            TOC
+          </button>
         </div>
       </header>
 

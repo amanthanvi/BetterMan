@@ -141,7 +141,13 @@ export default function SearchPage() {
           <span className="font-medium text-[var(--bm-fg)]">systemd.unit</span>.
         </div>
       ) : resultsQuery.isLoading ? (
-        <div className="mt-8 text-sm text-[color:var(--bm-muted)]">Searching…</div>
+        <div className="mt-8" aria-label="Loading search results">
+          <ol className="space-y-3">
+            {Array.from({ length: 8 }).map((_v, idx) => (
+              <SearchResultSkeletonRow key={idx} />
+            ))}
+          </ol>
+        </div>
       ) : resultsQuery.isError ? (
         <div className="mt-8 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
           Search failed.{' '}
@@ -278,6 +284,18 @@ function SearchResultRow({
   )
 }
 
+function SearchResultSkeletonRow() {
+  return (
+    <li className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm">
+      <div className="animate-pulse space-y-3">
+        <div className="h-5 w-40 rounded-full bg-[color:var(--bm-border)/0.65]" />
+        <div className="h-4 w-[min(34rem,90%)] rounded-full bg-[color:var(--bm-border)/0.5]" />
+        <div className="h-4 w-[min(26rem,80%)] rounded-full bg-[color:var(--bm-border)/0.4]" />
+      </div>
+    </li>
+  )
+}
+
 function HighlightText({ text }: { text: string }) {
   const parts: Array<{ kind: 'text' | 'mark'; value: string }> = []
   let cursor = 0
@@ -317,4 +335,3 @@ function HighlightText({ text }: { text: string }) {
     </>
   )
 }
-
