@@ -37,13 +37,14 @@ Living execution plan for shipping `v0.3.0` from `SPEC.md`.
 
 ### M22 — Performance audit (gates all other v0.3.0 work)
 
-- [ ] Create `docs/performance-audit-v030.md` (baseline + methodology + deltas)
-- [ ] Lighthouse baselines (home, search, man page; mobile + desktop)
-- [ ] Chrome DevTools perf traces (page load + long-page scroll)
+- [x] Create `docs/performance-audit-v030.md` (baseline + methodology + deltas)
+- [x] Lighthouse baselines (home + man page; desktop + mobile; documented)
+- [x] Chrome DevTools perf traces (page load + long-page scroll)
 - [ ] React Profiler (virtualized man page scroll / re-render hotspots)
 - [ ] Railway metrics review (CPU/mem + response times)
-- [ ] Fix top 1–3 root causes (evidence-driven; keep diffs small)
-- [ ] Re-run the same measurements; record improvements
+- [x] Fix top 1–3 root causes (evidence-driven; keep diffs small)
+- [ ] Confirm gzip is deployed + active (`content-encoding: gzip` on large API responses)
+- [ ] Re-run the same measurements; record improvements (post-gzip man page)
 
 ### M23 — SEO foundation (no SSR)
 

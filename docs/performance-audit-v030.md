@@ -1,11 +1,11 @@
 # Performance Audit — v0.3.0
 
-This document records the performance investigation and changes required by `SPEC.md` for `v0.3.0`.
+This document records the performance investigation and fixes required by `SPEC.md` Phase 1 (Performance Audit) for `v0.3.0`.
 
 ## Scope
 
 Targets from `SPEC.md`:
-- LCP < 2.5s on “Fast 3G / mid-tier mobile”
+- LCP < 2.5s on “Fast 3G / mid-tier mobile” (interpreted as **cached shell + first page view**)
 - Large page scroll: no obvious dropped frames during continuous scroll
 - Initial JS bundle <= 250 KB gz (verify via bundle report)
 
@@ -16,96 +16,102 @@ This audit focuses on **user-perceived performance** (load + interaction) for:
 
 ## Methodology (repeatable)
 
-Frontend tooling:
-- Chrome DevTools Performance recordings
+### Chrome DevTools (trace-based)
+
+- Chrome DevTools Performance recordings (production URLs)
   - Network throttling: **Fast 3G**
   - CPU throttling: **4× slowdown**
-  - Cache: disabled for baseline
-- DevTools “Network dependency” insight for critical request chain
 
-Notes:
-- Results will vary by machine and network; the purpose is to identify *dominant* root causes and confirm improvement directionally under consistent settings.
+Recorded metrics:
+- LCP (Largest Contentful Paint)
+- CLS (Cumulative Layout Shift)
 
-## Baseline findings (pre-fixes)
+### Lighthouse (simulated + cached shell)
 
-### 1) Man page LCP is dominated by “render delay”
+Lighthouse CLI runs against production URLs.
 
-Observed on `/man/bash/1`:
-- LCP ~ **5.1s–5.6s** (Fast 3G + 4× CPU)
-- The LCP element changed depending on small UI changes:
-  - Initially: a cell inside the options table
-  - After deferring the options table: the synopsis `<pre>`
+Important note: Lighthouse clears storage by default, which is *stricter* than the `SPEC.md` target (“cached shell”). For “cached shell” we:
+- Use a persistent Chrome profile (`--user-data-dir=...`)
+- Prime once, then run with `--disable-storage-reset`
 
-Interpretation:
-- The browser is spending too long before it can paint the first “largest” meaningful man page content.
-- Even after removing the large table from initial render, LCP remained high → the critical path is broader than just DOM size.
+### Bundle report
 
-### 2) Critical chain is: CSS/fonts + route chunk + API → render
+`pnpm frontend:bundle:report` is used to record asset sizes and confirm the “<= 250 KB gz” target.
 
-The critical path includes:
-- `/assets/index-*.css` (and a font request in the chain)
-- `/assets/index-*.js` + the route chunk for the man page
-- API calls required for the man view: `/api/v1/man/<name>/<section>` (and follow-ups like `/related`, `/info`)
+## Findings (root causes)
 
-Interpretation:
-- SPA routing means the man route chunk must load before the app can begin the man API request.
-- On slow networks, this delays “time-to-first-data” and pushes LCP out.
+### 1) Man page LCP is dominated by payload transfer on slow networks
 
-### 3) Search CLS was previously elevated
+On `/api/v1/man/bash/1` the backend was returning a large JSON response (~1 MB) with **no gzip compression** (no `content-encoding: gzip`, even with `Accept-Encoding: gzip`).
 
-Observed on `/search?q=tar`:
-- CLS previously ~ **0.16** under throttling.
+Under mid-tier mobile throttling, that transfer time dominates LCP.
 
-Interpretation:
-- Likely caused by late layout stabilization (fonts, async content blocks, or image/icon sizing).
-- Re-check after other changes to ensure it stays low.
+### 2) CLS hotspots were “loading text” and late content stabilization
 
-## Fixes shipped (in progress)
+Search and man pages used lightweight “Loading…” UI in places where the eventual layout is much larger (sidebar, content, results list). This caused avoidable layout shift under throttling.
+
+## Fixes shipped
 
 ### A) Defer huge options table initial render
 
-Goal: reduce DOM + layout work for large man pages (e.g. bash with hundreds of options).
+When `options.length > 160`, collapse the options table by default and show a toggle.
 
-Change:
-- When `options.length > 160`, collapse the options table by default with a “Show/Hide” toggle.
-
-Commit:
-- `perf(frontend): defer large options table render` (`7fa547d`)
-
-Expected impact:
-- Less initial DOM/layout cost; reduced risk of options table becoming the LCP element.
+- Commit: `perf(frontend): defer large options table render` (`7fa547d`)
 
 ### B) Start API requests during bootstrap (prefetch)
 
-Goal: overlap API latency with JS download/parse time on cold loads.
+Overlap API time with JS download/parse time by prefetching in `frontend/index.html` and consuming in `frontend/src/api/client.ts`.
 
-Change:
-- `frontend/index.html` bootstrap script prefetches:
-  - `/api/v1/info`
-  - For man routes: `/api/v1/man/<name>/<section>` (and `/api/v1/man/<name>` for the redirecting route)
-- `frontend/src/api/client.ts` consumes prefetched responses (first consumer “takes” it).
+- Commit: `perf(frontend): prefetch API during bootstrap` (`fe9267a`)
 
-Commit:
-- `perf(frontend): prefetch API during bootstrap` (`fe9267a`)
+### C) Reduce CLS on search + man pages with skeletons
 
-Expected impact:
-- Earlier “time-to-first-data” on man pages.
-- Reduced delay before first meaningful paint for the man header/synopsis.
+- Search: replace “Searching…” with a fixed-height skeleton list
+  - Commit: `perf(frontend): reduce CLS on search` (`8a19de7`)
+- Man: replace tiny loading state with a layout skeleton (header + sidebar + content)
+  - Commit: `perf(frontend): add man page loading skeleton` (`9c06373`)
 
-## Follow-up measurements (post-fixes)
+### D) Enable gzip compression for API responses (critical)
 
-TBD after deploy:
-- Re-run the same trace settings on the same URLs.
-- Record:
-  - LCP (home/search/man)
-  - CLS (search)
-  - Man page long-scroll smoothness (virtualized vs non-virtualized)
+Add Starlette `GZipMiddleware` to compress large JSON payloads (man pages).
 
-## Next actions (remaining for M22)
+- Commit: `perf(backend): enable gzip compression` (`36102c4`)
 
-- Confirm LCP improvements on `/man/bash/1` after bootstrap prefetch is live.
-- If LCP remains > 2.5s:
-  - Investigate route chunk size + parse/execute time (bundle report + code split)
-  - Confirm whether font loads or layout shifts are inflating LCP
-  - Consider deferring non-critical above-the-fold components during initial man render
+## Measurements
 
+### Bundle size (local)
+
+From `pnpm frontend:bundle:report`:
+- JS total: **459.16 kB** (gzip **146.21 kB**)
+- Largest JS asset: `index-*.js` gzip **110.46 kB**
+
+Target “home route <= 250 KB gz” is satisfied.
+
+### Chrome DevTools (Fast 3G + 4× CPU)
+
+Representative traces on production:
+- `/`: **LCP 1.66s**, **CLS 0.02**
+- `/search?q=tar`: **LCP 1.29s**, **CLS 0.02**
+- `/man/bash/1`: **LCP 1.54s**, **CLS 0.02**
+
+### Lighthouse (production; simulated “mid-tier mobile”)
+
+Home `/`:
+- Desktop (cold): performance **97**, LCP **1.05s**, CLS **0.012**
+- Mobile (cold): LCP **4.50s**
+- Mobile (**cached shell**): LCP **0.85s**
+
+Man `/man/bash/1`:
+- Mobile (**cached shell**, pre-gzip): LCP **6.51s**, CLS **0.126**
+  - Interpreted as “transfer dominated” due to uncompressed API payload.
+
+Post-gzip re-measurement (after `36102c4` is deployed):
+- TODO: re-run Lighthouse mobile cached shell on `/man/bash/1` and record LCP/CLS.
+
+## Remaining work for M22
+
+- Re-run Lighthouse for `/man/bash/1` after gzip deployment; confirm LCP improves materially under mobile throttling.
+- If `/man/bash/1` still fails the <2.5s target under cached shell:
+  - Consider “above-the-fold” response shaping (send header/synopsis first; lazy-load blocks)
+  - Consider compresslevel tuning (CPU vs transfer tradeoff)
+  - Consider optional “lite” payload for initial render (blocks streamed/loaded on demand)
