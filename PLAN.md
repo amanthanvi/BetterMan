@@ -43,8 +43,8 @@ Living execution plan for shipping `v0.3.0` from `SPEC.md`.
 - [ ] React Profiler (virtualized man page scroll / re-render hotspots)
 - [ ] Railway metrics review (CPU/mem + response times)
 - [x] Fix top 1–3 root causes (evidence-driven; keep diffs small)
-- [ ] Confirm gzip is deployed + active (`content-encoding: gzip` on large API responses)
-- [ ] Re-run the same measurements; record improvements (post-gzip man page)
+- [x] Confirm gzip is deployed + active (`content-encoding: gzip` on large API responses)
+- [x] Re-run the same measurements; record improvements (post-gzip man page)
 
 ### M23 — SEO foundation (no SSR)
 

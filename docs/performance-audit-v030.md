@@ -106,12 +106,12 @@ Man `/man/bash/1`:
   - Interpreted as “transfer dominated” due to uncompressed API payload.
 
 Post-gzip re-measurement (after `36102c4` is deployed):
-- TODO: re-run Lighthouse mobile cached shell on `/man/bash/1` and record LCP/CLS.
+- Confirmed `content-encoding: gzip` and response size reduction (~1.0 MB → ~173 kB on `/api/v1/man/bash/1`).
+- Mobile (**cached shell**, post-gzip): LCP **2.15s**, CLS **0.126**
 
 ## Remaining work for M22
 
-- Re-run Lighthouse for `/man/bash/1` after gzip deployment; confirm LCP improves materially under mobile throttling.
-- If `/man/bash/1` still fails the <2.5s target under cached shell:
+- If `/man/bash/1` ever fails the <2.5s target under cached shell again:
   - Consider “above-the-fold” response shaping (send header/synopsis first; lazy-load blocks)
   - Consider compresslevel tuning (CPU vs transfer tradeoff)
   - Consider optional “lite” payload for initial render (blocks streamed/loaded on demand)
