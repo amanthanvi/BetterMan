@@ -73,6 +73,9 @@ function RootLayoutInner() {
   const routeKey = useRouterState({
     select: (s) => `${s.location.pathname}${s.location.search}`,
   })
+  const pathname = useRouterState({
+    select: (s) => s.location.pathname,
+  })
 
   useEffect(() => {
     const onPop = () => {
@@ -119,8 +122,21 @@ function RootLayoutInner() {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '/') {
         e.preventDefault()
-        searchRef.current?.focus()
-        searchRef.current?.select()
+        const headerSearch = searchRef.current
+        if (headerSearch && isElementVisible(headerSearch)) {
+          headerSearch.focus()
+          headerSearch.select()
+          return
+        }
+
+        const homeSearch = document.querySelector('[data-bm-home-search]') as HTMLInputElement | null
+        if (homeSearch) {
+          homeSearch.focus()
+          homeSearch.select()
+          return
+        }
+
+        setPaletteOpen(true)
         return
       }
 
@@ -189,24 +205,26 @@ function RootLayoutInner() {
             </div>
           ) : null}
 
-          <form
-            className="hidden flex-1 sm:block"
-            onSubmit={(e) => {
-              e.preventDefault()
-              const query = q.trim()
-              if (!query) return
-              navigate({ to: '/search', search: { q: query } })
-            }}
-          >
-            <input
-              ref={searchRef}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search commands…"
-              className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-              aria-label="Search man pages"
-            />
-          </form>
+          {pathname !== '/' ? (
+            <form
+              className="hidden flex-1 sm:block"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const query = q.trim()
+                if (!query) return
+                navigate({ to: '/search', search: { q: query } })
+              }}
+            >
+              <input
+                ref={searchRef}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search commands…"
+                className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                aria-label="Search man pages"
+              />
+            </form>
+          ) : null}
           <button
             type="button"
             className="hidden rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] sm:block"
@@ -309,4 +327,8 @@ function isTypingTarget(el: Element | null) {
   if (el instanceof HTMLSelectElement) return true
   if (el instanceof HTMLElement) return el.isContentEditable
   return false
+}
+
+function isElementVisible(el: HTMLElement) {
+  return el.getClientRects().length > 0
 }

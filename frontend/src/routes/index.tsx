@@ -41,6 +41,7 @@ function IndexPage() {
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <input
+            data-bm-home-search
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search (e.g. tar, ssh_config, curl)…"
