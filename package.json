@@ -6,6 +6,7 @@
 		"docs": "cat SPEC.md PLAN.md README.md",
 		"frontend:dev": "pnpm -C frontend dev",
 		"frontend:build": "pnpm -C frontend build",
+		"frontend:bundle:report": "pnpm -C frontend bundle:report",
 		"frontend:lint": "pnpm -C frontend lint",
 		"frontend:test": "pnpm -C frontend test",
 		"frontend:e2e": "pnpm -C frontend e2e",

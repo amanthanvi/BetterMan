@@ -22,7 +22,9 @@ Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 - `pnpm backend:lint`
 - `pnpm frontend:dev`
 - `pnpm frontend:build`
+- `pnpm frontend:bundle:report`
 - `pnpm frontend:lint`
+- `pnpm frontend:test`
 - `pnpm ingest:sample`
 - `pnpm ingest:run`
 - `pnpm ingest:lint`
@@ -81,14 +83,14 @@ Goal: **type-safety with minimal churn / risk** (preserve current response shape
 
 ### M15 — Performance + caching
 
-- [ ] TanStack Virtual for large man pages (100+ blocks threshold), preserving anchors + deep links
-- [ ] highlight.js optimization: lazy-load only common languages (bash, shell, python, c, makefile)
-- [ ] Bundle size visibility in CI (warn-only; does not block merges)
-- [ ] Granular ETags for man endpoints: `content_sha256 + dataset_release_id`
+- [x] TanStack Virtual for large man pages (100+ blocks threshold), preserving anchors + deep links
+- [x] highlight.js optimization: lazy-load only common languages (bash, shell, python, c, makefile)
+- [x] Bundle size visibility in CI (warn-only; does not block merges)
+- [x] Granular ETags for man endpoints: `content_sha256 + dataset_release_id`
 
 ### M16 — UX polish + architecture + release
 
-- [ ] Find-in-page keybindings: Enter → next match, Shift+Enter → previous (desktop + mobile)
+- [x] Find-in-page keybindings: Enter → next match, Shift+Enter → previous (desktop + mobile)
 - [ ] Print styles (`@media print`) hide navigation, preserve content layout
 - [ ] Decompose man page view into components + extract domain hooks (keep behavior identical; add tests)
 - [ ] CI green on `main` (including deploy-to-Railway workflow); verify Railway deploy is healthy

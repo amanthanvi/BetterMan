@@ -45,6 +45,7 @@ jobs:
       - run: pnpm -C frontend lint
       - run: pnpm -C frontend test
       - run: pnpm -C frontend build
+      - run: pnpm -C frontend bundle:report
 
   backend:
     runs-on: ubuntu-latest
