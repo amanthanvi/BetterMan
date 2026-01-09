@@ -53,18 +53,20 @@ export function ManPageView({
 
   const rawFindQuery = find.trim()
   const deferredFindQuery = useDeferredValue(rawFindQuery)
-  const findQuery = rawFindQuery.length >= 2 ? deferredFindQuery : ''
+  const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
   const findEnabled = findQuery.length >= 2
+  const findStable = deferredFindQuery === rawFindQuery
+  const stableFindQuery = deferredFindQuery.length >= 2 ? deferredFindQuery : ''
   const findIndex = useMemo(
-    () => (findEnabled ? buildFindIndex(content.blocks, findQuery) : null),
-    [content.blocks, findEnabled, findQuery],
+    () => (stableFindQuery.length >= 2 ? buildFindIndex(content.blocks, stableFindQuery) : null),
+    [content.blocks, stableFindQuery],
   )
-  const matchCount = findIndex?.total ?? 0
+  const matchCount = findStable ? (findIndex?.total ?? 0) : 0
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
   const findCountLabel =
     rawFindQuery.length < 2
       ? '—'
-      : findQuery !== rawFindQuery
+      : !findStable
         ? '…'
         : matchCount
           ? `${displayIndex + 1}/${matchCount}`
