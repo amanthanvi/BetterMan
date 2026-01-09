@@ -1,12 +1,13 @@
-import { Link } from '@tanstack/react-router'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToc } from '../../app/toc'
-import type { BlockNode, InlineNode, ManPage, ManPageContent, OptionItem, SectionPage } from '../../api/types'
+import type { ManPage, ManPageContent, OptionItem, SectionPage } from '../../api/types'
 import { DocRenderer, type DocRendererHandle } from '../../man/DocRenderer'
 import { parseOptionTerms } from '../../man/find'
 import { OptionsTable } from '../../man/OptionsTable'
-import { Toc } from '../../man/Toc'
+import { buildFindIndex, locateFindMatch } from './findIndex'
+import { ManPageFooterSections } from './ManPageFooterSections'
+import { ManPageSidebar } from './ManPageSidebar'
 
 const FIND_BAR_KEY = 'bm-find-bar-hidden'
 
@@ -41,7 +42,6 @@ export function ManPageView({
   const [findBarHidden, setFindBarHidden] = useState(() => readStoredFindBarHidden())
   const [activeFindIndex, setActiveFindIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
-  const [showAllRelated, setShowAllRelated] = useState(false)
   const activeMarkRef = useRef<HTMLElement | null>(null)
   const findInputDesktopRef = useRef<HTMLInputElement | null>(null)
   const findInputMobileRef = useRef<HTMLInputElement | null>(null)
@@ -261,136 +261,57 @@ export function ManPageView({
 
       <div className={`mt-10 grid gap-10 ${showSidebar ? 'lg:grid-cols-[19rem_minmax(0,1fr)]' : ''}`}>
         {showSidebar ? (
-          <aside data-bm-sidebar className="hidden lg:block">
-            <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2">
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
-                  <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Navigator</div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {quickJumps.map((j) => (
-                      <a
-                        key={j.id}
-                        href={`#${j.id}`}
-                        onClick={(e) => {
-                          if (!docRef.current) return
-                          e.preventDefault()
-                          try {
-                            window.history.pushState(null, '', `#${j.id}`)
-                          } catch {
-                            try {
-                              window.location.hash = j.id
-                            } catch {
-                              // ignore
-                            }
-                          }
-                          docRef.current?.scrollToAnchor(j.id, { behavior: scrollBehavior })
-                        }}
-                        className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs hover:bg-[color:var(--bm-bg)/0.55]"
-                      >
-                        {j.title}
-                      </a>
-                    ))}
-                    {!quickJumps.length ? (
-                      <span className="text-sm text-[color:var(--bm-muted)]">—</span>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Find</div>
-                    {findBarHidden ? (
-                      <button
-                        type="button"
-                        className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                        onClick={() => {
-                          setFindBarHiddenPersisted(false)
-                          requestAnimationFrame(() => focusFindInput())
-                        }}
-                      >
-                        Show
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                        onClick={() => setFindBarHiddenPersisted(true)}
-                      >
-                        Hide
-                      </button>
-                    )}
-                  </div>
-
-                  {!findBarHidden ? (
-                    <div className="mt-3 space-y-3">
-                      <input
-                        ref={findInputDesktopRef}
-                        value={find}
-                        onChange={(e) => {
-                          setFind(e.target.value)
-                          setActiveFindIndex(0)
-                          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-                          activeMarkRef.current = null
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && matchCount) {
-                            e.preventDefault()
-                            if (e.shiftKey) goPrev()
-                            else goNext()
-                          }
-                        }}
-                        placeholder="Find in page…"
-                        className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                        aria-label="Find in page"
-                      />
-
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
-                        <div className="font-mono">
-                          {findCountLabel}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
-                            onClick={goPrev}
-                            disabled={!matchCount}
-                          >
-                            Prev
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
-                            onClick={goNext}
-                            disabled={!matchCount}
-                          >
-                            Next
-                          </button>
-                          {find ? (
-                            <button
-                              type="button"
-                              className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                              onClick={() => {
-                                setFind('')
-                                setActiveFindIndex(0)
-                                if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-                                activeMarkRef.current = null
-                              }}
-                            >
-                              Clear
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
-                  <Toc items={content.toc} activeId={activeTocId} onNavigateToId={toc.scrollToId ?? undefined} />
-                </div>
-              </div>
-            </div>
-          </aside>
+          <ManPageSidebar
+            quickJumps={quickJumps}
+            onQuickJump={(id) => {
+              if (!docRef.current) return false
+              try {
+                window.history.pushState(null, '', `#${id}`)
+              } catch {
+                try {
+                  window.location.hash = id
+                } catch {
+                  // ignore
+                }
+              }
+              docRef.current?.scrollToAnchor(id, { behavior: scrollBehavior })
+              return true
+            }}
+            findBarHidden={findBarHidden}
+            onShowFind={() => {
+              setFindBarHiddenPersisted(false)
+              requestAnimationFrame(() => focusFindInput())
+            }}
+            onHideFind={() => setFindBarHiddenPersisted(true)}
+            find={find}
+            findInputRef={findInputDesktopRef}
+            onFindChange={(next) => {
+              setFind(next)
+              setActiveFindIndex(0)
+              if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+              activeMarkRef.current = null
+            }}
+            onFindKeyDown={(e) => {
+              if (e.key === 'Enter' && matchCount) {
+                e.preventDefault()
+                if (e.shiftKey) goPrev()
+                else goNext()
+              }
+            }}
+            findCountLabel={findCountLabel}
+            matchCount={matchCount}
+            onPrev={goPrev}
+            onNext={goNext}
+            onClearFind={() => {
+              setFind('')
+              setActiveFindIndex(0)
+              if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+              activeMarkRef.current = null
+            }}
+            tocItems={content.toc}
+            activeTocId={activeTocId}
+            onTocNavigateToId={toc.scrollToId ?? undefined}
+          />
         ) : null}
 
         <article className="min-w-0">
@@ -541,162 +462,7 @@ export function ManPageView({
         </article>
       </div>
 
-      {content.seeAlso?.length ? (
-        <aside className="mt-10">
-          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">See also</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {content.seeAlso.slice(0, 24).map((ref) => (
-              <li key={`${ref.name}:${ref.section ?? ''}`}>
-                {ref.section && !ref.resolvedPageId ? (
-                  <span
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.25] px-3 py-1 text-sm text-[color:var(--bm-muted)]"
-                    title="Not available in this dataset"
-                  >
-                    {ref.name}({ref.section})
-                  </span>
-                ) : ref.section ? (
-                  <Link
-                    to="/man/$name/$section"
-                    params={{ name: ref.name, section: ref.section }}
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
-                  >
-                    {ref.name}({ref.section})
-                  </Link>
-                ) : (
-                  <Link
-                    to="/man/$name"
-                    params={{ name: ref.name }}
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
-                  >
-                    {ref.name}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </aside>
-      ) : null}
-
-      {relatedItems.length ? (
-        <aside className="mt-10">
-          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Related</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {(showAllRelated ? relatedItems : relatedItems.slice(0, 5)).map((item) => (
-              <li key={`${item.name}:${item.section}`}>
-                <Link
-                  to="/man/$name/$section"
-                  params={{ name: item.name, section: item.section }}
-                  className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
-                >
-                  {item.name}({item.section})
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {relatedItems.length > 5 ? (
-            <div className="mt-3">
-              <button
-                type="button"
-                className="text-sm underline underline-offset-4"
-                onClick={() => setShowAllRelated((v) => !v)}
-              >
-                {showAllRelated ? 'Show fewer' : `Show all (${relatedItems.length})`}
-              </button>
-            </div>
-          ) : null}
-        </aside>
-      ) : null}
+      <ManPageFooterSections seeAlso={content.seeAlso} relatedItems={relatedItems} />
     </div>
   )
-}
-
-function buildFindIndex(blocks: BlockNode[], query: string): { prefixByBlock: number[]; total: number } {
-  const q = query.trim()
-  if (q.length < 2) return { prefixByBlock: new Array(blocks.length).fill(0), total: 0 }
-
-  const needle = q.toLowerCase()
-  const prefixByBlock = new Array<number>(blocks.length)
-  let total = 0
-
-  for (let idx = 0; idx < blocks.length; idx += 1) {
-    total += countInBlock(blocks[idx]!, needle)
-    prefixByBlock[idx] = total
-  }
-
-  return { prefixByBlock, total }
-}
-
-function locateFindMatch(prefixByBlock: number[], matchIndex: number) {
-  if (!prefixByBlock.length) return null
-
-  const target = matchIndex + 1
-  let lo = 0
-  let hi = prefixByBlock.length - 1
-  let ans = -1
-
-  while (lo <= hi) {
-    const mid = Math.floor((lo + hi) / 2)
-    const v = prefixByBlock[mid]!
-    if (v >= target) {
-      ans = mid
-      hi = mid - 1
-    } else {
-      lo = mid + 1
-    }
-  }
-
-  if (ans < 0) return null
-  const prev = ans === 0 ? 0 : prefixByBlock[ans - 1]!
-  return { blockIndex: ans, withinBlockIndex: matchIndex - prev }
-}
-
-function countInBlock(block: BlockNode, needle: string): number {
-  switch (block.type) {
-    case 'heading':
-      return countInText(block.text, needle)
-    case 'paragraph':
-      return countInInlines(block.inlines, needle)
-    case 'list':
-      return block.items.reduce((sum, item) => sum + countInBlocks(item, needle), 0)
-    case 'definition_list':
-      return block.items.reduce((sum, item) => {
-        return sum + countInInlines(item.termInlines, needle) + countInBlocks(item.definitionBlocks, needle)
-      }, 0)
-    case 'code_block':
-      return countInText(block.text, needle)
-    case 'table': {
-      let sum = 0
-      for (const h of block.headers) sum += countInText(h, needle)
-      for (const row of block.rows) for (const cell of row) sum += countInText(cell, needle)
-      return sum
-    }
-    case 'horizontal_rule':
-      return 0
-  }
-}
-
-function countInBlocks(blocks: BlockNode[], needle: string): number {
-  return blocks.reduce((sum, block) => sum + countInBlock(block, needle), 0)
-}
-
-function countInInlines(inlines: InlineNode[], needle: string): number {
-  return inlines.reduce((sum, inline) => {
-    if (inline.type === 'text' || inline.type === 'code') return sum + countInText(inline.text, needle)
-    if (inline.type === 'emphasis' || inline.type === 'strong') return sum + countInInlines(inline.inlines, needle)
-    if (inline.type === 'link') return sum + countInInlines(inline.inlines, needle)
-    return sum
-  }, 0)
-}
-
-function countInText(text: string, needle: string): number {
-  const hay = text.toLowerCase()
-  let idx = 0
-  let count = 0
-  while (true) {
-    const next = hay.indexOf(needle, idx)
-    if (next === -1) break
-    count += 1
-    idx = next + needle.length
-  }
-  return count
 }

@@ -92,6 +92,6 @@ Goal: **type-safety with minimal churn / risk** (preserve current response shape
 
 - [x] Find-in-page keybindings: Enter → next match, Shift+Enter → previous (desktop + mobile)
 - [x] Print styles (`@media print`) hide navigation, preserve content layout
-- [ ] Decompose man page view into components + extract domain hooks (keep behavior identical; add tests)
+- [x] Decompose man page view into components + extract domain hooks (keep behavior identical; add tests)
 - [ ] CI green on `main` (including deploy-to-Railway workflow); verify Railway deploy is healthy
 - [ ] Update docs + bump version strings; tag `v0.2.0`
