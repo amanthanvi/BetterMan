@@ -2,9 +2,9 @@
 
 **Project:** BetterMan
 **Spec Version:** v0.2.1
-**Status:** In Development (v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Status:** Shipped (v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
 **Last Updated:** 2026-01-09 (EST)
-**Interview Status:** In Progress - v0.2.1 scope approved
+**Interview Status:** Complete - v0.2.1 shipped
 
 ---
 
