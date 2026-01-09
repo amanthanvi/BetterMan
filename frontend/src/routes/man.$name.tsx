@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
+import { Helmet } from 'react-helmet-async'
 
 import { fetchManByName } from '../api/client'
+import { getCanonicalUrl } from '../lib/seo'
 import { rootRoute } from './__root'
 
 export const manByNameRoute = createRoute({
@@ -14,6 +16,7 @@ export const manByNameRoute = createRoute({
 function ManByNamePage() {
   const { name } = manByNameRoute.useParams()
   const navigate = useNavigate()
+  const canonical = getCanonicalUrl()
 
   const query = useQuery({
     queryKey: ['manByName', name.toLowerCase()],
@@ -31,18 +34,33 @@ function ManByNamePage() {
   }, [navigate, query.data])
 
   if (query.isLoading) {
-    return <div className="text-sm text-[color:var(--bm-muted)]">Loading…</div>
+    return (
+      <>
+        <Helmet>
+          <title>Loading… — BetterMan</title>
+          {canonical ? <link rel="canonical" href={canonical} /> : null}
+        </Helmet>
+        <div className="text-sm text-[color:var(--bm-muted)]">Loading…</div>
+      </>
+    )
   }
 
   if (query.isError) {
     return (
-      <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
-        Page not found.{' '}
-        <Link to="/search" search={{ q: name }} className="underline underline-offset-4">
-          Search for “{name}”
-        </Link>
-        .
-      </div>
+      <>
+        <Helmet>
+          <title>{name} — Not found — BetterMan</title>
+          <meta name="description" content={`We couldn’t find “${name}” in the current BetterMan dataset.`} />
+          {canonical ? <link rel="canonical" href={canonical} /> : null}
+        </Helmet>
+        <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+          Page not found.{' '}
+          <Link to="/search" search={{ q: name }} className="underline underline-offset-4">
+            Search for “{name}”
+          </Link>
+          .
+        </div>
+      </>
     )
   }
 
@@ -51,9 +69,19 @@ function ManByNamePage() {
   }
 
   const options = query.data?.options ?? []
+  const title = `${name} — Choose section — BetterMan`
+  const description = `Multiple man page sections match “${name}”. Choose a section to continue.`
 
   return (
     <div className="mx-auto max-w-5xl">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        {canonical ? <link rel="canonical" href={canonical} /> : null}
+      </Helmet>
       <h1 className="font-mono text-3xl font-semibold tracking-tight">{name}</h1>
       <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
         Multiple sections match this name. Pick one:

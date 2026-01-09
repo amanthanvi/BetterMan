@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useEffect } from 'react'
+import { Helmet } from 'react-helmet-async'
 
 import { useToc } from '../app/toc'
 import { ApiHttpError, fetchManByName, fetchManByNameAndSection, fetchRelated } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
+import { getCanonicalUrl, getCspNonce, safeJsonLdStringify } from '../lib/seo'
 import { recordRecentPage } from '../lib/recent'
 import { manByNameAndSectionRoute } from '../routes/man.$name.$section'
 import { ManPageView } from './man/ManPageView'
@@ -13,6 +15,8 @@ export default function ManByNameAndSectionPage() {
   const { name, section } = manByNameAndSectionRoute.useParams()
   const nameNorm = name.toLowerCase()
   const { setItems } = useToc()
+  const canonical = getCanonicalUrl()
+  const cspNonce = getCspNonce()
 
   const pageQuery = useQuery({
     queryKey: queryKeys.man(nameNorm, section),
@@ -53,53 +57,71 @@ export default function ManByNameAndSectionPage() {
   }, [recentDescription, recentId, recentName, recentSection])
 
   if (pageQuery.isLoading) {
-    return <ManPageSkeleton />
+    return (
+      <>
+        <Helmet>
+          <title>Loading… — BetterMan</title>
+          {canonical ? <link rel="canonical" href={canonical} /> : null}
+        </Helmet>
+        <ManPageSkeleton />
+      </>
+    )
   }
 
   if (pageQuery.isError) {
     const alt = alternativesQuery.data
     return (
-      <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
-        <div className="font-medium text-[color:var(--bm-fg)]">Page not found.</div>
-        {alternativesQuery.isLoading ? (
-          <div className="mt-2">Looking for alternatives…</div>
-        ) : alt?.kind === 'ambiguous' && alt.options.length ? (
-          <div className="mt-2 space-y-2">
-            <div>Available sections:</div>
-            <ul className="flex flex-wrap gap-2">
-              {alt.options.map((opt) => (
-                <li key={opt.section}>
-                  <Link
-                    to="/man/$name/$section"
-                    params={{ name: nameNorm, section: opt.section }}
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[var(--bm-bg)/0.4] px-3 py-1 text-sm hover:bg-[color:var(--bm-bg)/0.6]"
-                  >
-                    {nameNorm}({opt.section})
-                  </Link>
-                </li>
-              ))}
-            </ul>
+      <>
+        <Helmet>
+          <title>{nameNorm}({section}) — Not found — BetterMan</title>
+          <meta
+            name="description"
+            content={`We couldn’t find ${nameNorm}(${section}) in the current BetterMan dataset.`}
+          />
+          {canonical ? <link rel="canonical" href={canonical} /> : null}
+        </Helmet>
+        <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
+          <div className="font-medium text-[color:var(--bm-fg)]">Page not found.</div>
+          {alternativesQuery.isLoading ? (
+            <div className="mt-2">Looking for alternatives…</div>
+          ) : alt?.kind === 'ambiguous' && alt.options.length ? (
+            <div className="mt-2 space-y-2">
+              <div>Available sections:</div>
+              <ul className="flex flex-wrap gap-2">
+                {alt.options.map((opt) => (
+                  <li key={opt.section}>
+                    <Link
+                      to="/man/$name/$section"
+                      params={{ name: nameNorm, section: opt.section }}
+                      className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[var(--bm-bg)/0.4] px-3 py-1 text-sm hover:bg-[color:var(--bm-bg)/0.6]"
+                    >
+                      {nameNorm}({opt.section})
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : alt?.kind === 'page' ? (
+            <div className="mt-2">
+              Found{' '}
+              <Link
+                to="/man/$name/$section"
+                params={{ name: alt.data.page.name, section: alt.data.page.section }}
+                className="underline underline-offset-4"
+              >
+                {alt.data.page.name}({alt.data.page.section})
+              </Link>{' '}
+              instead.
+            </div>
+          ) : null}
+          <div className="mt-3">
+            <Link to="/search" search={{ q: nameNorm }} className="underline underline-offset-4">
+              Search for “{nameNorm}”
+            </Link>
+            .
           </div>
-        ) : alt?.kind === 'page' ? (
-          <div className="mt-2">
-            Found{' '}
-            <Link
-              to="/man/$name/$section"
-              params={{ name: alt.data.page.name, section: alt.data.page.section }}
-              className="underline underline-offset-4"
-            >
-              {alt.data.page.name}({alt.data.page.section})
-            </Link>{' '}
-            instead.
-          </div>
-        ) : null}
-        <div className="mt-3">
-          <Link to="/search" search={{ q: nameNorm }} className="underline underline-offset-4">
-            Search for “{nameNorm}”
-          </Link>
-          .
         </div>
-      </div>
+      </>
     )
   }
 
@@ -108,14 +130,43 @@ export default function ManByNameAndSectionPage() {
   }
 
   const { page, content } = pageQuery.data
+  const pageTitle = `${page.name}(${page.section}) - BetterMan`
+  const pageDescription = page.description || page.title || `${page.name}(${page.section}) man page.`
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: `${page.name}(${page.section}) - ${page.title}`,
+    name: `${page.name}(${page.section})`,
+    description: pageDescription,
+    dateModified: page.datasetReleaseId.split('+')[0] ?? undefined,
+    author: {
+      '@type': 'Organization',
+      name: `${page.sourcePackage || page.name} maintainers`,
+    },
+  }
 
   return (
-    <ManPageView
-      key={page.id}
-      page={page}
-      content={content}
-      relatedItems={relatedQuery.data?.items ?? []}
-    />
+    <>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="article" />
+        {canonical ? <link rel="canonical" href={canonical} /> : null}
+        {cspNonce ? (
+          <script nonce={cspNonce} type="application/ld+json">
+            {safeJsonLdStringify(jsonLd)}
+          </script>
+        ) : null}
+      </Helmet>
+      <ManPageView
+        key={page.id}
+        page={page}
+        content={content}
+        relatedItems={relatedQuery.data?.items ?? []}
+      />
+    </>
   )
 }
 

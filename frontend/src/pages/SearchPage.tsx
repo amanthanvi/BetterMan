@@ -2,10 +2,12 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 
 import { listSections, search } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import type { SearchResult } from '../api/types'
+import { getCanonicalUrl } from '../lib/seo'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { recordRecentSearch } from '../lib/recent'
 import { searchRoute } from '../routes/search'
@@ -15,6 +17,7 @@ export default function SearchPage() {
   const navigate = useNavigate()
   const [input, setInput] = useState(q)
   const debouncedInput = useDebouncedValue(input, 150)
+  const canonical = getCanonicalUrl()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const itemRefs = useRef<Array<HTMLAnchorElement | null>>([])
   const [activeIndex, setActiveIndex] = useState(0)
@@ -37,6 +40,10 @@ export default function SearchPage() {
   const query = q.trim()
   const limit = 20
   const sectionFilter = section?.trim() || undefined
+  const title = query.length ? `Search “${query}” — BetterMan` : 'Search — BetterMan'
+  const description = query.length
+    ? `Search results for “${query}” in the BetterMan man page dataset${sectionFilter ? ` (section ${sectionFilter})` : ''}.`
+    : 'Search the BetterMan man page dataset.'
 
   const resultsQuery = useInfiniteQuery({
     queryKey: queryKeys.search(query, sectionFilter),
@@ -65,6 +72,14 @@ export default function SearchPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        {canonical ? <link rel="canonical" href={canonical} /> : null}
+      </Helmet>
       <header className="flex flex-col gap-2 border-b border-[var(--bm-border)] pb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Search</h1>
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[color:var(--bm-muted)]">

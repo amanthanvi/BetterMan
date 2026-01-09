@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 
 import { fetchInfo, listSections } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
+import { getCanonicalUrl } from '../lib/seo'
 import { formatRelativeTime } from '../lib/time'
 import { rootRoute } from './__root'
 
@@ -16,9 +18,24 @@ export const indexRoute = createRoute({
 function IndexPage() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
+  const canonical = getCanonicalUrl()
 
   return (
     <div className="mx-auto max-w-4xl py-14">
+      <Helmet>
+        <title>BetterMan — readable Linux man pages</title>
+        <meta
+          name="description"
+          content="BetterMan is a fast, readable web UI for Linux man pages — search-first, keyboard-friendly, built for reading."
+        />
+        <meta property="og:title" content="BetterMan — readable Linux man pages" />
+        <meta
+          property="og:description"
+          content="BetterMan is a fast, readable web UI for Linux man pages — search-first, keyboard-friendly, built for reading."
+        />
+        <meta property="og:type" content="website" />
+        {canonical ? <link rel="canonical" href={canonical} /> : null}
+      </Helmet>
       <header className="text-center">
         <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight">
           Man pages,

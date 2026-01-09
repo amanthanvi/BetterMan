@@ -1,10 +1,12 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 
 import { listSection, search } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import type { SectionPage as SectionPageItem } from '../api/types'
+import { getCanonicalUrl } from '../lib/seo'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { sectionRoute } from '../routes/section.$section'
 
@@ -66,9 +68,20 @@ export default function SectionPage() {
   const results = browseQuery.data.pages.flatMap((p) => p.results)
 
   const grouped = groupByLetter(results)
+  const canonical = getCanonicalUrl()
+  const title = `Section ${first.section} — ${first.label} — BetterMan`
+  const description = `Browse BetterMan man pages in section ${first.section} (${first.label}).`
 
   return (
     <div className="mx-auto max-w-5xl">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        {canonical ? <link rel="canonical" href={canonical} /> : null}
+      </Helmet>
       <header className="border-b border-[var(--bm-border)] pb-6">
         <h1 className="text-3xl font-semibold tracking-tight">
           Section <span className="font-mono">{first.section}</span>{' '}
@@ -194,4 +207,3 @@ function groupByLetter(items: SectionPageItem[]) {
 
   return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b))
 }
-

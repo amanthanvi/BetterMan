@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 
 import { fetchLicenseText, fetchLicenses } from '../api/client'
 import type { LicensePackage } from '../api/types'
+import { getCanonicalUrl } from '../lib/seo'
 
 export default function LicensesPage() {
   const [filter, setFilter] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
+  const canonical = getCanonicalUrl()
 
   const licensesQuery = useQuery({
     queryKey: ['licenses'],
@@ -39,9 +42,19 @@ export default function LicensesPage() {
   }
 
   const data = licensesQuery.data
+  const title = 'Licenses — BetterMan'
+  const description = 'Attribution and license notices for the current BetterMan dataset release.'
 
   return (
     <div className="mx-auto max-w-6xl">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:type" content="website" />
+        {canonical ? <link rel="canonical" href={canonical} /> : null}
+      </Helmet>
       <header className="border-b border-[var(--bm-border)] pb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Licenses</h1>
         <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
@@ -148,4 +161,3 @@ function LicensePackageRow({
     </li>
   )
 }
-
