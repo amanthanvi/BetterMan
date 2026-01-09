@@ -22,7 +22,10 @@ _SUPPORTED_DISTROS = ("debian", "ubuntu", "fedora")
 
 def _public_base_url(request: Request) -> str:
     settings: Settings | None = getattr(request.app.state, "settings", None)
-    base_url = settings.public_base_url if settings and settings.public_base_url else str(request.base_url)
+    if settings and settings.public_base_url:
+        base_url = settings.public_base_url
+    else:
+        base_url = str(request.base_url)
     return base_url.rstrip("/")
 
 
@@ -33,8 +36,12 @@ async def _get_active_release(session: AsyncSession, *, distro: str) -> DatasetR
         .order_by(DatasetRelease.ingested_at.desc())
         .limit(1)
     )
-    if hasattr(DatasetRelease, "distro"):
-        q = q.where(getattr(DatasetRelease, "distro") == distro)
+    try:
+        distro_col = DatasetRelease.distro  # type: ignore[attr-defined]
+    except AttributeError:
+        distro_col = None
+    if distro_col is not None:
+        q = q.where(distro_col == distro)
     return await session.scalar(q)
 
 
@@ -96,12 +103,15 @@ async def sitemap_index(
             releases["debian"] = release
 
     cache_control = "public, max-age=3600"
-    etag = compute_weak_etag("sitemap-index", *sorted([r.dataset_release_id for r in releases.values()]))
+    release_ids = sorted([r.dataset_release_id for r in releases.values()])
+    etag = compute_weak_etag("sitemap-index", *release_ids)
     not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
     if not_modified is not None:
         return not_modified
 
-    root = ET.Element("sitemapindex", attrib={"xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9"})
+    root = ET.Element(
+        "sitemapindex", attrib={"xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    )
 
     for distro in distros:
         release = releases.get(distro)
@@ -154,9 +164,9 @@ async def sitemap_distro(
         if not isinstance(section, str) or not section:
             continue
         node = ET.SubElement(root, "url")
-        ET.SubElement(node, "loc").text = f"{base}/man/{quote(name, safe='')}/{quote(section, safe='')}"
+        loc = f"{base}/man/{quote(name, safe='')}/{quote(section, safe='')}"
+        ET.SubElement(node, "loc").text = loc
 
     res = Response(content=_xml_bytes(root), media_type="application/xml")
     set_cache_headers(res, etag=etag, cache_control=cache_control)
     return res
-
