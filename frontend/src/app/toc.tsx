@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
 import type { TocItem } from '../api/types'
 
@@ -22,11 +22,14 @@ export function TocProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [scrollToId, _setScrollToId] = useState<ScrollToId | null>(null)
-  const setScrollToId = (fn: ScrollToId | null) => _setScrollToId(fn ? () => fn : null)
+  const setScrollToId = useCallback(
+    (fn: ScrollToId | null) => _setScrollToId(fn ? () => fn : null),
+    [],
+  )
 
   const value = useMemo(
     () => ({ items, setItems, open, setOpen, sidebarOpen, setSidebarOpen, scrollToId, setScrollToId }),
-    [items, open, sidebarOpen, scrollToId],
+    [items, open, sidebarOpen, scrollToId, setScrollToId],
   )
 
   return <TocContext.Provider value={value}>{children}</TocContext.Provider>

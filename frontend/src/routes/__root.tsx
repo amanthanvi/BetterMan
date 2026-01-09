@@ -306,6 +306,7 @@ function TocDrawer() {
               </button>
             </Dialog.Close>
           </div>
+          <Dialog.Description className="sr-only">Jump to a section in this man page.</Dialog.Description>
           <div className="mt-4">
             <Toc
               items={toc.items}

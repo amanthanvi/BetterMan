@@ -10,6 +10,21 @@ test('man: renders page chrome (Navigator rail)', async ({ page }) => {
   await expect(page.getByText('On this page')).toBeVisible()
 })
 
+test('man: mobile TOC drawer opens', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const pageErrors: string[] = []
+  page.on('pageerror', (err) => pageErrors.push(err.message))
+
+  await page.goto('/man/curl/1')
+
+  const tocButton = page.getByRole('button', { name: 'TOC' })
+  await expect(tocButton).toBeVisible()
+  await tocButton.click()
+
+  await expect(page.getByRole('heading', { name: 'Table of contents' })).toBeVisible()
+  await expect(pageErrors, pageErrors.join('\n')).toEqual([])
+})
+
 test('man: find-in-page highlights matches', async ({ page }) => {
   await page.goto('/man/tar/1')
   await page.getByRole('textbox', { name: 'Find in page' }).fill('tar')
