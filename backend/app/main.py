@@ -19,6 +19,7 @@ from app.core.logging import configure_logging, get_logger
 from app.db.session import create_engine, create_session_maker
 from app.security.headers import SecurityHeadersMiddleware
 from app.security.request_ip import get_client_ip
+from app.web.seo import router as seo_router
 from app.web.spa_static import SPAStaticFiles
 
 
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
+    app.include_router(seo_router)
     app.include_router(v1_router)
 
     @app.middleware("http")
