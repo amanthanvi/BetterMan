@@ -76,16 +76,16 @@ Living execution plan for shipping `v0.3.0` from `SPEC.md`.
 ### M25 — Multi‑distribution API + frontend
 
 - Backend API:
-  - [ ] Add optional `?distro=` query param to relevant endpoints
-  - [ ] Default behavior remains Debian when `?distro` omitted (existing URLs unchanged)
-  - [ ] Expose page “variants” info so UI only shows per-page selector when useful
-  - [ ] Regenerate OpenAPI + commit `frontend/src/api/openapi.gen.ts`
+  - [x] Add optional `?distro=` query param to relevant endpoints
+  - [x] Default behavior remains Debian when `?distro` omitted (existing URLs unchanged)
+  - [x] Expose page “variants” info so UI only shows per-page selector when useful
+  - [x] Regenerate OpenAPI + commit `frontend/src/api/openapi.gen.ts`
 - Frontend:
-  - [ ] Store global distro preference (localStorage) + apply to API requests
-  - [ ] Header distro selector (always available) + per-page override (only when variants exist)
-  - [ ] Ensure “copy link” preserves `?distro=` when non-default
+  - [x] Store global distro preference (localStorage) + apply to API requests
+  - [x] Header distro selector (always available) + per-page override (only when variants exist)
+  - [x] Ensure “copy link” preserves `?distro=` when non-default
 - E2E:
-  - [ ] Distro switch changes content (or shows “no differences” when identical)
+  - [x] Distro switch changes content (or shows “no differences” when identical)
 
 ### M26 — Release v0.3.0
 
