@@ -91,7 +91,7 @@ Goal: **type-safety with minimal churn / risk** (preserve current response shape
 ### M16 — UX polish + architecture + release
 
 - [x] Find-in-page keybindings: Enter → next match, Shift+Enter → previous (desktop + mobile)
-- [ ] Print styles (`@media print`) hide navigation, preserve content layout
+- [x] Print styles (`@media print`) hide navigation, preserve content layout
 - [ ] Decompose man page view into components + extract domain hooks (keep behavior identical; add tests)
 - [ ] CI green on `main` (including deploy-to-Railway workflow); verify Railway deploy is healthy
 - [ ] Update docs + bump version strings; tag `v0.2.0`
