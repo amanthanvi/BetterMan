@@ -286,7 +286,12 @@ function TocDrawer() {
             </Dialog.Close>
           </div>
           <div className="mt-4">
-            <Toc items={toc.items} showTitle={false} onNavigate={() => toc.setOpen(false)} />
+            <Toc
+              items={toc.items}
+              showTitle={false}
+              onNavigate={() => toc.setOpen(false)}
+              onNavigateToId={toc.scrollToId ?? undefined}
+            />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

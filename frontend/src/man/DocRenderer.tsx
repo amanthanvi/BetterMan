@@ -1,22 +1,50 @@
+import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import { Link } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import type { BlockNode, InlineNode } from '../api/types'
 import { CodeBlock } from './CodeBlock'
+
+type BmScrollBehavior = 'auto' | 'smooth'
+
+export type DocRendererHandle = {
+  isVirtualized: boolean
+  scrollToBlockIndex: (
+    index: number,
+    opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior },
+  ) => void
+  scrollToAnchor: (
+    id: string,
+    opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior },
+  ) => void
+}
 
 type HighlightCtx = {
   findQuery?: string
   optionRegex?: RegExp
 }
 
-export function DocRenderer({
-  blocks,
-  findQuery,
-  optionTerms,
-}: {
-  blocks: BlockNode[]
-  findQuery?: string
-  optionTerms?: string[]
-}) {
+export const DocRenderer = forwardRef<
+  DocRendererHandle,
+  {
+    blocks: BlockNode[]
+    findQuery?: string
+    optionTerms?: string[]
+    onActiveHeadingChange?: (id: string | null) => void
+  }
+>(function DocRenderer(
+  { blocks, findQuery, optionTerms, onActiveHeadingChange },
+  ref,
+) {
   const optionRegex = buildOptionRegex(optionTerms)
   const find = findQuery?.trim()
 
@@ -25,14 +53,182 @@ export function DocRenderer({
     optionRegex,
   }
 
+  const isVirtualized = blocks.length >= 100
+
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    setScrollMargin(el.offsetTop)
+  }, [blocks.length])
+
+  const anchorToBlockIndex = useMemo(() => buildAnchorIndex(blocks), [blocks])
+  const headings = useMemo(() => {
+    return blocks.flatMap((b, idx) => (b.type === 'heading' ? [{ id: b.id, index: idx }] : []))
+  }, [blocks])
+
+  const virtualizer = useWindowVirtualizer<HTMLDivElement>({
+    count: blocks.length,
+    enabled: isVirtualized,
+    estimateSize: (idx) => estimateBlockSize(blocks[idx]),
+    overscan: 6,
+    gap: 20,
+    scrollMargin,
+    scrollPaddingStart: 140,
+    getItemKey: (idx) => blockKey(blocks[idx], idx),
+  })
+
+  const fineTuneScrollToId = useCallback(
+    (id: string, opts: { behavior: BmScrollBehavior; block: ScrollLogicalPosition }) => {
+      let attempts = 0
+
+      const tick = () => {
+        attempts += 1
+        const el = document.getElementById(id)
+        if (el) {
+          el.scrollIntoView({ behavior: opts.behavior, block: opts.block })
+          return
+        }
+        if (attempts < 20) window.requestAnimationFrame(tick)
+      }
+
+      window.requestAnimationFrame(tick)
+    },
+    [],
+  )
+
+  const scrollToBlockIndex = useCallback(
+    (
+      index: number,
+      opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior },
+    ) => {
+      if (!isVirtualized) return
+
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const behavior = opts?.behavior ?? (reduced ? 'auto' : 'smooth')
+      const align = opts?.align ?? 'start'
+
+      virtualizer.scrollToIndex(index, {
+        align: align === 'center' ? 'center' : 'start',
+        behavior,
+      })
+    },
+    [isVirtualized, virtualizer],
+  )
+
+  const scrollToAnchor = useCallback(
+    (
+      id: string,
+      opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior },
+    ) => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const behavior = opts?.behavior ?? (reduced ? 'auto' : 'smooth')
+      const align = opts?.align ?? 'start'
+      const block = align === 'center' ? 'center' : 'start'
+
+      const idx = anchorToBlockIndex.get(id)
+      if (idx != null && isVirtualized) {
+        virtualizer.scrollToIndex(idx, {
+          align: align === 'center' ? 'center' : 'start',
+          behavior,
+        })
+      }
+
+      fineTuneScrollToId(id, { behavior, block })
+    },
+    [anchorToBlockIndex, fineTuneScrollToId, isVirtualized, virtualizer],
+  )
+
+  useImperativeHandle(
+    ref,
+    () => ({ isVirtualized, scrollToBlockIndex, scrollToAnchor }),
+    [isVirtualized, scrollToAnchor, scrollToBlockIndex],
+  )
+
+  useEffect(() => {
+    const onHash = () => {
+      const raw = window.location.hash.replace(/^#/, '')
+      if (!raw) return
+      try {
+        scrollToAnchor(decodeURIComponent(raw), { behavior: 'auto' })
+      } catch {
+        // ignore bad URI sequences
+      }
+    }
+
+    onHash()
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [scrollToAnchor])
+
+  useEffect(() => {
+    if (!isVirtualized || !onActiveHeadingChange || !headings.length) return
+
+    const activeRef = { id: null as string | null }
+    let raf = 0
+
+    const update = () => {
+      raf = 0
+
+      const item = virtualizer.getVirtualItemForOffset(window.scrollY + 180)
+      const index = item?.index ?? 0
+      const nextId = findActiveHeadingId(headings, index)
+
+      if (nextId !== activeRef.id) {
+        activeRef.id = nextId
+        onActiveHeadingChange(nextId)
+      }
+    }
+
+    const onScroll = () => {
+      if (raf) return
+      raf = window.requestAnimationFrame(update)
+    }
+
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      if (raf) window.cancelAnimationFrame(raf)
+    }
+  }, [headings, isVirtualized, onActiveHeadingChange, virtualizer])
+
+  if (!isVirtualized) {
+    return (
+      <div ref={containerRef} className="space-y-5">
+        {blocks.map((block, idx) => (
+          <BlockView key={blockKey(block, idx)} block={block} ctx={ctx} />
+        ))}
+      </div>
+    )
+  }
+
+  const items = virtualizer.getVirtualItems()
+  const total = virtualizer.getTotalSize()
+
   return (
-    <div className="space-y-5">
-      {blocks.map((block, idx) => (
-        <BlockView key={blockKey(block, idx)} block={block} ctx={ctx} />
-      ))}
+    <div ref={containerRef}>
+      <div className="relative w-full" style={{ height: total }}>
+        {items.map((v) => (
+          <div
+            key={v.key}
+            ref={virtualizer.measureElement}
+            data-index={v.index}
+            data-bm-block-index={v.index}
+            className="absolute left-0 top-0 w-full"
+            style={{ transform: `translateY(${v.start - scrollMargin}px)` }}
+          >
+            <BlockView block={blocks[v.index]} ctx={ctx} />
+          </div>
+        ))}
+      </div>
     </div>
   )
-}
+})
 
 function blockKey(block: BlockNode, fallbackIdx: number) {
   if (block.type === 'heading') return `h:${block.id}`
@@ -112,6 +308,7 @@ function BlockView({ block, ctx }: { block: BlockNode; ctx: HighlightCtx }) {
         <CodeBlock
           id={block.id}
           text={block.text}
+          languageHint={block.languageHint ?? undefined}
           findQuery={ctx.findQuery}
           optionRegex={ctx.optionRegex}
         />
@@ -300,4 +497,55 @@ function getRanges(text: string, regex: RegExp) {
     if (!m[0].length) regex.lastIndex += 1
   }
   return ranges
+}
+
+function buildAnchorIndex(blocks: BlockNode[]) {
+  const map = new Map<string, number>()
+
+  for (const [idx, block] of blocks.entries()) {
+    if (block.type === 'heading') map.set(block.id, idx)
+    if (block.type === 'code_block' && block.id) map.set(block.id, idx)
+    if (block.type === 'definition_list') {
+      for (const item of block.items) {
+        if (item.id) map.set(item.id, idx)
+      }
+    }
+  }
+
+  return map
+}
+
+function estimateBlockSize(block: BlockNode): number {
+  if (block.type === 'heading') return block.level <= 2 ? 84 : 64
+  if (block.type === 'paragraph') return 92
+  if (block.type === 'list') return 140
+  if (block.type === 'definition_list') return 220
+  if (block.type === 'table') return 260
+  if (block.type === 'horizontal_rule') return 40
+  if (block.type === 'code_block') {
+    const lines = block.text.split('\n').length
+    return Math.min(720, 90 + lines * 18)
+  }
+  return 120
+}
+
+function findActiveHeadingId(headings: Array<{ id: string; index: number }>, index: number) {
+  if (!headings.length) return null
+
+  let lo = 0
+  let hi = headings.length - 1
+  let best = 0
+
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2)
+    const m = headings[mid]!
+    if (m.index <= index) {
+      best = mid
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+
+  return headings[best]?.id ?? null
 }

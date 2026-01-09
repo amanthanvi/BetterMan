@@ -5,10 +5,10 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useToc } from '../app/toc'
 import { ApiHttpError, fetchManByName, fetchManByNameAndSection, fetchRelated } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
-import type { ManPage, ManPageContent, OptionItem, SectionPage } from '../api/types'
+import type { BlockNode, InlineNode, ManPage, ManPageContent, OptionItem, SectionPage } from '../api/types'
 import { recordRecentPage } from '../lib/recent'
-import { DocRenderer } from '../man/DocRenderer'
-import { countFindMatches, parseOptionTerms } from '../man/find'
+import { DocRenderer, type DocRendererHandle } from '../man/DocRenderer'
+import { parseOptionTerms } from '../man/find'
 import { OptionsTable } from '../man/OptionsTable'
 import { Toc } from '../man/Toc'
 import { manByNameAndSectionRoute } from '../routes/man.$name.$section'
@@ -160,6 +160,7 @@ function ManPageView({
   const activeMarkRef = useRef<HTMLElement | null>(null)
   const findInputDesktopRef = useRef<HTMLInputElement | null>(null)
   const findInputMobileRef = useRef<HTMLInputElement | null>(null)
+  const docRef = useRef<DocRendererHandle | null>(null)
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
   const activeTocId = activeHeadingId ?? content.toc[0]?.id ?? null
   const [copiedLink, setCopiedLink] = useState(false)
@@ -169,10 +170,11 @@ function ManPageView({
   const deferredFindQuery = useDeferredValue(rawFindQuery)
   const findQuery = rawFindQuery.length >= 2 ? deferredFindQuery : ''
   const findEnabled = findQuery.length >= 2
-  const matchCount = useMemo(
-    () => (findEnabled ? countFindMatches(content.blocks, findQuery) : 0),
+  const findIndex = useMemo(
+    () => (findEnabled ? buildFindIndex(content.blocks, findQuery) : null),
     [content.blocks, findEnabled, findQuery],
   )
+  const matchCount = findIndex?.total ?? 0
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
   const findCountLabel =
     rawFindQuery.length < 2
@@ -187,6 +189,8 @@ function ManPageView({
     () => (selectedOption ? parseOptionTerms(selectedOption.flags) : []),
     [selectedOption],
   )
+  const isVirtualized = content.blocks.length >= 100
+  const setScrollToId = toc.setScrollToId
   const showSidebar = toc.sidebarOpen
   const scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
   const setFindBarHiddenPersisted = (hidden: boolean) => {
@@ -201,6 +205,15 @@ function ManPageView({
   }, [])
 
   useEffect(() => {
+    setScrollToId((id) => {
+      docRef.current?.scrollToAnchor(id)
+    })
+    return () => setScrollToId(null)
+  }, [setScrollToId])
+
+  useEffect(() => {
+    if (isVirtualized) return
+
     const ids = content.toc.map((t) => t.id).filter(Boolean)
     const els = ids
       .map((id) => document.getElementById(id))
@@ -225,7 +238,7 @@ function ManPageView({
 
     for (const el of els) observer.observe(el)
     return () => observer.disconnect()
-  }, [content.toc, page.id])
+  }, [content.toc, isVirtualized, page.id])
 
   const focusFindInput = () => {
     const isDesktop = window.matchMedia('(min-width: 1024px)').matches
@@ -259,10 +272,40 @@ function ManPageView({
   }, [content.toc])
 
   const scrollToFind = (idx: number) => {
+    if (!matchCount) return
+    const clamped = ((idx % matchCount) + matchCount) % matchCount
+
+    if (docRef.current?.isVirtualized && findIndex) {
+      const loc = locateFindMatch(findIndex.prefixByBlock, clamped)
+      if (!loc) return
+
+      docRef.current.scrollToBlockIndex(loc.blockIndex, { align: 'center', behavior: scrollBehavior })
+
+      let attempts = 0
+      const tick = () => {
+        attempts += 1
+        const block = document.querySelector(`[data-bm-block-index="${loc.blockIndex}"]`) as HTMLElement | null
+        const marks = block
+          ? (Array.from(block.querySelectorAll('mark[data-bm-find]')) as HTMLElement[])
+          : []
+        if (marks.length) {
+          const el = marks[Math.min(loc.withinBlockIndex, marks.length - 1)]!
+          el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
+          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+          el.classList.add('bm-find-active')
+          activeMarkRef.current = el
+          return
+        }
+        if (attempts < 20) window.requestAnimationFrame(tick)
+      }
+
+      window.requestAnimationFrame(tick)
+      return
+    }
+
     const marks = Array.from(document.querySelectorAll('mark[data-bm-find]')) as HTMLElement[]
     if (!marks.length) return
-    const clamped = ((idx % marks.length) + marks.length) % marks.length
-    const el = marks[clamped]
+    const el = marks[Math.min(clamped, marks.length - 1)]!
     el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
     if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
     el.classList.add('bm-find-active')
@@ -270,17 +313,15 @@ function ManPageView({
   }
 
   const goPrev = () => {
-    const marks = Array.from(document.querySelectorAll('mark[data-bm-find]'))
-    if (!marks.length) return
-    const idx = (activeFindIndex - 1 + marks.length) % marks.length
+    if (!matchCount) return
+    const idx = (activeFindIndex - 1 + matchCount) % matchCount
     setActiveFindIndex(idx)
     scrollToFind(idx)
   }
 
   const goNext = () => {
-    const marks = Array.from(document.querySelectorAll('mark[data-bm-find]'))
-    if (!marks.length) return
-    const idx = (activeFindIndex + 1) % marks.length
+    if (!matchCount) return
+    const idx = (activeFindIndex + 1) % matchCount
     setActiveFindIndex(idx)
     scrollToFind(idx)
   }
@@ -345,6 +386,20 @@ function ManPageView({
                       <a
                         key={j.id}
                         href={`#${j.id}`}
+                        onClick={(e) => {
+                          if (!docRef.current) return
+                          e.preventDefault()
+                          try {
+                            window.history.pushState(null, '', `#${j.id}`)
+                          } catch {
+                            try {
+                              window.location.hash = j.id
+                            } catch {
+                              // ignore
+                            }
+                          }
+                          docRef.current?.scrollToAnchor(j.id, { behavior: scrollBehavior })
+                        }}
                         className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs hover:bg-[color:var(--bm-bg)/0.55]"
                       >
                         {j.title}
@@ -395,7 +450,8 @@ function ManPageView({
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && matchCount) {
                             e.preventDefault()
-                            scrollToFind(activeFindIndex)
+                            if (e.shiftKey) goPrev()
+                            else goNext()
                           }
                         }}
                         placeholder="Find in page…"
@@ -445,7 +501,7 @@ function ManPageView({
                 </div>
 
                 <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
-                  <Toc items={content.toc} activeId={activeTocId} />
+                  <Toc items={content.toc} activeId={activeTocId} onNavigateToId={toc.scrollToId ?? undefined} />
                 </div>
               </div>
             </div>
@@ -482,7 +538,8 @@ function ManPageView({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && matchCount) {
                         e.preventDefault()
-                        scrollToFind(activeFindIndex)
+                        if (e.shiftKey) goPrev()
+                        else goNext()
                       }
                     }}
                     placeholder="Find in page…"
@@ -565,7 +622,24 @@ function ManPageView({
                   selectedAnchorId={selectedOption?.anchorId}
                   onSelect={(opt) => {
                     setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
-                    document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
+                    try {
+                      window.history.pushState(null, '', `#${opt.anchorId}`)
+                    } catch {
+                      try {
+                        window.location.hash = opt.anchorId
+                      } catch {
+                        // ignore
+                      }
+                    }
+
+                    if (docRef.current) {
+                      docRef.current.scrollToAnchor(opt.anchorId, { align: 'center', behavior: scrollBehavior })
+                    } else {
+                      document.getElementById(opt.anchorId)?.scrollIntoView({
+                        behavior: scrollBehavior,
+                        block: 'center',
+                      })
+                    }
                   }}
                 />
               </div>
@@ -573,9 +647,11 @@ function ManPageView({
           ) : null}
 
           <DocRenderer
+            ref={docRef}
             blocks={content.blocks}
             findQuery={findEnabled ? findQuery : undefined}
             optionTerms={optionTerms}
+            onActiveHeadingChange={isVirtualized ? setActiveHeadingId : undefined}
           />
         </article>
       </div>
@@ -647,4 +723,95 @@ function ManPageView({
       ) : null}
     </div>
   )
+}
+
+function buildFindIndex(blocks: BlockNode[], query: string): { prefixByBlock: number[]; total: number } {
+  const q = query.trim()
+  if (q.length < 2) return { prefixByBlock: new Array(blocks.length).fill(0), total: 0 }
+
+  const needle = q.toLowerCase()
+  const prefixByBlock = new Array<number>(blocks.length)
+  let total = 0
+
+  for (let idx = 0; idx < blocks.length; idx += 1) {
+    total += countInBlock(blocks[idx]!, needle)
+    prefixByBlock[idx] = total
+  }
+
+  return { prefixByBlock, total }
+}
+
+function locateFindMatch(prefixByBlock: number[], matchIndex: number) {
+  if (!prefixByBlock.length) return null
+
+  const target = matchIndex + 1
+  let lo = 0
+  let hi = prefixByBlock.length - 1
+  let ans = -1
+
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2)
+    const v = prefixByBlock[mid]!
+    if (v >= target) {
+      ans = mid
+      hi = mid - 1
+    } else {
+      lo = mid + 1
+    }
+  }
+
+  if (ans < 0) return null
+  const prev = ans === 0 ? 0 : prefixByBlock[ans - 1]!
+  return { blockIndex: ans, withinBlockIndex: matchIndex - prev }
+}
+
+function countInBlock(block: BlockNode, needle: string): number {
+  switch (block.type) {
+    case 'heading':
+      return countInText(block.text, needle)
+    case 'paragraph':
+      return countInInlines(block.inlines, needle)
+    case 'list':
+      return block.items.reduce((sum, item) => sum + countInBlocks(item, needle), 0)
+    case 'definition_list':
+      return block.items.reduce((sum, item) => {
+        return sum + countInInlines(item.termInlines, needle) + countInBlocks(item.definitionBlocks, needle)
+      }, 0)
+    case 'code_block':
+      return countInText(block.text, needle)
+    case 'table': {
+      let sum = 0
+      for (const h of block.headers) sum += countInText(h, needle)
+      for (const row of block.rows) for (const cell of row) sum += countInText(cell, needle)
+      return sum
+    }
+    case 'horizontal_rule':
+      return 0
+  }
+}
+
+function countInBlocks(blocks: BlockNode[], needle: string): number {
+  return blocks.reduce((sum, block) => sum + countInBlock(block, needle), 0)
+}
+
+function countInInlines(inlines: InlineNode[], needle: string): number {
+  return inlines.reduce((sum, inline) => {
+    if (inline.type === 'text' || inline.type === 'code') return sum + countInText(inline.text, needle)
+    if (inline.type === 'emphasis' || inline.type === 'strong') return sum + countInInlines(inline.inlines, needle)
+    if (inline.type === 'link') return sum + countInInlines(inline.inlines, needle)
+    return sum
+  }, 0)
+}
+
+function countInText(text: string, needle: string): number {
+  const hay = text.toLowerCase()
+  let idx = 0
+  let count = 0
+  while (true) {
+    const next = hay.indexOf(needle, idx)
+    if (next === -1) break
+    count += 1
+    idx = next + needle.length
+  }
+  return count
 }

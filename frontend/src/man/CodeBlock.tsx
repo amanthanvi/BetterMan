@@ -8,8 +8,18 @@ async function loadHljs(): Promise<unknown> {
     hljsPromise = Promise.all([
       import('highlight.js/lib/core'),
       import('highlight.js/lib/languages/bash'),
-    ]).then(([core, bash]) => {
+      import('highlight.js/lib/languages/c'),
+      import('highlight.js/lib/languages/makefile'),
+      import('highlight.js/lib/languages/python'),
+    ]).then(([core, bash, c, makefile, python]) => {
       core.default.registerLanguage('bash', bash.default)
+      core.default.registerLanguage('shell', bash.default)
+      core.default.registerLanguage('sh', bash.default)
+      core.default.registerLanguage('zsh', bash.default)
+
+      core.default.registerLanguage('c', c.default)
+      core.default.registerLanguage('makefile', makefile.default)
+      core.default.registerLanguage('python', python.default)
       return core.default
     })
   }
@@ -20,15 +30,18 @@ async function loadHljs(): Promise<unknown> {
 export function CodeBlock({
   id,
   text,
+  languageHint,
   findQuery,
   optionRegex,
 }: {
   id?: string | null
   text: string
+  languageHint?: string | null
   findQuery?: string
   optionRegex?: RegExp
 }) {
   const [copied, setCopied] = useState(false)
+  const language = normalizeLanguageHint(languageHint) ?? 'bash'
   const markedText = useMemo(
     () => buildMarkedText(text, { findQuery, optionRegex }),
     [findQuery, optionRegex, text],
@@ -51,7 +64,7 @@ export function CodeBlock({
       if (cancelled) return
       try {
         const next = (hljs as { highlight: (t: string, o: unknown) => { value: string } }).highlight(markedText, {
-          language: 'bash',
+          language,
           ignoreIllegals: true,
         }).value
         setHighlighted({ source: markedText, html: applyMarkers(next) })
@@ -63,7 +76,7 @@ export function CodeBlock({
     return () => {
       cancelled = true
     }
-  }, [markedText, text])
+  }, [language, markedText, text])
 
   const html = highlighted?.source === markedText ? highlighted.html : fallbackHtml
   const highlightedNodes = useMemo(() => highlightedHtmlToReact(html), [html])
@@ -91,10 +104,23 @@ export function CodeBlock({
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
       <pre className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] p-5 text-sm leading-7 shadow-sm">
-        <code className="hljs language-bash">{highlightedNodes}</code>
+        <code className={`hljs language-${language}`}>{highlightedNodes}</code>
       </pre>
     </div>
   )
+}
+
+function normalizeLanguageHint(hint?: string | null): 'bash' | 'c' | 'makefile' | 'python' | null {
+  if (!hint) return null
+  const cleaned = hint.trim().toLowerCase()
+  if (!cleaned) return null
+
+  if (['bash', 'shell', 'sh', 'zsh', 'console'].includes(cleaned)) return 'bash'
+  if (['python', 'py'].includes(cleaned)) return 'python'
+  if (['c', 'c99', 'c11', 'cpp', 'c++'].includes(cleaned)) return 'c'
+  if (['make', 'makefile'].includes(cleaned)) return 'makefile'
+
+  return null
 }
 
 function highlightedHtmlToReact(html: string): ReactNode[] {

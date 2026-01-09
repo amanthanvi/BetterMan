@@ -13,11 +13,13 @@ export function Toc({
   items,
   activeId,
   onNavigate,
+  onNavigateToId,
   showTitle = true,
 }: {
   items: TocItem[]
   activeId?: string | null
   onNavigate?: () => void
+  onNavigateToId?: (id: string) => void
   showTitle?: boolean
 }) {
   if (!items.length) return null
@@ -47,7 +49,23 @@ export function Toc({
           <li key={item.id} className="text-[color:var(--bm-muted)]">
             <a
               href={`#${item.id}`}
-              onClick={() => onNavigate?.()}
+              onClick={(e) => {
+                if (onNavigateToId) {
+                  e.preventDefault()
+                  try {
+                    window.history.pushState(null, '', `#${item.id}`)
+                  } catch {
+                    try {
+                      window.location.hash = item.id
+                    } catch {
+                      // ignore
+                    }
+                  }
+                  onNavigateToId(item.id)
+                }
+
+                onNavigate?.()
+              }}
               className={`group block rounded-xl py-1.5 pr-2 no-underline transition ${
                 activeId === item.id
                   ? 'bg-[color:var(--bm-accent)/0.12] text-[color:var(--bm-fg)]'
