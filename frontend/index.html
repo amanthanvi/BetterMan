@@ -89,6 +89,21 @@
             // ignore
           }
           prefetchJson(`/api/v1/man/${encodeURIComponent(name)}`)
+        } else if (parts[0] === 'search') {
+          const params = new URLSearchParams(window.location.search)
+          const q = params.get('q')?.trim() ?? ''
+          const section = params.get('section')?.trim() ?? ''
+
+          if (q) {
+            const apiParams = new URLSearchParams()
+            apiParams.set('q', q)
+            if (section) apiParams.set('section', section)
+            apiParams.set('limit', '20')
+            apiParams.set('offset', '0')
+            prefetchJson(`/api/v1/search?${apiParams.toString()}`)
+          }
+
+          prefetchJson('/api/v1/sections')
         }
       })()
     </script>
