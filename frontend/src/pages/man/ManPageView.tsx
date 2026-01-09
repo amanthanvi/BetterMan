@@ -50,6 +50,8 @@ export function ManPageView({
   const activeTocId = activeHeadingId ?? content.toc[0]?.id ?? null
   const [copiedLink, setCopiedLink] = useState(false)
   const copyTimeoutRef = useRef<number | null>(null)
+  const optionsCount = content.options?.length ?? 0
+  const [optionsVisible, setOptionsVisible] = useState(() => optionsCount > 0 && optionsCount <= 160)
 
   const rawFindQuery = find.trim()
   const deferredFindQuery = useDeferredValue(rawFindQuery)
@@ -423,34 +425,52 @@ export function ManPageView({
 
           {content.options?.length ? (
             <section className="mb-10">
-              <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Options</h2>
-              <div className="mt-3">
-                <OptionsTable
-                  options={content.options}
-                  selectedAnchorId={selectedOption?.anchorId}
-                  onSelect={(opt) => {
-                    setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
-                    try {
-                      window.history.pushState(null, '', `#${opt.anchorId}`)
-                    } catch {
-                      try {
-                        window.location.hash = opt.anchorId
-                      } catch {
-                        // ignore
-                      }
-                    }
-
-                    if (docRef.current) {
-                      docRef.current.scrollToAnchor(opt.anchorId, { align: 'center', behavior: scrollBehavior })
-                    } else {
-                      document.getElementById(opt.anchorId)?.scrollIntoView({
-                        behavior: scrollBehavior,
-                        block: 'center',
-                      })
-                    }
-                  }}
-                />
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">
+                  Options{optionsCount ? <span className="text-[color:var(--bm-muted)]"> · {optionsCount}</span> : null}
+                </div>
+                <button
+                  type="button"
+                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                  onClick={() => setOptionsVisible((v) => !v)}
+                >
+                  {optionsVisible ? 'Hide' : 'Show'}
+                </button>
               </div>
+
+              {optionsVisible ? (
+                <div className="mt-3">
+                  <OptionsTable
+                    options={content.options}
+                    selectedAnchorId={selectedOption?.anchorId}
+                    onSelect={(opt) => {
+                      setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
+                      try {
+                        window.history.pushState(null, '', `#${opt.anchorId}`)
+                      } catch {
+                        try {
+                          window.location.hash = opt.anchorId
+                        } catch {
+                          // ignore
+                        }
+                      }
+
+                      if (docRef.current) {
+                        docRef.current.scrollToAnchor(opt.anchorId, { align: 'center', behavior: scrollBehavior })
+                      } else {
+                        document.getElementById(opt.anchorId)?.scrollIntoView({
+                          behavior: scrollBehavior,
+                          block: 'center',
+                        })
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="mt-3 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.6] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
+                  This man page has a large options table. Expand it if you need to jump to a flag.
+                </div>
+              )}
             </section>
           ) : null}
 
