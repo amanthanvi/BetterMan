@@ -109,6 +109,15 @@ Post-gzip re-measurement (after `36102c4` is deployed):
 - Confirmed `content-encoding: gzip` and response size reduction (~1.0 MB → ~173 kB on `/api/v1/man/bash/1`).
 - Mobile (**cached shell**, post-gzip): LCP **2.15s**, CLS **0.126**
 
+### Railway runtime spot-check (production)
+
+Production runtime checks (not a load test):
+- `railway status --json` shows the `web` service’s latest deployment is `SUCCESS`.
+- `railway logs --service web --environment production --since 1h --lines 5000` includes structured request logs with `duration_ms=...`.
+
+Sample (manual curls; low N):
+- `n=11`, `p50≈414ms`, `p95≈1526ms`, `max≈1645ms`
+
 ## Remaining work for M22
 
 - If `/man/bash/1` ever fails the <2.5s target under cached shell again:
