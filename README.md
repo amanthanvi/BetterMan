@@ -20,6 +20,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - `v0.1.2` shipped (tag `v0.1.2`).
 - `v0.2.0` shipped (tag `v0.2.0`).
 - `v0.2.1` shipped (tag `v0.2.1`).
+- `v0.3.0` in progress (multi-distribution + SEO + performance).
 - Default branch: `main`. Execution plan: `PLAN.md`.
 
 ## Deploy (Railway)

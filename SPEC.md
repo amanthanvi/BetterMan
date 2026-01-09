@@ -1,10 +1,10 @@
 # 1. Title / Version / Status
 
 **Project:** BetterMan
-**Spec Version:** v0.2.1
-**Status:** Shipped (v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Spec Version:** v0.3.0
+**Status:** Planning (v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
 **Last Updated:** 2026-01-09 (EST)
-**Interview Status:** Complete - v0.2.1 shipped
+**Interview Status:** Complete - v0.3.0 scoped
 
 ---
 
@@ -12,7 +12,7 @@
 
 -   BetterMan is a fast, modern web interface for Linux man pages focused on readability, speed, and navigation.
 -   Anonymous, public, internet-facing web app (no accounts, no login) with stable shareable URLs.
--   Distribution-agnostic: presents a single, canonical set of man pages sourced from a stable reference (Debian stable) without exposing distribution details to users.
+-   Multi-distribution support (v0.3.0): presents man pages from multiple Linux distributions (Debian, Ubuntu, Fedora) with Debian as the canonical default. Users can view distribution-specific variations when they exist.
 -   Provides high-quality rendering (headings, anchors, options tables, examples) versus raw terminal `man`.
 -   Includes instant-feel search backed by a server-side index (PostgreSQL Full Text Search) with typo tolerance.
 -   Keyboard-first UX: command palette (Cmd/Ctrl+K), global shortcuts, and consistent focus management.
@@ -43,6 +43,12 @@
 -   Visual polish: theme transition animations, mobile layout fixes, typography/contrast refinements
 -   Performance tuning: query analysis, cache TTL optimization, bundle review
 -   Operational runbooks: CSP debugging, Railway operations, E2E test debugging, type generation issues
+
+**v0.3.0 focus:** performance, discoverability, and multi-distribution content expansion:
+
+-   **Phase 1 (Performance):** Comprehensive profiling audit (Lighthouse, Chrome DevTools, React Profiler, Railway metrics); fix LCP issues and virtualization jank on large pages. Performance work blocks subsequent phases.
+-   **Phase 2 (SEO Foundation):** Sitemap index (per-distribution XML files), meta tags via react-helmet-async (hybrid: static base + client-side enhancement), TechArticle JSON-LD (minimal fields).
+-   **Phase 3 (Multi-Distribution):** Add Ubuntu and Fedora alongside Debian via parallel ingestion pipelines; distribution selector (global setting + per-page override); query param URL scheme (`?distro=ubuntu`).
 
 ---
 
@@ -80,7 +86,7 @@
 # 4. Non-Goals
 
 -   No user accounts, authentication, profiles, favorites, or history in v0.1.0.
--   No SEO-driven requirements (no SSR solely for crawlers; no sitemap/indexing work).
+-   No SSR solely for crawlers. **v0.3.0 update:** Minimal SEO support added (sitemap, meta tags, JSON-LD) without SSR.
 -   No user-generated content (comments, edits, annotations).
 -   No offline native apps (desktop/mobile).
 -   No full "terminal emulation" or interactive command execution.
@@ -601,17 +607,27 @@ As a user reading a complex man page, I want to click on `-r` in the OPTIONS tab
 
 ## Content Source Strategy
 
-For v0.1.0, BetterMan is **distribution-agnostic** and presents a single, unified set of man pages.
+**v0.1.0–v0.2.x:** BetterMan was **distribution-agnostic**, presenting a single, unified set of man pages from Debian stable.
 
-**Source:** Debian stable (currently Debian 13 "trixie") as the canonical reference.
+**v0.3.0 (Multi-Distribution):** BetterMan supports **multiple Linux distributions** with Debian as the canonical default.
+
+**Supported Distributions:**
+-   **Debian stable** (currently Debian 13 "trixie") — canonical reference, shown by default
+-   **Ubuntu LTS** (currently Ubuntu 24.04 "Noble Numbat") — Debian-based, enterprise-common
+-   **Fedora** (current stable release) — RPM-based, enterprise relevance
 
 **Rationale:**
--   Debian is a widely-used, stable base for many other distributions.
--   Provides comprehensive coverage of standard Unix/Linux commands.
--   Well-maintained with consistent packaging and documentation.
--   Avoids exposing distribution complexity to users in v0.1.0.
+-   Debian remains the canonical default due to stability and comprehensive coverage.
+-   Ubuntu adds enterprise coverage and Debian-derivative packages.
+-   Fedora provides RPM ecosystem coverage and Red Hat-adjacent tooling.
 
-**Note:** The internal source (Debian) is an implementation detail. Users interact with man pages without knowledge of or reference to any specific distribution.
+**Distribution Selection:**
+-   **Default:** Debian (current behavior preserved; existing URLs unaffected)
+-   **URL scheme:** Query parameter `?distro=ubuntu` or `?distro=fedora` (preserves existing URLs)
+-   **UI:** Global distribution preference (stored in localStorage) + per-page override when distribution variations exist
+-   **Variations:** When a man page differs across distributions, a tab/dropdown selector appears
+
+**Note:** Users visiting without a `?distro` parameter see Debian content by default. The distribution selector only appears when meaningful differences exist between distributions for a given page.
 
 ## Package Coverage
 
@@ -938,6 +954,36 @@ Bundle analysis:
 -   Identify any unexpectedly large chunks
 -   Ensure highlight.js lazy loading is effective
 -   Target: maintain initial JS bundle <= 250 KB gz
+
+## Performance Audit (v0.3.0)
+
+**Decision:** Comprehensive profiling audit before any feature work. Performance blocks other v0.3.0 phases.
+
+**Observed Issues:**
+-   Initial page load (LCP) concerns — needs investigation
+-   Virtualization jank on large pages (multiple pages affected) — scrolling feels stuttery
+
+**Profiling Approach (Comprehensive):**
+
+Frontend:
+-   **Lighthouse:** Run against production URL for Core Web Vitals baseline
+-   **Chrome DevTools Performance:** Record page load and scroll interactions
+-   **React Profiler:** Component-level render analysis for virtualized pages
+
+Backend:
+-   **Railway Metrics:** Use built-in observability for API latency breakdown
+-   **Database:** `EXPLAIN ANALYZE` on search and page fetch queries
+
+**Targets:**
+-   LCP < 2.5s on "Fast 3G / mid-tier mobile" (existing target, verify compliance)
+-   Large page scroll: no dropped frames at 60fps during continuous scroll
+-   Initial JS bundle: <= 250 KB gz (existing target, verify compliance)
+
+**Blockers:** Performance issues must be resolved before proceeding to Phase 2 (SEO) and Phase 3 (Multi-Distribution).
+
+**Fix Categories:**
+-   **LCP fixes:** Font loading optimization, critical CSS, resource prioritization
+-   **Virtualization fixes:** TanStack Virtual configuration tuning, overscan adjustments, memo optimization
 
 ## Abuse Controls (Rate limiting, Bot Mitigation)
 
@@ -1946,6 +1992,75 @@ Testing strategy significantly expanded for v0.2.0 with comprehensive frontend t
 
 ---
 
+# 20.5 SEO & Discoverability (v0.3.0)
+
+**Decision:** Minimal SEO support without SSR.
+
+## Sitemap
+
+**Implementation:** Sitemap index with per-distribution XML files.
+
+-   `/sitemap.xml` — sitemap index pointing to distribution-specific sitemaps
+-   `/sitemap-debian.xml` — all Debian man page URLs
+-   `/sitemap-ubuntu.xml` — all Ubuntu man page URLs
+-   `/sitemap-fedora.xml` — all Fedora man page URLs
+
+**Generation:** Regenerated after each dataset update (scheduled monthly ingestion).
+
+**Size management:** Sitemap index pattern handles growth as distributions expand.
+
+## Meta Tags
+
+**Implementation:** Hybrid approach using react-helmet-async.
+
+-   **Static base:** Basic meta tags in `index.html` (title, description, og:image)
+-   **Client-side enhancement:** react-helmet-async updates page-specific meta on route change
+-   **Per-page meta:**
+    -   `<title>`: `{name}({section}) - BetterMan`
+    -   `<meta name="description">`: One-line description from man page
+    -   `<meta property="og:title">`: Same as title
+    -   `<meta property="og:description">`: Same as description
+
+**Note:** Search engines will see the static base; JavaScript-capable crawlers (Googlebot) will see enhanced meta.
+
+## Structured Data (JSON-LD)
+
+**Schema type:** TechArticle (Schema.org)
+
+**Fields (minimal):**
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "tar(1) - GNU tar manual page",
+  "name": "tar(1)",
+  "description": "an archiving utility",
+  "dateModified": "2026-01-01T00:00:00Z",
+  "author": {
+    "@type": "Organization",
+    "name": "tar maintainers"
+  }
+}
+```
+
+**Injection:** Client-side via react-helmet-async `<script type="application/ld+json">`.
+
+## robots.txt
+
+**Policy:**
+-   Allow all crawlers for man page content
+-   Disallow `/api/` endpoints (API is for app use, not crawling)
+-   Point to sitemap index
+
+```
+User-agent: *
+Allow: /
+Disallow: /api/
+Sitemap: https://betterman.sh/sitemap.xml
+```
+
+---
+
 # 21. Milestones & Delivery Plan
 
 ## Phased Plan (v0.1.0) - COMPLETED
@@ -2078,6 +2193,86 @@ Testing strategy significantly expanded for v0.2.0 with comprehensive frontend t
 -   [ ] Domain hooks extracted and tested
 -   [ ] Tests co-located with components
 
+## Phased Plan (v0.3.0)
+
+**Phase 1: Performance Audit (Blocks Phase 2 & 3)**
+1. Run comprehensive Lighthouse audit on production
+2. Profile with Chrome DevTools Performance (page load + scroll)
+3. Profile with React Profiler (virtualized page renders)
+4. Review Railway metrics for API latency breakdown
+5. Run `EXPLAIN ANALYZE` on search and page fetch queries
+6. Document findings and prioritize fixes
+7. Fix LCP issues (font loading, critical CSS, resource prioritization)
+8. Fix virtualization jank (TanStack Virtual tuning, memo optimization)
+9. Verify targets met: LCP < 2.5s, smooth scroll, bundle <= 250KB gz
+
+**Phase 2: SEO Foundation**
+1. Add react-helmet-async dependency
+2. Implement page-specific meta tags (title, description, og:*)
+3. Add TechArticle JSON-LD structured data
+4. Create sitemap generation endpoint/script
+5. Implement sitemap index with per-distribution XML files
+6. Add robots.txt
+7. E2E test: sitemap validation
+
+**Phase 3: Multi-Distribution**
+1. Assess database schema for multi-distribution support
+2. Add `distribution` column/table as needed
+3. Create parallel ingestion pipeline for Ubuntu
+4. Create parallel ingestion pipeline for Fedora
+5. Update API to accept `?distro=` query parameter
+6. Implement distribution selector UI (global setting)
+7. Implement per-page distribution selector (when variations exist)
+8. E2E test: distribution selector workflow
+9. Update runbooks for multi-distro operations
+
+**Phase 4: Polish & Release**
+1. Audit runbooks against production experience
+2. Update documentation (SPEC, README, PLAN)
+3. CI green on `main`
+4. Deploy healthy
+5. Tag `v0.3.0`
+
+## Definition of Done (v0.3.0 Launch Checklist)
+
+**Performance**
+
+-   [ ] Lighthouse audit completed and documented
+-   [ ] LCP < 2.5s on Fast 3G (verified)
+-   [ ] Virtualized page scroll: smooth at 60fps
+-   [ ] Initial JS bundle <= 250 KB gz (verified)
+-   [ ] All profiling findings addressed or documented for future
+
+**SEO**
+
+-   [ ] react-helmet-async integrated
+-   [ ] Page-specific meta tags working (title, description, og:*)
+-   [ ] TechArticle JSON-LD on man pages
+-   [ ] Sitemap index at `/sitemap.xml`
+-   [ ] Per-distribution sitemaps generated
+-   [ ] robots.txt deployed
+
+**Multi-Distribution**
+
+-   [ ] Database schema supports multiple distributions
+-   [ ] Ubuntu man pages ingested
+-   [ ] Fedora man pages ingested
+-   [ ] `?distro=` query parameter working
+-   [ ] Global distribution preference (localStorage)
+-   [ ] Per-page distribution selector (when variations exist)
+-   [ ] Parallel ingestion pipelines working
+
+**Testing**
+
+-   [ ] E2E test: sitemap is valid XML with expected URLs
+-   [ ] E2E test: distribution selector switches content
+-   [ ] Existing E2E tests still pass
+
+**Operations**
+
+-   [ ] Runbooks audited against production experience
+-   [ ] Multi-distro runbook added
+
 ---
 
 # 22. Risks & Mitigations
@@ -2098,6 +2293,14 @@ Testing strategy significantly expanded for v0.2.0 with comprehensive frontend t
     - Mitigation: Test thoroughly in staging; have rollback plan to previous CSP policy.
 8. **v0.2.0: Type generation adds CI complexity**
     - Mitigation: Generate types during CI, fail fast on schema mismatches; document regeneration process.
+9. **v0.3.0: Multi-distribution database complexity**
+    - Mitigation: Assess schema carefully before implementation; choose cost-effective approach; maintain Debian as canonical default.
+10. **v0.3.0: Parallel ingestion pipeline failures**
+    - Mitigation: Independent pipelines per distribution; one distribution failure doesn't block others; clear alerting per pipeline.
+11. **v0.3.0: SEO without SSR limitations**
+    - Mitigation: Use react-helmet-async for client-side meta; modern Googlebot executes JavaScript; monitor Search Console for indexing issues.
+12. **v0.3.0: Performance regression from multi-distro queries**
+    - Mitigation: Ensure proper indexes on distribution column; maintain query performance targets; profile before and after.
 
 ---
 
