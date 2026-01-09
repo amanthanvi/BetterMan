@@ -286,6 +286,8 @@ export interface components {
         InfoResponse: {
             /** Datasetreleaseid */
             datasetReleaseId: string;
+            /** Distro */
+            distro: string;
             /** Lastupdated */
             lastUpdated: string;
             /** Locale */
@@ -367,6 +369,8 @@ export interface components {
             datasetReleaseId: string;
             /** Description */
             description: string;
+            /** Distro */
+            distro: string;
             /** Id */
             id: string;
             /** Locale */
@@ -399,6 +403,17 @@ export interface components {
         ManPageResponse: {
             content: components["schemas"]["ManPageContent"];
             page: components["schemas"]["ManPage"];
+            /** Variants */
+            variants: components["schemas"]["ManPageVariant"][];
+        };
+        /** ManPageVariant */
+        ManPageVariant: {
+            /** Contentsha256 */
+            contentSha256: string;
+            /** Datasetreleaseid */
+            datasetReleaseId: string;
+            /** Distro */
+            distro: string;
         };
         /** OptionItem */
         OptionItem: {
@@ -551,7 +566,9 @@ export type $defs = Record<string, never>;
 export interface operations {
     get_info_api_v1_info_get: {
         parameters: {
-            query?: never;
+            query?: {
+                distro?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -567,11 +584,22 @@ export interface operations {
                     "application/json": components["schemas"]["InfoResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     list_licenses_api_v1_licenses_get: {
         parameters: {
-            query?: never;
+            query?: {
+                distro?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -587,11 +615,22 @@ export interface operations {
                     "application/json": components["schemas"]["LicensesResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     get_license_api_v1_licenses__package__get: {
         parameters: {
-            query?: never;
+            query?: {
+                distro?: string | null;
+            };
             header?: never;
             path: {
                 package: string;
@@ -622,7 +661,9 @@ export interface operations {
     };
     get_man_by_name_api_v1_man__name__get: {
         parameters: {
-            query?: never;
+            query?: {
+                distro?: string | null;
+            };
             header?: never;
             path: {
                 name: string;
@@ -662,7 +703,9 @@ export interface operations {
     };
     get_man_by_name_and_section_api_v1_man__name___section__get: {
         parameters: {
-            query?: never;
+            query?: {
+                distro?: string | null;
+            };
             header?: never;
             path: {
                 name: string;
@@ -694,7 +737,9 @@ export interface operations {
     };
     get_related_api_v1_man__name___section__related_get: {
         parameters: {
-            query?: never;
+            query?: {
+                distro?: string | null;
+            };
             header?: never;
             path: {
                 name: string;
@@ -731,6 +776,7 @@ export interface operations {
                 section?: string | null;
                 limit?: number;
                 offset?: number;
+                distro?: string | null;
             };
             header?: never;
             path?: never;
@@ -763,6 +809,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 offset?: number;
+                distro?: string | null;
             };
             header?: never;
             path: {
@@ -794,7 +841,9 @@ export interface operations {
     };
     list_sections_api_v1_sections_get: {
         parameters: {
-            query?: never;
+            query?: {
+                distro?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -808,6 +857,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SectionLabel"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

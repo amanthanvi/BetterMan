@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Query, Request, Response
 from fastapi.params import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.schemas import LicensesResponse, LicenseTextResponse
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
+from app.datasets.distro import normalize_distro
 from app.db.models import License, ManPage, ManPageLicenseMap
 from app.db.session import get_session
 from app.security.deps import rate_limit_page
@@ -24,10 +25,12 @@ _PKG_RE = re.compile(r"^[a-z0-9][a-z0-9+.-]*$")
 async def list_licenses(
     request: Request,
     response: Response,
+    distro: str | None = Query(default=None),
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> LicensesResponse | Response:
-    release = await require_active_release(session)
+    distro_norm = normalize_distro(distro)
+    release = await require_active_release(session, distro=distro_norm)
 
     cache_control = "public, max-age=300"
     etag = compute_weak_etag("licenses", release.dataset_release_id)
@@ -87,6 +90,7 @@ async def get_license(
     request: Request,
     response: Response,
     package: str,
+    distro: str | None = Query(default=None),
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> LicenseTextResponse | Response:
@@ -94,7 +98,8 @@ async def get_license(
     if not _PKG_RE.fullmatch(pkg):
         raise APIError(status_code=400, code="INVALID_PACKAGE", message="Invalid package name")
 
-    release = await require_active_release(session)
+    distro_norm = normalize_distro(distro)
+    release = await require_active_release(session, distro=distro_norm)
 
     cache_control = "public, max-age=300"
     etag = compute_weak_etag("license", release.dataset_release_id, pkg)

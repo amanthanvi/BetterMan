@@ -17,6 +17,7 @@ class ApiErrorEnvelope(BaseModel):
 class InfoResponse(BaseModel):
     datasetReleaseId: str
     locale: str
+    distro: str
     pageCount: int
     lastUpdated: str
 
@@ -217,6 +218,7 @@ class SeeAlsoRef(BaseModel):
 class ManPage(BaseModel):
     id: str
     locale: str
+    distro: str
     name: str
     section: str
     title: str
@@ -232,9 +234,16 @@ class ManPageContent(DocumentModel):
     seeAlso: list[SeeAlsoRef] | None = None
 
 
+class ManPageVariant(BaseModel):
+    distro: str
+    datasetReleaseId: str
+    contentSha256: str
+
+
 class ManPageResponse(BaseModel):
     page: ManPage
     content: ManPageContent
+    variants: list[ManPageVariant]
 
 
 class AmbiguousOption(BaseModel):

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.schemas import SectionLabel, SectionResponse
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
+from app.datasets.distro import normalize_distro
 from app.db.models import ManPage
 from app.db.session import get_session
 from app.man.normalize import normalize_section, validate_section
@@ -22,10 +23,12 @@ router = APIRouter()
 async def list_sections(
     request: Request,
     response: Response,
+    distro: str | None = Query(default=None),
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> list[SectionLabel] | Response:
-    release = await require_active_release(session)
+    distro_norm = normalize_distro(distro)
+    release = await require_active_release(session, distro=distro_norm)
 
     cache_control = "public, max-age=300"
     etag = compute_weak_etag("sections", release.dataset_release_id)
@@ -50,13 +53,15 @@ async def list_section(
     section: str,
     limit: int = Query(default=200, ge=1, le=500),
     offset: int = Query(default=0, ge=0, le=5000),
+    distro: str | None = Query(default=None),
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> SectionResponse | Response:
     section_norm = normalize_section(section)
     validate_section(section_norm)
 
-    release = await require_active_release(session)
+    distro_norm = normalize_distro(distro)
+    release = await require_active_release(session, distro=distro_norm)
     label = _section_label(section_norm)
 
     cache_control = "public, max-age=300"

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.schemas import SearchResponse
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
+from app.datasets.distro import normalize_distro
 from app.db.models import ManPage, ManPageContent, ManPageSearch
 from app.db.session import get_session
 from app.man.normalize import normalize_section, validate_section
@@ -29,6 +30,7 @@ async def search(
     section: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0, le=5000),
+    distro: str | None = Query(default=None),
     _: None = Depends(rate_limit_search),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> SearchResponse | Response:
@@ -41,7 +43,9 @@ async def search(
     if section is not None:
         section_norm = normalize_section(section)
         validate_section(section_norm)
-    release = await require_active_release(session)
+
+    distro_norm = normalize_distro(distro)
+    release = await require_active_release(session, distro=distro_norm)
 
     cache_control = "public, max-age=300"
     etag = compute_weak_etag(

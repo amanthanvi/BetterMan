@@ -12,7 +12,7 @@ async def test_info_shape() -> None:
         res = await client.get("/api/v1/info")
     assert res.status_code == 200
     data = res.json()
-    assert set(data.keys()) == {"datasetReleaseId", "locale", "pageCount", "lastUpdated"}
+    assert set(data.keys()) == {"datasetReleaseId", "locale", "distro", "pageCount", "lastUpdated"}
 
 
 async def _dummy_session_dep():
