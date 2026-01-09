@@ -61,17 +61,17 @@ Living execution plan for shipping `v0.3.0` from `SPEC.md`.
 **Design choice (low-risk, incremental):** dataset releases are distro-scoped.
 
 - DB:
-  - [ ] Alembic migration: add `dataset_releases.distro` (`debian|ubuntu|fedora`, default `debian`)
-  - [ ] Alembic migration: allow one active release per `(locale, distro)` (replace old locale-only active constraint)
-  - [ ] Backfill existing rows to `debian`
+  - [x] Alembic migration: add `dataset_releases.distro` (`debian|ubuntu|fedora`, default `debian`)
+  - [x] Alembic migration: allow one active release per `(locale, distro)` (replace old locale-only active constraint)
+  - [x] Backfill existing rows to `debian`
 - Ingestion:
-  - [ ] Add `--distro` flag and distro-aware dataset release IDs (avoid collisions)
-  - [ ] Debian + Ubuntu: apt-based ingest (reuse dpkg tooling)
-  - [ ] Fedora: dnf-based ingest + rpm manifest capture
-  - [ ] Keep pipelines independent (one distro failing doesn’t block others)
-  - [ ] Tests: distro selection + dataset release IDs + manifest shape
+  - [x] Add `--distro` flag and distro-aware dataset release IDs (avoid collisions)
+  - [x] Debian + Ubuntu: apt-based ingest (reuse dpkg tooling)
+  - [x] Fedora: dnf-based ingest + rpm manifest capture
+  - [x] Keep pipelines independent (one distro failing doesn’t block others)
+  - [x] Tests: distro selection + dataset release IDs + manifest shape
 - Ops:
-  - [ ] Update `.github/workflows/update-docs.yml` to ingest+promote per distro
+  - [x] Update `.github/workflows/update-docs.yml` to ingest+promote per distro
 
 ### M25 — Multi‑distribution API + frontend
 
