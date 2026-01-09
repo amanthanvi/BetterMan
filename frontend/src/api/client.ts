@@ -11,6 +11,18 @@ import type {
   SectionResponse,
 } from './types'
 
+type PrefetchEntry = {
+  ok: boolean
+  status: number
+  payload?: unknown
+}
+
+declare global {
+  interface Window {
+    __bm_prefetch?: Record<string, Promise<PrefetchEntry>>
+  }
+}
+
 export class ApiHttpError extends Error {
   status: number
   code?: string
@@ -43,7 +55,31 @@ function asErrorEnvelope(payload: unknown): ApiErrorEnvelope | undefined {
   return { error: { code: error.code, message: error.message } }
 }
 
+function takePrefetched(path: string): Promise<PrefetchEntry> | null {
+  if (typeof window === 'undefined') return null
+  const store = window.__bm_prefetch
+  if (!store) return null
+  const hit = store[path]
+  if (!hit) return null
+  delete store[path]
+  return hit
+}
+
 async function apiGet<T>(path: string): Promise<T> {
+  const prefetched = takePrefetched(path)
+  if (prefetched) {
+    const { ok, status, payload } = await prefetched
+    if (!ok) {
+      const envelope = asErrorEnvelope(payload)
+      throw new ApiHttpError(envelope?.error.message ?? 'Request failed', {
+        status,
+        code: envelope?.error.code,
+        payload,
+      })
+    }
+    return payload as T
+  }
+
   const res = await fetch(path, {
     method: 'GET',
     headers: { Accept: 'application/json' },
@@ -107,7 +143,29 @@ export type ManByNameResult =
   | { kind: 'ambiguous'; options: AmbiguousOption[] }
 
 export async function fetchManByName(name: string): Promise<ManByNameResult> {
-  const res = await fetch(`/api/v1/man/${encodeURIComponent(name)}`, {
+  const path = `/api/v1/man/${encodeURIComponent(name)}`
+  const prefetched = takePrefetched(path)
+
+  if (prefetched) {
+    const { ok, status, payload } = await prefetched
+    if (status === 409) {
+      const options = (payload as { options?: AmbiguousOption[] } | undefined)?.options
+      return { kind: 'ambiguous', options: Array.isArray(options) ? options : [] }
+    }
+
+    if (!ok) {
+      const envelope = asErrorEnvelope(payload)
+      throw new ApiHttpError(envelope?.error.message ?? 'Request failed', {
+        status,
+        code: envelope?.error.code,
+        payload,
+      })
+    }
+
+    return { kind: 'page', data: payload as ManPageResponse }
+  }
+
+  const res = await fetch(path, {
     method: 'GET',
     headers: { Accept: 'application/json' },
   })

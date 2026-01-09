@@ -39,6 +39,59 @@
         }
       })()
     </script>
+    <script>
+      ;(() => {
+        const store = (window.__bm_prefetch ??= {})
+        const prefetchJson = (path) => {
+          if (store[path]) return
+          store[path] = fetch(path, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+          })
+            .then(async (res) => {
+              let payload
+              try {
+                payload = await res.json()
+              } catch {
+                payload = undefined
+              }
+              return { ok: res.ok, status: res.status, payload }
+            })
+            .catch(() => ({ ok: false, status: 0, payload: undefined }))
+        }
+
+        // Start core API requests while the JS bundle is still downloading.
+        prefetchJson('/api/v1/info')
+
+        const parts = window.location.pathname.split('/').filter(Boolean)
+        if (parts[0] === 'man' && parts.length >= 3) {
+          const rawName = parts[1] ?? ''
+          const rawSection = parts[2] ?? ''
+          let name = rawName
+          let section = rawSection
+          try {
+            name = decodeURIComponent(rawName)
+          } catch {
+            // ignore
+          }
+          try {
+            section = decodeURIComponent(rawSection)
+          } catch {
+            // ignore
+          }
+          prefetchJson(`/api/v1/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`)
+        } else if (parts[0] === 'man' && parts.length === 2) {
+          const rawName = parts[1] ?? ''
+          let name = rawName
+          try {
+            name = decodeURIComponent(rawName)
+          } catch {
+            // ignore
+          }
+          prefetchJson(`/api/v1/man/${encodeURIComponent(name)}`)
+        }
+      })()
+    </script>
     <title>BetterMan</title>
   </head>
   <body>
