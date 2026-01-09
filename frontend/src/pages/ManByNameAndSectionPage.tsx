@@ -53,7 +53,7 @@ export default function ManByNameAndSectionPage() {
   }, [recentDescription, recentId, recentName, recentSection])
 
   if (pageQuery.isLoading) {
-    return <div className="text-sm text-[color:var(--bm-muted)]">Loading…</div>
+    return <ManPageSkeleton />
   }
 
   if (pageQuery.isError) {
@@ -116,5 +116,51 @@ export default function ManByNameAndSectionPage() {
       content={content}
       relatedItems={relatedQuery.data?.items ?? []}
     />
+  )
+}
+
+function ManPageSkeleton() {
+  return (
+    <div className="mx-auto max-w-6xl">
+      <div className="rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-6 shadow-sm backdrop-blur">
+        <div className="animate-pulse space-y-5">
+          <div className="space-y-3">
+            <div className="h-10 w-[min(18rem,85%)] rounded-2xl bg-[color:var(--bm-border)/0.6]" />
+            <div className="h-4 w-[min(56ch,95%)] rounded-full bg-[color:var(--bm-border)/0.45]" />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="h-6 w-40 rounded-full bg-[color:var(--bm-border)/0.5]" />
+            <div className="h-6 w-48 rounded-full bg-[color:var(--bm-border)/0.5]" />
+          </div>
+
+          <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.25] p-4">
+            <div className="h-3 w-20 rounded-full bg-[color:var(--bm-border)/0.55]" />
+            <div className="mt-3 h-28 w-full rounded-xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65]" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10 grid gap-10 lg:grid-cols-[19rem_minmax(0,1fr)]">
+        <aside className="hidden lg:block">
+          <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2">
+            <div className="space-y-4">
+              <div className="h-44 animate-pulse rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] shadow-sm backdrop-blur" />
+              <div className="h-60 animate-pulse rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] shadow-sm backdrop-blur" />
+            </div>
+          </div>
+        </aside>
+
+        <article className="min-w-0">
+          <div className="animate-pulse space-y-4">
+            <div className="h-6 w-52 rounded-full bg-[color:var(--bm-border)/0.55]" />
+            <div className="h-4 w-[min(70ch,100%)] rounded-full bg-[color:var(--bm-border)/0.4]" />
+            <div className="h-4 w-[min(64ch,92%)] rounded-full bg-[color:var(--bm-border)/0.4]" />
+            <div className="h-4 w-[min(60ch,88%)] rounded-full bg-[color:var(--bm-border)/0.4]" />
+            <div className="h-4 w-[min(66ch,94%)] rounded-full bg-[color:var(--bm-border)/0.4]" />
+          </div>
+        </article>
+      </div>
+    </div>
   )
 }
