@@ -1,10 +1,10 @@
 # 1. Title / Version / Status
 
 **Project:** BetterMan
-**Spec Version:** v0.2.0
-**Status:** Shipped (v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Spec Version:** v0.2.1
+**Status:** In Development (v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
 **Last Updated:** 2026-01-09 (EST)
-**Interview Status:** Completed - all v0.2.0 decisions resolved
+**Interview Status:** In Progress - v0.2.1 scope approved
 
 ---
 
@@ -36,6 +36,13 @@
 -   Enhanced security (CSP nonces, Pydantic strict mode)
 -   UX polish (Find-in-page improvements, print styles, TOC scroll-spy)
 -   Component architecture improvements (decomposition, domain hooks)
+
+**v0.2.1 focus:** polish, CSP refinement, and operational documentation:
+
+-   CSP policy adjustment: `style-src` now includes `'unsafe-inline'` (required for TanStack Virtual positioning)
+-   Visual polish: theme transition animations, mobile layout fixes, typography/contrast refinements
+-   Performance tuning: query analysis, cache TTL optimization, bundle review
+-   Operational runbooks: CSP debugging, Railway operations, E2E test debugging, type generation issues
 
 ---
 
@@ -205,6 +212,7 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 -   **Default:** System preference (respects `prefers-color-scheme` media query on first visit).
 -   Persist user choice in local storage after explicit selection.
 -   Contrast ratios must meet WCAG 2.2 AA.
+-   **Theme transition (v0.2.1):** 150ms CSS transition on background and text colors when switching themes. Respects `prefers-reduced-motion` (instant switch when reduced motion preferred).
 -   Responsive:
     -   < 768px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
         -   **Mobile TOC access:** Sticky header button toggles TOC drawer. Button is always visible for quick access during reading.
@@ -220,6 +228,27 @@ When `@media print` is active:
 -   **Code blocks:** Preserve with monospace font, use `page-break-inside: avoid` to keep blocks intact.
 -   **Syntax highlighting:** Removed for print - plain monospace saves ink, better on B&W printers.
 -   **Typography:** Optimized for paper - appropriate margins, readable font sizes.
+
+## Visual Polish (v0.2.1)
+
+**Decision:** Targeted refinements to address specific issues; not a design overhaul.
+
+Typography adjustments:
+-   **Code blocks:** Review monospace font size, line height, and padding for readability
+-   **Body text:** Verify paragraph sizing and line length constraints
+-   **Headings:** Confirm H1-H6 hierarchy and spacing consistency
+-   **Small text:** Improve readability of labels, metadata, and captions
+
+Color refinements:
+-   **Dark mode contrast:** Ensure all elements meet WCAG AA contrast ratios
+-   **Light mode contrast:** Address any washed-out muted elements
+-   **Accent consistency:** Unify primary/accent color usage across components
+-   **Syntax highlighting:** Adjust code highlighting colors for both themes
+
+Mobile layout fixes:
+-   **Header overflow:** Fix metadata tags wrapping/overflow on narrow screens
+-   **TOC drawer:** Review sizing, positioning, and dismissal behavior
+-   **Content width:** Ensure text and code blocks have proper padding
 
 ## Accessibility Requirements
 
@@ -890,6 +919,26 @@ Tie-breakers:
 -   Optimize CTE usage and join patterns
 -   Target: maintain P95 < 250ms as dataset grows
 
+## Performance Tuning (v0.2.1)
+
+**Decision:** Comprehensive performance review based on production data.
+
+Query analysis:
+-   Run `EXPLAIN ANALYZE` on search ranking query with production-like data
+-   Identify any sequential scans or inefficient joins
+-   Document query plan and optimization opportunities
+
+Cache tuning:
+-   Review HTTP cache TTLs based on actual hit rates
+-   Analyze Redis rate limiting memory usage and key expiration
+-   Adjust `max-age` values if data shows opportunity for longer caching
+
+Bundle analysis:
+-   Review Vite bundle report for code splitting opportunities
+-   Identify any unexpectedly large chunks
+-   Ensure highlight.js lazy loading is effective
+-   Target: maintain initial JS bundle <= 250 KB gz
+
 ## Abuse Controls (Rate limiting, Bot Mitigation)
 
 -   Implement basic per-IP rate limiting at the application layer:
@@ -1371,12 +1420,13 @@ Normalized resolved relationships (for related commands):
 -   XSS:
     -   Safe document model rendering (no raw HTML injection).
     -   Strict URL sanitization for links.
-    -   **CSP headers (v0.2.0 - Strict with Nonces):**
+    -   **CSP headers (v0.2.1 - Scripts Strict, Styles Relaxed):**
         -   `script-src 'self' 'nonce-{random}'` - no inline scripts without nonce
-        -   `style-src 'self' 'nonce-{random}'` - no inline styles without nonce
+        -   `style-src 'self' 'unsafe-inline'` - inline styles allowed (required for TanStack Virtual positioning)
         -   `object-src 'none'`
         -   `upgrade-insecure-requests`
         -   Nonces generated per-request in FastAPI middleware, injected into HTML response and CSP header.
+        -   **Note (v0.2.1):** `'unsafe-inline'` for styles is a pragmatic tradeoff - TanStack Virtual requires dynamic inline styles for virtualization positioning that cannot use nonces.
 -   Injection:
     -   Parameterized queries only.
     -   **Pydantic strict mode (v0.2.0):** Enable strict validation on all API request models, reject invalid types.
@@ -1394,20 +1444,25 @@ Normalized resolved relationships (for related commands):
 -   Integrity:
     -   Dataset release IDs and digests stored; ingestion requires signed CI secrets.
 
-## CSP Nonce Implementation (v0.2.0)
+## CSP Nonce Implementation (v0.2.0, updated v0.2.1)
 
-**Decision:** Generate nonces per-request in FastAPI middleware.
+**Decision:** Generate nonces per-request in FastAPI middleware for scripts; allow inline styles.
 
 Implementation:
 1. Middleware generates cryptographically random nonce for each request
-2. Nonce injected into HTML template served for SPA
-3. Same nonce included in `Content-Security-Policy` header
-4. Any inline scripts/styles must include matching nonce attribute
+2. Nonce injected into HTML template served for SPA (script tags only)
+3. Same nonce included in `Content-Security-Policy` header for `script-src`
+4. `style-src` uses `'unsafe-inline'` instead of nonces
 
 Benefits:
--   Eliminates `'unsafe-inline'` from CSP
--   Per-request nonces prevent replay attacks
--   Aligns with modern CSP best practices
+-   Scripts protected with per-request nonces (prevents XSS via script injection)
+-   Styles allow inline for TanStack Virtual compatibility
+-   Per-request nonces prevent script replay attacks
+
+Tradeoffs (v0.2.1):
+-   `'unsafe-inline'` for styles is less strict than nonce-only
+-   However, XSS via style injection is lower risk than script injection
+-   TanStack Virtual requires dynamic `style` attributes for positioning (`height`, `transform`) that cannot use nonces
 
 Rollback:
 -   Set `CSP_ENABLED=false` to disable CSP header injection (emergency only)
@@ -1599,6 +1654,39 @@ Scaling:
     - Mark dataset release as inactive
     - Roll back to prior dataset release
     - Re-run ingestion with fix; verify failure thresholds before republishing
+
+## Runbooks (v0.2.1 Additions)
+
+Detailed step-by-step runbooks located in `docs/runbooks/`:
+
+6. **CSP violations debugging** (`docs/runbooks/csp-violations.md`)
+    - Check browser DevTools console for CSP violation reports
+    - Identify source of violation (inline styles, scripts, third-party)
+    - Verify nonce injection is working correctly
+    - If emergency: set `CSP_ENABLED=false` in Railway env vars
+    - For style violations from TanStack Virtual: expected (documented tradeoff)
+
+7. **Railway operations** (`docs/runbooks/railway-ops.md`)
+    - Deploy: automatic on push to `main` after CI passes
+    - Manual deploy: `gh workflow run deploy.yml -f ref=<branch>`
+    - View logs: Railway dashboard or `railway logs`
+    - Restart service: Railway dashboard "Restart" button
+    - Scale: adjust instance count in Railway settings
+    - Environment variables: Railway dashboard "Variables" tab
+
+8. **E2E test failures** (`docs/runbooks/e2e-debug.md`)
+    - Check CI artifacts for Playwright traces and screenshots
+    - Run locally: `pnpm frontend:e2e` (requires backend running)
+    - Debug specific test: `pnpm frontend:e2e -- --debug -g "test name"`
+    - Flaky test? Check for timing issues, add explicit waits
+    - Update snapshots: `pnpm frontend:e2e -- --update-snapshots`
+
+9. **Type generation out of sync** (`docs/runbooks/type-gen.md`)
+    - CI fails with "generated types differ"
+    - Run: `cd backend && uv run python -c "from app.main import app; import json; print(json.dumps(app.openapi()))" > ../frontend/src/api/openapi.json`
+    - Run: `cd frontend && pnpm openapi:gen`
+    - Commit the regenerated `openapi.gen.ts`
+    - If Pydantic models changed, verify TypeScript types are correct
 
 ---
 

@@ -1,6 +1,6 @@
-# BetterMan — PLAN (v0.2.0)
+# BetterMan — PLAN (v0.2.1)
 
-Living execution plan for shipping `v0.2.0` from `SPEC.md`.
+Living execution plan for shipping `v0.2.1` from `SPEC.md`.
 
 - Branch: `main` (small/medium diffs; commit + push frequently)
 - Principle: fix root causes; no drive‑by refactors
@@ -12,6 +12,7 @@ Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 - [x] v0.1.1 shipped (tag `v0.1.1`)
 - [x] v0.1.2 shipped (tag `v0.1.2`)
 - [x] v0.2.0 shipped (tag `v0.2.0`)
+- [ ] v0.2.1 in progress
 
 ## Golden Commands (current; proven)
 
@@ -31,68 +32,40 @@ Living execution plan for shipping `v0.2.0` from `SPEC.md`.
 - `pnpm ingest:lint`
 - `pnpm ingest:test`
 
-## Milestones (v0.2.0)
+## Milestones (v0.2.1)
 
-### M10 — Docs alignment + planning
+### M17 — CSP policy refinement (scripts strict, styles relaxed)
 
-- [x] Update `SPEC.md` runtime versions to match repo/CI/Docker (Node 25, Python 3.14)
-- [x] Keep `README.md` / `SECURITY.md` / `CONTRIBUTING.md` current as new scripts + checks land
+- [ ] Update CSP `style-src` to include `'unsafe-inline'` (TanStack Virtual needs inline `style=""`)
+- [ ] Keep script nonces strict (`script-src 'nonce-…'`)
+- [ ] Update CSP-related tests
+- [ ] Verify CSP in prod (no unexpected violations)
 
-### M11 — Frontend unit tests (Vitest + Testing Library)
+### M18 — Visual polish (targeted)
 
-- [x] Add Vitest + Testing Library + jsdom config under `frontend/`
-- [x] Add `frontend` test scripts (then wire into root `pnpm` scripts)
-- [x] Add initial tests for the highest-risk UI logic:
-  - TOC keyboard navigation + active-state behavior
-  - Find-in-page highlighting + next/prev navigation logic
-- [x] Update `.github/workflows/ci.yml` to run frontend unit tests
+- [ ] Add 150ms theme transition for background/text colors
+- [ ] Respect `prefers-reduced-motion` (no theme animation when reduced motion preferred)
+- [ ] Avoid “first paint” theme animation (no flash/animate on initial load)
+- [ ] Fix mobile header overflow (metadata tags wrapping/overflow on narrow screens)
+- [ ] Typography/contrast review (code blocks + small labels + syntax highlighting in both themes)
 
-### M12 — E2E + accessibility (Playwright + axe-core)
+### M19 — Performance tuning (evidence + low-risk tweaks only)
 
-- [x] Add Playwright project under `frontend/e2e/`
-- [x] Add minimal deterministic E2E seed dataset (small DB seed) for CI
-- [x] Implement 10–15 “critical flow” E2E tests per `SPEC.md`:
-  - Home → Search → Page
-  - Command palette search → open result
-  - TOC navigation + scroll-spy
-  - Find-in-page
-  - Missing page UX
-  - Theme persistence
-- [x] Add axe-core checks; fail CI on critical + serious violations
-- [x] Update `.github/workflows/ci.yml` to run E2E + a11y checks
+- [ ] Run `EXPLAIN ANALYZE` on the `/search` query and document findings
+- [ ] Review HTTP cache TTLs and only adjust if clearly safe
+- [ ] Review bundle report (`pnpm frontend:bundle:report`) and confirm target stays met
 
-### M13 — API contract: OpenAPI quality + TypeScript type generation
+### M20 — Operational runbooks
 
-Goal: **type-safety with minimal churn / risk** (preserve current response shapes; avoid downtime).
+- [ ] Add `docs/runbooks/csp-violations.md`
+- [ ] Add `docs/runbooks/railway-ops.md`
+- [ ] Add `docs/runbooks/e2e-debug.md`
+- [ ] Add `docs/runbooks/type-gen.md`
+- [ ] Update `docs/runbooks/README.md` list
 
-- [x] Add Pydantic response models for all public endpoints (match existing JSON keys)
-- [x] Make OpenAPI stable + useful (discriminated unions for doc model)
-- [x] Generate OpenAPI JSON during CI
-- [x] Generate TypeScript types from OpenAPI (lowest-risk approach):
-  - Generate `paths` types via `openapi-typescript`
-  - Export stable named aliases used by the app (so `frontend/src/api/client.ts` churn stays small)
-  - Update `SPEC.md` for `openapi.gen.ts` output + `types.ts` alias layer
-- [x] CI check: fail if generated types are out of date
+### M21 — Release
 
-### M14 — Security hardening (CSP nonces + rate limit fallback)
-
-- [x] Implement per-request CSP nonces in FastAPI middleware
-- [x] Inject nonce into SPA HTML response (server-served `index.html`)
-- [x] Remove `'unsafe-inline'` from CSP:
-  - remove React `style={{…}}` usage (e.g., `frontend/src/man/Toc.tsx`) and any other inline-style usage
-- [x] Implement in-memory rate limit fallback when Redis is unavailable (per-process), with tests
-
-### M15 — Performance + caching
-
-- [x] TanStack Virtual for large man pages (100+ blocks threshold), preserving anchors + deep links
-- [x] highlight.js optimization: lazy-load only common languages (bash, shell, python, c, makefile)
-- [x] Bundle size visibility in CI (warn-only; does not block merges)
-- [x] Granular ETags for man endpoints: `content_sha256 + dataset_release_id`
-
-### M16 — UX polish + architecture + release
-
-- [x] Find-in-page keybindings: Enter → next match, Shift+Enter → previous (desktop + mobile)
-- [x] Print styles (`@media print`) hide navigation, preserve content layout
-- [x] Decompose man page view into components + extract domain hooks (keep behavior identical; add tests)
-- [x] CI green on `main` (including deploy-to-Railway workflow); verify Railway deploy is healthy
-- [x] Update docs + bump version strings; tag `v0.2.0`
+- [ ] CI green on `main` (including Railway deploy workflow)
+- [ ] Deploy healthy (manual spot-check of `/healthz` + one real page load)
+- [ ] Update `SPEC.md` / `README.md` / `PLAN.md` statuses to “shipped”
+- [ ] Tag `v0.2.1`
