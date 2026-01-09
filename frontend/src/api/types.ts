@@ -27,6 +27,7 @@ export type SeeAlsoRef = Schemas['SeeAlsoRef']
 export type ManPage = Schemas['ManPage']
 export type ManPageContent = Schemas['ManPageContent']
 export type DocumentModel = Pick<ManPageContent, 'toc' | 'blocks'>
+export type ManPageVariant = Schemas['ManPageVariant']
 export type ManPageResponse = Schemas['ManPageResponse']
 
 export type AmbiguousOption = Schemas['AmbiguousOption']

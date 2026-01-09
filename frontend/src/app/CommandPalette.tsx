@@ -4,9 +4,11 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
 import { search } from '../api/client'
+import { queryKeys } from '../api/queryKeys'
 import type { SearchResult } from '../api/types'
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../lib/recent'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
+import { useDistro } from './distro'
 import { useTheme } from './theme'
 import { useToc } from './toc'
 
@@ -58,6 +60,7 @@ export function CommandPalette({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const distro = useDistro()
   const theme = useTheme()
   const navigate = useNavigate()
   const toc = useToc()
@@ -75,7 +78,7 @@ export function CommandPalette({
   const debouncedQuery = useDebouncedValue(parsed.text.trim(), 120)
 
   const searchQuery = useQuery({
-    queryKey: ['paletteSearch', debouncedQuery],
+    queryKey: queryKeys.paletteSearch(distro.distro, debouncedQuery),
     enabled: open && parsed.mode === 'search' && debouncedQuery.length > 0,
     queryFn: () => search({ q: debouncedQuery, limit: 10, offset: 0 }),
   })

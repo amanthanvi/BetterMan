@@ -57,7 +57,51 @@
     <script>
       ;(() => {
         const store = (window.__bm_prefetch ??= {})
+        const normalizeDistro = (value) => {
+          if (typeof value !== 'string') return null
+          const v = value.trim().toLowerCase()
+          return v === 'debian' || v === 'ubuntu' || v === 'fedora' ? v : null
+        }
+
+        const readUrlDistro = () => {
+          try {
+            return normalizeDistro(new URL(window.location.href).searchParams.get('distro'))
+          } catch {
+            return null
+          }
+        }
+
+        const readStoredDistro = () => {
+          try {
+            return normalizeDistro(localStorage.getItem('bm-distro'))
+          } catch {
+            return null
+          }
+        }
+
+        const effectiveDistro = (() => {
+          const fromUrl = readUrlDistro()
+          if (fromUrl) {
+            try {
+              localStorage.setItem('bm-distro', fromUrl)
+            } catch {
+              // ignore
+            }
+            return fromUrl
+          }
+          return readStoredDistro() ?? 'debian'
+        })()
+
+        const withDistro = (path) => {
+          if (!path.startsWith('/api/')) return path
+          if (path.includes('distro=')) return path
+          if (effectiveDistro === 'debian') return path
+          const sep = path.includes('?') ? '&' : '?'
+          return `${path}${sep}distro=${encodeURIComponent(effectiveDistro)}`
+        }
+
         const prefetchJson = (path) => {
+          path = withDistro(path)
           if (store[path]) return
           store[path] = fetch(path, {
             method: 'GET',

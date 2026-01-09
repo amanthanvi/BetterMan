@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 
+import { useDistro } from '../app/distro'
 import { listSection, search } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import type { SectionPage as SectionPageItem } from '../api/types'
@@ -12,13 +13,14 @@ import { sectionRoute } from '../routes/section.$section'
 
 export default function SectionPage() {
   const { section } = sectionRoute.useParams()
+  const distro = useDistro()
   const [q, setQ] = useState('')
   const debounced = useDebouncedValue(q, 150).trim()
 
   const limit = 200
 
   const browseQuery = useInfiniteQuery({
-    queryKey: queryKeys.section(section),
+    queryKey: queryKeys.section(distro.distro, section),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       listSection(section, { limit, offset: typeof pageParam === 'number' ? pageParam : 0 }),
@@ -31,7 +33,7 @@ export default function SectionPage() {
 
   const searchLimit = 50
   const searchQuery = useInfiniteQuery({
-    queryKey: queryKeys.search(debounced, section),
+    queryKey: queryKeys.search(distro.distro, debounced, section),
     enabled: debounced.length > 0,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>

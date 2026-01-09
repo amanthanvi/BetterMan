@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 
+import { useDistro } from '../app/distro'
 import { useToc } from '../app/toc'
 import { ApiHttpError, fetchManByName, fetchManByNameAndSection, fetchRelated } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
@@ -14,24 +15,25 @@ import { ManPageView } from './man/ManPageView'
 export default function ManByNameAndSectionPage() {
   const { name, section } = manByNameAndSectionRoute.useParams()
   const nameNorm = name.toLowerCase()
+  const distro = useDistro()
   const { setItems } = useToc()
   const canonical = getCanonicalUrl()
   const cspNonce = getCspNonce()
 
   const pageQuery = useQuery({
-    queryKey: queryKeys.man(nameNorm, section),
+    queryKey: queryKeys.man(distro.distro, nameNorm, section),
     queryFn: () => fetchManByNameAndSection(nameNorm, section),
   })
 
   const alternativesQuery = useQuery({
-    queryKey: ['manAlternatives', nameNorm],
+    queryKey: queryKeys.manAlternatives(distro.distro, nameNorm),
     enabled: pageQuery.isError && pageQuery.error instanceof ApiHttpError && pageQuery.error.status === 404,
     queryFn: () => fetchManByName(nameNorm),
     retry: false,
   })
 
   const relatedQuery = useQuery({
-    queryKey: queryKeys.related(nameNorm, section),
+    queryKey: queryKeys.related(distro.distro, nameNorm, section),
     queryFn: () => fetchRelated(nameNorm, section),
     enabled: pageQuery.isSuccess,
   })
@@ -129,7 +131,7 @@ export default function ManByNameAndSectionPage() {
     return <div className="text-sm text-[color:var(--bm-muted)]">Loading…</div>
   }
 
-  const { page, content } = pageQuery.data
+  const { page, content, variants } = pageQuery.data
   const pageTitle = `${page.name}(${page.section}) - BetterMan`
   const pageDescription = page.description || page.title || `${page.name}(${page.section}) man page.`
   const jsonLd = {
@@ -164,6 +166,7 @@ export default function ManByNameAndSectionPage() {
         key={page.id}
         page={page}
         content={content}
+        variants={variants}
         relatedItems={relatedQuery.data?.items ?? []}
       />
     </>

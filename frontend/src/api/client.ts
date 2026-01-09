@@ -11,6 +11,8 @@ import type {
   SectionResponse,
 } from './types'
 
+import { getEffectiveDistro } from '../app/distro'
+
 type PrefetchEntry = {
   ok: boolean
   status: number
@@ -65,8 +67,18 @@ function takePrefetched(path: string): Promise<PrefetchEntry> | null {
   return hit
 }
 
+function withDistro(path: string): string {
+  if (!path.startsWith('/api/')) return path
+  if (path.includes('distro=')) return path
+  const distro = getEffectiveDistro()
+  if (distro === 'debian') return path
+  const sep = path.includes('?') ? '&' : '?'
+  return `${path}${sep}distro=${encodeURIComponent(distro)}`
+}
+
 async function apiGet<T>(path: string): Promise<T> {
-  const prefetched = takePrefetched(path)
+  const url = withDistro(path)
+  const prefetched = takePrefetched(url)
   if (prefetched) {
     const { ok, status, payload } = await prefetched
     if (!ok) {
@@ -80,7 +92,7 @@ async function apiGet<T>(path: string): Promise<T> {
     return payload as T
   }
 
-  const res = await fetch(path, {
+  const res = await fetch(url, {
     method: 'GET',
     headers: { Accept: 'application/json' },
   })
@@ -143,7 +155,7 @@ export type ManByNameResult =
   | { kind: 'ambiguous'; options: AmbiguousOption[] }
 
 export async function fetchManByName(name: string): Promise<ManByNameResult> {
-  const path = `/api/v1/man/${encodeURIComponent(name)}`
+  const path = withDistro(`/api/v1/man/${encodeURIComponent(name)}`)
   const prefetched = takePrefetched(path)
 
   if (prefetched) {

@@ -4,6 +4,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 
+import { useDistro } from '../app/distro'
 import { listSections, search } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import type { SearchResult } from '../api/types'
@@ -14,6 +15,7 @@ import { searchRoute } from '../routes/search'
 
 export default function SearchPage() {
   const { q, section } = searchRoute.useSearch()
+  const distro = useDistro()
   const navigate = useNavigate()
   const [input, setInput] = useState(q)
   const debouncedInput = useDebouncedValue(input, 150)
@@ -23,7 +25,7 @@ export default function SearchPage() {
   const [activeIndex, setActiveIndex] = useState(0)
 
   const sectionsQuery = useQuery({
-    queryKey: ['sections'],
+    queryKey: queryKeys.sections(distro.distro),
     queryFn: () => listSections(),
   })
 
@@ -46,7 +48,7 @@ export default function SearchPage() {
     : 'Search the BetterMan man page dataset.'
 
   const resultsQuery = useInfiniteQuery({
-    queryKey: queryKeys.search(query, sectionFilter),
+    queryKey: queryKeys.search(distro.distro, query, sectionFilter),
     enabled: query.length > 0,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>

@@ -2,22 +2,25 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 
+import { useDistro } from '../app/distro'
 import { fetchLicenseText, fetchLicenses } from '../api/client'
+import { queryKeys } from '../api/queryKeys'
 import type { LicensePackage } from '../api/types'
 import { getCanonicalUrl } from '../lib/seo'
 
 export default function LicensesPage() {
+  const distro = useDistro()
   const [filter, setFilter] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const canonical = getCanonicalUrl()
 
   const licensesQuery = useQuery({
-    queryKey: ['licenses'],
+    queryKey: queryKeys.licenses(distro.distro),
     queryFn: () => fetchLicenses(),
   })
 
   const licenseQuery = useQuery({
-    queryKey: ['licenseText', selected],
+    queryKey: queryKeys.licenseText(distro.distro, selected),
     enabled: Boolean(selected),
     queryFn: () => fetchLicenseText(selected!),
   })

@@ -3,7 +3,9 @@ import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 
+import { useDistro } from '../app/distro'
 import { fetchManByName } from '../api/client'
+import { queryKeys } from '../api/queryKeys'
 import { getCanonicalUrl } from '../lib/seo'
 import { rootRoute } from './__root'
 
@@ -16,10 +18,11 @@ export const manByNameRoute = createRoute({
 function ManByNamePage() {
   const { name } = manByNameRoute.useParams()
   const navigate = useNavigate()
+  const distro = useDistro()
   const canonical = getCanonicalUrl()
 
   const query = useQuery({
-    queryKey: ['manByName', name.toLowerCase()],
+    queryKey: queryKeys.manByName(distro.distro, name.toLowerCase()),
     queryFn: () => fetchManByName(name.toLowerCase()),
   })
 

@@ -1,7 +1,8 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 
+import { DISTRO_LABEL, normalizeDistro, useDistro, writeUrlDistro } from '../../app/distro'
 import { useToc } from '../../app/toc'
-import type { ManPage, ManPageContent, OptionItem, SectionPage } from '../../api/types'
+import type { ManPage, ManPageContent, ManPageVariant, OptionItem, SectionPage } from '../../api/types'
 import { DocRenderer, type DocRendererHandle } from '../../man/DocRenderer'
 import { parseOptionTerms } from '../../man/find'
 import { OptionsTable } from '../../man/OptionsTable'
@@ -31,13 +32,16 @@ function writeStoredFindBarHidden(hidden: boolean) {
 export function ManPageView({
   page,
   content,
+  variants,
   relatedItems,
 }: {
   page: ManPage
   content: ManPageContent
+  variants: ManPageVariant[]
   relatedItems: SectionPage[]
 }) {
   const toc = useToc()
+  const distro = useDistro()
   const [find, setFind] = useState('')
   const [findBarHidden, setFindBarHidden] = useState(() => readStoredFindBarHidden())
   const [activeFindIndex, setActiveFindIndex] = useState(0)
@@ -86,6 +90,17 @@ export function ManPageView({
     setFindBarHidden(hidden)
     writeStoredFindBarHidden(hidden)
   }
+
+  const variantPicker = useMemo(() => {
+    const list = Array.isArray(variants) ? variants : []
+    const uniqueContent = new Set(list.map((v) => v.contentSha256))
+    if (list.length < 2) return null
+    if (uniqueContent.size < 2) return null
+
+    const order: Record<string, number> = { debian: 0, ubuntu: 1, fedora: 2 }
+    const ordered = [...list].sort((a, b) => (order[a.distro] ?? 99) - (order[b.distro] ?? 99))
+    return { ordered }
+  }, [variants])
 
   useEffect(() => {
     return () => {
@@ -138,7 +153,10 @@ export function ManPageView({
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href)
+      const url = new URL(window.location.href)
+      if (distro.distro === 'debian') url.searchParams.delete('distro')
+      else url.searchParams.set('distro', distro.distro)
+      await navigator.clipboard.writeText(url.toString())
       setCopiedLink(true)
       if (copyTimeoutRef.current != null) window.clearTimeout(copyTimeoutRef.current)
       copyTimeoutRef.current = window.setTimeout(() => setCopiedLink(false), 2000)
@@ -241,6 +259,32 @@ export function ManPageView({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--bm-muted)]">
+            {variantPicker ? (
+              <label className="flex items-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
+                <span className="text-[color:var(--bm-muted)]">distro</span>
+                <select
+                  value={distro.distro}
+                  onChange={(e) => {
+                    const next = normalizeDistro(e.target.value)
+                    if (!next) return
+                    distro.setDistro(next)
+                    writeUrlDistro(next)
+                  }}
+                  className="bg-transparent text-[color:var(--bm-fg)] outline-none"
+                  aria-label="Select distribution variant"
+                >
+                  {variantPicker.ordered.map((v) => {
+                    const normalized = normalizeDistro(v.distro)
+                    if (!normalized) return null
+                    return (
+                      <option key={v.distro} value={v.distro}>
+                        {DISTRO_LABEL[normalized]}
+                      </option>
+                    )
+                  })}
+                </select>
+              </label>
+            ) : null}
             {page.sourcePackage ? (
               <span className="min-w-0 max-w-full break-words rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
                 pkg {page.sourcePackage}

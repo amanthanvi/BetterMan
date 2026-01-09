@@ -3,6 +3,7 @@ import { createRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 
+import { useDistro } from '../app/distro'
 import { fetchInfo, listSections } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import { getCanonicalUrl } from '../lib/seo'
@@ -97,8 +98,9 @@ function IndexPage() {
 }
 
 function HomeDatasetLine() {
+  const distro = useDistro()
   const infoQuery = useQuery({
-    queryKey: queryKeys.info(),
+    queryKey: queryKeys.info(distro.distro),
     queryFn: () => fetchInfo(),
     staleTime: 5 * 60_000,
   })
@@ -113,8 +115,9 @@ function HomeDatasetLine() {
 }
 
 function HomeBrowse() {
+  const distro = useDistro()
   const sectionsQuery = useQuery({
-    queryKey: ['sections'],
+    queryKey: queryKeys.sections(distro.distro),
     queryFn: () => listSections(),
     staleTime: 60 * 60_000,
   })

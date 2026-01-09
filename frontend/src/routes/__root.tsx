@@ -4,6 +4,14 @@ import { createRootRoute, Link, Outlet, useNavigate, useRouterState } from '@tan
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 
 import { ErrorBoundary } from '../app/ErrorBoundary'
+import {
+  DISTRO_LABEL,
+  DISTROS,
+  DistroProvider,
+  normalizeDistro,
+  useDistro,
+  writeUrlDistro,
+} from '../app/distro'
 import { TocProvider, useToc } from '../app/toc'
 import { ThemeProvider, useTheme } from '../app/theme'
 import { fetchInfo } from '../api/client'
@@ -46,9 +54,11 @@ export const rootRoute = createRootRoute({
 function RootLayout() {
   return (
     <ThemeProvider>
-      <TocProvider>
-        <RootLayoutInner />
-      </TocProvider>
+      <DistroProvider>
+        <TocProvider>
+          <RootLayoutInner />
+        </TocProvider>
+      </DistroProvider>
     </ThemeProvider>
   )
 }
@@ -63,9 +73,10 @@ function RootLayoutInner() {
   const isPopRef = useRef(false)
   const toc = useToc()
   const theme = useTheme()
+  const distro = useDistro()
 
   const infoQuery = useQuery({
-    queryKey: queryKeys.info(),
+    queryKey: queryKeys.info(distro.distro),
     queryFn: () => fetchInfo(),
     staleTime: 5 * 60_000,
   })
@@ -225,6 +236,26 @@ function RootLayoutInner() {
               />
             </form>
           ) : null}
+
+          <select
+            value={distro.distro}
+            onChange={(e) => {
+              const next = normalizeDistro(e.target.value)
+              if (next) {
+                distro.setDistro(next)
+                writeUrlDistro(next)
+              }
+            }}
+            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-xs font-medium text-[color:var(--bm-fg)] hover:bg-[color:var(--bm-surface)/0.9] sm:text-sm"
+            aria-label="Select distribution"
+          >
+            {DISTROS.map((d) => (
+              <option key={d} value={d}>
+                {DISTRO_LABEL[d]}
+              </option>
+            ))}
+          </select>
+
           <button
             type="button"
             className="hidden rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] sm:block"
