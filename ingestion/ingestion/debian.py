@@ -23,14 +23,73 @@ def is_debian_like() -> bool:
     return Path("/etc/debian_version").exists() and _DPKG_INFO_DIR.exists()
 
 
+def _enable_manpages_if_excluded() -> bool:
+    path = Path("/etc/dpkg/dpkg.cfg.d/excludes")
+    if not path.exists():
+        return False
+    try:
+        original = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False
+
+    lines = original.splitlines(keepends=True)
+    filtered = [
+        line for line in lines if not line.strip().startswith("path-exclude=/usr/share/man/")
+    ]
+    if filtered == lines:
+        return False
+
+    try:
+        path.write_text("".join(filtered), encoding="utf-8")
+    except OSError:
+        return False
+    return True
+
+
+def _installed_packages(packages: list[str], *, env: dict[str, str]) -> list[str]:
+    installed: list[str] = []
+    for pkg in packages:
+        proc = subprocess.run(
+            ["dpkg-query", "-W", "-f", "${Status}", pkg],
+            check=False,
+            env=env,
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            continue
+        if "install ok installed" in proc.stdout:
+            installed.append(pkg)
+    return installed
+
+
 def apt_install(packages: list[str]) -> None:
     env = os.environ | {"DEBIAN_FRONTEND": "noninteractive"}
+
+    reinstall: list[str] = []
+    if _enable_manpages_if_excluded():
+        reinstall = _installed_packages(packages, env=env)
+
     subprocess.run(["apt-get", "update", "-qq"], check=True, env=env)
     subprocess.run(
         ["apt-get", "install", "-y", "-qq", "--no-install-recommends", *packages],
         check=True,
         env=env,
     )
+    if reinstall:
+        subprocess.run(
+            [
+                "apt-get",
+                "install",
+                "-y",
+                "-qq",
+                "--no-install-recommends",
+                "--reinstall",
+                *reinstall,
+            ],
+            check=True,
+            env=env,
+        )
 
 
 def dpkg_arch() -> str:

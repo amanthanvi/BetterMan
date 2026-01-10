@@ -74,7 +74,7 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
     runner_cmd = shlex.join(["/opt/venv/bin/python", "-m", "ingestion.cli", *args])
     if distro in {"debian", "ubuntu"}:
         inner = (
-            "set -euo pipefail; "
+            "set -eu; "
             "export DEBIAN_FRONTEND=noninteractive; "
             "mkdir -p /work; "
             "cp -R /src/. /work; "
