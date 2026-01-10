@@ -57,3 +57,23 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
   2. Re-run `update-dataset`.
   3. Re-check `/api/v1/info?distro=…` + `sitemap-<distro>.xml`.
 
+#### Ubuntu: “no man pages ingested”
+
+Ubuntu base images can exclude man pages during package install via dpkg config (commonly:
+`/etc/dpkg/dpkg.cfg.d/excludes` containing `path-exclude=/usr/share/man/*`). When present, packages will install successfully but ship no `/usr/share/man` content.
+
+- Confirm:
+  - `docker run --rm ubuntu:24.04 sh -lc 'test -f /etc/dpkg/dpkg.cfg.d/excludes && cat /etc/dpkg/dpkg.cfg.d/excludes | sed -n \"1,80p\"'`
+- Fix (if you’re debugging manually):
+  - Remove the `path-exclude=/usr/share/man/*` line(s), then reinstall the packages that were already present in the image so their man pages get installed.
+
+In BetterMan, the Ubuntu ingest path handles this automatically (see `ingestion/ingestion/debian.py`).
+
+#### Fedora: “too few man pages ingested”
+
+Fedora base images can be built with docs disabled (`dnf` config `tsflags=nodocs`), and some packages may already be installed without docs. A plain `dnf install` won’t backfill docs for packages already present in the base image.
+
+- Fix (if you’re debugging manually):
+  - Install with `--setopt=tsflags=` and reinstall any preinstalled packages with `--setopt=tsflags=` so their man pages are backfilled.
+
+In BetterMan, the Fedora ingest path handles this automatically (see `ingestion/ingestion/fedora.py`).
