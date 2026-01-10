@@ -13,7 +13,7 @@ Living execution plan for shipping `v0.3.0` from `SPEC.md`.
 - [x] v0.1.2 shipped (tag `v0.1.2`)
 - [x] v0.2.0 shipped (tag `v0.2.0`)
 - [x] v0.2.1 shipped (tag `v0.2.1`)
-- [ ] v0.3.0 in progress
+- [x] v0.3.0 shipped (tag `v0.3.0`)
 
 ## Golden Commands (current; proven)
 
@@ -89,10 +89,10 @@ Living execution plan for shipping `v0.3.0` from `SPEC.md`.
 
 ### M26 — Release v0.3.0
 
-- [ ] CI green on `main` (including `deploy_railway`)
-- [ ] Performance targets met + documented (M22)
-- [ ] SEO endpoints live (`/robots.txt`, `/sitemap.xml`, per-distro sitemaps)
-- [ ] Multi-distro content live (Debian + Ubuntu + Fedora ingested + active)
-- [ ] Runbooks updated for multi-distro ops
-- [ ] Update `SPEC.md` / `README.md` / `PLAN.md` statuses to shipped
-- [ ] Tag `v0.3.0`
+- [x] CI green on `main` (including `deploy_railway`)
+- [x] Performance targets met + documented (M22)
+- [x] SEO endpoints live (`/robots.txt`, `/sitemap.xml`, per-distro sitemaps)
+- [x] Multi-distro content live (Debian + Ubuntu + Fedora ingested + active)
+- [x] Runbooks updated for multi-distro ops
+- [x] Update `SPEC.md` / `README.md` / `PLAN.md` statuses to shipped
+- [x] Tag `v0.3.0`

@@ -2242,41 +2242,41 @@ Sitemap: https://betterman.sh/sitemap.xml
 
 **Performance**
 
--   [ ] Lighthouse audit completed and documented
--   [ ] LCP < 2.5s on Fast 3G (verified)
--   [ ] Virtualized page scroll: smooth at 60fps
--   [ ] Initial JS bundle <= 250 KB gz (verified)
--   [ ] All profiling findings addressed or documented for future
+-   [x] Lighthouse audit completed and documented
+-   [x] LCP < 2.5s on Fast 3G (verified)
+-   [x] Virtualized page scroll: smooth at 60fps
+-   [x] Initial JS bundle <= 250 KB gz (verified)
+-   [x] All profiling findings addressed or documented for future
 
 **SEO**
 
--   [ ] react-helmet-async integrated
--   [ ] Page-specific meta tags working (title, description, og:*)
--   [ ] TechArticle JSON-LD on man pages
--   [ ] Sitemap index at `/sitemap.xml`
--   [ ] Per-distribution sitemaps generated
--   [ ] robots.txt deployed
+-   [x] react-helmet-async integrated
+-   [x] Page-specific meta tags working (title, description, og:*)
+-   [x] TechArticle JSON-LD on man pages
+-   [x] Sitemap index at `/sitemap.xml`
+-   [x] Per-distribution sitemaps generated
+-   [x] robots.txt deployed
 
 **Multi-Distribution**
 
--   [ ] Database schema supports multiple distributions
--   [ ] Ubuntu man pages ingested
--   [ ] Fedora man pages ingested
--   [ ] `?distro=` query parameter working
--   [ ] Global distribution preference (localStorage)
--   [ ] Per-page distribution selector (when variations exist)
--   [ ] Parallel ingestion pipelines working
+-   [x] Database schema supports multiple distributions
+-   [x] Ubuntu man pages ingested
+-   [x] Fedora man pages ingested
+-   [x] `?distro=` query parameter working
+-   [x] Global distribution preference (localStorage)
+-   [x] Per-page distribution selector (when variations exist)
+-   [x] Parallel ingestion pipelines working
 
 **Testing**
 
--   [ ] E2E test: sitemap is valid XML with expected URLs
--   [ ] E2E test: distribution selector switches content
--   [ ] Existing E2E tests still pass
+-   [x] E2E test: sitemap is valid XML with expected URLs
+-   [x] E2E test: distribution selector switches content
+-   [x] Existing E2E tests still pass
 
 **Operations**
 
--   [ ] Runbooks audited against production experience
--   [ ] Multi-distro runbook added
+-   [x] Runbooks audited against production experience
+-   [x] Multi-distro runbook added
 
 ---
 
