@@ -18,8 +18,14 @@ test('seo: robots.txt + sitemaps exist', async ({ page }) => {
   const sitemapDebRes = await page.goto('/sitemap-debian.xml')
   expect(sitemapDebRes?.status()).toBe(200)
   const sitemapDeb = await page.locator('body').innerText()
-  expect(sitemapDeb).toContain('<urlset')
-  expect(sitemapDeb).toContain('/man/tar/1')
+  expect(sitemapDeb).toContain('<sitemapindex')
+  expect(sitemapDeb).toContain('/sitemap-debian-1.xml')
+
+  const sitemapDebPageRes = await page.goto('/sitemap-debian-1.xml')
+  expect(sitemapDebPageRes?.status()).toBe(200)
+  const sitemapDebPage = await page.locator('body').innerText()
+  expect(sitemapDebPage).toContain('<urlset')
+  expect(sitemapDebPage).toContain('/man/tar/1')
 })
 
 test('seo: man pages emit JSON-LD with CSP nonce', async ({ page }) => {
