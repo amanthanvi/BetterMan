@@ -9,6 +9,9 @@ export type InfoResponse = Schemas['InfoResponse']
 export type SearchResult = Schemas['SearchResult']
 export type SearchResponse = Schemas['SearchResponse']
 
+export type Suggestion = Schemas['Suggestion']
+export type SuggestResponse = Schemas['SuggestResponse']
+
 export type SectionLabel = Schemas['SectionLabel']
 export type SectionPage = Schemas['SectionPage']
 export type SectionResponse = Schemas['SectionResponse']

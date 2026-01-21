@@ -9,6 +9,7 @@ import type {
   SearchResponse,
   SectionLabel,
   SectionResponse,
+  SuggestResponse,
 } from './types'
 
 import { getEffectiveDistro } from '../app/distro'
@@ -125,6 +126,12 @@ export function search(opts: {
   if (typeof opts.limit === 'number') params.set('limit', String(opts.limit))
   if (typeof opts.offset === 'number') params.set('offset', String(opts.offset))
   return apiGet<SearchResponse>(`/api/v1/search?${params.toString()}`)
+}
+
+export function suggest(name: string): Promise<SuggestResponse> {
+  const params = new URLSearchParams()
+  params.set('name', name)
+  return apiGet<SuggestResponse>(`/api/v1/suggest?${params.toString()}`)
 }
 
 export function listSections(): Promise<SectionLabel[]> {
