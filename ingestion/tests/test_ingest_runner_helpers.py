@@ -3,11 +3,11 @@ from __future__ import annotations
 from uuid import uuid4
 
 from ingestion.ingest_runner import (
-    _PageRow,
     _content_packages,
     _filter_sources,
     _insert_links,
     _iter_internal_doc_links,
+    _PageRow,
     _parse_man_href,
 )
 from ingestion.man_scan import ManSource
