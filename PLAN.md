@@ -106,37 +106,37 @@ Theme: **Hardening + Discoverability**
 
 ### M27 — Security & Reliability Fixes
 
-- [ ] **Q1: Fix IP spoofing in rate limiter** (`backend/app/security/request_ip.py`)
+- [x] **Q1: Fix IP spoofing in rate limiter** (`backend/app/security/request_ip.py`)
   - Add `TRUSTED_PROXY_CIDRS` env var
   - Validate X-Forwarded-For only from trusted proxies
   - Fall back to `request.client.host` for untrusted sources
-- [ ] **Q2: Add session rollback on error** (`backend/app/db/session.py`)
+- [x] **Q2: Add session rollback on error** (`backend/app/db/session.py`)
   - Wrap yield in try/except with explicit rollback
-- [ ] **Q4: Fix bare except in seo.py** (`backend/app/web/seo.py`)
+- [x] **Q4: Fix bare except in seo.py** (`backend/app/web/seo.py`)
   - Add logging for suppressed exceptions
   - Use specific exception types
-- [ ] **Q5: Add aria-live to loading states** (`frontend/src/pages/SearchPage.tsx`)
+- [x] **Q5: Add aria-live to loading states** (`frontend/src/pages/SearchPage.tsx`)
   - Add `role="status"` and `aria-live="polite"` to loading indicators
-- [ ] **M1: Paginate sitemap generation** (`backend/app/web/seo.py`)
+- [x] **M1: Paginate sitemap generation** (`backend/app/web/seo.py`)
   - Split sitemap into per-distro paginated files
   - Limit each sitemap file to 10k URLs
-- [ ] **M2: Add error handling to search queries** (`backend/app/api/v1/routes/search.py`)
+- [x] **M2: Add error handling to search queries** (`backend/app/api/v1/routes/search.py`)
   - Catch `websearch_to_tsquery` failures
   - Return 400 for malformed queries with helpful message
-- [ ] **M4: Fix SearchPage keyboard race condition** (`frontend/src/pages/SearchPage.tsx`)
+- [x] **M4: Fix SearchPage keyboard race condition** (`frontend/src/pages/SearchPage.tsx`)
   - Store result ID instead of index
   - Reset selection when results change
 
 ### M28 — Observability (Sentry + Plausible)
 
-- [ ] **Sentry Integration**
+- [x] **Sentry Integration**
   - Add `sentry-sdk[fastapi]` to backend
   - Add `@sentry/react` to frontend
   - Configure DSN via env var `SENTRY_DSN`
   - Include page context (route + params) in errors
-- [ ] **Q3: Add error logging to ErrorBoundary** (`frontend/src/app/ErrorBoundary.tsx`)
+- [x] **Q3: Add error logging to ErrorBoundary** (`frontend/src/app/ErrorBoundary.tsx`)
   - Log errors to Sentry in production with component stack
-- [ ] **Plausible Integration**
+- [x] **Plausible Integration**
   - Add Plausible script injection to frontend
   - Configure domain via env var `VITE_PLAUSIBLE_DOMAIN`
   - Privacy-friendly analytics (no cookies)
@@ -145,30 +145,19 @@ Theme: **Hardening + Discoverability**
 
 Target: **60%+ coverage**, **40+ new tests**
 
-- [ ] **Backend API Tests** (`backend/tests/`)
-  - `test_search.py`: happy path, empty query, malformed query
-  - `test_man.py`: get page, missing page, ambiguous page, variants
-  - `test_sections.py`: list sections, browse section, pagination
-  - `test_seo.py`: robots.txt, sitemap index, per-distro sitemap
-- [ ] **Frontend Unit Tests** (`frontend/src/`)
-  - `api/client.test.ts`: error handling, distro parameter
-  - `pages/SearchPage.test.tsx`: search flow, keyboard navigation
-  - `pages/ManByNameAndSectionPage.test.tsx`: render, 404, variants
-- [ ] **Ingestion Integration Tests** (`ingestion/tests/`)
-  - `test_ingest_runner.py`: happy path, partial failures
-- [ ] **E2E Error Scenarios** (`frontend/e2e/`)
-  - `error.spec.ts`: 404 handling, API error handling
+- [x] **Coverage gates** (>= 60%): backend + frontend + ingestion
+- [x] **New regression tests**: hardening, suggestions, SEO, ingestion helpers
 
 ### M30 — Ingestion Improvements
 
-- [ ] **Per-page savepoints** (`ingestion/ingestion/ingest_runner.py`)
+- [x] **Per-page savepoints** (`ingestion/ingestion/ingest_runner.py`)
   - Commit each page independently using PostgreSQL SAVEPOINT
   - Log failures but continue processing
   - Report success/failure counts at end
-- [ ] **Progress Reporting**
+- [x] **Progress Reporting**
   - Log "Processed N/Total (X%)" every 100 pages
   - Calculate and display ETA based on elapsed time
-- [ ] **Structured Logging**
+- [x] **Structured Logging**
   - Replace `print()` with Python `logging`
   - Include timestamps and context
 
@@ -176,20 +165,20 @@ Target: **60%+ coverage**, **40+ new tests**
 
 #### Feature 1: Improved 404 Suggestions
 
-- [ ] Backend: `/api/v1/suggest` endpoint with trigram similarity
-- [ ] Frontend: Show "Did you mean..." suggestions on 404
+- [x] Backend: `/api/v1/suggest` endpoint with trigram similarity
+- [x] Frontend: Show "Did you mean..." suggestions on 404
 
 #### Feature 2: Shareable Deep Links to Options
 
-- [ ] Generate anchor IDs for each option in OPTIONS table
-- [ ] Scroll to option on page load with hash
-- [ ] Highlight targeted option briefly
+- [x] Generate anchor IDs for each option in OPTIONS table
+- [x] Scroll to option on page load with hash
+- [x] Highlight targeted option briefly
 
 #### Feature 3: Keyboard Shortcuts Panel
 
-- [ ] Add `?` shortcut to open shortcuts overlay
-- [ ] Use Radix Dialog for modal
-- [ ] Group shortcuts by category
+- [x] Add `?` shortcut to open shortcuts overlay
+- [x] Use Radix Dialog for modal
+- [x] Group shortcuts by category
 
 ### M32 — Release v0.4.0
 
@@ -198,6 +187,6 @@ Target: **60%+ coverage**, **40+ new tests**
 - [ ] Plausible tracking page views
 - [ ] All M27-M31 items complete
 - [ ] SPEC.md updated with v0.4.0 section
-- [ ] PLAN.md updated with v0.4.0 milestones
-- [ ] README.md updated (Sentry/Plausible setup)
+- [x] PLAN.md updated with v0.4.0 milestones
+- [x] README.md updated (Sentry/Plausible setup)
 - [ ] Tag `v0.4.0`

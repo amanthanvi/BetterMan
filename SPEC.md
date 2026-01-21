@@ -2652,14 +2652,14 @@ When a page is not found, the API can suggest similar pages using trigram simila
 
 Uses pg_trgm's `similarity()` function with a 0.2 threshold (lower than search's 0.3 for more suggestions).
 
-### Deep Links to Options (Planned)
+### Deep Links to Options
 
-Options in the OPTIONS table will have stable anchor IDs for direct linking:
-- Format: `/man/tar/1#option-verbose` or `/man/tar/1#opt--recursive`
-- Scroll to option on page load
+Options in the OPTIONS table have stable anchor IDs for direct linking:
+- Format: `/man/tar/1#verbose` (anchor IDs are slugified from the option flags)
+- Scroll to option on page load (and on `hashchange`)
 - Brief highlight animation on targeted option
 
-### Keyboard Shortcuts Panel (Planned)
+### Keyboard Shortcuts Panel
 
 Press `?` to open a shortcuts overlay showing all available keyboard shortcuts:
 - Grouped by category (Navigation, Search, Page)
@@ -2703,31 +2703,31 @@ v0.4.0 is **non-breaking**. All changes are additive or internal improvements.
 
 **Security & Reliability**
 
--   [ ] IP spoofing prevention in rate limiting (`TRUSTED_PROXY_CIDRS`)
--   [ ] DB session rolls back on errors (no pool poisoning)
--   [ ] Malformed search queries return HTTP 400 (not 500)
--   [ ] Sitemaps paginated (max 10k URLs per file) and validated in E2E
+-   [x] IP spoofing prevention in rate limiting (`TRUSTED_PROXY_CIDRS`)
+-   [x] DB session rolls back on errors (no pool poisoning)
+-   [x] Malformed search queries return HTTP 400 (not 500)
+-   [x] Sitemaps paginated (max 10k URLs per file) and validated in E2E
 
 **Observability**
 
--   [ ] Backend Sentry captures unhandled exceptions when `SENTRY_DSN` is set
--   [ ] Frontend Sentry captures ErrorBoundary crashes when `VITE_SENTRY_DSN` is set
--   [ ] Trace propagation enabled for `/api/` (frontend → backend) when Sentry is enabled
--   [ ] Plausible pageview tracking enabled when `VITE_PLAUSIBLE_DOMAIN` is set (disabled otherwise)
+-   [x] Backend Sentry captures unhandled exceptions when `SENTRY_DSN` is set
+-   [x] Frontend Sentry captures ErrorBoundary crashes when `VITE_SENTRY_DSN` is set
+-   [x] Trace propagation enabled for `/api/` (frontend → backend) when Sentry is enabled
+-   [x] Plausible pageview tracking enabled when `VITE_PLAUSIBLE_DOMAIN` is set (disabled otherwise)
 
 **Discoverability**
 
--   [ ] `GET /api/v1/suggest?name=...` returns useful "did you mean" suggestions
--   [ ] Man page 404 UI shows suggestions when available
--   [ ] Shareable deep links to options work (`#<anchorId>` scroll + highlight)
--   [ ] Keyboard shortcuts panel available via `?`
+-   [x] `GET /api/v1/suggest?name=...` returns useful "did you mean" suggestions
+-   [x] Man page 404 UI shows suggestions when available
+-   [x] Shareable deep links to options work (`#<anchorId>` scroll + highlight)
+-   [x] Keyboard shortcuts panel available via `?`
 
 **Testing**
 
 -   [ ] CI green on `main` (including `deploy_railway`)
--   [ ] Coverage >= 60% and increased test suite (backend + frontend + ingestion + E2E)
+-   [x] Coverage >= 60% and increased test suite (backend + frontend + ingestion + E2E)
 
 **Release**
 
--   [ ] Docs updated (`README.md`, `SPEC.md`, `PLAN.md`, `.env.example`)
+-   [x] Docs updated (`README.md`, `SPEC.md`, `PLAN.md`, `.env.example`)
 -   [ ] Tag `v0.4.0`
