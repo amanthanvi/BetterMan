@@ -183,8 +183,8 @@ Target: **60%+ coverage**, **40+ new tests**
 ### M32 — Release v0.4.0
 
 - [x] CI green on `main`
-- [ ] Sentry receiving errors
-- [ ] Plausible tracking page views
+- [x] Sentry receiving errors
+- [ ] Plausible tracking page views (set `VITE_PLAUSIBLE_DOMAIN` in Railway)
 - [x] All M27-M31 items complete
 - [x] SPEC.md updated with v0.4.0 section
 - [x] PLAN.md updated with v0.4.0 milestones

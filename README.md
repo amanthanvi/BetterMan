@@ -55,6 +55,8 @@ Error tracking for both backend and frontend.
 
 Errors include page context (route + params) and component stack traces.
 
+**Production note:** the SPA reads `VITE_SENTRY_DSN` at runtime from `/config.js` (served by the backend), so set it as a backend service env var (e.g., Railway variable).
+
 ### Plausible (Analytics)
 
 Privacy-friendly analytics (no cookies, GDPR-compliant).
@@ -64,6 +66,8 @@ Privacy-friendly analytics (no cookies, GDPR-compliant).
 - `VITE_PLAUSIBLE_DOMAIN` (frontend): Domain configured in Plausible (e.g., `betterman.dev`)
 
 Analytics are disabled if the env var is not set.
+
+**Production note:** the SPA reads `VITE_PLAUSIBLE_DOMAIN` at runtime from `/config.js` (served by the backend).
 
 ### Proxy Trust (Rate Limiting)
 
