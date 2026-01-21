@@ -27,4 +27,8 @@ def create_session_maker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     session_maker: async_sessionmaker[AsyncSession] = request.app.state.db_sessionmaker
     async with session_maker() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

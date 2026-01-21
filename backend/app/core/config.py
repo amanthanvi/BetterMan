@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     rate_limit_search_per_minute: int = 60
     rate_limit_page_per_minute: int = 300
 
+    trusted_proxy_cidrs: str = ""
+
     serve_frontend: bool = True
     frontend_dist_dir: str = "../frontend/dist"
 
