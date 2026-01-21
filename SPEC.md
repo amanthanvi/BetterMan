@@ -2698,3 +2698,36 @@ v0.4.0 is **non-breaking**. All changes are additive or internal improvements.
 2. Deploy frontend with new env vars (Sentry, Plausible)
 3. Verify error tracking in Sentry
 4. Verify analytics in Plausible dashboard
+
+## Definition of Done (v0.4.0 Launch Checklist)
+
+**Security & Reliability**
+
+-   [ ] IP spoofing prevention in rate limiting (`TRUSTED_PROXY_CIDRS`)
+-   [ ] DB session rolls back on errors (no pool poisoning)
+-   [ ] Malformed search queries return HTTP 400 (not 500)
+-   [ ] Sitemaps paginated (max 10k URLs per file) and validated in E2E
+
+**Observability**
+
+-   [ ] Backend Sentry captures unhandled exceptions when `SENTRY_DSN` is set
+-   [ ] Frontend Sentry captures ErrorBoundary crashes when `VITE_SENTRY_DSN` is set
+-   [ ] Trace propagation enabled for `/api/` (frontend → backend) when Sentry is enabled
+-   [ ] Plausible pageview tracking enabled when `VITE_PLAUSIBLE_DOMAIN` is set (disabled otherwise)
+
+**Discoverability**
+
+-   [ ] `GET /api/v1/suggest?name=...` returns useful "did you mean" suggestions
+-   [ ] Man page 404 UI shows suggestions when available
+-   [ ] Shareable deep links to options work (`#<anchorId>` scroll + highlight)
+-   [ ] Keyboard shortcuts panel available via `?`
+
+**Testing**
+
+-   [ ] CI green on `main` (including `deploy_railway`)
+-   [ ] Coverage >= 60% and increased test suite (backend + frontend + ingestion + E2E)
+
+**Release**
+
+-   [ ] Docs updated (`README.md`, `SPEC.md`, `PLAN.md`, `.env.example`)
+-   [ ] Tag `v0.4.0`
