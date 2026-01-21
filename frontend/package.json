@@ -8,7 +8,7 @@
 		"build": "tsc -b && vite build",
 		"bundle:report": "node scripts/bundle-report.mjs",
 		"lint": "eslint .",
-		"test": "vitest run --config vitest.config.ts",
+		"test": "vitest run --config vitest.config.ts --coverage",
 		"test:watch": "vitest --config vitest.config.ts",
 		"e2e": "playwright test --config playwright.config.ts",
 		"preview": "vite preview"
@@ -40,6 +40,7 @@
 		"@types/react": "^19.2.8",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^5.1.1",
+		"@vitest/coverage-v8": "^4.0.17",
 		"eslint": "^9.39.1",
 		"eslint-plugin-react-hooks": "^7.0.1",
 		"eslint-plugin-react-refresh": "^0.4.24",
@@ -49,6 +50,6 @@
 		"typescript": "~5.9.3",
 		"typescript-eslint": "^8.46.4",
 		"vite": "^7.3.1",
-		"vitest": "^4.0.16"
+		"vitest": "^4.0.17"
 	}
 }
