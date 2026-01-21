@@ -5,7 +5,13 @@ import { Helmet } from 'react-helmet-async'
 
 import { useDistro } from '../app/distro'
 import { useToc } from '../app/toc'
-import { ApiHttpError, fetchManByName, fetchManByNameAndSection, fetchRelated } from '../api/client'
+import {
+  ApiHttpError,
+  fetchManByName,
+  fetchManByNameAndSection,
+  fetchRelated,
+  suggest,
+} from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import { getCanonicalUrl, getCspNonce, safeJsonLdStringify } from '../lib/seo'
 import { recordRecentPage } from '../lib/recent'
@@ -29,6 +35,13 @@ export default function ManByNameAndSectionPage() {
     queryKey: queryKeys.manAlternatives(distro.distro, nameNorm),
     enabled: pageQuery.isError && pageQuery.error instanceof ApiHttpError && pageQuery.error.status === 404,
     queryFn: () => fetchManByName(nameNorm),
+    retry: false,
+  })
+
+  const suggestQuery = useQuery({
+    queryKey: queryKeys.suggest(distro.distro, nameNorm),
+    enabled: pageQuery.isError && pageQuery.error instanceof ApiHttpError && pageQuery.error.status === 404,
+    queryFn: () => suggest(nameNorm),
     retry: false,
   })
 
@@ -72,6 +85,7 @@ export default function ManByNameAndSectionPage() {
 
   if (pageQuery.isError) {
     const alt = alternativesQuery.data
+    const suggestions = suggestQuery.data?.suggestions ?? []
     return (
       <>
         <Helmet>
@@ -114,6 +128,28 @@ export default function ManByNameAndSectionPage() {
                 {alt.data.page.name}({alt.data.page.section})
               </Link>{' '}
               instead.
+            </div>
+          ) : suggestQuery.isLoading ? (
+            <div className="mt-2">Looking for close matches…</div>
+          ) : suggestions.length ? (
+            <div className="mt-2 space-y-2">
+              <div>Did you mean:</div>
+              <ul className="space-y-2">
+                {suggestions.map((s) => (
+                  <li key={`${s.name}:${s.section}`} className="flex flex-col">
+                    <Link
+                      to="/man/$name/$section"
+                      params={{ name: s.name, section: s.section }}
+                      className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
+                    >
+                      {s.name}({s.section})
+                    </Link>
+                    {s.description ? (
+                      <div className="text-xs text-[color:var(--bm-muted)]">{s.description}</div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
           <div className="mt-3">
