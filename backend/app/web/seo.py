@@ -132,52 +132,6 @@ async def sitemap_index(
     return res
 
 
-@router.get("/sitemap-{distro}.xml", include_in_schema=False)
-async def sitemap_distro(
-    request: Request,
-    distro: str,
-    session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> Response:
-    if distro not in _SUPPORTED_DISTROS:
-        return Response(status_code=404)
-    if not hasattr(DatasetRelease, "distro") and distro != "debian":
-        return Response(status_code=404)
-
-    release = await _get_active_release(session, distro=distro)
-    if release is None:
-        return Response(status_code=404)
-
-    total = await session.scalar(
-        select(func.count()).select_from(ManPage).where(ManPage.dataset_release_id == release.id)
-    )
-    total_int = int(total or 0)
-    page_count = max(1, math.ceil(total_int / _SITEMAP_URLS_PER_FILE))
-
-    cache_control = "public, max-age=3600"
-    etag = compute_weak_etag(
-        "sitemap-distro-index", distro, release.dataset_release_id, str(page_count)
-    )
-    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
-    if not_modified is not None:
-        return not_modified
-
-    base = _public_base_url(request)
-    root = ET.Element(
-        "sitemapindex", attrib={"xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
-    )
-
-    lastmod = _iso_z(release.ingested_at)
-    for page in range(1, page_count + 1):
-        node = ET.SubElement(root, "sitemap")
-        ET.SubElement(node, "loc").text = f"{base}/sitemap-{distro}-{page}.xml"
-        if lastmod:
-            ET.SubElement(node, "lastmod").text = lastmod
-
-    res = Response(content=_xml_bytes(root), media_type="application/xml")
-    set_cache_headers(res, etag=etag, cache_control=cache_control)
-    return res
-
-
 @router.get("/sitemap-{distro}-{page}.xml", include_in_schema=False)
 async def sitemap_distro_page(
     request: Request,
@@ -224,6 +178,52 @@ async def sitemap_distro_page(
         node = ET.SubElement(root, "url")
         loc = f"{base}/man/{quote(name, safe='')}/{quote(section, safe='')}"
         ET.SubElement(node, "loc").text = loc
+
+    res = Response(content=_xml_bytes(root), media_type="application/xml")
+    set_cache_headers(res, etag=etag, cache_control=cache_control)
+    return res
+
+
+@router.get("/sitemap-{distro}.xml", include_in_schema=False)
+async def sitemap_distro(
+    request: Request,
+    distro: str,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> Response:
+    if distro not in _SUPPORTED_DISTROS:
+        return Response(status_code=404)
+    if not hasattr(DatasetRelease, "distro") and distro != "debian":
+        return Response(status_code=404)
+
+    release = await _get_active_release(session, distro=distro)
+    if release is None:
+        return Response(status_code=404)
+
+    total = await session.scalar(
+        select(func.count()).select_from(ManPage).where(ManPage.dataset_release_id == release.id)
+    )
+    total_int = int(total or 0)
+    page_count = max(1, math.ceil(total_int / _SITEMAP_URLS_PER_FILE))
+
+    cache_control = "public, max-age=3600"
+    etag = compute_weak_etag(
+        "sitemap-distro-index", distro, release.dataset_release_id, str(page_count)
+    )
+    not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
+    if not_modified is not None:
+        return not_modified
+
+    base = _public_base_url(request)
+    root = ET.Element(
+        "sitemapindex", attrib={"xmlns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    )
+
+    lastmod = _iso_z(release.ingested_at)
+    for page in range(1, page_count + 1):
+        node = ET.SubElement(root, "sitemap")
+        ET.SubElement(node, "loc").text = f"{base}/sitemap-{distro}-{page}.xml"
+        if lastmod:
+            ET.SubElement(node, "lastmod").text = lastmod
 
     res = Response(content=_xml_bytes(root), media_type="application/xml")
     set_cache_headers(res, etag=etag, cache_control=cache_control)
