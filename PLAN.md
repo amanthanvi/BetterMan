@@ -184,7 +184,7 @@ Target: **60%+ coverage**, **40+ new tests**
 
 - [x] CI green on `main`
 - [x] Sentry receiving errors
-- [ ] Plausible tracking page views (set `VITE_PLAUSIBLE_DOMAIN` in Railway)
+- [x] Plausible tracking page views (set `VITE_PLAUSIBLE_DOMAIN` in Railway → `betterman.sh`; verify in Plausible UI)
 - [x] All M27-M31 items complete
 - [x] SPEC.md updated with v0.4.0 section
 - [x] PLAN.md updated with v0.4.0 milestones
