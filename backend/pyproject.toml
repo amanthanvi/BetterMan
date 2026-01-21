@@ -10,6 +10,7 @@ dependencies = [
   "fastapi>=0.115.0",
   "pydantic-settings>=2.6.0",
   "redis>=5.2.0",
+  "sentry-sdk[fastapi]>=2.0.0",
   "sqlalchemy[asyncio]>=2.0.30",
   "structlog>=24.4.0",
   "uvicorn[standard]>=0.30.0",
@@ -33,4 +34,3 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-

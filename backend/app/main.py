@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 from time import perf_counter
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -16,6 +17,7 @@ from app.api.v1.router import router as v1_router
 from app.core.config import Settings
 from app.core.errors import APIError
 from app.core.logging import configure_logging, get_logger
+from app.core.observability import init_sentry
 from app.db.session import create_engine, create_session_maker
 from app.security.headers import SecurityHeadersMiddleware
 from app.security.request_ip import get_client_ip
@@ -26,6 +28,7 @@ from app.web.spa_static import SPAStaticFiles
 def create_app() -> FastAPI:
     configure_logging()
     settings = Settings()
+    init_sentry(settings)
 
     db_engine = create_engine(settings)
     redis: Redis = from_url(settings.redis_url)
@@ -54,10 +57,33 @@ def create_app() -> FastAPI:
     app.state.db_sessionmaker = create_session_maker(db_engine)
     app.state.redis = redis
 
+    csp_script_src_extra: list[str] = []
+    csp_connect_src_extra: list[str] = []
+
+    if settings.vite_plausible_domain.strip():
+        csp_script_src_extra.append("https://plausible.io")
+        csp_connect_src_extra.append("https://plausible.io")
+
+    for dsn in (settings.sentry_dsn, settings.vite_sentry_dsn):
+        try:
+            dsn_parsed = urlparse(dsn)
+            if dsn_parsed.scheme and dsn_parsed.hostname:
+                origin = f"{dsn_parsed.scheme}://{dsn_parsed.hostname}"
+                if dsn_parsed.port:
+                    origin = f"{origin}:{dsn_parsed.port}"
+                csp_connect_src_extra.append(origin)
+        except Exception:  # noqa: BLE001
+            continue
+
+    csp_script_src_extra = sorted(set(csp_script_src_extra))
+    csp_connect_src_extra = sorted(set(csp_connect_src_extra))
+
     app.add_middleware(
         SecurityHeadersMiddleware,
         env=settings.env,
         csp_enabled=settings.csp_enabled,
+        csp_script_src_extra=tuple(csp_script_src_extra),
+        csp_connect_src_extra=tuple(csp_connect_src_extra),
     )
 
     app.add_middleware(GZipMiddleware, minimum_size=1024)
@@ -70,6 +96,14 @@ def create_app() -> FastAPI:
             allow_methods=["GET", "HEAD", "OPTIONS"],
             allow_headers=["*"],
         )
+
+    if settings.sentry_dsn.strip():
+        try:
+            from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+
+            app.add_middleware(SentryAsgiMiddleware)
+        except Exception:  # noqa: BLE001
+            get_logger(action="sentry").warning("sentry_middleware_failed")
 
     app.include_router(seo_router)
     app.include_router(v1_router)

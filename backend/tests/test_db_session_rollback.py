@@ -45,4 +45,3 @@ async def test_get_session_rolls_back_on_error() -> None:
         await gen.athrow(RuntimeError("boom"))
 
     assert dummy.rollback_called
-

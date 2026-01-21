@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import UTC
 import math
+from datetime import UTC
 from urllib.parse import quote
 from xml.etree import ElementTree as ET
 

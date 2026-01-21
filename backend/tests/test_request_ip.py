@@ -22,11 +22,14 @@ def test_get_client_ip_ignores_xff_when_untrusted() -> None:
 
 
 def test_get_client_ip_uses_xff_when_peer_is_trusted() -> None:
-    req = _make_request(peer_ip="10.1.2.3", xff="198.51.100.2, 10.0.0.1", trusted_proxy_cidrs="10.0.0.0/8")
+    req = _make_request(
+        peer_ip="10.1.2.3",
+        xff="198.51.100.2, 10.0.0.1",
+        trusted_proxy_cidrs="10.0.0.0/8",
+    )
     assert get_client_ip(req) == "198.51.100.2"
 
 
 def test_get_client_ip_falls_back_when_xff_is_invalid() -> None:
     req = _make_request(peer_ip="10.1.2.3", xff="not-an-ip", trusted_proxy_cidrs="10.0.0.0/8")
     assert get_client_ip(req) == "10.1.2.3"
-

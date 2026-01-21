@@ -38,4 +38,3 @@ async def _dummy_session_dep():
             raise ProgrammingError("stmt", None, Exception("bad"))
 
     yield _DummySession()
-

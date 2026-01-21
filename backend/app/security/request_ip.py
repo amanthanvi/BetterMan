@@ -5,7 +5,6 @@ from functools import lru_cache
 
 from fastapi import Request
 
-
 Network = ipaddress.IPv4Network | ipaddress.IPv6Network
 
 
