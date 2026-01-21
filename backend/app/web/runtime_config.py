@@ -19,13 +19,9 @@ async def config_js(request: Request) -> Response:
     settings = getattr(request.app.state, "settings", None)
 
     sentry_dsn = getattr(settings, "vite_sentry_dsn", "") if settings is not None else ""
-    plausible_domain = (
-        getattr(settings, "vite_plausible_domain", "") if settings is not None else ""
-    )
 
     payload = {
         "sentryDsn": sentry_dsn.strip() or None,
-        "plausibleDomain": plausible_domain.strip() or None,
     }
 
     cache_control = "public, max-age=60"

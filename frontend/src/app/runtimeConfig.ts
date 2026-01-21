@@ -1,6 +1,5 @@
 export type BetterManRuntimeConfig = {
   sentryDsn?: string | null
-  plausibleDomain?: string | null
 }
 
 export function getRuntimeConfig(): BetterManRuntimeConfig | null {
@@ -8,4 +7,3 @@ export function getRuntimeConfig(): BetterManRuntimeConfig | null {
   if (!raw || typeof raw !== 'object') return null
   return raw as BetterManRuntimeConfig
 }
-

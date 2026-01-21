@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html as _html
 import re
 from pathlib import Path
 
@@ -9,16 +10,26 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 _FINGERPRINTED_ASSET_RE = re.compile(r"^assets/.+-[A-Za-z0-9]{8,}\\.[A-Za-z0-9]+$")
+_HEAD_CLOSE_RE = re.compile(r"</head>", flags=re.IGNORECASE)
 _SCRIPT_TAG_RE = re.compile(r"<script(?![^>]*\\snonce=)", flags=re.IGNORECASE)
 
 
 class SPAStaticFiles(StaticFiles):
-    def __init__(self, *, directory: str, index: str = "index.html"):
+    def __init__(self, *, directory: str, index: str = "index.html", plausible_domain: str = ""):
         super().__init__(directory=directory, html=True, check_dir=False)
         self._index_path = Path(directory) / index
+        self._plausible_domain = plausible_domain.strip()
 
     def _index_response(self, scope: Scope) -> HTMLResponse:
         html = self._index_path.read_text(encoding="utf-8")
+        if self._plausible_domain and 'data-bm-plausible="1"' not in html:
+            domain = _html.escape(self._plausible_domain, quote=True)
+            snippet = (
+                f'    <script defer data-domain="{domain}" data-bm-plausible="1" '
+                f'src="https://plausible.io/js/script.js"></script>\n'
+            )
+            html = _HEAD_CLOSE_RE.sub(f"{snippet}  </head>", html, count=1)
+
         nonce = scope.get("csp_nonce") or (scope.get("state") or {}).get("csp_nonce")
         if nonce:
             html = _SCRIPT_TAG_RE.sub(f'<script nonce="{nonce}"', html)

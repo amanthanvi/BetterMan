@@ -154,7 +154,14 @@ def create_app() -> FastAPI:
     if settings.serve_frontend:
         dist_path = Path(settings.frontend_dist_dir)
         if dist_path.exists() and dist_path.is_dir():
-            app.mount("/", SPAStaticFiles(directory=str(dist_path)), name="spa")
+            app.mount(
+                "/",
+                SPAStaticFiles(
+                    directory=str(dist_path),
+                    plausible_domain=settings.vite_plausible_domain,
+                ),
+                name="spa",
+            )
 
     return app
 
