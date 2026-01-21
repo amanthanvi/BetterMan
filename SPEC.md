@@ -2730,4 +2730,4 @@ v0.4.0 is **non-breaking**. All changes are additive or internal improvements.
 **Release**
 
 -   [x] Docs updated (`README.md`, `SPEC.md`, `PLAN.md`, `.env.example`)
--   [ ] Tag `v0.4.0`
+-   [x] Tag `v0.4.0`

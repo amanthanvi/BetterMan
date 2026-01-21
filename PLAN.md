@@ -189,4 +189,4 @@ Target: **60%+ coverage**, **40+ new tests**
 - [x] SPEC.md updated with v0.4.0 section
 - [x] PLAN.md updated with v0.4.0 milestones
 - [x] README.md updated (Sentry/Plausible setup)
-- [ ] Tag `v0.4.0`
+- [x] Tag `v0.4.0`
