@@ -4,7 +4,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 ## Repo layout (planned)
 
-```
+```text
 /
 ├── frontend/           # React SPA
 ├── backend/            # FastAPI service (serves API + built SPA)
@@ -21,6 +21,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - `v0.2.0` shipped (tag `v0.2.0`).
 - `v0.2.1` shipped (tag `v0.2.1`).
 - `v0.3.0` shipped (tag `v0.3.0`) (multi-distribution + SEO + performance).
+- `v0.4.0` shipped (tag `v0.4.0`) (hardening + discoverability + observability).
 - Default branch: `main`. Execution plan: `PLAN.md`.
 
 ## Deploy (Railway)
@@ -40,6 +41,43 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - Code scanning: `.github/workflows/codeql.yml` (CodeQL) + `.github/workflows/scorecards.yml` (OSSF Scorecards → SARIF).
 - Dependency updates: `.github/dependabot.yml` (GitHub Actions, frontend npm, backend/ingestion uv, Dockerfile base images).
 - API contract: `frontend/src/api/openapi.gen.ts` is generated from backend OpenAPI and enforced in CI.
+
+## Observability (v0.4.0)
+
+### Sentry (Error Tracking)
+
+Error tracking for both backend and frontend.
+
+**Environment variables:**
+
+- `SENTRY_DSN` (backend): Sentry DSN for the FastAPI service
+- `VITE_SENTRY_DSN` (frontend): Sentry DSN for the React app
+
+Errors include page context (route + params) and component stack traces.
+
+**Production note:** the SPA reads `VITE_SENTRY_DSN` at runtime from `/config.js` (served by the backend), so set it as a backend service env var (e.g., Railway variable).
+
+### Plausible (Analytics)
+
+Privacy-friendly analytics (no cookies, GDPR-compliant).
+
+**Environment variables:**
+
+- `VITE_PLAUSIBLE_DOMAIN` (frontend): Domain configured in Plausible (e.g., `betterman.dev`)
+
+Analytics are disabled if the env var is not set.
+
+**Production note:** the SPA reads `VITE_PLAUSIBLE_DOMAIN` at runtime from `/config.js` (served by the backend).
+
+### Proxy Trust (Rate Limiting)
+
+For accurate IP-based rate limiting behind a reverse proxy:
+
+**Environment variables:**
+
+- `TRUSTED_PROXY_CIDRS` (backend): Comma-separated list of trusted proxy CIDRs (e.g., `10.0.0.0/8,172.16.0.0/12`)
+
+When set, X-Forwarded-For is only trusted from connections originating within these CIDRs.
 
 ## UX notes
 

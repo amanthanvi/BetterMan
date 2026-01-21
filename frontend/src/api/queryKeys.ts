@@ -2,6 +2,7 @@ export const queryKeys = {
   info: (distro: string) => ['info', distro] as const,
   sections: (distro: string) => ['sections', distro] as const,
   search: (distro: string, q: string, section?: string) => ['search', distro, q, section ?? null] as const,
+  suggest: (distro: string, name: string) => ['suggest', distro, name] as const,
   section: (distro: string, section: string) => ['section', distro, section] as const,
   manByName: (distro: string, name: string) => ['manByName', distro, name] as const,
   man: (distro: string, name: string, section: string) => ['man', distro, name, section] as const,

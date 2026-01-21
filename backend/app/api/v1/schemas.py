@@ -36,6 +36,17 @@ class SearchResponse(BaseModel):
     suggestions: list[str]
 
 
+class Suggestion(BaseModel):
+    name: str
+    section: str
+    description: str
+
+
+class SuggestResponse(BaseModel):
+    query: str
+    suggestions: list[Suggestion]
+
+
 class SectionLabel(BaseModel):
     section: str
     label: str

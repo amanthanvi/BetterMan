@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.params import Depends
 from sqlalchemy import case, func, select
+from sqlalchemy.exc import DataError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas import SearchResponse
@@ -85,44 +86,51 @@ async def search(
 
     headline_opts = "MaxFragments=2, MinWords=3, MaxWords=15, StartSel=⟪, StopSel=⟫"
 
-    results = (
-        await session.execute(
-            select(
-                ManPage.name,
-                ManPage.section,
-                ManPage.title,
-                ManPage.description,
-                func.ts_headline(
-                    "simple",
-                    ManPageContent.plain_text,
-                    tsquery,
-                    headline_opts,
-                ).label("hl"),
+    try:
+        results = (
+            await session.execute(
+                select(
+                    ManPage.name,
+                    ManPage.section,
+                    ManPage.title,
+                    ManPage.description,
+                    func.ts_headline(
+                        "simple",
+                        ManPageContent.plain_text,
+                        tsquery,
+                        headline_opts,
+                    ).label("hl"),
+                )
+                .join(ManPageSearch, ManPageSearch.man_page_id == ManPage.id)
+                .join(ManPageContent, ManPageContent.man_page_id == ManPage.id)
+                .where(*where_clauses)
+                .order_by(
+                    score.desc(),
+                    func.length(ManPage.name).asc(),
+                    ManPage.section.asc(),
+                    ManPage.id.asc(),
+                )
+                .limit(limit)
+                .offset(offset)
             )
-            .join(ManPageSearch, ManPageSearch.man_page_id == ManPage.id)
-            .join(ManPageContent, ManPageContent.man_page_id == ManPage.id)
-            .where(*where_clauses)
-            .order_by(
-                score.desc(),
-                func.length(ManPage.name).asc(),
-                ManPage.section.asc(),
-                ManPage.id.asc(),
-            )
-            .limit(limit)
-            .offset(offset)
-        )
-    ).all()
+        ).all()
 
-    suggestions = (
-        await session.execute(
-            select(ManPageSearch.name_norm)
-            .join(ManPage, ManPage.id == ManPageSearch.man_page_id)
-            .where(ManPage.dataset_release_id == release.id)
-            .where(func.similarity(ManPageSearch.name_norm, query_norm) > 0.3)
-            .order_by(func.similarity(ManPageSearch.name_norm, query_norm).desc())
-            .limit(5)
-        )
-    ).scalars()
+        suggestions = (
+            await session.execute(
+                select(ManPageSearch.name_norm)
+                .join(ManPage, ManPage.id == ManPageSearch.man_page_id)
+                .where(ManPage.dataset_release_id == release.id)
+                .where(func.similarity(ManPageSearch.name_norm, query_norm) > 0.3)
+                .order_by(func.similarity(ManPageSearch.name_norm, query_norm).desc())
+                .limit(5)
+            )
+        ).scalars()
+    except (DataError, ProgrammingError):
+        raise APIError(
+            status_code=400,
+            code="INVALID_QUERY",
+            message="Invalid search query",
+        ) from None
 
     set_cache_headers(response, etag=etag, cache_control=cache_control)
     return SearchResponse(

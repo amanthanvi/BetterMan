@@ -14,6 +14,7 @@ dependencies = [
 [dependency-groups]
 dev = [
   "pytest>=8.0.0",
+  "pytest-cov>=6.0.0",
   "ruff>=0.7.0",
 ]
 
@@ -26,3 +27,4 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--cov=ingestion --cov-report=term-missing:skip-covered --cov-fail-under=60"

@@ -13,6 +13,10 @@ import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { recordRecentSearch } from '../lib/recent'
 import { searchRoute } from '../routes/search'
 
+function keyForResult(r: SearchResult) {
+  return `${r.name}:${r.section}`
+}
+
 export default function SearchPage() {
   const { q, section } = searchRoute.useSearch()
   const distro = useDistro()
@@ -22,7 +26,7 @@ export default function SearchPage() {
   const canonical = getCanonicalUrl()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const itemRefs = useRef<Array<HTMLAnchorElement | null>>([])
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [activeKey, setActiveKey] = useState<string | null>(null)
 
   const sectionsQuery = useQuery({
     queryKey: queryKeys.sections(distro.distro),
@@ -72,6 +76,18 @@ export default function SearchPage() {
 
   const suggestions = resultsQuery.data?.pages[0]?.suggestions ?? []
 
+  useEffect(() => {
+    if (!allResults.length) {
+      setActiveKey(null)
+      return
+    }
+
+    setActiveKey((prev) => {
+      if (prev && allResults.some((r) => keyForResult(r) === prev)) return prev
+      return keyForResult(allResults[0]!)
+    })
+  }, [allResults])
+
   return (
     <div className="mx-auto max-w-5xl">
       <Helmet>
@@ -106,13 +122,14 @@ export default function SearchPage() {
               if (e.key === 'ArrowDown') {
                 if (!allResults.length) return
                 e.preventDefault()
-                setActiveIndex(0)
+                const nextKey = keyForResult(allResults[0]!)
+                setActiveKey(nextKey)
                 itemRefs.current[0]?.focus()
               } else if (e.key === 'ArrowUp') {
                 if (!allResults.length) return
                 e.preventDefault()
                 const idx = allResults.length - 1
-                setActiveIndex(idx)
+                setActiveKey(keyForResult(allResults[idx]!))
                 itemRefs.current[idx]?.focus()
               }
             }}
@@ -158,7 +175,13 @@ export default function SearchPage() {
           <span className="font-medium text-[var(--bm-fg)]">systemd.unit</span>.
         </div>
       ) : resultsQuery.isLoading ? (
-        <div className="mt-8" aria-label="Loading search results">
+        <div
+          className="mt-8"
+          role="status"
+          aria-live="polite"
+          aria-label="Loading search results"
+          aria-busy="true"
+        >
           <ol className="space-y-3">
             {Array.from({ length: 8 }).map((_v, idx) => (
               <SearchResultSkeletonRow key={idx} />
@@ -207,11 +230,11 @@ export default function SearchPage() {
                 key={`${r.name}:${r.section}`}
                 result={r}
                 query={query}
-                active={idx === activeIndex}
+                active={keyForResult(r) === activeKey}
                 bindRef={(el) => {
                   itemRefs.current[idx] = el
                 }}
-                onFocus={() => setActiveIndex(idx)}
+                onFocus={() => setActiveKey(keyForResult(r))}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {
                     e.preventDefault()
@@ -226,7 +249,7 @@ export default function SearchPage() {
                   e.preventDefault()
                   const delta = isNext ? 1 : -1
                   const next = (idx + delta + allResults.length) % allResults.length
-                  setActiveIndex(next)
+                  setActiveKey(keyForResult(allResults[next]!))
                   itemRefs.current[next]?.focus()
                 }}
               />

@@ -67,6 +67,7 @@ function RootLayoutInner() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement | null>(null)
   const lastRouteKeyRef = useRef<string | null>(null)
   const scrollPositionsRef = useRef<Map<string, number>>(new Map())
@@ -128,6 +129,12 @@ function RootLayoutInner() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setPaletteOpen(true)
+        return
+      }
+
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '?') {
+        e.preventDefault()
+        setShortcutsOpen(true)
         return
       }
 
@@ -286,6 +293,11 @@ function RootLayoutInner() {
       </header>
 
       <TocDrawer />
+      <ShortcutsDialog
+        open={shortcutsOpen}
+        onOpenChange={setShortcutsOpen}
+        isManPage={pathname.startsWith('/man/')}
+      />
       {paletteOpen ? (
         <Suspense fallback={null}>
           <LazyCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
@@ -347,6 +359,95 @@ function TocDrawer() {
               onNavigate={() => toc.setOpen(false)}
               onNavigateToId={toc.scrollToId ?? undefined}
             />
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
+
+function ShortcutsDialog({
+  open,
+  onOpenChange,
+  isManPage,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  isManPage: boolean
+}) {
+  const groups: Array<{ title: string; items: Array<{ keys: string[]; desc: string }> }> = [
+    {
+      title: 'Global',
+      items: [
+        { keys: ['Ctrl/⌘', 'K'], desc: 'Open command palette' },
+        { keys: ['/'], desc: 'Focus search (or open palette)' },
+        { keys: ['?'], desc: 'Show keyboard shortcuts' },
+        { keys: ['D'], desc: 'Cycle theme' },
+        { keys: ['B'], desc: 'Toggle TOC' },
+        { keys: ['T'], desc: 'Scroll to top' },
+      ],
+    },
+  ]
+
+  if (isManPage) {
+    groups.push({
+      title: 'Man page',
+      items: [
+        { keys: ['Enter'], desc: 'Next find match' },
+        { keys: ['Shift', 'Enter'], desc: 'Previous find match' },
+      ],
+    })
+  }
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
+        <Dialog.Content className="fixed left-1/2 top-24 z-40 w-[min(92vw,38rem)] -translate-x-1/2 rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-6 shadow-xl backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <Dialog.Title className="text-base font-semibold tracking-tight">
+                Keyboard shortcuts
+              </Dialog.Title>
+              <Dialog.Description className="mt-1 text-sm text-[color:var(--bm-muted)]">
+                Press <span className="font-mono">Esc</span> to close.
+              </Dialog.Description>
+            </div>
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
+              >
+                Close
+              </button>
+            </Dialog.Close>
+          </div>
+
+          <div className="mt-5 space-y-6">
+            {groups.map((g) => (
+              <section key={g.title}>
+                <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">
+                  {g.title}
+                </div>
+                <ul className="mt-3 space-y-2">
+                  {g.items.map((it) => (
+                    <li key={`${g.title}:${it.desc}`} className="flex items-center justify-between gap-4">
+                      <div className="text-sm text-[color:var(--bm-muted)]">{it.desc}</div>
+                      <div className="flex flex-wrap items-center justify-end gap-1">
+                        {it.keys.map((k) => (
+                          <kbd
+                            key={k}
+                            className="rounded-lg border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-2 py-1 font-mono text-xs text-[color:var(--bm-fg)]"
+                          >
+                            {k}
+                          </kbd>
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

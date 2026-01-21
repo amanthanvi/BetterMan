@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import * as Sentry from '@sentry/react'
+import type { ErrorInfo, ReactNode } from 'react'
 import { Component } from 'react'
+import { getRuntimeConfig } from './runtimeConfig'
 
 type Props = {
   children: ReactNode
@@ -15,6 +17,21 @@ export class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(): State {
     return { hasError: true }
+  }
+
+  componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
+    const dsn = import.meta.env.VITE_SENTRY_DSN || getRuntimeConfig()?.sentryDsn
+    if (!dsn) return
+
+    Sentry.withScope((scope) => {
+      scope.setContext('react', { componentStack: errorInfo.componentStack })
+      scope.setContext('route', {
+        pathname: window.location.pathname,
+        search: window.location.search,
+        hash: window.location.hash,
+      })
+      Sentry.captureException(error)
+    })
   }
 
   render() {

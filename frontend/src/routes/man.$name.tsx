@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 
 import { useDistro } from '../app/distro'
-import { fetchManByName } from '../api/client'
+import { ApiHttpError, fetchManByName, suggest } from '../api/client'
 import { queryKeys } from '../api/queryKeys'
 import { getCanonicalUrl } from '../lib/seo'
 import { rootRoute } from './__root'
@@ -24,6 +24,13 @@ function ManByNamePage() {
   const query = useQuery({
     queryKey: queryKeys.manByName(distro.distro, name.toLowerCase()),
     queryFn: () => fetchManByName(name.toLowerCase()),
+  })
+
+  const suggestQuery = useQuery({
+    queryKey: queryKeys.suggest(distro.distro, name.toLowerCase()),
+    enabled: query.isError && query.error instanceof ApiHttpError && query.error.status === 404,
+    queryFn: () => suggest(name.toLowerCase()),
+    retry: false,
   })
 
   useEffect(() => {
@@ -49,6 +56,7 @@ function ManByNamePage() {
   }
 
   if (query.isError) {
+    const suggestions = suggestQuery.data?.suggestions ?? []
     return (
       <>
         <Helmet>
@@ -57,11 +65,36 @@ function ManByNamePage() {
           {canonical ? <link rel="canonical" href={canonical} /> : null}
         </Helmet>
         <div className="rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
-          Page not found.{' '}
-          <Link to="/search" search={{ q: name }} className="underline underline-offset-4">
-            Search for “{name}”
-          </Link>
-          .
+          <div className="font-medium text-[color:var(--bm-fg)]">Page not found.</div>
+          {suggestQuery.isLoading ? (
+            <div className="mt-2">Looking for close matches…</div>
+          ) : suggestions.length ? (
+            <div className="mt-2 space-y-2">
+              <div>Did you mean:</div>
+              <ul className="space-y-2">
+                {suggestions.map((s) => (
+                  <li key={`${s.name}:${s.section}`} className="flex flex-col">
+                    <Link
+                      to="/man/$name/$section"
+                      params={{ name: s.name, section: s.section }}
+                      className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
+                    >
+                      {s.name}({s.section})
+                    </Link>
+                    {s.description ? (
+                      <div className="text-xs text-[color:var(--bm-muted)]">{s.description}</div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="mt-3">
+            <Link to="/search" search={{ q: name }} className="underline underline-offset-4">
+              Search for “{name}”
+            </Link>
+            .
+          </div>
         </div>
       </>
     )
