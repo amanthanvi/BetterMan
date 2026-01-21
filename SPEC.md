@@ -2724,7 +2724,7 @@ v0.4.0 is **non-breaking**. All changes are additive or internal improvements.
 
 **Testing**
 
--   [ ] CI green on `main` (including `deploy_railway`)
+-   [x] CI green on `main` (including `deploy_railway`)
 -   [x] Coverage >= 60% and increased test suite (backend + frontend + ingestion + E2E)
 
 **Release**

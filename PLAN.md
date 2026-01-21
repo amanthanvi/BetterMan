@@ -14,7 +14,7 @@ Living execution plan for shipping `v0.4.0` from `SPEC.md`.
 - [x] v0.2.0 shipped (tag `v0.2.0`)
 - [x] v0.2.1 shipped (tag `v0.2.1`)
 - [x] v0.3.0 shipped (tag `v0.3.0`)
-- [ ] v0.4.0 in progress
+- [x] v0.4.0 shipped (tag `v0.4.0`)
 
 ## Golden Commands (current; proven)
 
@@ -182,11 +182,11 @@ Target: **60%+ coverage**, **40+ new tests**
 
 ### M32 — Release v0.4.0
 
-- [ ] CI green on `main`
+- [x] CI green on `main`
 - [ ] Sentry receiving errors
 - [ ] Plausible tracking page views
-- [ ] All M27-M31 items complete
-- [ ] SPEC.md updated with v0.4.0 section
+- [x] All M27-M31 items complete
+- [x] SPEC.md updated with v0.4.0 section
 - [x] PLAN.md updated with v0.4.0 milestones
 - [x] README.md updated (Sentry/Plausible setup)
 - [ ] Tag `v0.4.0`
