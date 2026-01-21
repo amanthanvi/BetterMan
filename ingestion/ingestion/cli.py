@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
-import sys
 
+from ingestion.db import iso_utc_now, json_dumps
 from ingestion.docker_runner import run_ingest_container
 from ingestion.ingest_runner import ingest as ingest_dataset
+
+logger = logging.getLogger("betterman.ingestion")
+
+
+def _log(event: str, **fields: object) -> None:
+    logger.info(json_dumps({"ts": iso_utc_now(), "event": event, **fields}))
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -32,6 +39,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
     parser = _build_parser()
     args = parser.parse_args(argv)
 
@@ -59,7 +68,7 @@ def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> in
     git_sha = os.environ.get("BETTERMAN_INGEST_GIT_SHA", "unknown")
 
     if not image_ref or not image_digest:
-        print("Missing BETTERMAN_IMAGE_REF / BETTERMAN_IMAGE_DIGEST", file=sys.stderr)
+        _log("ingest_error", error="Missing BETTERMAN_IMAGE_REF / BETTERMAN_IMAGE_DIGEST")
         return 2
 
     try:
@@ -73,17 +82,19 @@ def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> in
             distro=distro,
         )
     except RuntimeError as exc:
-        print(str(exc), file=sys.stderr)
+        _log("ingest_error", error=str(exc))
         return 2
     except Exception as exc:  # noqa: BLE001
-        print(str(exc), file=sys.stderr)
+        _log("ingest_error", error=str(exc))
         return 1
 
-    print(
-        f"Ingested {result.succeeded}/{result.total} pages "
-        f"(hard_failed={result.hard_failed}) "
-        f"datasetReleaseId={result.dataset_release_id} "
-        f"published={result.published}"
+    _log(
+        "ingest_done",
+        total=result.total,
+        succeeded=result.succeeded,
+        hardFailed=result.hard_failed,
+        datasetReleaseId=result.dataset_release_id,
+        published=result.published,
     )
     return 0
 

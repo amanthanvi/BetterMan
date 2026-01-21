@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import gzip
+import logging
 import re
-import sys
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic
 
-from ingestion.db import connect, json_dumps, uuid4
+from ingestion.db import connect, iso_utc_now, json_dumps, uuid4
 from ingestion.debian import (
     apt_install,
     dpkg_arch,
@@ -42,6 +43,12 @@ _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+\\-]*$")
 _MAN_HREF_RE = re.compile(
     r"^/man/(?P<name>[a-z0-9][a-z0-9._+\\-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
 )
+
+logger = logging.getLogger("betterman.ingestion")
+
+
+def _log(event: str, **fields: object) -> None:
+    logger.info(json_dumps({"ts": iso_utc_now(), "event": event, **fields}))
 
 
 @dataclass(frozen=True)
@@ -104,7 +111,8 @@ def ingest(
     }
 
     parsed_pages: list[_PageRow] = []
-    hard_failed = 0
+    parse_failed = 0
+    parse_started = monotonic()
     for src in sources:
         try:
             parsed_pages.append(
@@ -116,15 +124,24 @@ def ingest(
                 )
             )
         except Exception as exc:  # noqa: BLE001 (batch ingestion)
-            hard_failed += 1
-            print(f"[hard-fail] {src.path}: {exc}", file=sys.stderr)
+            parse_failed += 1
+            _log("page_parse_failed", path=str(src.path), error=str(exc))
+
+        processed = len(parsed_pages) + parse_failed
+        if processed and processed % 100 == 0:
+            elapsed = monotonic() - parse_started
+            rate = processed / elapsed if elapsed > 0 else 0.0
+            remaining = max(0, len(sources) - processed)
+            eta_s = int(remaining / rate) if rate > 0 else None
+            _log(
+                "parse_progress",
+                processed=processed,
+                total=len(sources),
+                pct=round((processed / len(sources)) * 100.0, 2) if sources else 0.0,
+                etaSeconds=eta_s,
+            )
 
     total = len(sources)
-    succeeded = len(parsed_pages)
-    hard_fail_rate = (hard_failed / total) if total else 0.0
-    success_rate = (succeeded / total) if total else 0.0
-
-    publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
 
     conn = connect(database_url)
     try:
@@ -161,82 +178,140 @@ def ingest(
 
         _resolve_doc_links_and_see_also(pages=parsed_pages)
 
-        for row in parsed_pages:
-            cur.execute(
-                """
-                INSERT INTO man_pages
-                    (
-                        id, dataset_release_id, name, section, title, description,
-                        source_path, source_package, source_package_version,
-                        content_sha256, has_parse_warnings
-                    )
-                VALUES
-                    (
-                        %s::uuid, %s::uuid, %s, %s, %s, %s,
-                        %s, %s, %s,
-                        %s, %s
-                    )
-                """,
-                (
-                    str(row.page_id),
-                    str(release_uuid),
-                    row.name,
-                    row.section,
-                    row.title,
-                    row.description,
-                    row.source_path,
-                    row.source_package,
-                    row.source_package_version,
-                    row.content_sha256,
-                    row.has_parse_warnings,
-                ),
-            )
+        inserted_pages: list[_PageRow] = []
+        insert_failed = 0
+        insert_started = monotonic()
 
-            cur.execute(
-                """
-                INSERT INTO man_page_content
-                    (man_page_id, doc, plain_text, synopsis, options, see_also)
-                VALUES
-                    (%s::uuid, %s::jsonb, %s, %s::jsonb, %s::jsonb, %s::jsonb)
-                """,
-                (
-                    str(row.page_id),
-                    json_dumps(row.doc),
-                    row.plain_text,
-                    json_dumps(row.synopsis) if row.synopsis is not None else None,
-                    json_dumps(row.options) if row.options is not None else None,
-                    json_dumps(row.see_also) if row.see_also is not None else None,
-                ),
-            )
+        for i, row in enumerate(parsed_pages, start=1):
+            sp = f"page_{i}"
+            cur.execute(f"SAVEPOINT {sp}")
 
-            doc_text = normalize_ws(f"{row.headings_text} {row.plain_text}")
-            cur.execute(
-                """
-                INSERT INTO man_page_search (man_page_id, tsv, name_norm, desc_norm)
-                VALUES
-                    (
-                        %s::uuid,
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO man_pages
                         (
-                            setweight(to_tsvector('simple', %s), 'A') ||
-                            setweight(to_tsvector('simple', %s), 'B') ||
-                            setweight(to_tsvector('simple', %s), 'C')
-                        ),
-                        %s,
-                        %s
-                    )
-                """,
-                (
-                    str(row.page_id),
-                    row.name,
-                    row.description,
-                    doc_text,
-                    row.name.lower(),
-                    row.description.lower(),
-                ),
-            )
+                            id, dataset_release_id, name, section, title, description,
+                            source_path, source_package, source_package_version,
+                            content_sha256, has_parse_warnings
+                        )
+                    VALUES
+                        (
+                            %s::uuid, %s::uuid, %s, %s, %s, %s,
+                            %s, %s, %s,
+                            %s, %s
+                        )
+                    """,
+                    (
+                        str(row.page_id),
+                        str(release_uuid),
+                        row.name,
+                        row.section,
+                        row.title,
+                        row.description,
+                        row.source_path,
+                        row.source_package,
+                        row.source_package_version,
+                        row.content_sha256,
+                        row.has_parse_warnings,
+                    ),
+                )
 
-        _insert_links(cur, pages=parsed_pages)
-        _insert_licenses(cur, pages=parsed_pages)
+                cur.execute(
+                    """
+                    INSERT INTO man_page_content
+                        (man_page_id, doc, plain_text, synopsis, options, see_also)
+                    VALUES
+                        (%s::uuid, %s::jsonb, %s, %s::jsonb, %s::jsonb, %s::jsonb)
+                    """,
+                    (
+                        str(row.page_id),
+                        json_dumps(row.doc),
+                        row.plain_text,
+                        json_dumps(row.synopsis) if row.synopsis is not None else None,
+                        json_dumps(row.options) if row.options is not None else None,
+                        json_dumps(row.see_also) if row.see_also is not None else None,
+                    ),
+                )
+
+                doc_text = normalize_ws(f"{row.headings_text} {row.plain_text}")
+                cur.execute(
+                    """
+                    INSERT INTO man_page_search (man_page_id, tsv, name_norm, desc_norm)
+                    VALUES
+                        (
+                            %s::uuid,
+                            (
+                                setweight(to_tsvector('simple', %s), 'A') ||
+                                setweight(to_tsvector('simple', %s), 'B') ||
+                                setweight(to_tsvector('simple', %s), 'C')
+                            ),
+                            %s,
+                            %s
+                        )
+                    """,
+                    (
+                        str(row.page_id),
+                        row.name,
+                        row.description,
+                        doc_text,
+                        row.name.lower(),
+                        row.description.lower(),
+                    ),
+                )
+            except Exception as exc:  # noqa: BLE001 (batch ingestion)
+                insert_failed += 1
+                cur.execute(f"ROLLBACK TO SAVEPOINT {sp}")
+                cur.execute(f"RELEASE SAVEPOINT {sp}")
+                _log(
+                    "page_insert_failed",
+                    name=row.name,
+                    section=row.section,
+                    path=row.source_path,
+                    error=str(exc),
+                )
+                continue
+
+            cur.execute(f"RELEASE SAVEPOINT {sp}")
+            inserted_pages.append(row)
+
+            if i % 100 == 0:
+                elapsed = monotonic() - insert_started
+                rate = i / elapsed if elapsed > 0 else 0.0
+                remaining = max(0, len(parsed_pages) - i)
+                eta_s = int(remaining / rate) if rate > 0 else None
+                _log(
+                    "insert_progress",
+                    processed=i,
+                    total=len(parsed_pages),
+                    pct=round((i / len(parsed_pages)) * 100.0, 2) if parsed_pages else 0.0,
+                    etaSeconds=eta_s,
+                )
+
+        if insert_failed:
+            _resolve_doc_links_and_see_also(pages=inserted_pages)
+            for row in inserted_pages:
+                cur.execute(
+                    """
+                    UPDATE man_page_content
+                    SET doc = %s::jsonb, see_also = %s::jsonb
+                    WHERE man_page_id = %s::uuid
+                    """,
+                    (
+                        json_dumps(row.doc),
+                        json_dumps(row.see_also) if row.see_also is not None else None,
+                        str(row.page_id),
+                    ),
+                )
+
+        _insert_links(cur, pages=inserted_pages)
+        _insert_licenses(cur, pages=inserted_pages)
+
+        succeeded = len(inserted_pages)
+        hard_failed = parse_failed + insert_failed
+        hard_fail_rate = (hard_failed / total) if total else 0.0
+        success_rate = (succeeded / total) if total else 0.0
+        publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
 
         published = False
         if publish_allowed and activate:
@@ -260,6 +335,16 @@ def ingest(
         raise
     finally:
         conn.close()
+
+    _log(
+        "ingest_summary",
+        datasetReleaseId=dataset_release_id,
+        total=total,
+        succeeded=succeeded,
+        failed=hard_failed,
+        published=published,
+        publishAllowed=publish_allowed,
+    )
 
     if not publish_allowed:
         raise RuntimeError(
@@ -448,6 +533,8 @@ def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
 
         if page.see_also:
             for ref in page.see_also:
+                ref.pop("resolvedPageId", None)
+
                 name = str(ref.get("name") or "").strip().lower()
                 if not name:
                     continue
@@ -482,12 +569,10 @@ def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
             candidates = by_name.get(name, [])
 
             if section is None:
-                if not candidates:
-                    link["linkType"] = "unresolved"
+                link["linkType"] = "internal" if candidates else "unresolved"
                 continue
 
-            if (name, section) not in index:
-                link["linkType"] = "unresolved"
+            link["linkType"] = "internal" if (name, section) in index else "unresolved"
 
 
 def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
@@ -495,6 +580,7 @@ def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
     by_name: dict[str, list[str]] = {}
     for p in pages:
         by_name.setdefault(p.name, []).append(p.section)
+    inserted_ids = set(index.values())
 
     seen: set[tuple[str, str, str]] = set()
     for page in pages:
@@ -503,6 +589,8 @@ def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
             for ref in page.see_also:
                 to_id = ref.get("resolvedPageId")
                 if not isinstance(to_id, str) or not to_id:
+                    continue
+                if to_id not in inserted_ids:
                     continue
                 if to_id == from_id:
                     continue
