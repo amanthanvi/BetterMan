@@ -46,6 +46,7 @@ export function ManPageView({
   const [findBarHidden, setFindBarHidden] = useState(() => readStoredFindBarHidden())
   const [activeFindIndex, setActiveFindIndex] = useState(0)
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
+  const [flashAnchorId, setFlashAnchorId] = useState<string | null>(null)
   const activeMarkRef = useRef<HTMLElement | null>(null)
   const findInputDesktopRef = useRef<HTMLInputElement | null>(null)
   const findInputMobileRef = useRef<HTMLInputElement | null>(null)
@@ -56,6 +57,7 @@ export function ManPageView({
   const copyTimeoutRef = useRef<number | null>(null)
   const optionsCount = content.options?.length ?? 0
   const [optionsVisible, setOptionsVisible] = useState(() => optionsCount > 0 && optionsCount <= 160)
+  const flashTimeoutRef = useRef<number | null>(null)
 
   const rawFindQuery = find.trim()
   const deferredFindQuery = useDeferredValue(rawFindQuery)
@@ -105,8 +107,15 @@ export function ManPageView({
   useEffect(() => {
     return () => {
       if (copyTimeoutRef.current != null) window.clearTimeout(copyTimeoutRef.current)
+      if (flashTimeoutRef.current != null) window.clearTimeout(flashTimeoutRef.current)
     }
   }, [])
+
+  const flashOption = (anchorId: string) => {
+    setFlashAnchorId(anchorId)
+    if (flashTimeoutRef.current != null) window.clearTimeout(flashTimeoutRef.current)
+    flashTimeoutRef.current = window.setTimeout(() => setFlashAnchorId(null), 1400)
+  }
 
   useEffect(() => {
     setScrollToId((id) => {
@@ -143,6 +152,41 @@ export function ManPageView({
     for (const el of els) observer.observe(el)
     return () => observer.disconnect()
   }, [content.toc, isVirtualized, page.id])
+
+  useEffect(() => {
+    const options = content.options ?? []
+    if (!options.length) return
+
+    const byAnchor = new Map(options.map((o) => [o.anchorId, o]))
+
+    const applyHash = () => {
+      const raw = window.location.hash
+      const anchorId = raw.startsWith('#') ? raw.slice(1) : raw
+      if (!anchorId) return
+      const opt = byAnchor.get(anchorId)
+      if (!opt) return
+
+      setOptionsVisible(true)
+      setSelectedOption(opt)
+      flashOption(opt.anchorId)
+
+      let attempts = 0
+      const tick = () => {
+        attempts += 1
+        const el = document.getElementById(opt.anchorId)
+        if (el) {
+          el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
+          return
+        }
+        if (attempts < 20) window.requestAnimationFrame(tick)
+      }
+      window.requestAnimationFrame(tick)
+    }
+
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
+  }, [content.options, page.id, scrollBehavior])
 
   const focusFindInput = () => {
     const isDesktop = window.matchMedia('(min-width: 1024px)').matches
@@ -499,15 +543,13 @@ export function ManPageView({
                         }
                       }
 
-                      if (docRef.current) {
-                        docRef.current.scrollToAnchor(opt.anchorId, { align: 'center', behavior: scrollBehavior })
-                      } else {
-                        document.getElementById(opt.anchorId)?.scrollIntoView({
-                          behavior: scrollBehavior,
-                          block: 'center',
-                        })
-                      }
+                      flashOption(opt.anchorId)
+                      document.getElementById(opt.anchorId)?.scrollIntoView({
+                        behavior: scrollBehavior,
+                        block: 'center',
+                      })
                     }}
+                    flashAnchorId={flashAnchorId}
                   />
                 </div>
               ) : (

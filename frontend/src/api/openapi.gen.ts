@@ -157,6 +157,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Suggest */
+        get: operations["suggest_api_v1_suggest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -515,6 +532,22 @@ export interface components {
              */
             type: "strong";
         };
+        /** SuggestResponse */
+        SuggestResponse: {
+            /** Query */
+            query: string;
+            /** Suggestions */
+            suggestions: components["schemas"]["Suggestion"][];
+        };
+        /** Suggestion */
+        Suggestion: {
+            /** Description */
+            description: string;
+            /** Name */
+            name: string;
+            /** Section */
+            section: string;
+        };
         /** TableBlock */
         TableBlock: {
             /** Headers */
@@ -857,6 +890,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SectionLabel"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_api_v1_suggest_get: {
+        parameters: {
+            query: {
+                name: string;
+                distro?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestResponse"];
                 };
             };
             /** @description Validation Error */

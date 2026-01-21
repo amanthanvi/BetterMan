@@ -3,10 +3,12 @@ import type { OptionItem } from '../api/types'
 export function OptionsTable({
   options,
   selectedAnchorId,
+  flashAnchorId,
   onSelect,
 }: {
   options: OptionItem[]
   selectedAnchorId?: string | null
+  flashAnchorId?: string | null
   onSelect?: (opt: OptionItem) => void
 }) {
   return (
@@ -26,12 +28,13 @@ export function OptionsTable({
               key={opt.anchorId}
               className={`odd:bg-[color:var(--bm-bg)/0.25] ${
                 selectedAnchorId === opt.anchorId ? 'bg-[color:var(--bm-accent)/0.12]' : ''
-              }`}
+              } ${flashAnchorId === opt.anchorId ? 'bm-option-flash' : ''}`}
             >
               <td className="border-b border-[var(--bm-border)] px-3 py-2 align-top font-mono text-[color:var(--bm-fg)]">
                 <a
                   href={`#${opt.anchorId}`}
-                  className="no-underline hover:underline"
+                  id={opt.anchorId}
+                  className="scroll-mt-24 no-underline hover:underline"
                   onClick={() => onSelect?.(opt)}
                 >
                   {opt.flags}

@@ -10,5 +10,16 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     clearMocks: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text'],
+      thresholds: {
+        branches: 60,
+        functions: 60,
+        lines: 60,
+        statements: 60,
+      },
+      exclude: ['src/test/**', 'src/api/openapi.gen.ts', '**/*.d.ts'],
+    },
   },
 })

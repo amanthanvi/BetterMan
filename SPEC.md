@@ -1,10 +1,10 @@
 # 1. Title / Version / Status
 
 **Project:** BetterMan
-**Spec Version:** v0.3.0
-**Status:** Planning (v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
-**Last Updated:** 2026-01-09 (EST)
-**Interview Status:** Complete - v0.3.0 scoped
+**Spec Version:** v0.4.0
+**Status:** In Progress (v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Last Updated:** 2026-01-21 (EST)
+**Interview Status:** Complete - v0.4.0 scoped
 
 ---
 
@@ -49,6 +49,13 @@
 -   **Phase 1 (Performance):** Comprehensive profiling audit (Lighthouse, Chrome DevTools, React Profiler, Railway metrics); fix LCP issues and virtualization jank on large pages. Performance work blocks subsequent phases.
 -   **Phase 2 (SEO Foundation):** Sitemap index (per-distribution XML files), meta tags via react-helmet-async (hybrid: static base + client-side enhancement), TechArticle JSON-LD (minimal fields).
 -   **Phase 3 (Multi-Distribution):** Add Ubuntu and Fedora alongside Debian via parallel ingestion pipelines; distribution selector (global setting + per-page override); query param URL scheme (`?distro=ubuntu`).
+
+**v0.4.0 focus:** hardening, observability, and discoverability:
+
+-   **Security & Reliability:** Fix IP spoofing in rate limiter via CIDR-based proxy trust, add session rollback on errors, improve error handling for malformed search queries, paginate sitemaps for scalability.
+-   **Observability:** Sentry integration (frontend + backend) for error tracking, Plausible integration for privacy-friendly analytics.
+-   **Ingestion Improvements:** Per-page savepoints for partial failure recovery, structured logging with progress/ETA reporting.
+-   **User Features:** Improved 404 suggestions via trigram similarity ("Did you mean..."), shareable deep links to options, keyboard shortcuts panel.
 
 ---
 
@@ -2535,3 +2542,196 @@ Each phase can be rolled back independently:
 -   v0.2.0 API is fully compatible with v0.1.x clients
 -   v0.2.0 frontend is fully compatible with v0.1.x API
 -   Dataset format unchanged between v0.1.x and v0.2.0
+
+---
+
+# 26. v0.4.0 — Hardening & Discoverability
+
+## Overview
+
+v0.4.0 focuses on production reliability, comprehensive testing, and observability while adding user-facing features that improve discoverability. This release does not introduce breaking changes.
+
+## Security & Reliability Improvements
+
+### IP Spoofing Prevention (M27-Q1)
+
+**Problem:** Rate limiting trusted X-Forwarded-For unconditionally allows attackers to bypass limits by spoofing the header.
+
+**Solution:** Introduce `TRUSTED_PROXY_CIDRS` environment variable:
+- Only trust X-Forwarded-For when the direct connection originates from a configured CIDR
+- Fall back to `request.client.host` for untrusted connections
+- Parse CIDRs at startup with caching for performance
+
+**Configuration:**
+```
+TRUSTED_PROXY_CIDRS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+```
+
+### Session Rollback on Error (M27-Q2)
+
+Database sessions now explicitly rollback on exceptions, preventing connection pool issues under error load.
+
+### Search Query Error Handling (M27-M2)
+
+Malformed search queries (unclosed quotes, invalid operators) now return HTTP 400 with a helpful message instead of 500 errors.
+
+### Sitemap Pagination (M27-M1)
+
+Sitemaps are now paginated with a maximum of 10,000 URLs per file:
+- `/sitemap.xml` → index of per-distro sitemap indexes
+- `/sitemap-{distro}.xml` → index of paginated sitemaps for that distro
+- `/sitemap-{distro}-{page}.xml` → actual URL list (max 10k)
+
+## Observability (M28)
+
+### Sentry Integration
+
+Error tracking for both backend (FastAPI) and frontend (React):
+
+**Backend:**
+- `sentry-sdk[fastapi]` with SQLAlchemy integration
+- Environment and release tagging
+- Automatic exception capture
+
+**Frontend:**
+- `@sentry/react` integration
+- ErrorBoundary captures with component stack traces
+- Page context (route + params) attached to errors
+
+**Configuration:**
+```
+SENTRY_DSN=https://xxx@sentry.io/123  # Backend
+VITE_SENTRY_DSN=https://xxx@sentry.io/456  # Frontend
+```
+
+**Production note:** the SPA reads `VITE_SENTRY_DSN` at runtime from `/config.js` (served by the backend) so Railway env var changes do not require rebuilding the frontend bundle.
+
+### Plausible Analytics
+
+Privacy-friendly analytics (no cookies, GDPR-compliant):
+- Script dynamically injected based on configuration
+- Disabled entirely when env var is not set
+
+**Configuration:**
+```
+VITE_PLAUSIBLE_DOMAIN=betterman.dev
+```
+
+**Production note:** the SPA reads `VITE_PLAUSIBLE_DOMAIN` at runtime from `/config.js` (served by the backend).
+
+## Ingestion Improvements (M30)
+
+### Per-Page Savepoints (M30-M3)
+
+Ingestion now uses PostgreSQL SAVEPOINTs for per-page transaction control:
+- Each page commits independently
+- Failed pages are logged and skipped without aborting the entire run
+- Final summary reports success/failure counts
+
+### Structured Logging
+
+Replaced `print()` statements with Python `logging`:
+- Progress reporting every 100 pages
+- ETA calculation based on elapsed time
+- JSON-compatible extra context for machine parsing
+
+## User Features (M31)
+
+### Improved 404 Suggestions
+
+When a page is not found, the API can suggest similar pages using trigram similarity:
+
+**Endpoint:** `GET /api/v1/suggest?name={query}`
+
+**Response:**
+```json
+{
+  "query": "grpe",
+  "suggestions": [
+    {"name": "grep", "section": "1", "description": "print lines that match patterns"},
+    {"name": "groups", "section": "1", "description": "print the groups a user is in"}
+  ]
+}
+```
+
+Uses pg_trgm's `similarity()` function with a 0.2 threshold (lower than search's 0.3 for more suggestions).
+
+### Deep Links to Options
+
+Options in the OPTIONS table have stable anchor IDs for direct linking:
+- Format: `/man/tar/1#verbose` (anchor IDs are slugified from the option flags)
+- Scroll to option on page load (and on `hashchange`)
+- Brief highlight animation on targeted option
+
+### Keyboard Shortcuts Panel
+
+Press `?` to open a shortcuts overlay showing all available keyboard shortcuts:
+- Grouped by category (Navigation, Search, Page)
+- Uses Radix Dialog for accessibility
+- Closes on Escape or click outside
+
+## Accessibility Improvements
+
+### aria-live for Loading States (M27-Q5)
+
+Loading indicators now have proper ARIA attributes:
+- `role="status"` for screen reader announcement
+- `aria-live="polite"` for non-intrusive updates
+
+### Keyboard Race Condition Fix (M27-M4)
+
+Search results keyboard navigation now tracks by result ID instead of array index:
+- Prevents selection jumping when results update
+- Maintains user's position through rapid typing
+
+## New Environment Variables Summary
+
+| Variable | Component | Description |
+|----------|-----------|-------------|
+| `SENTRY_DSN` | Backend | Sentry DSN for FastAPI error tracking |
+| `VITE_SENTRY_DSN` | Frontend | Sentry DSN for React error tracking |
+| `VITE_PLAUSIBLE_DOMAIN` | Frontend | Plausible analytics domain |
+| `TRUSTED_PROXY_CIDRS` | Backend | Comma-separated trusted proxy CIDRs |
+
+## Migration Notes
+
+v0.4.0 is **non-breaking**. All changes are additive or internal improvements.
+
+**Recommended deployment order:**
+1. Deploy backend with new env vars (Sentry, proxy trust)
+2. Deploy frontend with new env vars (Sentry, Plausible)
+3. Verify error tracking in Sentry
+4. Verify analytics in Plausible dashboard
+
+## Definition of Done (v0.4.0 Launch Checklist)
+
+**Security & Reliability**
+
+-   [x] IP spoofing prevention in rate limiting (`TRUSTED_PROXY_CIDRS`)
+-   [x] DB session rolls back on errors (no pool poisoning)
+-   [x] Malformed search queries return HTTP 400 (not 500)
+-   [x] Sitemaps paginated (max 10k URLs per file) and validated in E2E
+
+**Observability**
+
+-   [x] Backend Sentry captures unhandled exceptions when `SENTRY_DSN` is set
+-   [x] Frontend Sentry captures ErrorBoundary crashes when `VITE_SENTRY_DSN` is set
+-   [x] Trace propagation enabled for `/api/` (frontend → backend) when Sentry is enabled
+-   [x] Plausible pageview tracking enabled when `VITE_PLAUSIBLE_DOMAIN` is set (disabled otherwise)
+
+**Discoverability**
+
+-   [x] `GET /api/v1/suggest?name=...` returns useful "did you mean" suggestions
+-   [x] Man page 404 UI shows suggestions when available
+-   [x] Shareable deep links to options work (`#<anchorId>` scroll + highlight)
+-   [x] Keyboard shortcuts panel available via `?`
+
+**Testing**
+
+-   [x] CI green on `main` (including `deploy_railway`)
+-   [x] Coverage >= 60% and increased test suite (backend + frontend + ingestion + E2E)
+
+**Release**
+
+-   [x] Docs updated (`README.md`, `SPEC.md`, `PLAN.md`, `.env.example`)
+-   [x] Tag `v0.4.0`
