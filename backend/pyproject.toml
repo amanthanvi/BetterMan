@@ -21,6 +21,7 @@ dev = [
   "httpx>=0.27.0",
   "pytest>=8.0.0",
   "pytest-asyncio>=0.24.0",
+  "pytest-cov>=6.0.0",
   "ruff>=0.7.0",
 ]
 
@@ -34,3 +35,4 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--cov=app --cov-report=term-missing:skip-covered --cov-fail-under=60"
