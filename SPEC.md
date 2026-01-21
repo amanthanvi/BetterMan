@@ -2617,7 +2617,7 @@ Privacy-friendly analytics (no cookies, GDPR-compliant):
 VITE_PLAUSIBLE_DOMAIN=betterman.dev
 ```
 
-**Production note:** the SPA reads `VITE_PLAUSIBLE_DOMAIN` at runtime from `/config.js` (served by the backend).
+**Production note:** the backend injects the Plausible script tag into `index.html` when `VITE_PLAUSIBLE_DOMAIN` is set.
 
 ## Ingestion Improvements (M30)
 

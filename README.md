@@ -67,7 +67,7 @@ Privacy-friendly analytics (no cookies, GDPR-compliant).
 
 Analytics are disabled if the env var is not set.
 
-**Production note:** the SPA reads `VITE_PLAUSIBLE_DOMAIN` at runtime from `/config.js` (served by the backend).
+**Production note:** the backend injects the Plausible script tag into `index.html` when `VITE_PLAUSIBLE_DOMAIN` is set.
 
 ### Proxy Trust (Rate Limiting)
 
