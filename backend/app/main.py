@@ -21,6 +21,7 @@ from app.core.observability import init_sentry
 from app.db.session import create_engine, create_session_maker
 from app.security.headers import SecurityHeadersMiddleware
 from app.security.request_ip import get_client_ip
+from app.web.runtime_config import router as runtime_config_router
 from app.web.seo import router as seo_router
 from app.web.spa_static import SPAStaticFiles
 
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
             get_logger(action="sentry").warning("sentry_middleware_failed")
 
     app.include_router(seo_router)
+    app.include_router(runtime_config_router)
     app.include_router(v1_router)
 
     @app.middleware("http")

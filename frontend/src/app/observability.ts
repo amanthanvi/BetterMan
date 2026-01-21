@@ -1,9 +1,10 @@
 import * as Sentry from '@sentry/react'
+import { getRuntimeConfig } from './runtimeConfig'
 
 let sentryInitialized = false
 
 export function initSentry(router: unknown) {
-  const dsn = import.meta.env.VITE_SENTRY_DSN
+  const dsn = import.meta.env.VITE_SENTRY_DSN || getRuntimeConfig()?.sentryDsn
   if (!dsn || sentryInitialized) return
   sentryInitialized = true
 
@@ -19,7 +20,7 @@ export function initSentry(router: unknown) {
 let plausibleInitialized = false
 
 export function initPlausible() {
-  const domain = import.meta.env.VITE_PLAUSIBLE_DOMAIN
+  const domain = import.meta.env.VITE_PLAUSIBLE_DOMAIN || getRuntimeConfig()?.plausibleDomain
   if (!domain || plausibleInitialized) return
   plausibleInitialized = true
 
