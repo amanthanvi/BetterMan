@@ -2604,6 +2604,8 @@ SENTRY_DSN=https://xxx@sentry.io/123  # Backend
 VITE_SENTRY_DSN=https://xxx@sentry.io/456  # Frontend
 ```
 
+**Production note:** the SPA reads `VITE_SENTRY_DSN` at runtime from `/config.js` (served by the backend) so Railway env var changes do not require rebuilding the frontend bundle.
+
 ### Plausible Analytics
 
 Privacy-friendly analytics (no cookies, GDPR-compliant):
@@ -2614,6 +2616,8 @@ Privacy-friendly analytics (no cookies, GDPR-compliant):
 ```
 VITE_PLAUSIBLE_DOMAIN=betterman.dev
 ```
+
+**Production note:** the SPA reads `VITE_PLAUSIBLE_DOMAIN` at runtime from `/config.js` (served by the backend).
 
 ## Ingestion Improvements (M30)
 
