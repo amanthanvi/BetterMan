@@ -6,6 +6,12 @@ function createNonce(): string {
 
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV === 'development'
+  const plausibleEnabled = Boolean(process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim())
+  const sentryEnabled = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN?.trim())
+
+  const connectSrc = [`'self'`]
+  if (plausibleEnabled) connectSrc.push('https://plausible.io')
+  if (sentryEnabled) connectSrc.push('https://*.sentry.io')
 
   const csp = [
     `default-src 'self'`,
@@ -17,7 +23,7 @@ function buildCsp(nonce: string): string {
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self'`,
-    `connect-src 'self'`,
+    `connect-src ${connectSrc.join(' ')}`,
     ...(isDev ? [] : ['upgrade-insecure-requests']),
   ]
 
