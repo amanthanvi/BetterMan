@@ -121,17 +121,17 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M42 — UX engagement (localStorage only)
 
-- [ ] Bookmarks: toggle + `/bookmarks` + palette integration
-- [ ] History: `/history` + tabs + grouped dates
-- [ ] Reading preferences panel + persistence
-- [ ] Shortcuts: `M`, `H`, `P` + shortcuts dialog update
+- [x] Bookmarks: toggle + `/bookmarks` + palette integration
+- [x] History: `/history` + tabs + grouped dates
+- [x] Reading preferences panel + persistence
+- [x] Shortcuts: `M`, `H`, `P` + shortcuts dialog update
 
 ### M43 — Mobile & PWA
 
-- [ ] Service worker (prod only) for offline reading
-- [ ] Offline indicator
-- [ ] Mobile bottom navigation
-- [ ] Touch gesture: swipe to open TOC
+- [x] Service worker (prod only) for offline reading
+- [x] Offline indicator
+- [x] Mobile bottom navigation
+- [x] Touch gesture: swipe to open TOC
 
 ### M44 — Release v0.5.0
 
