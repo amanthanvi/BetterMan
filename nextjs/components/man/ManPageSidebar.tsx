@@ -42,6 +42,19 @@ export function ManPageSidebar({
   activeTocId: string | null
   onTocNavigateToId?: (id: string) => void
 }) {
+  const activeQuickJumpId = (() => {
+    if (!activeTocId) return null
+    const idx = tocItems.findIndex((t) => t.id === activeTocId)
+    if (idx < 0) return activeTocId
+
+    for (let i = idx; i >= 0; i -= 1) {
+      const it = tocItems[i]
+      if (it && it.level === 2 && it.id) return it.id
+    }
+
+    return activeTocId
+  })()
+
   return (
     <aside data-bm-sidebar className="hidden lg:block">
       <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2">
@@ -56,7 +69,11 @@ export function ManPageSidebar({
                   onClick={(e) => {
                     if (onQuickJump(j.id)) e.preventDefault()
                   }}
-                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs hover:bg-[color:var(--bm-bg)/0.55]"
+                  className={`rounded-full border px-3 py-1 text-xs ${
+                    activeQuickJumpId === j.id
+                      ? 'border-[color:var(--bm-accent)/0.4] bg-[color:var(--bm-accent)/0.12] hover:bg-[color:var(--bm-accent)/0.16]'
+                      : 'border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] hover:bg-[color:var(--bm-bg)/0.55]'
+                  }`}
                 >
                   {j.title}
                 </a>
@@ -141,4 +158,3 @@ export function ManPageSidebar({
     </aside>
   )
 }
-
