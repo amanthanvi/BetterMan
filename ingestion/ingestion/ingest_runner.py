@@ -565,7 +565,9 @@ def _content_packages(*, sample: bool, distro: str) -> list[str]:
 
     out: list[str] = []
     seen: set[str] = set()
-    pkg_set = FULL_PACKAGE_SET_BY_DISTRO.get(distro) or FULL_PACKAGE_SET_BY_DISTRO["debian"]
+    pkg_set = FULL_PACKAGE_SET_BY_DISTRO.get(distro)
+    if pkg_set is None:
+        pkg_set = FULL_PACKAGE_SET_BY_DISTRO["debian"]
     for pkg in [*base, *pkg_set]:
         if pkg in seen:
             continue

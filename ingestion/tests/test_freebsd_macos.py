@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import ingestion.freebsd as freebsd
 import ingestion.macos as macos
+from ingestion.ingest_runner import _content_packages
 
 
 def test_pkg_packages_parses_tabbed_output(monkeypatch) -> None:
@@ -77,3 +78,8 @@ def test_is_permissive_manpage_looks_for_license_markers() -> None:
         is True
     )
     assert macos.is_permissive_manpage(b"This is an Apple proprietary man page.") is False
+
+
+def test_content_packages_does_not_fallback_for_empty_distro_sets() -> None:
+    assert _content_packages(sample=False, distro="freebsd") == []
+    assert _content_packages(sample=False, distro="macos") == []
