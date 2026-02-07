@@ -28,6 +28,9 @@ Living execution plan for shipping `v0.5.0` from `SPEC.md`.
 
 - `pnpm db:up`
 - `pnpm db:down`
+- `pnpm next:dev`
+- `pnpm next:build`
+- `pnpm next:lint`
 - `pnpm backend:dev`
 - `pnpm backend:test`
 - `pnpm backend:lint`
@@ -55,31 +58,31 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M34 — Route parity (SSR + metadata)
 
-- [ ] All existing routes render in Next.js (no URL changes)
-- [ ] `generateMetadata()` replaces `react-helmet-async`
-- [ ] Man page SSR contains real content in page source
-- [ ] Command palette works (Next router)
-- [ ] TanStack Virtual works for large pages (client components)
+- [x] All existing routes render in Next.js (no URL changes)
+- [x] `generateMetadata()` replaces `react-helmet-async`
+- [x] Man page SSR contains real content in page source
+- [x] Command palette works (Next router)
+- [x] TanStack Virtual works for large pages (client components)
 
 ### M35 — SEO endpoints in Next.js
 
-- [ ] `GET /robots.txt` served by Next.js
+- [x] `GET /robots.txt` served by Next.js
 - [ ] Sitemaps served by Next.js:
-  - [ ] `GET /sitemap.xml`
-  - [ ] `GET /sitemap-<distro>.xml`
-  - [ ] `GET /sitemap-<distro>-<page>.xml`
+  - [x] `GET /sitemap.xml`
+  - [x] `GET /sitemap-<distro>.xml`
+  - [x] `GET /sitemap-<distro>-<page>.xml`
 - [ ] E2E asserts robots + sitemaps work against Next.js
 
 ### M36 — CSP nonces in Next.js
 
-- [ ] Next.js middleware sets CSP + per-request nonce
-- [ ] Inline scripts (theme bootstrap, JSON-LD, analytics) receive nonce
-- [ ] CSP runbook updated (`docs/runbooks/csp-violations.md`)
+- [x] Next.js middleware sets CSP + per-request nonce
+- [x] Inline scripts (theme bootstrap, JSON-LD, analytics) receive nonce
+- [x] CSP runbook updated (`docs/runbooks/csp-violations.md`)
 
 ### M37 — Observability migration (Next.js)
 
-- [ ] Plausible moved to Next.js `<Script>` (`NEXT_PUBLIC_PLAUSIBLE_DOMAIN`)
-- [ ] Sentry enabled via `@sentry/nextjs` (`NEXT_PUBLIC_SENTRY_DSN`)
+- [x] Plausible moved to Next.js `<Script>` (`NEXT_PUBLIC_PLAUSIBLE_DOMAIN`)
+- [x] Sentry enabled via `@sentry/nextjs` (`NEXT_PUBLIC_SENTRY_DSN`)
 
 ### M38 — FastAPI becomes API-only
 
