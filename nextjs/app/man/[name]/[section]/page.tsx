@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
-import Script from 'next/script'
 
 import { ManPageView } from '../../../../components/man/ManPageView'
+import { JsonLdHead } from '../../../../components/seo/JsonLdHead'
 import { FastApiError, fetchManByName, fetchManByNameAndSection, fetchRelated, suggest } from '../../../../lib/api'
 import { normalizeDistro } from '../../../../lib/distro'
 import { safeJsonLdStringify } from '../../../../lib/seo'
@@ -130,12 +130,10 @@ export default async function ManByNameAndSectionPage({
 
     return (
       <>
-        <Script
+        <JsonLdHead
           id={`bm-jsonld:${pageData.page.id}`}
-          type="application/ld+json"
           nonce={nonce}
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: jsonLd }}
+          jsonLd={jsonLd}
         />
         <ManPageView
           key={pageData.page.id}
