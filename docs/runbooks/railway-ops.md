@@ -34,8 +34,12 @@ Prereqs:
 
 DNS (Cloudflare):
 
-- CNAME `betterman.sh` → `pra71pqd.up.railway.app`
-- CNAME `www.betterman.sh` → `6knyu6fn.up.railway.app`
+- Find the Railway-provided domain for the `nextjs` service:
+  - `railway status`
+  - `railway domain --json`
+- Point both custom domains at the `nextjs` Railway domain (currently `nextjs-production-79aa.up.railway.app`):
+  - CNAME `betterman.sh` → `nextjs-production-79aa.up.railway.app`
+  - CNAME `www.betterman.sh` → `nextjs-production-79aa.up.railway.app`
 - Ensure records are **DNS only** (no proxy) while validating Railway certificates.
 
 Verification:

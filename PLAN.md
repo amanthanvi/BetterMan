@@ -105,8 +105,8 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 - [ ] Rollback plan documented
 
 **DNS action required (Cloudflare):**
-- `betterman.sh` CNAME → `pra71pqd.up.railway.app`
-- `www.betterman.sh` CNAME → `6knyu6fn.up.railway.app`
+- CNAME `betterman.sh` → `nextjs-production-79aa.up.railway.app`
+- CNAME `www.betterman.sh` → `nextjs-production-79aa.up.railway.app`
 
 ### M41 — Distro expansion (7 total)
 
