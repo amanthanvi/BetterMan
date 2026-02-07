@@ -261,3 +261,36 @@ export function fetchLicenseText(opts: { distro: Distro; packageName: string }):
     next: { revalidate: 300 },
   })
 }
+
+export type SeoRelease = {
+  distro: string
+  datasetReleaseId: string
+  ingestedAt: string
+  pageCount: number
+}
+
+export type SeoReleasesResponse = {
+  urlsPerFile: number
+  items: SeoRelease[]
+}
+
+export type SeoSitemapItem = {
+  name: string
+  section: string
+}
+
+export type SeoSitemapPageResponse = {
+  items: SeoSitemapItem[]
+  page: number
+}
+
+export function fetchSeoReleases(): Promise<SeoReleasesResponse> {
+  return fetchJson<SeoReleasesResponse>('/api/v1/seo/releases', { next: { revalidate: 3600 } })
+}
+
+export function fetchSeoSitemapPage(opts: { distro: string; page: number }): Promise<SeoSitemapPageResponse> {
+  const params = new URLSearchParams()
+  params.set('distro', opts.distro)
+  params.set('page', String(opts.page))
+  return fetchJson<SeoSitemapPageResponse>(`/api/v1/seo/sitemap-page?${params.toString()}`, { next: { revalidate: 3600 } })
+}
