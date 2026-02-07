@@ -1,10 +1,10 @@
 # 1. Title / Version / Status
 
 **Project:** BetterMan
-**Spec Version:** v0.4.0
-**Status:** In Progress (v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Spec Version:** v0.5.0
+**Status:** In Progress (v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
 **Last Updated:** 2026-01-21 (EST)
-**Interview Status:** Complete - v0.4.0 scoped
+**Interview Status:** Complete - v0.5.0 scoped
 
 ---
 
@@ -57,6 +57,14 @@
 -   **Ingestion Improvements:** Per-page savepoints for partial failure recovery, structured logging with progress/ETA reporting.
 -   **User Features:** Improved 404 suggestions via trigram similarity ("Did you mean..."), shareable deep links to options, keyboard shortcuts panel.
 
+**v0.5.0 focus:** Next.js migration, content expansion, UX engagement, and mobile/PWA:
+
+-   **Phase 1 (Next.js Migration):** Migrate frontend from Vite + TanStack Router to Next.js App Router for SSR/streaming. Two-service Railway deployment (Next.js + FastAPI). Server-rendered metadata replaces react-helmet-async.
+-   **Phase 2 (Content Expansion):** Add Arch Linux, Alpine Linux, FreeBSD, and macOS (BSD-licensed pages only) — expanding from 3 to 7 distributions.
+-   **Phase 3 (UX Engagement):** Bookmarks/favorites, enhanced history, reading preferences — all localStorage-based, no backend changes.
+-   **Phase 4 (Mobile & PWA):** Service worker for offline reading, mobile bottom navigation, touch gestures, add-to-homescreen.
+-   **Phase 5 (Infra & Polish):** Staging/prod full isolation, horizontal scaling readiness, documentation and release.
+
 ---
 
 # 3. Goals
@@ -93,7 +101,7 @@
 # 4. Non-Goals
 
 -   No user accounts, authentication, profiles, favorites, or history in v0.1.0.
--   No SSR solely for crawlers. **v0.3.0 update:** Minimal SEO support added (sitemap, meta tags, JSON-LD) without SSR.
+-   No SSR solely for crawlers. **v0.3.0 update:** Minimal SEO support added (sitemap, meta tags, JSON-LD) without SSR. **v0.5.0 update:** SSR is now in-scope via Next.js App Router migration — provides server-rendered content for SEO, OG tags, and improved initial load performance.
 -   No user-generated content (comments, edits, annotations).
 -   No offline native apps (desktop/mobile).
 -   No full "terminal emulation" or interactive command execution.
@@ -1023,16 +1031,28 @@ flowchart LR
   FE <-->|fetch JSON| API
 ```
 
-**Deployment Platform:** Railway for all services (web, PostgreSQL, Redis).
+**v0.5.0 deployment topology (two services):**
+
+```mermaid
+flowchart LR
+  U[User Browser] -->|HTTPS| NX[Next.js Service]
+  NX -->|/api/* rewrite| FA[FastAPI Service]
+  FA -->|SQL over TLS| PG[(PostgreSQL)]
+  FA -->|Rate Limit State| RD[(Redis)]
+  NX -->|SSR + Static Assets| U
+```
+
+**Deployment Platform:** Railway for all services (web, PostgreSQL, Redis). v0.5.0 splits the single web service into Next.js (public-facing) and FastAPI (internal API via Railway private networking).
 
 ## Frontend Architecture
 
 **Stack Decisions:**
 -   **Runtime:** Node 25
--   **Build Tool:** Vite
--   **Framework:** React + TypeScript SPA
--   **Router:** TanStack Router (type-safe routing with excellent TypeScript integration)
--   **State Management:** TanStack Query for server state + React Context for UI state
+-   **Build Tool:** Vite (**v0.5.0:** Next.js App Router replaces Vite)
+-   **Framework:** React + TypeScript SPA (**v0.5.0:** Next.js with SSR + streaming + client hydration)
+-   **Router:** TanStack Router (type-safe routing with excellent TypeScript integration) (**v0.5.0:** Next.js file-based App Router)
+-   **State Management:** TanStack Query for server state + React Context for UI state (**v0.5.0:** RSC server fetch + TanStack Query dehydration for client)
+-   **Meta Tags:** react-helmet-async (**v0.5.0:** Next.js `generateMetadata()` — server-rendered, zero client JS)
 -   **Component Primitives:** Radix UI (selectively, e.g. Dialog) + small custom UI primitives
 -   **CSS:** Tailwind v4
 -   **Testing (v0.2.0):** Vitest + Testing Library for unit/component tests
@@ -2313,6 +2333,22 @@ Sitemap: https://betterman.sh/sitemap.xml
     - Mitigation: Use react-helmet-async for client-side meta; modern Googlebot executes JavaScript; monitor Search Console for indexing issues.
 12. **v0.3.0: Performance regression from multi-distro queries**
     - Mitigation: Ensure proper indexes on distribution column; maintain query performance targets; profile before and after.
+13. **v0.5.0: Next.js migration scope creep**
+    - Mitigation: Phase 1 is blocking; ship migration before adding features. Keep SPA deployable as rollback.
+14. **v0.5.0: SSR hydration bugs (theme/distro/localStorage)**
+    - Mitigation: `useEffect` for client-only state; render neutral defaults on server; thorough E2E testing.
+15. **v0.5.0: Two-service Railway networking issues**
+    - Mitigation: Test private networking thoroughly in staging; health checks for both services; rollback plan keeps SPA deployable.
+16. **v0.5.0: FreeBSD VM extraction flakiness in CI**
+    - Mitigation: Retry logic; monthly cadence; fallback to pre-extracted archive if VM fails.
+17. **v0.5.0: macOS license filtering misses proprietary pages**
+    - Mitigation: Curated allowlist approach; conservative initial set; label as "macOS (BSD)" in UI.
+18. **v0.5.0: Alpine low man page coverage disappoints users**
+    - Mitigation: Set expectations in UI ("Alpine has limited man page coverage"); require `-doc` subpackages.
+19. **v0.5.0: PWA service worker caching stale content**
+    - Mitigation: Versioned cache; cache-busting on deploy; "Update available" prompt for users.
+20. **v0.5.0: Next.js bundle size regression**
+    - Mitigation: Next.js bundle analyzer in CI; compare against Vite baseline; fail CI on significant regressions.
 
 ---
 
@@ -2735,3 +2771,508 @@ v0.4.0 is **non-breaking**. All changes are additive or internal improvements.
 
 -   [x] Docs updated (`README.md`, `SPEC.md`, `PLAN.md`, `.env.example`)
 -   [x] Tag `v0.4.0`
+
+---
+
+# 27. v0.5.0 — Next.js Migration, Content Expansion & UX Engagement
+
+## Overview
+
+v0.5.0 is BetterMan's largest architectural release. It migrates the frontend from a Vite-built React SPA to Next.js App Router for SSR/streaming, expands content to 7 distributions (adding Arch, Alpine, FreeBSD, macOS), introduces user engagement features (bookmarks, history, reading preferences), and improves mobile experience with PWA support.
+
+**This release has breaking deployment changes** (single service → two services on Railway) but **no breaking URL or API changes**.
+
+## Phases (ordered, Phase 1 blocks all others)
+
+- **Phase 1: Next.js Migration** — Migrate frontend from Vite + TanStack Router to Next.js App Router. Keep FastAPI as data API. Two-service Railway deployment.
+- **Phase 2: Content Expansion** — Add Arch Linux, Alpine Linux, FreeBSD, and macOS (BSD-licensed pages only) ingestion pipelines.
+- **Phase 3: UX Engagement** — Bookmarks/favorites, enhanced history, reading preferences, all localStorage-based.
+- **Phase 4: Mobile & PWA** — Service worker for offline reading, mobile gestures, bottom navigation bar, add-to-homescreen.
+- **Phase 5: Infra & Polish** — Staging/prod full isolation, horizontal scaling readiness, release.
+
+---
+
+## Phase 1: Next.js Migration
+
+### Architecture Change
+
+| Aspect | v0.4.0 (Current) | v0.5.0 (Target) |
+|--------|-------------------|------------------|
+| Frontend build | Vite 7.3 | Next.js 15 App Router |
+| Routing | TanStack Router (client) | Next.js file-based (server + client) |
+| Rendering | CSR (SPA) | SSR + streaming + client hydration |
+| Data fetching | TanStack Query (client-only) | RSC server fetch + TanStack Query (client) |
+| Meta/OG tags | react-helmet-async (client) | Next.js Metadata API (server) |
+| Deployment | Single Railway service | Two Railway services (Next.js + FastAPI) |
+| CSP nonces | FastAPI middleware | Next.js middleware |
+
+### Route Mapping
+
+```
+Current (TanStack Router)         →  Next.js App Router
+frontend/src/routes/__root.tsx    →  app/layout.tsx
+frontend/src/routes/index.tsx     →  app/page.tsx
+frontend/src/routes/search.tsx    →  app/search/page.tsx
+frontend/src/routes/man.$name.tsx →  app/man/[name]/page.tsx
+frontend/src/routes/man.$name.$section.tsx → app/man/[name]/[section]/page.tsx
+frontend/src/routes/section.$section.tsx   → app/section/[section]/page.tsx
+frontend/src/routes/licenses.tsx  →  app/licenses/page.tsx
+(NEW)                             →  app/bookmarks/page.tsx
+(NEW)                             →  app/history/page.tsx
+```
+
+### Data Fetching Strategy (Hybrid)
+
+**Server Components** (SSR for SEO + initial render):
+- Man page content: RSC fetches from FastAPI (server-to-server, no client round-trip)
+- Search results initial page (SSR with streaming via Suspense)
+- Section listings, license pages
+- Metadata/OG tags via Next.js `generateMetadata()` — replaces react-helmet-async entirely
+
+**Client Components** (`'use client'` for interactivity):
+- Command palette (lazy loaded)
+- Find-in-page, TOC scroll-spy
+- Theme toggle, distro selector
+- Infinite scroll pagination (search, section browse)
+- TanStack Virtual (DocRenderer) — requires window/DOM
+- All new UX features (bookmarks, reading prefs, history)
+
+**Dehydration pattern**: RSC prefetches data → dehydrate to TanStack Query → client picks up seamlessly.
+
+### Deployment Topology
+
+Two Railway services:
+
+1. **Next.js Service** (public-facing):
+   - Handles all web traffic (SSR + static assets)
+   - Proxies `/api/*` to FastAPI via `next.config.js` rewrites
+   - Public domain: `betterman.sh`
+   - Env: `FASTAPI_INTERNAL_URL`, `SENTRY_DSN`, `PLAUSIBLE_DOMAIN`
+
+2. **FastAPI Service** (internal):
+   - Pure API server (no static file serving)
+   - Railway private networking: `http://fastapi.railway.internal:8000`
+   - Remove `serve_frontend`, `SPAStaticFiles`, `runtime_config` router
+   - Keeps PostgreSQL/Redis connections, rate limiting, Sentry backend
+
+### CSP Nonces in Next.js
+
+- Next.js middleware generates cryptographic nonce per-request
+- Nonce passed to layout via `headers()` API
+- `next/script` components receive nonce for inline scripts
+- Plausible injection moves from FastAPI HTML injection → Next.js `<Script>` component
+- Same security model: `script-src 'self' 'nonce-{random}'`, `style-src 'self' 'unsafe-inline'`
+
+### Component Migration Rules
+
+- **Server Components by default**: page shells, metadata, initial data fetching
+- **Client Components when needed**: anything using useState/useEffect, DOM APIs, localStorage, event handlers, TanStack Virtual
+- **Pattern**: Server shell fetches data → passes as props to client interactive core
+- **No react-helmet-async**: All meta tags via `generateMetadata()` (server-rendered, zero client JS)
+
+### OpenAPI Type Generation
+
+Pipeline unchanged:
+- FastAPI generates `/openapi.json`
+- `openapi-typescript` generates `frontend/src/api/openapi.gen.ts`
+- CI enforces sync
+- Types shared between server and client components
+
+### Testing Migration
+
+- **Vitest**: Keep for component unit tests. Mock Next.js router with `next-router-mock`.
+- **Playwright**: Update config to point to Next.js dev server (port 3000). URL structure unchanged — most E2E tests work as-is.
+- **axe-core**: No changes needed.
+- **New E2E tests**: SSR verification (check page source has content), OG tag verification.
+
+### Migration Risks
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| SSR hydration mismatches (theme/distro from localStorage) | Visual flicker | `useEffect` for client-only state; render neutral default on server |
+| Performance regression from SSR overhead | Slower TTFB | Streaming SSR with Suspense boundaries; ISR for popular pages |
+| TanStack Router → Next.js router API differences | Broken navigation | Adapter hooks wrapping Next.js `useRouter` |
+| Two-service deployment complexity | Ops burden | Health checks for both services; rollback plan: keep SPA deployable |
+| Loss of inline prefetch optimization | Slower initial load | RSC replaces it (server→server is faster than client→server) |
+
+### Migration Steps (Ordered)
+
+1. Initialize Next.js alongside existing `frontend/` (new `nextjs/` directory)
+2. API client setup (server-side fetch + client-side TanStack Query)
+3. Root layout (providers, header, footer, CSP middleware)
+4. Home page migration
+5. Search page (SSR initial results + client infinite scroll)
+6. Man page view (generateMetadata + server fetch + client DocRenderer)
+7. Command palette (client component, lazy loaded)
+8. Remaining routes (section, licenses, 404)
+9. Testing infrastructure update (Playwright + Vitest)
+10. FastAPI backend cleanup (remove frontend serving)
+11. Railway deployment (two services + private networking)
+12. Observability migration (Plausible → Next.js Script, Sentry verify)
+13. Cut over (side-by-side → route traffic → retire old SPA)
+14. Cleanup (rename `nextjs/` → `frontend/`, update CI)
+
+---
+
+## Phase 2: Content Expansion (4 New Distributions)
+
+### Overview
+
+Expand from 3 distributions (Debian, Ubuntu, Fedora) to 7 (add Arch Linux, Alpine Linux, FreeBSD, macOS).
+
+### Arch Linux
+
+- **Container**: `archlinux:latest` (official Docker image)
+- **Package manager**: `pacman -Syu --noconfirm <packages>`
+- **Package query**: `pacman -Q` (format: `name version`)
+- **New file**: `ingestion/ingestion/arch.py` (pacman helpers)
+- **Rolling release handling**: Pin to image digest in CI; timestamp-based dataset release IDs
+- **Update cadence**: Monthly (same as others; Arch's rolling nature means each snapshot differs)
+- **Risk**: Rolling release drift; wider package version variance than Debian/Ubuntu
+
+### Alpine Linux
+
+- **Container**: `alpine:3.x` (pinned stable release)
+- **Package manager**: `apk add --no-cache <packages>`
+- **Package query**: `apk info -v`
+- **New file**: `ingestion/ingestion/alpine.py` (apk helpers)
+- **Man page coverage note**: Alpine is minimalist; many packages don't ship man pages by default. Requires `-doc` subpackages.
+- **Expected coverage**: Lower than Debian/Fedora. Accept >60% success rate (adjusted threshold for Alpine's smaller base).
+- **Risk**: Low man page coverage; BusyBox commands may lack individual man pages
+
+### FreeBSD
+
+- **No Docker image**: FreeBSD doesn't have official Docker support
+- **Extraction strategy**: GitHub Actions with FreeBSD VM action (e.g., `vmactions/freebsd-vm@v1`) — runs FreeBSD in a VM within CI
+- **Package manager**: `pkg install <packages>`
+- **Package query**: `pkg query "%n\t%v"`
+- **New file**: `ingestion/ingestion/freebsd.py` (pkg helpers + VM extraction)
+- **Pipeline difference**: Extract man pages from VM → tar → upload as CI artifact → standard ingestion pipeline parses them
+- **Update cadence**: Monthly
+- **Risk**: VM overhead (10-30 min per ingest); GitHub Actions minutes cost
+
+### macOS (BSD-Licensed Pages Only)
+
+- **Legal constraint**: Only extract man pages with BSD/MIT/Apache/public-domain licenses. Skip Apple-proprietary pages.
+- **Extraction**: GitHub Actions macOS runner (`macos-latest`)
+- **Man pages location**: `/usr/share/man/`
+- **Manifest**: `sw_vers` + `pkgutil --pkgs` for provenance
+- **New file**: `ingestion/ingestion/macos.py` (system scan + license filter)
+- **License filtering**: Cross-reference each man page's source package against a curated allowlist of BSD-licensed packages
+- **Expected coverage**: Subset of full macOS man pages (BSD utilities, POSIX tools)
+- **UI label**: "macOS (BSD)" to clarify scope
+- **Risk**: Maintaining accurate license allowlist; subset may confuse users expecting full macOS coverage
+
+### Database Changes
+
+- **No schema migration needed**: `dataset_releases.distro` is a string column; new values just work
+- **Backend validation**: Update Pydantic `distro` field to accept `arch|alpine|freebsd|macos` in addition to existing values
+- **Frontend type update**: Expand `Distro` TypeScript type union
+
+### Frontend Distro Selector Scaling
+
+With 7 distros, the dropdown needs better organization:
+
+**Grouped dropdown:**
+```
+Linux
+  Debian (default)
+  Ubuntu
+  Fedora
+  Arch Linux
+  Alpine
+BSD
+  FreeBSD
+  macOS (BSD)
+```
+
+### Ingestion Pipeline Updates
+
+- `ingestion/ingestion/cli.py`: Expand `--distro` choices
+- `ingestion/ingestion/package_set.py`: Add `FULL_PACKAGE_SET_ARCH`, `_ALPINE`, `_FREEBSD`, `_MACOS`
+- `ingestion/ingestion/ingest_runner.py`: Add distro dispatch branches
+- `ingestion/ingestion/docker_runner.py`: Add Arch + Alpine images
+- `.github/workflows/update-docs.yml`: Add jobs for each new distro (FreeBSD + macOS use special runners)
+
+### Per-Distro Package Sets
+
+Each new distro targets the same core categories: system utilities, networking, admin tools, dev tools, common servers, text processing.
+
+### Sitemap Updates
+
+New sitemaps auto-generated: `/sitemap-arch.xml`, `/sitemap-alpine.xml`, `/sitemap-freebsd.xml`, `/sitemap-macos.xml`
+
+---
+
+## Phase 3: UX Engagement Features
+
+All features are **client-side only** (localStorage). No backend changes required.
+
+### Bookmarks/Favorites
+
+**Storage**: `localStorage` key `bm-bookmarks`
+
+```typescript
+type BookmarksStore = {
+  version: 1
+  items: Array<{
+    name: string
+    section: string
+    description?: string
+    addedAt: number  // Date.now()
+  }>
+}
+```
+
+**Functionality**:
+- MUST: Add/remove bookmark from man page view (toggle button in header)
+- MUST: Dedicated `/bookmarks` page with list view
+- MUST: Integration with command palette (bookmarked pages shown with indicator)
+- SHOULD: Export/import as JSON
+- SHOULD: Search/filter within bookmarks
+- MAY: Keyboard shortcut `M` to toggle bookmark on current page
+
+**New files**: `lib/bookmarks.ts`, `app/bookmarks/page.tsx`, `components/BookmarkButton.tsx`
+
+### Enhanced History
+
+**Storage**: Extend existing `bm-recent` localStorage key with versioned schema.
+
+```typescript
+type RecentStore = {
+  version: 1
+  items: Array<{
+    kind: 'page' | 'search'
+    name?: string
+    section?: string
+    query?: string
+    description?: string
+    at: number
+  }>
+  lastCleared?: number
+}
+```
+
+**Functionality**:
+- MUST: Dedicated `/history` page (grouped by day: Today, Yesterday, Last 7 days, Older)
+- MUST: Tabs for "All" | "Pages" | "Searches"
+- MUST: Clear all with confirmation
+- SHOULD: Remove individual items
+- SHOULD: Search within history
+- MAY: Keyboard shortcut `H` to open history
+
+**New files**: `app/history/page.tsx`, extend `lib/recent.ts`
+
+### Reading Preferences
+
+**Storage**: `localStorage` key `bm-reading-prefs`
+
+```typescript
+type ReadingPreferences = {
+  version: 1
+  fontSize: 'small' | 'medium' | 'large' | 'xlarge'  // 90%, 100%, 115%, 130%
+  fontFamily: 'serif' | 'sans' | 'mono'
+  lineHeight: 'compact' | 'normal' | 'relaxed'       // 1.5, 1.65, 1.85
+  columnWidth: 'narrow' | 'normal' | 'wide'          // 42rem, 56rem, 72rem
+  codeTheme: 'light' | 'dark' | 'auto'
+}
+```
+
+**Functionality**:
+- MUST: Settings panel accessible from man page view (slide-in drawer)
+- MUST: Live preview (changes apply immediately)
+- MUST: Persist across sessions
+- MUST: Reset to defaults button
+- SHOULD: Keyboard shortcut `P` to open preferences
+- Implementation: CSS custom properties controlled by `data-*` attributes on `<body>`
+
+**New files**: `lib/readingPrefs.ts`, `app/readingPrefs.tsx` (context provider), `components/ReadingPrefsPanel.tsx`
+
+### localStorage Key Registry
+
+Consolidate all storage keys in `lib/storage.ts`:
+```typescript
+export const STORAGE_KEYS = {
+  theme: 'bm-theme',
+  distro: 'bm-distro',
+  recent: 'bm-recent',
+  bookmarks: 'bm-bookmarks',
+  readingPrefs: 'bm-reading-prefs',
+} as const
+```
+
+---
+
+## Phase 4: Mobile & PWA
+
+### PWA Capabilities
+
+- **Web App Manifest**: `manifest.json` with standalone display, icons, shortcuts
+- **Service Worker**: Cache-first for static assets, network-first for API responses
+  - Previously viewed man pages available offline
+  - Fonts and icons cached on first visit
+- **Offline indicator**: Subtle banner when offline ("Offline — showing cached content")
+- **Add to Home Screen**: Supported on iOS Safari + Android Chrome
+
+### Mobile UX Improvements
+
+- **Mobile bottom navigation bar** (sticky): Home, Search, History, Bookmarks, More
+- **Touch gesture**: Swipe from left edge to open TOC drawer
+- **Mobile command palette**: Bottom sheet instead of center dialog; larger touch targets (44px min)
+- **Mobile reading prefs**: Bottom sheet with touch-optimized option buttons
+
+### Service Worker Strategy
+
+- Register only in production (`process.env.NODE_ENV === 'production'`)
+- Cache strategy:
+  - Static assets (JS, CSS, fonts, images): Cache-first with versioned cache name
+  - API responses (`/api/*`): Network-first with cache fallback (enables offline)
+  - HTML pages: Network-first (SSR content must be fresh)
+- Cache eviction: Version-based (new deploy → new cache name → old cache purged)
+
+---
+
+## Phase 5: Infra & Polish
+
+### Staging/Prod Full Isolation
+
+- Separate Railway environments (not just DB URLs)
+- Separate Sentry projects (staging vs prod)
+- Separate Plausible sites
+- CI deploys to staging first; manual promotion to prod (or auto-promote with health check)
+
+### Horizontal Scaling Readiness
+
+- Next.js stateless by design (SSR has no in-process state)
+- FastAPI already stateless (Redis for rate limiting, PostgreSQL for data)
+- Connection pooling: Consider PgBouncer if connection count becomes an issue
+- Rate limiting: Already Redis-backed (works across instances)
+- Session affinity: Not required (no server-side sessions)
+
+### Release Polish
+
+- Update all documentation (README, SPEC, PLAN, CONTRIBUTING)
+- Audit runbooks against new two-service architecture
+- New runbooks: Next.js deployment, service-to-service networking, SSR debugging
+- Performance baseline: Lighthouse comparison (pre/post migration)
+- Bundle analysis: Next.js bundle analyzer comparison
+
+---
+
+## New Environment Variables (v0.5.0)
+
+| Variable | Service | Description |
+|----------|---------|-------------|
+| `FASTAPI_INTERNAL_URL` | Next.js | Internal URL for FastAPI service |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Next.js | Plausible analytics domain |
+| `NEXT_PUBLIC_SENTRY_DSN` | Next.js | Sentry DSN for frontend |
+
+### Removed from FastAPI
+| Variable | Reason |
+|----------|--------|
+| `SERVE_FRONTEND` | Next.js serves frontend now |
+| `FRONTEND_DIST_DIR` | No longer serves static files |
+| `VITE_SENTRY_DSN` | Moves to Next.js env |
+| `VITE_PLAUSIBLE_DOMAIN` | Moves to Next.js env |
+
+---
+
+## New Keyboard Shortcuts (v0.5.0)
+
+| Shortcut | Context | Action |
+|----------|---------|--------|
+| `M` | Man page view | Toggle bookmark |
+| `H` | Global | Open history page |
+| `P` | Man page view | Open reading preferences |
+
+---
+
+## Definition of Done (v0.5.0 Launch Checklist)
+
+**Phase 1: Next.js Migration**
+
+- [ ] Next.js App Router renders all existing routes
+- [ ] SSR working: page source contains man page content (not empty shell)
+- [ ] `generateMetadata` produces correct OG tags (verify with social debuggers)
+- [ ] TanStack Query hydration working (no redundant client fetches)
+- [ ] TanStack Virtual working for large pages (client component)
+- [ ] Command palette functional with Next.js router
+- [ ] CSP nonces working via Next.js middleware
+- [ ] Two-service Railway deployment healthy
+- [ ] FastAPI internal-only (no public static file serving)
+- [ ] Plausible tracking via Next.js `<Script>`
+- [ ] Sentry capturing errors (both services)
+- [ ] All existing E2E tests passing
+- [ ] Lighthouse LCP <= 2.5s (should improve with SSR)
+- [ ] react-helmet-async removed
+
+**Phase 2: Content Expansion**
+
+- [ ] Arch Linux ingestion pipeline working (pacman-based)
+- [ ] Alpine Linux ingestion pipeline working (apk-based)
+- [ ] FreeBSD ingestion pipeline working (VM-based via GH Actions)
+- [ ] macOS ingestion pipeline working (GH Actions macOS runner, BSD-licensed only)
+- [ ] All 4 new distros ingested and active in staging
+- [ ] Backend accepts `?distro=arch|alpine|freebsd|macos`
+- [ ] Frontend distro selector shows grouped dropdown (7 distros)
+- [ ] Per-distro sitemaps generated for new distros
+- [ ] E2E test: distro switch works for new distros
+
+**Phase 3: UX Engagement**
+
+- [ ] Bookmarks: add/remove from man page, `/bookmarks` page, command palette integration
+- [ ] History: `/history` page with grouped date view, tabs, clear
+- [ ] Reading preferences: panel with font size, font family, line height, column width, code theme
+- [ ] All preferences persist in localStorage
+- [ ] Keyboard shortcuts `M`, `H`, `P` working
+- [ ] Updated `?` shortcuts dialog includes new shortcuts
+
+**Phase 4: Mobile & PWA**
+
+- [ ] Service worker registered in production
+- [ ] Offline reading of previously viewed pages works
+- [ ] Web App Manifest present (standalone mode, icons)
+- [ ] Mobile bottom navigation bar
+- [ ] Mobile gesture: swipe to open TOC
+- [ ] Offline indicator shown when disconnected
+
+**Phase 5: Infra & Polish**
+
+- [ ] Staging/prod fully isolated (separate environments)
+- [ ] Runbooks updated for two-service architecture
+- [ ] Performance comparison documented (pre/post migration)
+- [ ] CI green on `main`
+- [ ] Docs updated (SPEC, README, PLAN, CONTRIBUTING)
+- [ ] Tag `v0.5.0`
+
+---
+
+## v0.5.0 Risks
+
+| # | Risk | Impact | Mitigation |
+|---|------|--------|------------|
+| 13 | Next.js migration scope creep | Delayed release | Phase 1 is blocking; ship migration before adding features |
+| 14 | SSR hydration bugs (theme/distro/localStorage) | Visual flicker, React errors | useEffect for client state; neutral server defaults |
+| 15 | Two-service Railway networking issues | Broken API calls | Test private networking thoroughly; keep SPA deployable as rollback |
+| 16 | FreeBSD VM extraction flakiness in CI | Broken ingestion | Retry logic; monthly cadence; fallback to pre-extracted archive |
+| 17 | macOS license filtering misses proprietary pages | Legal exposure | Curated allowlist approach; conservative initial set; mark as "BSD" |
+| 18 | Alpine low man page coverage disappoints users | UX confusion | Set expectations in UI ("Alpine has limited man page coverage") |
+| 19 | PWA service worker caching stale content | Users see old pages | Versioned cache; cache-busting on deploy; "Update available" prompt |
+| 20 | Next.js bundle size regression | Performance | Next.js bundle analyzer in CI; compare against Vite baseline |
+
+---
+
+## Migration Notes
+
+v0.5.0 has **deployment breaking changes**:
+- Railway goes from 1 service to 2 services
+- Frontend env vars change prefix (`VITE_*` → `NEXT_PUBLIC_*`)
+- FastAPI stops serving static files
+
+**Recommended deployment order:**
+1. Deploy FastAPI with `SERVE_FRONTEND=false` (API-only mode)
+2. Deploy Next.js service with `FASTAPI_INTERNAL_URL` pointed to FastAPI
+3. Route public domain to Next.js service
+4. Verify SSR, API proxy, Sentry, Plausible
+5. Verify all 7 distros ingested and active
+6. Remove old SPA deploy config
