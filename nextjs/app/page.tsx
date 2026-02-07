@@ -50,6 +50,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <input
             name="q"
             placeholder="Search (e.g. tar, ssh_config, curl)…"
+            data-bm-home-search
             className="min-w-0 flex-1 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Search man pages"
           />

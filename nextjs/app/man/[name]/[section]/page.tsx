@@ -3,6 +3,8 @@ import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
 
 import { DocRenderer } from '../../../../components/doc/DocRenderer'
+import { RecentPageRecorder } from '../../../../components/recent/RecentPageRecorder'
+import { TocSync } from '../../../../components/toc/TocSync'
 import { FastApiError, fetchManByName, fetchManByNameAndSection, fetchRelated, suggest } from '../../../../lib/api'
 import { normalizeDistro } from '../../../../lib/distro'
 
@@ -189,6 +191,12 @@ export default async function ManByNameAndSectionPage({
           </aside>
 
           <article className="min-w-0">
+            <TocSync items={pageData.content.toc} />
+            <RecentPageRecorder
+              name={pageData.page.name}
+              section={pageData.page.section}
+              description={pageData.page.description || pageData.page.title}
+            />
             <DocRenderer blocks={pageData.content.blocks} />
           </article>
         </div>
