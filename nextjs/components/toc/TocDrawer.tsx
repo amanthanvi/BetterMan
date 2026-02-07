@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 
 import { useToc } from '../state/toc'
+import { Toc } from './Toc'
 
 export function TocDrawer() {
   const toc = useToc()
@@ -28,7 +29,7 @@ export function TocDrawer() {
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold tracking-tight">Table of contents</div>
+          <h2 className="text-sm font-semibold tracking-tight">Table of contents</h2>
           <button
             type="button"
             className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
@@ -40,27 +41,21 @@ export function TocDrawer() {
         <div className="sr-only">Jump to a section in this man page.</div>
 
         <div className="mt-4">
-          <ol className="space-y-1">
-            {toc.items.map((t) => (
-              <li key={t.id}>
-                <button
-                  type="button"
-                  className="w-full rounded-md px-3 py-2 text-left text-sm text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.75] hover:text-[color:var(--bm-fg)]"
-                  onClick={() => {
-                    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-                    document.getElementById(t.id)?.scrollIntoView({ behavior, block: 'start' })
-                    window.location.hash = t.id
-                    toc.setOpen(false)
-                  }}
-                >
-                  {t.title}
-                </button>
-              </li>
-            ))}
-          </ol>
+          <Toc
+            items={toc.items}
+            showTitle={false}
+            onNavigate={() => toc.setOpen(false)}
+            onNavigateToId={(id) => {
+              if (toc.scrollToId) {
+                toc.scrollToId(id)
+                return
+              }
+              const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+              document.getElementById(id)?.scrollIntoView({ behavior, block: 'start' })
+            }}
+          />
         </div>
       </div>
     </div>
   )
 }
-

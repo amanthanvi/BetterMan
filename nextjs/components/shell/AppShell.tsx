@@ -152,7 +152,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'b' && toc.items.length) {
         e.preventDefault()
-        toc.setOpen(!toc.open)
+        if (window.matchMedia('(min-width: 1024px)').matches) {
+          toc.setSidebarOpen(!toc.sidebarOpen)
+        } else {
+          toc.setOpen(!toc.open)
+        }
         return
       }
 
