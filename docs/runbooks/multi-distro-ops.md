@@ -28,6 +28,7 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 
 - Trigger manually:
   - Ingest to staging: `gh workflow run update-dataset`
+  - Arch-only (skip BSD): `gh workflow run update-dataset -f linux_distro=arch -f bsd=false`
   - Ingest + promote: `gh workflow run update-dataset -f promote=true`
   - Promote-only: `gh workflow run update-dataset -f ingest=false -f promote=true`
 - Watch:

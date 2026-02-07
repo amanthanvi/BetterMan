@@ -8,6 +8,28 @@ on:
         type: boolean
         required: false
         default: true
+      linux:
+        description: Run Linux container ingests (debian/ubuntu/fedora/arch/alpine)
+        type: boolean
+        required: false
+        default: true
+      bsd:
+        description: Run BSD ingests (freebsd/macos)
+        type: boolean
+        required: false
+        default: true
+      linux_distro:
+        description: Linux distro to ingest (workflow_dispatch only)
+        type: choice
+        required: false
+        default: all
+        options:
+          - all
+          - debian
+          - ubuntu
+          - fedora
+          - arch
+          - alpine
       promote:
         description: Promote active staging releases to prod
         type: boolean
@@ -26,7 +48,7 @@ permissions:
 
 jobs:
   ingest_linux:
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ingest != 'false' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.linux != 'false') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
@@ -52,23 +74,29 @@ jobs:
 
           cd ingestion
 
-          echo "Ingesting Debian…"
-          uv run python -m ingestion.cli ingest --distro debian --activate
+          target="${{ github.event.inputs.linux_distro }}"
+          if [[ -z "${target}" || "${target}" == "all" ]]; then
+            echo "Ingesting Debian…"
+            uv run python -m ingestion.cli ingest --distro debian --activate
 
-          echo "Ingesting Arch…"
-          uv run python -m ingestion.cli ingest --distro arch --activate
+            echo "Ingesting Arch…"
+            uv run python -m ingestion.cli ingest --distro arch --activate
 
-          echo "Ingesting Alpine…"
-          uv run python -m ingestion.cli ingest --distro alpine --activate
+            echo "Ingesting Alpine…"
+            uv run python -m ingestion.cli ingest --distro alpine --activate
 
-          echo "Ingesting Ubuntu…"
-          uv run python -m ingestion.cli ingest --distro ubuntu --activate || echo "Ubuntu ingest failed (continuing)"
+            echo "Ingesting Ubuntu…"
+            uv run python -m ingestion.cli ingest --distro ubuntu --activate || echo "Ubuntu ingest failed (continuing)"
 
-          echo "Ingesting Fedora…"
-          uv run python -m ingestion.cli ingest --distro fedora --activate || echo "Fedora ingest failed (continuing)"
+            echo "Ingesting Fedora…"
+            uv run python -m ingestion.cli ingest --distro fedora --activate || echo "Fedora ingest failed (continuing)"
+          else
+            echo "Ingesting ${target}…"
+            uv run python -m ingestion.cli ingest --distro "${target}" --activate
+          fi
 
   ingest_macos:
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ingest != 'false' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.bsd != 'false') }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
@@ -93,7 +121,7 @@ jobs:
           uv run python -m ingestion.cli ingest --distro macos --activate
 
   ingest_freebsd:
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ingest != 'false' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.bsd != 'false') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
