@@ -367,7 +367,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               setActiveIndex(0)
             }}
             placeholder="Search… (use > for actions, # for headings)"
-            className="w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="w-full rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Command palette input"
           />
         </div>

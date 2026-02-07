@@ -19,6 +19,43 @@ import { OptionsTable } from './OptionsTable'
 
 const FIND_BAR_KEY = 'bm-find-bar-hidden'
 
+type IconProps = { className?: string }
+
+function IconCopy({ className }: IconProps) {
+  return (
+    <svg
+      className={className ?? 'size-4'}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  )
+}
+
+function IconCheck({ className }: IconProps) {
+  return (
+    <svg
+      className={className ?? 'size-4'}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
 function readStoredFindBarHidden(): boolean {
   try {
     return localStorage.getItem(FIND_BAR_KEY) === '1'
@@ -299,11 +336,12 @@ export function ManPageView({
               />
               <button
                 type="button"
-                className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
                 onClick={copyLink}
                 aria-label="Copy link to clipboard"
                 title={copiedLink ? 'Copied' : 'Copy link'}
               >
+                {copiedLink ? <IconCheck className="size-4 text-[var(--bm-accent)]" /> : <IconCopy className="size-4" />}
                 {copiedLink ? 'Copied' : 'Copy link'}
               </button>
             </div>

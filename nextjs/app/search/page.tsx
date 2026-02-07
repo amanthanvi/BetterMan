@@ -140,12 +140,18 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                 className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <Link
-                    href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, distro)}
-                    className="font-mono text-base font-semibold tracking-tight underline underline-offset-4"
-                  >
-                    {r.name}({r.section})
-                  </Link>
+                  <div className="flex items-baseline gap-2">
+                    <Link
+                      href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, distro)}
+                      className="font-mono text-base font-semibold tracking-tight underline underline-offset-4"
+                      title={`${r.name}(${r.section})`}
+                    >
+                      {r.name}
+                    </Link>
+                    <span className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-2 py-0.5 font-mono text-[11px] text-[color:var(--bm-muted)]">
+                      {r.section}
+                    </span>
+                  </div>
                   <div className="text-xs text-[color:var(--bm-muted)]">{r.title}</div>
                 </div>
                 <div className="mt-2 text-sm text-[color:var(--bm-muted)]">{r.description}</div>

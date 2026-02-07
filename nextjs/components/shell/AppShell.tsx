@@ -38,6 +38,96 @@ function withDistro(path: string, distro: string): string {
   return `${url.pathname}${url.search}`
 }
 
+type IconProps = { className?: string }
+
+function IconCommand({ className }: IconProps) {
+  return (
+    <svg
+      className={className ?? 'size-4'}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0 0-6Z" />
+    </svg>
+  )
+}
+
+function IconSun({ className }: IconProps) {
+  return (
+    <svg
+      className={className ?? 'size-4'}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
+  )
+}
+
+function IconSliders({ className }: IconProps) {
+  return (
+    <svg
+      className={className ?? 'size-4'}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
+      <path d="M2 14h4M10 8h4M18 16h4" />
+    </svg>
+  )
+}
+
+function IconList({ className }: IconProps) {
+  return (
+    <svg
+      className={className ?? 'size-4'}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M8 6h13M8 12h13M8 18h13" />
+      <path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </svg>
+  )
+}
+
+function IconChevronDown({ className }: IconProps) {
+  return (
+    <svg
+      className={className ?? 'size-4'}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -330,49 +420,59 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </form>
           ) : null}
 
-          <select
-            value={distro.distro}
-            onChange={(e) => {
-              const next = normalizeDistro(e.target.value)
-              if (next) distro.setDistro(next)
-            }}
-            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-xs font-medium text-[color:var(--bm-fg)] hover:bg-[color:var(--bm-surface)/0.9] sm:text-sm"
-            aria-label="Select distribution"
-          >
-            {DISTRO_GROUPS.map((g) => (
-              <optgroup key={g.label} label={g.label}>
-                {g.items.map((d) => (
-                  <option key={d} value={d}>
-                    {DISTRO_LABEL[d]}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={distro.distro}
+              onChange={(e) => {
+                const next = normalizeDistro(e.target.value)
+                if (next) distro.setDistro(next)
+              }}
+              className="appearance-none rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 pr-9 text-xs font-medium text-[color:var(--bm-fg)] outline-none hover:bg-[color:var(--bm-surface)/0.9] focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] sm:text-sm"
+              aria-label="Select distribution"
+            >
+              {DISTRO_GROUPS.map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.items.map((d) => (
+                    <option key={d} value={d}>
+                      {DISTRO_LABEL[d]}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <IconChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--bm-muted)]" />
+          </div>
 
           <button
             type="button"
-            className="hidden rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] sm:block"
+            className="hidden items-center justify-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
             onClick={() => setPaletteOpen(true)}
+            aria-label="Open command palette"
+            title="Command palette (Ctrl/⌘ K)"
           >
-            Ctrl/⌘ K
+            <IconCommand className="size-4" />
+            <span className="hidden xl:inline font-mono text-xs text-[color:var(--bm-muted)]">Ctrl/⌘ K</span>
           </button>
           <button
             type="button"
-            className="hidden items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
+            className="hidden items-center justify-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
             onClick={() => theme.cycle()}
             title={`Theme: ${theme.mode}`}
+            aria-label="Cycle theme"
           >
-            Theme
+            <IconSun className="size-4" />
+            <span className="hidden xl:inline">Theme</span>
           </button>
           {isManPage ? (
             <button
               type="button"
-              className="hidden items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
+              className="hidden items-center justify-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
               onClick={() => setPrefsOpen(true)}
               title="Reading preferences"
+              aria-label="Open reading preferences"
             >
-              Prefs
+              <IconSliders className="size-4" />
+              <span className="hidden xl:inline">Prefs</span>
             </button>
           ) : null}
           <button
@@ -383,8 +483,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => toc.setOpen(true)}
             tabIndex={toc.items.length ? 0 : -1}
             aria-hidden={!toc.items.length}
+            aria-label="Open table of contents"
           >
-            TOC
+            <IconList className="size-4" />
+            <span className="hidden sm:inline sm:pl-1.5">TOC</span>
           </button>
         </div>
         {offline ? (

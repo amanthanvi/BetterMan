@@ -42,7 +42,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       </p>
 
       <form
-        className="mt-10 rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-5 shadow-sm backdrop-blur"
+        className="mt-14 rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-5 shadow-sm backdrop-blur"
         action="/search"
         method="get"
       >
@@ -63,7 +63,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </button>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[color:var(--bm-muted)]">
+        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[var(--bm-border)] pt-4 text-xs text-[color:var(--bm-muted)]">
           <span className="font-mono">Try:</span>
           <Link
             href={`/search?q=tar${distroParam}`}
@@ -91,11 +91,20 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </Link>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
-          <div className="flex items-center gap-2">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--bm-border)] pt-4 text-xs text-[color:var(--bm-muted)]">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono">Keys:</span>
-            <span className="font-mono">/</span> search
-            <span className="font-mono">Ctrl/⌘K</span> palette
+            <kbd className="rounded-lg border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-2 py-1 font-mono text-xs text-[color:var(--bm-fg)]">
+              /
+            </kbd>
+            <span>search</span>
+            <kbd className="rounded-lg border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-2 py-1 font-mono text-xs text-[color:var(--bm-fg)]">
+              Ctrl/⌘
+            </kbd>
+            <kbd className="rounded-lg border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-2 py-1 font-mono text-xs text-[color:var(--bm-fg)]">
+              K
+            </kbd>
+            <span>palette</span>
           </div>
           <div className="font-mono text-[10px] text-[color:var(--bm-muted)] sm:text-xs">
             Dataset {info.datasetReleaseId} · {info.pageCount.toLocaleString()} pages · updated{' '}
@@ -104,7 +113,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
       </form>
 
-      <section className="mt-10">
+      <section className="mt-14">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Browse</h2>
           <div className="text-xs text-[color:var(--bm-muted)]">Sections 1–9</div>

@@ -205,7 +205,13 @@
   @media (prefers-reduced-motion: no-preference) {
     html,
     body,
-    body * {
+    [data-bm-app-header],
+    [data-bm-app-footer],
+    [data-bm-sidebar],
+    [data-bm-findbar],
+    main,
+    article,
+    footer {
       transition-property: color, background-color, border-color, fill, stroke;
       transition-duration: 150ms;
       transition-timing-function: ease-out;
