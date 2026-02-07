@@ -4,9 +4,11 @@ import subprocess
 from pathlib import Path
 
 _PACMAN_LOCAL_DIR = Path("/var/lib/pacman/local")
+_PACMAN_CONF_PATH = Path("/etc/pacman.conf")
 
 
 def pacman_install(packages: list[str]) -> None:
+    _ensure_pacman_extracts_man_pages()
     subprocess.run(["pacman", "-Syu", "--noconfirm", "--needed", *packages], check=True)
 
 
@@ -91,3 +93,46 @@ def _read_pacman_files(path: Path) -> list[str]:
             continue
         out.append(line)
     return out
+
+
+def _ensure_pacman_extracts_man_pages() -> None:
+    if not _PACMAN_CONF_PATH.exists():
+        return
+    try:
+        content = _PACMAN_CONF_PATH.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return
+
+    updated: list[str] = []
+    changed = False
+
+    for raw in content.splitlines():
+        line = raw.rstrip("\n")
+        stripped = line.strip()
+
+        if not stripped or stripped.startswith("#") or not stripped.startswith("NoExtract"):
+            updated.append(line)
+            continue
+
+        if "usr/share/man" not in stripped:
+            updated.append(line)
+            continue
+
+        key, sep, rest = line.partition("=")
+        if not sep:
+            changed = True
+            continue
+
+        patterns = rest.split()
+        kept = [p for p in patterns if "usr/share/man" not in p]
+        if not kept:
+            changed = True
+            continue
+
+        updated.append(f"{key.strip()} = {' '.join(kept)}")
+        changed = True
+
+    if not changed:
+        return
+
+    _PACMAN_CONF_PATH.write_text("\n".join(updated).rstrip() + "\n", encoding="utf-8")
