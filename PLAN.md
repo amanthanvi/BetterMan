@@ -67,11 +67,11 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 ### M35 — SEO endpoints in Next.js
 
 - [x] `GET /robots.txt` served by Next.js
-- [ ] Sitemaps served by Next.js:
+- [x] Sitemaps served by Next.js:
   - [x] `GET /sitemap.xml`
   - [x] `GET /sitemap-<distro>.xml`
   - [x] `GET /sitemap-<distro>-<page>.xml`
-- [ ] E2E asserts robots + sitemaps work against Next.js
+- [x] E2E asserts robots + sitemaps work against Next.js
 
 ### M36 — CSP nonces in Next.js
 
@@ -92,9 +92,9 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M39 — CI + E2E migration
 
-- [ ] CI builds/tests Next.js package
-- [ ] E2E runs against Next.js + FastAPI (two processes)
-- [ ] OpenAPI → TypeScript generation remains enforced
+- [x] CI builds/tests Next.js package
+- [x] E2E runs against Next.js + FastAPI (two processes)
+- [x] OpenAPI → TypeScript generation remains enforced
 
 ### M40 — Railway: two services + cutover
 
