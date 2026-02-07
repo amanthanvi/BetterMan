@@ -47,6 +47,24 @@ jobs:
       - run: pnpm -C frontend build
       - run: pnpm -C frontend bundle:report
 
+  nextjs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+        with:
+          version: 10.27.0
+
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v4
+        with:
+          node-version: 25
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -C nextjs lint
+      - run: pnpm -C nextjs build
+
   backend:
     runs-on: ubuntu-latest
     steps:
@@ -115,6 +133,7 @@ jobs:
   e2e:
     needs:
       - frontend
+      - nextjs
       - backend
     runs-on: ubuntu-latest
     services:
@@ -177,8 +196,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          pnpm -C frontend build
-
           cd backend
           nohup uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/betterman-e2e.log 2>&1 &
 
@@ -193,14 +210,36 @@ jobs:
           tail -n 200 /tmp/betterman-e2e.log || true
           exit 1
 
+      - name: Start Next.js
+        env:
+          FASTAPI_INTERNAL_URL: http://127.0.0.1:8000
+        run: |
+          set -euo pipefail
+
+          pnpm -C nextjs build
+
+          nohup pnpm -C nextjs start -- -p 3000 > /tmp/betterman-next.log 2>&1 &
+
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/robots.txt >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Timed out waiting for Next.js"
+          tail -n 200 /tmp/betterman-next.log || true
+          exit 1
+
       - name: Run Playwright E2E + a11y
         env:
-          E2E_BASE_URL: http://127.0.0.1:8000
+          E2E_BASE_URL: http://127.0.0.1:3000
         run: pnpm -C frontend e2e
 
   deploy_railway:
     needs:
       - frontend
+      - nextjs
       - backend
       - ingestion
       - api_types
