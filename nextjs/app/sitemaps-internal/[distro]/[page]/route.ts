@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 
-import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../lib/api'
+import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../../../lib/api'
 
 function weakEtag(parts: string[]): string {
   const digest = createHash('sha256').update(parts.join('|')).digest('base64url')

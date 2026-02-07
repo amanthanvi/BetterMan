@@ -12,12 +12,24 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, '..'),
   async rewrites() {
     const fastapi = normalizeBaseUrl(process.env.FASTAPI_INTERNAL_URL) ?? 'http://127.0.0.1:8000'
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${fastapi}/api/:path*`,
-      },
-    ]
+    return {
+      beforeFiles: [
+        {
+          source: '/sitemap-:distro-:page.xml',
+          destination: '/sitemaps-internal/:distro/:page',
+        },
+        {
+          source: '/sitemap-:distro.xml',
+          destination: '/sitemaps-internal/:distro',
+        },
+      ],
+      afterFiles: [
+        {
+          source: '/api/:path*',
+          destination: `${fastapi}/api/:path*`,
+        },
+      ],
+    }
   },
 }
 

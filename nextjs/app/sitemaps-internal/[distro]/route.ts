@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 
-import { fetchSeoReleases } from '../../lib/api'
+import { fetchSeoReleases } from '../../../lib/api'
 
 function toIsoZ(iso: string): string | null {
   const dt = new Date(iso)
