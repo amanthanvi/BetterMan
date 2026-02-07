@@ -23,7 +23,7 @@ Living execution plan for shipping `v0.5.0` from `SPEC.md`.
 - [x] v0.2.1 shipped (tag `v0.2.1`)
 - [x] v0.3.0 shipped (tag `v0.3.0`)
 - [x] v0.4.0 shipped (tag `v0.4.0`)
-- [ ] v0.5.0 in progress
+- [x] v0.5.0 shipped (tag `v0.5.0`)
 
 ## Golden Commands (current; proven)
 
@@ -117,7 +117,7 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 - [x] Frontend distro selector grouped (Linux/BSD)
 - [x] Sitemaps include all distros (from active releases)
 
-**Verification TODO:** Run `update-dataset` via workflow_dispatch and confirm staging has active dataset releases for `freebsd` + `macos`, then verify sitemap endpoints render them.
+**Verification:** `update-dataset` ran and prod shows active releases + sitemaps for all distros (Arch run `21786479374`, Alpine run `21787847507`).
 
 ### M42 — UX engagement (localStorage only)
 
@@ -135,9 +135,9 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M44 — Release v0.5.0
 
-- [ ] Staging/prod isolation (docs + config)
+- [x] Staging/prod isolation (docs + config)
 - [x] Runbooks updated for two-service architecture
 - [x] Performance + bundle comparisons documented
 - [x] CI green on `main`
 - [x] Docs updated (`SPEC.md`, `README.md`, `CONTRIBUTING.md`, `.env.example`)
-- [ ] Tag `v0.5.0`
+- [x] Tag `v0.5.0`
