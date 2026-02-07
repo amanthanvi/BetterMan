@@ -14,6 +14,20 @@ export type SectionLabel = {
   label: string
 }
 
+export type SearchResult = {
+  name: string
+  section: string
+  title: string
+  description: string
+  highlights: string[]
+}
+
+export type SearchResponse = {
+  query: string
+  results: SearchResult[]
+  suggestions: string[]
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(fastapiUrl(path), {
     ...init,
@@ -48,3 +62,20 @@ export function listSections(distro: Distro): Promise<SectionLabel[]> {
   })
 }
 
+export function search(opts: {
+  distro: Distro
+  q: string
+  section?: string
+  limit?: number
+  offset?: number
+}): Promise<SearchResponse> {
+  const params = new URLSearchParams()
+  params.set('q', opts.q)
+  if (opts.section) params.set('section', opts.section)
+  if (typeof opts.limit === 'number') params.set('limit', String(opts.limit))
+  if (typeof opts.offset === 'number') params.set('offset', String(opts.offset))
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  return fetchJson<SearchResponse>(`/api/v1/search?${params.toString()}`, {
+    cache: 'no-store',
+  })
+}
