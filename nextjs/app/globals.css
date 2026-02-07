@@ -130,6 +130,76 @@
     font-family: var(--font-serif);
     line-height: 1.65;
     letter-spacing: 0.01em;
+
+    --bm-reading-font-size: 15px;
+    --bm-reading-line-height: 1.85;
+    --bm-reading-font-family: var(--font-serif);
+    --bm-reading-column-width: 56rem;
+
+    --bm-code-bg: var(--bm-bg);
+    --bm-code-surface: var(--bm-surface);
+    --bm-code-fg: var(--bm-fg);
+    --bm-code-muted: var(--bm-muted);
+    --bm-code-border: var(--bm-border);
+    --bm-code-accent: var(--bm-accent);
+    --bm-code-accent-contrast: var(--bm-accent-contrast);
+  }
+
+  body[data-bm-font-size="small"] {
+    --bm-reading-font-size: 13.5px;
+  }
+  body[data-bm-font-size="large"] {
+    --bm-reading-font-size: 17.25px;
+  }
+  body[data-bm-font-size="xlarge"] {
+    --bm-reading-font-size: 19.5px;
+  }
+
+  body[data-bm-font-family="sans"] {
+    --bm-reading-font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+  }
+  body[data-bm-font-family="mono"] {
+    --bm-reading-font-family: var(--font-mono);
+  }
+
+  body[data-bm-line-height="compact"] {
+    --bm-reading-line-height: 1.5;
+  }
+  body[data-bm-line-height="normal"] {
+    --bm-reading-line-height: 1.65;
+  }
+
+  body[data-bm-column-width="narrow"] {
+    --bm-reading-column-width: 42rem;
+  }
+  body[data-bm-column-width="wide"] {
+    --bm-reading-column-width: 72rem;
+  }
+
+  body[data-bm-code-theme="light"] {
+    --bm-code-bg: #f7f1e6;
+    --bm-code-surface: #fffdf7;
+    --bm-code-fg: #1b1a17;
+    --bm-code-muted: #5f5a52;
+    --bm-code-border: #e2d6c4;
+    --bm-code-accent: #b9382d;
+    --bm-code-accent-contrast: #fff6f3;
+  }
+
+  body[data-bm-code-theme="dark"] {
+    --bm-code-bg: #0b0d10;
+    --bm-code-surface: #10151c;
+    --bm-code-fg: #f0eadf;
+    --bm-code-muted: #aca599;
+    --bm-code-border: #202734;
+    --bm-code-accent: #ff6b5a;
+    --bm-code-accent-contrast: #1b0c0a;
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -165,12 +235,12 @@
 
   .hljs {
     background: transparent;
-    color: var(--bm-fg);
+    color: var(--bm-code-fg);
   }
 
   .hljs-comment,
   .hljs-quote {
-    color: var(--bm-muted);
+    color: var(--bm-code-muted);
     font-style: italic;
   }
 
@@ -178,14 +248,14 @@
   .hljs-built_in,
   .hljs-literal,
   .hljs-symbol {
-    color: color-mix(in srgb, var(--bm-accent) 72%, var(--bm-fg));
+    color: color-mix(in srgb, var(--bm-code-accent) 72%, var(--bm-code-fg));
     font-weight: 600;
   }
 
   .hljs-string,
   .hljs-title,
   .hljs-attr {
-    color: color-mix(in srgb, var(--bm-accent) 38%, var(--bm-fg));
+    color: color-mix(in srgb, var(--bm-code-accent) 38%, var(--bm-code-fg));
   }
 
   .bm-mark {

@@ -93,14 +93,14 @@ export function CodeBlock({
     <div id={id ?? undefined} className="relative scroll-mt-32">
       <button
         type="button"
-        className="absolute right-3 top-3 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.85] p-2 text-[color:var(--bm-muted)] shadow-sm hover:bg-[color:var(--bm-surface)]"
+        className="absolute right-3 top-3 rounded-full border border-[var(--bm-code-border)] bg-[color:var(--bm-code-surface)/0.85] p-2 text-[color:var(--bm-code-muted)] shadow-sm hover:bg-[color:var(--bm-code-surface)]"
         onClick={copy}
         aria-label="Copy code block"
         title={copied ? 'Copied' : 'Copy'}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
-      <pre className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] p-5 text-sm leading-7 shadow-sm">
+      <pre className="overflow-x-auto rounded-2xl border border-[var(--bm-code-border)] bg-[color:var(--bm-code-bg)/0.35] p-5 text-[length:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)] shadow-sm">
         <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />
       </pre>
     </div>

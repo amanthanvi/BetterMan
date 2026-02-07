@@ -247,15 +247,13 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
     }
 
     case 'paragraph':
-      return <p className="text-[15px] leading-8 text-[color:var(--bm-fg)]">{renderInlines(block.inlines, ctx, distro)}</p>
+      return <p className="text-[color:var(--bm-fg)]">{renderInlines(block.inlines, ctx, distro)}</p>
 
     case 'list': {
       const ListTag = (block.ordered ? 'ol' : 'ul') as 'ol'
       return (
         <ListTag
-          className={`ml-6 space-y-2 text-[15px] leading-8 text-[color:var(--bm-fg)] ${
-            block.ordered ? 'list-decimal' : 'list-disc'
-          }`}
+          className={`ml-6 space-y-2 text-[color:var(--bm-fg)] ${block.ordered ? 'list-decimal' : 'list-disc'}`}
         >
           {block.items.map((itemBlocks, idx) => (
             <li key={idx}>
@@ -278,7 +276,7 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
               <dt id={item.id ?? undefined} className="scroll-mt-32 font-mono text-sm font-semibold text-[color:var(--bm-fg)]">
                 {renderInlines(item.termInlines, ctx, distro)}
               </dt>
-              <dd className="mt-2 space-y-2 pl-4 text-[15px] leading-8 text-[color:var(--bm-fg)]">
+              <dd className="mt-2 space-y-2 pl-4 text-[color:var(--bm-fg)]">
                 {item.definitionBlocks.map((child, childIdx) => (
                   <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} distro={distro} />
                 ))}
@@ -302,7 +300,7 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
     case 'table':
       return (
         <div className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] shadow-sm">
-          <table className="w-full border-collapse text-left text-[15px]">
+          <table className="w-full border-collapse text-left text-[color:var(--bm-fg)]">
             <thead className="bg-[color:var(--bm-bg)/0.7] text-[color:var(--bm-muted)]">
               <tr>
                 {block.headers.map((h, idx) => (
@@ -339,7 +337,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
         return <span key={idx}>{highlightText(inline.text, ctx)}</span>
       case 'code':
         return (
-          <code key={idx} className="rounded bg-[color:var(--bm-bg)/0.8] px-1 py-0.5 font-mono text-[0.95em]">
+          <code key={idx} className="rounded bg-[color:var(--bm-code-bg)/0.8] px-1 py-0.5 font-mono text-[0.95em]">
             {highlightText(inline.text, ctx)}
           </code>
         )
@@ -522,4 +520,3 @@ function withDistroHref(href: string, distro: Distro): string {
   url.searchParams.set('distro', distro)
   return `${url.pathname}${url.search}${url.hash}`
 }
-

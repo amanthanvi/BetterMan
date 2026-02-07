@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import type { SearchResponse, SearchResult } from '../../lib/api'
+import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, getBookmarks } from '../../lib/bookmarks'
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../../lib/recent'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useDistro } from '../state/distro'
@@ -89,6 +90,17 @@ function recentToItems(recent: RecentItem[], ctx: { runSearch: (q: string) => vo
   })
 }
 
+function bookmarksToItems(bookmarks: Array<{ name: string; section: string; description?: string }>, ctx: { runMan: (name: string, section: string) => void }) {
+  return bookmarks.slice(0, 10).map((b) => ({
+    kind: 'page' as const,
+    id: `bookmark:${b.name}:${b.section}`,
+    name: b.name,
+    section: b.section,
+    description: b.description ?? '',
+    run: () => ctx.runMan(b.name, b.section),
+  }))
+}
+
 function resultToItem(
   result: SearchResult,
   ctx: { query: string; runMan: (name: string, section: string) => void },
@@ -130,6 +142,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const [activeIndex, setActiveIndex] = useState(0)
   const parsed = useMemo(() => parsePaletteInput(input), [input])
   const debouncedQuery = useDebouncedValue(parsed.text.trim(), 120)
+  const [bookmarkSet, setBookmarkSet] = useState<Set<string>>(() => new Set())
 
   const [searchState, setSearchState] = useState<{ status: 'idle' | 'loading' | 'error' | 'success'; data?: SearchResponse }>({
     status: 'idle',
@@ -149,6 +162,25 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     router.push(withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro.distro))
     close()
   }
+
+  useEffect(() => {
+    if (!open) return
+    const sync = () => setBookmarkSet(new Set(getBookmarks().items.map((it) => `${it.name}:${it.section}`)))
+    sync()
+
+    const bump = () => sync()
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== BOOKMARKS_STORAGE_KEY) return
+      bump()
+    }
+
+    window.addEventListener(BOOKMARKS_EVENT, bump)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(BOOKMARKS_EVENT, bump)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -215,6 +247,24 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         close()
       },
     },
+    {
+      kind: 'action',
+      id: 'action-history',
+      label: 'Go to history',
+      run: () => {
+        router.push('/history')
+        close()
+      },
+    },
+    {
+      kind: 'action',
+      id: 'action-bookmarks',
+      label: 'Go to bookmarks',
+      run: () => {
+        router.push('/bookmarks')
+        close()
+      },
+    },
     ...sectionActions,
     {
       kind: 'action',
@@ -253,7 +303,14 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     }
 
     const q = parsed.text.trim()
-    if (!q) return [...recentToItems(getRecent(), { runSearch, runMan }), ...baseActions]
+    if (!q) {
+      const bookmarks = getBookmarks().items
+      return [
+        ...bookmarksToItems(bookmarks, { runMan }),
+        ...recentToItems(getRecent(), { runSearch, runMan }),
+        ...baseActions,
+      ]
+    }
     if (searchState.status !== 'success' || !searchState.data) return []
     return searchState.data.results.map((r) => resultToItem(r, { query: q, runMan }))
   })()
@@ -343,7 +400,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <div className="font-medium text-[color:var(--bm-fg)]">{itemLabel(item)}</div>
-                    {item.kind === 'action' && item.detail ? (
+                    {item.kind === 'page' && bookmarkSet.has(`${item.name}:${item.section}`) ? (
+                      <div className="text-xs text-[color:var(--bm-muted)]">★</div>
+                    ) : item.kind === 'action' && item.detail ? (
                       <div className="text-xs text-[color:var(--bm-muted)]">{item.detail}</div>
                     ) : null}
                   </div>

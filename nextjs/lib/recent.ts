@@ -1,4 +1,4 @@
-type RecentItem =
+export type RecentItem =
   | {
       kind: 'page'
       name: string
@@ -12,28 +12,31 @@ type RecentItem =
       at: number
     }
 
-const STORAGE_KEY = 'bm-recent'
-const MAX_ITEMS = 30
+export type RecentStore = {
+  version: 1
+  items: RecentItem[]
+  lastCleared?: number
+}
+
+export const RECENT_STORAGE_KEY = 'bm-recent'
+export const RECENT_EVENT = 'bm:recent-changed'
+
+const MAX_ITEMS = 120
+
+function defaultStore(): RecentStore {
+  return { version: 1, items: [] }
+}
 
 function readRaw(): unknown {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+    const raw = localStorage.getItem(RECENT_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
   } catch {
-    return []
+    return null
   }
 }
 
-function write(items: RecentItem[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, MAX_ITEMS)))
-  } catch {
-    // ignore
-  }
-}
-
-export function getRecent(): RecentItem[] {
-  const raw = readRaw()
+function parseItems(raw: unknown): RecentItem[] {
   if (!Array.isArray(raw)) return []
 
   const parsed: RecentItem[] = []
@@ -57,13 +60,76 @@ export function getRecent(): RecentItem[] {
       parsed.push({ kind: 'search', query: r.query, at: r.at })
     }
   }
+  return parsed
+}
 
-  parsed.sort((a, b) => b.at - a.at)
-  return parsed.slice(0, MAX_ITEMS)
+function parseStore(raw: unknown): RecentStore {
+  if (!raw) return defaultStore()
+
+  if (Array.isArray(raw)) {
+    return { version: 1, items: parseItems(raw) }
+  }
+
+  if (typeof raw !== 'object') return defaultStore()
+  const r = raw as Record<string, unknown>
+  if (r.version !== 1) return defaultStore()
+  const items = parseItems(r.items)
+  const lastCleared = typeof r.lastCleared === 'number' ? r.lastCleared : undefined
+  return { version: 1, items, lastCleared }
+}
+
+function emitChanged() {
+  try {
+    window.dispatchEvent(new CustomEvent(RECENT_EVENT))
+  } catch {
+    // ignore
+  }
+}
+
+function writeStore(store: RecentStore) {
+  try {
+    const normalized = normalizeStore(store)
+    localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(normalized))
+  } catch {
+    // ignore
+  }
+  emitChanged()
+}
+
+function normalizeStore(store: RecentStore): RecentStore {
+  const items = store.items
+    .slice()
+    .sort((a, b) => b.at - a.at)
+    .slice(0, MAX_ITEMS)
+  return { version: 1, items, lastCleared: store.lastCleared }
+}
+
+export function getRecentStore(): RecentStore {
+  return normalizeStore(parseStore(readRaw()))
+}
+
+export function getRecent(): RecentItem[] {
+  return getRecentStore().items
 }
 
 export function clearRecent() {
-  write([])
+  writeStore({ version: 1, items: [], lastCleared: Date.now() })
+}
+
+export type RecentKey =
+  | { kind: 'page'; name: string; section: string }
+  | { kind: 'search'; query: string }
+
+export function removeRecent(key: RecentKey) {
+  const store = getRecentStore()
+  const next = store.items.filter((x) => !matches(x, key))
+  if (next.length === store.items.length) return
+  writeStore({ ...store, items: next })
+}
+
+function matches(a: RecentItem, b: RecentKey) {
+  if (b.kind === 'page') return a.kind === 'page' && a.name === b.name && a.section === b.section
+  return a.kind === 'search' && a.query === b.query
 }
 
 export function recordRecentPage(opts: { name: string; section: string; description?: string }) {
@@ -75,9 +141,9 @@ export function recordRecentPage(opts: { name: string; section: string; descript
     at: Date.now(),
   }
 
-  const existing = getRecent()
-  const without = existing.filter((x) => !(x.kind === 'page' && x.name === item.name && x.section === item.section))
-  write([item, ...without])
+  const store = getRecentStore()
+  const without = store.items.filter((x) => !(x.kind === 'page' && x.name === item.name && x.section === item.section))
+  writeStore({ ...store, items: [item, ...without] })
 }
 
 export function recordRecentSearch(query: string) {
@@ -85,10 +151,7 @@ export function recordRecentSearch(query: string) {
   if (!q) return
 
   const item: RecentItem = { kind: 'search', query: q, at: Date.now() }
-  const existing = getRecent()
-  const without = existing.filter((x) => !(x.kind === 'search' && x.query === item.query))
-  write([item, ...without])
+  const store = getRecentStore()
+  const without = store.items.filter((x) => !(x.kind === 'search' && x.query === item.query))
+  writeStore({ ...store, items: [item, ...without] })
 }
-
-export type { RecentItem }
-

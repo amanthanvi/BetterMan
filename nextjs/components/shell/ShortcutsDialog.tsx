@@ -34,6 +34,7 @@ export function ShortcutsDialog({
         { keys: ['D'], desc: 'Cycle theme' },
         { keys: ['B'], desc: 'Toggle TOC' },
         { keys: ['T'], desc: 'Scroll to top' },
+        { keys: ['H'], desc: 'Open history' },
       ],
     },
   ]
@@ -42,6 +43,8 @@ export function ShortcutsDialog({
     groups.push({
       title: 'Man page',
       items: [
+        { keys: ['M'], desc: 'Toggle bookmark' },
+        { keys: ['P'], desc: 'Open reading preferences' },
         { keys: ['Enter'], desc: 'Next find match' },
         { keys: ['Shift', 'Enter'], desc: 'Previous find match' },
       ],
@@ -99,4 +102,3 @@ export function ShortcutsDialog({
     </div>
   )
 }
-

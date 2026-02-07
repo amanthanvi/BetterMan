@@ -6,9 +6,11 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
+import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { DISTRO_GROUPS, DISTRO_LABEL, normalizeDistro } from '../../lib/distro'
 import { formatRelativeTime } from '../../lib/time'
 import { CommandPalette } from '../palette/CommandPalette'
+import { ReadingPrefsDrawer } from '../reading/ReadingPrefsDrawer'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
@@ -46,6 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [q, setQ] = useState('')
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [prefsOpen, setPrefsOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement | null>(null)
 
   const lastRouteKeyRef = useRef<string | null>(null)
@@ -53,6 +56,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isPopRef = useRef(false)
 
   const routeKey = `${pathname}?${searchParams.toString()}`
+  const routeParts = pathname.split('/').filter(Boolean)
+  const isManPage = routeParts[0] === 'man' && routeParts.length >= 3
 
   const [info, setInfo] = useState<InfoResponse | null>(null)
 
@@ -185,11 +190,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
         })
       }
+
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'h') {
+        e.preventDefault()
+        router.push('/history')
+        return
+      }
+
+      if (isManPage && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        setPrefsOpen(true)
+        return
+      }
+
+      if (isManPage && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault()
+        try {
+          window.dispatchEvent(new CustomEvent(BOOKMARK_TOGGLE_EVENT))
+        } catch {
+          // ignore
+        }
+        return
+      }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [theme, toc])
+  }, [isManPage, router, theme, toc])
 
   return (
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
@@ -269,6 +296,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             Theme
           </button>
+          {isManPage ? (
+            <button
+              type="button"
+              className="hidden items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
+              onClick={() => setPrefsOpen(true)}
+              title="Reading preferences"
+            >
+              Prefs
+            </button>
+          ) : null}
           <button
             type="button"
             className={`inline-flex items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] lg:hidden ${
@@ -284,7 +321,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <TocDrawer />
-      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} isManPage={pathname.startsWith('/man/')} />
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} isManPage={isManPage} />
+      <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
       <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>

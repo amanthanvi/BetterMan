@@ -6,6 +6,7 @@ import type { SectionPage } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
 import { DISTRO_LABEL, normalizeDistro } from '../../lib/distro'
 import type { ManPage, ManPageContent, ManPageVariant, OptionItem } from '../../lib/docModel'
+import { BookmarkButton } from '../bookmarks/BookmarkButton'
 import { DocRenderer, type DocRendererHandle } from '../doc/DocRenderer'
 import { useDistro } from '../state/distro'
 import { useToc } from '../state/toc'
@@ -290,15 +291,22 @@ export function ManPageView({
               <p className="mt-3 max-w-[70ch] text-base text-[color:var(--bm-muted)]">{page.description}</p>
             </div>
 
-            <button
-              type="button"
-              className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-              onClick={copyLink}
-              aria-label="Copy link to clipboard"
-              title={copiedLink ? 'Copied' : 'Copy link'}
-            >
-              {copiedLink ? 'Copied' : 'Copy link'}
-            </button>
+            <div className="flex items-center gap-2">
+              <BookmarkButton
+                name={page.name}
+                section={page.section}
+                description={page.description || page.title}
+              />
+              <button
+                type="button"
+                className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                onClick={copyLink}
+                aria-label="Copy link to clipboard"
+                title={copiedLink ? 'Copied' : 'Copy link'}
+              >
+                {copiedLink ? 'Copied' : 'Copy link'}
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--bm-muted)]">
@@ -404,7 +412,7 @@ export function ManPageView({
           />
         ) : null}
 
-        <article className="min-w-0">
+        <article className="min-w-0 mx-auto max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
           <div data-bm-findbar className={`sticky top-16 z-10 lg:hidden ${findBarHidden ? 'mb-4' : 'mb-8'}`}>
             {findBarHidden ? (
               <div className="flex justify-end">
@@ -565,4 +573,3 @@ export function ManPageView({
     </div>
   )
 }
-
