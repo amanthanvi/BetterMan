@@ -1,6 +1,6 @@
 # Multi-distro operations
 
-BetterMan supports multiple Linux distributions (Debian default; optional `?distro=ubuntu|fedora`).
+BetterMan supports multiple distributions (Debian default; optional `?distro=ubuntu|fedora|arch|alpine|freebsd|macos`).
 
 ## Quick checks (prod)
 
@@ -8,11 +8,19 @@ BetterMan supports multiple Linux distributions (Debian default; optional `?dist
   - `curl -fsS https://betterman.sh/api/v1/info`
   - `curl -fsS 'https://betterman.sh/api/v1/info?distro=ubuntu'`
   - `curl -fsS 'https://betterman.sh/api/v1/info?distro=fedora'`
+  - `curl -fsS 'https://betterman.sh/api/v1/info?distro=arch'`
+  - `curl -fsS 'https://betterman.sh/api/v1/info?distro=alpine'`
+  - `curl -fsS 'https://betterman.sh/api/v1/info?distro=freebsd'`
+  - `curl -fsS 'https://betterman.sh/api/v1/info?distro=macos'`
 - Sitemaps:
   - `curl -fsS https://betterman.sh/sitemap.xml | head`
   - `curl -fsS https://betterman.sh/sitemap-debian.xml | head`
   - `curl -fsS https://betterman.sh/sitemap-ubuntu.xml | head` (404 if uninitialized)
   - `curl -fsS https://betterman.sh/sitemap-fedora.xml | head` (404 if uninitialized)
+  - `curl -fsS https://betterman.sh/sitemap-arch.xml | head` (404 if uninitialized)
+  - `curl -fsS https://betterman.sh/sitemap-alpine.xml | head` (404 if uninitialized)
+  - `curl -fsS https://betterman.sh/sitemap-freebsd.xml | head` (404 if uninitialized)
+  - `curl -fsS https://betterman.sh/sitemap-macos.xml | head` (404 if uninitialized)
 
 ## Run ingestion + promotion (GitHub Actions)
 
@@ -27,7 +35,7 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 **Notes**
 
 - The workflow ingests into staging (`BETTERMAN_STAGING_DATABASE_URL`) then promotes the active release into prod (`BETTERMAN_PROD_DATABASE_URL`).
-- Debian is always required; Ubuntu/Fedora may be configured to “continue on failure” in workflow steps. When multi-distro is expected live, treat Ubuntu/Fedora ingestion failures as release blockers.
+- Debian is always required; the remaining distros may be configured to “continue on failure” in workflow steps. When multi-distro is expected live, treat any distro ingestion failures as release blockers.
 
 ## Verify distro API behavior
 
@@ -36,6 +44,10 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 - Explicit distro:
   - `curl -fsS 'https://betterman.sh/api/v1/man/curl/1?distro=ubuntu' | head`
   - `curl -fsS 'https://betterman.sh/api/v1/man/curl/1?distro=fedora' | head`
+  - `curl -fsS 'https://betterman.sh/api/v1/man/curl/1?distro=arch' | head`
+  - `curl -fsS 'https://betterman.sh/api/v1/man/curl/1?distro=alpine' | head`
+  - `curl -fsS 'https://betterman.sh/api/v1/man/curl/1?distro=freebsd' | head`
+  - `curl -fsS 'https://betterman.sh/api/v1/man/curl/1?distro=macos' | head`
 
 ## Troubleshooting
 
