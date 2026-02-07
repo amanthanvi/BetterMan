@@ -22,11 +22,10 @@ BetterMan deploys to Railway.
 ## Logs / debugging
 
 - Prefer Railway dashboard logs for quick triage.
-- If using Railway CLI, ensure you have a valid `RAILWAY_TOKEN` in your environment.
+- If using Railway CLI non-interactively, set `RAILWAY_API_TOKEN` (account/workspace token) or `RAILWAY_TOKEN` (project token).
 
 ## Common failures
 
 - Missing `RAILWAY_TOKEN` secret in GitHub Actions.
 - Railway deployment stuck in `PENDING` / `BUILDING` (check build logs).
 - Service restarts due to missing env vars (check Railway “Variables”).
-

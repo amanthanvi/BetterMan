@@ -28,7 +28,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 - Auto-deploy: `.github/workflows/ci.yml` deploys after all jobs pass on pushes to `main`.
 - Manual deploy: `.github/workflows/deploy.yml` (workflow `deploy-railway`, input `ref`).
-- Requires `RAILWAY_TOKEN` GitHub Actions secret (exported to Railway CLI as `RAILWAY_TOKEN`).
+- Requires `RAILWAY_TOKEN` GitHub Actions secret (exported to Railway CLI as `RAILWAY_API_TOKEN`).
 
 ## Dataset updates
 
