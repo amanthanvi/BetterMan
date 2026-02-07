@@ -4,9 +4,9 @@ from typing import Literal
 
 from app.core.errors import APIError
 
-Distro = Literal["debian", "ubuntu", "fedora"]
+Distro = Literal["debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"]
 
-SUPPORTED_DISTROS: set[str] = {"debian", "ubuntu", "fedora"}
+SUPPORTED_DISTROS: set[str] = {"debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"}
 
 
 def normalize_distro(value: str | None) -> Distro:
