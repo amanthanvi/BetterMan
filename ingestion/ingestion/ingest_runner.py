@@ -545,7 +545,7 @@ def _build_dataset_release_id(*, git_sha: str, mandoc_version: str | None, distr
 def _content_packages(*, sample: bool, distro: str) -> list[str]:
     if distro in {"freebsd", "macos"}:
         base: list[str] = []
-    elif distro == "arch":
+    elif distro in {"arch", "alpine"}:
         base = ["mandoc"]
     else:
         base = ["mandoc", "man-db"]
