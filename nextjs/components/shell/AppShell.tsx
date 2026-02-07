@@ -110,13 +110,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (isTypingTarget(document.activeElement)) return
-
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setPaletteOpen(true)
         return
       }
+
+      if (isTypingTarget(document.activeElement)) return
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '?') {
         e.preventDefault()

@@ -35,6 +35,7 @@ function readStoredTheme(): ThemeMode {
 
 function resolveTheme(mode: ThemeMode): 'light' | 'dark' {
   if (mode === 'light' || mode === 'dark') return mode
+  if (typeof window === 'undefined') return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
@@ -88,4 +89,3 @@ export function useTheme(): ThemeContextValue {
   if (!ctx) throw new Error('useTheme must be used within <ThemeProvider>')
   return ctx
 }
-

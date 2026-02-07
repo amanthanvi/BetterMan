@@ -292,7 +292,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   if (!open) return null
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50" onMouseDown={() => close()}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+      className="fixed inset-0 z-50"
+      onMouseDown={() => close()}
+    >
       <div className="absolute inset-0 bg-black/55" />
       <div className="relative mx-auto mt-20 w-[min(92vw,44rem)] overflow-hidden rounded-xl border border-[var(--bm-border)] bg-[var(--bm-bg)] shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="border-b border-[var(--bm-border)] p-3">
