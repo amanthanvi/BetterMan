@@ -91,3 +91,14 @@ Fedora base images can be built with docs disabled (`dnf` config `tsflags=nodocs
   - Install with `--setopt=tsflags=` and reinstall any preinstalled packages with `--setopt=tsflags=` so their man pages are backfilled.
 
 In BetterMan, the Fedora ingest path handles this automatically (see `ingestion/ingestion/fedora.py`).
+
+#### Arch: “no man pages ingested”
+
+Arch base images can exclude man pages via `pacman` config (`NoExtract` patterns like `usr/share/man/*`). When present, packages will install successfully but ship no `/usr/share/man` content, causing ingestion to return `total=0`.
+
+- Confirm:
+  - `docker run --rm archlinux:latest sh -lc 'grep -n \"^NoExtract\" /etc/pacman.conf || true'`
+- Fix (if you’re debugging manually):
+  - Remove/adjust any `NoExtract` patterns that match `usr/share/man/*`, then reinstall the packages you care about so their man pages are extracted.
+
+In BetterMan, the Arch ingest path handles this automatically (see `ingestion/ingestion/arch.py`).
