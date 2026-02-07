@@ -18,21 +18,23 @@ BetterMan uses CSP with **strict script nonces** and **relaxed styles** (see `SP
 
 ## Most common causes
 
-- Inline script tag missing a nonce (should be injected by the backend for the SPA HTML).
+- Inline script tag missing a nonce.
 - A new third‑party script/style was added (should not happen; avoid CDNs).
 - A route is accidentally serving HTML without the middleware (misconfigured mount).
 
+**v0.5.0 (Next.js):** CSP is injected by `nextjs/middleware.ts` (Next service), not by FastAPI.
+
 ## Local reproduction
 
-1. Start the backend:
+1. Start local services:
    - `pnpm backend:dev`
-2. Open the app and watch the browser DevTools Console + Network panels.
+   - `pnpm next:dev`
+2. Open the Next app (`http://127.0.0.1:3000`) and watch the browser DevTools Console + Network panels.
 
 ## Emergency rollback (last resort)
 
-Disable CSP header injection:
+Disable CSP header injection on the **Next** service:
 
-- Set `CSP_ENABLED=false` in Railway env vars for the web service.
+- Set `CSP_ENABLED=false` in Railway env vars for the Next service.
 
 Then redeploy/restart the service.
-
