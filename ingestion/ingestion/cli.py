@@ -22,7 +22,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ingest = sub.add_parser("ingest", help="Ingest man pages into Postgres")
     ingest.add_argument(
         "--distro",
-        choices=["debian", "ubuntu", "fedora"],
+        choices=["debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"],
         default="debian",
         help="Distribution to ingest (affects base image and package manager)",
     )

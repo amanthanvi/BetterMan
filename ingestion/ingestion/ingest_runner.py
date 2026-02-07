@@ -9,6 +9,28 @@ from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic
 
+from ingestion.alpine import (
+    apk_arch,
+    apk_install,
+    apk_packages,
+)
+from ingestion.alpine import (
+    build_manpath_to_package as build_manpath_to_package_apk,
+)
+from ingestion.alpine import (
+    mandoc_pkg_version as mandoc_pkg_version_apk,
+)
+from ingestion.arch import (
+    build_manpath_to_package as build_manpath_to_package_pacman,
+)
+from ingestion.arch import (
+    mandoc_pkg_version as mandoc_pkg_version_pacman,
+)
+from ingestion.arch import (
+    pacman_arch,
+    pacman_install,
+    pacman_packages,
+)
 from ingestion.db import connect, iso_utc_now, json_dumps, uuid4
 from ingestion.debian import (
     apt_install,
@@ -76,6 +98,10 @@ def ingest(
         apt_install(requested)
     elif distro == "fedora":
         dnf_install(requested)
+    elif distro == "arch":
+        pacman_install(requested)
+    elif distro == "alpine":
+        apk_install(requested)
     else:
         raise RuntimeError(f"unsupported distro: {distro}")
 
@@ -87,11 +113,21 @@ def ingest(
         arch = dpkg_arch()
         mandoc_version = mandoc_pkg_version_dpkg(packages)
         manpath_to_pkg = build_manpath_to_package_dpkg()
-    else:
+    elif distro == "fedora":
         packages = rpm_packages()
         arch = rpm_arch()
         mandoc_version = mandoc_pkg_version_rpm(packages)
         manpath_to_pkg = build_manpath_to_package_rpm([src.path for src in sources])
+    elif distro == "arch":
+        packages = pacman_packages()
+        arch = pacman_arch()
+        mandoc_version = mandoc_pkg_version_pacman(packages)
+        manpath_to_pkg = build_manpath_to_package_pacman()
+    else:
+        packages = apk_packages()
+        arch = apk_arch()
+        mandoc_version = mandoc_pkg_version_apk(packages)
+        manpath_to_pkg = build_manpath_to_package_apk()
 
     dataset_release_id = _build_dataset_release_id(
         git_sha=git_sha, mandoc_version=mandoc_version, distro=distro

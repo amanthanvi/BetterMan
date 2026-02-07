@@ -32,6 +32,8 @@ jobs:
           BETTERMAN_DEBIAN_IMAGE_REF: debian:trixie
           BETTERMAN_UBUNTU_IMAGE_REF: ubuntu:24.04
           BETTERMAN_FEDORA_IMAGE_REF: fedora:41
+          BETTERMAN_ARCH_IMAGE_REF: archlinux:latest
+          BETTERMAN_ALPINE_IMAGE_REF: alpine:3.20
         shell: bash
         run: |
           set -euo pipefail
@@ -46,6 +48,12 @@ jobs:
 
           echo "Ingesting Fedora…"
           uv run python -m ingestion.cli ingest --distro fedora --activate || echo "Fedora ingest failed (continuing)"
+
+          echo "Ingesting Arch…"
+          uv run python -m ingestion.cli ingest --distro arch --activate || echo "Arch ingest failed (continuing)"
+
+          echo "Ingesting Alpine…"
+          uv run python -m ingestion.cli ingest --distro alpine --activate || echo "Alpine ingest failed (continuing)"
 
       - name: Install Postgres client (pg_dump/psql)
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -65,7 +73,7 @@ jobs:
 
           dump_flags=(--data-only --no-owner --no-privileges --column-inserts)
 
-          for distro in debian ubuntu fedora; do
+          for distro in debian ubuntu fedora arch alpine; do
             row="$(psql "$STAGING_DB_URL" -t -A -c "SELECT id, dataset_release_id FROM dataset_releases WHERE locale = 'en' AND distro = '${distro}' AND is_active = TRUE ORDER BY ingested_at DESC LIMIT 1;")"
             if [[ -z "$row" ]]; then
               echo "No active ${distro} dataset release found in staging; skipping."

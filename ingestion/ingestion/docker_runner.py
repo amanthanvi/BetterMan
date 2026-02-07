@@ -14,11 +14,15 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "debian": "debian:trixie",
         "ubuntu": "ubuntu:24.04",
         "fedora": "fedora:41",
+        "arch": "archlinux:latest",
+        "alpine": "alpine:3.20",
     }
     image_env = {
         "debian": "BETTERMAN_DEBIAN_IMAGE_REF",
         "ubuntu": "BETTERMAN_UBUNTU_IMAGE_REF",
         "fedora": "BETTERMAN_FEDORA_IMAGE_REF",
+        "arch": "BETTERMAN_ARCH_IMAGE_REF",
+        "alpine": "BETTERMAN_ALPINE_IMAGE_REF",
     }
 
     if distro not in default_images or distro not in image_env:
@@ -85,12 +89,32 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
             "/opt/venv/bin/pip install -q /work; "
             f"{runner_cmd}"
         )
-    else:
+    elif distro == "fedora":
         inner = (
             "set -euo pipefail; "
             "mkdir -p /work; "
             "cp -R /src/. /work; "
             "dnf -y -q install python3 python3-pip ca-certificates >/dev/null; "
+            "python3 -m venv /opt/venv; "
+            "/opt/venv/bin/pip install -q /work; "
+            f"{runner_cmd}"
+        )
+    elif distro == "arch":
+        inner = (
+            "set -euo pipefail; "
+            "mkdir -p /work; "
+            "cp -R /src/. /work; "
+            "pacman -Syu --noconfirm --needed python python-pip ca-certificates >/dev/null; "
+            "python -m venv /opt/venv; "
+            "/opt/venv/bin/pip install -q /work; "
+            f"{runner_cmd}"
+        )
+    else:
+        inner = (
+            "set -eu; "
+            "mkdir -p /work; "
+            "cp -R /src/. /work; "
+            "apk add --no-cache python3 py3-pip ca-certificates >/dev/null; "
             "python3 -m venv /opt/venv; "
             "/opt/venv/bin/pip install -q /work; "
             f"{runner_cmd}"
