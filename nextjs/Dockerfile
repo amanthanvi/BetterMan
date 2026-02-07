@@ -25,4 +25,4 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/nextjs ./nextjs
 
-CMD ["sh", "-c", "cd nextjs && node_modules/.bin/next start -p ${PORT:-3000} -H 0.0.0.0"]
+CMD ["sh", "-c", "cd nextjs && node_modules/.bin/next start -p ${PORT:-3000} -H ::"]
