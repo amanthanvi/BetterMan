@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
+import type { Metadata } from 'next'
 
 import { listSections, search } from '../../lib/api'
 import { isDefaultDistro, normalizeDistro } from '../../lib/distro'
@@ -18,6 +19,19 @@ function withDistro(path: string, distro: string): string {
   const url = new URL(path, 'https://example.invalid')
   url.searchParams.set('distro', distro)
   return `${url.pathname}${url.search}`
+}
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
+  const sp = await searchParams
+  const q = getFirst(sp.q)?.trim() ?? ''
+  const title = q ? `Search “${q}” — BetterMan` : 'Search — BetterMan'
+  const description = q ? `Search results for “${q}”.` : 'Search the BetterMan dataset.'
+  return {
+    title,
+    description,
+    robots: { index: false },
+    openGraph: { title, description, type: 'website' },
+  }
 }
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {

@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import type { Metadata } from 'next'
 
 import { LicensesClient } from './LicensesClient'
 import { fetchLicenses } from '../../lib/api'
@@ -11,6 +12,18 @@ type SearchParams = Record<string, string | string[] | undefined>
 function getFirst(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0]
   return value
+}
+
+export function generateMetadata(): Metadata {
+  return {
+    title: 'Licenses — BetterMan',
+    description: 'Attribution and license notices for the current BetterMan dataset release.',
+    openGraph: {
+      title: 'Licenses — BetterMan',
+      description: 'Attribution and license notices for the current BetterMan dataset release.',
+      type: 'website',
+    },
+  }
 }
 
 export default async function LicensesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {

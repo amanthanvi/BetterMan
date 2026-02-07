@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { cookies } from 'next/headers'
+import type { Metadata } from 'next'
+import { cookies, headers } from 'next/headers'
 
 import { DocRenderer } from '../../../../components/doc/DocRenderer'
 import { FastApiError, fetchManByName, fetchManByNameAndSection, fetchRelated, suggest } from '../../../../lib/api'
@@ -19,6 +20,67 @@ function withDistro(path: string, distro: string): string {
   const url = new URL(path, 'https://example.invalid')
   url.searchParams.set('distro', distro)
   return `${url.pathname}${url.search}`
+}
+
+async function getRequestOrigin(): Promise<string | null> {
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host')
+  if (!host) return null
+
+  const proto = h.get('x-forwarded-proto') ?? 'https'
+  return `${proto}://${host}`
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ name: string; section: string }>
+  searchParams: Promise<SearchParams>
+}): Promise<Metadata> {
+  const { name, section } = await params
+  const sp = await searchParams
+  const cookieStore = await cookies()
+  const cookieDistro = cookieStore.get('bm-distro')?.value
+  const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+
+  const origin = await getRequestOrigin()
+  const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)
+  const canonical = origin ? `${origin}${canonicalPath}` : undefined
+
+  try {
+    const data = await fetchManByNameAndSection({
+      distro,
+      name: name.toLowerCase(),
+      section,
+    })
+
+    const title = `${data.page.name}(${data.page.section}) - BetterMan`
+    const description = data.page.description || data.page.title || `${data.page.name}(${data.page.section}) man page.`
+
+    return {
+      title,
+      description,
+      alternates: canonical ? { canonical } : undefined,
+      openGraph: {
+        title,
+        description,
+        type: 'article',
+      },
+    }
+  } catch (err) {
+    if (err instanceof FastApiError && err.status === 404) {
+      const title = `${name}(${section}) — Not found — BetterMan`
+      const description = `We couldn’t find ${name}(${section}) in the current BetterMan dataset.`
+      return {
+        title,
+        description,
+        alternates: canonical ? { canonical } : undefined,
+        robots: { index: false },
+      }
+    }
+    return { title: 'BetterMan' }
+  }
 }
 
 export default async function ManByNameAndSectionPage({

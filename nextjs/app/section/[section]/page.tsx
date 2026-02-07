@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
+import type { Metadata } from 'next'
 
 import { listSection } from '../../../lib/api'
 import { isDefaultDistro, normalizeDistro } from '../../../lib/distro'
@@ -18,6 +19,20 @@ function withDistro(path: string, distro: string): string {
   const url = new URL(path, 'https://example.invalid')
   url.searchParams.set('distro', distro)
   return `${url.pathname}${url.search}`
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ section: string }> }): Promise<Metadata> {
+  const { section } = await params
+  const title = `Section ${section} — BetterMan`
+  return {
+    title,
+    description: `Browse BetterMan man pages in section ${section}.`,
+    openGraph: {
+      title,
+      description: `Browse BetterMan man pages in section ${section}.`,
+      type: 'website',
+    },
+  }
 }
 
 export default async function SectionPage({
