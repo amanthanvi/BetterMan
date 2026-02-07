@@ -43,9 +43,9 @@ class ParsedManPage:
 
 def parse_mandoc_html(html: str) -> ParsedManPage:
     soup = BeautifulSoup(html, "html.parser")
-    manual_text = soup.find("div", class_="manual-text")
+    manual_text = soup.select_one(".manual-text") or soup.select_one("#manual-text") or soup.body
     if manual_text is None:
-        raise ValueError("mandoc output missing div.manual-text")
+        raise ValueError("mandoc output missing manual text container")
 
     used_ids: set[str] = set()
     toc: list[TocItem] = []

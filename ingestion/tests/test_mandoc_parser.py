@@ -43,3 +43,18 @@ def test_parse_mandoc_html_extracts_core_fields() -> None:
 
     assert parsed.see_also is not None
     assert [(r.name, r.section) for r in parsed.see_also] == [("tar", "1"), ("ssh_config", "5")]
+
+
+def test_parse_mandoc_html_falls_back_to_body_container() -> None:
+    html = """<!doctype html>
+<html>
+  <body>
+    <section class="Sh">
+      <h1 class="Sh" id="NAME"><a class="permalink" href="#NAME">NAME</a></h1>
+      <p class="Pp">ls - list directory contents</p>
+    </section>
+  </body>
+</html>
+"""
+    parsed = parse_mandoc_html(html)
+    assert parsed.description == "list directory contents"
