@@ -1,10 +1,17 @@
-# BetterMan — PLAN (v0.4.0)
+# BetterMan — PLAN (v0.5.0)
 
-Living execution plan for shipping `v0.4.0` from `SPEC.md`.
+Living execution plan for shipping `v0.5.0` from `SPEC.md`.
 
 - Branch: `main` (small/medium diffs; commit + push frequently)
 - Principle: fix root causes; no drive‑by refactors
 - Source of truth: `SPEC.md` (updated when reality changes)
+
+## Decisions (v0.5.0)
+
+- SSR preference source: OK to mirror `theme` + `distro` into cookies (localStorage remains the user-facing store).
+- SEO endpoints: re-implement `robots.txt` + sitemaps in Next.js (not FastAPI).
+- Sentry: OK to adopt `@sentry/nextjs`.
+- Offline strategy: cache HTML (network-first, cache fallback) + cache API responses (network-first, cache fallback).
 
 ## Status
 
@@ -15,6 +22,7 @@ Living execution plan for shipping `v0.4.0` from `SPEC.md`.
 - [x] v0.2.1 shipped (tag `v0.2.1`)
 - [x] v0.3.0 shipped (tag `v0.3.0`)
 - [x] v0.4.0 shipped (tag `v0.4.0`)
+- [ ] v0.5.0 in progress
 
 ## Golden Commands (current; proven)
 
@@ -34,159 +42,92 @@ Living execution plan for shipping `v0.4.0` from `SPEC.md`.
 - `pnpm ingest:lint`
 - `pnpm ingest:test`
 
-## v0.3.0 Milestones
+## v0.5.0 Milestones
 
-### M22 — Performance audit (gates all other v0.3.0 work)
+Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
-- [x] Create `docs/performance-audit-v030.md` (baseline + methodology + deltas)
-- [x] Lighthouse baselines (home + man page; desktop + mobile; documented)
-- [x] Chrome DevTools perf traces (page load + long-page scroll)
-- [x] React render hotspot scan (defer full React DevTools Profiler; revisit if regressions)
-- [x] Railway runtime spot-check (status + request durations via logs)
-- [x] Fix top 1–3 root causes (evidence-driven; keep diffs small)
-- [x] Confirm gzip is deployed + active (`content-encoding: gzip` on large API responses)
-- [x] Re-run the same measurements; record improvements (post-gzip man page)
+### M33 — Next.js scaffold (side-by-side)
 
-### M23 — SEO foundation (no SSR)
+- [ ] Add `nextjs/` package (Next.js 15 App Router + TypeScript + Tailwind v4)
+- [ ] Add pnpm workspace entry for `nextjs/`
+- [ ] Add root scripts (`next:*`) and document them
+- [ ] Route shells exist: `/`, `/search`, `/man/[name]`, `/man/[name]/[section]`, `/section/[section]`, `/licenses`
 
-- [x] Add static base meta to `frontend/index.html` (title/description/og basics)
-- [x] Add `react-helmet-async` + `HelmetProvider` at app root
-- [x] Per-route `<Helmet>` meta (home/search/section/man/licenses) + canonical links
-- [x] Man pages: TechArticle JSON‑LD (minimal fields; safe stringification)
-- [x] Backend: `GET /robots.txt` (disallow `/api/`, include sitemap index)
-- [x] Backend: `GET /sitemap.xml` (index) + `GET /sitemap-<distro>.xml` (per distro)
-- [x] E2E: sitemap + robots smoke (valid XML, contains at least one known URL)
+### M34 — Route parity (SSR + metadata)
 
-### M24 — Multi‑distribution DB + ingestion (Debian + Ubuntu + Fedora)
+- [ ] All existing routes render in Next.js (no URL changes)
+- [ ] `generateMetadata()` replaces `react-helmet-async`
+- [ ] Man page SSR contains real content in page source
+- [ ] Command palette works (Next router)
+- [ ] TanStack Virtual works for large pages (client components)
 
-**Design choice (low-risk, incremental):** dataset releases are distro-scoped.
+### M35 — SEO endpoints in Next.js
 
-- DB:
-  - [x] Alembic migration: add `dataset_releases.distro` (`debian|ubuntu|fedora`, default `debian`)
-  - [x] Alembic migration: allow one active release per `(locale, distro)` (replace old locale-only active constraint)
-  - [x] Backfill existing rows to `debian`
-- Ingestion:
-  - [x] Add `--distro` flag and distro-aware dataset release IDs (avoid collisions)
-  - [x] Debian + Ubuntu: apt-based ingest (reuse dpkg tooling)
-  - [x] Fedora: dnf-based ingest + rpm manifest capture
-  - [x] Keep pipelines independent (one distro failing doesn’t block others)
-  - [x] Tests: distro selection + dataset release IDs + manifest shape
-- Ops:
-  - [x] Update `.github/workflows/update-docs.yml` to ingest+promote per distro
+- [ ] `GET /robots.txt` served by Next.js
+- [ ] Sitemaps served by Next.js:
+  - [ ] `GET /sitemap.xml`
+  - [ ] `GET /sitemap-<distro>.xml`
+  - [ ] `GET /sitemap-<distro>-<page>.xml`
+- [ ] E2E asserts robots + sitemaps work against Next.js
 
-### M25 — Multi‑distribution API + frontend
+### M36 — CSP nonces in Next.js
 
-- Backend API:
-  - [x] Add optional `?distro=` query param to relevant endpoints
-  - [x] Default behavior remains Debian when `?distro` omitted (existing URLs unchanged)
-  - [x] Expose page “variants” info so UI only shows per-page selector when useful
-  - [x] Regenerate OpenAPI + commit `frontend/src/api/openapi.gen.ts`
-- Frontend:
-  - [x] Store global distro preference (localStorage) + apply to API requests
-  - [x] Header distro selector (always available) + per-page override (only when variants exist)
-  - [x] Ensure “copy link” preserves `?distro=` when non-default
-- E2E:
-  - [x] Distro switch changes content (or shows “no differences” when identical)
+- [ ] Next.js middleware sets CSP + per-request nonce
+- [ ] Inline scripts (theme bootstrap, JSON-LD, analytics) receive nonce
+- [ ] CSP runbook updated (`docs/runbooks/csp-violations.md`)
 
-### M26 — Release v0.3.0
+### M37 — Observability migration (Next.js)
 
-- [x] CI green on `main` (including `deploy_railway`)
-- [x] Performance targets met + documented (M22)
-- [x] SEO endpoints live (`/robots.txt`, `/sitemap.xml`, per-distro sitemaps)
-- [x] Multi-distro content live (Debian + Ubuntu + Fedora ingested + active)
-- [x] Runbooks updated for multi-distro ops
-- [x] Update `SPEC.md` / `README.md` / `PLAN.md` statuses to shipped
-- [x] Tag `v0.3.0`
+- [ ] Plausible moved to Next.js `<Script>` (`NEXT_PUBLIC_PLAUSIBLE_DOMAIN`)
+- [ ] Sentry enabled via `@sentry/nextjs` (`NEXT_PUBLIC_SENTRY_DSN`)
 
-## v0.4.0 Milestones
+### M38 — FastAPI becomes API-only
 
-v0.4.0 focuses on production reliability, comprehensive testing, and observability while adding user-facing features that improve discoverability.
+- [ ] Disable static frontend serving (`SERVE_FRONTEND=false`)
+- [ ] Remove SPA static + `/config.js` runtime config
+- [ ] Remove FastAPI SEO endpoints (robots/sitemaps) after Next owns them
 
-Theme: **Hardening + Discoverability**
+### M39 — CI + E2E migration
 
-### M27 — Security & Reliability Fixes
+- [ ] CI builds/tests Next.js package
+- [ ] E2E runs against Next.js + FastAPI (two processes)
+- [ ] OpenAPI → TypeScript generation remains enforced
 
-- [x] **Q1: Fix IP spoofing in rate limiter** (`backend/app/security/request_ip.py`)
-  - Add `TRUSTED_PROXY_CIDRS` env var
-  - Validate X-Forwarded-For only from trusted proxies
-  - Fall back to `request.client.host` for untrusted sources
-- [x] **Q2: Add session rollback on error** (`backend/app/db/session.py`)
-  - Wrap yield in try/except with explicit rollback
-- [x] **Q4: Fix bare except in seo.py** (`backend/app/web/seo.py`)
-  - Add logging for suppressed exceptions
-  - Use specific exception types
-- [x] **Q5: Add aria-live to loading states** (`frontend/src/pages/SearchPage.tsx`)
-  - Add `role="status"` and `aria-live="polite"` to loading indicators
-- [x] **M1: Paginate sitemap generation** (`backend/app/web/seo.py`)
-  - Split sitemap into per-distro paginated files
-  - Limit each sitemap file to 10k URLs
-- [x] **M2: Add error handling to search queries** (`backend/app/api/v1/routes/search.py`)
-  - Catch `websearch_to_tsquery` failures
-  - Return 400 for malformed queries with helpful message
-- [x] **M4: Fix SearchPage keyboard race condition** (`frontend/src/pages/SearchPage.tsx`)
-  - Store result ID instead of index
-  - Reset selection when results change
+### M40 — Railway: two services + cutover
 
-### M28 — Observability (Sentry + Plausible)
+- [ ] Next.js service public (domain `betterman.sh`)
+- [ ] FastAPI service internal-only (private networking)
+- [ ] GitHub Actions deploy workflow deploys both services
+- [ ] Rollback plan documented
 
-- [x] **Sentry Integration**
-  - Add `sentry-sdk[fastapi]` to backend
-  - Add `@sentry/react` to frontend
-  - Configure DSN via env var `SENTRY_DSN`
-  - Include page context (route + params) in errors
-- [x] **Q3: Add error logging to ErrorBoundary** (`frontend/src/app/ErrorBoundary.tsx`)
-  - Log errors to Sentry in production with component stack
-- [x] **Plausible Integration**
-  - Add Plausible script injection to frontend
-  - Configure domain via env var `VITE_PLAUSIBLE_DOMAIN`
-  - Privacy-friendly analytics (no cookies)
+### M41 — Distro expansion (7 total)
 
-### M29 — Comprehensive Test Coverage
+- [ ] Backend accepts `?distro=arch|alpine|freebsd|macos`
+- [ ] Ingestion supports Arch (pacman) + Alpine (apk)
+- [ ] FreeBSD ingest via GitHub Actions VM
+- [ ] macOS ingest via GitHub Actions runner (BSD allowlist)
+- [ ] Frontend distro selector grouped (Linux/BSD)
+- [ ] Sitemaps include all distros
 
-Target: **60%+ coverage**, **40+ new tests**
+### M42 — UX engagement (localStorage only)
 
-- [x] **Coverage gates** (>= 60%): backend + frontend + ingestion
-- [x] **New regression tests**: hardening, suggestions, SEO, ingestion helpers
+- [ ] Bookmarks: toggle + `/bookmarks` + palette integration
+- [ ] History: `/history` + tabs + grouped dates
+- [ ] Reading preferences panel + persistence
+- [ ] Shortcuts: `M`, `H`, `P` + shortcuts dialog update
 
-### M30 — Ingestion Improvements
+### M43 — Mobile & PWA
 
-- [x] **Per-page savepoints** (`ingestion/ingestion/ingest_runner.py`)
-  - Commit each page independently using PostgreSQL SAVEPOINT
-  - Log failures but continue processing
-  - Report success/failure counts at end
-- [x] **Progress Reporting**
-  - Log "Processed N/Total (X%)" every 100 pages
-  - Calculate and display ETA based on elapsed time
-- [x] **Structured Logging**
-  - Replace `print()` with Python `logging`
-  - Include timestamps and context
+- [ ] Service worker (prod only) for offline reading
+- [ ] Offline indicator
+- [ ] Mobile bottom navigation
+- [ ] Touch gesture: swipe to open TOC
 
-### M31 — User Features
+### M44 — Release v0.5.0
 
-#### Feature 1: Improved 404 Suggestions
-
-- [x] Backend: `/api/v1/suggest` endpoint with trigram similarity
-- [x] Frontend: Show "Did you mean..." suggestions on 404
-
-#### Feature 2: Shareable Deep Links to Options
-
-- [x] Generate anchor IDs for each option in OPTIONS table
-- [x] Scroll to option on page load with hash
-- [x] Highlight targeted option briefly
-
-#### Feature 3: Keyboard Shortcuts Panel
-
-- [x] Add `?` shortcut to open shortcuts overlay
-- [x] Use Radix Dialog for modal
-- [x] Group shortcuts by category
-
-### M32 — Release v0.4.0
-
-- [x] CI green on `main`
-- [x] Sentry receiving errors
-- [x] Plausible tracking page views (set `VITE_PLAUSIBLE_DOMAIN` in Railway → `betterman.sh`; verify in Plausible UI)
-- [x] All M27-M31 items complete
-- [x] SPEC.md updated with v0.4.0 section
-- [x] PLAN.md updated with v0.4.0 milestones
-- [x] README.md updated (Sentry/Plausible setup)
-- [x] Tag `v0.4.0`
+- [ ] Staging/prod isolation (docs + config)
+- [ ] Runbooks updated for two-service architecture
+- [ ] Performance + bundle comparisons documented
+- [ ] CI green on `main`
+- [ ] Docs updated (`SPEC.md`, `README.md`, `CONTRIBUTING.md`, `.env.example`)
+- [ ] Tag `v0.5.0`

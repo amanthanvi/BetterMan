@@ -2846,13 +2846,14 @@ Two Railway services:
 1. **Next.js Service** (public-facing):
    - Handles all web traffic (SSR + static assets)
    - Proxies `/api/*` to FastAPI via `next.config.js` rewrites
+   - Serves SEO endpoints directly (Next owns `robots.txt` + sitemaps)
    - Public domain: `betterman.sh`
-   - Env: `FASTAPI_INTERNAL_URL`, `SENTRY_DSN`, `PLAUSIBLE_DOMAIN`
+   - Env: `FASTAPI_INTERNAL_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`
 
 2. **FastAPI Service** (internal):
    - Pure API server (no static file serving)
    - Railway private networking: `http://fastapi.railway.internal:8000`
-   - Remove `serve_frontend`, `SPAStaticFiles`, `runtime_config` router
+   - Remove `serve_frontend`, `SPAStaticFiles`, `runtime_config` router, and FastAPI SEO endpoints
    - Keeps PostgreSQL/Redis connections, rate limiting, Sentry backend
 
 ### CSP Nonces in Next.js
@@ -2889,7 +2890,7 @@ Pipeline unchanged:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| SSR hydration mismatches (theme/distro from localStorage) | Visual flicker | `useEffect` for client-only state; render neutral default on server |
+| SSR hydration mismatches (theme/distro from localStorage) | Visual flicker | Mirror state into cookies for SSR; `useEffect` for client-only state; render neutral default on server |
 | Performance regression from SSR overhead | Slower TTFB | Streaming SSR with Suspense boundaries; ISR for popular pages |
 | TanStack Router → Next.js router API differences | Broken navigation | Adapter hooks wrapping Next.js `useRouter` |
 | Two-service deployment complexity | Ops burden | Health checks for both services; rollback plan: keep SPA deployable |
@@ -3127,7 +3128,7 @@ export const STORAGE_KEYS = {
 - Cache strategy:
   - Static assets (JS, CSS, fonts, images): Cache-first with versioned cache name
   - API responses (`/api/*`): Network-first with cache fallback (enables offline)
-  - HTML pages: Network-first (SSR content must be fresh)
+  - HTML pages: Network-first with cache fallback (enables offline reading of previously viewed pages)
 - Cache eviction: Version-based (new deploy → new cache name → old cache purged)
 
 ---
