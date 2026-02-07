@@ -2947,8 +2947,8 @@ Expand from 3 distributions (Debian, Ubuntu, Fedora) to 7 (add Arch Linux, Alpin
 - **Extraction strategy**: GitHub Actions with FreeBSD VM action (e.g., `vmactions/freebsd-vm@v1`) — runs FreeBSD in a VM within CI
 - **Package manager**: `pkg install <packages>`
 - **Package query**: `pkg query "%n\t%v"`
-- **New file**: `ingestion/ingestion/freebsd.py` (pkg helpers + VM extraction)
-- **Pipeline difference**: Extract man pages from VM → tar → upload as CI artifact → standard ingestion pipeline parses them
+- **New file**: `ingestion/ingestion/freebsd.py` (pkg helpers)
+- **Pipeline difference**: Run the ingestion pipeline directly inside the FreeBSD VM (no Docker) and ingest into staging DB over the network.
 - **Update cadence**: Monthly
 - **Risk**: VM overhead (10-30 min per ingest); GitHub Actions minutes cost
 
@@ -2957,12 +2957,12 @@ Expand from 3 distributions (Debian, Ubuntu, Fedora) to 7 (add Arch Linux, Alpin
 - **Legal constraint**: Only extract man pages with BSD/MIT/Apache/public-domain licenses. Skip Apple-proprietary pages.
 - **Extraction**: GitHub Actions macOS runner (`macos-latest`)
 - **Man pages location**: `/usr/share/man/`
-- **Manifest**: `sw_vers` + `pkgutil --pkgs` for provenance
 - **New file**: `ingestion/ingestion/macos.py` (system scan + license filter)
-- **License filtering**: Cross-reference each man page's source package against a curated allowlist of BSD-licensed packages
+- **Manifest**: `sw_vers` product version recorded in `packageManifest.osVersion`
+- **License filtering**: Conservative filter by scanning man page headers for permissive license markers (BSD/MIT/Apache). Pages without markers are excluded.
 - **Expected coverage**: Subset of full macOS man pages (BSD utilities, POSIX tools)
 - **UI label**: "macOS (BSD)" to clarify scope
-- **Risk**: Maintaining accurate license allowlist; subset may confuse users expecting full macOS coverage
+- **Risk**: License detection may be overly strict or miss headers; subset may confuse users expecting full macOS coverage
 
 ### Database Changes
 

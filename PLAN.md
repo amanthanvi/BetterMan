@@ -110,12 +110,14 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M41 — Distro expansion (7 total)
 
-- [ ] Backend accepts `?distro=arch|alpine|freebsd|macos`
-- [ ] Ingestion supports Arch (pacman) + Alpine (apk)
-- [ ] FreeBSD ingest via GitHub Actions VM
-- [ ] macOS ingest via GitHub Actions runner (BSD allowlist)
-- [ ] Frontend distro selector grouped (Linux/BSD)
-- [ ] Sitemaps include all distros
+- [x] Backend accepts `?distro=arch|alpine|freebsd|macos`
+- [x] Ingestion supports Arch (pacman) + Alpine (apk)
+- [x] FreeBSD ingest via GitHub Actions VM (direct ingest inside VM)
+- [x] macOS ingest via GitHub Actions runner (BSD marker filter)
+- [x] Frontend distro selector grouped (Linux/BSD)
+- [x] Sitemaps include all distros (from active releases)
+
+**Verification TODO:** Run `update-dataset` via workflow_dispatch and confirm staging has active dataset releases for `freebsd` + `macos`, then verify sitemap endpoints render them.
 
 ### M42 — UX engagement (localStorage only)
 
