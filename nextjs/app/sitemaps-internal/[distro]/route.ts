@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { fetchSeoReleases } from '../../../lib/api'
+import { getPublicOrigin } from '../../../lib/public-origin'
 
 function toIsoZ(iso: string): string | null {
   const dt = new Date(iso)
@@ -16,7 +17,7 @@ function weakEtag(parts: string[]): string {
 export async function GET(request: Request, ctx: { params: Promise<{ distro?: string }> }) {
   const { distro } = await ctx.params
   if (!distro) return new Response(null, { status: 404 })
-  const origin = new URL(request.url).origin
+  const origin = getPublicOrigin(request)
   const releases = await fetchSeoReleases()
 
   const release = releases.items.find((r) => r.distro === distro)

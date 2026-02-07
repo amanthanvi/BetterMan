@@ -1,5 +1,7 @@
+import { getPublicOrigin } from '../../lib/public-origin'
+
 export async function GET(request: Request) {
-  const origin = new URL(request.url).origin
+  const origin = getPublicOrigin(request)
   const body = [
     'User-agent: *',
     'Allow: /',
@@ -15,4 +17,3 @@ export async function GET(request: Request) {
     },
   })
 }
-

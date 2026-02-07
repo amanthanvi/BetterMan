@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../../../lib/api'
+import { getPublicOrigin } from '../../../../lib/public-origin'
 
 function weakEtag(parts: string[]): string {
   const digest = createHash('sha256').update(parts.join('|')).digest('base64url')
@@ -16,7 +17,7 @@ function withDistro(loc: string, distro: string): string {
 
 export async function GET(request: Request, ctx: { params: Promise<{ distro?: string; page?: string }> }) {
   const { distro, page: pageRaw } = await ctx.params
-  const origin = new URL(request.url).origin
+  const origin = getPublicOrigin(request)
   if (!distro || !pageRaw) return new Response(null, { status: 404 })
   const page = Number(pageRaw)
 
