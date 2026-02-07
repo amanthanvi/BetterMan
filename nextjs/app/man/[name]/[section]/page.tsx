@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
+import Script from 'next/script'
 
 import { ManPageView } from '../../../../components/man/ManPageView'
 import { FastApiError, fetchManByName, fetchManByNameAndSection, fetchRelated, suggest } from '../../../../lib/api'
 import { normalizeDistro } from '../../../../lib/distro'
+import { safeJsonLdStringify } from '../../../../lib/seo'
 
 export const dynamic = 'force-dynamic'
 
@@ -109,8 +111,32 @@ export default async function ManByNameAndSectionPage({
       section: pageData.page.section,
     }).catch(() => null)
 
+    const nonce = (await headers()).get('x-nonce') ?? undefined
+    const jsonLd = safeJsonLdStringify({
+      '@context': 'https://schema.org',
+      '@type': 'TechArticle',
+      headline: `${pageData.page.name}(${pageData.page.section}) - ${pageData.page.title}`,
+      name: `${pageData.page.name}(${pageData.page.section})`,
+      description:
+        pageData.page.description ||
+        pageData.page.title ||
+        `${pageData.page.name}(${pageData.page.section}) man page.`,
+      dateModified: pageData.page.datasetReleaseId.split('+')[0] ?? undefined,
+      author: {
+        '@type': 'Organization',
+        name: `${pageData.page.sourcePackage || pageData.page.name} maintainers`,
+      },
+    })
+
     return (
       <>
+        <Script
+          id={`bm-jsonld:${pageData.page.id}`}
+          type="application/ld+json"
+          nonce={nonce}
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: jsonLd }}
+        />
         <ManPageView
           key={pageData.page.id}
           page={pageData.page}

@@ -20,6 +20,31 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" data-theme={theme} suppressHydrationWarning>
       <body>
+        <Script
+          id="bm-shortcuts-bootstrap"
+          nonce={nonce}
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+  try {
+    const FLAG = '__bmPaletteRequested';
+    const EVENT = 'bm:palette-request';
+    if (window[FLAG] !== true) window[FLAG] = false;
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if ((e.ctrlKey || e.metaKey) && String(e.key || '').toLowerCase() === 'k') {
+          e.preventDefault();
+          window[FLAG] = true;
+          window.dispatchEvent(new CustomEvent(EVENT));
+        }
+      },
+      true,
+    );
+  } catch {}
+})();`,
+          }}
+        />
         <Providers>{children}</Providers>
         {plausibleDomain ? (
           <Script
