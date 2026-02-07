@@ -286,6 +286,7 @@ jobs:
           RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
           RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
           RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
+          RAILWAY_NEXTJS_SERVICE_ID: 40fa322d-c334-4662-8858-8edf380d3f10
         shell: bash
         run: |
           set -euo pipefail
@@ -295,36 +296,43 @@ jobs:
             exit 1
           fi
 
-          railway link \
-            --workspace "$RAILWAY_WORKSPACE_ID" \
-            --project "$RAILWAY_PROJECT_ID" \
-            --environment "$RAILWAY_ENVIRONMENT_ID" \
-            --service "$RAILWAY_SERVICE_ID"
+          deploy_service() {
+            local service_id="$1"
 
-          railway up --ci \
-            --service "$RAILWAY_SERVICE_ID" \
-            --environment "$RAILWAY_ENVIRONMENT_ID"
+            railway link \
+              --workspace "$RAILWAY_WORKSPACE_ID" \
+              --project "$RAILWAY_PROJECT_ID" \
+              --environment "$RAILWAY_ENVIRONMENT_ID" \
+              --service "$service_id"
 
-          echo "Waiting for Railway deployment to reach SUCCESS…"
-          for attempt in {1..60}; do
-            info="$(railway service status --json --service "$RAILWAY_SERVICE_ID" --environment "$RAILWAY_ENVIRONMENT_ID")"
-            status="$(echo "$info" | jq -r '.status // empty')"
-            stopped="$(echo "$info" | jq -r '.stopped')"
-            deployment_id="$(echo "$info" | jq -r '.deploymentId // empty')"
+            railway up --ci \
+              --service "$service_id" \
+              --environment "$RAILWAY_ENVIRONMENT_ID"
 
-            echo "[$attempt/60] status=${status} stopped=${stopped} deploymentId=${deployment_id}"
+            echo "Waiting for Railway deployment to reach SUCCESS (serviceId=${service_id})…"
+            for attempt in {1..60}; do
+              info="$(railway service status --json --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID")"
+              status="$(echo "$info" | jq -r '.status // empty')"
+              stopped="$(echo "$info" | jq -r '.stopped')"
+              deployment_id="$(echo "$info" | jq -r '.deploymentId // empty')"
 
-            if [[ "$status" == "SUCCESS" && "$stopped" == "false" ]]; then
-              exit 0
-            fi
+              echo "[$attempt/60] status=${status} stopped=${stopped} deploymentId=${deployment_id}"
 
-            if [[ "$status" == "FAILURE" || "$status" == "ERROR" ]]; then
-              echo "Railway deployment failed"
-              exit 1
-            fi
+              if [[ "$status" == "SUCCESS" && "$stopped" == "false" ]]; then
+                return 0
+              fi
 
-            sleep 5
-          done
+              if [[ "$status" == "FAILURE" || "$status" == "ERROR" || "$status" == "CRASHED" ]]; then
+                echo "Railway deployment failed"
+                return 1
+              fi
 
-          echo "Timed out waiting for Railway deployment"
-          exit 1
+              sleep 5
+            done
+
+            echo "Timed out waiting for Railway deployment"
+            return 1
+          }
+
+          deploy_service "$RAILWAY_SERVICE_ID"
+          deploy_service "$RAILWAY_NEXTJS_SERVICE_ID"
