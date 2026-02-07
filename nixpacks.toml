@@ -2,7 +2,7 @@
 nixPkgs = ["python3", "gcc", "nodejs", "pnpm"]
 
 [phases.build]
-cmds = ["pnpm install --frozen-lockfile", "pnpm -C frontend build"]
+cmds = ["pnpm install --frozen-lockfile", "pnpm -C frontend build", "pnpm -C nextjs build"]
 
 [start]
-cmd = "cd backend && python -m app.db.migrate && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+cmd = "set -eu; if [ \"${RAILWAY_SERVICE_NAME:-}\" = \"nextjs\" ]; then cd nextjs && exec pnpm exec next start -p ${PORT:-3000} -H 0.0.0.0; else cd backend && python -m app.db.migrate && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}; fi"
