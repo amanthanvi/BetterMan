@@ -55,17 +55,17 @@ jobs:
           echo "Ingesting Debian…"
           uv run python -m ingestion.cli ingest --distro debian --activate
 
-          echo "Ingesting Ubuntu…"
-          uv run python -m ingestion.cli ingest --distro ubuntu --activate || echo "Ubuntu ingest failed (continuing)"
-
-          echo "Ingesting Fedora…"
-          uv run python -m ingestion.cli ingest --distro fedora --activate || echo "Fedora ingest failed (continuing)"
-
           echo "Ingesting Arch…"
           uv run python -m ingestion.cli ingest --distro arch --activate
 
           echo "Ingesting Alpine…"
           uv run python -m ingestion.cli ingest --distro alpine --activate
+
+          echo "Ingesting Ubuntu…"
+          uv run python -m ingestion.cli ingest --distro ubuntu --activate || echo "Ubuntu ingest failed (continuing)"
+
+          echo "Ingesting Fedora…"
+          uv run python -m ingestion.cli ingest --distro fedora --activate || echo "Fedora ingest failed (continuing)"
 
   ingest_macos:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ingest != 'false' }}
