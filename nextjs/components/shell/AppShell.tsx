@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
-import { DISTRO_LABEL, DISTROS, normalizeDistro } from '../../lib/distro'
+import { DISTRO_GROUPS, DISTRO_LABEL, normalizeDistro } from '../../lib/distro'
 import { formatRelativeTime } from '../../lib/time'
 import { CommandPalette } from '../palette/CommandPalette'
 import { useDistro } from '../state/distro'
@@ -243,10 +243,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-xs font-medium text-[color:var(--bm-fg)] hover:bg-[color:var(--bm-surface)/0.9] sm:text-sm"
             aria-label="Select distribution"
           >
-            {DISTROS.map((d) => (
-              <option key={d} value={d}>
-                {DISTRO_LABEL[d]}
-              </option>
+            {DISTRO_GROUPS.map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.items.map((d) => (
+                  <option key={d} value={d}>
+                    {DISTRO_LABEL[d]}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
 

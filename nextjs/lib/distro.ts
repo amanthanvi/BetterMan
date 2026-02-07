@@ -1,17 +1,35 @@
-export type Distro = 'debian' | 'ubuntu' | 'fedora'
+export type Distro = 'debian' | 'ubuntu' | 'fedora' | 'arch' | 'alpine' | 'freebsd' | 'macos'
 
-export const DISTROS: readonly Distro[] = ['debian', 'ubuntu', 'fedora'] as const
+export const DISTRO_GROUPS: ReadonlyArray<{ label: string; items: readonly Distro[] }> = [
+  { label: 'Linux', items: ['debian', 'ubuntu', 'fedora', 'arch', 'alpine'] as const },
+  { label: 'BSD', items: ['freebsd', 'macos'] as const },
+] as const
+
+export const DISTROS: readonly Distro[] = DISTRO_GROUPS.flatMap((g) => g.items)
 
 export const DISTRO_LABEL: Record<Distro, string> = {
   debian: 'Debian',
   ubuntu: 'Ubuntu',
   fedora: 'Fedora',
+  arch: 'Arch Linux',
+  alpine: 'Alpine',
+  freebsd: 'FreeBSD',
+  macos: 'macOS (BSD)',
 }
 
 export function normalizeDistro(value: unknown): Distro | null {
   if (typeof value !== 'string') return null
   const v = value.trim().toLowerCase()
-  if (v === 'debian' || v === 'ubuntu' || v === 'fedora') return v
+  if (
+    v === 'debian' ||
+    v === 'ubuntu' ||
+    v === 'fedora' ||
+    v === 'arch' ||
+    v === 'alpine' ||
+    v === 'freebsd' ||
+    v === 'macos'
+  )
+    return v
   return null
 }
 
