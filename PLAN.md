@@ -136,8 +136,8 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 ### M44 — Release v0.5.0
 
 - [ ] Staging/prod isolation (docs + config)
-- [ ] Runbooks updated for two-service architecture
-- [ ] Performance + bundle comparisons documented
-- [ ] CI green on `main`
-- [ ] Docs updated (`SPEC.md`, `README.md`, `CONTRIBUTING.md`, `.env.example`)
+- [x] Runbooks updated for two-service architecture
+- [x] Performance + bundle comparisons documented
+- [x] CI green on `main`
+- [x] Docs updated (`SPEC.md`, `README.md`, `CONTRIBUTING.md`, `.env.example`)
 - [ ] Tag `v0.5.0`
