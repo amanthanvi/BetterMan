@@ -1,13 +1,124 @@
+'use client'
+
+import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import Link from 'next/link'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { BlockNode, InlineNode } from '../../lib/docModel'
 
+type BmScrollBehavior = 'auto' | 'smooth'
+
 export function DocRenderer({ blocks }: { blocks: BlockNode[] }) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => setMounted(true), [])
+
+  if (!mounted || blocks.length < 100) {
+    return (
+      <div className="space-y-5">
+        {blocks.map((block, idx) => (
+          <BlockView key={blockKey(block, idx)} block={block} />
+        ))}
+      </div>
+    )
+  }
+
+  return <VirtualizedBlocks blocks={blocks} />
+}
+
+function VirtualizedBlocks({ blocks }: { blocks: BlockNode[] }) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    setScrollMargin(el.offsetTop)
+  }, [blocks.length])
+
+  const anchorToBlockIndex = useMemo(() => buildAnchorIndex(blocks), [blocks])
+
+  const virtualizer = useWindowVirtualizer<HTMLDivElement>({
+    count: blocks.length,
+    estimateSize: (idx) => estimateBlockSize(blocks[idx]),
+    overscan: 6,
+    gap: 20,
+    scrollMargin,
+    scrollPaddingStart: 140,
+    getItemKey: (idx) => blockKey(blocks[idx], idx),
+  })
+
+  const fineTuneScrollToId = useCallback((id: string, opts: { behavior: BmScrollBehavior; block: ScrollLogicalPosition }) => {
+    let attempts = 0
+
+    const tick = () => {
+      attempts += 1
+      const el = document.getElementById(id)
+      if (el) {
+        el.scrollIntoView({ behavior: opts.behavior, block: opts.block })
+        return
+      }
+      if (attempts < 20) window.requestAnimationFrame(tick)
+    }
+
+    window.requestAnimationFrame(tick)
+  }, [])
+
+  const scrollToAnchor = useCallback(
+    (id: string, opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior }) => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const behavior = opts?.behavior ?? (reduced ? 'auto' : 'smooth')
+      const align = opts?.align ?? 'start'
+      const block = align === 'center' ? 'center' : 'start'
+
+      const idx = anchorToBlockIndex.get(id)
+      if (idx != null) {
+        virtualizer.scrollToIndex(idx, {
+          align: align === 'center' ? 'center' : 'start',
+          behavior,
+        })
+      }
+
+      fineTuneScrollToId(id, { behavior, block })
+    },
+    [anchorToBlockIndex, fineTuneScrollToId, virtualizer],
+  )
+
+  useEffect(() => {
+    const onHash = () => {
+      const raw = window.location.hash.replace(/^#/, '')
+      if (!raw) return
+      try {
+        scrollToAnchor(decodeURIComponent(raw), { behavior: 'auto' })
+      } catch {
+        // ignore bad URI sequences
+      }
+    }
+
+    onHash()
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [scrollToAnchor])
+
+  const items = virtualizer.getVirtualItems()
+  const total = virtualizer.getTotalSize()
+
   return (
-    <div className="space-y-5">
-      {blocks.map((block, idx) => (
-        <BlockView key={blockKey(block, idx)} block={block} />
-      ))}
+    <div ref={containerRef}>
+      <div className="relative w-full" style={{ height: total }}>
+        {items.map((v) => (
+          <div
+            key={v.key}
+            ref={virtualizer.measureElement}
+            data-index={v.index}
+            data-bm-block-index={v.index}
+            className="absolute left-0 top-0 w-full"
+            style={{ transform: `translateY(${v.start - scrollMargin}px)` }}
+          >
+            <BlockView block={blocks[v.index]} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -124,7 +235,7 @@ function BlockView({ block }: { block: BlockNode }) {
 }
 
 function renderInlines(inlines: InlineNode[]) {
-  return inlines.map((inline, idx) => {
+  return inlines.map((inline, idx): ReactNode => {
     switch (inline.type) {
       case 'text':
         return <span key={idx}>{inline.text}</span>
@@ -192,4 +303,34 @@ function renderInlines(inlines: InlineNode[]) {
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
+}
+
+function buildAnchorIndex(blocks: BlockNode[]) {
+  const map = new Map<string, number>()
+
+  for (const [idx, block] of blocks.entries()) {
+    if (block.type === 'heading') map.set(block.id, idx)
+    if (block.type === 'code_block' && block.id) map.set(block.id, idx)
+    if (block.type === 'definition_list') {
+      for (const item of block.items) {
+        if (item.id) map.set(item.id, idx)
+      }
+    }
+  }
+
+  return map
+}
+
+function estimateBlockSize(block: BlockNode): number {
+  if (block.type === 'heading') return block.level <= 2 ? 84 : 64
+  if (block.type === 'paragraph') return 92
+  if (block.type === 'list') return 140
+  if (block.type === 'definition_list') return 220
+  if (block.type === 'table') return 260
+  if (block.type === 'horizontal_rule') return 40
+  if (block.type === 'code_block') {
+    const lines = block.text.split('\n').length
+    return Math.min(720, 90 + lines * 18)
+  }
+  return 120
 }
