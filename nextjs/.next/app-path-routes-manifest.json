@@ -1,9 +1,0 @@
-{
-  "/_not-found/page": "/_not-found",
-  "/licenses/page": "/licenses",
-  "/page": "/",
-  "/search/page": "/search",
-  "/man/[name]/[section]/page": "/man/[name]/[section]",
-  "/section/[section]/page": "/section/[section]",
-  "/man/[name]/page": "/man/[name]"
-}

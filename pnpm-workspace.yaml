@@ -1,6 +1,5 @@
 packages:
   - frontend
-  - nextjs
 
 onlyBuiltDependencies:
   - esbuild
