@@ -28,6 +28,22 @@ export type SearchResponse = {
   suggestions: string[]
 }
 
+export type SectionPage = {
+  name: string
+  section: string
+  title: string
+  description: string
+}
+
+export type SectionResponse = {
+  section: string
+  label: string
+  limit: number
+  offset: number
+  total: number
+  results: SectionPage[]
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(fastapiUrl(path), {
     ...init,
@@ -78,4 +94,21 @@ export function search(opts: {
   return fetchJson<SearchResponse>(`/api/v1/search?${params.toString()}`, {
     cache: 'no-store',
   })
+}
+
+export function listSection(opts: {
+  distro: Distro
+  section: string
+  limit?: number
+  offset?: number
+}): Promise<SectionResponse> {
+  const params = new URLSearchParams()
+  if (typeof opts.limit === 'number') params.set('limit', String(opts.limit))
+  if (typeof opts.offset === 'number') params.set('offset', String(opts.offset))
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  const qs = params.toString()
+  return fetchJson<SectionResponse>(
+    `/api/v1/section/${encodeURIComponent(opts.section)}${qs ? `?${qs}` : ''}`,
+    { next: { revalidate: 300 } },
+  )
 }
