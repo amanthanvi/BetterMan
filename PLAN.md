@@ -48,10 +48,10 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M33 — Next.js scaffold (side-by-side)
 
-- [ ] Add `nextjs/` package (Next.js 15 App Router + TypeScript + Tailwind v4)
-- [ ] Add pnpm workspace entry for `nextjs/`
-- [ ] Add root scripts (`next:*`) and document them
-- [ ] Route shells exist: `/`, `/search`, `/man/[name]`, `/man/[name]/[section]`, `/section/[section]`, `/licenses`
+- [x] Add `nextjs/` package (Next.js 15 App Router + TypeScript + Tailwind v4)
+- [x] Add pnpm workspace entry for `nextjs/`
+- [x] Add root scripts (`next:*`) and document them
+- [x] Route shells exist: `/`, `/search`, `/man/[name]`, `/man/[name]/[section]`, `/section/[section]`, `/licenses`
 
 ### M34 — Route parity (SSR + metadata)
 
