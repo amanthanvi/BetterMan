@@ -15,7 +15,6 @@ FROM deps AS build
 COPY nextjs ./nextjs
 
 RUN pnpm -C nextjs build
-RUN CI=true pnpm prune --prod
 
 
 FROM node:25-bookworm-slim AS runtime
