@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import subprocess
+from pathlib import Path
 
 from ingestion.db import iso_utc_now, json_dumps
 from ingestion.docker_runner import run_ingest_container
@@ -53,6 +55,13 @@ def main(argv: list[str] | None = None) -> int:
                 distro=args.distro,
             )
 
+        if args.distro in {"freebsd", "macos"}:
+            return _run_ingest_on_host(
+                sample=args.sample,
+                activate=activate,
+                distro=args.distro,
+            )
+
         return run_ingest_container(sample=args.sample, activate=activate, distro=args.distro)
 
     raise AssertionError("unreachable")
@@ -97,6 +106,56 @@ def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> in
         published=result.published,
     )
     return 0
+
+
+def _run_ingest_on_host(*, sample: bool, activate: bool, distro: str) -> int:
+    database_url = os.environ.get("INGEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if not database_url:
+        database_url = "postgresql://betterman:betterman@postgres:5432/betterman"
+
+    repo_root = Path(__file__).resolve().parents[2]
+
+    image_ref = os.environ.get("BETTERMAN_IMAGE_REF", f"host:{distro}")
+    image_digest = os.environ.get("BETTERMAN_IMAGE_DIGEST", "unknown")
+    git_sha = os.environ.get("BETTERMAN_INGEST_GIT_SHA") or _git_sha(repo_root)
+
+    try:
+        result = ingest_dataset(
+            sample=sample,
+            activate=activate,
+            database_url=database_url,
+            image_ref=image_ref,
+            image_digest=image_digest,
+            git_sha=git_sha,
+            distro=distro,
+        )
+    except RuntimeError as exc:
+        _log("ingest_error", error=str(exc))
+        return 2
+    except Exception as exc:  # noqa: BLE001
+        _log("ingest_error", error=str(exc))
+        return 1
+
+    _log(
+        "ingest_done",
+        total=result.total,
+        succeeded=result.succeeded,
+        hardFailed=result.hard_failed,
+        datasetReleaseId=result.dataset_release_id,
+        published=result.published,
+    )
+    return 0
+
+
+def _git_sha(repo_root: Path) -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=repo_root,
+            text=True,
+        ).strip()
+    except Exception:  # noqa: BLE001
+        return "unknown"
 
 
 if __name__ == "__main__":

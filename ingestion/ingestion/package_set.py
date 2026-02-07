@@ -125,12 +125,18 @@ FULL_PACKAGE_SET_ALPINE: list[str] = [
     "procps",
 ]
 
+FULL_PACKAGE_SET_FREEBSD: list[str] = []
+
+FULL_PACKAGE_SET_MACOS: list[str] = []
+
 FULL_PACKAGE_SET_BY_DISTRO: dict[str, list[str]] = {
     "debian": FULL_PACKAGE_SET_DEBIAN,
     "ubuntu": FULL_PACKAGE_SET_UBUNTU,
     "fedora": FULL_PACKAGE_SET_FEDORA,
     "arch": FULL_PACKAGE_SET_ARCH,
     "alpine": FULL_PACKAGE_SET_ALPINE,
+    "freebsd": FULL_PACKAGE_SET_FREEBSD,
+    "macos": FULL_PACKAGE_SET_MACOS,
 }
 
 FULL_PACKAGE_SET: list[str] = FULL_PACKAGE_SET_DEBIAN

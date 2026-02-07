@@ -55,6 +55,12 @@ from ingestion.fedora import (
 from ingestion.fedora import (
     mandoc_pkg_version as mandoc_pkg_version_rpm,
 )
+from ingestion.freebsd import (
+    freebsd_arch,
+    pkg_install,
+    pkg_packages,
+)
+from ingestion.macos import is_permissive_manpage, macos_arch, macos_version
 from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import render_html
 from ingestion.mandoc_parser import parse_mandoc_html
@@ -102,11 +108,26 @@ def ingest(
         pacman_install(requested)
     elif distro == "alpine":
         apk_install(requested)
+    elif distro == "freebsd":
+        pkg_install(requested)
+    elif distro == "macos":
+        pass
     else:
         raise RuntimeError(f"unsupported distro: {distro}")
 
-    man_root = Path("/usr/share/man")
-    sources = _filter_sources(scan_man_sources(man_root, sample=sample))
+    man_roots = [Path("/usr/share/man")]
+    if distro == "freebsd":
+        man_roots.extend([Path("/usr/local/man"), Path("/usr/local/share/man")])
+
+    sources: list[ManSource] = []
+    for man_root in man_roots:
+        if not man_root.exists():
+            continue
+        sources.extend(scan_man_sources(man_root, sample=sample))
+
+    sources = _filter_sources(sources)
+    if distro == "macos":
+        sources = _filter_macos_sources(sources)
 
     if distro in {"debian", "ubuntu"}:
         packages = dpkg_packages()
@@ -123,11 +144,21 @@ def ingest(
         arch = pacman_arch()
         mandoc_version = mandoc_pkg_version_pacman(packages)
         manpath_to_pkg = build_manpath_to_package_pacman()
-    else:
+    elif distro == "alpine":
         packages = apk_packages()
         arch = apk_arch()
         mandoc_version = mandoc_pkg_version_apk(packages)
         manpath_to_pkg = build_manpath_to_package_apk()
+    elif distro == "freebsd":
+        packages = pkg_packages()
+        arch = freebsd_arch()
+        mandoc_version = None
+        manpath_to_pkg = {}
+    else:
+        packages = {}
+        arch = macos_arch()
+        mandoc_version = None
+        manpath_to_pkg = {}
 
     dataset_release_id = _build_dataset_release_id(
         git_sha=git_sha, mandoc_version=mandoc_version, distro=distro
@@ -145,6 +176,8 @@ def ingest(
         "mandocPackageVersion": mandoc_version,
         "generatedAt": datetime.now(tz=UTC).isoformat(),
     }
+    if distro == "macos":
+        package_manifest["osVersion"] = macos_version()
 
     parsed_pages: list[_PageRow] = []
     parse_failed = 0
@@ -433,6 +466,19 @@ def _filter_sources(sources: list[ManSource]) -> list[ManSource]:
     return out
 
 
+def _filter_macos_sources(sources: list[ManSource]) -> list[ManSource]:
+    out: list[ManSource] = []
+    for src in sources:
+        try:
+            raw = _read_bytes(src.path)
+        except Exception:  # noqa: BLE001
+            continue
+        if not is_permissive_manpage(raw):
+            continue
+        out.append(src)
+    return out
+
+
 def _parse_source(
     src: ManSource,
     *,
@@ -497,23 +543,23 @@ def _build_dataset_release_id(*, git_sha: str, mandoc_version: str | None, distr
 
 
 def _content_packages(*, sample: bool, distro: str) -> list[str]:
-    base = ["mandoc", "man-db"]
+    base = [] if distro in {"freebsd", "macos"} else ["mandoc", "man-db"]
     if sample:
-        if distro == "fedora":
-            return [
-                *base,
-                "bash",
-                "coreutils",
-                "curl",
-                "openssh-clients",
-                "tar",
-            ]
+        if distro in {"freebsd", "macos"}:
+            return []
+
+        openssh_pkg = "openssh-client"
+        if distro in {"fedora"}:
+            openssh_pkg = "openssh-clients"
+        elif distro in {"arch"}:
+            openssh_pkg = "openssh"
+
         return [
             *base,
             "bash",
             "coreutils",
             "curl",
-            "openssh-client",
+            openssh_pkg,
             "tar",
         ]
 
