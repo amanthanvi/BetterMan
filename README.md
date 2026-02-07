@@ -37,7 +37,8 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 ## Dataset updates
 
 - Monthly ingest + promote: `.github/workflows/update-docs.yml` (workflow `update-dataset`).
-  - `workflow_dispatch` default: ingest to staging only (set input `promote=true` to also promote to prod).
+  - `workflow_dispatch` defaults: `ingest=true`, `promote=false` (ingest to staging only).
+  - Promote-only: `ingest=false`, `promote=true` (promotes current staging actives without re-ingesting).
 - Requires `BETTERMAN_STAGING_DATABASE_URL` + `BETTERMAN_PROD_DATABASE_URL` GitHub Actions secrets.
 
 ## Security / Quality (CI)

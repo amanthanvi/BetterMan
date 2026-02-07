@@ -27,7 +27,9 @@ BetterMan supports multiple distributions (Debian default; optional `?distro=ubu
 Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 
 - Trigger manually:
-  - `gh workflow run update-dataset`
+  - Ingest to staging: `gh workflow run update-dataset`
+  - Ingest + promote: `gh workflow run update-dataset -f promote=true`
+  - Promote-only: `gh workflow run update-dataset -f ingest=false -f promote=true`
 - Watch:
   - `gh run list --workflow update-docs.yml --limit 5`
   - `gh run watch <RUN_ID>`

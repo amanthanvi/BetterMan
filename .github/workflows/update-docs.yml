@@ -3,6 +3,11 @@ name: update-dataset
 on:
   workflow_dispatch:
     inputs:
+      ingest:
+        description: Run ingestion into staging DB
+        type: boolean
+        required: false
+        default: true
       promote:
         description: Promote active staging releases to prod
         type: boolean
@@ -21,6 +26,7 @@ permissions:
 
 jobs:
   ingest_linux:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ingest != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
@@ -62,6 +68,7 @@ jobs:
           uv run python -m ingestion.cli ingest --distro alpine --activate
 
   ingest_macos:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ingest != 'false' }}
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
@@ -86,6 +93,7 @@ jobs:
           uv run python -m ingestion.cli ingest --distro macos --activate
 
   ingest_freebsd:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.ingest != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
