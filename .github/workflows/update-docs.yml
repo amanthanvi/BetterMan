@@ -111,6 +111,11 @@ jobs:
               py="python3.12"
             fi
 
+            if ! command -v cargo >/dev/null 2>&1; then
+              echo "cargo not found; installing Rust toolchain (required to build pydantic-core)…"
+              pkg install -y rust
+            fi
+
             $py -m ensurepip --upgrade
             $py -m pip install --upgrade pip
             $py -m pip install ./ingestion
