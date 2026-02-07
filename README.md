@@ -6,9 +6,10 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 ```text
 /
-├── frontend/           # React SPA
-├── backend/            # FastAPI service (serves API + built SPA)
-├── ingestion/          # Ingestion pipeline scripts
+├── nextjs/             # Next.js App Router (public web)
+├── backend/            # FastAPI (API-only; internal)
+├── ingestion/          # Ingestion pipeline (dataset builds)
+├── frontend/           # Legacy Vite SPA (kept for CI/e2e harness for now)
 ├── docker-compose.yml  # Local Postgres + Redis
 └── SPEC.md
 ```
@@ -29,10 +30,14 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - Auto-deploy: `.github/workflows/ci.yml` deploys after all jobs pass on pushes to `main`.
 - Manual deploy: `.github/workflows/deploy.yml` (workflow `deploy-railway`, input `ref`).
 - Requires `RAILWAY_TOKEN` GitHub Actions secret (exported to Railway CLI as `RAILWAY_API_TOKEN`).
+- `v0.5.0` deploy topology: two Railway services
+  - `nextjs` (public web) → set `FASTAPI_INTERNAL_URL=http://web.railway.internal:8080`
+  - `web` (FastAPI API-only; private networking)
 
 ## Dataset updates
 
 - Monthly ingest + promote: `.github/workflows/update-docs.yml` (workflow `update-dataset`).
+  - `workflow_dispatch` default: ingest to staging only (set input `promote=true` to also promote to prod).
 - Requires `BETTERMAN_STAGING_DATABASE_URL` + `BETTERMAN_PROD_DATABASE_URL` GitHub Actions secrets.
 
 ## Security / Quality (CI)
@@ -42,20 +47,16 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - Dependency updates: `.github/dependabot.yml` (GitHub Actions, frontend npm, backend/ingestion uv, Dockerfile base images).
 - API contract: `frontend/src/api/openapi.gen.ts` is generated from backend OpenAPI and enforced in CI.
 
-## Observability (v0.4.0)
+## Observability (v0.5.0)
 
 ### Sentry (Error Tracking)
 
-Error tracking for both backend and frontend.
+Error tracking for both services.
 
 **Environment variables:**
 
-- `SENTRY_DSN` (backend): Sentry DSN for the FastAPI service
-- `VITE_SENTRY_DSN` (frontend): Sentry DSN for the React app
-
-Errors include page context (route + params) and component stack traces.
-
-**Production note:** the SPA reads `VITE_SENTRY_DSN` at runtime from `/config.js` (served by the backend), so set it as a backend service env var (e.g., Railway variable).
+- `SENTRY_DSN` (backend)
+- `NEXT_PUBLIC_SENTRY_DSN` (Next.js)
 
 ### Plausible (Analytics)
 
@@ -63,11 +64,9 @@ Privacy-friendly analytics (no cookies, GDPR-compliant).
 
 **Environment variables:**
 
-- `VITE_PLAUSIBLE_DOMAIN` (frontend): Domain configured in Plausible (e.g., `betterman.dev`)
+- `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (Next.js): Domain configured in Plausible (e.g., `betterman.sh`)
 
 Analytics are disabled if the env var is not set.
-
-**Production note:** the backend injects the Plausible script tag into `index.html` when `VITE_PLAUSIBLE_DOMAIN` is set.
 
 ### Proxy Trust (Rate Limiting)
 
