@@ -1,6 +1,5 @@
 'use client'
 
-import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 let hljsPromise: Promise<unknown> | null = null
@@ -78,7 +77,6 @@ export function CodeBlock({
   }, [language, markedText, text])
 
   const html = highlighted?.source === markedText ? highlighted.html : fallbackHtml
-  const highlightedNodes = useMemo(() => highlightedHtmlToReact(html), [html])
 
   const copy = async () => {
     try {
@@ -103,7 +101,7 @@ export function CodeBlock({
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
       <pre className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] p-5 text-sm leading-7 shadow-sm">
-        <code className={`hljs language-${language}`}>{highlightedNodes}</code>
+        <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />
       </pre>
     </div>
   )
@@ -120,50 +118,6 @@ function normalizeLanguageHint(hint?: string | null): 'bash' | 'c' | 'makefile' 
   if (['make', 'makefile'].includes(cleaned)) return 'makefile'
 
   return null
-}
-
-function highlightedHtmlToReact(html: string): ReactNode[] {
-  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html')
-  const container = doc.body.firstElementChild
-  if (!container) return [html]
-  return Array.from(container.childNodes).map((n, idx) => nodeToReact(n, `r:${idx}`))
-}
-
-function nodeToReact(node: ChildNode, key: string): ReactNode {
-  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? ''
-  if (node.nodeType !== Node.ELEMENT_NODE) return ''
-
-  const el = node as HTMLElement
-  const children = Array.from(el.childNodes).map((c, idx) => nodeToReact(c, `${key}:${idx}`))
-
-  if (el.tagName === 'SPAN') {
-    const className = filterClasses(el.className, (c) => c === 'hljs' || c.startsWith('hljs-'))
-    return (
-      <span key={key} className={className || undefined}>
-        {children}
-      </span>
-    )
-  }
-
-  if (el.tagName === 'MARK') {
-    const className = filterClasses(el.className, (c) => c === 'bm-mark' || c === 'bm-find' || c === 'bm-opt' || c === 'bm-find-active')
-    const attrs: { 'data-bm-find'?: ''; 'data-bm-opt'?: '' } = {}
-    if (el.hasAttribute('data-bm-find')) attrs['data-bm-find'] = ''
-    if (el.hasAttribute('data-bm-opt')) attrs['data-bm-opt'] = ''
-
-    return (
-      <mark key={key} className={className || undefined} {...attrs}>
-        {children}
-      </mark>
-    )
-  }
-
-  return <span key={key}>{el.textContent ?? ''}</span>
-}
-
-function filterClasses(raw: string, allow: (cls: string) => boolean) {
-  const classes = raw.split(/\s+/).map((c) => c.trim()).filter(Boolean)
-  return classes.filter(allow).join(' ')
 }
 
 function escapeHtml(text: string) {
@@ -281,4 +235,3 @@ function CheckIcon() {
     </svg>
   )
 }
-
