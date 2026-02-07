@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  ingest_and_promote:
+  ingest_linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
@@ -55,6 +55,63 @@ jobs:
           echo "Ingesting Alpine…"
           uv run python -m ingestion.cli ingest --distro alpine --activate || echo "Alpine ingest failed (continuing)"
 
+  ingest_macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v5
+        with:
+          python-version: 3.14
+
+      - run: pipx install uv
+      - run: cd ingestion && uv sync --frozen
+
+      - name: Ingest macOS (BSD) to staging DB
+        env:
+          INGEST_DATABASE_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd ingestion
+
+          echo "Ingesting macOS (BSD)…"
+          uv run python -m ingestion.cli ingest --distro macos --activate || echo "macOS ingest failed (continuing)"
+
+  ingest_freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
+
+      - name: Ingest FreeBSD to staging DB
+        uses: vmactions/freebsd-vm@f674f993e17ee7a71c14726b5d96599e59cda724 # v1
+        with:
+          release: "15.0"
+          envs: "INGEST_DATABASE_URL BETTERMAN_INGEST_GIT_SHA"
+          usesh: true
+          run: |
+            set -euo pipefail
+
+            cd "$GITHUB_WORKSPACE"
+
+            pkg update -f
+            pkg install -y python3
+
+            python3 -m pip install --upgrade pip
+            python3 -m pip install ./ingestion
+
+            echo "Ingesting FreeBSD…"
+            python3 -m ingestion.cli ingest --distro freebsd --activate || echo "FreeBSD ingest failed (continuing)"
+        env:
+          INGEST_DATABASE_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
+          BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
+
+  promote:
+    runs-on: ubuntu-latest
+    needs: [ingest_linux, ingest_macos, ingest_freebsd]
+    if: ${{ always() }}
+    steps:
       - name: Install Postgres client (pg_dump/psql)
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
@@ -73,7 +130,7 @@ jobs:
 
           dump_flags=(--data-only --no-owner --no-privileges --column-inserts)
 
-          for distro in debian ubuntu fedora arch alpine; do
+          for distro in debian ubuntu fedora arch alpine freebsd macos; do
             row="$(psql "$STAGING_DB_URL" -t -A -c "SELECT id, dataset_release_id FROM dataset_releases WHERE locale = 'en' AND distro = '${distro}' AND is_active = TRUE ORDER BY ingested_at DESC LIMIT 1;")"
             if [[ -z "$row" ]]; then
               echo "No active ${distro} dataset release found in staging; skipping."
