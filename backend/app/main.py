@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 from time import perf_counter
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -21,9 +20,6 @@ from app.core.observability import init_sentry
 from app.db.session import create_engine, create_session_maker
 from app.security.headers import SecurityHeadersMiddleware
 from app.security.request_ip import get_client_ip
-from app.web.runtime_config import router as runtime_config_router
-from app.web.seo import router as seo_router
-from app.web.spa_static import SPAStaticFiles
 
 
 def create_app() -> FastAPI:
@@ -106,8 +102,6 @@ def create_app() -> FastAPI:
         except Exception:  # noqa: BLE001
             get_logger(action="sentry").warning("sentry_middleware_failed")
 
-    app.include_router(seo_router)
-    app.include_router(runtime_config_router)
     app.include_router(v1_router)
 
     @app.middleware("http")
@@ -150,18 +144,6 @@ def create_app() -> FastAPI:
             status_code=400,
             content={"error": {"code": "INVALID_REQUEST", "message": "Invalid request"}},
         )
-
-    if settings.serve_frontend:
-        dist_path = Path(settings.frontend_dist_dir)
-        if dist_path.exists() and dist_path.is_dir():
-            app.mount(
-                "/",
-                SPAStaticFiles(
-                    directory=str(dist_path),
-                    plausible_domain=settings.vite_plausible_domain,
-                ),
-                name="spa",
-            )
 
     return app
 
