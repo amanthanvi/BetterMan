@@ -98,11 +98,19 @@ jobs:
             pkg update -f
             pkg install -y python3
 
-            python3 -m pip install --upgrade pip
-            python3 -m pip install ./ingestion
+            py="python3"
+            if ! $py -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)'; then
+              echo "python3 is < 3.12; installing python312…"
+              pkg install -y python312
+              py="python3.12"
+            fi
+
+            $py -m ensurepip --upgrade
+            $py -m pip install --upgrade pip
+            $py -m pip install ./ingestion
 
             echo "Ingesting FreeBSD…"
-            python3 -m ingestion.cli ingest --distro freebsd --activate || echo "FreeBSD ingest failed (continuing)"
+            $py -m ingestion.cli ingest --distro freebsd --activate || echo "FreeBSD ingest failed (continuing)"
         env:
           INGEST_DATABASE_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
