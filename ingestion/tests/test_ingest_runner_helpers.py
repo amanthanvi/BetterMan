@@ -31,6 +31,13 @@ def test_content_packages_dedupes_base_packages() -> None:
     assert len(set(pkgs)) == len(pkgs)
 
 
+def test_content_packages_arch_avoids_man_db_conflict() -> None:
+    pkgs = _content_packages(sample=True, distro="arch")
+    assert pkgs[0] == "mandoc"
+    assert "man-db" not in pkgs
+    assert len(set(pkgs)) == len(pkgs)
+
+
 def test_parse_man_href_supports_extended_sections() -> None:
     assert _parse_man_href("/man/openssl/1ssl") == ("openssl", "1ssl")
     assert _parse_man_href("/man/curl/1") == ("curl", "1")
