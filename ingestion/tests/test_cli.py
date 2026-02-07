@@ -118,6 +118,41 @@ def test_run_ingest_in_container_success_logs_done(monkeypatch) -> None:
     assert events and events[-1][0] == "ingest_done"
 
 
+def test_run_ingest_in_container_defaults_git_sha_from_repo(monkeypatch) -> None:
+    monkeypatch.setenv("BETTERMAN_IMAGE_REF", "example:latest")
+    monkeypatch.setenv("BETTERMAN_IMAGE_DIGEST", "sha256:deadbeef")
+    monkeypatch.delenv("BETTERMAN_INGEST_GIT_SHA", raising=False)
+    monkeypatch.setenv("INGEST_DATABASE_URL", "postgresql://u:p@h:5432/db")
+
+    monkeypatch.setattr(cli, "_git_sha", lambda _repo_root: "deadbeef")
+
+    called: dict[str, object] = {}
+
+    def fake_ingest_dataset(
+        *,
+        sample: bool,
+        activate: bool,
+        database_url: str,
+        image_ref: str,
+        image_digest: str,
+        git_sha: str,
+        distro: str,
+    ):
+        called["git_sha"] = git_sha
+        return SimpleNamespace(
+            dataset_release_id="release",
+            total=1,
+            succeeded=1,
+            hard_failed=0,
+            published=True,
+        )
+
+    monkeypatch.setattr(cli, "ingest_dataset", fake_ingest_dataset)
+
+    assert cli._run_ingest_in_container(sample=False, activate=True, distro="debian") == 0
+    assert called["git_sha"] == "deadbeef"
+
+
 def test_run_ingest_on_host_defaults_image_fields(monkeypatch) -> None:
     monkeypatch.delenv("BETTERMAN_IMAGE_REF", raising=False)
     monkeypatch.delenv("BETTERMAN_IMAGE_DIGEST", raising=False)

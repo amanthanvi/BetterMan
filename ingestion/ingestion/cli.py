@@ -72,9 +72,11 @@ def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> in
     if not database_url:
         database_url = "postgresql://betterman:betterman@postgres:5432/betterman"
 
+    repo_root = Path(__file__).resolve().parents[2]
+
     image_ref = os.environ.get("BETTERMAN_IMAGE_REF")
     image_digest = os.environ.get("BETTERMAN_IMAGE_DIGEST")
-    git_sha = os.environ.get("BETTERMAN_INGEST_GIT_SHA", "unknown")
+    git_sha = os.environ.get("BETTERMAN_INGEST_GIT_SHA") or _git_sha(repo_root)
 
     if not image_ref or not image_digest:
         _log("ingest_error", error="Missing BETTERMAN_IMAGE_REF / BETTERMAN_IMAGE_DIGEST")
