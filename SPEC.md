@@ -2640,7 +2640,7 @@ SENTRY_DSN=https://xxx@sentry.io/123  # Backend
 VITE_SENTRY_DSN=https://xxx@sentry.io/456  # Frontend
 ```
 
-**Production note:** the SPA reads `VITE_SENTRY_DSN` at runtime from `/config.js` (served by the backend) so Railway env var changes do not require rebuilding the frontend bundle.
+**Production note (v0.4.0 only):** the SPA reads `VITE_SENTRY_DSN` at runtime from `/config.js` (served by the backend) so Railway env var changes do not require rebuilding the frontend bundle. In v0.5.0, `/config.js` is removed and config is owned by Next.js env vars.
 
 ### Plausible Analytics
 
@@ -2653,7 +2653,7 @@ Privacy-friendly analytics (no cookies, GDPR-compliant):
 VITE_PLAUSIBLE_DOMAIN=betterman.dev
 ```
 
-**Production note:** the backend injects the Plausible script tag into `index.html` when `VITE_PLAUSIBLE_DOMAIN` is set.
+**Production note (v0.4.0 only):** the backend injects the Plausible script tag into `index.html` when `VITE_PLAUSIBLE_DOMAIN` is set. In v0.5.0, Plausible moves to Next.js `<Script>`.
 
 ## Ingestion Improvements (M30)
 
@@ -2845,14 +2845,14 @@ Two Railway services:
 
 1. **Next.js Service** (public-facing):
    - Handles all web traffic (SSR + static assets)
-   - Proxies `/api/*` to FastAPI via `next.config.js` rewrites
+   - Proxies `/api/*` to FastAPI via Next.js route handler (`app/api/[...path]`) so `FASTAPI_INTERNAL_URL` is runtime-configurable
    - Serves SEO endpoints directly (Next owns `robots.txt` + sitemaps)
    - Public domain: `betterman.sh`
    - Env: `FASTAPI_INTERNAL_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`
 
 2. **FastAPI Service** (internal):
    - Pure API server (no static file serving)
-   - Railway private networking: `http://fastapi.railway.internal:8000`
+   - Railway private networking: `http://web.railway.internal:8080` (IPv6-only DNS; bind on `::`)
    - Remove `serve_frontend`, `SPAStaticFiles`, `runtime_config` router, and FastAPI SEO endpoints
    - Keeps PostgreSQL/Redis connections, rate limiting, Sentry backend
 
@@ -3168,13 +3168,13 @@ export const STORAGE_KEYS = {
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Next.js | Plausible analytics domain |
 | `NEXT_PUBLIC_SENTRY_DSN` | Next.js | Sentry DSN for frontend |
 
-### Removed from FastAPI
+### No longer required by FastAPI (v0.5.0)
 | Variable | Reason |
 |----------|--------|
 | `SERVE_FRONTEND` | Next.js serves frontend now |
-| `FRONTEND_DIST_DIR` | No longer serves static files |
-| `VITE_SENTRY_DSN` | Moves to Next.js env |
-| `VITE_PLAUSIBLE_DOMAIN` | Moves to Next.js env |
+| `FRONTEND_DIST_DIR` | FastAPI no longer serves static files |
+| `VITE_SENTRY_DSN` | Frontend moves to Next.js env |
+| `VITE_PLAUSIBLE_DOMAIN` | Frontend moves to Next.js env |
 
 ---
 
@@ -3271,9 +3271,9 @@ v0.5.0 has **deployment breaking changes**:
 - FastAPI stops serving static files
 
 **Recommended deployment order:**
-1. Deploy FastAPI with `SERVE_FRONTEND=false` (API-only mode)
-2. Deploy Next.js service with `FASTAPI_INTERNAL_URL` pointed to FastAPI
-3. Route public domain to Next.js service
+1. Deploy FastAPI (API-only; no frontend/static routes; bind on `::` for private networking)
+2. Deploy Next.js service with `FASTAPI_INTERNAL_URL` pointed to FastAPI (route handler proxies `/api/*`)
+3. Route public domain to Next.js service (update DNS to Railway-provided traffic route targets)
 4. Verify SSR, API proxy, Sentry, Plausible
 5. Verify all 7 distros ingested and active
 6. Remove old SPA deploy config

@@ -15,7 +15,7 @@ This repo follows the global agent guidance in:
 
 - Current (`v0.4.0`): `frontend/` (Vite SPA) + `backend/` (FastAPI serving API + built SPA)
 - Target (`v0.5.0`): **two services**
-  - `frontend/` (Next.js App Router; public-facing)
+  - `nextjs/` (Next.js App Router; public-facing)
   - `backend/` (FastAPI API-only; internal)
   - `ingestion/` (dataset pipeline; scheduled via GitHub Actions)
 
@@ -53,4 +53,3 @@ This repo follows the global agent guidance in:
 - Use Conventional Commits (`feat|fix|refactor|docs|chore|test|perf|ci|build|style`).
 - Update `SPEC.md` when behavior/architecture changes.
 - Update `PLAN.md` as work progresses (it’s the central “living” checklist).
-

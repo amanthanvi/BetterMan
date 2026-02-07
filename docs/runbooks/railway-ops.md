@@ -2,6 +2,12 @@
 
 BetterMan deploys to Railway.
 
+## v0.5.0 notes (two services)
+
+- `nextjs` is public-facing (custom domains).
+- `web` (FastAPI) is internal-only; Next proxies `/api/*` to it via Railway private networking.
+- Railway private networking uses IPv6-only `.railway.internal` DNS. Services must bind to `::` (not just `0.0.0.0`).
+
 ## Deploy
 
 ### Automatic (default)
@@ -18,6 +24,26 @@ BetterMan deploys to Railway.
 ## Rollback
 
 - Re-run the manual deploy workflow (`deploy-railway`) with a previous known-good `ref` (SHA or tag).
+
+## Custom domains / cutover (v0.5.0)
+
+Prereqs:
+
+- `FASTAPI_INTERNAL_URL` is set on the `nextjs` service (example: `http://web.railway.internal:8080`).
+- `/api/v1/info` works on the Next service domain (`https://nextjs-…up.railway.app/api/v1/info`).
+
+DNS (Cloudflare):
+
+- CNAME `betterman.sh` → `pra71pqd.up.railway.app`
+- CNAME `www.betterman.sh` → `6knyu6fn.up.railway.app`
+- Ensure records are **DNS only** (no proxy) while validating Railway certificates.
+
+Verification:
+
+- `https://betterman.sh/robots.txt` returns `200`
+- `https://betterman.sh/sitemap.xml` returns `200`
+- `https://betterman.sh/man/tar/1` returns `200` and contains content in page source
+- `https://betterman.sh/api/v1/info` returns `200` JSON
 
 ## Logs / debugging
 

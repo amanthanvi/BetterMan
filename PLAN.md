@@ -12,6 +12,7 @@ Living execution plan for shipping `v0.5.0` from `SPEC.md`.
 - SEO endpoints: re-implement `robots.txt` + sitemaps in Next.js (not FastAPI).
 - Sentry: OK to adopt `@sentry/nextjs`.
 - Offline strategy: cache HTML (network-first, cache fallback) + cache API responses (network-first, cache fallback).
+- Railway private networking: `.railway.internal` resolves to IPv6-only; services must bind on `::` (not just `0.0.0.0`).
 
 ## Status
 
@@ -86,9 +87,9 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M38 — FastAPI becomes API-only
 
-- [ ] Disable static frontend serving (`SERVE_FRONTEND=false`)
-- [ ] Remove SPA static + `/config.js` runtime config
-- [ ] Remove FastAPI SEO endpoints (robots/sitemaps) after Next owns them
+- [x] Disable static frontend serving (no SPA mount)
+- [x] Remove SPA static + `/config.js` runtime config
+- [x] Remove FastAPI SEO endpoints (robots/sitemaps) after Next owns them
 
 ### M39 — CI + E2E migration
 
@@ -102,6 +103,10 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 - [ ] FastAPI service internal-only (private networking)
 - [ ] GitHub Actions deploy workflow deploys both services
 - [ ] Rollback plan documented
+
+**DNS action required (Cloudflare):**
+- `betterman.sh` CNAME → `pra71pqd.up.railway.app`
+- `www.betterman.sh` CNAME → `6knyu6fn.up.railway.app`
 
 ### M41 — Distro expansion (7 total)
 
