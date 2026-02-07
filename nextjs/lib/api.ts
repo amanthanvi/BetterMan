@@ -1,5 +1,9 @@
 import { fastapiUrl } from './fastapi'
 import type { Distro } from './distro'
+import type {
+  AmbiguousPageResponse,
+  ManPageResponse,
+} from './docModel'
 
 export type InfoResponse = {
   datasetReleaseId: string
@@ -44,6 +48,51 @@ export type SectionResponse = {
   results: SectionPage[]
 }
 
+export type Suggestion = {
+  name: string
+  section: string
+  description: string
+}
+
+export type SuggestResponse = {
+  query: string
+  suggestions: Suggestion[]
+}
+
+export type LicensePackage = {
+  name: string
+  version: string
+  hasLicenseText: boolean
+}
+
+export type LicensesResponse = {
+  datasetReleaseId: string
+  ingestedAt: string
+  imageRef: string
+  imageDigest: string
+  packageManifest: Record<string, unknown> | null
+  packages: LicensePackage[]
+}
+
+export type LicenseTextResponse = {
+  package: string
+  licenseId: string
+  licenseName: string
+  text: string
+}
+
+export class FastApiError extends Error {
+  status: number
+  bodyText?: string
+
+  constructor(status: number, message: string, bodyText?: string) {
+    super(message)
+    this.name = 'FastApiError'
+    this.status = status
+    this.bodyText = bodyText
+  }
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(fastapiUrl(path), {
     ...init,
@@ -54,7 +103,13 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
-    throw new Error(`FastAPI request failed: ${res.status} ${res.statusText}`)
+    let bodyText: string | undefined
+    try {
+      bodyText = await res.text()
+    } catch {
+      // ignore
+    }
+    throw new FastApiError(res.status, `FastAPI request failed: ${res.status} ${res.statusText}`, bodyText)
   }
 
   return (await res.json()) as T
@@ -111,4 +166,98 @@ export function listSection(opts: {
     `/api/v1/section/${encodeURIComponent(opts.section)}${qs ? `?${qs}` : ''}`,
     { next: { revalidate: 300 } },
   )
+}
+
+export type ManByNameResult =
+  | { kind: 'page'; data: ManPageResponse }
+  | { kind: 'ambiguous'; options: AmbiguousPageResponse['options'] }
+
+export async function fetchManByName(opts: {
+  distro: Distro
+  name: string
+}): Promise<ManByNameResult> {
+  const params = new URLSearchParams()
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  const qs = params.toString()
+
+  const res = await fetch(fastapiUrl(`/api/v1/man/${encodeURIComponent(opts.name)}${qs ? `?${qs}` : ''}`), {
+    headers: { Accept: 'application/json' },
+    next: { revalidate: 300 },
+  })
+
+  if (res.status === 409) {
+    const payload = (await res.json()) as AmbiguousPageResponse
+    return { kind: 'ambiguous', options: payload.options ?? [] }
+  }
+
+  if (!res.ok) {
+    let bodyText: string | undefined
+    try {
+      bodyText = await res.text()
+    } catch {
+      // ignore
+    }
+    throw new FastApiError(res.status, `FastAPI request failed: ${res.status} ${res.statusText}`, bodyText)
+  }
+
+  return { kind: 'page', data: (await res.json()) as ManPageResponse }
+}
+
+export function fetchManByNameAndSection(opts: {
+  distro: Distro
+  name: string
+  section: string
+}): Promise<ManPageResponse> {
+  const params = new URLSearchParams()
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  const qs = params.toString()
+  return fetchJson<ManPageResponse>(
+    `/api/v1/man/${encodeURIComponent(opts.name)}/${encodeURIComponent(opts.section)}${qs ? `?${qs}` : ''}`,
+    { next: { revalidate: 300 } },
+  )
+}
+
+export type RelatedResponse = {
+  items: SectionPage[]
+}
+
+export function fetchRelated(opts: {
+  distro: Distro
+  name: string
+  section: string
+}): Promise<RelatedResponse> {
+  const params = new URLSearchParams()
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  const qs = params.toString()
+  return fetchJson<RelatedResponse>(
+    `/api/v1/man/${encodeURIComponent(opts.name)}/${encodeURIComponent(opts.section)}/related${qs ? `?${qs}` : ''}`,
+    { next: { revalidate: 300 } },
+  )
+}
+
+export function suggest(opts: { distro: Distro; name: string }): Promise<SuggestResponse> {
+  const params = new URLSearchParams()
+  params.set('name', opts.name)
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  return fetchJson<SuggestResponse>(`/api/v1/suggest?${params.toString()}`, {
+    next: { revalidate: 300 },
+  })
+}
+
+export function fetchLicenses(opts: { distro: Distro }): Promise<LicensesResponse> {
+  const params = new URLSearchParams()
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  const qs = params.toString()
+  return fetchJson<LicensesResponse>(`/api/v1/licenses${qs ? `?${qs}` : ''}`, {
+    next: { revalidate: 300 },
+  })
+}
+
+export function fetchLicenseText(opts: { distro: Distro; packageName: string }): Promise<LicenseTextResponse> {
+  const params = new URLSearchParams()
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  const qs = params.toString()
+  return fetchJson<LicenseTextResponse>(`/api/v1/licenses/${encodeURIComponent(opts.packageName)}${qs ? `?${qs}` : ''}`, {
+    next: { revalidate: 300 },
+  })
 }
