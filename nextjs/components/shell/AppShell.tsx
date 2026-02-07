@@ -15,6 +15,7 @@ import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
 import { TocDrawer } from '../toc/TocDrawer'
+import { MobileBottomNav } from './MobileBottomNav'
 import { ShortcutsDialog } from './ShortcutsDialog'
 
 function isTypingTarget(el: Element | null) {
@@ -49,6 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
+  const [offline, setOffline] = useState(false)
   const searchRef = useRef<HTMLInputElement | null>(null)
 
   const lastRouteKeyRef = useRef<string | null>(null)
@@ -79,6 +81,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     return () => controller.abort()
   }, [distro.distro])
+
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine)
+    update()
+    window.addEventListener('online', update)
+    window.addEventListener('offline', update)
+    return () => {
+      window.removeEventListener('online', update)
+      window.removeEventListener('offline', update)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') return
+    if (!('serviceWorker' in navigator)) return
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // ignore
+    })
+  }, [])
 
   useEffect(() => {
     const onPop = () => {
@@ -218,6 +239,54 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [isManPage, router, theme, toc])
 
+  useEffect(() => {
+    if (!isManPage) return
+    if (!toc.items.length) return
+
+    let tracking = false
+    let startX = 0
+    let startY = 0
+    let opened = false
+
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return
+      const t = e.touches[0]
+      startX = t.clientX
+      startY = t.clientY
+      tracking = startX <= 40
+      opened = false
+    }
+
+    const onMove = (e: TouchEvent) => {
+      if (!tracking || opened) return
+      if (window.matchMedia('(min-width: 1024px)').matches) return
+      const t = e.touches[0]
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
+      if (dx > 72 && Math.abs(dy) < 36) {
+        opened = true
+        tracking = false
+        toc.setOpen(true)
+      }
+    }
+
+    const onEnd = () => {
+      tracking = false
+      opened = false
+    }
+
+    window.addEventListener('touchstart', onStart, { passive: true })
+    window.addEventListener('touchmove', onMove, { passive: true })
+    window.addEventListener('touchend', onEnd, { passive: true })
+    window.addEventListener('touchcancel', onEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onStart)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+      window.removeEventListener('touchcancel', onEnd)
+    }
+  }, [isManPage, toc])
+
   return (
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
       <header
@@ -318,6 +387,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             TOC
           </button>
         </div>
+        {offline ? (
+          <div className="border-t border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] px-4 py-2 text-xs text-[color:var(--bm-muted)]">
+            Offline — showing cached content
+          </div>
+        ) : null}
       </header>
 
       <TocDrawer />
@@ -325,7 +399,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
-      <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:pb-10">{children}</main>
 
       <footer data-bm-app-footer className="border-t border-[var(--bm-border)]">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-[color:var(--bm-muted)] sm:flex-row sm:items-center sm:justify-between">
@@ -343,6 +417,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
       </footer>
+
+      <MobileBottomNav onMore={() => setPaletteOpen(true)} />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { Providers } from './providers'
 export const metadata: Metadata = {
   title: 'BetterMan',
   description: 'BetterMan is a fast, readable web UI for Linux man pages.',
+  manifest: '/site.webmanifest',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
