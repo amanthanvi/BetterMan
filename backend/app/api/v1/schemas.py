@@ -90,6 +90,28 @@ class LicenseTextResponse(BaseModel):
     text: str
 
 
+class SeoReleaseItem(BaseModel):
+    distro: str
+    datasetReleaseId: str
+    ingestedAt: str
+    pageCount: int
+
+
+class SeoReleasesResponse(BaseModel):
+    urlsPerFile: int
+    items: list[SeoReleaseItem]
+
+
+class SeoSitemapPageItem(BaseModel):
+    name: str
+    section: str
+
+
+class SeoSitemapPageResponse(BaseModel):
+    items: list[SeoSitemapPageItem]
+    page: int
+
+
 class TocItem(BaseModel):
     id: str
     title: str

@@ -5,6 +5,7 @@ from fastapi.params import Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas import SeoReleasesResponse, SeoSitemapPageResponse
 from app.datasets.active import get_active_release
 from app.datasets.distro import SUPPORTED_DISTROS, normalize_distro
 from app.db.models import ManPage
@@ -16,12 +17,12 @@ router = APIRouter()
 SITEMAP_URLS_PER_FILE = 10_000
 
 
-@router.get("/seo/releases", include_in_schema=False)
+@router.get("/seo/releases", include_in_schema=False, response_model=SeoReleasesResponse)
 async def list_seo_releases(
     request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict | Response:
+) -> SeoReleasesResponse | Response:
     cache_control = "public, max-age=3600"
 
     items: list[dict[str, object]] = []
@@ -61,14 +62,14 @@ async def list_seo_releases(
     return {"urlsPerFile": SITEMAP_URLS_PER_FILE, "items": items}
 
 
-@router.get("/seo/sitemap-page", include_in_schema=False)
+@router.get("/seo/sitemap-page", include_in_schema=False, response_model=SeoSitemapPageResponse)
 async def list_sitemap_page_items(
     request: Request,
     response: Response,
     distro: str = Query(min_length=1, max_length=50),
     page: int = Query(ge=1),
     session: AsyncSession = Depends(get_session),  # noqa: B008
-) -> dict | Response:
+) -> SeoSitemapPageResponse | Response:
     distro_norm = normalize_distro(distro)
     release = await get_active_release(session, distro=distro_norm)
     if release is None:
