@@ -19,7 +19,7 @@ jobs:
   deploy_web:
     runs-on: ubuntu-latest
     env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_WORKSPACE_ID: ed8a9f0d-ab1b-48a4-a7a1-86a95b0e5f18
       RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
       RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
