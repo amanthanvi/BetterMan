@@ -56,10 +56,10 @@ jobs:
           uv run python -m ingestion.cli ingest --distro fedora --activate || echo "Fedora ingest failed (continuing)"
 
           echo "Ingesting Arch…"
-          uv run python -m ingestion.cli ingest --distro arch --activate || echo "Arch ingest failed (continuing)"
+          uv run python -m ingestion.cli ingest --distro arch --activate
 
           echo "Ingesting Alpine…"
-          uv run python -m ingestion.cli ingest --distro alpine --activate || echo "Alpine ingest failed (continuing)"
+          uv run python -m ingestion.cli ingest --distro alpine --activate
 
   ingest_macos:
     runs-on: macos-latest
@@ -83,7 +83,7 @@ jobs:
           cd ingestion
 
           echo "Ingesting macOS (BSD)…"
-          uv run python -m ingestion.cli ingest --distro macos --activate || echo "macOS ingest failed (continuing)"
+          uv run python -m ingestion.cli ingest --distro macos --activate
 
   ingest_freebsd:
     runs-on: ubuntu-latest
@@ -121,7 +121,7 @@ jobs:
             $py -m pip install ./ingestion
 
             echo "Ingesting FreeBSD…"
-            $py -m ingestion.cli ingest --distro freebsd --activate || echo "FreeBSD ingest failed (continuing)"
+            $py -m ingestion.cli ingest --distro freebsd --activate
         env:
           INGEST_DATABASE_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
