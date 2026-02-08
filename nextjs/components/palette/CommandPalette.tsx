@@ -407,37 +407,36 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             <div className="p-3 text-sm text-[color:var(--bm-muted)]">No matches.</div>
           ) : null}
 
-          <ol id="bm-palette-list" role="listbox" className="space-y-1">
+          <div id="bm-palette-list" role="listbox" className="space-y-1">
             {items.map((item, idx) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  id={`bm-palette-option-${idx}`}
-                  role="option"
-                  aria-selected={idx === safeActiveIndex}
-                  className={`w-full rounded-md px-3 py-2 text-left text-sm ${
-                    idx === safeActiveIndex
-                      ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
-                      : 'text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.8] hover:text-[color:var(--bm-fg)]'
-                  }`}
-                  onMouseEnter={() => setActiveIndex(idx)}
-                  onClick={() => item.run()}
-                >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <div className="font-medium text-[color:var(--bm-fg)]">{itemLabel(item)}</div>
-                    {item.kind === 'page' && bookmarkSet.has(`${item.name}:${item.section}`) ? (
-                      <div className="text-xs text-[color:var(--bm-muted)]">★</div>
-                    ) : item.kind === 'action' && item.detail ? (
-                      <div className="text-xs text-[color:var(--bm-muted)]">{item.detail}</div>
-                    ) : null}
-                  </div>
-                  {item.kind === 'page' ? (
-                    <div className="mt-1 text-xs text-[color:var(--bm-muted)]">{item.description}</div>
+              <button
+                key={item.id}
+                type="button"
+                id={`bm-palette-option-${idx}`}
+                role="option"
+                aria-selected={idx === safeActiveIndex}
+                className={`w-full rounded-md px-3 py-2 text-left text-sm ${
+                  idx === safeActiveIndex
+                    ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
+                    : 'text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.8] hover:text-[color:var(--bm-fg)]'
+                }`}
+                onMouseEnter={() => setActiveIndex(idx)}
+                onClick={() => item.run()}
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="font-medium text-[color:var(--bm-fg)]">{itemLabel(item)}</div>
+                  {item.kind === 'page' && bookmarkSet.has(`${item.name}:${item.section}`) ? (
+                    <div className="text-xs text-[color:var(--bm-muted)]">★</div>
+                  ) : item.kind === 'action' && item.detail ? (
+                    <div className="text-xs text-[color:var(--bm-muted)]">{item.detail}</div>
                   ) : null}
-                </button>
-              </li>
+                </div>
+                {item.kind === 'page' ? (
+                  <div className="mt-1 text-xs text-[color:var(--bm-muted)]">{item.description}</div>
+                ) : null}
+              </button>
             ))}
-          </ol>
+          </div>
         </div>
       </div>
     </div>

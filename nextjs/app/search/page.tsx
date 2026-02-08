@@ -145,6 +145,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                       href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, distro)}
                       className="font-mono text-base font-semibold tracking-tight underline underline-offset-4"
                       title={`${r.name}(${r.section})`}
+                      aria-label={`${r.name}(${r.section})`}
                     >
                       {r.name}
                     </Link>

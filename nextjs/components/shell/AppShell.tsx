@@ -490,7 +490,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => toc.setOpen(true)}
             tabIndex={toc.items.length ? 0 : -1}
             aria-hidden={!toc.items.length}
-            aria-label="Open table of contents"
+            aria-label="TOC"
+            title="Table of contents"
           >
             <IconList className="size-4" />
             <span className="hidden sm:inline sm:pl-1.5">TOC</span>
