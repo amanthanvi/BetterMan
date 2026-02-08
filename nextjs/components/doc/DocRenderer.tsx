@@ -28,6 +28,7 @@ export type DocRendererHandle = {
 
 type HighlightCtx = {
   findQuery?: string
+  findRegex?: RegExp
   optionRegex?: RegExp
 }
 
@@ -45,13 +46,15 @@ export const DocRenderer = forwardRef<
 
   useEffect(() => setMounted(true), [])
 
-  const optionRegex = buildOptionRegex(optionTerms)
   const find = findQuery?.trim()
+  const stableFind = find && find.length >= 2 ? find : undefined
+  const optionRegex = useMemo(() => buildOptionRegex(optionTerms), [optionTerms])
+  const findRegex = useMemo(() => {
+    if (!stableFind) return undefined
+    return new RegExp(escapeRegExp(stableFind), 'gi')
+  }, [stableFind])
 
-  const ctx: HighlightCtx = {
-    findQuery: find && find.length >= 2 ? find : undefined,
-    optionRegex,
-  }
+  const ctx = useMemo((): HighlightCtx => ({ findQuery: stableFind, findRegex, optionRegex }), [findRegex, optionRegex, stableFind])
 
   const shouldVirtualize = blocks.length >= 100
   const isVirtualized = mounted && shouldVirtualize
@@ -403,11 +406,11 @@ function escapeRegExp(text: string) {
 }
 
 function highlightText(text: string, ctx: HighlightCtx) {
-  const hasFind = Boolean(ctx.findQuery)
+  const hasFind = Boolean(ctx.findRegex)
   const hasOpt = Boolean(ctx.optionRegex)
   if (!hasFind && !hasOpt) return text
 
-  const findRanges = hasFind ? getRanges(text, new RegExp(escapeRegExp(ctx.findQuery!), 'gi')) : []
+  const findRanges = hasFind ? getRanges(text, ctx.findRegex!) : []
   const optionRanges = hasOpt ? getRanges(text, ctx.optionRegex!) : []
 
   const optionFiltered = optionRanges.filter((r) => !overlapsAny(r, findRanges))

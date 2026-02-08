@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 
 let hljsPromise: Promise<unknown> | null = null
 
@@ -65,7 +65,9 @@ export function CodeBlock({
           language,
           ignoreIllegals: true,
         }).value
-        setHighlighted({ source: markedText, html: applyMarkers(next) })
+        startTransition(() => {
+          setHighlighted({ source: markedText, html: applyMarkers(next) })
+        })
       } catch {
         // keep fallback
       }
