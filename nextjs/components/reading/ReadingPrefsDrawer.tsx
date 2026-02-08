@@ -39,13 +39,43 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
   }) => (
     <section>
       <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">{label}</div>
-      <div role="radiogroup" aria-label={label} className="mt-3 flex flex-wrap gap-2">
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className="mt-3 flex flex-wrap gap-2"
+        onKeyDown={(e) => {
+          if (!options.length) return
+
+          let nextIndex: number | null = null
+          const currentIndex = Math.max(0, options.findIndex((o) => o.id === value))
+
+          if (e.key === 'Home') nextIndex = 0
+          else if (e.key === 'End') nextIndex = options.length - 1
+          else if (e.key === 'ArrowRight' || e.key === 'ArrowDown')
+            nextIndex = (currentIndex + 1) % options.length
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp')
+            nextIndex = (currentIndex - 1 + options.length) % options.length
+
+          if (nextIndex === null) return
+          e.preventDefault()
+
+          const next = options[nextIndex]
+          if (!next) return
+
+          onChange(next.id)
+          requestAnimationFrame(() => {
+            const radios = e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')
+            radios[nextIndex]?.focus()
+          })
+        }}
+      >
         {options.map((o) => (
           <button
             key={o.id}
             type="button"
             role="radio"
             aria-checked={value === o.id}
+            tabIndex={value === o.id ? 0 : -1}
             className={`rounded-full border border-[var(--bm-border)] px-4 py-2 text-sm font-medium ${
               value === o.id
                 ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
@@ -66,13 +96,13 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
       aria-modal="true"
       aria-label="Reading preferences"
       className="fixed inset-0 z-40"
-      onMouseDown={() => onOpenChange(false)}
+      onClick={() => onOpenChange(false)}
     >
       <div className="absolute inset-0 bg-black/50" />
       <div
         ref={panelRef}
         className="relative ml-auto h-full w-[min(92vw,28rem)] overflow-y-auto border-l border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-6 shadow-xl backdrop-blur"
-        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
           <div>

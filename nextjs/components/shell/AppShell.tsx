@@ -201,7 +201,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const prevKey = lastRouteKeyRef.current
-    if (prevKey) scrollPositionsRef.current.set(prevKey, window.scrollY)
+    if (prevKey) {
+      scrollPositionsRef.current.set(prevKey, window.scrollY)
+      if (scrollPositionsRef.current.size > 100) {
+        const firstKey = scrollPositionsRef.current.keys().next().value
+        if (firstKey) scrollPositionsRef.current.delete(firstKey)
+      }
+    }
 
     const nextY = isPopRef.current ? scrollPositionsRef.current.get(routeKey) ?? 0 : 0
     isPopRef.current = false

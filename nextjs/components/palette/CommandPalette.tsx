@@ -354,13 +354,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       aria-modal="true"
       aria-label="Command palette"
       className="fixed inset-0 z-50"
-      onMouseDown={() => close()}
+      onClick={() => close()}
     >
       <div className="absolute inset-0 bg-black/55" />
       <div
         ref={dialogRef}
         className="relative mx-auto mt-20 w-[min(92vw,44rem)] overflow-hidden rounded-xl border border-[var(--bm-border)] bg-[var(--bm-bg)] shadow-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-[var(--bm-border)] p-3">
           <div aria-live="polite" className="sr-only">
@@ -390,7 +390,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           />
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto p-2">
+        <div
+          className="max-h-[60vh] overflow-y-auto p-2"
+          tabIndex={0}
+          aria-label="Command palette results"
+        >
           {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
             <div className="p-3 text-sm text-[color:var(--bm-muted)]">Searching…</div>
           ) : null}
@@ -405,12 +409,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
           <div id="bm-palette-list" role="listbox" className="space-y-1">
             {items.map((item, idx) => (
-              <button
+              <div
                 key={item.id}
-                type="button"
                 id={`bm-palette-option-${idx}`}
                 role="option"
                 aria-selected={idx === safeActiveIndex}
+                tabIndex={-1}
                 className={`w-full rounded-md px-3 py-2 text-left text-sm ${
                   idx === safeActiveIndex
                     ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
@@ -430,7 +434,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 {item.kind === 'page' ? (
                   <div className="mt-1 text-xs text-[color:var(--bm-muted)]">{item.description}</div>
                 ) : null}
-              </button>
+              </div>
             ))}
           </div>
         </div>

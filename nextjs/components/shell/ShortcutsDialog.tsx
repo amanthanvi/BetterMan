@@ -65,13 +65,13 @@ export function ShortcutsDialog({
       aria-modal="true"
       aria-label="Keyboard shortcuts"
       className="fixed inset-0 z-50"
-      onMouseDown={() => onOpenChange(false)}
+      onClick={() => onOpenChange(false)}
     >
       <div className="absolute inset-0 bg-black/55" />
       <div
         ref={dialogRef}
         className="relative mx-auto mt-24 w-[min(92vw,38rem)] rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-6 shadow-xl backdrop-blur"
-        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
           <div>

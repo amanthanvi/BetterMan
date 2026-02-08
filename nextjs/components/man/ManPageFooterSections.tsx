@@ -30,10 +30,12 @@ export function ManPageFooterSections({
               <li key={`${ref.name}:${ref.section ?? ''}`}>
                 {ref.section && !ref.resolvedPageId ? (
                   <span
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.25] px-3 py-1 text-sm text-[color:var(--bm-muted)]"
+                    aria-disabled="true"
+                    className="inline-flex cursor-not-allowed items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.25] px-3 py-1 text-sm text-[color:var(--bm-muted)] opacity-70"
                     title="Not available in this dataset"
                   >
                     {ref.name}({ref.section})
+                    <span className="sr-only"> (not available)</span>
                   </span>
                 ) : ref.section ? (
                   <Link

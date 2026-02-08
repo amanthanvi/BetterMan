@@ -33,13 +33,13 @@ export function TocDrawer() {
       aria-modal="true"
       aria-label="Table of contents"
       className="fixed inset-0 z-40"
-      onMouseDown={() => toc.setOpen(false)}
+      onClick={() => toc.setOpen(false)}
     >
       <div className="absolute inset-0 bg-black/50" />
       <div
         ref={panelRef}
         className="relative h-full w-[min(90vw,24rem)] overflow-y-auto border-r border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-5 shadow-xl backdrop-blur"
-        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold tracking-tight">Table of contents</h2>
