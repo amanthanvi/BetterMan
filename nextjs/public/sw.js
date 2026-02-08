@@ -7,6 +7,10 @@ const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const HTML_CACHE = `${CACHE_PREFIX}-html-${CACHE_VERSION}`
 const API_CACHE = `${CACHE_PREFIX}-api-${CACHE_VERSION}`
 
+const MAX_STATIC_ENTRIES = 200
+const MAX_HTML_ENTRIES = 80
+const MAX_API_ENTRIES = 200
+
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting())
 })
@@ -49,12 +53,23 @@ function isStaticAsset(request, url) {
   )
 }
 
-async function networkFirst(request, cacheName) {
+async function trimCache(cache, maxEntries) {
+  if (!maxEntries) return
+  const keys = await cache.keys()
+  const extra = keys.length - maxEntries
+  if (extra <= 0) return
+  for (let i = 0; i < extra; i += 1) {
+    await cache.delete(keys[i])
+  }
+}
+
+async function networkFirst(request, cacheName, maxEntries) {
   const cache = await caches.open(cacheName)
   try {
     const res = await fetch(request)
     if (res && res.ok) {
       await cache.put(request, res.clone())
+      await trimCache(cache, maxEntries)
     }
     return res
   } catch {
@@ -67,7 +82,7 @@ async function networkFirst(request, cacheName) {
   }
 }
 
-async function cacheFirst(request, cacheName) {
+async function cacheFirst(request, cacheName, maxEntries) {
   const cache = await caches.open(cacheName)
   const cached = await cache.match(request)
   if (cached) return cached
@@ -75,6 +90,7 @@ async function cacheFirst(request, cacheName) {
   const res = await fetch(request)
   if (res && res.ok) {
     await cache.put(request, res.clone())
+    await trimCache(cache, maxEntries)
   }
   return res
 }
@@ -87,17 +103,17 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request, HTML_CACHE))
+    event.respondWith(networkFirst(request, HTML_CACHE, MAX_HTML_ENTRIES))
     return
   }
 
   if (isApiRequest(url)) {
-    event.respondWith(networkFirst(request, API_CACHE))
+    event.respondWith(networkFirst(request, API_CACHE, MAX_API_ENTRIES))
     return
   }
 
   if (isStaticAsset(request, url)) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE))
+    event.respondWith(cacheFirst(request, STATIC_CACHE, MAX_STATIC_ENTRIES))
     return
   }
 })
