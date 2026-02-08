@@ -379,8 +379,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-[var(--bm-accent)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--bm-accent-contrast)]"
+      >
+        Skip to content
+      </a>
       <header
         data-bm-app-header
+        aria-label="Site header"
         className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] backdrop-blur"
       >
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
@@ -501,9 +508,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
-      <main className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:pb-10">{children}</main>
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:pb-10">
+        {children}
+      </main>
 
-      <footer data-bm-app-footer className="border-t border-[var(--bm-border)]">
+      <footer data-bm-app-footer aria-label="Site footer" className="border-t border-[var(--bm-border)]">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-[color:var(--bm-muted)] sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
             <div className="text-[color:var(--bm-fg)]">BetterMan</div>

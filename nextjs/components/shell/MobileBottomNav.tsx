@@ -130,7 +130,10 @@ export function MobileBottomNav({ onMore }: { onMore: () => void }) {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] backdrop-blur sm:hidden">
+    <nav
+      aria-label="Main navigation"
+      className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] backdrop-blur sm:hidden"
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
         <Item href="/" label="Home" icon={<IconHome />} />
         <Item href="/search" label="Search" icon={<IconSearch />} />
