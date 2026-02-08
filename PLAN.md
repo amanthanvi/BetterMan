@@ -99,14 +99,14 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M40 — Railway: two services + cutover
 
-- [ ] Next.js service public (domain `betterman.sh`)
-- [ ] FastAPI service internal-only (private networking)
-- [ ] GitHub Actions deploy workflow deploys both services
-- [ ] Rollback plan documented
+- [x] Next.js service public (domains `betterman.sh`, `www.betterman.sh`)
+- [x] FastAPI service internal-only (private networking)
+- [x] GitHub Actions deploy workflow deploys both services
+- [x] Rollback plan documented (`docs/runbooks/railway-ops.md`)
 
-**DNS action required (Cloudflare):**
-- CNAME `betterman.sh` → `nextjs-production-79aa.up.railway.app`
-- CNAME `www.betterman.sh` → `nextjs-production-79aa.up.railway.app`
+**DNS (Cloudflare):**
+- CNAME apex + `www` to the Railway-provided domain for the `nextjs` service (see `docs/runbooks/railway-ops.md`).
+- If using the Cloudflare proxy, ensure SSL is configured appropriately for your origin.
 
 ### M41 — Distro expansion (7 total)
 

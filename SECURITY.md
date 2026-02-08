@@ -14,7 +14,7 @@ Please do **not** open a public GitHub issue for security reports.
 
 Instead, report vulnerabilities via one of:
 
-- GitHub Security Advisories (preferred, if enabled)
+- GitHub Security Advisories (preferred)
 - Email: `aman_thanvi@outlook.com`
 
 Include:
@@ -22,6 +22,15 @@ Include:
 - A clear description of the issue and impact
 - Steps to reproduce / proof-of-concept
 - Affected versions/commits (if known)
+
+## Supported Versions
+
+Only the latest minor series receives security patches.
+
+| Version | Supported |
+| ------- | --------- |
+| 0.5.x   | ✅        |
+| < 0.5   | ❌        |
 
 ## Response expectations
 

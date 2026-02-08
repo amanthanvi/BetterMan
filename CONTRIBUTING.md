@@ -17,6 +17,24 @@ Thanks for contributing! This repo is bootstrapping from `SPEC.md`.
 3. Make focused changes with tests/docs where relevant.
 4. Open a PR. Please fill out the PR template.
 
+## Prerequisites
+
+This repo is a multi-service monorepo.
+
+- Node.js (CI uses Node `25`)
+- pnpm (see `package.json` → `packageManager`)
+- Python (CI uses Python `3.14`) + `uv`
+- Docker (for local Postgres + Redis via `docker-compose.yml`)
+
+## Quick start (local)
+
+```bash
+pnpm install
+pnpm db:up
+pnpm backend:dev
+pnpm next:dev
+```
+
 ## Commands
 
 See `README.md` → “Golden commands”.

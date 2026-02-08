@@ -2,14 +2,14 @@
 
 BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
-## Repo layout (planned)
+## Repo layout
 
 ```text
 /
 ├── nextjs/             # Next.js App Router (public web)
 ├── backend/            # FastAPI (API-only; internal)
 ├── ingestion/          # Ingestion pipeline (dataset builds)
-├── frontend/           # Legacy Vite SPA (kept for CI/e2e harness for now)
+├── frontend/           # Legacy Vite SPA (used for CI/e2e harness only; do not add features here)
 ├── docker-compose.yml  # Local Postgres + Redis
 └── SPEC.md
 ```
@@ -23,6 +23,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - `v0.2.1` shipped (tag `v0.2.1`).
 - `v0.3.0` shipped (tag `v0.3.0`) (multi-distribution + SEO + performance).
 - `v0.4.0` shipped (tag `v0.4.0`) (hardening + discoverability + observability).
+- `v0.5.0` shipped (tag `v0.5.0`) (Next.js migration + 7 distros + bookmarks/history + PWA).
 - Default branch: `main`. Execution plan: `PLAN.md`.
 
 ## Deploy (Railway)
@@ -100,6 +101,12 @@ When set, X-Forwarded-For is only trusted from connections originating within th
 - `pnpm backend:dev` — FastAPI dev server (port 8000)
 - `pnpm backend:test` — backend tests (pytest)
 - `pnpm backend:lint` — ruff check + format check
+
+### Next.js
+
+- `pnpm next:dev` — Next.js dev server
+- `pnpm next:build` — Next.js production build
+- `pnpm next:lint` — Next.js lint
 
 ### Frontend
 
