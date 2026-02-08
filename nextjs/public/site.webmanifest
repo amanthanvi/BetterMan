@@ -1,6 +1,9 @@
 {
+  "id": "/",
   "name": "BetterMan",
   "short_name": "BetterMan",
+  "description": "A fast, readable web UI for Linux man pages.",
+  "scope": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b0f12",
@@ -15,6 +18,12 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

@@ -5,7 +5,7 @@ import { cookies, headers } from 'next/headers'
 import { ManPageView } from '../../../../components/man/ManPageView'
 import { JsonLdHead } from '../../../../components/seo/JsonLdHead'
 import { FastApiError, fetchManByName, fetchManByNameAndSection, fetchRelated, suggest } from '../../../../lib/api'
-import { normalizeDistro } from '../../../../lib/distro'
+import { normalizeDistro, withDistro } from '../../../../lib/distro'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
 export const dynamic = 'force-dynamic'
@@ -15,13 +15,6 @@ type SearchParams = Record<string, string | string[] | undefined>
 function getFirst(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0]
   return value
-}
-
-function withDistro(path: string, distro: string): string {
-  if (distro === 'debian') return path
-  const url = new URL(path, 'https://example.invalid')
-  url.searchParams.set('distro', distro)
-  return `${url.pathname}${url.search}`
 }
 
 async function getRequestOrigin(): Promise<string | null> {

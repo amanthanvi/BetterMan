@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
 import { listSections, search } from '../../lib/api'
-import { isDefaultDistro, normalizeDistro } from '../../lib/distro'
+import { isDefaultDistro, normalizeDistro, withDistro } from '../../lib/distro'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,13 +12,6 @@ type SearchParams = Record<string, string | string[] | undefined>
 function getFirst(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0]
   return value
-}
-
-function withDistro(path: string, distro: string): string {
-  if (distro === 'debian') return path
-  const url = new URL(path, 'https://example.invalid')
-  url.searchParams.set('distro', distro)
-  return `${url.pathname}${url.search}`
 }
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
@@ -84,7 +77,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             placeholder="Type a command…"
             className="min-w-[16rem] flex-1 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Search man pages"
-            autoFocus
           />
           <select
             name="section"

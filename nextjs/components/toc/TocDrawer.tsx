@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 
 import { useToc } from '../state/toc'
 import { useFocusTrap } from '../../lib/useFocusTrap'
+import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { Toc } from './Toc'
 
 export function TocDrawer() {
@@ -11,6 +12,7 @@ export function TocDrawer() {
   const panelRef = useRef<HTMLDivElement | null>(null)
 
   useFocusTrap(toc.open, panelRef)
+  useBodyScrollLock(toc.open)
 
   useEffect(() => {
     if (!toc.open) return
@@ -26,7 +28,13 @@ export function TocDrawer() {
   if (!toc.open) return null
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-40" onMouseDown={() => toc.setOpen(false)}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Table of contents"
+      className="fixed inset-0 z-40"
+      onMouseDown={() => toc.setOpen(false)}
+    >
       <div className="absolute inset-0 bg-black/50" />
       <div
         ref={panelRef}

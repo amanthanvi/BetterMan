@@ -8,6 +8,8 @@ import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, getBookmarks } from '../../lib/
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../../lib/recent'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useFocusTrap } from '../../lib/useFocusTrap'
+import { withDistro } from '../../lib/distro'
+import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
@@ -52,13 +54,6 @@ function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
   if (raw.startsWith('>')) return { mode: 'actions', text: raw.slice(1) }
   if (raw.startsWith('#')) return { mode: 'headings', text: raw.slice(1) }
   return { mode: 'search', text: raw }
-}
-
-function withDistro(path: string, distro: string): string {
-  if (distro === 'debian') return path
-  const url = new URL(path, 'https://example.invalid')
-  url.searchParams.set('distro', distro)
-  return `${url.pathname}${url.search}`
 }
 
 function isTypingTarget(el: Element | null) {
@@ -190,6 +185,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   }, [open])
 
   useFocusTrap(open, dialogRef)
+  useBodyScrollLock(open)
 
   useEffect(() => {
     if (!open || parsed.mode !== 'search') return

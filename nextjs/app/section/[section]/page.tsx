@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
 import { listSection } from '../../../lib/api'
-import { isDefaultDistro, normalizeDistro } from '../../../lib/distro'
+import { isDefaultDistro, normalizeDistro, withDistro } from '../../../lib/distro'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,13 +12,6 @@ type SearchParams = Record<string, string | string[] | undefined>
 function getFirst(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0]
   return value
-}
-
-function withDistro(path: string, distro: string): string {
-  if (distro === 'debian') return path
-  const url = new URL(path, 'https://example.invalid')
-  url.searchParams.set('distro', distro)
-  return `${url.pathname}${url.search}`
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ section: string }> }): Promise<Metadata> {

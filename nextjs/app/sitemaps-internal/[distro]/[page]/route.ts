@@ -1,18 +1,12 @@
 import { createHash } from 'node:crypto'
 
 import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../../../lib/api'
+import { withDistro } from '../../../../lib/distro'
 import { getPublicOrigin } from '../../../../lib/public-origin'
 
 function weakEtag(parts: string[]): string {
   const digest = createHash('sha256').update(parts.join('|')).digest('base64url')
   return `W/"${digest}"`
-}
-
-function withDistro(loc: string, distro: string): string {
-  if (distro === 'debian') return loc
-  const url = new URL(loc)
-  url.searchParams.set('distro', distro)
-  return url.toString()
 }
 
 export async function GET(request: Request, ctx: { params: Promise<{ distro?: string; page?: string }> }) {

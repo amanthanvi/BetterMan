@@ -6,13 +6,7 @@ import { useState } from 'react'
 import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
-
-function withDistro(path: string, distro: Distro): string {
-  if (distro === 'debian') return path
-  const url = new URL(path, 'https://example.invalid')
-  url.searchParams.set('distro', distro)
-  return `${url.pathname}${url.search}`
-}
+import { withDistro } from '../../lib/distro'
 
 export function ManPageFooterSections({
   distro,
@@ -93,4 +87,3 @@ export function ManPageFooterSections({
     </>
   )
 }
-

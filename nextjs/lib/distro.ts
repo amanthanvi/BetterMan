@@ -36,3 +36,11 @@ export function normalizeDistro(value: unknown): Distro | null {
 export function isDefaultDistro(distro: Distro): boolean {
   return distro === 'debian'
 }
+
+export function withDistro(loc: string, distro: string): string {
+  if (!distro || distro === 'debian') return loc
+  const isAbsolute = /^https?:\/\//.test(loc)
+  const url = isAbsolute ? new URL(loc) : new URL(loc, 'https://example.invalid')
+  url.searchParams.set('distro', distro)
+  return isAbsolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`
+}

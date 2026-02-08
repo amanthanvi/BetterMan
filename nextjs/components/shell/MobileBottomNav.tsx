@@ -100,34 +100,35 @@ function IconDots({ className }: IconProps) {
   )
 }
 
+function MobileBottomNavItem({
+  href,
+  label,
+  icon,
+  active,
+}: {
+  href: string
+  label: string
+  icon: ReactNode
+  active: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      className={`relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium ${
+        active
+          ? 'font-semibold text-[color:var(--bm-fg)] before:absolute before:top-0 before:left-1/2 before:h-0.5 before:w-6 before:-translate-x-1/2 before:rounded-full before:bg-[var(--bm-accent)]'
+          : 'text-[color:var(--bm-muted)] hover:text-[color:var(--bm-fg)]'
+      }`}
+      aria-current={active ? 'page' : undefined}
+    >
+      {icon}
+      <span>{label}</span>
+    </Link>
+  )
+}
+
 export function MobileBottomNav({ onMore }: { onMore: () => void }) {
   const pathname = usePathname()
-
-  const Item = ({
-    href,
-    label,
-    icon,
-  }: {
-    href: string
-    label: string
-    icon: ReactNode
-  }) => {
-    const active = isActive(pathname, href)
-    return (
-      <Link
-        href={href}
-        className={`relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium ${
-          active
-            ? 'font-semibold text-[color:var(--bm-fg)] before:absolute before:top-0 before:left-1/2 before:h-0.5 before:w-6 before:-translate-x-1/2 before:rounded-full before:bg-[var(--bm-accent)]'
-            : 'text-[color:var(--bm-muted)] hover:text-[color:var(--bm-fg)]'
-        }`}
-        aria-current={active ? 'page' : undefined}
-      >
-        {icon}
-        <span>{label}</span>
-      </Link>
-    )
-  }
 
   return (
     <nav
@@ -135,10 +136,10 @@ export function MobileBottomNav({ onMore }: { onMore: () => void }) {
       className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] backdrop-blur sm:hidden"
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
-        <Item href="/" label="Home" icon={<IconHome />} />
-        <Item href="/search" label="Search" icon={<IconSearch />} />
-        <Item href="/history" label="History" icon={<IconClock />} />
-        <Item href="/bookmarks" label="Bookmarks" icon={<IconStar />} />
+        <MobileBottomNavItem href="/" label="Home" icon={<IconHome />} active={isActive(pathname, '/')} />
+        <MobileBottomNavItem href="/search" label="Search" icon={<IconSearch />} active={isActive(pathname, '/search')} />
+        <MobileBottomNavItem href="/history" label="History" icon={<IconClock />} active={isActive(pathname, '/history')} />
+        <MobileBottomNavItem href="/bookmarks" label="Bookmarks" icon={<IconStar />} active={isActive(pathname, '/bookmarks')} />
         <button
           type="button"
           className="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] hover:text-[color:var(--bm-fg)]"

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
-import { DISTRO_GROUPS, DISTRO_LABEL, normalizeDistro } from '../../lib/distro'
+import { DISTRO_GROUPS, DISTRO_LABEL, normalizeDistro, withDistro } from '../../lib/distro'
 import { formatRelativeTime } from '../../lib/time'
 import { CommandPalette } from '../palette/CommandPalette'
 import { ReadingPrefsDrawer } from '../reading/ReadingPrefsDrawer'
@@ -29,13 +29,6 @@ function isTypingTarget(el: Element | null) {
 
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
-}
-
-function withDistro(path: string, distro: string): string {
-  if (distro === 'debian') return path
-  const url = new URL(path, 'https://example.invalid')
-  url.searchParams.set('distro', distro)
-  return `${url.pathname}${url.search}`
 }
 
 type IconProps = { className?: string }

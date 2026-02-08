@@ -11,17 +11,11 @@ import {
   getRecent,
   removeRecent,
 } from '../../lib/recent'
+import { withDistro } from '../../lib/distro'
 import { formatRelativeTime } from '../../lib/time'
 import { useDistro } from '../../components/state/distro'
 
 type Tab = 'all' | 'pages' | 'searches'
-
-function withDistro(path: string, distro: string): string {
-  if (distro === 'debian') return path
-  const url = new URL(path, 'https://example.invalid')
-  url.searchParams.set('distro', distro)
-  return `${url.pathname}${url.search}`
-}
 
 function msToIso(ms: number): string {
   const dt = new Date(ms)

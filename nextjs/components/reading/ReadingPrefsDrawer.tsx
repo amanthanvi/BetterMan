@@ -4,12 +4,14 @@ import { useEffect, useRef } from 'react'
 
 import { useReadingPrefs } from '../state/readingPrefs'
 import { useFocusTrap } from '../../lib/useFocusTrap'
+import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 
 export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { prefs, updatePrefs, reset } = useReadingPrefs()
   const panelRef = useRef<HTMLDivElement | null>(null)
 
   useFocusTrap(open, panelRef)
+  useBodyScrollLock(open)
 
   useEffect(() => {
     if (!open) return
@@ -59,7 +61,13 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
   )
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-40" onMouseDown={() => onOpenChange(false)}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Reading preferences"
+      className="fixed inset-0 z-40"
+      onMouseDown={() => onOpenChange(false)}
+    >
       <div className="absolute inset-0 bg-black/50" />
       <div
         ref={panelRef}

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 
 import { useFocusTrap } from '../../lib/useFocusTrap'
+import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 
 export function ShortcutsDialog({
   open,
@@ -16,6 +17,7 @@ export function ShortcutsDialog({
   const dialogRef = useRef<HTMLDivElement | null>(null)
 
   useFocusTrap(open, dialogRef)
+  useBodyScrollLock(open)
 
   useEffect(() => {
     if (!open) return
