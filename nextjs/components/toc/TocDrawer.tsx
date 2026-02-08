@@ -1,12 +1,16 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { useToc } from '../state/toc'
+import { useFocusTrap } from '../../lib/useFocusTrap'
 import { Toc } from './Toc'
 
 export function TocDrawer() {
   const toc = useToc()
+  const panelRef = useRef<HTMLDivElement | null>(null)
+
+  useFocusTrap(toc.open, panelRef)
 
   useEffect(() => {
     if (!toc.open) return
@@ -25,6 +29,7 @@ export function TocDrawer() {
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-40" onMouseDown={() => toc.setOpen(false)}>
       <div className="absolute inset-0 bg-black/50" />
       <div
+        ref={panelRef}
         className="relative h-full w-[min(90vw,24rem)] overflow-y-auto border-r border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-5 shadow-xl backdrop-blur"
         onMouseDown={(e) => e.stopPropagation()}
       >

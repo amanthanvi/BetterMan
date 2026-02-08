@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+
+import { useFocusTrap } from '../../lib/useFocusTrap'
 
 export function ShortcutsDialog({
   open,
@@ -11,6 +13,10 @@ export function ShortcutsDialog({
   onOpenChange: (open: boolean) => void
   isManPage: boolean
 }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+
+  useFocusTrap(open, dialogRef)
+
   useEffect(() => {
     if (!open) return
     const onKeyDown = (e: KeyboardEvent) => {
@@ -52,9 +58,16 @@ export function ShortcutsDialog({
   }
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50" onMouseDown={() => onOpenChange(false)}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Keyboard shortcuts"
+      className="fixed inset-0 z-50"
+      onMouseDown={() => onOpenChange(false)}
+    >
       <div className="absolute inset-0 bg-black/55" />
       <div
+        ref={dialogRef}
         className="relative mx-auto mt-24 w-[min(92vw,38rem)] rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-6 shadow-xl backdrop-blur"
         onMouseDown={(e) => e.stopPropagation()}
       >

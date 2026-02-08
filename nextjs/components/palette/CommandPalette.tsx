@@ -7,6 +7,7 @@ import type { SearchResponse, SearchResult } from '../../lib/api'
 import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, getBookmarks } from '../../lib/bookmarks'
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../../lib/recent'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import { useFocusTrap } from '../../lib/useFocusTrap'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
@@ -137,6 +138,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const theme = useTheme()
   const toc = useToc()
 
+  const dialogRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [input, setInput] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -186,6 +188,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     if (!open) return
     inputRef.current?.focus()
   }, [open])
+
+  useFocusTrap(open, dialogRef)
 
   useEffect(() => {
     if (!open || parsed.mode !== 'search') return
@@ -357,8 +361,21 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       onMouseDown={() => close()}
     >
       <div className="absolute inset-0 bg-black/55" />
-      <div className="relative mx-auto mt-20 w-[min(92vw,44rem)] overflow-hidden rounded-xl border border-[var(--bm-border)] bg-[var(--bm-bg)] shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className="relative mx-auto mt-20 w-[min(92vw,44rem)] overflow-hidden rounded-xl border border-[var(--bm-border)] bg-[var(--bm-bg)] shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="border-b border-[var(--bm-border)] p-3">
+          <div aria-live="polite" className="sr-only">
+            {searchState.status === 'loading'
+              ? 'Searching'
+              : parsed.text.trim()
+                ? items.length
+                  ? `${items.length} results`
+                  : 'No matches'
+                : ''}
+          </div>
           <input
             ref={inputRef}
             value={input}
@@ -369,6 +386,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             placeholder="Search… (use > for actions, # for headings)"
             className="w-full rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Command palette input"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={true}
+            aria-controls="bm-palette-list"
+            aria-activedescendant={items.length ? `bm-palette-option-${safeActiveIndex}` : undefined}
           />
         </div>
 
@@ -385,11 +407,14 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             <div className="p-3 text-sm text-[color:var(--bm-muted)]">No matches.</div>
           ) : null}
 
-          <ol className="space-y-1">
+          <ol id="bm-palette-list" role="listbox" className="space-y-1">
             {items.map((item, idx) => (
               <li key={item.id}>
                 <button
                   type="button"
+                  id={`bm-palette-option-${idx}`}
+                  role="option"
+                  aria-selected={idx === safeActiveIndex}
                   className={`w-full rounded-md px-3 py-2 text-left text-sm ${
                     idx === safeActiveIndex
                       ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'

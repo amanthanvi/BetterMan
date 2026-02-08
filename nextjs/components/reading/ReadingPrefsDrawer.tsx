@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { useReadingPrefs } from '../state/readingPrefs'
+import { useFocusTrap } from '../../lib/useFocusTrap'
 
 export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { prefs, updatePrefs, reset } = useReadingPrefs()
+  const panelRef = useRef<HTMLDivElement | null>(null)
+
+  useFocusTrap(open, panelRef)
 
   useEffect(() => {
     if (!open) return
@@ -33,11 +37,13 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
   }) => (
     <section>
       <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">{label}</div>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div role="radiogroup" aria-label={label} className="mt-3 flex flex-wrap gap-2">
         {options.map((o) => (
           <button
             key={o.id}
             type="button"
+            role="radio"
+            aria-checked={value === o.id}
             className={`rounded-full border border-[var(--bm-border)] px-4 py-2 text-sm font-medium ${
               value === o.id
                 ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
@@ -56,6 +62,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-40" onMouseDown={() => onOpenChange(false)}>
       <div className="absolute inset-0 bg-black/50" />
       <div
+        ref={panelRef}
         className="relative ml-auto h-full w-[min(92vw,28rem)] overflow-y-auto border-l border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-6 shadow-xl backdrop-blur"
         onMouseDown={(e) => e.stopPropagation()}
       >
