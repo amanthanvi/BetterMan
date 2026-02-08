@@ -5,6 +5,19 @@ import type { KeyboardEvent, RefObject } from 'react'
 import type { TocItem } from '../../lib/docModel'
 import { Toc } from '../toc/Toc'
 
+function getFindA11yStatus(find: string, label: string): string {
+  const q = find.trim()
+  if (q.length < 2) return ''
+  if (label === '…') return 'Searching'
+  if (label === '0/0') return 'No matches'
+  const m = /^(\d+)\/(\d+)$/.exec(label)
+  if (!m) return ''
+  const current = Number(m[1])
+  const total = Number(m[2])
+  if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) return ''
+  return `Match ${current} of ${total}`
+}
+
 export function ManPageSidebar({
   quickJumps,
   onQuickJump,
@@ -120,6 +133,9 @@ export function ManPageSidebar({
 
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
                   <div className="font-mono">{findCountLabel}</div>
+                  <div aria-live="polite" className="sr-only">
+                    {getFindA11yStatus(find, findCountLabel)}
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"

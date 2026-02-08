@@ -116,7 +116,7 @@ export function MobileBottomNav({ onMore }: { onMore: () => void }) {
     return (
       <Link
         href={href}
-        className={`relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[11px] font-medium ${
+        className={`relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium ${
           active
             ? 'font-semibold text-[color:var(--bm-fg)] before:absolute before:top-0 before:left-1/2 before:h-0.5 before:w-6 before:-translate-x-1/2 before:rounded-full before:bg-[var(--bm-accent)]'
             : 'text-[color:var(--bm-muted)] hover:text-[color:var(--bm-fg)]'
@@ -141,7 +141,7 @@ export function MobileBottomNav({ onMore }: { onMore: () => void }) {
         <Item href="/bookmarks" label="Bookmarks" icon={<IconStar />} />
         <button
           type="button"
-          className="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[11px] font-medium text-[color:var(--bm-muted)] hover:text-[color:var(--bm-fg)]"
+          className="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] hover:text-[color:var(--bm-fg)]"
           onClick={onMore}
           aria-label="More actions"
         >

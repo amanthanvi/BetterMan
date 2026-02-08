@@ -77,6 +77,19 @@ function getScrollBehavior(): 'auto' | 'smooth' {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }
 
+function getFindA11yStatus(find: string, label: string): string {
+  const q = find.trim()
+  if (q.length < 2) return ''
+  if (label === '…') return 'Searching'
+  if (label === '0/0') return 'No matches'
+  const m = /^(\d+)\/(\d+)$/.exec(label)
+  if (!m) return ''
+  const current = Number(m[1])
+  const total = Number(m[2])
+  if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) return ''
+  return `Match ${current} of ${total}`
+}
+
 export function ManPageView({
   page,
   content,
@@ -490,6 +503,9 @@ export function ManPageView({
                     aria-label="Find in page"
                   />
                   <div className="font-mono text-xs text-[color:var(--bm-muted)]">{findCountLabel}</div>
+                  <div aria-live="polite" className="sr-only">
+                    {getFindA11yStatus(find, findCountLabel)}
+                  </div>
                   <button
                     type="button"
                     className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
