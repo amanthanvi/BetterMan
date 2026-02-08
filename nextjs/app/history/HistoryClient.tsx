@@ -113,6 +113,11 @@ export function HistoryClient() {
   const TabButton = ({ id, label }: { id: Tab; label: string }) => (
     <button
       type="button"
+      id={`bm-history-tab-${id}`}
+      role="tab"
+      aria-selected={tab === id}
+      aria-controls="bm-history-panel"
+      tabIndex={tab === id ? 0 : -1}
       className={`rounded-full border border-[var(--bm-border)] px-4 py-2 text-sm font-medium ${
         tab === id
           ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
@@ -144,7 +149,7 @@ export function HistoryClient() {
           </button>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div role="tablist" aria-label="History filter" className="mt-5 flex flex-wrap gap-2">
           <TabButton id="all" label="All" />
           <TabButton id="pages" label="Pages" />
           <TabButton id="searches" label="Searches" />
@@ -161,7 +166,12 @@ export function HistoryClient() {
         </div>
       </header>
 
-      <section className="mt-6 space-y-6">
+      <section
+        id="bm-history-panel"
+        role="tabpanel"
+        aria-labelledby={`bm-history-tab-${tab}`}
+        className="mt-6 space-y-6"
+      >
         {!filtered.length ? (
           <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
             No history yet.

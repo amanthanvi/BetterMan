@@ -457,6 +457,7 @@ export function ManPageView({
                 <button
                   type="button"
                   className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
+                  aria-label="Show find bar"
                   onClick={() => {
                     setFindBarHiddenPersisted(false)
                     requestAnimationFrame(() => focusFindInput())
@@ -494,6 +495,7 @@ export function ManPageView({
                     className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
                     onClick={goPrev}
                     disabled={!matchCount}
+                    aria-label="Previous match"
                   >
                     Prev
                   </button>
@@ -502,6 +504,7 @@ export function ManPageView({
                     className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
                     onClick={goNext}
                     disabled={!matchCount}
+                    aria-label="Next match"
                   >
                     Next
                   </button>
@@ -509,6 +512,7 @@ export function ManPageView({
                     <button
                       type="button"
                       className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                      aria-label="Clear find query"
                       onClick={() => {
                         setFind('')
                         setActiveFindIndex(0)
@@ -523,6 +527,7 @@ export function ManPageView({
                     type="button"
                     className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
                     onClick={() => setFindBarHiddenPersisted(true)}
+                    aria-label="Hide find bar"
                   >
                     Hide
                   </button>

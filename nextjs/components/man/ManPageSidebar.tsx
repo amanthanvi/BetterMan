@@ -90,6 +90,7 @@ export function ManPageSidebar({
                   type="button"
                   className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
                   onClick={onShowFind}
+                  aria-label="Show find bar"
                 >
                   Show
                 </button>
@@ -98,6 +99,7 @@ export function ManPageSidebar({
                   type="button"
                   className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
                   onClick={onHideFind}
+                  aria-label="Hide find bar"
                 >
                   Hide
                 </button>
@@ -124,6 +126,7 @@ export function ManPageSidebar({
                       className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
                       onClick={onPrev}
                       disabled={!matchCount}
+                      aria-label="Previous match"
                     >
                       Prev
                     </button>
@@ -132,6 +135,7 @@ export function ManPageSidebar({
                       className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
                       onClick={onNext}
                       disabled={!matchCount}
+                      aria-label="Next match"
                     >
                       Next
                     </button>
@@ -140,6 +144,7 @@ export function ManPageSidebar({
                         type="button"
                         className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
                         onClick={onClearFind}
+                        aria-label="Clear find query"
                       >
                         Clear
                       </button>

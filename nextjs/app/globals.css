@@ -300,9 +300,11 @@
     }
   }
 
-  .bm-option-flash a {
-    border-radius: 0.4rem;
-    animation: bm-option-ring 1.2s ease-out 1;
+  @media (prefers-reduced-motion: no-preference) {
+    .bm-option-flash a {
+      border-radius: 0.4rem;
+      animation: bm-option-ring 1.2s ease-out 1;
+    }
   }
 
   @media print {
