@@ -309,14 +309,17 @@ jobs:
               --service "$service_id" \
               --environment "$RAILWAY_ENVIRONMENT_ID"
 
-            echo "Waiting for Railway deployment to reach SUCCESS (serviceId=${service_id})…"
-            for attempt in {1..60}; do
+            max_attempts=180
+            sleep_seconds=5
+
+            echo "Waiting for Railway deployment to reach SUCCESS (serviceId=${service_id}, maxWait=$((max_attempts * sleep_seconds))s)…"
+            for ((attempt = 1; attempt <= max_attempts; attempt++)); do
               info="$(railway service status --json --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID")"
               status="$(echo "$info" | jq -r '.status // empty')"
               stopped="$(echo "$info" | jq -r '.stopped')"
               deployment_id="$(echo "$info" | jq -r '.deploymentId // empty')"
 
-              echo "[$attempt/60] status=${status} stopped=${stopped} deploymentId=${deployment_id}"
+              echo "[$attempt/$max_attempts] status=${status} stopped=${stopped} deploymentId=${deployment_id}"
 
               if [[ "$status" == "SUCCESS" && "$stopped" == "false" ]]; then
                 return 0
@@ -324,13 +327,15 @@ jobs:
 
               if [[ "$status" == "FAILURE" || "$status" == "ERROR" || "$status" == "CRASHED" ]]; then
                 echo "Railway deployment failed"
+                railway logs --deployment --lines 200 --latest --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID" || true
                 return 1
               fi
 
-              sleep 5
+              sleep "$sleep_seconds"
             done
 
             echo "Timed out waiting for Railway deployment"
+            railway logs --deployment --lines 200 --latest --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID" || true
             return 1
           }
 
