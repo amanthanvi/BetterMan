@@ -44,6 +44,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <input
             name="q"
+            type="search"
+            autoComplete="off"
             placeholder="Search (e.g. tar, ssh_config, curl)…"
             data-bm-home-search
             className="min-w-0 flex-1 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"

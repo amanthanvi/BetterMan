@@ -127,7 +127,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
               <span>All sections</span>
             )}
           </div>
-          <ol className="space-y-3">
+          <ol className="space-y-3" aria-label="Search results">
             {results.results.map((r) => (
               <li
                 key={`${r.name}:${r.section}`}

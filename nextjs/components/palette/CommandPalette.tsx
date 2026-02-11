@@ -50,8 +50,8 @@ type PaletteItem =
 type ActionItem = Extract<PaletteItem, { kind: 'action' }>
 
 function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
-  if (raw.startsWith('\\>')) return { mode: 'search', text: raw.slice(1) }
-  if (raw.startsWith('\\#')) return { mode: 'search', text: raw.slice(1) }
+  if (raw.startsWith('\\>')) return { mode: 'search', text: raw.slice(2) }
+  if (raw.startsWith('\\#')) return { mode: 'search', text: raw.slice(2) }
   if (raw.startsWith('>')) return { mode: 'actions', text: raw.slice(1) }
   if (raw.startsWith('#')) return { mode: 'headings', text: raw.slice(1) }
   return { mode: 'search', text: raw }
@@ -353,9 +353,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       aria-modal="true"
       aria-label="Command palette"
       className="fixed inset-0 z-50"
-      onClick={() => close()}
     >
-      <div className="absolute inset-0 bg-black/55" />
+      <div className="absolute inset-0 bg-black/55" onClick={() => close()} />
       <div
         ref={dialogRef}
         className="relative mx-auto mt-20 w-[min(92vw,44rem)] overflow-hidden rounded-xl border border-[var(--bm-border)] bg-[var(--bm-bg)] shadow-2xl"
@@ -389,11 +388,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           />
         </div>
 
-        <div
-          className="max-h-[60vh] overflow-y-auto p-2"
-          tabIndex={0}
-          aria-label="Command palette results"
-        >
+        <div className="max-h-[60vh] overflow-y-auto p-2">
           {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
             <div className="p-3 text-sm text-[color:var(--bm-muted)]">Searching…</div>
           ) : null}

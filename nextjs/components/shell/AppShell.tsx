@@ -515,7 +515,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
-      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:pb-10">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:pb-10 outline-none">
         {children}
       </main>
 
