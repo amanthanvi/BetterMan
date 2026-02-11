@@ -134,7 +134,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
   const [offline, setOffline] = useState(false)
+  const [themeAnnouncement, setThemeAnnouncement] = useState('')
   const searchRef = useRef<HTMLInputElement | null>(null)
+  const themeAnnouncementMountedRef = useRef(false)
 
   const lastRouteKeyRef = useRef<string | null>(null)
   const scrollPositionsRef = useRef<Map<string, number>>(new Map())
@@ -329,6 +331,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [isManPage, router, theme, toc])
 
   useEffect(() => {
+    if (!themeAnnouncementMountedRef.current) {
+      themeAnnouncementMountedRef.current = true
+      return
+    }
+    setThemeAnnouncement(`Theme: ${theme.mode}.`)
+  }, [theme.mode])
+
+  useEffect(() => {
     if (!isManPage) return
     if (!toc.items.length) return
 
@@ -394,6 +404,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Image src="/betterman-mark.svg" alt="" className="size-6" width={24} height={24} priority />
             BetterMan
           </Link>
+          <div aria-live="polite" className="sr-only">
+            {themeAnnouncement}
+          </div>
 
           {info ? (
             <div className="hidden items-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] px-3 py-1 text-xs text-[color:var(--bm-muted)] shadow-sm backdrop-blur md:flex">

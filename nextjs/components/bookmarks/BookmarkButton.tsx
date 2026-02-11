@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, BOOKMARK_TOGGLE_EVENT, isBookmarked, toggleBookmark } from '../../lib/bookmarks'
 
@@ -26,6 +26,8 @@ function IconStar({ className, filled }: IconProps & { filled?: boolean }) {
 export function BookmarkButton({ name, section, description }: { name: string; section: string; description?: string }) {
   const key = useMemo(() => `${name}(${section})`, [name, section])
   const [active, setActive] = useState(() => isBookmarked({ name, section }))
+  const [announcement, setAnnouncement] = useState('')
+  const hasMountedRef = useRef(false)
 
   const sync = useCallback(() => {
     setActive(isBookmarked({ name, section }))
@@ -57,10 +59,19 @@ export function BookmarkButton({ name, section, description }: { name: string; s
     return () => window.removeEventListener(BOOKMARK_TOGGLE_EVENT, onRequest)
   }, [onToggle])
 
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+    setAnnouncement(active ? `Bookmarked ${key}.` : `Removed bookmark for ${key}.`)
+  }, [active, key])
+
   return (
     <button
       type="button"
       aria-pressed={active}
+      aria-label={active ? `Remove bookmark for ${key}` : `Bookmark ${key}`}
       className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium ${
         active
           ? 'border-[color:var(--bm-accent)/0.4] bg-[color:var(--bm-accent)/0.12] hover:bg-[color:var(--bm-accent)/0.16]'
@@ -74,6 +85,9 @@ export function BookmarkButton({ name, section, description }: { name: string; s
         className={`size-4 ${active ? 'text-[var(--bm-accent)]' : 'text-[color:var(--bm-muted)]'}`}
       />
       {active ? 'Bookmarked' : 'Bookmark'}
+      <span aria-live="polite" className="sr-only">
+        {announcement}
+      </span>
     </button>
   )
 }
