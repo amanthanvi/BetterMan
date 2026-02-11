@@ -69,6 +69,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         className="mt-6 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur"
         action="/search"
         method="get"
+        role="search"
+        aria-label="Search man pages"
       >
         <div className="flex flex-wrap items-center gap-2">
           <input

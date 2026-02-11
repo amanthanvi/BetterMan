@@ -346,6 +346,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [active, close, items.length, open])
 
+  useEffect(() => {
+    if (!open) return
+    if (!items.length) return
+    const el = document.getElementById(`bm-palette-option-${safeActiveIndex}`)
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [items.length, open, safeActiveIndex])
+
   if (!open) return null
 
   return (

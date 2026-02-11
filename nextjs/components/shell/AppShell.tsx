@@ -421,6 +421,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {pathname !== '/' ? (
             <form
               className="hidden flex-1 sm:block"
+              role="search"
+              aria-label="Search man pages"
               onSubmit={(e) => {
                 e.preventDefault()
                 const query = q.trim()

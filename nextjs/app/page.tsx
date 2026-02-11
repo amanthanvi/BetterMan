@@ -38,6 +38,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         className="mt-14 rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-5 shadow-sm backdrop-blur"
         action="/search"
         method="get"
+        role="search"
+        aria-label="Search man pages"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <input
