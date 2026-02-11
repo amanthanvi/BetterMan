@@ -388,7 +388,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           />
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto p-2">
+        <div
+          className="max-h-[60vh] overflow-y-auto p-2"
+          tabIndex={0}
+          aria-label="Command palette results"
+        >
           {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
             <div className="p-3 text-sm text-[color:var(--bm-muted)]">Searching…</div>
           ) : null}
