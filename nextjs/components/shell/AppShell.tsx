@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
+import { isTypingTarget } from '../../lib/dom'
 import { DISTRO_GROUPS, DISTRO_LABEL, normalizeDistro, withDistro } from '../../lib/distro'
 import { formatRelativeTime } from '../../lib/time'
 import { CommandPalette } from '../palette/CommandPalette'
@@ -17,15 +18,6 @@ import { useToc } from '../state/toc'
 import { TocDrawer } from '../toc/TocDrawer'
 import { MobileBottomNav } from './MobileBottomNav'
 import { ShortcutsDialog } from './ShortcutsDialog'
-
-function isTypingTarget(el: Element | null) {
-  if (!el) return false
-  if (el instanceof HTMLInputElement) return !['button', 'checkbox', 'radio', 'range'].includes(el.type)
-  if (el instanceof HTMLTextAreaElement) return true
-  if (el instanceof HTMLSelectElement) return true
-  if (el instanceof HTMLElement) return el.isContentEditable
-  return false
-}
 
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0

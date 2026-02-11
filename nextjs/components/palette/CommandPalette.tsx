@@ -10,6 +10,7 @@ import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useFocusTrap } from '../../lib/useFocusTrap'
 import { withDistro } from '../../lib/distro'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
+import { isTypingTarget } from '../../lib/dom'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
@@ -54,15 +55,6 @@ function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
   if (raw.startsWith('>')) return { mode: 'actions', text: raw.slice(1) }
   if (raw.startsWith('#')) return { mode: 'headings', text: raw.slice(1) }
   return { mode: 'search', text: raw }
-}
-
-function isTypingTarget(el: Element | null) {
-  if (!el) return false
-  if (el instanceof HTMLInputElement) return !['button', 'checkbox', 'radio', 'range'].includes(el.type)
-  if (el instanceof HTMLTextAreaElement) return true
-  if (el instanceof HTMLSelectElement) return true
-  if (el instanceof HTMLElement) return el.isContentEditable
-  return false
 }
 
 function recentToItems(recent: RecentItem[], ctx: { runSearch: (q: string) => void; runMan: (name: string, section: string) => void }) {

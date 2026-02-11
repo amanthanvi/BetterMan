@@ -69,8 +69,12 @@ export function ManPageSidebar({
   })()
 
   return (
-    <aside data-bm-sidebar className="hidden lg:block">
-      <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2">
+    <aside data-bm-sidebar aria-label="Navigator sidebar" className="hidden lg:block">
+      <div
+        className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2 outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] focus:ring-offset-2 focus:ring-offset-[var(--bm-bg)]"
+        tabIndex={0}
+        aria-label="Navigator"
+      >
         <div className="space-y-4">
           <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
             <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Navigator</div>
