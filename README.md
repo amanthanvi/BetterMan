@@ -1,6 +1,30 @@
 # BetterMan
 
-BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
+<p align="center">
+  <img src="nextjs/public/betterman-mark.svg" width="96" height="96" alt="BetterMan logo" />
+</p>
+
+BetterMan is a fast, readable web UI for `man` pages — built to feel like a hacker tool: crisp type, keyboard-first, and no accounts.
+
+- Live: https://betterman.sh
+- Spec / architecture: `SPEC.md`
+- Roadmap (high-level): `ROADMAP.md`
+- Execution plan (living checklist): `PLAN.md`
+- Changelog: `CHANGELOG.md`
+- Support: `SUPPORT.md`
+- Contributing: `CONTRIBUTING.md`
+
+<p align="center">
+  <img src="nextjs/public/og-image.png" alt="BetterMan preview" />
+</p>
+
+## What you get
+
+- Search with clean previews
+- Multiple distros (Linux + BSD + macOS BSD-licensed pages)
+- Local-only bookmarks, history, and reading preferences
+- Command palette + shortcuts
+- PWA + offline caching for recently read pages
 
 ## Repo layout
 
@@ -16,16 +40,9 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 
 ## Status
 
-- `v0.1.0` shipped (tag `v0.1.0`).
-- `v0.1.1` shipped (tag `v0.1.1`).
-- `v0.1.2` shipped (tag `v0.1.2`).
-- `v0.2.0` shipped (tag `v0.2.0`).
-- `v0.2.1` shipped (tag `v0.2.1`).
-- `v0.3.0` shipped (tag `v0.3.0`) (multi-distribution + SEO + performance).
-- `v0.4.0` shipped (tag `v0.4.0`) (hardening + discoverability + observability).
-- `v0.5.0` shipped (tag `v0.5.0`) (Next.js migration + 7 distros + bookmarks/history + PWA).
-- `v0.6.0` in progress (design + UI/UX overhaul).
-- Default branch: `main`. Execution plan: `PLAN.md`.
+- Latest release: `v0.5.0` (tag `v0.5.0`)
+- In progress: `v0.6.0` (design + UI/UX overhaul; tracked in `PLAN.md`)
+- Default branch: `main`
 
 ## Deploy (Railway)
 
@@ -129,6 +146,7 @@ When set, X-Forwarded-For is only trusted from connections originating within th
 - Read `CONTRIBUTING.md`.
 - Be kind: `CODE_OF_CONDUCT.md`.
 - Security issues: `SECURITY.md`.
+- Support/questions: `SUPPORT.md`.
 
 ## License
 
