@@ -112,7 +112,27 @@ export function ManPageHeaderCard({
                   else params.set('distro', next)
 
                   const qs = params.toString()
-                  router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+                  const base = qs ? `${pathname}?${qs}` : pathname
+                  const target = `${base}${window.location.hash || ''}`
+
+                  try {
+                    router.replace(target, { scroll: false })
+                    window.setTimeout(() => {
+                      try {
+                        const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
+                        if (current === target) return
+                        window.location.assign(target)
+                      } catch {
+                        window.location.assign(target)
+                      }
+                    }, 750)
+                  } catch {
+                    try {
+                      window.location.assign(target)
+                    } catch {
+                      // ignore
+                    }
+                  }
                 }}
                 className="bg-transparent text-[color:var(--bm-fg)] outline-none"
                 aria-label="Select distribution variant"
