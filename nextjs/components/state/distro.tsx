@@ -89,7 +89,8 @@ export function DistroProvider({ children }: { children: React.ReactNode }) {
         searchParams: new URLSearchParams(searchParams.toString()),
         distro: next,
       })
-      router.replace(url, { scroll: false })
+      router.push(url, { scroll: false })
+      router.refresh()
     },
     [pathname, router, searchParams],
   )
