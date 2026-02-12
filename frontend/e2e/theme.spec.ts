@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test('theme: cycle persists to localStorage', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Theme' }).click()
+  await page.getByRole('button', { name: 'Cycle theme' }).click()
 
   const stored = await page.evaluate(() => localStorage.getItem('bm-theme'))
   expect(stored).toBe('light')
@@ -11,4 +11,3 @@ test('theme: cycle persists to localStorage', async ({ page }) => {
   const storedAfter = await page.evaluate(() => localStorage.getItem('bm-theme'))
   expect(storedAfter).toBe('light')
 })
-
