@@ -22,6 +22,7 @@ export function generateMetadata(): Metadata {
       title: 'Licenses — BetterMan',
       description: 'Attribution and license notices for the current BetterMan dataset release.',
       type: 'website',
+      images: ['/og-image.png'],
     },
   }
 }

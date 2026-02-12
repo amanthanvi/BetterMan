@@ -5,18 +5,22 @@
   aria-label="BetterMan"
 >
   <title>BetterMan</title>
-  <rect x="96" y="96" width="832" height="832" rx="192" fill="#0b0f12" />
-  <path
-    d="M 260 304 L 360 384 L 260 464"
+  <rect x="96" y="96" width="832" height="832" rx="192" fill="#000000" />
+  <polyline
+    points="360,320 520,512 360,704"
     fill="none"
-    stroke="#2dd4bf"
-    stroke-width="72"
+    stroke="#dc3232"
+    stroke-width="96"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-  <rect x="410" y="352" width="136" height="64" rx="14" fill="#2dd4bf" />
-  <rect x="600" y="352" width="228" height="64" rx="14" fill="#e9e3d8" />
-  <rect x="260" y="560" width="624" height="56" rx="10" fill="#e9e3d8" />
-  <rect x="260" y="672" width="552" height="52" rx="10" fill="#9aa3ad" />
-  <rect x="260" y="780" width="472" height="52" rx="10" fill="#9aa3ad" />
+  <line
+    x1="560"
+    y1="704"
+    x2="740"
+    y2="704"
+    stroke="#dc3232"
+    stroke-width="96"
+    stroke-linecap="round"
+  />
 </svg>

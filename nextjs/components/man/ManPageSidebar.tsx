@@ -3,20 +3,9 @@
 import type { KeyboardEvent, RefObject } from 'react'
 
 import type { TocItem } from '../../lib/docModel'
+import { ChevronDownIcon } from '../icons'
 import { Toc } from '../toc/Toc'
-
-function getFindA11yStatus(find: string, label: string): string {
-  const q = find.trim()
-  if (q.length < 2) return ''
-  if (label === '…') return 'Searching'
-  if (label === '0/0') return 'No matches'
-  const m = /^(\d+)\/(\d+)$/.exec(label)
-  if (!m) return ''
-  const current = Number(m[1])
-  const total = Number(m[2])
-  if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) return ''
-  return `Match ${current} of ${total}`
-}
+import { getFindA11yStatus } from './findA11y'
 
 export function ManPageSidebar({
   quickJumps,
@@ -69,117 +58,112 @@ export function ManPageSidebar({
   })()
 
   return (
-    <aside data-bm-sidebar aria-label="Navigator sidebar" className="hidden lg:block">
-      <div
-        className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2 outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] focus:ring-offset-2 focus:ring-offset-[var(--bm-bg)]"
-        tabIndex={0}
-        aria-label="Navigator"
-      >
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
-            <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Navigator</div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {quickJumps.map((j) => (
-                <a
-                  key={j.id}
-                  href={`#${j.id}`}
-                  onClick={(e) => {
-                    if (onQuickJump(j.id)) e.preventDefault()
-                  }}
-                  className={`rounded-full border px-3 py-1 text-xs ${
-                    activeQuickJumpId === j.id
-                      ? 'border-[color:var(--bm-accent)/0.4] bg-[color:var(--bm-accent)/0.12] hover:bg-[color:var(--bm-accent)/0.16]'
-                      : 'border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] hover:bg-[color:var(--bm-bg)/0.55]'
-                  }`}
-                >
-                  {j.title}
-                </a>
-              ))}
-              {!quickJumps.length ? <span className="text-sm text-[color:var(--bm-muted)]">—</span> : null}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Find</div>
-              {findBarHidden ? (
-                <button
-                  type="button"
-                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                  onClick={onShowFind}
-                  aria-label="Show find bar"
-                >
-                  Show
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                  onClick={onHideFind}
-                  aria-label="Hide find bar"
-                >
-                  Hide
-                </button>
-              )}
-            </div>
-
-            {!findBarHidden ? (
-              <div className="mt-3 space-y-3">
-                <input
-                  ref={findInputRef}
-                  value={find}
-                  onChange={(e) => onFindChange(e.target.value)}
-                  onKeyDown={onFindKeyDown}
-                  placeholder="Find in page…"
-                  className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                  aria-label="Find in page"
-                />
-
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--bm-muted)]">
-                  <div className="font-mono">{findCountLabel}</div>
-                  <div aria-live="polite" className="sr-only">
-                    {getFindA11yStatus(find, findCountLabel)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
-                      onClick={onPrev}
-                      disabled={!matchCount}
-                      aria-label="Previous match"
-                    >
-                      Prev
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
-                      onClick={onNext}
-                      disabled={!matchCount}
-                      aria-label="Next match"
-                    >
-                      Next
-                    </button>
-                    {find ? (
-                      <button
-                        type="button"
-                        className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                        onClick={onClearFind}
-                        aria-label="Clear find query"
-                      >
-                        Clear
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur">
-            <Toc items={tocItems} activeId={activeTocId} onNavigateToId={onTocNavigateToId} />
-          </div>
+    <div className="flex h-full flex-col gap-6">
+      <div>
+        <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Quick jumps</div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {quickJumps.map((j) => (
+            <a
+              key={j.id}
+              href={`#${j.id}`}
+              onClick={(e) => {
+                if (onQuickJump(j.id)) e.preventDefault()
+              }}
+              className={`rounded-[var(--bm-radius-sm)] border px-2 py-1 font-mono text-xs transition-colors ${
+                activeQuickJumpId === j.id
+                  ? 'border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] text-[color:var(--bm-fg)]'
+                  : 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]'
+              }`}
+            >
+              {j.title.toUpperCase()}
+            </a>
+          ))}
+          {!quickJumps.length ? <span className="text-xs text-[color:var(--bm-muted)]">—</span> : null}
         </div>
       </div>
-    </aside>
+
+      <div>
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Find</div>
+          {findBarHidden ? (
+            <button
+              type="button"
+              className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-2 py-1 font-mono text-xs text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]"
+              onClick={onShowFind}
+              aria-label="Show find"
+            >
+              Show
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-2 py-1 font-mono text-xs text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]"
+              onClick={onHideFind}
+              aria-label="Hide find"
+            >
+              Hide
+            </button>
+          )}
+        </div>
+
+        {!findBarHidden ? (
+          <div className="mt-3 grid gap-3">
+            <input
+              ref={findInputRef}
+              value={find}
+              onChange={(e) => onFindChange(e.target.value)}
+              onKeyDown={onFindKeyDown}
+              placeholder="Find in page…"
+              className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)] outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              aria-label="Find in page"
+            />
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-mono text-xs text-[color:var(--bm-muted)]">{findCountLabel}</div>
+              <div aria-live="polite" className="sr-only">
+                {getFindA11yStatus(find, findCountLabel)}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)] disabled:opacity-50"
+                  onClick={onPrev}
+                  disabled={!matchCount}
+                  aria-label="Previous match"
+                >
+                  <ChevronDownIcon className="size-4 -rotate-180" />
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)] disabled:opacity-50"
+                  onClick={onNext}
+                  disabled={!matchCount}
+                  aria-label="Next match"
+                >
+                  <ChevronDownIcon className="size-4" />
+                </button>
+                {find ? (
+                  <button
+                    type="button"
+                    className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 font-mono text-xs text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]"
+                    onClick={onClearFind}
+                    aria-label="Clear find"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="min-h-0 flex-1">
+        <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Contents</div>
+        <div className="mt-3">
+          <Toc items={tocItems} activeId={activeTocId} onNavigateToId={onTocNavigateToId} showTitle={false} />
+        </div>
+      </div>
+    </div>
   )
 }

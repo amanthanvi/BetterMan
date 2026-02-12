@@ -115,7 +115,7 @@ export function HistoryClient() {
       className={`rounded-full border border-[var(--bm-border)] px-4 py-2 text-sm font-medium ${
         tab === id
           ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
-          : 'bg-[color:var(--bm-surface)/0.75] text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] hover:text-[color:var(--bm-fg)]'
+          : 'bg-[var(--bm-surface)] text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] hover:text-[color:var(--bm-fg)]'
       }`}
       onClick={() => setTab(id)}
     >
@@ -135,7 +135,7 @@ export function HistoryClient() {
           </div>
           <button
             type="button"
-            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] disabled:opacity-50"
+            className="rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] disabled:opacity-50"
             onClick={clear}
             disabled={!items.length}
           >
@@ -154,7 +154,7 @@ export function HistoryClient() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter history…"
-            className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="w-full rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Filter history"
           />
         </div>
@@ -167,14 +167,14 @@ export function HistoryClient() {
         className="mt-6 space-y-6"
       >
         {!filtered.length ? (
-          <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
+          <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
             No history yet.
           </div>
         ) : (
           groups.map((g) => (
             <div key={g.title}>
               <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">{g.title}</div>
-              <div className="mt-3 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] shadow-sm">
+              <div className="mt-3 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)]">
                 <ul className="divide-y divide-[var(--bm-border)]">
                   {g.items.map((it) => (
                     <li key={it.kind === 'search' ? `search:${it.query}` : `page:${it.name}:${it.section}`} className="flex flex-wrap items-center justify-between gap-3 p-4">

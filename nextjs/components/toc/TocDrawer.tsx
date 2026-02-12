@@ -38,14 +38,14 @@ export function TocDrawer() {
       <div className="absolute inset-0 bg-black/50" />
       <div
         ref={panelRef}
-        className="relative h-full w-[min(90vw,24rem)] overflow-y-auto border-r border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-5 shadow-xl backdrop-blur"
+        className="relative h-full w-[min(90vw,24rem)] overflow-y-auto border-r border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-5  "
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold tracking-tight">Table of contents</h2>
           <button
             type="button"
-            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
+            className="rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
             onClick={() => toc.setOpen(false)}
           >
             Close

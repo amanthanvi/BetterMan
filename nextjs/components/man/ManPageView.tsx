@@ -1,93 +1,24 @@
 'use client'
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
-import type { Distro } from '../../lib/distro'
-import { DISTRO_LABEL, normalizeDistro } from '../../lib/distro'
 import type { ManPage, ManPageContent, ManPageVariant, OptionItem } from '../../lib/docModel'
-import { BookmarkButton } from '../bookmarks/BookmarkButton'
-import { DocRenderer, type DocRendererHandle } from '../doc/DocRenderer'
+import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
+import { DocRenderer } from '../doc/DocRenderer'
+import { RecentPageRecorder } from '../recent/RecentPageRecorder'
 import { useDistro } from '../state/distro'
 import { useToc } from '../state/toc'
-import { RecentPageRecorder } from '../recent/RecentPageRecorder'
 import { parseOptionTerms } from './find'
-import { buildFindIndex, locateFindMatch } from './findIndex'
+import { ManPageFindBar } from './ManPageFindBar'
 import { ManPageFooterSections } from './ManPageFooterSections'
-import { ManPageSidebar } from './ManPageSidebar'
-import { OptionsTable } from './OptionsTable'
-
-const FIND_BAR_KEY = 'bm-find-bar-hidden'
-
-type IconProps = { className?: string }
-
-function IconCopy({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  )
-}
-
-function IconCheck({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
-}
-
-function readStoredFindBarHidden(): boolean {
-  try {
-    return localStorage.getItem(FIND_BAR_KEY) === '1'
-  } catch {
-    // ignore
-  }
-  return false
-}
-
-function writeStoredFindBarHidden(hidden: boolean) {
-  try {
-    localStorage.setItem(FIND_BAR_KEY, hidden ? '1' : '0')
-  } catch {
-    // ignore
-  }
-}
+import { ManPageHeaderCard } from './ManPageHeaderCard'
+import { ManPageNavigatorOverlay } from './ManPageNavigatorOverlay'
+import { ManPageOptionsSection } from './ManPageOptionsSection'
+import { useManPageFind } from './useManPageFind'
 
 function getScrollBehavior(): 'auto' | 'smooth' {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-}
-
-function getFindA11yStatus(find: string, label: string): string {
-  const q = find.trim()
-  if (q.length < 2) return ''
-  if (label === '…') return 'Searching'
-  if (label === '0/0') return 'No matches'
-  const m = /^(\d+)\/(\d+)$/.exec(label)
-  if (!m) return ''
-  const current = Number(m[1])
-  const total = Number(m[2])
-  if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) return ''
-  return `Match ${current} of ${total}`
 }
 
 export function ManPageView({
@@ -103,56 +34,26 @@ export function ManPageView({
 }) {
   const toc = useToc()
   const distro = useDistro()
-  const [find, setFind] = useState('')
-  const [findBarHidden, setFindBarHidden] = useState(() => readStoredFindBarHidden())
-  const [activeFindIndex, setActiveFindIndex] = useState(0)
+
+  const manFind = useManPageFind({ blocks: content.blocks })
+
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
   const [flashAnchorId, setFlashAnchorId] = useState<string | null>(null)
-  const activeMarkRef = useRef<HTMLElement | null>(null)
-  const findInputDesktopRef = useRef<HTMLInputElement | null>(null)
-  const findInputMobileRef = useRef<HTMLInputElement | null>(null)
-  const docRef = useRef<DocRendererHandle | null>(null)
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
   const activeTocId = activeHeadingId ?? content.toc[0]?.id ?? null
+
   const [copiedLink, setCopiedLink] = useState(false)
   const copyTimeoutRef = useRef<number | null>(null)
+
   const optionsCount = content.options?.length ?? 0
   const [optionsVisible, setOptionsVisible] = useState(() => optionsCount > 0 && optionsCount <= 160)
   const flashTimeoutRef = useRef<number | null>(null)
 
-  const rawFindQuery = find.trim()
-  const deferredFindQuery = useDeferredValue(rawFindQuery)
-  const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
-  const findEnabled = findQuery.length >= 2
-  const findStable = deferredFindQuery === rawFindQuery
-  const stableFindQuery = deferredFindQuery.length >= 2 ? deferredFindQuery : ''
-  const findIndex = useMemo(
-    () => (stableFindQuery.length >= 2 ? buildFindIndex(content.blocks, stableFindQuery) : null),
-    [content.blocks, stableFindQuery],
-  )
-  const matchCount = findStable ? (findIndex?.total ?? 0) : 0
-  const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
-  const findCountLabel = rawFindQuery.length < 2 ? '—' : !findStable ? '…' : matchCount ? `${displayIndex + 1}/${matchCount}` : '0/0'
-
   const optionTerms = useMemo(() => (selectedOption ? parseOptionTerms(selectedOption.flags) : []), [selectedOption])
   const shouldVirtualize = content.blocks.length >= 100
-  const setScrollToId = toc.setScrollToId
   const showSidebar = toc.sidebarOpen
-  const setFindBarHiddenPersisted = (hidden: boolean) => {
-    setFindBarHidden(hidden)
-    writeStoredFindBarHidden(hidden)
-  }
 
-  const variantPicker = useMemo(() => {
-    const list = Array.isArray(variants) ? variants : []
-    const uniqueContent = new Set(list.map((v) => v.contentSha256))
-    if (list.length < 2) return null
-    if (uniqueContent.size < 2) return null
-
-    const order: Record<string, number> = { debian: 0, ubuntu: 1, fedora: 2 }
-    const ordered = [...list].sort((a, b) => (order[a.distro] ?? 99) - (order[b.distro] ?? 99))
-    return { ordered }
-  }, [variants])
+  useBodyScrollLock(showSidebar)
 
   useEffect(() => {
     toc.setItems(content.toc ?? [])
@@ -166,6 +67,17 @@ export function ManPageView({
     }
   }, [])
 
+  useEffect(() => {
+    if (!showSidebar) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      toc.setSidebarOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showSidebar, toc])
+
   const flashOption = (anchorId: string) => {
     setFlashAnchorId(anchorId)
     if (flashTimeoutRef.current != null) window.clearTimeout(flashTimeoutRef.current)
@@ -173,18 +85,20 @@ export function ManPageView({
   }
 
   useEffect(() => {
-    setScrollToId((id) => {
+    toc.setScrollToId((id) => {
       setActiveHeadingId(id)
-      docRef.current?.scrollToAnchor(id)
+      manFind.docRef.current?.scrollToAnchor(id)
     })
-    return () => setScrollToId(null)
-  }, [setScrollToId])
+    return () => toc.setScrollToId(null)
+  }, [manFind.docRef, toc])
 
   useEffect(() => {
     if (shouldVirtualize) return
 
     const ids = content.toc.map((t) => t.id).filter(Boolean)
-    const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
+    const els = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => Boolean(el))
 
     if (!els.length) return
 
@@ -193,7 +107,8 @@ export function ManPageView({
         const visible = entries.filter((e) => e.isIntersecting)
         if (!visible.length) return
         visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        const next = (visible[0]?.target as HTMLElement | undefined)?.id
+        const target = visible[0]?.target
+        const next = target instanceof HTMLElement ? target.id : ''
         if (next) setActiveHeadingId(next)
       },
       { root: null, threshold: [0, 1], rootMargin: '-20% 0px -70% 0px' },
@@ -239,13 +154,6 @@ export function ManPageView({
     return () => window.removeEventListener('hashchange', applyHash)
   }, [content.options, page.id])
 
-  const focusFindInput = () => {
-    const isDesktop = window.matchMedia('(min-width: 1024px)').matches
-    const el = isDesktop ? findInputDesktopRef.current : findInputMobileRef.current
-    el?.focus()
-    el?.select()
-  }
-
   const copyLink = async () => {
     try {
       const url = new URL(window.location.href)
@@ -273,362 +181,147 @@ export function ManPageView({
     return out.slice(0, 6)
   }, [content.toc])
 
-  const scrollToFind = (idx: number) => {
-    if (!matchCount) return
-    const clamped = ((idx % matchCount) + matchCount) % matchCount
+  const openNavigator = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) toc.setSidebarOpen(!toc.sidebarOpen)
+    else toc.setOpen(true)
+  }
+
+  const openPrefs = () => {
+    try {
+      window.dispatchEvent(new CustomEvent('bm:prefs-request'))
+    } catch {
+      // ignore
+    }
+  }
+
+  const onSelectOption = (opt: OptionItem) => {
     const scrollBehavior = getScrollBehavior()
+    setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
 
-    if (docRef.current?.isVirtualized && findIndex) {
-      const loc = locateFindMatch(findIndex.prefixByBlock, clamped)
-      if (!loc) return
-
-      docRef.current.scrollToBlockIndex(loc.blockIndex, { align: 'center', behavior: scrollBehavior })
-
-      let attempts = 0
-      const tick = () => {
-        attempts += 1
-        const block = document.querySelector(`[data-bm-block-index="${loc.blockIndex}"]`) as HTMLElement | null
-        const marks = block ? (Array.from(block.querySelectorAll('mark[data-bm-find]')) as HTMLElement[]) : []
-        if (marks.length) {
-          const el = marks[Math.min(loc.withinBlockIndex, marks.length - 1)]!
-          el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
-          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-          el.classList.add('bm-find-active')
-          activeMarkRef.current = el
-          return
-        }
-        if (attempts < 20) window.requestAnimationFrame(tick)
+    try {
+      window.history.pushState(null, '', `#${opt.anchorId}`)
+    } catch {
+      try {
+        window.location.hash = opt.anchorId
+      } catch {
+        // ignore
       }
-
-      window.requestAnimationFrame(tick)
-      return
     }
 
-    const marks = Array.from(document.querySelectorAll('mark[data-bm-find]')) as HTMLElement[]
-    if (!marks.length) return
-    const el = marks[Math.min(clamped, marks.length - 1)]!
-    el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
-    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-    el.classList.add('bm-find-active')
-    activeMarkRef.current = el
-  }
-
-  const goPrev = () => {
-    if (!matchCount) return
-    const idx = (activeFindIndex - 1 + matchCount) % matchCount
-    setActiveFindIndex(idx)
-    scrollToFind(idx)
-  }
-
-  const goNext = () => {
-    if (!matchCount) return
-    const idx = (activeFindIndex + 1) % matchCount
-    setActiveFindIndex(idx)
-    scrollToFind(idx)
+    flashOption(opt.anchorId)
+    document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
   }
 
   return (
     <div className="mx-auto max-w-6xl">
       <RecentPageRecorder name={page.name} section={page.section} description={page.description || page.title} />
 
-      <header className="rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-6 shadow-sm backdrop-blur">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="break-words font-mono text-3xl font-semibold leading-[1.05] tracking-tight sm:text-4xl">
-                {page.name}({page.section})
-              </h1>
-              <p className="mt-3 max-w-[70ch] text-base text-[color:var(--bm-muted)]">{page.description}</p>
-            </div>
+      <ManPageNavigatorOverlay
+        open={showSidebar}
+        onClose={() => toc.setSidebarOpen(false)}
+        quickJumps={quickJumps}
+        onQuickJump={(id) => {
+          if (!manFind.docRef.current) return false
+          try {
+            window.history.pushState(null, '', `#${id}`)
+          } catch {
+            try {
+              window.location.hash = id
+            } catch {
+              // ignore
+            }
+          }
+          manFind.docRef.current.scrollToAnchor(id, { behavior: getScrollBehavior() })
+          return true
+        }}
+        findBarHidden={manFind.findBarHidden}
+        onShowFind={() => {
+          manFind.setFindBarHiddenPersisted(false)
+          requestAnimationFrame(() => manFind.focusFindInput())
+        }}
+        onHideFind={() => manFind.setFindBarHiddenPersisted(true)}
+        find={manFind.find}
+        findInputRef={manFind.findInputDesktopRef}
+        onFindChange={manFind.onFindChange}
+        onFindKeyDown={(e) => {
+          if (e.key === 'Enter' && manFind.matchCount) {
+            e.preventDefault()
+            if (e.shiftKey) manFind.goPrev()
+            else manFind.goNext()
+          }
+        }}
+        findCountLabel={manFind.findCountLabel}
+        matchCount={manFind.matchCount}
+        onPrev={manFind.goPrev}
+        onNext={manFind.goNext}
+        onClearFind={manFind.onClearFind}
+        tocItems={content.toc}
+        activeTocId={activeTocId}
+        onTocNavigateToId={toc.scrollToId ?? undefined}
+      />
 
-            <div className="flex items-center gap-2">
-              <BookmarkButton
-                name={page.name}
-                section={page.section}
-                description={page.description || page.title}
-              />
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                onClick={copyLink}
-                aria-label="Copy link to clipboard"
-                title={copiedLink ? 'Copied' : 'Copy link'}
-              >
-                {copiedLink ? <IconCheck className="size-4 text-[var(--bm-accent)]" /> : <IconCopy className="size-4" />}
-                {copiedLink ? 'Copied' : 'Copy link'}
-              </button>
-            </div>
-          </div>
+      <ManPageHeaderCard
+        page={page}
+        synopsis={content.synopsis}
+        variants={variants}
+        distro={distro.distro}
+        setDistro={distro.setDistro}
+        hasNavigator={toc.items.length > 0}
+        onOpenNavigator={openNavigator}
+        onOpenPrefs={openPrefs}
+        onCopyLink={copyLink}
+        copiedLink={copiedLink}
+      />
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--bm-muted)]">
-            {variantPicker ? (
-              <label className="flex items-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
-                <span className="text-[color:var(--bm-muted)]">distro</span>
-                <select
-                  value={distro.distro}
-                  onChange={(e) => {
-                    const next = normalizeDistro(e.target.value)
-                    if (!next) return
-                    distro.setDistro(next)
-                  }}
-                  className="bg-transparent text-[color:var(--bm-fg)] outline-none"
-                  aria-label="Select distribution variant"
-                >
-                  {variantPicker.ordered.map((v) => {
-                    const normalized = normalizeDistro(v.distro)
-                    if (!normalized) return null
-                    return (
-                      <option key={v.distro} value={v.distro}>
-                        {DISTRO_LABEL[normalized]}
-                      </option>
-                    )
-                  })}
-                </select>
-              </label>
-            ) : null}
-            {page.sourcePackage ? (
-              <span className="min-w-0 max-w-full break-words rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
-                pkg {page.sourcePackage}
-                {page.sourcePackageVersion ? `@${page.sourcePackageVersion}` : ''}
-              </span>
-            ) : null}
-            <span className="min-w-0 max-w-full break-words rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-1 font-mono">
-              dataset {page.datasetReleaseId}
-            </span>
-          </div>
-
-          {content.synopsis?.length ? (
-            <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.25] p-4">
-              <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Synopsis</div>
-              <pre className="mt-3 overflow-x-auto rounded-xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] p-4 text-sm leading-6">
-                <code>{content.synopsis.join('\n')}</code>
-              </pre>
-            </div>
-          ) : null}
-        </div>
-      </header>
-
-      <div className={`mt-10 grid gap-10 ${showSidebar ? 'lg:grid-cols-[19rem_minmax(0,1fr)]' : ''}`}>
-        {showSidebar ? (
-          <ManPageSidebar
-            quickJumps={quickJumps}
-            onQuickJump={(id) => {
-              if (!docRef.current) return false
-              try {
-                window.history.pushState(null, '', `#${id}`)
-              } catch {
-                try {
-                  window.location.hash = id
-                } catch {
-                  // ignore
-                }
-              }
-              docRef.current?.scrollToAnchor(id, { behavior: getScrollBehavior() })
-              return true
+      <div className="mt-10">
+        <article className="mx-auto min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
+          <ManPageFindBar
+            hidden={manFind.findBarHidden}
+            onShow={() => {
+              manFind.setFindBarHiddenPersisted(false)
+              requestAnimationFrame(() => manFind.focusFindInput())
             }}
-            findBarHidden={findBarHidden}
-            onShowFind={() => {
-              setFindBarHiddenPersisted(false)
-              requestAnimationFrame(() => focusFindInput())
-            }}
-            onHideFind={() => setFindBarHiddenPersisted(true)}
-            find={find}
-            findInputRef={findInputDesktopRef}
-            onFindChange={(next) => {
-              setFind(next)
-              setActiveFindIndex(0)
-              if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-              activeMarkRef.current = null
-            }}
+            onHide={() => manFind.setFindBarHiddenPersisted(true)}
+            find={manFind.find}
+            findInputRef={manFind.findInputMobileRef}
+            onFindChange={manFind.onFindChange}
             onFindKeyDown={(e) => {
-              if (e.key === 'Enter' && matchCount) {
+              if (e.key === 'Enter' && manFind.matchCount) {
                 e.preventDefault()
-                if (e.shiftKey) goPrev()
-                else goNext()
+                if (e.shiftKey) manFind.goPrev()
+                else manFind.goNext()
               }
             }}
-            findCountLabel={findCountLabel}
-            matchCount={matchCount}
-            onPrev={goPrev}
-            onNext={goNext}
-            onClearFind={() => {
-              setFind('')
-              setActiveFindIndex(0)
-              if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-              activeMarkRef.current = null
-            }}
-            tocItems={content.toc}
-            activeTocId={activeTocId}
-            onTocNavigateToId={toc.scrollToId ?? undefined}
+            findCountLabel={manFind.findCountLabel}
+            matchCount={manFind.matchCount}
+            onPrev={manFind.goPrev}
+            onNext={manFind.goNext}
           />
-        ) : null}
 
-        <article className="min-w-0 mx-auto max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
-          <div data-bm-findbar className={`sticky top-16 z-10 lg:hidden ${findBarHidden ? 'mb-4' : 'mb-8'}`}>
-            {findBarHidden ? (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
-                  aria-label="Show find bar"
-                  onClick={() => {
-                    setFindBarHiddenPersisted(false)
-                    requestAnimationFrame(() => focusFindInput())
-                  }}
-                >
-                  Find
-                </button>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-3 shadow-sm backdrop-blur">
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    ref={findInputMobileRef}
-                    value={find}
-                    onChange={(e) => {
-                      setFind(e.target.value)
-                      setActiveFindIndex(0)
-                      if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-                      activeMarkRef.current = null
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && matchCount) {
-                        e.preventDefault()
-                        if (e.shiftKey) goPrev()
-                        else goNext()
-                      }
-                    }}
-                    placeholder="Find in page…"
-                    className="min-w-[14rem] flex-1 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                    aria-label="Find in page"
-                  />
-                  <div className="font-mono text-xs text-[color:var(--bm-muted)]">{findCountLabel}</div>
-                  <div aria-live="polite" className="sr-only">
-                    {getFindA11yStatus(find, findCountLabel)}
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
-                    onClick={goPrev}
-                    disabled={!matchCount}
-                    aria-label="Previous match"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55] disabled:opacity-50"
-                    onClick={goNext}
-                    disabled={!matchCount}
-                    aria-label="Next match"
-                  >
-                    Next
-                  </button>
-                  {find ? (
-                    <button
-                      type="button"
-                      className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                      aria-label="Clear find query"
-                      onClick={() => {
-                        setFind('')
-                        setActiveFindIndex(0)
-                        if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-                        activeMarkRef.current = null
-                      }}
-                    >
-                      Clear
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                    onClick={() => setFindBarHiddenPersisted(true)}
-                    aria-label="Hide find bar"
-                  >
-                    Hide
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {optionTerms.length ? (
-            <div className="mb-8 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm backdrop-blur">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Highlighting options</div>
-                  <div className="mt-2 font-mono text-sm text-[color:var(--bm-fg)]">{optionTerms.join(' ')}</div>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                  onClick={() => setSelectedOption(null)}
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          {content.options?.length ? (
-            <section className="mb-10">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">
-                  Options{optionsCount ? <span className="text-[color:var(--bm-muted)]"> · {optionsCount}</span> : null}
-                </div>
-                <button
-                  type="button"
-                  className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-xs font-medium hover:bg-[color:var(--bm-bg)/0.55]"
-                  onClick={() => setOptionsVisible((v) => !v)}
-                >
-                  {optionsVisible ? 'Hide' : 'Show'}
-                </button>
-              </div>
-
-              {optionsVisible ? (
-                <div className="mt-3">
-                  <OptionsTable
-                    options={content.options}
-                    selectedAnchorId={selectedOption?.anchorId}
-                    onSelect={(opt) => {
-                      const scrollBehavior = getScrollBehavior()
-                      setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
-                      try {
-                        window.history.pushState(null, '', `#${opt.anchorId}`)
-                      } catch {
-                        try {
-                          window.location.hash = opt.anchorId
-                        } catch {
-                          // ignore
-                        }
-                      }
-
-                      flashOption(opt.anchorId)
-                      document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
-                    }}
-                    flashAnchorId={flashAnchorId}
-                  />
-                </div>
-              ) : (
-                <div className="mt-3 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.6] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
-                  This man page has a large options table. Expand it if you need to jump to a flag.
-                </div>
-              )}
-            </section>
-          ) : null}
+          <ManPageOptionsSection
+            optionTerms={optionTerms}
+            onClearHighlight={() => setSelectedOption(null)}
+            options={content.options}
+            optionsCount={optionsCount}
+            optionsVisible={optionsVisible}
+            onToggleOptionsVisible={() => setOptionsVisible((v) => !v)}
+            selectedAnchorId={selectedOption?.anchorId}
+            flashAnchorId={flashAnchorId}
+            onSelectOption={onSelectOption}
+          />
 
           <DocRenderer
-            ref={docRef}
+            ref={manFind.docRef}
             blocks={content.blocks}
-            distro={distro.distro as Distro}
-            findQuery={findEnabled ? findQuery : undefined}
+            distro={distro.distro}
+            findQuery={manFind.findEnabled ? manFind.findQuery : undefined}
             optionTerms={optionTerms}
             onActiveHeadingChange={shouldVirtualize ? setActiveHeadingId : undefined}
           />
         </article>
       </div>
 
-      <ManPageFooterSections distro={distro.distro as Distro} seeAlso={content.seeAlso} relatedItems={relatedItems} />
+      <ManPageFooterSections distro={distro.distro} seeAlso={content.seeAlso} relatedItems={relatedItems} />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useFocusTrap } from '../../lib/useFocusTrap'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
@@ -15,9 +15,20 @@ export function ShortcutsDialog({
   isManPage: boolean
 }) {
   const dialogRef = useRef<HTMLDivElement | null>(null)
+  const [mounted, setMounted] = useState(open)
 
   useFocusTrap(open, dialogRef)
   useBodyScrollLock(open)
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      return
+    }
+
+    const t = window.setTimeout(() => setMounted(false), 150)
+    return () => window.clearTimeout(t)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -30,26 +41,39 @@ export function ShortcutsDialog({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onOpenChange, open])
 
-  if (!open) return null
+  if (!mounted) return null
 
   const groups: Array<{ title: string; items: Array<{ keys: string[]; desc: string }> }> = [
     {
-      title: 'Global',
+      title: 'Navigation',
+      items: [
+        { keys: ['H'], desc: 'Open history' },
+        { keys: ['T'], desc: 'Scroll to top' },
+      ],
+    },
+    {
+      title: 'Search',
       items: [
         { keys: ['Ctrl/⌘', 'K'], desc: 'Open command palette' },
         { keys: ['/'], desc: 'Focus search (or open palette)' },
-        { keys: ['?'], desc: 'Show keyboard shortcuts' },
+      ],
+    },
+    {
+      title: 'Page',
+      items: [{ keys: ['B'], desc: 'Toggle navigator' }],
+    },
+    {
+      title: 'Actions',
+      items: [
         { keys: ['D'], desc: 'Cycle theme' },
-        { keys: ['B'], desc: 'Toggle TOC' },
-        { keys: ['T'], desc: 'Scroll to top' },
-        { keys: ['H'], desc: 'Open history' },
+        { keys: ['?'], desc: 'Show keyboard shortcuts' },
       ],
     },
   ]
 
   if (isManPage) {
     groups.push({
-      title: 'Man page',
+      title: 'Man Page',
       items: [
         { keys: ['M'], desc: 'Toggle bookmark' },
         { keys: ['P'], desc: 'Open reading preferences' },
@@ -64,44 +88,46 @@ export function ShortcutsDialog({
       role="dialog"
       aria-modal="true"
       aria-label="Keyboard shortcuts"
-      className="fixed inset-0 z-50"
+      className={`fixed inset-0 z-50 ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
       onClick={() => onOpenChange(false)}
     >
-      <div className="absolute inset-0 bg-black/55" />
+      <div className={`absolute inset-0 bg-black/60 transition-opacity ${open ? 'opacity-100' : 'opacity-0'}`} />
       <div
         ref={dialogRef}
-        className="relative mx-auto mt-24 w-[min(92vw,38rem)] rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-6 shadow-xl backdrop-blur"
+        className={`relative mx-auto mt-24 w-[min(92vw,38rem)] rounded-[var(--bm-radius-lg)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-6 transition-opacity ${
+          open ? 'opacity-100' : 'opacity-0'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-base font-semibold tracking-tight">Keyboard shortcuts</div>
-            <div className="mt-1 text-sm text-[color:var(--bm-muted)]">
+            <div className="text-[14px] font-semibold tracking-tight text-[color:var(--bm-fg)]">Keyboard shortcuts</div>
+            <div className="mt-1 text-[13px] text-[color:var(--bm-muted)]">
               Press <span className="font-mono">Esc</span> to close.
             </div>
           </div>
           <button
             type="button"
-            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
+            className="h-9 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] hover:bg-[var(--bm-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--bm-accent)/0.35]"
             onClick={() => onOpenChange(false)}
           >
-            Close
+            Esc
           </button>
         </div>
 
-        <div className="mt-5 space-y-6">
+        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
           {groups.map((g) => (
-            <section key={g.title}>
-              <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">{g.title}</div>
-              <ul className="mt-3 space-y-2">
+            <section key={g.title} className="space-y-3">
+              <div className="font-mono text-[11px] tracking-wide text-[color:var(--bm-muted)]">{g.title}</div>
+              <ul className="space-y-2">
                 {g.items.map((it) => (
-                  <li key={`${g.title}:${it.desc}`} className="flex items-center justify-between gap-4">
-                    <div className="text-sm text-[color:var(--bm-muted)]">{it.desc}</div>
+                  <li key={`${g.title}:${it.desc}`} className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 text-[13px] text-[color:var(--bm-muted)]">{it.desc}</div>
                     <div className="flex flex-wrap items-center justify-end gap-1">
                       {it.keys.map((k) => (
                         <kbd
                           key={k}
-                          className="rounded-lg border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-2 py-1 font-mono text-xs text-[color:var(--bm-fg)]"
+                          className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-2 py-1 font-mono text-[11px] text-[color:var(--bm-fg)]"
                         >
                           {k}
                         </kbd>

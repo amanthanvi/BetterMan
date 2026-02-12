@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
+import type { Distro } from '../../lib/distro'
 import { listSections, search } from '../../lib/api'
-import { isDefaultDistro, normalizeDistro, withDistro } from '../../lib/distro'
+import { isDefaultDistro, normalizeDistro } from '../../lib/distro'
+import { SearchResultsClient } from './SearchResultsClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +14,15 @@ type SearchParams = Record<string, string | string[] | undefined>
 function getFirst(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0]
   return value
+}
+
+function buildSearchHref(opts: { q: string; section: string; distro: Distro }) {
+  const params = new URLSearchParams()
+  if (opts.q) params.set('q', opts.q)
+  if (opts.section) params.set('section', opts.section)
+  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  const qs = params.toString()
+  return qs ? `/search?${qs}` : '/search'
 }
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
@@ -23,7 +34,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     title,
     description,
     robots: { index: false },
-    openGraph: { title, description, type: 'website' },
+    openGraph: { title, description, type: 'website', images: ['/og-image.png'] },
   }
 }
 
@@ -31,15 +42,20 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const distro = (normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian') satisfies Distro
 
   const q = getFirst(sp.q)?.trim() ?? ''
   const section = getFirst(sp.section)?.trim() || ''
 
   const sections = await listSections(distro)
-  const sectionLabel = section ? sections.find((s) => s.section === section)?.label : undefined
+  const sectionPills = sections
+    .filter((s) => /^\d+$/.test(s.section))
+    .map((s) => ({ section: s.section, n: Number.parseInt(s.section, 10), label: s.label }))
+    .filter((s) => Number.isFinite(s.n))
+    .sort((a, b) => a.n - b.n)
+    .slice(0, 9)
 
-  const results = q
+  const initial = q
     ? await search({
         distro,
         q,
@@ -49,138 +65,61 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       })
     : null
 
-  const title = q ? `Search “${q}” — BetterMan` : 'Search — BetterMan'
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="flex flex-col gap-2 border-b border-[var(--bm-border)] pb-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Search</h1>
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[color:var(--bm-muted)]">
-          <div>Fast lookup across the current dataset.</div>
-          {q ? (
-            <div className="font-mono text-xs">
-              {section ? `section ${section} · ` : ''}
-              {(results?.results.length ?? 0).toLocaleString()} results loaded
-            </div>
-          ) : null}
-        </div>
-      </header>
+      <header className="border-b border-[var(--bm-border)] pb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
 
-      <form
-        className="mt-6 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur"
-        action="/search"
-        method="get"
-        role="search"
-        aria-label="Search man pages"
-      >
-        <div className="flex flex-wrap items-center gap-2">
+        <form className="mt-4" action="/search" method="get" role="search" aria-label="Search man pages">
           <input
             name="q"
+            type="search"
             defaultValue={q}
-            placeholder="Type a command…"
-            className="min-w-[16rem] flex-1 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            placeholder="search man pages…"
+            data-bm-page-search
+            autoComplete="off"
+            className="h-12 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)] outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Search man pages"
           />
-          <select
-            name="section"
-            defaultValue={section}
-            className="h-[3rem] rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-            aria-label="Filter by section"
-          >
-            <option value="">All sections</option>
-            {sections.map((s) => (
-              <option key={s.section} value={s.section}>
-                {s.section}: {s.label}
-              </option>
-            ))}
-          </select>
+          {section ? <input type="hidden" name="section" value={section} /> : null}
           {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
+        </form>
 
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-full bg-[var(--bm-accent)] px-6 py-3 text-sm font-semibold text-[var(--bm-accent-contrast)] hover:opacity-90"
+        <nav aria-label="Section filter" className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href={buildSearchHref({ q, section: '', distro })}
+            className={`rounded-[var(--bm-radius-sm)] border px-3 py-1 font-mono text-xs transition-colors ${
+              !section
+                ? 'border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] text-[color:var(--bm-fg)]'
+                : 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]'
+            }`}
           >
-            Search
-          </button>
-        </div>
+            All
+          </Link>
+          {sectionPills.map((s) => (
+            <Link
+              key={s.section}
+              href={buildSearchHref({ q, section: s.section, distro })}
+              className={`rounded-[var(--bm-radius-sm)] border px-3 py-1 font-mono text-xs transition-colors ${
+                section === s.section
+                  ? 'border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] text-[color:var(--bm-fg)]'
+                  : 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]'
+              }`}
+              title={s.label}
+              aria-label={`Section ${s.section}: ${s.label}`}
+            >
+              {s.section}
+            </Link>
+          ))}
+        </nav>
 
         <div className="mt-3 text-xs text-[color:var(--bm-muted)]">
           <span className="font-mono">Tip:</span> Use <span className="font-mono">ssh_config</span> or{' '}
           <span className="font-mono">systemd.unit</span> for dotted names.
         </div>
-      </form>
+      </header>
 
-      {!q ? (
-        <div className="mt-8 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
-          Try <span className="font-medium text-[var(--bm-fg)]">tar</span>,{' '}
-          <span className="font-medium text-[var(--bm-fg)]">ssh</span>, or{' '}
-          <span className="font-medium text-[var(--bm-fg)]">systemd.unit</span>.
-        </div>
-      ) : results && results.results.length ? (
-        <div className="mt-8">
-          <div className="mb-3 text-xs text-[color:var(--bm-muted)]">
-            {section ? (
-              <>
-                Filtering: <span className="font-mono">{section}</span>{' '}
-                <span className="text-[color:var(--bm-muted)]">{sectionLabel ?? ''}</span>
-              </>
-            ) : (
-              <span>All sections</span>
-            )}
-          </div>
-          <ol className="space-y-3" aria-label="Search results">
-            {results.results.map((r) => (
-              <li
-                key={`${r.name}:${r.section}`}
-                className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm backdrop-blur"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <div className="flex items-baseline gap-2">
-                    <Link
-                      href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, distro)}
-                      className="font-mono text-base font-semibold tracking-tight underline underline-offset-4"
-                      title={`${r.name}(${r.section})`}
-                      aria-label={`${r.name}(${r.section})`}
-                    >
-                      {r.name}
-                    </Link>
-                    <span className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-2 py-0.5 font-mono text-[11px] text-[color:var(--bm-muted)]">
-                      {r.section}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[color:var(--bm-muted)]">{r.title}</div>
-                </div>
-                <div className="mt-2 text-sm text-[color:var(--bm-muted)]">{r.description}</div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : (
-        <div className="mt-8 rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
-          No results.
-          {results?.suggestions?.length ? (
-            <>
-              {' '}
-              Try:{' '}
-              {results.suggestions.map((s, idx) => (
-                <span key={s}>
-                  {idx ? ', ' : ''}
-                  <Link
-                    href={withDistro(`/search?q=${encodeURIComponent(s)}`, distro)}
-                    className="underline underline-offset-4"
-                  >
-                    {s}
-                  </Link>
-                </span>
-              ))}
-              .
-            </>
-          ) : null}
-        </div>
-      )}
-
-      <div className="mt-10 text-xs text-[color:var(--bm-muted)]">
-        <span className="font-mono">{title}</span>
-      </div>
+      <SearchResultsClient distro={distro} q={q} section={section} initial={initial} />
     </div>
   )
 }

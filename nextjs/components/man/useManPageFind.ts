@@ -1,0 +1,158 @@
+'use client'
+
+import { useDeferredValue, useMemo, useRef, useState } from 'react'
+
+import type { BlockNode } from '../../lib/docModel'
+import type { DocRendererHandle } from '../doc/DocRenderer'
+import { buildFindIndex, locateFindMatch } from './findIndex'
+
+const FIND_BAR_KEY = 'bm-find-bar-hidden'
+
+function readStoredFindBarHidden(): boolean {
+  try {
+    return localStorage.getItem(FIND_BAR_KEY) === '1'
+  } catch {
+    // ignore
+  }
+  return false
+}
+
+function writeStoredFindBarHidden(hidden: boolean) {
+  try {
+    localStorage.setItem(FIND_BAR_KEY, hidden ? '1' : '0')
+  } catch {
+    // ignore
+  }
+}
+
+function getScrollBehavior(): 'auto' | 'smooth' {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+}
+
+export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
+  const [find, setFind] = useState('')
+  const [findBarHidden, setFindBarHidden] = useState(() => readStoredFindBarHidden())
+  const [activeFindIndex, setActiveFindIndex] = useState(0)
+
+  const activeMarkRef = useRef<HTMLElement | null>(null)
+  const findInputDesktopRef = useRef<HTMLInputElement | null>(null)
+  const findInputMobileRef = useRef<HTMLInputElement | null>(null)
+  const docRef = useRef<DocRendererHandle | null>(null)
+
+  const rawFindQuery = find.trim()
+  const deferredFindQuery = useDeferredValue(rawFindQuery)
+  const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
+  const findEnabled = findQuery.length >= 2
+  const findStable = deferredFindQuery === rawFindQuery
+  const stableFindQuery = deferredFindQuery.length >= 2 ? deferredFindQuery : ''
+
+  const findIndex = useMemo(
+    () => (stableFindQuery.length >= 2 ? buildFindIndex(blocks, stableFindQuery) : null),
+    [blocks, stableFindQuery],
+  )
+
+  const matchCount = findStable ? (findIndex?.total ?? 0) : 0
+  const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
+  const findCountLabel =
+    rawFindQuery.length < 2 ? '—' : !findStable ? '…' : matchCount ? `${displayIndex + 1}/${matchCount}` : '0/0'
+
+  const setFindBarHiddenPersisted = (hidden: boolean) => {
+    setFindBarHidden(hidden)
+    writeStoredFindBarHidden(hidden)
+  }
+
+  const focusFindInput = () => {
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches
+    const el = isDesktop ? findInputDesktopRef.current : findInputMobileRef.current
+    el?.focus()
+    el?.select()
+  }
+
+  const scrollToFind = (idx: number) => {
+    if (!matchCount) return
+    const clamped = ((idx % matchCount) + matchCount) % matchCount
+    const scrollBehavior = getScrollBehavior()
+
+    if (docRef.current?.isVirtualized && findIndex) {
+      const loc = locateFindMatch(findIndex.prefixByBlock, clamped)
+      if (!loc) return
+
+      docRef.current.scrollToBlockIndex(loc.blockIndex, { align: 'center', behavior: scrollBehavior })
+
+      let attempts = 0
+      const tick = () => {
+        attempts += 1
+        const block = document.querySelector<HTMLElement>(`[data-bm-block-index="${loc.blockIndex}"]`)
+        const marks = block ? Array.from(block.querySelectorAll<HTMLElement>('mark[data-bm-find]')) : []
+        if (marks.length) {
+          const el = marks[Math.min(loc.withinBlockIndex, marks.length - 1)]
+          if (!el) return
+          el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
+          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+          el.classList.add('bm-find-active')
+          activeMarkRef.current = el
+          return
+        }
+        if (attempts < 20) window.requestAnimationFrame(tick)
+      }
+
+      window.requestAnimationFrame(tick)
+      return
+    }
+
+    const marks = Array.from(document.querySelectorAll<HTMLElement>('mark[data-bm-find]'))
+    if (!marks.length) return
+    const el = marks[Math.min(clamped, marks.length - 1)]
+    if (!el) return
+    el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
+    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+    el.classList.add('bm-find-active')
+    activeMarkRef.current = el
+  }
+
+  const goPrev = () => {
+    if (!matchCount) return
+    const idx = (activeFindIndex - 1 + matchCount) % matchCount
+    setActiveFindIndex(idx)
+    scrollToFind(idx)
+  }
+
+  const goNext = () => {
+    if (!matchCount) return
+    const idx = (activeFindIndex + 1) % matchCount
+    setActiveFindIndex(idx)
+    scrollToFind(idx)
+  }
+
+  const onFindChange = (next: string) => {
+    setFind(next)
+    setActiveFindIndex(0)
+    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+    activeMarkRef.current = null
+  }
+
+  const onClearFind = () => {
+    setFind('')
+    setActiveFindIndex(0)
+    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+    activeMarkRef.current = null
+  }
+
+  return {
+    docRef,
+    find,
+    findBarHidden,
+    findInputDesktopRef,
+    findInputMobileRef,
+    focusFindInput,
+    onClearFind,
+    onFindChange,
+    findQuery,
+    findEnabled,
+    matchCount,
+    findCountLabel,
+    goPrev,
+    goNext,
+    setFindBarHiddenPersisted,
+  }
+}

@@ -61,6 +61,7 @@ export async function generateMetadata({
         title,
         description,
         type: 'article',
+        images: ['/og-image.png'],
       },
     }
   } catch (err) {

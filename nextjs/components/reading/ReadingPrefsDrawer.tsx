@@ -1,17 +1,32 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-import { useReadingPrefs } from '../state/readingPrefs'
-import { useFocusTrap } from '../../lib/useFocusTrap'
+import { DISTRO_GROUPS, type Distro } from '../../lib/distro'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
+import { useFocusTrap } from '../../lib/useFocusTrap'
+import { useDistro } from '../state/distro'
+import { useReadingPrefs } from '../state/readingPrefs'
 
 export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { prefs, updatePrefs, reset } = useReadingPrefs()
+  const distro = useDistro()
+
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const [mounted, setMounted] = useState(open)
 
   useFocusTrap(open, panelRef)
   useBodyScrollLock(open)
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      return
+    }
+
+    const t = window.setTimeout(() => setMounted(false), 150)
+    return () => window.clearTimeout(t)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -24,25 +39,27 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onOpenChange, open])
 
-  if (!open) return null
-
   const Seg = <T extends string>({
     label,
     value,
     options,
     onChange,
+    scroll = false,
   }: {
     label: string
     value: T
     options: Array<{ id: T; label: string }>
     onChange: (id: T) => void
+    scroll?: boolean
   }) => (
     <section>
-      <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">{label}</div>
+      <div className="font-mono text-[11px] tracking-wide text-[color:var(--bm-muted)]">{label}</div>
       <div
         role="radiogroup"
         aria-label={label}
-        className="mt-3 flex flex-wrap gap-2"
+        className={`mt-2 flex w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] ${
+          scroll ? 'overflow-x-auto' : 'overflow-hidden'
+        }`}
         onKeyDown={(e) => {
           if (!options.length) return
 
@@ -51,10 +68,8 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
 
           if (e.key === 'Home') nextIndex = 0
           else if (e.key === 'End') nextIndex = options.length - 1
-          else if (e.key === 'ArrowRight' || e.key === 'ArrowDown')
-            nextIndex = (currentIndex + 1) % options.length
-          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp')
-            nextIndex = (currentIndex - 1 + options.length) % options.length
+          else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextIndex = (currentIndex + 1) % options.length
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nextIndex = (currentIndex - 1 + options.length) % options.length
 
           if (nextIndex === null) return
           e.preventDefault()
@@ -69,17 +84,19 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
           })
         }}
       >
-        {options.map((o) => (
+        {options.map((o, idx) => (
           <button
             key={o.id}
             type="button"
             role="radio"
             aria-checked={value === o.id}
             tabIndex={value === o.id ? 0 : -1}
-            className={`rounded-full border border-[var(--bm-border)] px-4 py-2 text-sm font-medium ${
+            className={`px-3 py-2 text-left font-mono text-[13px] leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--bm-accent)/0.35] ${
+              scroll ? 'shrink-0 min-w-[5.75rem]' : 'flex-1'
+            } ${idx === 0 ? '' : 'border-l border-[var(--bm-border)]'} ${
               value === o.id
-                ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
-                : 'bg-[color:var(--bm-surface)/0.75] text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] hover:text-[color:var(--bm-fg)]'
+                ? 'bg-[var(--bm-accent-muted)] text-[color:var(--bm-fg)]'
+                : 'bg-transparent text-[color:var(--bm-muted)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)]'
             }`}
             onClick={() => onChange(o.id)}
           >
@@ -90,42 +107,58 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
     </section>
   )
 
+  if (!mounted) return null
+
+  const distroOptions: Array<{ id: Distro; label: string }> = DISTRO_GROUPS.flatMap((g) =>
+    g.items.map((id) => ({ id, label: `@${id}` })),
+  )
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Reading preferences"
-      className="fixed inset-0 z-40"
+      className={`fixed inset-0 z-40 flex items-end justify-center ${open ? 'pointer-events-auto' : 'pointer-events-none'} sm:items-stretch sm:justify-end`}
       onClick={() => onOpenChange(false)}
     >
-      <div className="absolute inset-0 bg-black/50" />
+      <div className={`absolute inset-0 bg-black/60 transition-opacity ${open ? 'opacity-100' : 'opacity-0'}`} />
       <div
         ref={panelRef}
-        className="relative ml-auto h-full w-[min(92vw,28rem)] overflow-y-auto border-l border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.92] p-6 shadow-xl backdrop-blur"
+        className={`relative w-full max-h-[75vh] overflow-y-auto rounded-t-[var(--bm-radius-lg)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-transform sm:ml-auto sm:h-full sm:max-h-none sm:w-80 sm:rounded-none sm:border-l sm:border-t-0 sm:border-b-0 sm:border-r-0 sm:pb-6 ${
+          open ? 'translate-y-0 sm:translate-x-0' : 'translate-y-full sm:translate-y-0 sm:translate-x-full'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-base font-semibold tracking-tight">Reading preferences</div>
-            <div className="mt-1 text-sm text-[color:var(--bm-muted)]">Applies to man page reading.</div>
+            <div className="text-[14px] font-semibold tracking-tight text-[color:var(--bm-fg)]">Reading preferences</div>
+            <div className="mt-1 text-[13px] text-[color:var(--bm-muted)]">Applies to man page reading.</div>
           </div>
           <button
             type="button"
-            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
+            className="h-9 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] hover:bg-[var(--bm-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--bm-accent)/0.35]"
             onClick={() => onOpenChange(false)}
           >
-            Close
+            Esc
           </button>
         </div>
 
         <div className="mt-6 space-y-6">
           <Seg
+            label="Default distro"
+            value={distro.distro}
+            options={distroOptions}
+            onChange={(next) => distro.setDistro(next)}
+            scroll
+          />
+
+          <Seg
             label="Font size"
             value={prefs.fontSize}
             options={[
-              { id: 'small', label: 'Small' },
-              { id: 'medium', label: 'Medium' },
-              { id: 'large', label: 'Large' },
+              { id: 'small', label: 'S' },
+              { id: 'medium', label: 'M' },
+              { id: 'large', label: 'L' },
               { id: 'xlarge', label: 'XL' },
             ]}
             onChange={(fontSize) => updatePrefs({ fontSize })}
@@ -178,7 +211,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
           <div className="pt-2">
             <button
               type="button"
-              className="w-full rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-3 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9]"
+              className="w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-3 font-mono text-[13px] font-semibold text-[color:var(--bm-fg)] hover:bg-[var(--bm-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--bm-accent)/0.35]"
               onClick={() => reset()}
             >
               Reset to defaults

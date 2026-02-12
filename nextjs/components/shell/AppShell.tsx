@@ -1,14 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { isTypingTarget } from '../../lib/dom'
-import { DISTRO_GROUPS, DISTRO_LABEL, normalizeDistro, withDistro } from '../../lib/distro'
+import { withDistro } from '../../lib/distro'
 import { formatRelativeTime } from '../../lib/time'
 import { CommandPalette } from '../palette/CommandPalette'
 import { ReadingPrefsDrawer } from '../reading/ReadingPrefsDrawer'
@@ -18,99 +17,10 @@ import { useToc } from '../state/toc'
 import { TocDrawer } from '../toc/TocDrawer'
 import { MobileBottomNav } from './MobileBottomNav'
 import { ShortcutsDialog } from './ShortcutsDialog'
+import { MoonIcon, SearchIcon, SunIcon } from '../icons'
 
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
-}
-
-type IconProps = { className?: string }
-
-function IconCommand({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0 0-6Z" />
-    </svg>
-  )
-}
-
-function IconSun({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-    </svg>
-  )
-}
-
-function IconSliders({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
-      <path d="M2 14h4M10 8h4M18 16h4" />
-    </svg>
-  )
-}
-
-function IconList({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M8 6h13M8 12h13M8 18h13" />
-      <path d="M3 6h.01M3 12h.01M3 18h.01" />
-    </svg>
-  )
-}
-
-function IconChevronDown({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  )
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -120,14 +30,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const distro = useDistro()
   const theme = useTheme()
   const toc = useToc()
-
-  const [q, setQ] = useState('')
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
   const [offline, setOffline] = useState(false)
   const [themeAnnouncement, setThemeAnnouncement] = useState('')
-  const searchRef = useRef<HTMLInputElement | null>(null)
   const themeAnnouncementMountedRef = useRef(false)
 
   const lastRouteKeyRef = useRef<string | null>(null)
@@ -235,6 +142,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    const EVENT = 'bm:prefs-request'
+    const onEvent = () => setPrefsOpen(true)
+    window.addEventListener(EVENT, onEvent)
+    return () => window.removeEventListener(EVENT, onEvent)
+  }, [])
+
+  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
@@ -252,15 +166,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '/') {
         e.preventDefault()
-        const headerSearch = searchRef.current
-        if (headerSearch && isElementVisible(headerSearch)) {
-          headerSearch.focus()
-          headerSearch.select()
+
+        const pageSearch = document.querySelector('[data-bm-page-search]') as HTMLInputElement | null
+        if (pageSearch && isElementVisible(pageSearch)) {
+          pageSearch.focus()
+          pageSearch.select()
           return
         }
 
         const homeSearch = document.querySelector('[data-bm-home-search]') as HTMLInputElement | null
-        if (homeSearch) {
+        if (homeSearch && isElementVisible(homeSearch)) {
           homeSearch.focus()
           homeSearch.select()
           return
@@ -389,122 +304,79 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header
         data-bm-app-header
         aria-label="Site header"
-        className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.85] backdrop-blur"
+        className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[var(--bm-surface-2)]"
       >
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <Link href="/" className="inline-flex items-center gap-2 text-base font-semibold tracking-tight">
-            <Image src="/betterman-mark.svg" alt="" className="size-6" width={24} height={24} priority />
-            BetterMan
+        <div className="mx-auto flex h-12 max-w-6xl items-center gap-3 px-4">
+          <Link href={withDistro('/', distro.distro)} className="inline-flex items-center gap-2">
+            <span className="font-mono text-sm font-semibold tracking-tight text-[var(--bm-accent)]">&gt;_</span>
+            <span className="text-sm font-semibold tracking-tight">BetterMan</span>
           </Link>
+
           <div aria-live="polite" className="sr-only">
             {themeAnnouncement}
           </div>
 
-          {info ? (
-            <div className="hidden items-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] px-3 py-1 text-xs text-[color:var(--bm-muted)] shadow-sm backdrop-blur md:flex">
-              <span className="font-mono text-[color:var(--bm-fg)]">{info.datasetReleaseId}</span>
-              <span aria-hidden="true">·</span>
-              <span>{info.pageCount.toLocaleString()} pages</span>
-              <span aria-hidden="true">·</span>
-              <span>updated {formatRelativeTime(info.lastUpdated)}</span>
-            </div>
-          ) : null}
+          <nav aria-label="Primary" className="hidden flex-1 items-stretch justify-center gap-6 md:flex">
+            {(
+              [
+                { href: withDistro('/', distro.distro), label: 'Home', active: pathname === '/' },
+                { href: withDistro('/search', distro.distro), label: 'Search', active: pathname === '/search' },
+                { href: withDistro('/licenses', distro.distro), label: 'Licenses', active: pathname === '/licenses' },
+              ] as const
+            ).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`inline-flex h-12 items-center border-b-2 px-1 text-sm font-medium transition-colors ${
+                  item.active
+                    ? 'border-[var(--bm-accent)] text-[var(--bm-accent)]'
+                    : 'border-transparent text-[color:var(--bm-muted)] hover:text-[var(--bm-fg)]'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
 
-          {pathname !== '/' ? (
-            <form
-              className="hidden flex-1 sm:block"
-              role="search"
-              aria-label="Search man pages"
-              onSubmit={(e) => {
-                e.preventDefault()
-                const query = q.trim()
-                if (!query) return
-                router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, distro.distro))
-              }}
-            >
-              <input
-                ref={searchRef}
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search commands…"
-                className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                aria-label="Search man pages"
-              />
-            </form>
-          ) : null}
-
-          <div className="relative">
-            <select
-              value={distro.distro}
-              onChange={(e) => {
-                const next = normalizeDistro(e.target.value)
-                if (next) distro.setDistro(next)
-              }}
-              className="appearance-none rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 pr-9 text-xs font-medium text-[color:var(--bm-fg)] outline-none hover:bg-[color:var(--bm-surface)/0.9] focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] sm:text-sm"
-              aria-label="Select distribution"
-            >
-              {DISTRO_GROUPS.map((g) => (
-                <optgroup key={g.label} label={g.label}>
-                  {g.items.map((d) => (
-                    <option key={d} value={d}>
-                      {DISTRO_LABEL[d]}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <IconChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--bm-muted)]" />
-          </div>
-
-          <button
-            type="button"
-            className="hidden items-center justify-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
-            onClick={() => setPaletteOpen(true)}
-            aria-label="Open command palette"
-            title="Command palette (Ctrl/⌘ K)"
-          >
-            <IconCommand className="size-4" />
-            <span className="hidden xl:inline font-mono text-xs text-[color:var(--bm-muted)]">Ctrl/⌘ K</span>
-          </button>
-          <button
-            type="button"
-            className="hidden items-center justify-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
-            onClick={() => theme.cycle()}
-            title={`Theme: ${theme.mode}`}
-            aria-label="Cycle theme"
-          >
-            <IconSun className="size-4" />
-            <span className="hidden xl:inline">Theme</span>
-          </button>
-          {isManPage ? (
+          <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
-              className="hidden items-center justify-center gap-2 rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] sm:inline-flex"
-              onClick={() => setPrefsOpen(true)}
-              title="Reading preferences"
-              aria-label="Open reading preferences"
+              className="hidden h-9 w-[min(28rem,42vw)] items-center gap-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 text-sm text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] md:inline-flex"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Search"
+              title="Command palette (Ctrl/⌘ K)"
             >
-              <IconSliders className="size-4" />
-              <span className="hidden xl:inline">Prefs</span>
+              <SearchIcon className="size-4" />
+              <span className="flex-1 text-left font-mono">Search…</span>
+              <kbd className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-2 py-0.5 font-mono text-xs text-[color:var(--bm-muted)]">
+                ⌘K
+              </kbd>
             </button>
-          ) : null}
-          <button
-            type="button"
-            className={`inline-flex items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] lg:hidden ${
-              toc.items.length ? '' : 'invisible pointer-events-none'
-            }`}
-            onClick={() => toc.setOpen(true)}
-            tabIndex={toc.items.length ? 0 : -1}
-            aria-hidden={!toc.items.length}
-            aria-label="TOC"
-            title="Table of contents"
-          >
-            <IconList className="size-4" />
-            <span className="hidden sm:inline sm:pl-1.5">TOC</span>
-          </button>
+
+            <button
+              type="button"
+              className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] md:hidden"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Search"
+              title="Search (Ctrl/⌘ K)"
+            >
+              <SearchIcon className="size-4" />
+            </button>
+
+            <button
+              type="button"
+              className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              onClick={() => theme.cycle()}
+              title={`Theme: ${theme.mode}`}
+              aria-label="Cycle theme"
+            >
+              {theme.resolved === 'dark' ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
+            </button>
+          </div>
         </div>
+
         {offline ? (
-          <div className="border-t border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] px-4 py-2 text-xs text-[color:var(--bm-muted)]">
+          <div className="border-t border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-4 py-2 text-xs text-[color:var(--bm-muted)]">
             Offline — showing cached content
           </div>
         ) : null}
@@ -536,7 +408,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      <MobileBottomNav onMore={() => setPaletteOpen(true)} />
+      <MobileBottomNav />
     </div>
   )
 }

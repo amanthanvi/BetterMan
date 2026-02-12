@@ -72,7 +72,7 @@ export function BookmarksClient() {
           </div>
           <button
             type="button"
-            className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] disabled:opacity-50"
+            className="rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] disabled:opacity-50"
             onClick={clear}
             disabled={!items.length}
           >
@@ -85,7 +85,7 @@ export function BookmarksClient() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter bookmarks…"
-            className="w-full rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="w-full rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Filter bookmarks"
           />
         </div>
@@ -93,11 +93,11 @@ export function BookmarksClient() {
 
       <section className="mt-6">
         {!filtered.length ? (
-          <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 text-sm text-[color:var(--bm-muted)] shadow-sm">
+          <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
             No bookmarks yet.
           </div>
         ) : (
-          <div className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] shadow-sm">
+          <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)]">
             <ul className="divide-y divide-[var(--bm-border)]">
               {filtered.map((it) => (
                 <li key={`${it.name}:${it.section}`} className="flex flex-wrap items-center justify-between gap-3 p-4">

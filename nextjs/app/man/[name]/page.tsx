@@ -53,7 +53,7 @@ export async function generateMetadata({
         title,
         description,
         alternates: canonical ? { canonical } : undefined,
-        openGraph: { title, description, type: 'article' },
+        openGraph: { title, description, type: 'article', images: ['/og-image.png'] },
       }
     }
 
@@ -63,7 +63,7 @@ export async function generateMetadata({
       title,
       description,
       alternates: canonical ? { canonical } : undefined,
-      openGraph: { title, description, type: 'website' },
+      openGraph: { title, description, type: 'website', images: ['/og-image.png'] },
     }
   } catch (err) {
     if (err instanceof FastApiError && err.status === 404) {
@@ -118,7 +118,7 @@ export default async function ManByNamePage({
           {result.options.map((opt) => (
             <li
               key={opt.section}
-              className="rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-4 shadow-sm"
+              className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 "
             >
               <Link
                 href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, distro)}

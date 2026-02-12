@@ -18,25 +18,28 @@ export default function GlobalError({
 
   return (
     <html lang="en">
-      <body>
-        <div className="min-h-dvh bg-[var(--bm-bg)] px-6 py-16 text-[var(--bm-fg)]">
-          <div className="mx-auto max-w-3xl rounded-3xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] p-6 shadow-sm backdrop-blur">
-            <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Error</div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Something went wrong</h1>
-            <p className="mt-3 text-sm text-[color:var(--bm-muted)]">
-              Try again, or go back home.
-            </p>
+      <body className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
+        <div className="mx-auto max-w-3xl px-6 py-16">
+          <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-6">
+            <div className="font-mono text-[11px] tracking-wide text-[color:var(--bm-muted)]">Error</div>
+            <h1 className="mt-2 text-[24px] font-semibold leading-tight tracking-tight text-[color:var(--bm-fg)]">
+              Something went wrong
+            </h1>
+            <p className="mt-3 text-[13px] text-[color:var(--bm-muted)]">Try again, or go back home.</p>
+            {error.digest ? (
+              <div className="mt-3 font-mono text-[11px] text-[color:var(--bm-muted)]">Digest: {error.digest}</div>
+            ) : null}
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-full bg-[var(--bm-accent)] px-5 py-2 text-sm font-semibold text-[var(--bm-accent-contrast)] hover:opacity-90"
+                className="h-10 rounded-md border border-[var(--bm-border-accent)] bg-[var(--bm-accent)] px-4 font-mono text-[13px] font-semibold text-[var(--bm-accent-contrast)] hover:bg-[var(--bm-accent-hover)]"
                 onClick={() => reset()}
               >
                 Retry
               </button>
               <Link
                 href="/"
-                className="inline-flex items-center justify-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-5 py-2 text-sm font-medium hover:bg-[color:var(--bm-bg)/0.55]"
+                className="inline-flex h-10 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 font-mono text-[13px] font-semibold text-[color:var(--bm-fg)] hover:bg-[var(--bm-surface-3)]"
               >
                 Go home
               </Link>
@@ -47,4 +50,3 @@ export default function GlobalError({
     </html>
   )
 }
-

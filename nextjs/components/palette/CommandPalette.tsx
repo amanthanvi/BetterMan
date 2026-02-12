@@ -8,7 +8,7 @@ import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, getBookmarks } from '../../lib/
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../../lib/recent'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useFocusTrap } from '../../lib/useFocusTrap'
-import { withDistro } from '../../lib/distro'
+import { normalizeDistro, withDistro, type Distro } from '../../lib/distro'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { isTypingTarget } from '../../lib/dom'
 import { useDistro } from '../state/distro'
@@ -30,13 +30,17 @@ type PaletteItem =
       id: string
       name: string
       section: string
+      title?: string
       description: string
+      highlights?: string[]
+      distro?: Distro
       run: () => void
     }
   | {
       kind: 'search'
       id: string
       query: string
+      distro?: Distro
       run: () => void
     }
   | {
@@ -49,6 +53,8 @@ type PaletteItem =
 
 type ActionItem = Extract<PaletteItem, { kind: 'action' }>
 
+type ParsedSearch = { distro?: Distro; text: string }
+
 function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
   if (raw.startsWith('\\>')) return { mode: 'search', text: raw.slice(2) }
   if (raw.startsWith('\\#')) return { mode: 'search', text: raw.slice(2) }
@@ -57,14 +63,31 @@ function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
   return { mode: 'search', text: raw }
 }
 
-function recentToItems(recent: RecentItem[], ctx: { runSearch: (q: string) => void; runMan: (name: string, section: string) => void }) {
+function parseSearchText(raw: string): ParsedSearch {
+  const trimmed = raw.trim()
+  if (!trimmed.startsWith('@')) return { text: trimmed }
+
+  const spaceIdx = trimmed.indexOf(' ')
+  const token = (spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)).slice(1)
+  const distro = normalizeDistro(token)
+  if (!distro) return { text: trimmed }
+
+  const rest = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx + 1)
+  return { distro, text: rest.trim() }
+}
+
+function recentToItems(
+  recent: RecentItem[],
+  ctx: { runSearch: (q: string, distroOverride?: Distro) => void; runMan: (name: string, section: string, distroOverride?: Distro) => void },
+): PaletteItem[] {
   return recent.slice(0, 12).map((r) => {
     if (r.kind === 'search') {
       return {
         kind: 'search' as const,
         id: `search:${r.query}`,
         query: r.query,
-        run: () => ctx.runSearch(r.query),
+        distro: parseSearchText(r.query).distro,
+        run: () => ctx.runSearch(r.query, parseSearchText(r.query).distro),
       }
     }
     return {
@@ -78,7 +101,10 @@ function recentToItems(recent: RecentItem[], ctx: { runSearch: (q: string) => vo
   })
 }
 
-function bookmarksToItems(bookmarks: Array<{ name: string; section: string; description?: string }>, ctx: { runMan: (name: string, section: string) => void }) {
+function bookmarksToItems(
+  bookmarks: Array<{ name: string; section: string; description?: string }>,
+  ctx: { runMan: (name: string, section: string, distroOverride?: Distro) => void },
+): PaletteItem[] {
   return bookmarks.slice(0, 10).map((b) => ({
     kind: 'page' as const,
     id: `bookmark:${b.name}:${b.section}`,
@@ -89,19 +115,19 @@ function bookmarksToItems(bookmarks: Array<{ name: string; section: string; desc
   }))
 }
 
-function resultToItem(
-  result: SearchResult,
-  ctx: { query: string; runMan: (name: string, section: string) => void },
-): PaletteItem {
+function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro; runMan: (name: string, section: string, distroOverride?: Distro) => void }): PaletteItem {
   return {
     kind: 'page',
     id: `page:${result.name}:${result.section}`,
     name: result.name,
     section: result.section,
+    title: result.title,
     description: result.description,
+    highlights: result.highlights,
+    distro: ctx.distro,
     run: () => {
       recordRecentSearch(ctx.query)
-      ctx.runMan(result.name, result.section)
+      ctx.runMan(result.name, result.section, ctx.distro)
     },
   }
 }
@@ -119,6 +145,22 @@ function itemLabel(item: PaletteItem) {
   }
 }
 
+function dedupePages(items: PaletteItem[]): PaletteItem[] {
+  const seen = new Set<string>()
+  const out: PaletteItem[] = []
+  for (const item of items) {
+    if (item.kind !== 'page') {
+      out.push(item)
+      continue
+    }
+    const key = `${item.name}:${item.section}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(item)
+  }
+  return out
+}
+
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const router = useRouter()
   const distro = useDistro()
@@ -127,10 +169,16 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const resultsRef = useRef<HTMLDivElement | null>(null)
+  const previewRef = useRef<HTMLDivElement | null>(null)
+
   const [input, setInput] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const parsed = useMemo(() => parsePaletteInput(input), [input])
-  const debouncedQuery = useDebouncedValue(parsed.text.trim(), 120)
+  const parsedSearch = useMemo(() => (parsed.mode === 'search' ? parseSearchText(parsed.text) : { text: parsed.text.trim() }), [parsed.mode, parsed.text])
+  const effectiveDistro = parsed.mode === 'search' && parsedSearch.distro ? parsedSearch.distro : distro.distro
+  const debouncedQuery = useDebouncedValue(parsed.mode === 'search' ? parsedSearch.text : parsed.text.trim(), 120)
+
   const [bookmarkSet, setBookmarkSet] = useState<Set<string>>(() => new Set())
 
   const [searchState, setSearchState] = useState<{ status: 'idle' | 'loading' | 'error' | 'success'; data?: SearchResponse }>({
@@ -139,16 +187,18 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange])
 
-  const runSearch = (q: string) => {
+  const runSearch = (q: string, distroOverride?: Distro) => {
     const query = q.trim()
     if (!query) return
     recordRecentSearch(query)
-    router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, distro.distro))
+    const targetDistro = distroOverride ?? effectiveDistro
+    router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, targetDistro))
     close()
   }
 
-  const runMan = (name: string, section: string) => {
-    router.push(withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro.distro))
+  const runMan = (name: string, section: string, distroOverride?: Distro) => {
+    const targetDistro = distroOverride ?? effectiveDistro
+    router.push(withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, targetDistro))
     close()
   }
 
@@ -193,7 +243,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     params.set('q', debouncedQuery)
     params.set('limit', '10')
     params.set('offset', '0')
-    if (distro.distro !== 'debian') params.set('distro', distro.distro)
+    if (effectiveDistro !== 'debian') params.set('distro', effectiveDistro)
 
     void fetch(`/api/v1/search?${params.toString()}`, {
       headers: { Accept: 'application/json' },
@@ -210,14 +260,14 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       })
 
     return () => controller.abort()
-  }, [debouncedQuery, distro.distro, open, parsed.mode])
+  }, [debouncedQuery, effectiveDistro, open, parsed.mode])
 
   const sectionActions: ActionItem[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((s) => ({
     kind: 'action',
     id: `action-section-${s}`,
     label: `Go to section ${s}`,
     run: () => {
-      router.push(withDistro(`/section/${encodeURIComponent(s)}`, distro.distro))
+      router.push(withDistro(`/section/${encodeURIComponent(s)}`, effectiveDistro))
       close()
     },
   }))
@@ -236,24 +286,6 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       label: 'Go home',
       run: () => {
         router.push('/')
-        close()
-      },
-    },
-    {
-      kind: 'action',
-      id: 'action-history',
-      label: 'Go to history',
-      run: () => {
-        router.push('/history')
-        close()
-      },
-    },
-    {
-      kind: 'action',
-      id: 'action-bookmarks',
-      label: 'Go to bookmarks',
-      run: () => {
-        router.push('/bookmarks')
         close()
       },
     },
@@ -296,15 +328,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
     const q = parsed.text.trim()
     if (!q) {
-      const bookmarks = getBookmarks().items
-      return [
-        ...bookmarksToItems(bookmarks, { runMan }),
-        ...recentToItems(getRecent(), { runSearch, runMan }),
-        ...baseActions,
-      ]
+      const bookmarkItems = bookmarksToItems(getBookmarks().items, { runMan })
+      const recentItems = recentToItems(getRecent(), { runSearch, runMan })
+      return dedupePages([...recentItems, ...bookmarkItems])
     }
+
     if (searchState.status !== 'success' || !searchState.data) return []
-    return searchState.data.results.map((r) => resultToItem(r, { query: q, runMan }))
+    return searchState.data.results.map((r) => resultToItem(r, { query: q, distro: effectiveDistro, runMan }))
   })()
 
   const safeActiveIndex = items.length ? Math.min(activeIndex, items.length - 1) : 0
@@ -318,6 +348,27 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         e.preventDefault()
         close()
         return
+      }
+
+      if (e.key === 'Tab') {
+        const canPreview = window.matchMedia('(min-width: 640px)').matches && Boolean(previewRef.current)
+        if (canPreview) {
+          const activeEl = document.activeElement
+
+          if (e.shiftKey) {
+            if (activeEl === previewRef.current) {
+              e.preventDefault()
+              inputRef.current?.focus()
+            }
+            return
+          }
+
+          if (activeEl === inputRef.current || activeEl === resultsRef.current) {
+            e.preventDefault()
+            previewRef.current?.focus()
+            return
+          }
+        }
       }
 
       if (isTypingTarget(document.activeElement) && document.activeElement !== inputRef.current) return
@@ -347,17 +398,77 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   if (!open) return null
 
+  const renderPreview = (item: PaletteItem | undefined) => {
+    if (!item) {
+      return <div className="text-[13px] text-[color:var(--bm-muted)]">No selection.</div>
+    }
+
+    if (item.kind === 'page') {
+      const snippet = item.highlights?.filter(Boolean).slice(0, 2).join('\n').trim()
+
+      return (
+        <div className="space-y-3">
+          <div>
+            <div className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{itemLabel(item)}</div>
+            {item.title ? <div className="mt-1 text-[11px] text-[color:var(--bm-muted)]">{item.title}</div> : null}
+            <div className="mt-2 text-[13px] leading-snug text-[color:var(--bm-muted)]">{item.description}</div>
+          </div>
+
+          {snippet ? (
+            <pre className="overflow-x-auto rounded-md border border-[var(--bm-border)] bg-[#0d0d0d] p-3 font-mono text-[11px] leading-relaxed text-[color:var(--bm-fg)]">
+              {snippet}
+            </pre>
+          ) : (
+            <div className="text-[11px] text-[color:var(--bm-muted)]">Press Enter to view details.</div>
+          )}
+
+          {item.distro && item.distro !== 'debian' ? (
+            <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">@{item.distro}</div>
+          ) : null}
+        </div>
+      )
+    }
+
+    if (item.kind === 'search') {
+      return (
+        <div className="space-y-2">
+          <div className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{itemLabel(item)}</div>
+          {item.distro && item.distro !== 'debian' ? <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">@{item.distro}</div> : null}
+          <div className="text-[11px] text-[color:var(--bm-muted)]">Press Enter to search.</div>
+        </div>
+      )
+    }
+
+    if (item.kind === 'heading') {
+      return (
+        <div className="space-y-2">
+          <div className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{item.title}</div>
+          <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">Level {item.level}</div>
+          <div className="text-[11px] text-[color:var(--bm-muted)]">Press Enter to jump.</div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{item.label}</div>
+        {item.detail ? <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">{item.detail}</div> : null}
+        <div className="text-[11px] text-[color:var(--bm-muted)]">Press Enter to run.</div>
+      </div>
+    )
+  }
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-50 flex items-end justify-center pb-[env(safe-area-inset-bottom)] sm:items-center sm:pb-0"
     >
-      <div className="absolute inset-0 bg-black/55" onClick={() => close()} />
+      <div className="absolute inset-0 bg-black/60" onClick={() => close()} />
       <div
         ref={dialogRef}
-        className="relative mx-auto mt-20 w-[min(92vw,44rem)] overflow-hidden rounded-xl border border-[var(--bm-border)] bg-[var(--bm-bg)] shadow-2xl"
+        className="relative w-full overflow-hidden rounded-t-[var(--bm-radius-lg)] border border-[var(--bm-border-accent)] bg-[var(--bm-surface-2)] sm:w-[min(94vw,56rem)] sm:rounded-[var(--bm-radius-lg)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-[var(--bm-border)] p-3">
@@ -377,8 +488,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               setInput(e.target.value)
               setActiveIndex(0)
             }}
-            placeholder="Search… (use > for actions, # for headings)"
-            className="w-full rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            placeholder="Search… (use > for actions, # for headings, @distro)"
+            className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] outline-none placeholder:text-[color:var(--bm-muted)] focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Command palette input"
             role="combobox"
             aria-autocomplete="list"
@@ -388,52 +499,71 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           />
         </div>
 
-        <div
-          className="max-h-[60vh] overflow-y-auto p-2"
-          tabIndex={0}
-          aria-label="Command palette results"
-        >
-          {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
-            <div className="p-3 text-sm text-[color:var(--bm-muted)]">Searching…</div>
-          ) : null}
+        <div className="flex max-h-[60vh]">
+          <div className="w-full border-r border-[var(--bm-border)] sm:w-[60%]">
+            <div
+              ref={resultsRef}
+              className="max-h-[60vh] overflow-y-auto p-2 outline-none"
+              tabIndex={0}
+              aria-label="Command palette results"
+            >
+              {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
+                <div className="p-3 text-[13px] text-[color:var(--bm-muted)]">Searching…</div>
+              ) : null}
 
-          {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'error' ? (
-            <div className="p-3 text-sm text-[color:var(--bm-muted)]">Search failed.</div>
-          ) : null}
+              {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'error' ? (
+                <div className="p-3 text-[13px] text-[color:var(--bm-muted)]">Search failed.</div>
+              ) : null}
 
-          {!items.length && parsed.text.trim() ? (
-            <div className="p-3 text-sm text-[color:var(--bm-muted)]">No matches.</div>
-          ) : null}
+              {!items.length && parsed.text.trim() ? (
+                <div className="p-3 text-[13px] text-[color:var(--bm-muted)]">No matches.</div>
+              ) : null}
 
-          <div id="bm-palette-list" role="listbox" className="space-y-1">
-            {items.map((item, idx) => (
-              <div
-                key={item.id}
-                id={`bm-palette-option-${idx}`}
-                role="option"
-                aria-selected={idx === safeActiveIndex}
-                tabIndex={-1}
-                className={`w-full rounded-md px-3 py-2 text-left text-sm ${
-                  idx === safeActiveIndex
-                    ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
-                    : 'text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.8] hover:text-[color:var(--bm-fg)]'
-                }`}
-                onMouseEnter={() => setActiveIndex(idx)}
-                onClick={() => item.run()}
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="font-medium text-[color:var(--bm-fg)]">{itemLabel(item)}</div>
-                  {item.kind === 'page' && bookmarkSet.has(`${item.name}:${item.section}`) ? (
-                    <div className="text-xs text-[color:var(--bm-muted)]">★</div>
-                  ) : item.kind === 'action' && item.detail ? (
-                    <div className="text-xs text-[color:var(--bm-muted)]">{item.detail}</div>
-                  ) : null}
-                </div>
-                {item.kind === 'page' ? (
-                  <div className="mt-1 text-xs text-[color:var(--bm-muted)]">{item.description}</div>
-                ) : null}
+              <div id="bm-palette-list" role="listbox" className="space-y-1">
+                {items.map((item, idx) => {
+                  const activeRow = idx === safeActiveIndex
+                  const bookmark = item.kind === 'page' ? bookmarkSet.has(`${item.name}:${item.section}`) : false
+
+                  return (
+                    <div
+                      key={item.id}
+                      id={`bm-palette-option-${idx}`}
+                      role="option"
+                      aria-selected={activeRow}
+                      tabIndex={-1}
+                      className={`w-full rounded-md border px-3 py-2 text-left ${
+                        activeRow
+                          ? 'border-[var(--bm-border-accent)] bg-[var(--bm-surface-3)] text-[color:var(--bm-fg)]'
+                          : 'border-transparent text-[color:var(--bm-muted)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)]'
+                      }`}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onClick={() => item.run()}
+                    >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="min-w-0 font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">
+                          {item.kind === 'action' ? `> ${item.label}` : item.kind === 'heading' ? `# ${item.title}` : itemLabel(item)}
+                        </div>
+                        {bookmark ? <div className="text-[11px] text-[color:var(--bm-muted)]">★</div> : null}
+                      </div>
+                      {item.kind === 'page' ? (
+                        <div className="mt-1 truncate text-[11px] text-[color:var(--bm-muted)]">{item.description}</div>
+                      ) : item.kind === 'action' && item.detail ? (
+                        <div className="mt-1 truncate text-[11px] text-[color:var(--bm-muted)]">{item.detail}</div>
+                      ) : null}
+                    </div>
+                  )
+                })}
               </div>
-            ))}
+            </div>
+          </div>
+
+          <div
+            ref={previewRef}
+            className="hidden max-h-[60vh] w-[40%] overflow-y-auto p-3 outline-none sm:block"
+            tabIndex={0}
+            aria-label="Command palette preview"
+          >
+            {renderPreview(active)}
           </div>
         </div>
       </div>

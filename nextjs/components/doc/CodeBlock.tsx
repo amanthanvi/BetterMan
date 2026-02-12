@@ -2,6 +2,9 @@
 
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 
+import { CheckIcon, CopyIcon } from '../icons'
+import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
+
 let hljsPromise: Promise<unknown> | null = null
 
 async function loadHljs(): Promise<unknown> {
@@ -28,6 +31,11 @@ async function loadHljs(): Promise<unknown> {
   return hljsPromise
 }
 
+type HighlightCtx = {
+  findQuery?: string
+  optionRegex?: RegExp
+}
+
 export function CodeBlock({
   id,
   text,
@@ -43,7 +51,8 @@ export function CodeBlock({
 }) {
   const [copied, setCopied] = useState(false)
   const language = normalizeLanguageHint(languageHint) ?? 'bash'
-  const markedText = useMemo(() => buildMarkedText(text, { findQuery, optionRegex }), [findQuery, optionRegex, text])
+  const ctx = useMemo((): HighlightCtx => ({ findQuery, optionRegex }), [findQuery, optionRegex])
+  const markedText = useMemo(() => buildMarkedText(text, ctx), [ctx, text])
   const fallbackHtml = useMemo(() => applyMarkers(escapeHtml(markedText)), [markedText])
   const [highlighted, setHighlighted] = useState<{ source: string; html: string } | null>(null)
   const timeoutRef = useRef<number | null>(null)
@@ -91,20 +100,30 @@ export function CodeBlock({
     }
   }
 
+  const languageLabel = language
+
   return (
-    <div id={id ?? undefined} className="relative scroll-mt-32">
-      <button
-        type="button"
-        className="absolute right-3 top-3 rounded-full border border-[var(--bm-code-border)] bg-[color:var(--bm-code-surface)/0.85] p-2 text-[color:var(--bm-code-muted)] shadow-sm hover:bg-[color:var(--bm-code-surface)]"
-        onClick={copy}
-        aria-label="Copy code block"
-        title={copied ? 'Copied' : 'Copy'}
-      >
-        {copied ? <CheckIcon /> : <CopyIcon />}
-      </button>
-      <pre className="overflow-x-auto rounded-2xl border border-[var(--bm-code-border)] bg-[color:var(--bm-code-bg)/0.35] p-5 text-[length:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)] shadow-sm">
-        <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />
-      </pre>
+    <div id={id ?? undefined} className="scroll-mt-32">
+      <div className="-mx-4 overflow-hidden rounded-none border border-[var(--bm-code-border)] bg-[#0d0d0d] sm:mx-0 sm:rounded-[var(--bm-radius)]">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--bm-code-border)] px-3 py-2">
+          <div className="min-w-0 truncate font-mono text-xs tracking-wide text-[color:var(--bm-code-muted)]">
+            {languageLabel}
+          </div>
+          <button
+            type="button"
+            className="inline-flex size-8 items-center justify-center rounded-[var(--bm-radius-sm)] border border-transparent text-[color:var(--bm-code-muted)] transition-colors hover:border-[var(--bm-code-border)] hover:text-[color:var(--bm-code-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            onClick={copy}
+            aria-label="Copy code block"
+            title={copied ? 'Copied' : 'Copy'}
+          >
+            {copied ? <CheckIcon /> : <CopyIcon />}
+          </button>
+        </div>
+
+        <pre className="overflow-x-auto p-4 text-[13px] leading-[1.6]">
+          <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />
+        </pre>
+      </div>
     </div>
   )
 }
@@ -131,20 +150,21 @@ function escapeHtml(text: string) {
     .replaceAll("'", '&#039;')
 }
 
-function buildMarkedText(text: string, opts: { findQuery?: string; optionRegex?: RegExp }) {
-  const findQuery = opts.findQuery?.trim()
+function buildMarkedText(text: string, ctx: HighlightCtx) {
+  const findQuery = ctx.findQuery?.trim()
   const hasFind = Boolean(findQuery && findQuery.length >= 2)
-  const hasOpt = Boolean(opts.optionRegex)
+  const hasOpt = Boolean(ctx.optionRegex)
 
   if (!hasFind && !hasOpt) return text
 
   const findRanges = hasFind ? getRanges(text, new RegExp(escapeRegExp(findQuery!), 'gi')) : []
-  const optRanges = hasOpt ? getRanges(text, opts.optionRegex!) : []
+  const optRanges = hasOpt ? getRanges(text, ctx.optionRegex!) : []
   const optFiltered = optRanges.filter((r) => !overlapsAny(r, findRanges))
 
-  const merged = [...findRanges.map((r) => ({ ...r, kind: 'find' as const })), ...optFiltered.map((r) => ({ ...r, kind: 'opt' as const }))].sort(
-    (a, b) => a.start - b.start,
-  )
+  const merged = [
+    ...findRanges.map((r) => ({ ...r, kind: 'find' as const })),
+    ...optFiltered.map((r) => ({ ...r, kind: 'opt' as const })),
+  ].sort((a, b) => a.start - b.start)
 
   if (!merged.length) return text
 
@@ -173,67 +193,8 @@ function applyMarkers(html: string) {
   return out
 }
 
-function overlapsAny(a: { start: number; end: number }, ranges: Array<{ start: number; end: number }>) {
-  return ranges.some((b) => a.start < b.end && b.start < a.end)
-}
-
-function getRanges(text: string, regex: RegExp) {
-  const ranges: Array<{ start: number; end: number }> = []
-  regex.lastIndex = 0
-  while (true) {
-    const m = regex.exec(text)
-    if (!m || m.index == null) break
-    const start = m.index
-    const end = start + m[0].length
-    if (end > start) ranges.push({ start, end })
-    if (!m[0].length) regex.lastIndex += 1
-  }
-  return ranges
-}
-
-function escapeRegExp(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 function shouldHighlight(text: string) {
   // preserve box-drawing diagrams as plain monospace
   if (/[\u2500-\u257F]/.test(text)) return false
   return true
-}
-
-function CopyIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  )
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
 }

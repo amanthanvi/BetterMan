@@ -1,12 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
 
 import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
 import { withDistro } from '../../lib/distro'
+
+function CardShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="h-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3 transition-colors group-hover:border-[var(--bm-border-accent)]">
+      {children}
+    </div>
+  )
+}
 
 export function ManPageFooterSections({
   distro,
@@ -17,73 +24,73 @@ export function ManPageFooterSections({
   seeAlso?: ManPageContent['seeAlso']
   relatedItems: SectionPage[]
 }) {
-  const [showAllRelated, setShowAllRelated] = useState(false)
-  const seeAlsoItems = seeAlso ?? []
+  const seeAlsoItems = (seeAlso ?? []).slice(0, 24)
+  const related = relatedItems.slice(0, 24)
 
   return (
     <>
       {seeAlsoItems.length ? (
-        <aside className="mt-10">
+        <aside className="mt-12" aria-label="See also">
           <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">See also</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {seeAlsoItems.slice(0, 24).map((ref) => (
-              <li key={`${ref.name}:${ref.section ?? ''}`}>
-                {ref.section && !ref.resolvedPageId ? (
-                  <span
-                    aria-disabled="true"
-                    className="inline-flex cursor-not-allowed items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.25] px-3 py-1 text-sm text-[color:var(--bm-muted)] opacity-70"
-                    title="Not available in this dataset"
-                  >
-                    {ref.name}({ref.section})
-                    <span className="sr-only"> (not available)</span>
-                  </span>
-                ) : ref.section ? (
-                  <Link
-                    href={withDistro(`/man/${encodeURIComponent(ref.name)}/${encodeURIComponent(ref.section)}`, distro)}
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
-                  >
-                    {ref.name}({ref.section})
-                  </Link>
-                ) : (
-                  <Link
-                    href={withDistro(`/man/${encodeURIComponent(ref.name)}`, distro)}
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
-                  >
-                    {ref.name}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 overflow-x-auto pb-2">
+            <ul className="flex gap-3">
+              {seeAlsoItems.map((ref) => {
+                const key = `${ref.name}:${ref.section ?? ''}`
+                const title = ref.section ? `${ref.name}(${ref.section})` : ref.name
+
+                if (ref.section && !ref.resolvedPageId) {
+                  return (
+                    <li key={key} className="w-[min(18rem,80vw)] shrink-0">
+                      <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-3 opacity-70" aria-disabled="true">
+                        <div className="font-mono text-sm font-semibold text-[color:var(--bm-fg)]">{title}</div>
+                        <div className="mt-1 text-sm text-[color:var(--bm-muted)]">Not available in this dataset</div>
+                        <span className="sr-only"> (not available)</span>
+                      </div>
+                    </li>
+                  )
+                }
+
+                const href = ref.section
+                  ? withDistro(`/man/${encodeURIComponent(ref.name)}/${encodeURIComponent(ref.section)}`, distro)
+                  : withDistro(`/man/${encodeURIComponent(ref.name)}`, distro)
+
+                return (
+                  <li key={key} className="w-[min(18rem,80vw)] shrink-0">
+                    <Link href={href} className="group block h-full focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]">
+                      <CardShell>
+                        <div className="font-mono text-sm font-semibold text-[color:var(--bm-fg)]">{title}</div>
+                      </CardShell>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         </aside>
       ) : null}
 
-      {relatedItems.length ? (
-        <aside className="mt-10">
+      {related.length ? (
+        <aside className="mt-12" aria-label="Related commands">
           <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Related</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {(showAllRelated ? relatedItems : relatedItems.slice(0, 5)).map((item) => (
-              <li key={`${item.name}:${item.section}`}>
-                <Link
-                  href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, distro)}
-                  className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.75] px-3 py-1 text-sm hover:bg-[color:var(--bm-surface)/0.9]"
-                >
-                  {item.name}({item.section})
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {relatedItems.length > 5 ? (
-            <div className="mt-3">
-              <button
-                type="button"
-                className="text-sm underline underline-offset-4"
-                onClick={() => setShowAllRelated((v) => !v)}
-              >
-                {showAllRelated ? 'Show fewer' : `Show all (${relatedItems.length})`}
-              </button>
-            </div>
-          ) : null}
+          <div className="mt-3 overflow-x-auto pb-2">
+            <ul className="flex gap-3">
+              {related.map((item) => (
+                <li key={`${item.name}:${item.section}`} className="w-[min(18rem,80vw)] shrink-0">
+                  <Link
+                    href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, distro)}
+                    className="group block h-full focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                  >
+                    <CardShell>
+                      <div className="font-mono text-sm font-semibold text-[color:var(--bm-fg)]">
+                        {item.name}({item.section})
+                      </div>
+                      <div className="mt-1 truncate text-sm text-[color:var(--bm-muted)]">{item.description}</div>
+                    </CardShell>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </aside>
       ) : null}
     </>

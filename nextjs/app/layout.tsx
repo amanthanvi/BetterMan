@@ -9,6 +9,12 @@ export const metadata: Metadata = {
   title: 'BetterMan',
   description: 'BetterMan is a fast, readable web UI for Linux man pages.',
   manifest: '/site.webmanifest',
+  openGraph: {
+    title: 'BetterMan',
+    description: 'BetterMan is a fast, readable web UI for Linux man pages.',
+    type: 'website',
+    images: ['/og-image.png'],
+  },
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -16,6 +16,7 @@ import {
 
 import type { Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
+import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
 import { CodeBlock } from './CodeBlock'
 
 type BmScrollBehavior = 'auto' | 'smooth'
@@ -236,14 +237,27 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
     case 'heading': {
       const level = clamp(block.level, 2, 6)
       const Tag = (`h${level}` as unknown) as 'h2'
+
+      const base = 'scroll-mt-32 pt-8 first:pt-0 text-[color:var(--bm-fg)]'
+      const headingClass =
+        level === 2
+          ? 'border-l-[3px] border-[var(--bm-accent)] pl-3 text-[20px] font-semibold tracking-tight leading-[1.2]'
+          : level === 3
+            ? 'text-[16px] font-semibold tracking-tight leading-[1.2]'
+            : level === 4
+              ? 'text-[14px] font-bold leading-[1.2]'
+              : 'text-[13px] font-semibold leading-[1.2]'
+
       return (
-        <Tag
-          id={block.id}
-          className="scroll-mt-32 pt-8 text-[color:var(--bm-fg)] first:pt-0 data-[level=2]:text-2xl data-[level=2]:font-semibold data-[level=2]:tracking-tight data-[level=3]:text-xl data-[level=3]:font-semibold data-[level=3]:tracking-tight data-[level=4]:text-base data-[level=4]:font-semibold"
-          data-level={level}
-        >
-          <a href={`#${block.id}`} className="no-underline hover:underline">
-            {highlightText(block.text, ctx)}
+        <Tag id={block.id} className={`${base} ${headingClass}`} data-level={level}>
+          <a href={`#${block.id}`} className="group inline-flex min-w-0 items-baseline gap-2 no-underline">
+            <span className="min-w-0 flex-1">{highlightText(block.text, ctx)}</span>
+            <span
+              aria-hidden="true"
+              className="font-mono text-xs text-[color:var(--bm-muted)] opacity-0 transition-opacity group-hover:opacity-100"
+            >
+              #
+            </span>
           </a>
         </Tag>
       )
@@ -256,7 +270,7 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
       const ListTag = (block.ordered ? 'ol' : 'ul') as 'ol'
       return (
         <ListTag
-          className={`ml-6 space-y-2 text-[color:var(--bm-fg)] ${block.ordered ? 'list-decimal' : 'list-disc'}`}
+          className={`ml-6 space-y-1.5 text-[color:var(--bm-fg)] ${block.ordered ? 'list-decimal' : 'list-disc'}`}
         >
           {block.items.map((itemBlocks, idx) => (
             <li key={idx}>
@@ -273,13 +287,13 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
 
     case 'definition_list':
       return (
-        <dl className="space-y-4">
+        <dl className="space-y-3">
           {block.items.map((item, idx) => (
             <div key={item.id ?? idx}>
               <dt id={item.id ?? undefined} className="scroll-mt-32 font-mono text-sm font-semibold text-[color:var(--bm-fg)]">
                 {renderInlines(item.termInlines, ctx, distro)}
               </dt>
-              <dd className="mt-2 space-y-2 pl-4 text-[color:var(--bm-fg)]">
+              <dd className="mt-1.5 space-y-2 pl-4 text-[color:var(--bm-fg)]">
                 {item.definitionBlocks.map((child, childIdx) => (
                   <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} distro={distro} />
                 ))}
@@ -302,12 +316,12 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
 
     case 'table':
       return (
-        <div className="overflow-x-auto rounded-2xl border border-[var(--bm-border)] bg-[color:var(--bm-surface)/0.65] shadow-sm">
+        <div className="overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-border)] bg-[var(--bm-surface)]">
           <table className="w-full border-collapse text-left text-[color:var(--bm-fg)]">
-            <thead className="bg-[color:var(--bm-bg)/0.7] text-[color:var(--bm-muted)]">
+            <thead className="bg-[var(--bm-surface-2)] text-[color:var(--bm-muted)]">
               <tr>
                 {block.headers.map((h, idx) => (
-                  <th key={idx} className="border-b border-[var(--bm-border)] px-3 py-2 font-medium">
+                  <th key={idx} className="border-b border-[var(--bm-border)] px-3 py-2 font-mono text-xs font-medium tracking-wide">
                     {highlightText(h, ctx)}
                   </th>
                 ))}
@@ -315,9 +329,9 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
             </thead>
             <tbody>
               {block.rows.map((row, rowIdx) => (
-                <tr key={rowIdx} className="odd:bg-[color:var(--bm-bg)/0.35]">
+                <tr key={rowIdx} className="border-b border-[var(--bm-border)] last:border-b-0 even:bg-[var(--bm-surface-2)]">
                   {row.map((cell, cellIdx) => (
-                    <td key={cellIdx} className="border-b border-[var(--bm-border)] px-3 py-2">
+                    <td key={cellIdx} className="px-3 py-2 text-sm">
                       {highlightText(cell, ctx)}
                     </td>
                   ))}
@@ -340,7 +354,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
         return <span key={idx}>{highlightText(inline.text, ctx)}</span>
       case 'code':
         return (
-          <code key={idx} className="rounded bg-[color:var(--bm-code-bg)/0.8] px-1 py-0.5 font-mono text-[0.95em]">
+          <code key={idx} className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-1.5 py-0.5 font-mono text-[0.95em] text-[color:var(--bm-fg)]">
             {highlightText(inline.text, ctx)}
           </code>
         )
@@ -401,10 +415,6 @@ function buildOptionRegex(terms?: string[]) {
   return new RegExp(body, 'g')
 }
 
-function escapeRegExp(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 function highlightText(text: string, ctx: HighlightCtx) {
   const hasFind = Boolean(ctx.findRegex)
   const hasOpt = Boolean(ctx.optionRegex)
@@ -444,24 +454,6 @@ function highlightText(text: string, ctx: HighlightCtx) {
 
   if (cursor < text.length) out.push(<span key={`t:${cursor}`}>{text.slice(cursor)}</span>)
   return out
-}
-
-function overlapsAny(a: { start: number; end: number }, ranges: Array<{ start: number; end: number }>) {
-  return ranges.some((b) => a.start < b.end && b.start < a.end)
-}
-
-function getRanges(text: string, regex: RegExp) {
-  const ranges: Array<{ start: number; end: number }> = []
-  regex.lastIndex = 0
-  while (true) {
-    const m = regex.exec(text)
-    if (!m || m.index == null) break
-    const start = m.index
-    const end = start + m[0].length
-    if (end > start) ranges.push({ start, end })
-    if (!m[0].length) regex.lastIndex += 1
-  }
-  return ranges
 }
 
 function buildAnchorIndex(blocks: BlockNode[]) {
