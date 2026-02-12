@@ -76,6 +76,8 @@ export function DistroProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
+  const search = searchParams.toString()
+
   const [distro, setDistroState] = useState<Distro>(() => readInitialDistro())
 
   const setDistro = useCallback(
@@ -86,17 +88,16 @@ export function DistroProvider({ children }: { children: React.ReactNode }) {
 
       const url = buildUrlWithDistro({
         pathname,
-        searchParams: new URLSearchParams(searchParams.toString()),
+        searchParams: new URLSearchParams(search),
         distro: next,
       })
-      router.push(url, { scroll: false })
-      router.refresh()
+      router.replace(url, { scroll: false })
     },
-    [pathname, router, searchParams],
+    [pathname, router, search],
   )
 
   useEffect(() => {
-    const fromUrl = normalizeDistro(searchParams.get('distro'))
+    const fromUrl = normalizeDistro(new URLSearchParams(search).get('distro'))
     if (!fromUrl) return
 
     setDistroState((prev) => {
@@ -105,7 +106,7 @@ export function DistroProvider({ children }: { children: React.ReactNode }) {
       writeCookie(fromUrl)
       return fromUrl
     })
-  }, [searchParams])
+  }, [search])
 
   const value = useMemo(() => ({ distro, setDistro }), [distro, setDistro])
   return <DistroContext.Provider value={value}>{children}</DistroContext.Provider>
