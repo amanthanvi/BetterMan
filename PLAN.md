@@ -295,13 +295,13 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [ ] Visual review: all pages in dark and light mode
 - [ ] Mobile: test on iOS Safari + Android Chrome
 - [ ] Keyboard-only flow: full navigation test
-- [ ] E2E: existing Playwright tests pass (update selectors as needed)
+- [x] E2E: existing Playwright tests pass (update selectors as needed)
 - [ ] Bundle size: no regression beyond font swap delta
 - [ ] CSP: verify nonces still work with new assets
 
 ### M60 — Release v0.6.0
 
-- [ ] CI green on `main`
+- [x] CI green on `main`
 - [x] Docs updated (`SPEC.md`, `README.md`, `PLAN.md`)
 - [ ] Lighthouse comparison (v0.5.0 vs v0.6.0) documented
 - [ ] Tag `v0.6.0`
