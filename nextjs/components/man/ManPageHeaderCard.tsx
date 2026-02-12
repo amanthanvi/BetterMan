@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 import type { Distro } from '../../lib/distro'
 import { DISTRO_LABEL, normalizeDistro } from '../../lib/distro'
@@ -42,7 +42,6 @@ export function ManPageHeaderCard({
 }) {
   const variantPicker = buildVariantPicker(variants)
 
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -107,6 +106,18 @@ export function ManPageHeaderCard({
                   const next = normalizeDistro(e.target.value)
                   if (!next) return
 
+                  try {
+                    localStorage.setItem('bm-distro', next)
+                  } catch {
+                    // ignore
+                  }
+
+                  try {
+                    document.cookie = `bm-distro=${encodeURIComponent(next)}; Path=/; Max-Age=31536000; SameSite=Lax`
+                  } catch {
+                    // ignore
+                  }
+
                   const params = new URLSearchParams(searchParams.toString())
                   if (next === 'debian') params.delete('distro')
                   else params.set('distro', next)
@@ -116,22 +127,15 @@ export function ManPageHeaderCard({
                   const target = `${base}${window.location.hash || ''}`
 
                   try {
-                    router.replace(target, { scroll: false })
-                    window.setTimeout(() => {
-                      try {
-                        const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
-                        if (current === target) return
-                        window.location.assign(target)
-                      } catch {
-                        window.location.assign(target)
-                      }
-                    }, 750)
+                    window.history.replaceState(null, '', target)
                   } catch {
-                    try {
-                      window.location.assign(target)
-                    } catch {
-                      // ignore
-                    }
+                    // ignore
+                  }
+
+                  try {
+                    window.location.assign(target)
+                  } catch {
+                    // ignore
                   }
                 }}
                 className="bg-transparent text-[color:var(--bm-fg)] outline-none"
