@@ -402,9 +402,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             ) : null}
           </div>
-          <Link href={withDistro('/licenses', distro.distro)} className="underline underline-offset-4">
-            Licenses
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href={withDistro('/licenses', distro.distro)} className="underline underline-offset-4">
+              Licenses
+            </Link>
+            <a
+              href="https://github.com/amanthanvi/BetterMan"
+              className="underline underline-offset-4"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GitHub
+            </a>
+          </div>
         </div>
       </footer>
 
