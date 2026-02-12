@@ -24,6 +24,7 @@ BetterMan is a fast, modern web interface for Linux man pages (see `SPEC.md`).
 - `v0.3.0` shipped (tag `v0.3.0`) (multi-distribution + SEO + performance).
 - `v0.4.0` shipped (tag `v0.4.0`) (hardening + discoverability + observability).
 - `v0.5.0` shipped (tag `v0.5.0`) (Next.js migration + 7 distros + bookmarks/history + PWA).
+- `v0.6.0` in progress (design + UI/UX overhaul).
 - Default branch: `main`. Execution plan: `PLAN.md`.
 
 ## Deploy (Railway)
@@ -83,9 +84,9 @@ When set, X-Forwarded-For is only trusted from connections originating within th
 
 ## UX notes
 
-- Desktop man pages: sticky “Navigator” rail (TOC + Find) with scroll-spy.
-- Man page: “Find in page” stays sticky by default; users can hide/show it.
-- Mobile: TOC is available via the sticky header “TOC” button (drawer).
+- Desktop man pages: toggleable “Navigator” panel (TOC + Find), hidden by default (toggle via `b` or header button).
+- Find-in-page: desktop inside Navigator; mobile uses a compact floating find bar.
+- `/bookmarks` and `/history` redirect to `/` (homepage dashboard includes Recent + Bookmarks).
 - Man sections support extended suffixes (e.g. `/man/openssl/1ssl`, `/section/3p`).
 
 ## Golden commands
