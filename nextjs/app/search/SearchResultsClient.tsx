@@ -83,7 +83,7 @@ function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResu
         <div className="text-[13px] text-[color:var(--bm-muted)]">{highlight(r.description, q)}</div>
 
         {synopsis ? (
-          <pre className="overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-3 font-mono text-xs leading-[1.6] text-[color:var(--bm-fg)]" tabIndex={0}>
+          <pre className="rounded-[var(--bm-radius)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-3 font-mono text-xs leading-[1.6] text-[color:var(--bm-fg)] whitespace-pre-wrap break-words">
             <code>{highlight(synopsis, q)}</code>
           </pre>
         ) : null}

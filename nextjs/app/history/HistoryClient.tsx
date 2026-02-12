@@ -112,10 +112,10 @@ export function HistoryClient() {
       aria-selected={tab === id}
       aria-controls="bm-history-panel"
       tabIndex={tab === id ? 0 : -1}
-      className={`rounded-full border border-[var(--bm-border)] px-4 py-2 text-sm font-medium ${
+      className={`rounded-md border border-[var(--bm-border)] px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] ${
         tab === id
-          ? 'bg-[color:var(--bm-accent)/0.14] text-[color:var(--bm-fg)]'
-          : 'bg-[var(--bm-surface)] text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-surface)/0.9] hover:text-[color:var(--bm-fg)]'
+          ? 'border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] text-[color:var(--bm-fg)]'
+          : 'bg-[var(--bm-surface)] text-[color:var(--bm-muted)] hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)]'
       }`}
       onClick={() => setTab(id)}
     >
@@ -135,7 +135,7 @@ export function HistoryClient() {
           </div>
           <button
             type="button"
-            className="rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--bm-surface)/0.9] disabled:opacity-50"
+            className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2 text-sm font-medium text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] disabled:opacity-50"
             onClick={clear}
             disabled={!items.length}
           >
@@ -154,7 +154,7 @@ export function HistoryClient() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter history…"
-            className="w-full rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
             aria-label="Filter history"
           />
         </div>
@@ -212,7 +212,7 @@ export function HistoryClient() {
 
                       <button
                         type="button"
-                        className="rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.35] px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] hover:bg-[color:var(--bm-bg)/0.55]"
+                        className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-3 py-2 text-xs font-medium text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
                         onClick={() => {
                           if (it.kind === 'search') removeRecent({ kind: 'search', query: it.query })
                           else removeRecent({ kind: 'page', name: it.name, section: it.section })

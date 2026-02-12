@@ -169,7 +169,7 @@ export default async function ManByNameAndSectionPage({
                 <li key={opt.section}>
                   <Link
                     href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, distro)}
-                    className="inline-flex items-center rounded-full border border-[var(--bm-border)] bg-[color:var(--bm-bg)/0.4] px-3 py-1 text-sm hover:bg-[color:var(--bm-bg)/0.6]"
+                    className="inline-flex items-center rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-1 text-sm text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
                   >
                     {name}({opt.section})
                   </Link>
