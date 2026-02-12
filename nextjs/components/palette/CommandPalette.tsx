@@ -415,7 +415,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           </div>
 
           {snippet ? (
-            <pre className="overflow-x-auto rounded-md border border-[var(--bm-border)] bg-[#0d0d0d] p-3 font-mono text-[11px] leading-relaxed text-[color:var(--bm-fg)]">
+            <pre className="overflow-x-auto rounded-md border border-[var(--bm-border)] bg-[#0d0d0d] p-3 font-mono text-[11px] leading-relaxed text-[color:var(--bm-fg)]" tabIndex={0}>
               {snippet}
             </pre>
           ) : (
@@ -505,6 +505,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               ref={resultsRef}
               className="max-h-[60vh] overflow-y-auto p-2 outline-none"
               tabIndex={0}
+              role="region"
               aria-label="Command palette results"
             >
               {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
@@ -561,6 +562,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             ref={previewRef}
             className="hidden max-h-[60vh] w-[40%] overflow-y-auto p-3 outline-none sm:block"
             tabIndex={0}
+            role="region"
             aria-label="Command palette preview"
           >
             {renderPreview(active)}

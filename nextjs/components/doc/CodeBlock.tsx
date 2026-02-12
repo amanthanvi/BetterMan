@@ -120,7 +120,7 @@ export function CodeBlock({
           </button>
         </div>
 
-        <pre className="overflow-x-auto p-4 text-[13px] leading-[1.6]">
+        <pre className="overflow-x-auto p-4 text-[13px] leading-[1.6]" tabIndex={0}>
           <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />
         </pre>
       </div>

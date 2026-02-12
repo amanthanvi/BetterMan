@@ -137,7 +137,7 @@ export function ManPageHeaderCard({
         {synopsis?.length ? (
           <div>
             <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Synopsis</div>
-            <pre className="mt-3 overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-[#0d0d0d] p-4 text-[13px] leading-[1.6] text-[color:var(--bm-code-fg)]">
+            <pre className="mt-3 overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-[#0d0d0d] p-4 text-[13px] leading-[1.6] text-[color:var(--bm-code-fg)]" tabIndex={0}>
               <code>{synopsis.join('\n')}</code>
             </pre>
           </div>

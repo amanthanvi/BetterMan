@@ -96,11 +96,15 @@ export function DistroProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fromUrl = normalizeDistro(searchParams.get('distro'))
-    if (!fromUrl || fromUrl === distro) return
-    setDistroState(fromUrl)
-    writeStoredDistro(fromUrl)
-    writeCookie(fromUrl)
-  }, [distro, searchParams])
+    if (!fromUrl) return
+
+    setDistroState((prev) => {
+      if (prev === fromUrl) return prev
+      writeStoredDistro(fromUrl)
+      writeCookie(fromUrl)
+      return fromUrl
+    })
+  }, [searchParams])
 
   const value = useMemo(() => ({ distro, setDistro }), [distro, setDistro])
   return <DistroContext.Provider value={value}>{children}</DistroContext.Provider>
