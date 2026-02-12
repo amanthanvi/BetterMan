@@ -265,7 +265,6 @@ export function ManPageView({
         synopsis={content.synopsis}
         variants={variants}
         distro={distro.distro}
-        setDistro={distro.setDistro}
         hasNavigator={toc.items.length > 0}
         onOpenNavigator={openNavigator}
         onOpenPrefs={openPrefs}

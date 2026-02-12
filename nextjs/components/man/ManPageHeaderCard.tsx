@@ -1,5 +1,7 @@
 'use client'
 
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+
 import type { Distro } from '../../lib/distro'
 import { DISTRO_LABEL, normalizeDistro } from '../../lib/distro'
 import type { ManPage, ManPageVariant } from '../../lib/docModel'
@@ -22,7 +24,6 @@ export function ManPageHeaderCard({
   synopsis,
   variants,
   distro,
-  setDistro,
   hasNavigator,
   onOpenNavigator,
   onOpenPrefs,
@@ -33,7 +34,6 @@ export function ManPageHeaderCard({
   synopsis?: string[] | null
   variants: ManPageVariant[]
   distro: Distro
-  setDistro: (next: Distro) => void
   hasNavigator: boolean
   onOpenNavigator: () => void
   onOpenPrefs: () => void
@@ -41,6 +41,10 @@ export function ManPageHeaderCard({
   copiedLink: boolean
 }) {
   const variantPicker = buildVariantPicker(variants)
+
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   return (
     <header className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-6">
@@ -102,7 +106,13 @@ export function ManPageHeaderCard({
                 onChange={(e) => {
                   const next = normalizeDistro(e.target.value)
                   if (!next) return
-                  setDistro(next)
+
+                  const params = new URLSearchParams(searchParams.toString())
+                  if (next === 'debian') params.delete('distro')
+                  else params.set('distro', next)
+
+                  const qs = params.toString()
+                  router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
                 }}
                 className="bg-transparent text-[color:var(--bm-fg)] outline-none"
                 aria-label="Select distribution variant"
@@ -111,7 +121,7 @@ export function ManPageHeaderCard({
                   const normalized = normalizeDistro(v.distro)
                   if (!normalized) return null
                   return (
-                    <option key={v.distro} value={v.distro}>
+                    <option key={v.distro} value={normalized}>
                       {DISTRO_LABEL[normalized]}
                     </option>
                   )
