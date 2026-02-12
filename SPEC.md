@@ -1,10 +1,10 @@
 # 1. Title / Version / Status
 
 **Project:** BetterMan
-**Spec Version:** v0.5.0
-**Status:** Shipped (v0.5.0 shipped, v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
-**Last Updated:** 2026-02-07 (EST)
-**Interview Status:** Complete - v0.5.0 scoped
+**Spec Version:** v0.6.0
+**Status:** v0.6.0 in progress (v0.5.0 shipped, v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Last Updated:** 2026-02-12 (EST)
+**Interview Status:** Complete - v0.6.0 scoped
 
 ---
 
@@ -64,6 +64,11 @@
 -   **Phase 3 (UX Engagement):** Bookmarks/favorites, enhanced history, reading preferences — all localStorage-based, no backend changes.
 -   **Phase 4 (Mobile & PWA):** Service worker for offline reading, mobile bottom navigation, touch gestures, add-to-homescreen.
 -   **Phase 5 (Infra & Polish):** Staging/prod full isolation, horizontal scaling readiness, documentation and release.
+
+
+**v0.6.0 focus:** Complete design and UI/UX overhaul — hacker-tool aesthetic:
+
+-   **Design system:** New typography (Geist Sans + JetBrains Mono), OLED-black dark mode, flat surfaces with crisp borders, tight 4–6px radii, red accent refinement, subtle dot-grid background.
 
 ---
 
@@ -3277,3 +3282,411 @@ v0.5.0 has **deployment breaking changes**:
 4. Verify SSR, API proxy, Sentry, Plausible
 5. Verify all 7 distros ingested and active
 6. Remove old SPA deploy config
+
+---
+
+# 28. v0.6.0 — Design & UI/UX Overhaul
+
+## Overview
+
+v0.6.0 is a comprehensive design and UI/UX overhaul that transforms BetterMan from a warm editorial aesthetic into a hacker-tool developer experience. This release focuses entirely on the frontend — no backend/API changes, no database migrations, no ingestion pipeline changes. It ships as a big-bang visual refresh across all pages and components.
+
+**This release has no breaking URL, API, or deployment changes.** All URLs, keyboard shortcuts, and features continue to work. The change is purely visual/UX.
+
+## Design Philosophy
+
+**Identity:** Premium developer tool — think Linear, Warp, Raycast. Dark-first, information-dense, keyboard-native, typographically disciplined.
+
+**Not:** Retro terminal cosplay, generic SaaS dashboard, or minimalist blank-page. BetterMan should feel like a tool built by developers for developers — opinionated, sharp, fast.
+
+**Principles:**
+- **Density over whitespace.** Man pages are reference material; users scan, not leisurely read. Maximize useful information per viewport.
+- **Monospace is a first-class citizen.** Technical content (names, sections, flags, code) renders in monospace. Prose uses the geometric sans.
+- **Dark is the default.** OLED black base, designed dark-first. Light mode is a warm-paper complement, not an afterthought.
+- **Borders define structure.** No shadows, no blur, no gradients for depth. Hairline borders and brightness steps create hierarchy.
+- **Motion serves function.** 100–200ms transitions on state changes only. Nothing decorative. Everything feels instant but polished.
+
+## Design System
+
+### Typography
+
+**Primary (UI/prose):** Geist Sans (variable weight, 100–900)
+- Why: designed for developer UIs, excellent readability at small sizes, open source, pairs naturally with monospace.
+- Replaces: Newsreader serif.
+
+**Monospace (code/technical):** JetBrains Mono (variable weight, 100–800)
+- Why: best-in-class for code readability, distinctive character shapes, already in the bundle.
+- Retained from v0.5.0.
+
+**Type scale:**
+
+| Token | Size | Weight | Use |
+|-------|------|--------|-----|
+| `xs` | 11px | 400 | Metadata, timestamps, badges |
+| `sm` | 13px | 400–500 | Secondary text, descriptions, nav items |
+| `base` | 14px | 400 | Body text, reading content |
+| `lg` | 16px | 500–600 | Subheadings (H3, H4) |
+| `xl` | 20px | 600 | Section headings (H2) |
+| `2xl` | 24px | 600 | Page titles |
+| `3xl` | 32px | 700 | Hero/display (homepage prompt, man page name) |
+
+**Line heights:** Prose 1.7, UI 1.4, Code 1.6, Headings 1.1–1.2.
+
+**Letter spacing:** Prose 0em (Geist is optimized), Mono 0.01em, Headings -0.02em (tight).
+
+### Color Palette
+
+**Dark mode (primary):**
+
+| Token | Value | Use |
+|-------|-------|-----|
+| `--bm-bg` | `#000000` | Page background (OLED black) |
+| `--bm-surface` | `#0a0a0a` | Primary surface (cards, panels) |
+| `--bm-surface-2` | `#111111` | Elevated surface (headers, drawers) |
+| `--bm-surface-3` | `#1a1a1a` | Hover/active surface state |
+| `--bm-fg` | `#e8e8e8` | Primary text |
+| `--bm-muted` | `#737373` | Secondary text, placeholders |
+| `--bm-border` | `rgba(255,255,255,0.08)` | Default hairline borders |
+| `--bm-border-accent` | `rgba(220,50,47,0.25)` | Interactive/focused element borders |
+| `--bm-accent` | `#dc3232` | Primary accent (links, active states, buttons) |
+| `--bm-accent-hover` | `#e84848` | Accent hover state |
+| `--bm-accent-muted` | `rgba(220,50,47,0.12)` | Accent backgrounds (highlights, selections) |
+| `--bm-accent-contrast` | `#ffffff` | Text on accent backgrounds |
+
+**Light mode (warm paper):**
+
+| Token | Value | Use |
+|-------|-------|-----|
+| `--bm-bg` | `#faf8f5` | Page background (warm off-white) |
+| `--bm-surface` | `#ffffff` | Primary surface |
+| `--bm-surface-2` | `#f5f3f0` | Elevated surface |
+| `--bm-surface-3` | `#edeae6` | Hover/active surface state |
+| `--bm-fg` | `#1a1a1a` | Primary text |
+| `--bm-muted` | `#6b6b6b` | Secondary text |
+| `--bm-border` | `rgba(0,0,0,0.08)` | Default hairline borders |
+| `--bm-border-accent` | `rgba(185,40,40,0.25)` | Interactive borders |
+| `--bm-accent` | `#b92828` | Primary accent |
+| `--bm-accent-hover` | `#a02222` | Accent hover |
+| `--bm-accent-muted` | `rgba(185,40,40,0.08)` | Accent backgrounds |
+| `--bm-accent-contrast` | `#ffffff` | Text on accent |
+
+### Surfaces & Borders
+
+- **No glassmorphism.** Remove all `backdrop-blur`, translucent backgrounds, and frosted glass effects.
+- **Flat solid surfaces** with brightness differentiation: `bg` < `surface` < `surface-2` < `surface-3`.
+- **Hairline borders** (1px, ~8% opacity) for structural definition.
+- **Accent borders** (~25% opacity) for interactive/focused states only.
+- **No shadows.** Hierarchy comes from border + brightness, not elevation.
+
+### Corner Radius
+
+- `--bm-radius-sm`: 4px (badges, small elements, kbd)
+- `--bm-radius`: 6px (cards, inputs, buttons, panels)
+- `--bm-radius-lg`: 8px (modals, large containers)
+- No `rounded-2xl` or `rounded-3xl` anywhere.
+
+### Background Treatment
+
+- Subtle dot grid on the background layer at ~4% foreground opacity.
+- Grid size: 16px × 16px, dot radius: 1px.
+- Same pattern in dark and light modes (adjusted opacity).
+- Nods to the terminal/matrix identity without being noisy.
+
+### Motion
+
+- **Default transition:** 150ms ease on color, background-color, border-color, opacity, transform.
+- **Panel slide:** 150ms ease for sidebar toggle, drawers.
+- **No decorative animation.** No staggered reveals, no parallax, no springs.
+- **Respects `prefers-reduced-motion`:** instant transitions when reduced motion preferred.
+
+### Icons
+
+- Inline SVG icons (current approach). No icon library change.
+- Stroke-based, 1.5–2px stroke width, current color inheritance.
+- Size: 16px default (UI), 20px for prominent actions.
+
+## Page Specifications
+
+### Homepage (Command-Line Dashboard)
+
+**Hero section:**
+- Full-width command prompt: large `$` character in accent color + search input field.
+- Input: monospace placeholder "search man pages…", bordered, large (48px height).
+- Below input: keyboard shortcuts as bordered `kbd` elements ("/ search", "⌘K palette").
+- No "Try:" example links. The prompt IS the call to action.
+
+**Dashboard sections (below hero):**
+
+**Recent** (visible when history exists):
+- Section header: "Recent" in xs monospace, muted.
+- Last 8 visited pages as compact rows: `name(section)` mono, description truncated, relative time.
+- No "View all" link (this IS the full recent view).
+
+**Bookmarks** (visible when bookmarks exist):
+- Section header: "Bookmarks" in xs monospace, muted.
+- All bookmarks as compact rows: `name(section)` mono, description, remove button on hover.
+- No separate /bookmarks page.
+
+**Browse:**
+- Section pills for sections 1–9: flat bordered tags, monospace section number + label.
+
+**Stats:**
+- Bottom of page: dataset release ID, page count, last updated. Monospace, xs, muted.
+
+**Route changes:**
+- `/bookmarks` → redirects to `/` (homepage)
+- `/history` → redirects to `/`
+
+### Man Page View
+
+**Header card:**
+- Dark surface (uses `surface-2` in both themes for terminal-card feel).
+- `name(section)` in JetBrains Mono 32px bold.
+- Description: Geist Sans 16px, muted.
+- Metadata: flat bordered pills (pkg, dataset). Only show distro variant picker when content actually differs across distros.
+- Actions: bookmark toggle icon + "Copy link" button (top-right).
+- Synopsis: code block within the card. Terminal-styled (dark bg, JetBrains Mono 13px).
+
+**Toggle sidebar (hidden by default):**
+- Activates via `b` shortcut or header button.
+- Slides in from left, 288px wide, dark surface, hairline right border.
+- Contains:
+  - Quick jumps: SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES, SEE ALSO (when present).
+  - TOC: full heading list with scroll-spy active indicator (accent left border on active item).
+  - Find-in-page: input field + match count + prev/next (desktop only; mobile has separate bar).
+- Closes on `Esc`, `b` again, or click outside.
+
+**Content area:**
+- `max-width` controlled by reading preferences (42rem / 56rem / 72rem).
+- Prose: Geist Sans 14px, line-height 1.7.
+- Headings: Geist Sans semibold, accent left border (3px) on H2.
+- Code blocks (terminal-in-page):
+  - Always `#0d0d0d` background regardless of theme mode.
+  - Minimal header bar: language label (left, xs mono muted) + copy button (right, icon).
+  - Code: JetBrains Mono 13px, line-height 1.6.
+  - Horizontal scroll, styled scrollbar.
+  - Copy: icon button, shows checkmark for 2s on success.
+- Options table:
+  - Dedicated collapsible section.
+  - Each option: flag(s) as monospace bordered badges, description inline.
+  - Click flag → highlights all occurrences in content (existing behavior, restyled).
+  - Selected: accent border on flag badge, accent-muted bg.
+- Definition lists: term in mono bold, definition in base prose. Tighter vertical spacing.
+- Cross-references: accent-colored `name(section)` links. Unresolved refs stay muted.
+- Find-in-page (mobile): sticky floating bar above content, compact.
+
+**Related commands (footer):**
+- Horizontal scrollable row of bordered cards.
+- Each: `name(section)` mono + truncated description.
+- Accent border on hover.
+
+### Search Page
+
+- **Header:** "Search" title + full-width search input (bordered, mono placeholder).
+- **Section filter:** flat bordered pills — "All" + section numbers. Active: accent bg-muted + accent border.
+- **Results as preview cards:**
+  - Card: bordered, surface bg, tight radius.
+  - `name(section)` in JetBrains Mono bold (left).
+  - Description: Geist Sans sm, below name.
+  - Synopsis snippet: 1–2 lines in code-style (monospace, muted bg), truncated.
+  - Distro badge: only if result is distro-specific.
+  - Match highlights: accent-muted background on matched terms.
+- **Suggestions:** "Did you mean: `grep`, `groups`?" — monospace accent links.
+- **Pagination:** "Load more" bordered button. No infinite scroll.
+- **Empty state:** "No results for `{query}`" + "Try: `tar`, `ssh`, `curl`" links.
+
+### Section Browse
+
+- Keep existing alphabetical layout with letter group headers.
+- Restyle: monospace command names, muted descriptions, hairline row dividers.
+- Section header: large section number + label (e.g., "1 — User Commands").
+- Letter sticky headers: xs monospace, accent-tinted.
+
+### Command Palette
+
+- **Trigger:** Cmd/Ctrl+K (unchanged).
+- **Visual:** dark surface, tight radius, 1px accent border, centered modal.
+- **Layout:** Split view — results list (60% left) + preview pane (40% right).
+- **Results list:**
+  - On empty query: recent pages (last 8), bookmarked pages (starred indicator).
+  - On typing: fuzzy search results, man pages.
+  - Each item: `name(section)` mono, description, section badge.
+  - Actions (prefixed with `>`): icon + label (Toggle theme, etc.).
+- **Preview pane:**
+  - Shows for selected (arrow-key highlighted) result.
+  - Content: synopsis (code block), description, section label, package info.
+  - No extra API call — uses data already in search response.
+  - If insufficient data: "Press Enter to view full page."
+- **Keyboard:** Up/Down navigate list, Enter opens, Esc closes, Tab focuses preview.
+
+### Licenses Page
+
+- Restyle with new design language. Keep existing structure.
+- Package names in monospace, license text in code blocks.
+- Table or dense list layout for package → license mapping.
+
+### Reading Preferences Drawer
+
+- Slide-in from right, 320px wide, dark surface, 1px left border.
+- Segmented button groups (not dropdowns) for each setting.
+- Live preview — changes apply to content immediately.
+- Reset to defaults button at bottom.
+- Accessible via `P` shortcut from man page view.
+
+### Shortcuts Dialog
+
+- Dark surface modal, tight radius, 1px border.
+- Grouped by category: Navigation, Search, Page, Actions.
+- Shortcut keys as bordered `kbd` elements (monospace).
+- Trigger: `?` shortcut (unchanged).
+
+## Header & Navigation
+
+### Desktop Header
+
+- Height: 48px, solid `surface-2` bg, 1px border-bottom.
+- Left: logomark (16px) + "BetterMan" wordmark (Geist Sans 14px semibold).
+- Center: nav links — "Home", "Search", "Licenses" (text, Geist Sans sm, muted, accent on active with subtle bottom indicator).
+- Right: Cmd+K search trigger (bordered input-like element with placeholder text "Search…" and kbd hint), theme toggle (sun/moon icon).
+- No distro selector in header.
+
+### Mobile Header
+
+- Same height (48px), solid bg.
+- Left: logomark.
+- Right: search trigger icon + theme toggle icon.
+- No nav links (handled by bottom nav).
+
+### Mobile Bottom Nav
+
+- 3 items: Home, Search, Bookmarks.
+- Active indicator: accent-colored top bar (2px) on active item.
+- Safe area padding for iOS.
+- Remove History and More items.
+
+## Distro Selector (Contextual)
+
+- **Not shown globally.** No header dropdown.
+- **Man page view:** Show distro variant picker in header card ONLY when the page has content that differs across distributions.
+- **Command palette:** Can type `@debian`, `@ubuntu`, etc. to filter by distro.
+- **Reading preferences:** Global default distro preference remains in the drawer.
+
+## Branding
+
+### Logomark
+
+- Terminal-inspired symbol. Candidates:
+  - Stylized `>_` (prompt cursor)
+  - Abstract angle bracket with underscore
+  - Monogram "BM" in monospace with terminal styling
+- Must work at: 16×16 (favicon), 32×32 (header), 192×192 (PWA), 512×512 (OG image).
+- Color: accent red (monochrome version for small sizes).
+
+### Wordmark
+
+- "BetterMan" in Geist Sans semibold, normal case.
+- Optional: "Better" in regular weight, "Man" in bold — subtle visual hierarchy.
+
+### Assets to Update
+
+- `favicon.ico` (multi-size)
+- `icon-192.png`, `icon-512.png` (PWA manifest)
+- `apple-touch-icon.png`
+- OG image template (`og-image.png`)
+- `site.webmanifest` (theme colors)
+
+## Migration Notes
+
+v0.6.0 has **no breaking changes** to URLs, API, deployment, or features.
+
+**What changes:**
+- All CSS custom properties renamed/revalued
+- Newsreader font files removed, Geist Sans added
+- Component markup updated (Tailwind classes change throughout)
+- `/bookmarks` and `/history` routes become redirects to `/`
+- Homepage layout fundamentally restructured
+- Man page view layout restructured (sidebar behavior change)
+- Mobile bottom nav simplified from 5 to 3 items
+
+**What stays the same:**
+- All URL structures
+- All API contracts
+- All keyboard shortcuts (same keys, same actions)
+- All features (bookmarks, history, find, options table, etc.)
+- Deployment topology (two Railway services)
+- SSR behavior, CSP nonces, Sentry, Plausible
+
+**Rollback:** Revert all commits and redeploy. No data migration needed.
+
+## Risks
+
+| # | Risk | Impact | Mitigation |
+|---|------|--------|------------|
+| 21 | Big-bang visual change alienates existing users | User confusion | Announce on landing page briefly; keep all features intact |
+| 22 | Font swap increases bundle size | LCP regression | Geist Sans variable is ~100KB; remove Newsreader (~same). Net neutral. |
+| 23 | OLED black + hairline borders looks broken on non-OLED displays | Visual quality | Test on LCD displays; ensure borders are visible at 8% opacity |
+| 24 | Removing /bookmarks and /history routes breaks bookmarks | Lost user links | 301 redirect to homepage; bookmarks/history data persists in localStorage |
+| 25 | Sidebar toggle changes muscle memory | UX friction | `b` shortcut unchanged; just default state changes from open to closed |
+| 26 | Terminal-styled code blocks in light mode look jarring | Design inconsistency | Dark code blocks are intentional contrast; test thoroughly in both themes |
+
+## Definition of Done (v0.6.0 Launch Checklist)
+
+**Design System**
+
+- [ ] Geist Sans loaded and rendering (replace Newsreader)
+- [ ] New color palette applied (dark + light)
+- [ ] All radius tokens applied (tight 4–6px)
+- [ ] All border patterns updated (hairline + accent)
+- [ ] Background dot grid implemented
+- [ ] All transitions set to 150ms
+- [ ] Focus rings consistent (2px accent)
+
+**Pages**
+
+- [ ] Homepage: command-prompt hero + dashboard sections
+- [ ] Man page: hero card header + toggle sidebar + terminal code blocks
+- [ ] Search: preview cards + section filter
+- [ ] Section browse: restyled
+- [ ] Licenses: restyled
+- [ ] /bookmarks → redirect to /
+- [ ] /history → redirect to /
+
+**Components**
+
+- [ ] Header: full nav bar, new branding
+- [ ] Command palette: preview pane
+- [ ] Mobile bottom nav: 3 items
+- [ ] Reading preferences drawer: restyled
+- [ ] Shortcuts dialog: restyled
+- [ ] Options table: tag-style flags
+- [ ] Code blocks: terminal-in-page treatment
+- [ ] TOC sidebar: toggle panel behavior
+- [ ] Loading skeletons: updated
+- [ ] Error/empty states: updated
+- [ ] 404 page: restyled
+
+**Branding**
+
+- [ ] New logomark designed
+- [ ] Wordmark restyled
+- [ ] Favicon updated
+- [ ] PWA icons updated
+- [ ] OG image updated
+
+**Quality**
+
+- [ ] Lighthouse LCP <= 2.5s
+- [ ] axe-core: zero critical/serious violations
+- [ ] WCAG AA contrast ratios verified (both themes)
+- [ ] Keyboard-only full navigation flow tested
+- [ ] Mobile tested (iOS Safari + Android Chrome)
+- [ ] E2E tests passing (selectors updated)
+- [ ] Bundle size: no significant regression
+- [ ] Print styles updated
+- [ ] CSP nonces verified
+
+**Release**
+
+- [ ] CI green on `main`
+- [ ] SPEC.md, PLAN.md, README.md updated
+- [ ] Tag `v0.6.0`
