@@ -2,6 +2,13 @@
 
 All notable changes to BetterMan are documented here.
 
+## v0.6.1
+
+- Man page find-in-page: show match count and enable prev/next navigation.
+- Options highlighting: more robust flag parsing/matching; options table splits combined flags into individual badges.
+- Fix hydration/focus console warnings (theme/distro SSR alignment; navigator focus restore).
+- E2E: assert no console errors; add coverage for find navigation + option badge rendering.
+
 ## v0.6.0
 
 - Design refresh: “hacker-tool” aesthetic with refined dark palette, typography scale, and UI tokens.

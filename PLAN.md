@@ -25,6 +25,7 @@ Living execution plan for shipping `v0.6.0` from `SPEC.md`.
 - [x] v0.4.0 shipped (tag `v0.4.0`)
 - [x] v0.5.0 shipped (tag `v0.5.0`)
 - [x] v0.6.0 shipped (tag `v0.6.0`)
+- [x] v0.6.1 shipped (tag `v0.6.1`)
 
 ## Golden Commands (current; proven)
 
