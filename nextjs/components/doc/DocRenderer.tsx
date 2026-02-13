@@ -409,8 +409,13 @@ function clamp(n: number, min: number, max: number) {
 }
 
 function buildOptionRegex(terms?: string[]) {
-  const cleaned = (terms ?? []).map((t) => t.trim()).filter(Boolean)
+  const cleaned = (terms ?? [])
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length || a.localeCompare(b))
+
   if (!cleaned.length) return undefined
+
   const body = cleaned.map((t) => escapeRegExp(t)).join('|')
   return new RegExp(body, 'g')
 }

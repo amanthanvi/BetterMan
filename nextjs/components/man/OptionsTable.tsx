@@ -3,10 +3,22 @@
 import type { OptionItem } from '../../lib/docModel'
 
 function splitFlags(flags: string): string[] {
-  return flags
+  const parts = flags
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
+
+  const out: string[] = []
+
+  for (const part of parts) {
+    const tokens = part.split(/\s+/g).map((s) => s.trim()).filter(Boolean)
+    const flagTokens = tokens.filter((t) => t.startsWith('-'))
+
+    if (flagTokens.length >= 2) out.push(...flagTokens)
+    else out.push(part)
+  }
+
+  return out
 }
 
 export function OptionsTable({

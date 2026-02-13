@@ -1,6 +1,6 @@
 'use client'
 
-import { useDeferredValue, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { BlockNode } from '../../lib/docModel'
 import type { DocRendererHandle } from '../doc/DocRenderer'
@@ -31,7 +31,7 @@ function getScrollBehavior(): 'auto' | 'smooth' {
 
 export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const [find, setFind] = useState('')
-  const [findBarHidden, setFindBarHidden] = useState(() => readStoredFindBarHidden())
+  const [findBarHidden, setFindBarHidden] = useState(false)
   const [activeFindIndex, setActiveFindIndex] = useState(0)
 
   const activeMarkRef = useRef<HTMLElement | null>(null)
@@ -39,22 +39,22 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const findInputMobileRef = useRef<HTMLInputElement | null>(null)
   const docRef = useRef<DocRendererHandle | null>(null)
 
+  useEffect(() => {
+    setFindBarHidden(readStoredFindBarHidden())
+  }, [])
+
   const rawFindQuery = find.trim()
-  const deferredFindQuery = useDeferredValue(rawFindQuery)
   const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
   const findEnabled = findQuery.length >= 2
-  const findStable = deferredFindQuery === rawFindQuery
-  const stableFindQuery = deferredFindQuery.length >= 2 ? deferredFindQuery : ''
 
   const findIndex = useMemo(
-    () => (stableFindQuery.length >= 2 ? buildFindIndex(blocks, stableFindQuery) : null),
-    [blocks, stableFindQuery],
+    () => (findEnabled ? buildFindIndex(blocks, findQuery) : null),
+    [blocks, findEnabled, findQuery],
   )
 
-  const matchCount = findStable ? (findIndex?.total ?? 0) : 0
+  const matchCount = findIndex?.total ?? 0
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
-  const findCountLabel =
-    rawFindQuery.length < 2 ? '—' : !findStable ? '…' : matchCount ? `${displayIndex + 1}/${matchCount}` : '0/0'
+  const findCountLabel = rawFindQuery.length < 2 ? '—' : matchCount ? `${displayIndex + 1}/${matchCount}` : '0/0'
 
   const setFindBarHiddenPersisted = (hidden: boolean) => {
     setFindBarHidden(hidden)
