@@ -22,7 +22,7 @@ const TocContext = createContext<TocContextValue | null>(null)
 export function TocProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<TocItem[]>([])
   const [open, setOpen] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [scrollToId, _setScrollToId] = useState<ScrollToId | null>(null)
   const setScrollToId = useCallback((fn: ScrollToId | null) => _setScrollToId(fn ? () => fn : null), [])
 

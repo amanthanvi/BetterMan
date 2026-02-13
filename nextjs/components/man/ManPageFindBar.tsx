@@ -101,6 +101,7 @@ export function ManPageFindBar({
           <div className="flex items-center gap-2">
             <input
               ref={findInputRef}
+              name="bm-find"
               value={find}
               onChange={(e) => onFindChange(e.target.value)}
               onKeyDown={onFindKeyDown}

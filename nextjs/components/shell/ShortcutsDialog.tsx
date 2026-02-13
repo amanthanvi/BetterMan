@@ -60,7 +60,7 @@ export function ShortcutsDialog({
     },
     {
       title: 'Page',
-      items: [{ keys: ['B'], desc: 'Toggle navigator' }],
+      items: [{ keys: ['B'], desc: 'Toggle sidebar' }],
     },
     {
       title: 'Actions',

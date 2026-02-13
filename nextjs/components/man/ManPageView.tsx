@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
 import type { ManPage, ManPageContent, ManPageVariant, OptionItem } from '../../lib/docModel'
-import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
+import { ChevronDownIcon } from '../icons'
 import { DocRenderer } from '../doc/DocRenderer'
 import { RecentPageRecorder } from '../recent/RecentPageRecorder'
 import { useDistro } from '../state/distro'
@@ -13,8 +13,8 @@ import { parseOptionTerms } from './find'
 import { ManPageFindBar } from './ManPageFindBar'
 import { ManPageFooterSections } from './ManPageFooterSections'
 import { ManPageHeaderCard } from './ManPageHeaderCard'
-import { ManPageNavigatorOverlay } from './ManPageNavigatorOverlay'
 import { ManPageOptionsSection } from './ManPageOptionsSection'
+import { ManPageSidebar } from './ManPageSidebar'
 import { useManPageFind } from './useManPageFind'
 
 function getScrollBehavior(): 'auto' | 'smooth' {
@@ -44,7 +44,6 @@ export function ManPageView({
 
   const [copiedLink, setCopiedLink] = useState(false)
   const copyTimeoutRef = useRef<number | null>(null)
-  const openNavigatorButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const optionsCount = content.options?.length ?? 0
   const [optionsVisible, setOptionsVisible] = useState(() => optionsCount > 0 && optionsCount <= 160)
@@ -52,24 +51,9 @@ export function ManPageView({
 
   const optionTerms = useMemo(() => (selectedOption ? parseOptionTerms(selectedOption.flags) : []), [selectedOption])
   const shouldVirtualize = content.blocks.length >= 100
-  const showSidebar = toc.sidebarOpen
 
-  useBodyScrollLock(showSidebar)
-
-  const closeNavigator = useCallback(() => {
-    openNavigatorButtonRef.current?.focus()
-    toc.setSidebarOpen(false)
-  }, [toc])
-
-  const openNavigator = useCallback(() => {
-    if (window.matchMedia('(min-width: 1024px)').matches) {
-      if (toc.sidebarOpen) closeNavigator()
-      else toc.setSidebarOpen(true)
-      return
-    }
-
-    toc.setOpen(true)
-  }, [closeNavigator, toc])
+  const hasToc = (content.toc ?? []).length > 0
+  const desktopSidebarExpanded = hasToc && toc.sidebarOpen
 
   useEffect(() => {
     toc.setItems(content.toc ?? [])
@@ -82,17 +66,6 @@ export function ManPageView({
       if (flashTimeoutRef.current != null) window.clearTimeout(flashTimeoutRef.current)
     }
   }, [])
-
-  useEffect(() => {
-    if (!showSidebar) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      closeNavigator()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [closeNavigator, showSidebar])
 
   const flashOption = (anchorId: string) => {
     setFlashAnchorId(anchorId)
@@ -223,68 +196,111 @@ export function ManPageView({
     document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
   }
 
+  const gridCols = desktopSidebarExpanded
+    ? 'lg:grid-cols-[18rem_minmax(0,1fr)]'
+    : 'lg:grid-cols-[3rem_minmax(0,1fr)]'
+
   return (
     <div className="mx-auto max-w-6xl">
       <RecentPageRecorder name={page.name} section={page.section} description={page.description || page.title} />
-
-      <ManPageNavigatorOverlay
-        open={showSidebar}
-        onClose={closeNavigator}
-        quickJumps={quickJumps}
-        onQuickJump={(id) => {
-          if (!manFind.docRef.current) return false
-          try {
-            window.history.pushState(null, '', `#${id}`)
-          } catch {
-            try {
-              window.location.hash = id
-            } catch {
-              // ignore
-            }
-          }
-          manFind.docRef.current.scrollToAnchor(id, { behavior: getScrollBehavior() })
-          return true
-        }}
-        findBarHidden={manFind.findBarHidden}
-        onShowFind={() => {
-          manFind.setFindBarHiddenPersisted(false)
-          requestAnimationFrame(() => manFind.focusFindInput())
-        }}
-        onHideFind={() => manFind.setFindBarHiddenPersisted(true)}
-        find={manFind.find}
-        findInputRef={manFind.findInputDesktopRef}
-        onFindChange={manFind.onFindChange}
-        onFindKeyDown={(e) => {
-          if (e.key === 'Enter' && manFind.matchCount) {
-            e.preventDefault()
-            if (e.shiftKey) manFind.goPrev()
-            else manFind.goNext()
-          }
-        }}
-        findCountLabel={manFind.findCountLabel}
-        matchCount={manFind.matchCount}
-        onPrev={manFind.goPrev}
-        onNext={manFind.goNext}
-        onClearFind={manFind.onClearFind}
-        tocItems={content.toc}
-        activeTocId={activeTocId}
-        onTocNavigateToId={toc.scrollToId ?? undefined}
-      />
 
       <ManPageHeaderCard
         page={page}
         synopsis={content.synopsis}
         variants={variants}
         distro={distro.distro}
-        hasNavigator={toc.items.length > 0}
-        onOpenNavigator={openNavigator}
-        navigatorButtonRef={openNavigatorButtonRef}
+        hasToc={hasToc}
+        onOpenContents={() => toc.setOpen(true)}
         onOpenPrefs={openPrefs}
         onCopyLink={copyLink}
         copiedLink={copiedLink}
       />
 
-      <div className="mt-10">
+      <div className={`mt-10 ${hasToc ? `lg:grid lg:items-start lg:gap-8 ${gridCols}` : ''}`}>
+        {hasToc ? (
+          <aside className="hidden lg:block">
+            <div className="sticky top-20">
+              <div
+                data-bm-sidebar
+                className="h-[calc(100dvh-6rem)] overflow-y-auto rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-4"
+              >
+                {desktopSidebarExpanded ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Contents</div>
+                      <button
+                        type="button"
+                        className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                        onClick={() => toc.setSidebarOpen(false)}
+                        aria-label="Collapse sidebar"
+                        title="Collapse (b)"
+                      >
+                        <ChevronDownIcon className="size-4 rotate-90" />
+                      </button>
+                    </div>
+
+                    <div className="mt-4">
+                      <ManPageSidebar
+                        quickJumps={quickJumps}
+                        onQuickJump={(id) => {
+                          if (!manFind.docRef.current) return false
+                          try {
+                            window.history.pushState(null, '', `#${id}`)
+                          } catch {
+                            try {
+                              window.location.hash = id
+                            } catch {
+                              // ignore
+                            }
+                          }
+                          manFind.docRef.current.scrollToAnchor(id, { behavior: getScrollBehavior() })
+                          return true
+                        }}
+                        findBarHidden={manFind.findBarHidden}
+                        onShowFind={() => {
+                          manFind.setFindBarHiddenPersisted(false)
+                          requestAnimationFrame(() => manFind.focusFindInput())
+                        }}
+                        onHideFind={() => manFind.setFindBarHiddenPersisted(true)}
+                        find={manFind.find}
+                        findInputRef={manFind.findInputDesktopRef}
+                        onFindChange={manFind.onFindChange}
+                        onFindKeyDown={(e) => {
+                          if (e.key === 'Enter' && manFind.matchCount) {
+                            e.preventDefault()
+                            if (e.shiftKey) manFind.goPrev()
+                            else manFind.goNext()
+                          }
+                        }}
+                        findCountLabel={manFind.findCountLabel}
+                        matchCount={manFind.matchCount}
+                        onPrev={manFind.goPrev}
+                        onNext={manFind.goNext}
+                        onClearFind={manFind.onClearFind}
+                        tocItems={content.toc}
+                        activeTocId={activeTocId}
+                        onTocNavigateToId={toc.scrollToId ?? undefined}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex h-full items-start justify-center pt-1">
+                    <button
+                      type="button"
+                      className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                      onClick={() => toc.setSidebarOpen(true)}
+                      aria-label="Expand sidebar"
+                      title="Expand (b)"
+                    >
+                      <ChevronDownIcon className="size-4 -rotate-90" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+        ) : null}
+
         <article className="mx-auto min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
           <ManPageFindBar
             hidden={manFind.findBarHidden}

@@ -79,6 +79,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
       <div className="mt-6 grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <aside className="space-y-3">
           <input
+            name="bm-licenses-filter"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter packages…"

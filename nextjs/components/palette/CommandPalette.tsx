@@ -483,6 +483,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           </div>
           <input
             ref={inputRef}
+            name="bm-palette"
             value={input}
             onChange={(e) => {
               setInput(e.target.value)

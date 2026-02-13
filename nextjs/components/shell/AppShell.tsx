@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
@@ -30,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const distro = useDistro()
   const theme = useTheme()
   const toc = useToc()
+  const setTocOpen = toc.setOpen
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
@@ -114,8 +114,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     isPopRef.current = false
     lastRouteKeyRef.current = routeKey
 
+    setTocOpen(false)
     window.scrollTo({ top: nextY, left: 0, behavior: 'auto' })
-  }, [routeKey])
+  }, [routeKey, setTocOpen])
 
   useEffect(() => {
     const h1 = document.querySelector('main h1') as HTMLElement | null
@@ -193,12 +194,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'b' && toc.items.length) {
         e.preventDefault()
-        const opener = document.querySelector('button[aria-label="Open navigator"]')
         if (window.matchMedia('(min-width: 1024px)').matches) {
-          if (toc.sidebarOpen && opener instanceof HTMLButtonElement) opener.focus()
           toc.setSidebarOpen(!toc.sidebarOpen)
         } else {
-          if (toc.open && opener instanceof HTMLButtonElement) opener.focus()
           toc.setOpen(!toc.open)
         }
         return
@@ -310,10 +308,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[var(--bm-surface-2)]"
       >
         <div className="mx-auto flex h-12 max-w-6xl items-center gap-3 px-4">
-          <Link href={withDistro('/', distro.distro)} className="inline-flex items-center gap-2">
+          <a href={withDistro('/', distro.distro)} className="inline-flex items-center gap-2">
             <span className="font-mono text-sm font-semibold tracking-tight text-[var(--bm-accent)]">&gt;_</span>
             <span className="text-sm font-semibold tracking-tight">BetterMan</span>
-          </Link>
+          </a>
 
           <div aria-live="polite" className="sr-only">
             {themeAnnouncement}
@@ -327,7 +325,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 { href: withDistro('/licenses', distro.distro), label: 'Licenses', active: pathname === '/licenses' },
               ] as const
             ).map((item) => (
-              <Link
+              <a
                 key={item.href}
                 href={item.href}
                 className={`inline-flex h-12 items-center border-b-2 px-1 text-sm font-medium transition-colors ${
@@ -337,7 +335,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 {item.label}
-              </Link>
+              </a>
             ))}
           </nav>
 
@@ -407,9 +405,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ) : null}
           </div>
           <div className="flex items-center gap-4">
-            <Link href={withDistro('/licenses', distro.distro)} className="underline underline-offset-4">
+            <a href={withDistro('/licenses', distro.distro)} className="underline underline-offset-4">
               Licenses
-            </Link>
+            </a>
             <a
               href="https://github.com/amanthanvi/BetterMan"
               className="underline underline-offset-4"

@@ -2,23 +2,11 @@
 
 import type { OptionItem } from '../../lib/docModel'
 
+import { parseOptionTerms } from './find'
+
 function splitFlags(flags: string): string[] {
-  const parts = flags
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-
-  const out: string[] = []
-
-  for (const part of parts) {
-    const tokens = part.split(/\s+/g).map((s) => s.trim()).filter(Boolean)
-    const flagTokens = tokens.filter((t) => t.startsWith('-'))
-
-    if (flagTokens.length >= 2) out.push(...flagTokens)
-    else out.push(part)
-  }
-
-  return out
+  const parsed = parseOptionTerms(flags)
+  return parsed.length ? parsed : [flags.trim()].filter(Boolean)
 }
 
 export function OptionsTable({

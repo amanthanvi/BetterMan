@@ -20,6 +20,7 @@ function buildCsp(nonce: string): string {
     `object-src 'none'`,
     `form-action 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src-elem 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ''}`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self'`,

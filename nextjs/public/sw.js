@@ -1,6 +1,6 @@
 /* BetterMan service worker (minimal, no Workbox). */
 
-const CACHE_VERSION = 'v0.5.0'
+const CACHE_VERSION = 'v0.6.2'
 const CACHE_PREFIX = 'bm'
 
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`

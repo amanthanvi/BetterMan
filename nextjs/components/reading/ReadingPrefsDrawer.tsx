@@ -8,50 +8,24 @@ import { useFocusTrap } from '../../lib/useFocusTrap'
 import { useDistro } from '../state/distro'
 import { useReadingPrefs } from '../state/readingPrefs'
 
-export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { prefs, updatePrefs, reset } = useReadingPrefs()
-  const distro = useDistro()
+type SegOption<T extends string> = { id: T; label: string }
 
-  const panelRef = useRef<HTMLDivElement | null>(null)
-  const [mounted, setMounted] = useState(open)
+type SegmentedRadioGroupProps<T extends string> = {
+  label: string
+  value: T
+  options: Array<SegOption<T>>
+  onChange: (id: T) => void
+  scroll?: boolean
+}
 
-  useFocusTrap(open, panelRef)
-  useBodyScrollLock(open)
-
-  useEffect(() => {
-    if (open) {
-      setMounted(true)
-      return
-    }
-
-    const t = window.setTimeout(() => setMounted(false), 150)
-    return () => window.clearTimeout(t)
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      onOpenChange(false)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onOpenChange, open])
-
-  const Seg = <T extends string>({
-    label,
-    value,
-    options,
-    onChange,
-    scroll = false,
-  }: {
-    label: string
-    value: T
-    options: Array<{ id: T; label: string }>
-    onChange: (id: T) => void
-    scroll?: boolean
-  }) => (
+function SegmentedRadioGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  scroll = false,
+}: SegmentedRadioGroupProps<T>) {
+  return (
     <section>
       <div className="font-mono text-[11px] tracking-wide text-[color:var(--bm-muted)]">{label}</div>
       <div
@@ -106,12 +80,42 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
       </div>
     </section>
   )
+}
+
+export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { prefs, updatePrefs, reset } = useReadingPrefs()
+  const distro = useDistro()
+
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const [mounted, setMounted] = useState(open)
+
+  useFocusTrap(open, panelRef)
+  useBodyScrollLock(open)
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      return
+    }
+
+    const t = window.setTimeout(() => setMounted(false), 150)
+    return () => window.clearTimeout(t)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      onOpenChange(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onOpenChange, open])
 
   if (!mounted) return null
 
-  const distroOptions: Array<{ id: Distro; label: string }> = DISTRO_GROUPS.flatMap((g) =>
-    g.items.map((id) => ({ id, label: `@${id}` })),
-  )
+  const distroOptions: Array<SegOption<Distro>> = DISTRO_GROUPS.flatMap((g) => g.items.map((id) => ({ id, label: `@${id}` })))
 
   return (
     <div
@@ -144,7 +148,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
         </div>
 
         <div className="mt-6 space-y-6">
-          <Seg
+          <SegmentedRadioGroup
             label="Default distro"
             value={distro.distro}
             options={distroOptions}
@@ -152,7 +156,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             scroll
           />
 
-          <Seg
+          <SegmentedRadioGroup
             label="Font size"
             value={prefs.fontSize}
             options={[
@@ -164,7 +168,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             onChange={(fontSize) => updatePrefs({ fontSize })}
           />
 
-          <Seg
+          <SegmentedRadioGroup
             label="Font family"
             value={prefs.fontFamily}
             options={[
@@ -175,7 +179,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             onChange={(fontFamily) => updatePrefs({ fontFamily })}
           />
 
-          <Seg
+          <SegmentedRadioGroup
             label="Line height"
             value={prefs.lineHeight}
             options={[
@@ -186,7 +190,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             onChange={(lineHeight) => updatePrefs({ lineHeight })}
           />
 
-          <Seg
+          <SegmentedRadioGroup
             label="Column width"
             value={prefs.columnWidth}
             options={[
@@ -197,7 +201,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             onChange={(columnWidth) => updatePrefs({ columnWidth })}
           />
 
-          <Seg
+          <SegmentedRadioGroup
             label="Code theme"
             value={prefs.codeTheme}
             options={[

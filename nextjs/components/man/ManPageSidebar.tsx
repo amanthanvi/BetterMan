@@ -110,6 +110,7 @@ export function ManPageSidebar({
           <div className="mt-3 grid gap-3">
             <input
               ref={findInputRef}
+              name="bm-find"
               value={find}
               onChange={(e) => onFindChange(e.target.value)}
               onKeyDown={onFindKeyDown}

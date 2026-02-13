@@ -1,6 +1,5 @@
 'use client'
 
-import type { RefObject } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
 import type { Distro } from '../../lib/distro'
@@ -25,9 +24,8 @@ export function ManPageHeaderCard({
   synopsis,
   variants,
   distro,
-  hasNavigator,
-  onOpenNavigator,
-  navigatorButtonRef,
+  hasToc,
+  onOpenContents,
   onOpenPrefs,
   onCopyLink,
   copiedLink,
@@ -36,9 +34,8 @@ export function ManPageHeaderCard({
   synopsis?: string[] | null
   variants: ManPageVariant[]
   distro: Distro
-  hasNavigator: boolean
-  onOpenNavigator: () => void
-  navigatorButtonRef?: RefObject<HTMLButtonElement | null>
+  hasToc: boolean
+  onOpenContents: () => void
   onOpenPrefs: () => void
   onCopyLink: () => void
   copiedLink: boolean
@@ -62,14 +59,13 @@ export function ManPageHeaderCard({
           </div>
 
           <div className="flex items-center gap-2">
-            {hasNavigator ? (
+            {hasToc ? (
               <button
                 type="button"
-                className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                ref={navigatorButtonRef}
-                onClick={onOpenNavigator}
-                aria-label="Open navigator"
-                title="Navigator (b)"
+                className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] lg:hidden"
+                onClick={onOpenContents}
+                aria-label="Open contents"
+                title="Contents (b)"
               >
                 <ListIcon className="size-4" />
               </button>
@@ -175,7 +171,10 @@ export function ManPageHeaderCard({
         {synopsis?.length ? (
           <div>
             <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Synopsis</div>
-            <pre className="mt-3 overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-[#0d0d0d] p-4 text-[13px] leading-[1.6] text-[color:var(--bm-code-fg)]" tabIndex={0}>
+            <pre
+              className="mt-3 overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-[#0d0d0d] p-4 text-[13px] leading-[1.6] text-[color:var(--bm-code-fg)]"
+              tabIndex={0}
+            >
               <code>{synopsis.join('\n')}</code>
             </pre>
           </div>
