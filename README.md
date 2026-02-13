@@ -6,7 +6,7 @@
   <img src="nextjs/public/betterman-mark.svg" width="96" height="96" alt="BetterMan logo" />
 </p>
 
-BetterMan is a fast, readable web UI for `man` pages — built to feel like a hacker tool: crisp type, keyboard-first, and no accounts.
+BetterMan is a fast, readable web UI for `man` pages — built to feel like a tool: crisp type, keyboard-first, and no accounts.
 
 - Live: https://betterman.sh
 - Spec / architecture: `SPEC.md`
