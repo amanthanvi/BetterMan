@@ -75,23 +75,23 @@ jobs:
 
           mkdir -p "$HOME/.railway"
           cat > "$HOME/.railway/config.json" <<JSON
-{
-  "projects": {
-    "$project_path": {
-      "projectPath": "$project_path",
-      "name": "betterman",
-      "project": "$RAILWAY_PROJECT_ID",
-      "environment": "$RAILWAY_ENVIRONMENT_ID",
-      "environmentName": "production",
-      "service": null
-    }
-  },
-  "user": {
-    "token": "$RAILWAY_API_TOKEN"
-  },
-  "linkedFunctions": null
-}
-JSON
+          {
+            "projects": {
+              "$project_path": {
+                "projectPath": "$project_path",
+                "name": "betterman",
+                "project": "$RAILWAY_PROJECT_ID",
+                "environment": "$RAILWAY_ENVIRONMENT_ID",
+                "environmentName": "production",
+                "service": null
+              }
+            },
+            "user": {
+              "token": "$RAILWAY_API_TOKEN"
+            },
+            "linkedFunctions": null
+          }
+          JSON
 
           deploy_service() {
             local service_id="$1"
