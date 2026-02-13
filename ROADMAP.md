@@ -7,7 +7,7 @@ This project is actively evolving.
 
 ## Current focus
 
-- Finish `v0.6.0` verification (a11y/perf/visual/mobile), then tag the release.
+- `v0.6.0` shipped. Next: papercuts + follow-ups (TBD).
 
 ## How to help
 

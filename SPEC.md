@@ -2,7 +2,7 @@
 
 **Project:** BetterMan
 **Spec Version:** v0.6.0
-**Status:** v0.6.0 in progress (v0.5.0 shipped, v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Status:** v0.6.0 shipped (v0.5.0 shipped, v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
 **Last Updated:** 2026-02-12 (EST)
 **Interview Status:** Complete - v0.6.0 scoped
 
@@ -3635,60 +3635,60 @@ v0.6.0 has **no breaking changes** to URLs, API, deployment, or features.
 
 **Design System**
 
-- [ ] Geist Sans loaded and rendering (replace Newsreader)
-- [ ] New color palette applied (dark + light)
-- [ ] All radius tokens applied (tight 4–6px)
-- [ ] All border patterns updated (hairline + accent)
-- [ ] Background dot grid implemented
-- [ ] All transitions set to 150ms
-- [ ] Focus rings consistent (2px accent)
+- [x] Geist Sans loaded and rendering (replace Newsreader)
+- [x] New color palette applied (dark + light)
+- [x] All radius tokens applied (tight 4–6px)
+- [x] All border patterns updated (hairline + accent)
+- [x] Background dot grid implemented
+- [x] All transitions set to 150ms
+- [x] Focus rings consistent (2px accent)
 
 **Pages**
 
-- [ ] Homepage: command-prompt hero + dashboard sections
-- [ ] Man page: hero card header + toggle sidebar + terminal code blocks
-- [ ] Search: preview cards + section filter
-- [ ] Section browse: restyled
-- [ ] Licenses: restyled
-- [ ] /bookmarks → redirect to /
-- [ ] /history → redirect to /
+- [x] Homepage: command-prompt hero + dashboard sections
+- [x] Man page: hero card header + toggle sidebar + terminal code blocks
+- [x] Search: preview cards + section filter
+- [x] Section browse: restyled
+- [x] Licenses: restyled
+- [x] /bookmarks → redirect to /
+- [x] /history → redirect to /
 
 **Components**
 
-- [ ] Header: full nav bar, new branding
-- [ ] Command palette: preview pane
-- [ ] Mobile bottom nav: 3 items
-- [ ] Reading preferences drawer: restyled
-- [ ] Shortcuts dialog: restyled
-- [ ] Options table: tag-style flags
-- [ ] Code blocks: terminal-in-page treatment
-- [ ] TOC sidebar: toggle panel behavior
-- [ ] Loading skeletons: updated
-- [ ] Error/empty states: updated
-- [ ] 404 page: restyled
+- [x] Header: full nav bar, new branding
+- [x] Command palette: preview pane
+- [x] Mobile bottom nav: 3 items
+- [x] Reading preferences drawer: restyled
+- [x] Shortcuts dialog: restyled
+- [x] Options table: tag-style flags
+- [x] Code blocks: terminal-in-page treatment
+- [x] TOC sidebar: toggle panel behavior
+- [x] Loading skeletons: updated
+- [x] Error/empty states: updated
+- [x] 404 page: restyled
 
 **Branding**
 
-- [ ] New logomark designed
-- [ ] Wordmark restyled
-- [ ] Favicon updated
-- [ ] PWA icons updated
-- [ ] OG image updated
+- [x] New logomark designed
+- [x] Wordmark restyled
+- [x] Favicon updated
+- [x] PWA icons updated
+- [x] OG image updated
 
 **Quality**
 
-- [ ] Lighthouse LCP <= 2.5s
-- [ ] axe-core: zero critical/serious violations
-- [ ] WCAG AA contrast ratios verified (both themes)
-- [ ] Keyboard-only full navigation flow tested
-- [ ] Mobile tested (iOS Safari + Android Chrome)
-- [ ] E2E tests passing (selectors updated)
-- [ ] Bundle size: no significant regression
-- [ ] Print styles updated
-- [ ] CSP nonces verified
+- [x] Lighthouse LCP <= 2.5s
+- [x] axe-core: zero critical/serious violations
+- [x] WCAG AA contrast ratios verified (both themes)
+- [x] Keyboard-only full navigation flow tested
+- [x] Mobile tested (iOS Safari + Android Chrome)
+- [x] E2E tests passing (selectors updated)
+- [x] Bundle size: no significant regression
+- [x] Print styles updated
+- [x] CSP nonces verified
 
 **Release**
 
-- [ ] CI green on `main`
-- [ ] SPEC.md, PLAN.md, README.md updated
-- [ ] Tag `v0.6.0`
+- [x] CI green on `main`
+- [x] SPEC.md, PLAN.md, README.md updated
+- [x] Tag `v0.6.0`

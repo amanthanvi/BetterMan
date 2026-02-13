@@ -24,7 +24,7 @@ Living execution plan for shipping `v0.6.0` from `SPEC.md`.
 - [x] v0.3.0 shipped (tag `v0.3.0`)
 - [x] v0.4.0 shipped (tag `v0.4.0`)
 - [x] v0.5.0 shipped (tag `v0.5.0`)
-- [ ] v0.6.0 in progress
+- [x] v0.6.0 shipped (tag `v0.6.0`)
 
 ## Golden Commands (current; proven)
 
@@ -304,4 +304,4 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] CI green on `main`
 - [x] Docs updated (`SPEC.md`, `README.md`, `PLAN.md`)
 - [x] Lighthouse comparison (v0.5.0 vs v0.6.0) documented
-- [ ] Tag `v0.6.0`
+- [x] Tag `v0.6.0`

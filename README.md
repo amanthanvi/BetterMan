@@ -11,6 +11,8 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a ha
 - Live: https://betterman.sh
 - Spec / architecture: `SPEC.md`
 - Architecture overview (quick read): `docs/ARCHITECTURE.md`
+- Getting started (local): `docs/GETTING_STARTED.md`
+- Governance: `GOVERNANCE.md`
 - Roadmap (high-level): `ROADMAP.md`
 - Execution plan (living checklist): `PLAN.md`
 - Changelog: `CHANGELOG.md`
@@ -43,8 +45,8 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a ha
 
 ## Status
 
-- Latest release: `v0.5.0` (tag `v0.5.0`)
-- In progress: `v0.6.0` (design + UI/UX overhaul; tracked in `PLAN.md`)
+- Latest release: `v0.6.0` (tag `v0.6.0`)
+- In progress: TBD (see `ROADMAP.md` + `PLAN.md`)
 - Default branch: `main`
 
 ## Deploy (Railway)
