@@ -290,6 +290,7 @@ jobs:
 
       - name: Deploy web (Railway)
         env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_WORKSPACE_ID: ed8a9f0d-ab1b-48a4-a7a1-86a95b0e5f18
           RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
@@ -304,6 +305,27 @@ jobs:
             echo "Missing RAILWAY_TOKEN GitHub Actions secret."
             exit 1
           fi
+          project_path="$(pwd -P)"
+
+          mkdir -p "$HOME/.railway"
+          cat > "$HOME/.railway/config.json" <<JSON
+{
+  "projects": {
+    "$project_path": {
+      "projectPath": "$project_path",
+      "name": "betterman",
+      "project": "$RAILWAY_PROJECT_ID",
+      "environment": "$RAILWAY_ENVIRONMENT_ID",
+      "environmentName": "production",
+      "service": null
+    }
+  },
+  "user": {
+    "token": "$RAILWAY_API_TOKEN"
+  },
+  "linkedFunctions": null
+}
+JSON
 
           railway_with_retry() {
             local max_attempts=5
@@ -356,13 +378,9 @@ jobs:
           deploy_service() {
             local service_id="$1"
 
-            railway_with_retry railway link \
-              --workspace "$RAILWAY_WORKSPACE_ID" \
-              --project "$RAILWAY_PROJECT_ID" \
-              --environment "$RAILWAY_ENVIRONMENT_ID" \
-              --service "$service_id"
 
             railway_with_retry railway up --ci \
+              --project "$RAILWAY_PROJECT_ID" \
               --service "$service_id" \
               --environment "$RAILWAY_ENVIRONMENT_ID"
 
