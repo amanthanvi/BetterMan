@@ -2,19 +2,66 @@ import { test, expect } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
 
-test('man: navigator panel opens and contains TOC + Find', async ({ page }) => {
+test('man: sticky sidebar renders TOC + Find (desktop)', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
-  const openNavigator = page.getByRole('button', { name: 'Open navigator' })
-  await expect(openNavigator).toBeVisible()
-  await openNavigator.click()
+  const sidebar = page.locator('[data-bm-sidebar]')
+  await expect(sidebar).toBeVisible()
+  await expect(sidebar.getByText('Quick jumps')).toBeVisible()
+  await expect(sidebar.getByRole('textbox', { name: 'Find in page' })).toBeVisible()
+  await expect(sidebar.getByRole('navigation', { name: 'On this page' })).toBeVisible()
+})
 
-  const dialog = page.getByRole('dialog', { name: 'Navigator' })
+test('man: sidebar collapses and expands with b', async ({ page }) => {
+  await page.goto('/man/tar/1')
+
+  const sidebar = page.locator('[data-bm-sidebar]')
+  await expect(sidebar.getByRole('textbox', { name: 'Find in page' })).toBeVisible()
+
+  await page.keyboard.press('b')
+  await expect(sidebar.getByRole('button', { name: 'Expand sidebar' })).toBeVisible()
+
+  await page.keyboard.press('b')
+  await expect(sidebar.getByRole('textbox', { name: 'Find in page' })).toBeVisible()
+})
+
+test('man: reading preferences drawer applies settings', async ({ page }) => {
+  const consoleErrors: string[] = []
+  const pageErrors: string[] = []
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text())
+  })
+  page.on('pageerror', (err) => pageErrors.push(err.message))
+
+  await page.goto('/man/tar/1')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+
+  await page.keyboard.press('p')
+  const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByText('Quick jumps')).toBeVisible()
-  await expect(dialog.getByRole('textbox', { name: 'Find in page' })).toBeVisible()
-  await expect(dialog.getByText('Contents')).toBeVisible()
+
+  await dialog.getByRole('radiogroup', { name: 'Font size' }).getByRole('radio', { name: 'L', exact: true }).click()
+  await expect(page.locator('body')).toHaveAttribute('data-bm-font-size', 'large')
+
+  await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
+  await expect(pageErrors, pageErrors.join('\n')).toEqual([])
+})
+
+test('man: header and footer links work from man pages', async ({ page }) => {
+  await page.goto('/man/tar/1')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+
+  const header = page.getByRole('banner', { name: 'Site header' })
+
+  await header.getByRole('link', { name: 'Search' }).click()
+  await expect(page).toHaveURL(/\/search/)
+
+  await page.goto('/man/tar/1')
+
+  const footer = page.getByRole('contentinfo', { name: 'Site footer' })
+  await footer.getByRole('link', { name: 'Licenses' }).click()
+  await expect(page).toHaveURL(/\/licenses/)
 })
 
 test('man: mobile TOC drawer opens', async ({ page }) => {
@@ -29,9 +76,9 @@ test('man: mobile TOC drawer opens', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
-  const openNavigator = page.getByRole('button', { name: 'Open navigator' })
-  await expect(openNavigator).toBeVisible({ timeout: 10_000 })
-  await openNavigator.click()
+  const openContents = page.getByRole('button', { name: 'Open contents' })
+  await expect(openContents).toBeVisible({ timeout: 10_000 })
+  await openContents.click()
 
   await expect(page.getByRole('dialog', { name: 'Table of contents' })).toBeVisible()
   await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
@@ -48,24 +95,23 @@ test('man: find-in-page shows count and navigates matches', async ({ page }) => 
 
   await page.goto('/man/tar/1')
 
-  await page.getByRole('button', { name: 'Open navigator' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Navigator' })
-  await expect(dialog).toBeVisible()
+  const sidebar = page.locator('[data-bm-sidebar]')
+  await expect(sidebar).toBeVisible()
 
-  await dialog.getByRole('textbox', { name: 'Find in page' }).fill('tar')
+  await sidebar.getByRole('textbox', { name: 'Find in page' }).fill('tar')
   await expect(page.locator('mark[data-bm-find]').first()).toBeVisible()
 
-  const count = dialog.getByText(/^\d+\/\d+$/)
+  const count = sidebar.getByText(/^\d+\/\d+$/)
   const label = (await count.innerText()).trim()
   expect(label).toMatch(/^1\/\d+$/)
   const totalRaw = label.split('/')[1]
   const total = totalRaw ? Number.parseInt(totalRaw, 10) : Number.NaN
   expect(total).toBeGreaterThan(1)
 
-  await dialog.getByRole('button', { name: 'Next match' }).click()
+  await sidebar.getByRole('button', { name: 'Next match' }).click()
   await expect(count).toHaveText(new RegExp(`^2/${total}$`))
 
-  await dialog.getByRole('button', { name: 'Previous match' }).click()
+  await sidebar.getByRole('button', { name: 'Previous match' }).click()
   await expect(count).toHaveText(new RegExp(`^1/${total}$`))
 
   await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
@@ -97,18 +143,20 @@ test('man: options table splits flags and highlights terms', async ({ page }) =>
   await expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 
-test('man: TOC navigation updates the URL hash', async ({ page }) => {
+test('man: TOC navigation updates the URL hash and scrolls', async ({ page }) => {
   await page.goto('/man/tar/1')
 
-  await page.getByRole('button', { name: 'Open navigator' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Navigator' })
-  await expect(dialog).toBeVisible()
+  const sidebar = page.locator('[data-bm-sidebar]')
+  await expect(sidebar).toBeVisible()
 
-  const toc = dialog.locator('nav[aria-label="On this page"]')
+  const toc = sidebar.locator('nav[aria-label="On this page"]')
   const examples = toc.getByRole('link', { name: 'EXAMPLES' })
 
+  const yBefore = await page.evaluate(() => window.scrollY)
   await examples.click()
+
   await expect(page).toHaveURL(/\/man\/tar\/1#examples$/)
+  await page.waitForFunction((y) => window.scrollY > y + 30, yBefore)
   await expect(examples).toHaveAttribute('class', /border-\[var\(--bm-accent\)\]/)
 })
 
