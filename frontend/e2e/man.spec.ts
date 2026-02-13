@@ -19,7 +19,11 @@ test('man: navigator panel opens and contains TOC + Find', async ({ page }) => {
 
 test('man: mobile TOC drawer opens', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
+  const consoleErrors: string[] = []
   const pageErrors: string[] = []
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text())
+  })
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
   await page.goto('/man/tar/1')
@@ -30,17 +34,67 @@ test('man: mobile TOC drawer opens', async ({ page }) => {
   await openNavigator.click()
 
   await expect(page.getByRole('dialog', { name: 'Table of contents' })).toBeVisible()
+  await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
   await expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 
-test('man: find-in-page highlights matches', async ({ page }) => {
+test('man: find-in-page shows count and navigates matches', async ({ page }) => {
+  const consoleErrors: string[] = []
+  const pageErrors: string[] = []
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text())
+  })
+  page.on('pageerror', (err) => pageErrors.push(err.message))
+
   await page.goto('/man/tar/1')
 
   await page.getByRole('button', { name: 'Open navigator' }).click()
-  await expect(page.getByRole('dialog', { name: 'Navigator' })).toBeVisible()
+  const dialog = page.getByRole('dialog', { name: 'Navigator' })
+  await expect(dialog).toBeVisible()
 
-  await page.getByRole('textbox', { name: 'Find in page' }).fill('tar')
+  await dialog.getByRole('textbox', { name: 'Find in page' }).fill('tar')
   await expect(page.locator('mark[data-bm-find]').first()).toBeVisible()
+
+  const count = dialog.getByText(/^\d+\/\d+$/)
+  const label = (await count.innerText()).trim()
+  expect(label).toMatch(/^1\/\d+$/)
+  const totalRaw = label.split('/')[1]
+  const total = totalRaw ? Number.parseInt(totalRaw, 10) : Number.NaN
+  expect(total).toBeGreaterThan(1)
+
+  await dialog.getByRole('button', { name: 'Next match' }).click()
+  await expect(count).toHaveText(new RegExp(`^2/${total}$`))
+
+  await dialog.getByRole('button', { name: 'Previous match' }).click()
+  await expect(count).toHaveText(new RegExp(`^1/${total}$`))
+
+  await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
+  await expect(pageErrors, pageErrors.join('\n')).toEqual([])
+})
+
+test('man: options table splits flags and highlights terms', async ({ page }) => {
+  const consoleErrors: string[] = []
+  const pageErrors: string[] = []
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text())
+  })
+  page.on('pageerror', (err) => pageErrors.push(err.message))
+
+  await page.goto('/man/tar/1')
+
+  const table = page.getByRole('table', { name: 'Command-line options' })
+  await expect(table).toBeVisible()
+
+  await expect(table.getByText('-c', { exact: true })).toBeVisible()
+  await expect(table.getByText('--create', { exact: true })).toBeVisible()
+  await expect(table.getByText('-c, --create', { exact: true })).toHaveCount(0)
+
+  await table.getByText('-c', { exact: true }).click()
+  await expect(page.locator('mark[data-bm-opt]').first()).toBeVisible()
+  await expect(page.locator('mark[data-bm-opt]').filter({ hasText: '--create' }).first()).toBeVisible()
+
+  await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
+  await expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 
 test('man: TOC navigation updates the URL hash', async ({ page }) => {
@@ -67,9 +121,7 @@ test('man: distro variant selector swaps content', async ({ page }) => {
   await page.goto('/man/tar/1?distro=debian')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
-  const marker = page.getByText(
-    'Ubuntu variant: this page is intentionally different for E2E testing.',
-  )
+  const marker = page.getByText('Ubuntu variant: this page is intentionally different for E2E testing.')
   await expect(marker).toHaveCount(0)
 
   const variantSelect = page.getByLabel('Select distribution variant')
