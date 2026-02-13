@@ -304,16 +304,64 @@ jobs:
             exit 1
           fi
 
+          railway_with_retry() {
+            local max_attempts=5
+            local attempt=1
+
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+
+              if (( attempt >= max_attempts )); then
+                echo "Railway command failed after ${max_attempts} attempts: $*" >&2
+                return 1
+              fi
+
+              echo "Railway command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              sleep $((attempt * 5))
+              attempt=$((attempt + 1))
+            done
+          }
+
+          railway_json_with_retry() {
+            local max_attempts=5
+            local attempt=1
+            local output
+
+            while true; do
+              if output="$("$@" 2>&1)"; then
+                if echo "$output" | jq -e . >/dev/null 2>&1; then
+                  printf '%s' "$output"
+                  return 0
+                fi
+                echo "Railway JSON command returned non-JSON (attempt ${attempt}/${max_attempts}): $*" >&2
+                echo "$output" >&2
+              else
+                echo "Railway JSON command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+                echo "$output" >&2
+              fi
+
+              if (( attempt >= max_attempts )); then
+                echo "Railway JSON command failed after ${max_attempts} attempts: $*" >&2
+                return 1
+              fi
+
+              sleep $((attempt * 5))
+              attempt=$((attempt + 1))
+            done
+          }
+
           deploy_service() {
             local service_id="$1"
 
-            railway link \
+            railway_with_retry railway link \
               --workspace "$RAILWAY_WORKSPACE_ID" \
               --project "$RAILWAY_PROJECT_ID" \
               --environment "$RAILWAY_ENVIRONMENT_ID" \
               --service "$service_id"
 
-            railway up --ci \
+            railway_with_retry railway up --ci \
               --service "$service_id" \
               --environment "$RAILWAY_ENVIRONMENT_ID"
 
@@ -322,7 +370,7 @@ jobs:
 
             echo "Waiting for Railway deployment to reach SUCCESS (serviceId=${service_id}, maxWait=$((max_attempts * sleep_seconds))s)…"
             for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-              info="$(railway service status --json --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID")"
+              info="$(railway_json_with_retry railway service status --json --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID")"
               status="$(echo "$info" | jq -r '.status // empty')"
               stopped="$(echo "$info" | jq -r '.stopped')"
               deployment_id="$(echo "$info" | jq -r '.deploymentId // empty')"
