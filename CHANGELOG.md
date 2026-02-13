@@ -2,6 +2,13 @@
 
 All notable changes to BetterMan are documented here.
 
+## v0.6.0
+
+- Design refresh: “hacker-tool” aesthetic with refined dark palette, typography scale, and UI tokens.
+- Man page reading polish: header + sidebar layout, options table density, and terminal-style code blocks.
+- Improved distro switching reliability (Next.js navigation) and stabilized E2E coverage.
+- OSS polish: architecture + getting-started docs, governance, CI badge, and CODEOWNERS.
+
 ## v0.5.0
 
 - Next.js App Router migration (SSR/streaming) and two-service Railway deployment (Next.js + FastAPI).
