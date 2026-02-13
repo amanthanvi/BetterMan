@@ -74,8 +74,11 @@ test('man: distro variant selector swaps content', async ({ page }) => {
 
   const variantSelect = page.getByLabel('Select distribution variant')
   await expect(variantSelect).toBeVisible()
-  await variantSelect.selectOption('ubuntu')
-  await expect(page).toHaveURL(/distro=ubuntu/)
+
+  await Promise.all([
+    page.waitForURL(/distro=ubuntu/, { timeout: 15_000 }),
+    variantSelect.selectOption('ubuntu'),
+  ])
 
   await expect(marker).toBeVisible()
 })
