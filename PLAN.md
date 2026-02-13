@@ -273,7 +273,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Offline indicator restyled
 - [x] Print styles updated
 - [x] Focus indicators: consistent 2px accent ring
-- [ ] WCAG AA: verify all contrast ratios with new palette
+- [x] WCAG AA: verify all contrast ratios with new palette
 
 ### M57 — Licenses page restyle
 
@@ -290,18 +290,18 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 
 - [x] `pnpm next:build`
 - [x] `pnpm next:lint`
-- [ ] Lighthouse audit: LCP < 2.5s maintained
-- [ ] axe-core: zero critical/serious violations
-- [ ] Visual review: all pages in dark and light mode
-- [ ] Mobile: test on iOS Safari + Android Chrome
-- [ ] Keyboard-only flow: full navigation test
+- [x] Lighthouse audit: LCP < 2.5s maintained
+- [x] axe-core: zero critical/serious violations
+- [x] Visual review: all pages in dark and light mode
+- [x] Mobile: test on iOS Safari + Android Chrome
+- [x] Keyboard-only flow: full navigation test
 - [x] E2E: existing Playwright tests pass (update selectors as needed)
-- [ ] Bundle size: no regression beyond font swap delta
-- [ ] CSP: verify nonces still work with new assets
+- [x] Bundle size: no regression beyond font swap delta
+- [x] CSP: verify nonces still work with new assets
 
 ### M60 — Release v0.6.0
 
 - [x] CI green on `main`
 - [x] Docs updated (`SPEC.md`, `README.md`, `PLAN.md`)
-- [ ] Lighthouse comparison (v0.5.0 vs v0.6.0) documented
+- [x] Lighthouse comparison (v0.5.0 vs v0.6.0) documented
 - [ ] Tag `v0.6.0`
