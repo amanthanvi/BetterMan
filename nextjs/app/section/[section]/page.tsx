@@ -95,7 +95,7 @@ export default async function SectionPage({
           />
           <button
             type="submit"
-            className="h-10 rounded-md border border-[var(--bm-border-accent)] bg-[var(--bm-accent)] px-4 text-[13px] font-semibold text-[var(--bm-accent-contrast)] hover:bg-[var(--bm-accent-hover)]"
+            className="h-10 rounded-md border border-[var(--bm-border-accent)] bg-[var(--bm-surface)] px-4 text-[13px] font-semibold text-[var(--bm-accent)] hover:bg-[var(--bm-surface-3)]"
           >
             Search
           </button>

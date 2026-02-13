@@ -32,7 +32,7 @@ export default function GlobalError({
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
-                className="h-10 rounded-md border border-[var(--bm-border-accent)] bg-[var(--bm-accent)] px-4 font-mono text-[13px] font-semibold text-[var(--bm-accent-contrast)] hover:bg-[var(--bm-accent-hover)]"
+                className="h-10 rounded-md border border-[var(--bm-border-accent)] bg-[var(--bm-surface)] px-4 font-mono text-[13px] font-semibold text-[var(--bm-accent)] hover:bg-[var(--bm-surface-3)]"
                 onClick={() => reset()}
               >
                 Retry

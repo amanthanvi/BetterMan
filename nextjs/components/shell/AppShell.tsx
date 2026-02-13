@@ -297,7 +297,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[var(--bm-accent)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--bm-accent-contrast)]"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:border focus:border-[var(--bm-border-accent)] focus:bg-[var(--bm-surface-2)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--bm-fg)]"
       >
         Skip to content
       </a>

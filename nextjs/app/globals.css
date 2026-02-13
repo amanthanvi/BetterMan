@@ -49,12 +49,12 @@
     --bm-surface-2: #111111;
     --bm-surface-3: #1a1a1a;
     --bm-fg: #e8e8e8;
-    --bm-muted: #737373;
+    --bm-muted: #828282;
     --bm-border: rgba(255, 255, 255, 0.08);
-    --bm-border-accent: rgba(220, 50, 47, 0.25);
-    --bm-accent: #dc3232;
+    --bm-border-accent: rgba(232, 72, 72, 0.25);
+    --bm-accent: #e84848;
     --bm-accent-hover: #e84848;
-    --bm-accent-muted: rgba(220, 50, 47, 0.12);
+    --bm-accent-muted: rgba(232, 72, 72, 0.12);
     --bm-accent-contrast: #ffffff;
 
     --bm-radius-sm: 4px;

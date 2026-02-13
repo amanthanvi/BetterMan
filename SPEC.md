@@ -3345,13 +3345,15 @@ v0.6.0 is a comprehensive design and UI/UX overhaul that transforms BetterMan fr
 | `--bm-surface-2` | `#111111` | Elevated surface (headers, drawers) |
 | `--bm-surface-3` | `#1a1a1a` | Hover/active surface state |
 | `--bm-fg` | `#e8e8e8` | Primary text |
-| `--bm-muted` | `#737373` | Secondary text, placeholders |
+| `--bm-muted` | `#828282` | Secondary text, placeholders |
 | `--bm-border` | `rgba(255,255,255,0.08)` | Default hairline borders |
-| `--bm-border-accent` | `rgba(220,50,47,0.25)` | Interactive/focused element borders |
-| `--bm-accent` | `#dc3232` | Primary accent (links, active states, buttons) |
+| `--bm-border-accent` | `rgba(232,72,72,0.25)` | Interactive/focused element borders |
+| `--bm-accent` | `#e84848` | Primary accent (links, active states, buttons) |
 | `--bm-accent-hover` | `#e84848` | Accent hover state |
-| `--bm-accent-muted` | `rgba(220,50,47,0.12)` | Accent backgrounds (highlights, selections) |
+| `--bm-accent-muted` | `rgba(232,72,72,0.12)` | Accent backgrounds (highlights, selections) |
 | `--bm-accent-contrast` | `#ffffff` | Text on accent backgrounds |
+
+_Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG AA contrast on `--bm-bg` and all surfaces (`--bm-surface*`).
 
 **Light mode (warm paper):**
 
