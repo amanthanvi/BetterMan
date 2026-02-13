@@ -7,6 +7,7 @@ import type { DocRendererHandle } from '../doc/DocRenderer'
 import { buildFindIndex, locateFindMatch } from './findIndex'
 
 const FIND_BAR_KEY = 'bm-find-bar-hidden'
+const FIND_DEBOUNCE_MS = 150
 
 function readStoredFindBarHidden(): boolean {
   try {
@@ -45,16 +46,39 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
 
   const rawFindQuery = find.trim()
   const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
-  const findEnabled = findQuery.length >= 2
+
+  const [debouncedFindQuery, setDebouncedFindQuery] = useState('')
+
+  useEffect(() => {
+    if (!findQuery) {
+      setDebouncedFindQuery('')
+      return
+    }
+
+    const t = window.setTimeout(() => setDebouncedFindQuery(findQuery), FIND_DEBOUNCE_MS)
+    return () => window.clearTimeout(t)
+  }, [findQuery])
+
+  const effectiveFindQuery = debouncedFindQuery
+  const isStale = effectiveFindQuery !== findQuery
+  const findEnabled = !isStale && effectiveFindQuery.length >= 2
 
   const findIndex = useMemo(
-    () => (findEnabled ? buildFindIndex(blocks, findQuery) : null),
-    [blocks, findEnabled, findQuery],
+    () => (findEnabled ? buildFindIndex(blocks, effectiveFindQuery) : null),
+    [blocks, effectiveFindQuery, findEnabled],
   )
 
   const matchCount = findIndex?.total ?? 0
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
-  const findCountLabel = rawFindQuery.length < 2 ? '—' : matchCount ? `${displayIndex + 1}/${matchCount}` : '0/0'
+
+  const findCountLabel =
+    rawFindQuery.length < 2
+      ? '—'
+      : isStale
+        ? '…'
+        : matchCount
+          ? `${displayIndex + 1}/${matchCount}`
+          : '0/0'
 
   const setFindBarHiddenPersisted = (hidden: boolean) => {
     setFindBarHidden(hidden)
@@ -147,7 +171,7 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     focusFindInput,
     onClearFind,
     onFindChange,
-    findQuery,
+    findQuery: effectiveFindQuery,
     findEnabled,
     matchCount,
     findCountLabel,

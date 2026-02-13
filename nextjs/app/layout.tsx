@@ -1,7 +1,5 @@
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
-import Script from 'next/script'
-
 import './globals.css'
 import { normalizeDistro } from '../lib/distro'
 import { Providers } from './providers'
@@ -34,39 +32,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" data-theme={theme} suppressHydrationWarning>
       <body>
-        <Script
-          id="bm-shortcuts-bootstrap"
-          nonce={nonce}
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(() => {
-  try {
-    const FLAG = '__bmPaletteRequested';
-    const EVENT = 'bm:palette-request';
-    if (window[FLAG] !== true) window[FLAG] = false;
-    window.addEventListener(
-      'keydown',
-      (e) => {
-        if ((e.ctrlKey || e.metaKey) && String(e.key || '').toLowerCase() === 'k') {
-          e.preventDefault();
-          window[FLAG] = true;
-          window.dispatchEvent(new CustomEvent(EVENT));
-        }
-      },
-      true,
-    );
-  } catch {}
-})();`,
-          }}
-        />
         <Providers initialCookieDistro={initialCookieDistro}>{children}</Providers>
         {plausibleDomain ? (
-          <Script
-            src="https://plausible.io/js/script.js"
-            data-domain={plausibleDomain}
-            strategy="afterInteractive"
-            nonce={nonce}
-          />
+          <script defer src="https://plausible.io/js/script.js" data-domain={plausibleDomain} nonce={nonce} />
         ) : null}
       </body>
     </html>

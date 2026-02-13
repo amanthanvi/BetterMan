@@ -13,6 +13,33 @@ test('man: sticky sidebar renders TOC + Find (desktop)', async ({ page }) => {
   await expect(sidebar.getByRole('navigation', { name: 'On this page' })).toBeVisible()
 })
 
+test('man: sidebar remains sticky while scrolling (desktop)', async ({ page }) => {
+  await page.goto('/man/tar/1')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+
+  const sidebar = page.locator('[data-bm-sidebar]')
+  await expect(sidebar).toBeVisible()
+
+  const header = page.getByRole('banner', { name: 'Site header' })
+
+  const maxY = await page.evaluate(() => Math.max(0, document.documentElement.scrollHeight - window.innerHeight))
+  const y1 = Math.min(400, maxY)
+  const y2 = Math.min(y1 + 150, maxY)
+
+  await page.evaluate((y) => window.scrollTo(0, y), y1)
+  await page.waitForFunction((y) => window.scrollY >= y - 2, y1)
+
+  const headerBottom = await header.evaluate((el) => el.getBoundingClientRect().bottom)
+  const top1 = await sidebar.evaluate((el) => el.getBoundingClientRect().top)
+  expect(top1).toBeGreaterThan(headerBottom - 1)
+
+  await page.evaluate((y) => window.scrollTo(0, y), y2)
+  await page.waitForFunction((y) => window.scrollY >= y - 2, y2)
+
+  const top2 = await sidebar.evaluate((el) => el.getBoundingClientRect().top)
+  expect(Math.abs(top2 - top1)).toBeLessThan(2)
+})
+
 test('man: sidebar collapses and expands with b', async ({ page }) => {
   await page.goto('/man/tar/1')
 

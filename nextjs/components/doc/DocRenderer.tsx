@@ -477,6 +477,21 @@ function buildAnchorIndex(blocks: BlockNode[]) {
   return map
 }
 
+const CODE_LINE_COUNT_CACHE = new WeakMap<object, number>()
+
+function countCodeLines(block: { text: string }): number {
+  const cached = CODE_LINE_COUNT_CACHE.get(block as object)
+  if (cached != null) return cached
+
+  let lines = 1
+  for (let i = 0; i < block.text.length; i += 1) {
+    if (block.text.charCodeAt(i) === 10) lines += 1
+  }
+
+  CODE_LINE_COUNT_CACHE.set(block as object, lines)
+  return lines
+}
+
 function estimateBlockSize(block: BlockNode): number {
   if (block.type === 'heading') return block.level <= 2 ? 84 : 64
   if (block.type === 'paragraph') return 92
@@ -485,7 +500,7 @@ function estimateBlockSize(block: BlockNode): number {
   if (block.type === 'table') return 260
   if (block.type === 'horizontal_rule') return 40
   if (block.type === 'code_block') {
-    const lines = block.text.split('\n').length
+    const lines = countCodeLines(block)
     return Math.min(720, 90 + lines * 18)
   }
   return 120

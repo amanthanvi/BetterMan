@@ -46,7 +46,7 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
 
 ## Status
 
-- Latest release: `v0.6.2` (tag `v0.6.2`)
+- Latest release: `v0.6.3` (tag `v0.6.3`)
 - In progress: TBD (see `ROADMAP.md` + `PLAN.md`)
 - Default branch: `main`
 

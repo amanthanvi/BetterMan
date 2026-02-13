@@ -2,6 +2,14 @@
 
 All notable changes to BetterMan are documented here.
 
+## v0.6.3
+
+- Man pages: fix a React render loop that could cause severe slowness / dead-tab crashes on long sessions.
+- Man pages: desktop sidebar is now truly sticky while scrolling (no longer scrolls out of view).
+- Search: 'Try:' links and query-param navigation now reliably refresh the results UI (plus a loading skeleton).
+- Perf: debounce find-in-page indexing; reduce syntax highlighting work for huge code blocks / heavy highlight modes.
+- Service worker: bump cache version to `v0.6.3` to flush stale assets after deploy.
+
 ## v0.6.2
 
 - Man pages: sticky, collapsible desktop sidebar (TOC + Find); mobile keeps the contents drawer.

@@ -326,3 +326,12 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] CSP: address Cloudflare email decode script CSP violation.
 - [x] Service worker: bump cache version to avoid stale assets.
 - [x] Tag `v0.6.2`
+
+### Release v0.6.3
+
+- [x] Man pages: fix a React render loop causing severe slowness / potential OOM crashes.
+- [x] Man pages: make the desktop sidebar truly sticky while scrolling.
+- [x] Search: "Try:" links + query-param navigation reliably refresh results UI (add loading skeleton).
+- [x] Perf: debounce find-in-page indexing; reduce code highlighting work in heavy modes.
+- [x] Service worker: bump cache version to avoid stale assets after deploy.
+- [x] Tag `v0.6.3`

@@ -7,42 +7,55 @@ import type { SearchResponse, SearchResult } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
 import { withDistro } from '../../lib/distro'
 
+const BACKEND_HIGHLIGHT_MARKER_RE = /[\u27ea\u27eb]/g
+
+function stripBackendHighlightMarkers(text: string): string {
+  return text.replace(BACKEND_HIGHLIGHT_MARKER_RE, '')
+}
+
 function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\[\]\\]/g, '\\$&')
 }
 
 function highlight(text: string, query: string): ReactNode[] {
   const q = query.trim()
-  if (q.length < 2) return [text]
+  const cleanedText = stripBackendHighlightMarkers(text)
+  if (q.length < 2) return [cleanedText]
 
   const re = new RegExp(escapeRegExp(q), 'gi')
   const out: ReactNode[] = []
   let last = 0
 
   while (true) {
-    const m = re.exec(text)
+    const m = re.exec(cleanedText)
     if (!m || m.index == null) break
     const start = m.index
     const end = start + m[0].length
-    if (start > last) out.push(text.slice(last, start))
+    if (start > last) out.push(cleanedText.slice(last, start))
     out.push(
       <mark key={start} className="bm-mark bm-find">
-        {text.slice(start, end)}
+        {cleanedText.slice(start, end)}
       </mark>,
     )
     last = end
     if (!m[0].length) re.lastIndex += 1
   }
 
-  if (last < text.length) out.push(text.slice(last))
-  return out.length ? out : [text]
+  if (last < cleanedText.length) out.push(cleanedText.slice(last))
+  return out.length ? out : [cleanedText]
 }
 
 function buildManHref(opts: { distro: Distro; name: string; section: string }) {
   return withDistro(`/man/${encodeURIComponent(opts.name)}/${encodeURIComponent(opts.section)}`, opts.distro)
 }
 
-async function fetchMore(opts: { distro: Distro; q: string; section: string; limit: number; offset: number }): Promise<SearchResponse> {
+async function fetchMore(opts: {
+  distro: Distro
+  q: string
+  section: string
+  limit: number
+  offset: number
+}): Promise<SearchResponse> {
   const params = new URLSearchParams()
   params.set('q', opts.q)
   params.set('limit', String(opts.limit))
@@ -59,9 +72,18 @@ async function fetchMore(opts: { distro: Distro; q: string; section: string; lim
 }
 
 function buildSynopsisSnippet(r: SearchResult): string {
-  const lines = (r.highlights ?? []).map((s) => s.trim()).filter(Boolean)
+  const lines = (r.highlights ?? [])
+    .flatMap((s) => stripBackendHighlightMarkers(s).split(/\r?\n/g))
+    .map((s) => s.trim())
+    .filter(Boolean)
+
   if (!lines.length) return ''
-  return lines.slice(0, 2).join('\n')
+
+  const picked = lines.slice(-2)
+  const maxLen = 180
+  return picked
+    .map((l) => (l.length > maxLen ? `${l.slice(0, maxLen)}…` : l))
+    .join('\n')
 }
 
 function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResult }) {
@@ -83,13 +105,32 @@ function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResu
         <div className="text-[13px] text-[color:var(--bm-muted)]">{highlight(r.description, q)}</div>
 
         {synopsis ? (
-          <pre className="rounded-[var(--bm-radius)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-3 font-mono text-xs leading-[1.6] text-[color:var(--bm-fg)] whitespace-pre-wrap break-words">
+          <pre className="whitespace-pre-wrap break-words rounded-[var(--bm-radius)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-3 font-mono text-xs leading-[1.6] text-[color:var(--bm-fg)]">
             <code>{highlight(synopsis, q)}</code>
           </pre>
         ) : null}
       </div>
     </li>
   )
+}
+
+function getSuggestions(initial: SearchResponse | null, q: string): string[] {
+  const wanted = (initial?.suggestions ?? []).map((s) => s.trim()).filter(Boolean)
+  if (!wanted.length) return []
+
+  const qLower = q.trim().toLowerCase()
+  const out: string[] = []
+  const seen = new Set<string>()
+
+  for (const s of wanted) {
+    const k = s.toLowerCase()
+    if (k === qLower) continue
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(s)
+  }
+
+  return out
 }
 
 export function SearchResultsClient({
@@ -111,7 +152,7 @@ export function SearchResultsClient({
     setResults(initial?.results ?? [])
     setError(null)
     setLoading(false)
-  }, [initial])
+  }, [distro, initial, q, section])
 
   const canLoadMore = Boolean(q && results.length > 0)
 
@@ -168,17 +209,22 @@ export function SearchResultsClient({
     )
   }
 
+  const suggestions = getSuggestions(initial, q)
+
   if (!results.length) {
     return (
       <div className="mt-8 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm text-[color:var(--bm-muted)]">
         No results for <span className="font-mono text-[color:var(--bm-fg)]">{q}</span>.
-        {initial?.suggestions?.length ? (
+        {suggestions.length ? (
           <div className="mt-3">
             <span className="text-[color:var(--bm-muted)]">Did you mean:</span>{' '}
-            {initial.suggestions.map((s, idx) => (
+            {suggestions.map((s, idx) => (
               <span key={s}>
                 {idx ? ', ' : ''}
-                <Link href={withDistro(`/search?q=${encodeURIComponent(s)}`, distro)} className="font-mono text-[var(--bm-accent)] hover:text-[var(--bm-accent-hover)]">
+                <Link
+                  href={withDistro(`/search?q=${encodeURIComponent(s)}`, distro)}
+                  className="font-mono text-[var(--bm-accent)] hover:text-[var(--bm-accent-hover)]"
+                >
                   {s}
                 </Link>
               </span>
@@ -192,13 +238,16 @@ export function SearchResultsClient({
 
   return (
     <div className="mt-8">
-      {initial?.suggestions?.length ? (
+      {suggestions.length ? (
         <div className="mb-4 text-xs text-[color:var(--bm-muted)]">
           Did you mean:{' '}
-          {initial.suggestions.map((s, idx) => (
+          {suggestions.map((s, idx) => (
             <span key={s}>
               {idx ? ', ' : ''}
-              <Link href={withDistro(`/search?q=${encodeURIComponent(s)}`, distro)} className="font-mono text-[var(--bm-accent)] hover:text-[var(--bm-accent-hover)]">
+              <Link
+                href={withDistro(`/search?q=${encodeURIComponent(s)}`, distro)}
+                className="font-mono text-[var(--bm-accent)] hover:text-[var(--bm-accent-hover)]"
+              >
                 {s}
               </Link>
             </span>

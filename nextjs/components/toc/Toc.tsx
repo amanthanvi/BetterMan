@@ -57,13 +57,9 @@ export function Toc({
                   if (onNavigateToId) {
                     e.preventDefault()
                     try {
-                      window.history.pushState(null, '', `#${item.id}`)
+                      window.location.hash = item.id
                     } catch {
-                      try {
-                        window.location.hash = item.id
-                      } catch {
-                        // ignore
-                      }
+                      // ignore
                     }
                     onNavigateToId(item.id)
                   }

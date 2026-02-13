@@ -33,6 +33,7 @@ export function ManPageView({
   relatedItems: SectionPage[]
 }) {
   const toc = useToc()
+  const { scrollToId, setScrollToId, setItems, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
   const distro = useDistro()
 
   const manFind = useManPageFind({ blocks: content.blocks })
@@ -53,12 +54,12 @@ export function ManPageView({
   const shouldVirtualize = content.blocks.length >= 100
 
   const hasToc = (content.toc ?? []).length > 0
-  const desktopSidebarExpanded = hasToc && toc.sidebarOpen
+  const desktopSidebarExpanded = hasToc && sidebarOpen
 
   useEffect(() => {
-    toc.setItems(content.toc ?? [])
-    return () => toc.setItems([])
-  }, [content.toc, toc])
+    setItems(content.toc ?? [])
+    return () => setItems([])
+  }, [content.toc, setItems])
 
   useEffect(() => {
     return () => {
@@ -74,12 +75,12 @@ export function ManPageView({
   }
 
   useEffect(() => {
-    toc.setScrollToId((id) => {
+    setScrollToId((id) => {
       setActiveHeadingId(id)
       manFind.docRef.current?.scrollToAnchor(id)
     })
-    return () => toc.setScrollToId(null)
-  }, [manFind.docRef, toc])
+    return () => setScrollToId(null)
+  }, [manFind.docRef, setScrollToId])
 
   useEffect(() => {
     if (shouldVirtualize) return
@@ -210,7 +211,7 @@ export function ManPageView({
         variants={variants}
         distro={distro.distro}
         hasToc={hasToc}
-        onOpenContents={() => toc.setOpen(true)}
+        onOpenContents={() => setTocOpen(true)}
         onOpenPrefs={openPrefs}
         onCopyLink={copyLink}
         copiedLink={copiedLink}
@@ -218,7 +219,7 @@ export function ManPageView({
 
       <div className={`mt-10 ${hasToc ? `lg:grid lg:items-start lg:gap-8 ${gridCols}` : ''}`}>
         {hasToc ? (
-          <aside className="hidden lg:block">
+          <aside className="hidden lg:block lg:self-stretch">
             <div className="sticky top-20">
               <div
                 data-bm-sidebar
@@ -231,7 +232,7 @@ export function ManPageView({
                       <button
                         type="button"
                         className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                        onClick={() => toc.setSidebarOpen(false)}
+                        onClick={() => setSidebarOpen(false)}
                         aria-label="Collapse sidebar"
                         title="Collapse (b)"
                       >
@@ -279,7 +280,7 @@ export function ManPageView({
                         onClearFind={manFind.onClearFind}
                         tocItems={content.toc}
                         activeTocId={activeTocId}
-                        onTocNavigateToId={toc.scrollToId ?? undefined}
+                        onTocNavigateToId={scrollToId ?? undefined}
                       />
                     </div>
                   </>
@@ -288,7 +289,7 @@ export function ManPageView({
                     <button
                       type="button"
                       className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                      onClick={() => toc.setSidebarOpen(true)}
+                      onClick={() => setSidebarOpen(true)}
                       aria-label="Expand sidebar"
                       title="Expand (b)"
                     >

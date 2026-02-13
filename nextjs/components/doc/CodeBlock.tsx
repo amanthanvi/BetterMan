@@ -57,6 +57,13 @@ export function CodeBlock({
   const [highlighted, setHighlighted] = useState<{ source: string; html: string } | null>(null)
   const timeoutRef = useRef<number | null>(null)
 
+  const allowSyntaxHighlight = shouldHighlight(text) && !ctx.findQuery && !ctx.optionRegex && text.length <= 20_000
+
+  useEffect(() => {
+    if (allowSyntaxHighlight) return
+    setHighlighted(null)
+  }, [allowSyntaxHighlight])
+
   useEffect(() => {
     return () => {
       if (timeoutRef.current != null) window.clearTimeout(timeoutRef.current)
@@ -64,7 +71,7 @@ export function CodeBlock({
   }, [])
 
   useEffect(() => {
-    if (!shouldHighlight(text)) return
+    if (!allowSyntaxHighlight) return
 
     let cancelled = false
     void loadHljs().then((hljs) => {
@@ -85,7 +92,7 @@ export function CodeBlock({
     return () => {
       cancelled = true
     }
-  }, [language, markedText, text])
+  }, [allowSyntaxHighlight, language, markedText, text])
 
   const html = highlighted?.source === markedText ? highlighted.html : fallbackHtml
 

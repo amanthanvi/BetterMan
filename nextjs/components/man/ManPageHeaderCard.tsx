@@ -101,6 +101,7 @@ export function ManPageHeaderCard({
             <label className="inline-flex items-center gap-2 rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-2 py-1 font-mono text-xs text-[color:var(--bm-muted)]">
               <span>distro</span>
               <select
+                name="distro"
                 value={distro}
                 onChange={(e) => {
                   const next = normalizeDistro(e.target.value)

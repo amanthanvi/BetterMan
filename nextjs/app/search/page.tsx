@@ -47,23 +47,24 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const q = getFirst(sp.q)?.trim() ?? ''
   const section = getFirst(sp.section)?.trim() || ''
 
-  const sections = await listSections(distro)
-  const sectionPills = sections
-    .filter((s) => /^\d+$/.test(s.section))
-    .map((s) => ({ section: s.section, n: Number.parseInt(s.section, 10), label: s.label }))
-    .filter((s) => Number.isFinite(s.n))
-    .sort((a, b) => a.n - b.n)
-    .slice(0, 9)
-
-  const initial = q
-    ? await search({
+  const sectionsPromise = listSections(distro)
+  const initialPromise = q
+    ? search({
         distro,
         q,
         section: section || undefined,
         limit: 20,
         offset: 0,
       })
-    : null
+    : Promise.resolve(null)
+
+  const [sections, initial] = await Promise.all([sectionsPromise, initialPromise])
+  const sectionPills = sections
+    .filter((s) => /^\d+$/.test(s.section))
+    .map((s) => ({ section: s.section, n: Number.parseInt(s.section, 10), label: s.label }))
+    .filter((s) => Number.isFinite(s.n))
+    .sort((a, b) => a.n - b.n)
+    .slice(0, 9)
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -72,6 +73,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
         <form className="mt-4" action="/search" method="get" role="search" aria-label="Search man pages">
           <input
+            key={`${distro}:${section}:${q}`}
             name="q"
             type="search"
             defaultValue={q}

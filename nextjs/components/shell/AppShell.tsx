@@ -119,10 +119,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [routeKey, setTocOpen])
 
   useEffect(() => {
-    const h1 = document.querySelector('main h1') as HTMLElement | null
-    if (!h1) return
-    if (!h1.hasAttribute('tabindex')) h1.setAttribute('tabindex', '-1')
-    h1.focus({ preventScroll: true })
+    const main = document.getElementById('main-content')
+    if (!(main instanceof HTMLElement)) return
+    main.focus({ preventScroll: true })
   }, [routeKey])
 
   useEffect(() => {
