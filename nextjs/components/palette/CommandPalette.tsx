@@ -277,7 +277,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       kind: 'action',
       id: 'action-theme',
       label: 'Toggle theme',
-      detail: `Current: ${theme.mode}`,
+      detail: 'Cycle: system → light → dark',
       run: () => theme.cycle(),
     },
     {

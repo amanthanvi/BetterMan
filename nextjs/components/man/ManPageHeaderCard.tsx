@@ -1,5 +1,6 @@
 'use client'
 
+import type { RefObject } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
 import type { Distro } from '../../lib/distro'
@@ -26,6 +27,7 @@ export function ManPageHeaderCard({
   distro,
   hasNavigator,
   onOpenNavigator,
+  navigatorButtonRef,
   onOpenPrefs,
   onCopyLink,
   copiedLink,
@@ -36,6 +38,7 @@ export function ManPageHeaderCard({
   distro: Distro
   hasNavigator: boolean
   onOpenNavigator: () => void
+  navigatorButtonRef?: RefObject<HTMLButtonElement | null>
   onOpenPrefs: () => void
   onCopyLink: () => void
   copiedLink: boolean
@@ -63,6 +66,7 @@ export function ManPageHeaderCard({
               <button
                 type="button"
                 className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                ref={navigatorButtonRef}
                 onClick={onOpenNavigator}
                 aria-label="Open navigator"
                 title="Navigator (b)"

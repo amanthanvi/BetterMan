@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
 import type { ManPage, ManPageContent, ManPageVariant, OptionItem } from '../../lib/docModel'
@@ -44,6 +44,7 @@ export function ManPageView({
 
   const [copiedLink, setCopiedLink] = useState(false)
   const copyTimeoutRef = useRef<number | null>(null)
+  const openNavigatorButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const optionsCount = content.options?.length ?? 0
   const [optionsVisible, setOptionsVisible] = useState(() => optionsCount > 0 && optionsCount <= 160)
@@ -54,6 +55,21 @@ export function ManPageView({
   const showSidebar = toc.sidebarOpen
 
   useBodyScrollLock(showSidebar)
+
+  const closeNavigator = useCallback(() => {
+    openNavigatorButtonRef.current?.focus()
+    toc.setSidebarOpen(false)
+  }, [toc])
+
+  const openNavigator = useCallback(() => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      if (toc.sidebarOpen) closeNavigator()
+      else toc.setSidebarOpen(true)
+      return
+    }
+
+    toc.setOpen(true)
+  }, [closeNavigator, toc])
 
   useEffect(() => {
     toc.setItems(content.toc ?? [])
@@ -72,11 +88,11 @@ export function ManPageView({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       e.preventDefault()
-      toc.setSidebarOpen(false)
+      closeNavigator()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [showSidebar, toc])
+  }, [closeNavigator, showSidebar])
 
   const flashOption = (anchorId: string) => {
     setFlashAnchorId(anchorId)
@@ -181,11 +197,6 @@ export function ManPageView({
     return out.slice(0, 6)
   }, [content.toc])
 
-  const openNavigator = () => {
-    if (window.matchMedia('(min-width: 1024px)').matches) toc.setSidebarOpen(!toc.sidebarOpen)
-    else toc.setOpen(true)
-  }
-
   const openPrefs = () => {
     try {
       window.dispatchEvent(new CustomEvent('bm:prefs-request'))
@@ -218,7 +229,7 @@ export function ManPageView({
 
       <ManPageNavigatorOverlay
         open={showSidebar}
-        onClose={() => toc.setSidebarOpen(false)}
+        onClose={closeNavigator}
         quickJumps={quickJumps}
         onQuickJump={(id) => {
           if (!manFind.docRef.current) return false
@@ -267,6 +278,7 @@ export function ManPageView({
         distro={distro.distro}
         hasNavigator={toc.items.length > 0}
         onOpenNavigator={openNavigator}
+        navigatorButtonRef={openNavigatorButtonRef}
         onOpenPrefs={openPrefs}
         onCopyLink={copyLink}
         copiedLink={copiedLink}

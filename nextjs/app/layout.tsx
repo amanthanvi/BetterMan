@@ -3,9 +3,11 @@ import { cookies, headers } from 'next/headers'
 import Script from 'next/script'
 
 import './globals.css'
+import { normalizeDistro } from '../lib/distro'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://betterman.sh'),
   title: 'BetterMan',
   description: 'BetterMan is a fast, readable web UI for Linux man pages.',
   manifest: '/site.webmanifest',
@@ -19,8 +21,13 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
+
   const resolved = cookieStore.get('bm-theme-resolved')?.value
   const theme = resolved === 'dark' || resolved === 'light' ? resolved : undefined
+
+  const cookieDistro = cookieStore.get('bm-distro')?.value
+  const initialCookieDistro = normalizeDistro(cookieDistro) ?? undefined
+
   const nonce = (await headers()).get('x-nonce') ?? undefined
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim()
 
@@ -52,7 +59,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 })();`,
           }}
         />
-        <Providers>{children}</Providers>
+        <Providers initialCookieDistro={initialCookieDistro}>{children}</Providers>
         {plausibleDomain ? (
           <Script
             src="https://plausible.io/js/script.js"

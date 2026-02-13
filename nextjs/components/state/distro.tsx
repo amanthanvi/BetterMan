@@ -14,21 +14,21 @@ type DistroContextValue = {
 const DISTRO_KEY = 'bm-distro'
 const COOKIE_DISTRO = 'bm-distro'
 
-function writeCookie(value: string) {
+function writeCookie(distro: Distro) {
   try {
-    document.cookie = `${COOKIE_DISTRO}=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`
+    document.cookie = `${COOKIE_DISTRO}=${encodeURIComponent(distro)}; Path=/; Max-Age=31536000; SameSite=Lax`
   } catch {
     // ignore
   }
 }
 
-function readStoredDistro(): Distro {
+function readStoredDistro(): Distro | null {
   try {
-    return normalizeDistro(localStorage.getItem(DISTRO_KEY)) ?? 'debian'
+    return normalizeDistro(localStorage.getItem(DISTRO_KEY))
   } catch {
     // ignore
   }
-  return 'debian'
+  return null
 }
 
 function writeStoredDistro(distro: Distro) {
@@ -36,15 +36,6 @@ function writeStoredDistro(distro: Distro) {
     localStorage.setItem(DISTRO_KEY, distro)
   } catch {
     // ignore
-  }
-}
-
-function readUrlDistro(): Distro | null {
-  if (typeof window === 'undefined') return null
-  try {
-    return normalizeDistro(new URL(window.location.href).searchParams.get('distro'))
-  } catch {
-    return null
   }
 }
 
@@ -58,27 +49,21 @@ function buildUrlWithDistro(opts: { pathname: string; searchParams: URLSearchPar
 
 const DistroContext = createContext<DistroContextValue | null>(null)
 
-function readInitialDistro(): Distro {
-  const fromUrl = readUrlDistro()
-  if (fromUrl) {
-    writeStoredDistro(fromUrl)
-    writeCookie(fromUrl)
-    return fromUrl
-  }
-
-  const stored = readStoredDistro()
-  writeCookie(stored)
-  return stored
-}
-
-export function DistroProvider({ children }: { children: React.ReactNode }) {
+export function DistroProvider({
+  children,
+  initialCookieDistro,
+}: {
+  children: React.ReactNode
+  initialCookieDistro?: Distro
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const search = searchParams.toString()
+  const urlDistro = normalizeDistro(searchParams.get('distro'))
 
-  const [distro, setDistroState] = useState<Distro>(() => readInitialDistro())
+  const [distro, setDistroState] = useState<Distro>(() => urlDistro ?? initialCookieDistro ?? 'debian')
 
   const setDistro = useCallback(
     (next: Distro) => {
@@ -97,16 +82,33 @@ export function DistroProvider({ children }: { children: React.ReactNode }) {
   )
 
   useEffect(() => {
-    const fromUrl = normalizeDistro(new URLSearchParams(search).get('distro'))
-    if (!fromUrl) return
+    if (!urlDistro) return
 
     setDistroState((prev) => {
-      if (prev === fromUrl) return prev
-      writeStoredDistro(fromUrl)
-      writeCookie(fromUrl)
-      return fromUrl
+      if (prev === urlDistro) return prev
+      writeStoredDistro(urlDistro)
+      writeCookie(urlDistro)
+      return urlDistro
     })
-  }, [search])
+  }, [urlDistro])
+
+  useEffect(() => {
+    if (urlDistro) return
+
+    const stored = readStoredDistro()
+    if (!stored) return
+
+    setDistroState((prev) => {
+      if (prev === stored) return prev
+      writeCookie(stored)
+      return stored
+    })
+  }, [urlDistro])
+
+  useEffect(() => {
+    writeStoredDistro(distro)
+    writeCookie(distro)
+  }, [distro])
 
   const value = useMemo(() => ({ distro, setDistro }), [distro, setDistro])
   return <DistroContext.Provider value={value}>{children}</DistroContext.Provider>
@@ -117,4 +119,3 @@ export function useDistro(): DistroContextValue {
   if (!ctx) throw new Error('useDistro must be used within <DistroProvider>')
   return ctx
 }
-

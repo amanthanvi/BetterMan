@@ -193,9 +193,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'b' && toc.items.length) {
         e.preventDefault()
+        const opener = document.querySelector('button[aria-label="Open navigator"]')
         if (window.matchMedia('(min-width: 1024px)').matches) {
+          if (toc.sidebarOpen && opener instanceof HTMLButtonElement) opener.focus()
           toc.setSidebarOpen(!toc.sidebarOpen)
         } else {
+          if (toc.open && opener instanceof HTMLButtonElement) opener.focus()
           toc.setOpen(!toc.open)
         }
         return
@@ -367,10 +370,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
               onClick={() => theme.cycle()}
-              title={`Theme: ${theme.mode}`}
+              title="Cycle theme"
               aria-label="Cycle theme"
             >
-              {theme.resolved === 'dark' ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
+              <SunIcon className="bm-theme-icon bm-theme-icon-sun size-4" />
+              <MoonIcon className="bm-theme-icon bm-theme-icon-moon size-4" />
             </button>
           </div>
         </div>

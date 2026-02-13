@@ -254,6 +254,32 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--bm-accent) 35%, transparent);
   }
 
+  .bm-theme-icon {
+    display: none;
+  }
+
+  html[data-theme="dark"] .bm-theme-icon-sun {
+    display: inline-flex;
+  }
+
+  html[data-theme="light"] .bm-theme-icon-moon {
+    display: inline-flex;
+  }
+
+  html:not([data-theme]) .bm-theme-icon-sun {
+    display: inline-flex;
+  }
+
+  @media (prefers-color-scheme: light) {
+    html:not([data-theme]) .bm-theme-icon-sun {
+      display: none;
+    }
+
+    html:not([data-theme]) .bm-theme-icon-moon {
+      display: inline-flex;
+    }
+  }
+
 
   ::selection {
     background: var(--bm-accent-muted);
