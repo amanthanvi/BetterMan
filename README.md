@@ -1,5 +1,7 @@
 # BetterMan
 
+[![ci](https://github.com/amanthanvi/BetterMan/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/amanthanvi/BetterMan/actions/workflows/ci.yml)
+
 <p align="center">
   <img src="nextjs/public/betterman-mark.svg" width="96" height="96" alt="BetterMan logo" />
 </p>
@@ -8,6 +10,7 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a ha
 
 - Live: https://betterman.sh
 - Spec / architecture: `SPEC.md`
+- Architecture overview (quick read): `docs/ARCHITECTURE.md`
 - Roadmap (high-level): `ROADMAP.md`
 - Execution plan (living checklist): `PLAN.md`
 - Changelog: `CHANGELOG.md`
