@@ -16,6 +16,7 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a ha
 - Roadmap (high-level): `ROADMAP.md`
 - Execution plan (living checklist): `PLAN.md`
 - Changelog: `CHANGELOG.md`
+- Releasing: `docs/RELEASING.md`
 - Support: `SUPPORT.md`
 - Contributing: `CONTRIBUTING.md`
 
