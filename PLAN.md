@@ -26,6 +26,7 @@ Living execution plan for shipping `v0.6.0` from `SPEC.md`.
 - [x] v0.5.0 shipped (tag `v0.5.0`)
 - [x] v0.6.0 shipped (tag `v0.6.0`)
 - [x] v0.6.1 shipped (tag `v0.6.1`)
+- [x] v0.6.2 shipped (tag `v0.6.2`)
 
 ## Golden Commands (current; proven)
 
@@ -162,7 +163,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - Background: subtle dot/pixel grid on dark, barely perceptible.
 - Motion: 100–200ms transitions on interactions only. No decorative animation.
 - Code blocks: terminal-in-page (dark bg even in light mode, minimal header bar with language label + copy button, no traffic-light dots).
-- Sidebar: toggle panel (hidden by default, shortcut to reveal).
+- Sidebar: sticky + collapsible on desktop; mobile uses contents drawer.
 - Command palette: refine current + add inline preview pane alongside results.
 - Homepage: command-line prompt metaphor with dashboard (recent + bookmarks merged in).
 - Eliminate /bookmarks and /history routes — merge into homepage dashboard.
@@ -213,7 +214,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 ### M48 — Man page view redesign
 
 - [x] Hero card header (dark surface even in light mode)
-- [x] Toggle sidebar panel hidden by default; opens from left; closes on Esc/click-outside
+- [x] Desktop: sticky sidebar (TOC + Find), collapsible via `b`; mobile uses contents drawer
 - [x] Content typography updated (H2 accent left border)
 - [x] Code blocks: terminal-in-page (always #0d0d0d, minimal header, copy feedback)
 - [x] Options table redesign: tag-style flags + collapsible panel
@@ -306,3 +307,22 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Docs updated (`SPEC.md`, `README.md`, `PLAN.md`)
 - [x] Lighthouse comparison (v0.5.0 vs v0.6.0) documented
 - [x] Tag `v0.6.0`
+
+---
+
+## v0.6.x Patch Releases
+
+### Release v0.6.1
+
+- [x] Man page find-in-page: show match count and enable prev/next navigation.
+- [x] Tag `v0.6.1`
+
+### Release v0.6.2
+
+- [x] Man pages: sticky, collapsible desktop sidebar (TOC + Find); mobile keeps the contents drawer.
+- [x] Fix header/footer navigation reliability from man pages.
+- [x] Reading preferences: segmented controls reliably clickable.
+- [x] Options table: flags parsing + display refined.
+- [x] CSP: address Cloudflare email decode script CSP violation.
+- [x] Service worker: bump cache version to avoid stale assets.
+- [x] Tag `v0.6.2`

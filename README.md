@@ -46,7 +46,7 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
 
 ## Status
 
-- Latest release: `v0.6.1` (tag `v0.6.1`)
+- Latest release: `v0.6.2` (tag `v0.6.2`)
 - In progress: TBD (see `ROADMAP.md` + `PLAN.md`)
 - Default branch: `main`
 
@@ -107,8 +107,9 @@ When set, X-Forwarded-For is only trusted from connections originating within th
 
 ## UX notes
 
-- Desktop man pages: toggleable “Navigator” panel (TOC + Find), hidden by default (toggle via `b` or header button).
-- Find-in-page: desktop inside Navigator; mobile uses a compact floating find bar.
+- Desktop man pages: sticky sidebar (TOC + Find), collapsible via `b`.
+- Mobile man pages: contents drawer (swipe from left edge, `b`, or the header contents button).
+- Find-in-page: desktop in sidebar; mobile uses a compact sticky bar above content.
 - `/bookmarks` and `/history` redirect to `/` (homepage dashboard includes Recent + Bookmarks).
 - Man sections support extended suffixes (e.g. `/man/openssl/1ssl`, `/section/3p`).
 

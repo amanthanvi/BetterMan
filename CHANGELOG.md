@@ -2,6 +2,14 @@
 
 All notable changes to BetterMan are documented here.
 
+## v0.6.2
+
+- Man pages: sticky, collapsible desktop sidebar (TOC + Find); mobile keeps the contents drawer.
+- Fix header/footer navigation flakiness from man pages (use plain anchors so clicks work before hydration).
+- Reading preferences: fix segmented controls remounting; options now reliably clickable and apply immediately.
+- CSP: add `script-src-elem` to allow Cloudflare-injected same-origin scripts (email decode) without breaking `strict-dynamic`.
+- Service worker: bump cache version to `v0.6.2` to avoid stale assets after deploy.
+
 ## v0.6.1
 
 - Man page find-in-page: show match count and enable prev/next navigation.

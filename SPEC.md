@@ -2,8 +2,8 @@
 
 **Project:** BetterMan
 **Spec Version:** v0.6.0
-**Status:** v0.6.0 shipped (v0.5.0 shipped, v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
-**Last Updated:** 2026-02-12 (EST)
+**Status:** v0.6.2 shipped (v0.6.1 shipped, v0.6.0 shipped, v0.5.0 shipped, v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Last Updated:** 2026-02-13 (EST)
 **Interview Status:** Complete - v0.6.0 scoped
 
 ---
@@ -3449,14 +3449,19 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
 - Actions: bookmark toggle icon + "Copy link" button (top-right).
 - Synopsis: code block within the card. Terminal-styled (dark bg, JetBrains Mono 13px).
 
-**Toggle sidebar (hidden by default):**
-- Activates via `b` shortcut or header button.
-- Slides in from left, 288px wide, dark surface, hairline right border.
+**Contents sidebar (desktop sticky + collapsible):**
+- Visible by default on desktop (`lg` and up) as a sticky left sidebar.
+- Collapsible via `b` (and a collapse/expand button). Collapsed state becomes a narrow rail.
 - Contains:
   - Quick jumps: SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES, SEE ALSO (when present).
+  - Find-in-page: input field + match count + prev/next + clear.
   - TOC: full heading list with scroll-spy active indicator (accent left border on active item).
-  - Find-in-page: input field + match count + prev/next (desktop only; mobile has separate bar).
-- Closes on `Esc`, `b` again, or click outside.
+- Clicking items scrolls content and updates the URL hash.
+
+**Contents drawer (mobile):**
+- Opens via `b`, swipe-from-left, or the header contents button.
+- Shows TOC only (Find remains the separate mobile bar).
+- Closes on `Esc`, `b` again, or tap outside.
 
 **Content area:**
 - `max-width` controlled by reading preferences (42rem / 56rem / 72rem).
