@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
+import { pressShortcutUntilVisible, waitForInteractiveShell } from './shortcuts'
 
 test('man: sticky sidebar renders TOC + Find (desktop)', async ({ page }) => {
   await page.goto('/man/tar/1')
@@ -42,15 +43,16 @@ test('man: sidebar remains sticky while scrolling (desktop)', async ({ page }) =
 
 test('man: sidebar collapses and expands with b', async ({ page }) => {
   await page.goto('/man/tar/1')
+  await waitForInteractiveShell(page)
 
   const sidebar = page.locator('[data-bm-sidebar]')
-  await expect(sidebar.getByRole('textbox', { name: 'Find in page' })).toBeVisible()
+  const findInput = sidebar.getByRole('textbox', { name: 'Find in page' })
+  const expandButton = sidebar.getByRole('button', { name: 'Expand sidebar' })
+  await expect(findInput).toBeVisible()
 
-  await page.keyboard.press('b')
-  await expect(sidebar.getByRole('button', { name: 'Expand sidebar' })).toBeVisible()
+  await pressShortcutUntilVisible(page, 'b', expandButton)
 
-  await page.keyboard.press('b')
-  await expect(sidebar.getByRole('textbox', { name: 'Find in page' })).toBeVisible()
+  await pressShortcutUntilVisible(page, 'b', findInput)
 })
 
 test('man: reading preferences drawer applies settings', async ({ page }) => {
@@ -63,8 +65,9 @@ test('man: reading preferences drawer applies settings', async ({ page }) => {
 
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+  await waitForInteractiveShell(page)
 
-  await page.keyboard.press('p')
+  await page.getByRole('button', { name: 'Reading preferences' }).click()
   const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
   await expect(dialog).toBeVisible()
 
