@@ -2,8 +2,8 @@
 
 **Project:** BetterMan
 **Spec Version:** v0.6.0
-**Status:** v0.6.3 shipped (v0.6.2 shipped, v0.6.1 shipped, v0.6.0 shipped, v0.5.0 shipped, v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
-**Last Updated:** 2026-02-13 (EST)
+**Status:** v0.6.4 shipped (v0.6.3 shipped, v0.6.2 shipped, v0.6.1 shipped, v0.6.0 shipped, v0.5.0 shipped, v0.4.0 shipped, v0.3.0 shipped, v0.2.1 shipped, v0.2.0 shipped, v0.1.2 shipped, v0.1.1 shipped, v0.1.0 shipped)
+**Last Updated:** 2026-02-24 (EST)
 **Interview Status:** Complete - v0.6.0 scoped
 
 ---
@@ -239,6 +239,11 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 -   Persist user choice in local storage after explicit selection.
 -   Contrast ratios must meet WCAG 2.2 AA.
 -   **Theme transition (v0.2.1):** 150ms CSS transition on background and text colors when switching themes. Respects `prefers-reduced-motion` (instant switch when reduced motion preferred).
+-   **UI themes (v0.6.4, experimental):**
+    -   Three visual modes: `default` (current hacker-tool system), `retro` (cyberpunk/matrix), `glass` (glassmorphic minimal).
+    -   Selection is persisted via cookie (`bm-ui-theme`) and applied server-side on `<html data-bm-ui-theme="...">` for SSR-safe initial paint.
+    -   Theme overrides are CSS-only and strictly scoped under `html[data-bm-ui-theme="retro"]` and `html[data-bm-ui-theme="glass"]`.
+    -   UI themes are orthogonal to light/dark/system mode. `data-theme` remains the source of truth for color-scheme mode and continues to work in all UI themes.
 -   Responsive:
     -   < 768px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
         -   **Mobile TOC access:** Sticky header button toggles TOC drawer. Button is always visible for quick access during reading.
@@ -3374,7 +3379,7 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
 
 ### Surfaces & Borders
 
-- **No glassmorphism.** Remove all `backdrop-blur`, translucent backgrounds, and frosted glass effects.
+- **Default theme:** no glassmorphism. Keep flat solid surfaces for the primary hacker-tool design language.
 - **Flat solid surfaces** with brightness differentiation: `bg` < `surface` < `surface-2` < `surface-3`.
 - **Hairline borders** (1px, ~8% opacity) for structural definition.
 - **Accent borders** (~25% opacity) for interactive/focused states only.
@@ -3400,6 +3405,19 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
 - **Panel slide:** 150ms ease for sidebar toggle, drawers.
 - **No decorative animation.** No staggered reveals, no parallax, no springs.
 - **Respects `prefers-reduced-motion`:** instant transitions when reduced motion preferred.
+
+### UI Themes (Experimental, v0.6.4)
+
+- **Default:** current production hacker-tool system remains the baseline and first-visit default.
+- **Retro (cyberpunk/matrix):**
+  - Bright matrix-green accent, dark terminal surfaces, scanline overlay, mono-first typography, and terminal framing motifs.
+  - Includes optional heading hex artifact metadata via `data-hex` attributes.
+  - Keeps interaction affordances explicit (strong focus ring and bordered controls).
+- **Glass (glassmorphic minimal):**
+  - Rounded translucent surfaces, soft atmospheric gradients, and restrained highlight glow.
+  - Header becomes a rounded floating capsule on desktop and collapses to full-width on mobile.
+  - Prioritizes legibility with conservative text shadow and clear contrast tokens.
+- **Scoping:** all experimental theme behavior is attribute-scoped via `data-bm-ui-theme` so default visuals never inherit retro/glass styles.
 
 ### Icons
 

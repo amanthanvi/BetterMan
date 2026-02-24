@@ -2,6 +2,13 @@
 
 All notable changes to BetterMan are documented here.
 
+## v0.6.4
+
+- UI theme switcher: new `ThemeSwitcher` dropdown in the app header to toggle between Default, Retro (cyberpunk), and Glass (glassmorphic) visual modes.
+- UI theme selection is persisted via cookie (`bm-ui-theme`) and SSR-compatible (`data-bm-ui-theme` on `<html>`) to avoid FOUC.
+- Existing light/dark/system mode remains intact (`data-theme`), now orthogonal to UI theme styling.
+- Service worker: bump cache version to `v0.6.4` to flush stale assets after deploy.
+
 ## v0.6.3
 
 - Man pages: fix a React render loop that could cause severe slowness / dead-tab crashes on long sessions.
@@ -76,4 +83,3 @@ All notable changes to BetterMan are documented here.
 ## v0.1.0
 
 - Initial public release: search + man page rendering + production ops baseline.
-

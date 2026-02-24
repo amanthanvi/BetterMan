@@ -27,6 +27,8 @@ Living execution plan for shipping `v0.6.0` from `SPEC.md`.
 - [x] v0.6.0 shipped (tag `v0.6.0`)
 - [x] v0.6.1 shipped (tag `v0.6.1`)
 - [x] v0.6.2 shipped (tag `v0.6.2`)
+- [x] v0.6.3 shipped (tag `v0.6.3`)
+- [x] v0.6.4 shipped (tag `v0.6.4`)
 
 ## Golden Commands (current; proven)
 
@@ -335,3 +337,12 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Perf: debounce find-in-page indexing; reduce code highlighting work in heavy modes.
 - [x] Service worker: bump cache version to avoid stale assets after deploy.
 - [x] Tag `v0.6.3`
+
+### Release v0.6.4
+
+- [x] UI theme switcher: ThemeSwitcher component with three visual modes (Default, Retro, Glass).
+- [x] Retro theme: cyberpunk/matrix aesthetic with green accent, scanlines, hex artifacts, CRT effects.
+- [x] Glass theme: glassmorphic minimal with rounded surfaces and gradient backgrounds.
+- [x] UI theme selection persisted via `bm-ui-theme` cookie (SSR-compatible).
+- [x] Documentation updated (SPEC.md, CHANGELOG.md).
+- [x] Tag `v0.6.4`

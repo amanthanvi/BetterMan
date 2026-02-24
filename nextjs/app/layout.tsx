@@ -23,6 +23,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const resolved = cookieStore.get('bm-theme-resolved')?.value
   const theme = resolved === 'dark' || resolved === 'light' ? resolved : undefined
 
+  const cookieUiTheme = cookieStore.get('bm-ui-theme')?.value
+  const uiTheme =
+    cookieUiTheme === 'default' || cookieUiTheme === 'retro' || cookieUiTheme === 'glass' ? cookieUiTheme : 'default'
+
   const cookieDistro = cookieStore.get('bm-distro')?.value
   const initialCookieDistro = normalizeDistro(cookieDistro) ?? undefined
 
@@ -30,8 +34,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim()
 
   return (
-    <html lang="en" data-theme={theme} suppressHydrationWarning>
-      <body>
+    <html lang="en" data-theme={theme} data-bm-ui-theme={uiTheme} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <Providers initialCookieDistro={initialCookieDistro}>{children}</Providers>
         {plausibleDomain ? (
           <script defer src="https://plausible.io/js/script.js" data-domain={plausibleDomain} nonce={nonce} />

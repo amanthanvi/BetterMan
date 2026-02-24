@@ -26,7 +26,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="sr-only">BetterMan</h1>
+      <h1 className="sr-only" data-hex="4265747465724d616e">BetterMan</h1>
 
       <section aria-label="Search" className="mt-6">
         <form action="/search" method="get" role="search" aria-label="Search man pages">
@@ -70,7 +70,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
       <section aria-label="Browse sections" className="mt-12">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Browse</h2>
+          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]" data-hex="42726f777365">Browse</h2>
           <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">Sections 1–9</div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">

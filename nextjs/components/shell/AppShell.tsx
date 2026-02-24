@@ -17,6 +17,7 @@ import { TocDrawer } from '../toc/TocDrawer'
 import { MobileBottomNav } from './MobileBottomNav'
 import { ShortcutsDialog } from './ShortcutsDialog'
 import { MoonIcon, SearchIcon, SunIcon } from '../icons'
+import { ThemeSwitcher } from '../../app/ThemeSwitcher'
 
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
@@ -363,16 +364,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SearchIcon className="size-4" />
             </button>
 
-            <button
-              type="button"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-              onClick={() => theme.cycle()}
-              title="Cycle theme"
-              aria-label="Cycle theme"
-            >
-              <SunIcon className="bm-theme-icon bm-theme-icon-sun size-4" />
-              <MoonIcon className="bm-theme-icon bm-theme-icon-moon size-4" />
-            </button>
+            <div className="inline-flex">
+              <button
+                type="button"
+                className="inline-flex size-9 items-center justify-center rounded-l-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                onClick={() => theme.cycle()}
+                title="Cycle theme"
+                aria-label="Cycle theme"
+              >
+                <SunIcon className="bm-theme-icon bm-theme-icon-sun size-4" />
+                <MoonIcon className="bm-theme-icon bm-theme-icon-moon size-4" />
+              </button>
+              <ThemeSwitcher />
+            </div>
           </div>
         </div>
 
