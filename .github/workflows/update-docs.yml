@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
 
       - name: Ingest FreeBSD to staging DB
-        uses: vmactions/freebsd-vm@f674f993e17ee7a71c14726b5d96599e59cda724 # v1
+        uses: vmactions/freebsd-vm@c9f815bc7aa0d34c9fdd0619b034a32d6ca7b57e # v1
         with:
           release: "15.0"
           envs: "INGEST_DATABASE_URL BETTERMAN_INGEST_GIT_SHA"
