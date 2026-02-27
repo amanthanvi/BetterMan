@@ -27,7 +27,7 @@ jobs:
       RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
       RAILWAY_NEXTJS_SERVICE_ID: 40fa322d-c334-4662-8858-8edf380d3f10
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           ref: ${{ inputs.ref }}
 
