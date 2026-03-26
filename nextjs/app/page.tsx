@@ -66,7 +66,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </form>
       </section>
 
-      <HomeDashboardClient distro={distro} />
+      <HomeDashboardClient distro={distro} initialDashboardSection={getFirst(sp.section)} />
 
       <section aria-label="Browse sections" className="mt-12">
         <div className="flex items-baseline justify-between gap-3">

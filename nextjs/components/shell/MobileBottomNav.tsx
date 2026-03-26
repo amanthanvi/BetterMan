@@ -51,7 +51,7 @@ export function MobileBottomNav() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
         <MobileBottomNavItem href="/" label="Home" icon={<HomeIcon />} active={isActive(pathname, '/')} />
         <MobileBottomNavItem href="/search" label="Search" icon={<SearchIcon />} active={isActive(pathname, '/search')} />
-        <MobileBottomNavItem href="/bookmarks" label="Bookmarks" icon={<StarIcon />} active={isActive(pathname, '/bookmarks')} />
+        <MobileBottomNavItem href="/#bookmarks" label="Bookmarks" icon={<StarIcon />} active={isActive(pathname, '/')} />
       </div>
     </nav>
   )

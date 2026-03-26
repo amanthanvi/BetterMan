@@ -54,7 +54,13 @@ function EmptyState({ title, body }: { title: string; body: string }) {
   )
 }
 
-export function HomeDashboardClient({ distro }: { distro: Distro }) {
+export function HomeDashboardClient({
+  distro,
+  initialDashboardSection,
+}: {
+  distro: Distro
+  initialDashboardSection?: string
+}) {
   const [recentPages, setRecentPages] = useState<RecentPageItem[]>([])
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
 
@@ -81,9 +87,21 @@ export function HomeDashboardClient({ distro }: { distro: Distro }) {
     }
   }, [])
 
+  useEffect(() => {
+    if (!initialDashboardSection) return
+    if (initialDashboardSection !== 'recent' && initialDashboardSection !== 'bookmarks') return
+
+    requestAnimationFrame(() => {
+      document.getElementById(initialDashboardSection)?.scrollIntoView({
+        behavior: 'auto',
+        block: 'start',
+      })
+    })
+  }, [initialDashboardSection])
+
   return (
     <div className="mt-10 grid gap-10">
-      <section aria-label="Recent">
+      <section id="recent" aria-label="Recent">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Recent</h2>
         </div>
@@ -117,7 +135,7 @@ export function HomeDashboardClient({ distro }: { distro: Distro }) {
         )}
       </section>
 
-      <section aria-label="Bookmarks">
+      <section id="bookmarks" aria-label="Bookmarks">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Bookmarks</h2>
         </div>
