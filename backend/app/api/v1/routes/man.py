@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.schemas import AmbiguousPageResponse, ManPageResponse, RelatedResponse
 from app.core.errors import APIError
 from app.datasets.active import require_active_release
-from app.datasets.distro import DISTRO_ORDER, normalize_distro
+from app.datasets.distro import DISTRO_ORDER_INDEX, normalize_distro
 from app.db.models import DatasetRelease, ManPage
 from app.db.session import get_session
 from app.man.normalize import normalize_name, normalize_section, validate_name, validate_section
@@ -277,7 +277,7 @@ async def _list_page_variants(
         and isinstance(row.content_sha256, str)
     ]
 
-    variants.sort(key=lambda v: (DISTRO_ORDER.get(v["distro"], 99), v["distro"]))
+    variants.sort(key=lambda v: (DISTRO_ORDER_INDEX.get(v["distro"], 99), v["distro"]))
     return variants
 
 

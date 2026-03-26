@@ -134,6 +134,7 @@ async def search(
 
     has_more = len(results) > limit
     visible_results = results[:limit]
+    next_offset = offset + len(visible_results) if has_more else None
 
     set_cache_headers(response, etag=etag, cache_control=cache_control)
     return SearchResponse(
@@ -150,4 +151,5 @@ async def search(
         ],
         suggestions=list(dict.fromkeys(suggestions)),
         hasMore=has_more,
+        nextOffset=next_offset,
     )

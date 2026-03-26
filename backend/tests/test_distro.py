@@ -9,15 +9,6 @@ def test_normalize_distro_defaults_to_debian() -> None:
 
 def test_supported_distros_are_ordered_explicitly() -> None:
     assert set(SUPPORTED_DISTROS) == set(DISTRO_ORDER)
-    assert tuple(DISTRO_ORDER) == (
-        "debian",
-        "ubuntu",
-        "fedora",
-        "arch",
-        "alpine",
-        "freebsd",
-        "macos",
-    )
     assert DISTRO_ORDER == (
         "debian",
         "ubuntu",

@@ -56,10 +56,8 @@ function EmptyState({ title, body }: { title: string; body: string }) {
 
 export function HomeDashboardClient({
   distro,
-  initialDashboardSection,
 }: {
   distro: Distro
-  initialDashboardSection?: string
 }) {
   const [recentPages, setRecentPages] = useState<RecentPageItem[]>([])
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
@@ -86,18 +84,6 @@ export function HomeDashboardClient({
       window.removeEventListener(BOOKMARKS_EVENT, onBookmarks)
     }
   }, [])
-
-  useEffect(() => {
-    if (!initialDashboardSection) return
-    if (initialDashboardSection !== 'recent' && initialDashboardSection !== 'bookmarks') return
-
-    requestAnimationFrame(() => {
-      document.getElementById(initialDashboardSection)?.scrollIntoView({
-        behavior: 'auto',
-        block: 'start',
-      })
-    })
-  }, [initialDashboardSection])
 
   return (
     <div className="mt-10 grid gap-10">

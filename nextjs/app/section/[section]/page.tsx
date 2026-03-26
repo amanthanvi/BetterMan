@@ -45,6 +45,36 @@ function buildSectionHref(opts: { section: string; distro: Distro; offset: numbe
   return qs ? `/section/${encodeURIComponent(opts.section)}?${qs}` : `/section/${encodeURIComponent(opts.section)}`
 }
 
+function PaginationControl({
+  href,
+  disabled,
+  children,
+}: {
+  href: string
+  disabled: boolean
+  children: React.ReactNode
+}) {
+  const className = `rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+    disabled
+      ? 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] opacity-50'
+      : 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]'
+  }`
+
+  if (disabled) {
+    return (
+      <span aria-disabled="true" className={className}>
+        {children}
+      </span>
+    )
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  )
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ section: string }> }): Promise<Metadata> {
   const { section } = await params
   const title = `Section ${section} — BetterMan`
@@ -154,31 +184,23 @@ export default async function SectionPage({
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">
-            Showing {data.offset + 1}-{data.offset + data.results.length} of {data.total.toLocaleString()} results.
+            {data.results.length === 0
+              ? `Showing 0 of ${data.total.toLocaleString()} results.`
+              : `Showing ${data.offset + 1}-${data.offset + data.results.length} of ${data.total.toLocaleString()} results.`}
           </div>
           <div className="flex items-center gap-2">
-            <Link
+            <PaginationControl
               href={buildSectionHref({ section: data.section, distro, offset: prevOffset })}
-              aria-disabled={!hasPrevPage}
-              className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-                hasPrevPage
-                  ? 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]'
-                  : 'pointer-events-none border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] opacity-50'
-              }`}
+              disabled={!hasPrevPage}
             >
               Previous
-            </Link>
-            <Link
+            </PaginationControl>
+            <PaginationControl
               href={buildSectionHref({ section: data.section, distro, offset: nextOffset })}
-              aria-disabled={!hasNextPage}
-              className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-                hasNextPage
-                  ? 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]'
-                  : 'pointer-events-none border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] opacity-50'
-              }`}
+              disabled={!hasNextPage}
             >
               Next
-            </Link>
+            </PaginationControl>
           </div>
         </div>
       </div>
