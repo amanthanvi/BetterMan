@@ -55,7 +55,7 @@ type ActionItem = Extract<PaletteItem, { kind: 'action' }>
 
 type ParsedSearch = { distro?: Distro; text: string }
 
-function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
+export function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
   if (raw.startsWith('\\>')) return { mode: 'search', text: raw.slice(2) }
   if (raw.startsWith('\\#')) return { mode: 'search', text: raw.slice(2) }
   if (raw.startsWith('>')) return { mode: 'actions', text: raw.slice(1) }
@@ -63,7 +63,7 @@ function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
   return { mode: 'search', text: raw }
 }
 
-function parseSearchText(raw: string): ParsedSearch {
+export function parseSearchText(raw: string): ParsedSearch {
   const trimmed = raw.trim()
   if (!trimmed.startsWith('@')) return { text: trimmed }
 

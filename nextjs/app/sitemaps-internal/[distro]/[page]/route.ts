@@ -9,6 +9,9 @@ function weakEtag(parts: string[]): string {
   return `W/"${digest}"`
 }
 
+type SeoRelease = Awaited<ReturnType<typeof fetchSeoReleases>>['items'][number]
+type SeoSitemapItem = Awaited<ReturnType<typeof fetchSeoSitemapPage>>['items'][number]
+
 export async function GET(request: Request, ctx: { params: Promise<{ distro?: string; page?: string }> }) {
   const { distro, page: pageRaw } = await ctx.params
   const origin = getPublicOrigin(request)
@@ -18,7 +21,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
   if (!Number.isInteger(page) || page < 1) return new Response(null, { status: 404 })
 
   const releases = await fetchSeoReleases()
-  const release = releases.items.find((r) => r.distro === distro)
+  const release = releases.items.find((r: SeoRelease) => r.distro === distro)
   if (!release) return new Response(null, { status: 404 })
 
   const urlsPerFile = releases.urlsPerFile || 10000
@@ -40,7 +43,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
   try {
     const data = await fetchSeoSitemapPage({ distro, page })
     const rows = data.items
-      .map((item) => {
+      .map((item: SeoSitemapItem) => {
         const locBase = `${origin}/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`
         const loc = withDistro(locBase, distro)
         return `  <url>\n    <loc>${loc}</loc>\n  </url>`

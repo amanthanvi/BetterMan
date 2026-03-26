@@ -20,7 +20,12 @@ export async function GET(request: Request) {
 
   const etag = weakEtag([
     'sitemap-index',
-    ...releases.items.flatMap((r) => [r.distro, r.datasetReleaseId, r.ingestedAt, String(r.pageCount)]),
+    ...releases.items.flatMap((r: (typeof releases.items)[number]) => [
+      r.distro,
+      r.datasetReleaseId,
+      r.ingestedAt,
+      String(r.pageCount),
+    ]),
   ])
   const ifNoneMatch = request.headers.get('if-none-match')
   if (ifNoneMatch && ifNoneMatch === etag) {
@@ -35,8 +40,8 @@ export async function GET(request: Request) {
 
   const rows = releases.items
     .slice()
-    .sort((a, b) => a.distro.localeCompare(b.distro))
-    .map((r) => {
+    .sort((a: (typeof releases.items)[number], b: (typeof releases.items)[number]) => a.distro.localeCompare(b.distro))
+    .map((r: (typeof releases.items)[number]) => {
       const lastmod = toIsoZ(r.ingestedAt)
       const loc = `${origin}/sitemap-${r.distro}.xml`
       return `  <sitemap>\n    <loc>${loc}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}\n  </sitemap>`

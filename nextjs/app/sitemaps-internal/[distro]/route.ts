@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto'
 import { fetchSeoReleases } from '../../../lib/api'
 import { getPublicOrigin } from '../../../lib/public-origin'
 
+type SeoRelease = Awaited<ReturnType<typeof fetchSeoReleases>>['items'][number]
+
 function toIsoZ(iso: string): string | null {
   const dt = new Date(iso)
   if (!Number.isFinite(dt.getTime())) return null
@@ -20,7 +22,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
   const origin = getPublicOrigin(request)
   const releases = await fetchSeoReleases()
 
-  const release = releases.items.find((r) => r.distro === distro)
+  const release = releases.items.find((r: SeoRelease) => r.distro === distro)
   if (!release) return new Response(null, { status: 404 })
 
   const urlsPerFile = releases.urlsPerFile || 10000

@@ -13,6 +13,8 @@
 		"next:dev": "pnpm -C nextjs dev",
 		"next:build": "pnpm -C nextjs build",
 		"next:lint": "pnpm -C nextjs lint",
+		"next:test": "pnpm -C nextjs test",
+		"next:openapi:gen": "cd backend && uv run python scripts/export_openapi.py /tmp/betterman-openapi.json && cd .. && pnpm -C nextjs openapi:gen",
 		"backend:dev": "cd backend && uv run uvicorn app.main:app --reload --port 8000",
 		"backend:test": "cd backend && uv run pytest",
 		"backend:lint": "cd backend && uv run ruff check . && uv run ruff format --check .",
