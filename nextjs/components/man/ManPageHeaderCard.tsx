@@ -3,7 +3,7 @@
 import { usePathname, useSearchParams } from 'next/navigation'
 
 import type { Distro } from '../../lib/distro'
-import { DISTRO_LABEL, normalizeDistro } from '../../lib/distro'
+import { DISTRO_LABEL, DISTRO_ORDER, normalizeDistro } from '../../lib/distro'
 import type { ManPage, ManPageVariant } from '../../lib/docModel'
 import { BookmarkButton } from '../bookmarks/BookmarkButton'
 import { CheckIcon, CopyIcon, ListIcon, SlidersIcon } from '../icons'
@@ -14,8 +14,7 @@ function buildVariantPicker(variants: ManPageVariant[]): { ordered: ManPageVaria
   if (list.length < 2) return null
   if (uniqueContent.size < 2) return null
 
-  const order: Record<string, number> = { debian: 0, ubuntu: 1, fedora: 2 }
-  const ordered = [...list].sort((a, b) => (order[a.distro] ?? 99) - (order[b.distro] ?? 99))
+  const ordered = [...list].sort((a, b) => (DISTRO_ORDER[a.distro as Distro] ?? 99) - (DISTRO_ORDER[b.distro as Distro] ?? 99))
   return { ordered }
 }
 

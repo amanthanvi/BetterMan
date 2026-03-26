@@ -213,6 +213,24 @@ test('man: distro variant selector swaps content', async ({ page }) => {
   await expect(marker).toBeVisible()
 })
 
+test('man: distro variant selector keeps full supported ordering', async ({ page }) => {
+  await page.goto('/man/tar/1?distro=debian')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+
+  const variantSelect = page.getByLabel('Select distribution variant')
+  await expect(variantSelect).toBeVisible()
+
+  await expect(variantSelect.locator('option')).toHaveText([
+    'Debian',
+    'Ubuntu',
+    'Fedora',
+    'Arch Linux',
+    'Alpine',
+    'FreeBSD',
+    'macOS (BSD)',
+  ])
+})
+
 test('man: ambiguous by-name route renders picker', async ({ page }) => {
   await page.goto('/man/printf')
   await expect(page.getByRole('heading', { name: 'printf' })).toBeVisible()

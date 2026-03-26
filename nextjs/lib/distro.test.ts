@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { DISTRO_GROUPS, DISTRO_LABEL, DISTROS, isDefaultDistro, normalizeDistro, withDistro } from './distro'
+import { DISTRO_GROUPS, DISTRO_LABEL, DISTROS, DISTRO_ORDER, isDefaultDistro, normalizeDistro, withDistro } from './distro'
 
 describe('distro helpers', () => {
   it('normalizes supported distros and rejects unsupported values', () => {
@@ -13,6 +13,15 @@ describe('distro helpers', () => {
 
   it('keeps distro metadata complete and ordered', () => {
     expect(DISTROS).toEqual(['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos'])
+    expect(DISTRO_ORDER).toEqual({
+      debian: 0,
+      ubuntu: 1,
+      fedora: 2,
+      arch: 3,
+      alpine: 4,
+      freebsd: 5,
+      macos: 6,
+    })
     expect(DISTRO_GROUPS).toEqual([
       { label: 'Linux', items: ['debian', 'ubuntu', 'fedora', 'arch', 'alpine'] },
       { label: 'BSD', items: ['freebsd', 'macos'] },

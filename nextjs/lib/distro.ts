@@ -6,6 +6,9 @@ export const DISTRO_GROUPS: ReadonlyArray<{ label: string; items: readonly Distr
 ] as const
 
 export const DISTROS: readonly Distro[] = DISTRO_GROUPS.flatMap((g) => g.items)
+export const DISTRO_ORDER: Record<Distro, number> = Object.fromEntries(
+  DISTROS.map((distro, index) => [distro, index]),
+) as Record<Distro, number>
 
 export const DISTRO_LABEL: Record<Distro, string> = {
   debian: 'Debian',
