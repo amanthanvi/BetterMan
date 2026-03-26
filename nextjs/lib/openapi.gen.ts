@@ -460,6 +460,10 @@ export interface components {
         };
         /** SearchResponse */
         SearchResponse: {
+            /** Hasmore */
+            hasMore: boolean;
+            /** Nextoffset */
+            nextOffset?: number | null;
             /** Query */
             query: string;
             /** Results */
