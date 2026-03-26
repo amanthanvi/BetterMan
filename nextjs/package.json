@@ -10,10 +10,10 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.38.0",
+    "@sentry/nextjs": "^10.46.0",
     "@tanstack/react-virtual": "^3.13.18",
     "highlight.js": "^11.11.1",
-    "next": "^15.0.0",
+    "next": "^15.5.14",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.1.18"
@@ -23,8 +23,8 @@
     "@types/node": "^25.0.8",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^9.39.1",
-    "eslint-config-next": "^15.0.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^15.5.14",
     "typescript": "~5.9.3"
   }
 }
