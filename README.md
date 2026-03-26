@@ -72,7 +72,7 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
 - Required PR checks for `main`: `dependency_review`, `frontend`, `backend`, `ingestion`, `api_types`, `e2e`.
 - Code scanning: `.github/workflows/codeql.yml` (CodeQL) + `.github/workflows/scorecards.yml` (OSSF Scorecards → SARIF).
 - Dependency updates: `.github/dependabot.yml` (GitHub Actions, frontend npm, backend/ingestion uv, Dockerfile base images).
-- API contract: `frontend/src/api/openapi.gen.ts` is generated from backend OpenAPI and enforced in CI.
+- API contract: generated OpenAPI types for both `frontend/src/api/openapi.gen.ts` and `nextjs/lib/openapi.gen.ts` are enforced in CI.
 
 ## Observability (v0.5.0)
 
