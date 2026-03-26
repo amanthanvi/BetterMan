@@ -52,7 +52,8 @@ Verification:
 ## Logs / debugging
 
 - Prefer Railway dashboard logs for quick triage.
-- If using Railway CLI non-interactively, set `RAILWAY_API_TOKEN` (account/workspace token) or `RAILWAY_TOKEN` (project token).
+- If using Railway CLI non-interactively, use `RAILWAY_TOKEN` for project-scoped CI/CD deploys.
+- Use `RAILWAY_API_TOKEN` only when you specifically need account/workspace-scoped CLI access.
 
 ## Common failures
 

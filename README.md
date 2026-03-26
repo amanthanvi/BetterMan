@@ -54,7 +54,7 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
 
 - Auto-deploy: `.github/workflows/ci.yml` deploys after all jobs pass on pushes to `main`.
 - Manual deploy: `.github/workflows/deploy.yml` (workflow `deploy-railway`, input `ref`).
-- Requires `RAILWAY_TOKEN` GitHub Actions secret (exported to Railway CLI as `RAILWAY_API_TOKEN`).
+- Requires `RAILWAY_TOKEN` GitHub Actions secret (used as Railway project-token auth in CI).
 - `v0.5.0` deploy topology: two Railway services
   - `nextjs` (public web) → set `FASTAPI_INTERNAL_URL=http://web.railway.internal:8080`
   - `web` (FastAPI API-only; private networking)
