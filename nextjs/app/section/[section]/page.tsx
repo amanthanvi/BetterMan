@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { Fragment } from 'react'
 
 import { listSection } from '../../../lib/api'
-import { isDefaultDistro, normalizeDistro, withDistro } from '../../../lib/distro'
+import { isDefaultDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +37,44 @@ function groupByLeadingChar<T extends { name: string }>(items: readonly T[]): Ar
   return groups
 }
 
+function buildSectionHref(opts: { section: string; distro: Distro; offset: number }) {
+  const params = new URLSearchParams()
+  if (opts.offset > 0) params.set('offset', String(opts.offset))
+  if (!isDefaultDistro(opts.distro)) params.set('distro', opts.distro)
+  const qs = params.toString()
+  return qs ? `/section/${encodeURIComponent(opts.section)}?${qs}` : `/section/${encodeURIComponent(opts.section)}`
+}
+
+function PaginationControl({
+  href,
+  disabled,
+  children,
+}: {
+  href: string
+  disabled: boolean
+  children: React.ReactNode
+}) {
+  const className = `rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+    disabled
+      ? 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] opacity-50'
+      : 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]'
+  }`
+
+  if (disabled) {
+    return (
+      <span aria-disabled="true" className={className}>
+        {children}
+      </span>
+    )
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  )
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ section: string }> }): Promise<Metadata> {
   const { section } = await params
   const title = `Section ${section} — BetterMan`
@@ -64,9 +102,15 @@ export default async function SectionPage({
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
   const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const offset = Number.parseInt(getFirst(sp.offset) ?? '0', 10)
+  const safeOffset = Number.isFinite(offset) && offset >= 0 ? offset : 0
 
-  const data = await listSection({ distro, section, limit: 200, offset: 0 })
+  const data = await listSection({ distro, section, limit: 200, offset: safeOffset })
   const groups = groupByLeadingChar(data.results)
+  const prevOffset = Math.max(0, data.offset - data.limit)
+  const nextOffset = data.offset + data.results.length
+  const hasPrevPage = data.offset > 0
+  const hasNextPage = nextOffset < data.total
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -138,11 +182,27 @@ export default async function SectionPage({
           ))}
         </ol>
 
-        {data.total > data.results.length ? (
-          <div className="mt-6 font-mono text-[11px] text-[color:var(--bm-muted)]">
-            Showing first {data.results.length.toLocaleString()} results. Use search to find more.
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">
+            {data.results.length === 0
+              ? `Showing 0 of ${data.total.toLocaleString()} results.`
+              : `Showing ${data.offset + 1}-${data.offset + data.results.length} of ${data.total.toLocaleString()} results.`}
           </div>
-        ) : null}
+          <div className="flex items-center gap-2">
+            <PaginationControl
+              href={buildSectionHref({ section: data.section, distro, offset: prevOffset })}
+              disabled={!hasPrevPage}
+            >
+              Previous
+            </PaginationControl>
+            <PaginationControl
+              href={buildSectionHref({ section: data.section, distro, offset: nextOffset })}
+              disabled={!hasNextPage}
+            >
+              Next
+            </PaginationControl>
+          </div>
+        </div>
       </div>
     </div>
   )

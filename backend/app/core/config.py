@@ -30,7 +30,4 @@ class Settings(BaseSettings):
     vite_sentry_dsn: str = ""
     vite_plausible_domain: str = ""
 
-    serve_frontend: bool = True
-    frontend_dist_dir: str = "../frontend/dist"
-
     csp_enabled: bool = True

@@ -145,16 +145,18 @@ export function SearchResultsClient({
   initial: SearchResponse | null
 }) {
   const [results, setResults] = useState<SearchResult[]>(() => initial?.results ?? [])
+  const [hasMore, setHasMore] = useState<boolean>(() => initial?.hasMore ?? false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setResults(initial?.results ?? [])
+    setHasMore(initial?.hasMore ?? false)
     setError(null)
     setLoading(false)
   }, [distro, initial, q, section])
 
-  const canLoadMore = Boolean(q && results.length > 0)
+  const canLoadMore = Boolean(q && results.length > 0 && hasMore)
 
   const onLoadMore = useCallback(async () => {
     if (!q || loading) return
@@ -162,6 +164,7 @@ export function SearchResultsClient({
     setError(null)
     try {
       const next = await fetchMore({ distro, q, section, limit: 20, offset: results.length })
+      setHasMore(next.hasMore)
       setResults((prev) => {
         const seen = new Set(prev.map((r) => `${r.name}:${r.section}`))
         const merged = prev.slice()
@@ -271,7 +274,7 @@ export function SearchResultsClient({
           disabled={!canLoadMore || loading}
           aria-label="Load more results"
         >
-          {loading ? 'Loading…' : 'Load more'}
+          {loading ? 'Loading…' : hasMore ? 'Load more' : 'All results loaded'}
         </button>
       </div>
 

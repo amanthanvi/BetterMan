@@ -24,6 +24,20 @@ test('search: typo still finds relevant results', async ({ page }) => {
   await expect(page.getByRole('link', { name: /tar\(1\)/i })).toBeVisible()
 })
 
+test('search: load more disables when all results are loaded', async ({ page }) => {
+  await page.goto('/search?q=tar')
+
+  const loadMore = page.getByRole('button', { name: 'Load more results' })
+  await expect(loadMore).toBeVisible()
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (await loadMore.isDisabled()) break
+    await loadMore.click()
+  }
+
+  await expect(loadMore).toBeDisabled()
+})
+
 test('search: a11y (no critical/serious violations)', async ({ page }) => {
   await page.goto('/search?q=tar')
   await expectNoCriticalOrSeriousViolations(page)

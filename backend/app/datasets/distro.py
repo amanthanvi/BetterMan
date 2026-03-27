@@ -6,7 +6,19 @@ from app.core.errors import APIError
 
 Distro = Literal["debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"]
 
-SUPPORTED_DISTROS: set[str] = {"debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"}
+DISTRO_ORDER: tuple[Distro, ...] = (
+    "debian",
+    "ubuntu",
+    "fedora",
+    "arch",
+    "alpine",
+    "freebsd",
+    "macos",
+)
+
+DISTRO_ORDER_INDEX: dict[str, int] = {distro: idx for idx, distro in enumerate(DISTRO_ORDER)}
+
+SUPPORTED_DISTROS: set[str] = set(DISTRO_ORDER)
 
 
 def normalize_distro(value: str | None) -> Distro:

@@ -7,7 +7,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "openapi:gen": "openapi-typescript /tmp/betterman-openapi.json --output lib/openapi.gen.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.46.0",
@@ -23,8 +26,12 @@
     "@types/node": "^25.0.8",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
     "eslint": "^9.39.4",
     "eslint-config-next": "^15.5.14",
-    "typescript": "~5.9.3"
+    "openapi-typescript": "^7.13.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.2"
   }
 }

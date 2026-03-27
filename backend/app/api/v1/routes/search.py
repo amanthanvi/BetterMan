@@ -110,7 +110,7 @@ async def search(
                     ManPage.section.asc(),
                     ManPage.id.asc(),
                 )
-                .limit(limit)
+                .limit(limit + 1)
                 .offset(offset)
             )
         ).all()
@@ -132,6 +132,10 @@ async def search(
             message="Invalid search query",
         ) from None
 
+    has_more = len(results) > limit
+    visible_results = results[:limit]
+    next_offset = offset + len(visible_results) if has_more else None
+
     set_cache_headers(response, etag=etag, cache_control=cache_control)
     return SearchResponse(
         query=query,
@@ -143,7 +147,9 @@ async def search(
                 "description": row.description,
                 "highlights": [row.hl] if row.hl else [],
             }
-            for row in results
+            for row in visible_results
         ],
         suggestions=list(dict.fromkeys(suggestions)),
+        hasMore=has_more,
+        nextOffset=next_offset,
     )

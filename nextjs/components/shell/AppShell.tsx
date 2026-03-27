@@ -23,6 +23,10 @@ function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
 }
 
+function dashboardHref(section: 'recent' | 'bookmarks', distro: string) {
+  return `${withDistro('/', distro)}#${section}`
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -213,7 +217,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'h') {
         e.preventDefault()
-        router.push('/history')
+        router.push(dashboardHref('recent', distro.distro))
         return
       }
 
@@ -236,7 +240,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isManPage, router, theme, toc])
+  }, [distro.distro, isManPage, router, theme, toc])
 
   useEffect(() => {
     if (!themeAnnouncementMountedRef.current) {

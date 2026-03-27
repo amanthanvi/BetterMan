@@ -4,82 +4,31 @@ import type {
   AmbiguousPageResponse,
   ManPageResponse,
 } from './docModel'
+import type { components } from './openapi.gen'
 
-export type InfoResponse = {
-  datasetReleaseId: string
-  locale: string
-  distro: string
-  pageCount: number
-  lastUpdated: string
-}
+type Schemas = components['schemas']
 
-export type SectionLabel = {
-  section: string
-  label: string
-}
+export type InfoResponse = Schemas['InfoResponse']
 
-export type SearchResult = {
-  name: string
-  section: string
-  title: string
-  description: string
-  highlights: string[]
-}
+export type SectionLabel = Schemas['SectionLabel']
 
-export type SearchResponse = {
-  query: string
-  results: SearchResult[]
-  suggestions: string[]
-}
+export type SearchResult = Schemas['SearchResult']
 
-export type SectionPage = {
-  name: string
-  section: string
-  title: string
-  description: string
-}
+export type SearchResponse = Schemas['SearchResponse']
 
-export type SectionResponse = {
-  section: string
-  label: string
-  limit: number
-  offset: number
-  total: number
-  results: SectionPage[]
-}
+export type SectionPage = Schemas['SectionPage']
 
-export type Suggestion = {
-  name: string
-  section: string
-  description: string
-}
+export type SectionResponse = Schemas['SectionResponse']
 
-export type SuggestResponse = {
-  query: string
-  suggestions: Suggestion[]
-}
+export type Suggestion = Schemas['Suggestion']
 
-export type LicensePackage = {
-  name: string
-  version: string
-  hasLicenseText: boolean
-}
+export type SuggestResponse = Schemas['SuggestResponse']
 
-export type LicensesResponse = {
-  datasetReleaseId: string
-  ingestedAt: string
-  imageRef: string
-  imageDigest: string
-  packageManifest: Record<string, unknown> | null
-  packages: LicensePackage[]
-}
+export type LicensePackage = Schemas['LicensePackage']
 
-export type LicenseTextResponse = {
-  package: string
-  licenseId: string
-  licenseName: string
-  text: string
-}
+export type LicensesResponse = Schemas['LicensesResponse']
+
+export type LicenseTextResponse = Schemas['LicenseTextResponse']
 
 export class FastApiError extends Error {
   status: number
@@ -217,9 +166,7 @@ export function fetchManByNameAndSection(opts: {
   )
 }
 
-export type RelatedResponse = {
-  items: SectionPage[]
-}
+export type RelatedResponse = Schemas['RelatedResponse']
 
 export function fetchRelated(opts: {
   distro: Distro

@@ -34,6 +34,8 @@ class SearchResponse(BaseModel):
     query: str
     results: list[SearchResult]
     suggestions: list[str]
+    hasMore: bool
+    nextOffset: int | None = None
 
 
 class Suggestion(BaseModel):

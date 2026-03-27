@@ -47,7 +47,7 @@ export function ShortcutsDialog({
     {
       title: 'Navigation',
       items: [
-        { keys: ['H'], desc: 'Open history' },
+        { keys: ['H'], desc: 'Jump to recent pages on Home' },
         { keys: ['T'], desc: 'Scroll to top' },
       ],
     },

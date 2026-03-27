@@ -133,8 +133,10 @@ jobs:
 
           cd ..
           pnpm -C frontend exec openapi-typescript /tmp/betterman-openapi.json --output src/api/openapi.gen.ts
+          pnpm -C nextjs exec openapi-typescript /tmp/betterman-openapi.json --output lib/openapi.gen.ts
 
           git diff --exit-code frontend/src/api/openapi.gen.ts
+          git diff --exit-code nextjs/lib/openapi.gen.ts
 
   e2e:
     needs:
