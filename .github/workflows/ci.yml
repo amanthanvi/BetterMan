@@ -306,109 +306,50 @@ jobs:
             echo "Missing RAILWAY_TOKEN GitHub Actions secret."
             exit 1
           fi
-          project_path="$(pwd -P)"
 
-          mkdir -p "$HOME/.railway"
-          cat > "$HOME/.railway/config.json" <<JSON
-          {
-            "projects": {
-              "$project_path": {
-                "projectPath": "$project_path",
-                "name": "betterman",
-                "project": "$RAILWAY_PROJECT_ID",
-                "environment": "$RAILWAY_ENVIRONMENT_ID",
-                "environmentName": "production",
-                "service": null
-              }
-            },
-            "linkedFunctions": null
-          }
-          JSON
-
-          railway_with_retry() {
-            local max_attempts=5
-            local attempt=1
-
-            while true; do
-              if "$@"; then
-                return 0
-              fi
-
-              if (( attempt >= max_attempts )); then
-                echo "Railway command failed after ${max_attempts} attempts: $*" >&2
-                return 1
-              fi
-
-              echo "Railway command failed (attempt ${attempt}/${max_attempts}): $*" >&2
-              sleep $((attempt * 5))
-              attempt=$((attempt + 1))
-            done
+          railway_project_token() {
+            env RAILWAY_TOKEN="$RAILWAY_TOKEN" railway "$@"
           }
 
-          railway_json_with_retry() {
-            local max_attempts=5
-            local attempt=1
+          railway_bearer_token() {
+            env -u RAILWAY_TOKEN RAILWAY_API_TOKEN="$RAILWAY_TOKEN" railway "$@"
+          }
+
+          railway_run() {
             local output
+            local status
 
-            while true; do
-              if output="$("$@" 2>&1)"; then
-                if echo "$output" | jq -e . >/dev/null 2>&1; then
-                  printf '%s' "$output"
-                  return 0
-                fi
-                echo "Railway JSON command returned non-JSON (attempt ${attempt}/${max_attempts}): $*" >&2
-                echo "$output" >&2
-              else
-                echo "Railway JSON command failed (attempt ${attempt}/${max_attempts}): $*" >&2
-                echo "$output" >&2
-              fi
+            set +e
+            output="$(railway_project_token "$@" 2>&1)"
+            status=$?
+            set -e
+            printf '%s\n' "$output"
 
-              if (( attempt >= max_attempts )); then
-                echo "Railway JSON command failed after ${max_attempts} attempts: $*" >&2
-                return 1
-              fi
+            if [[ $status -eq 0 ]]; then
+              return 0
+            fi
 
-              sleep $((attempt * 5))
-              attempt=$((attempt + 1))
-            done
+            if ! grep -qi "Unauthorized" <<<"$output"; then
+              return "$status"
+            fi
+
+            echo "Project-token auth rejected; retrying with bearer-token compatibility path..."
+            railway_bearer_token "$@"
           }
 
           deploy_service() {
             local service_id="$1"
 
-
-            railway_with_retry railway up --ci \
+            if railway_run up --ci \
               --project "$RAILWAY_PROJECT_ID" \
               --service "$service_id" \
-              --environment "$RAILWAY_ENVIRONMENT_ID"
+              --environment "$RAILWAY_ENVIRONMENT_ID"; then
+              return 0
+            fi
 
-            max_attempts=180
-            sleep_seconds=5
-
-            echo "Waiting for Railway deployment to reach SUCCESS (serviceId=${service_id}, maxWait=$((max_attempts * sleep_seconds))s)…"
-            for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-              info="$(railway_json_with_retry railway service status --json --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID")"
-              status="$(echo "$info" | jq -r '.status // empty')"
-              stopped="$(echo "$info" | jq -r '.stopped')"
-              deployment_id="$(echo "$info" | jq -r '.deploymentId // empty')"
-
-              echo "[$attempt/$max_attempts] status=${status} stopped=${stopped} deploymentId=${deployment_id}"
-
-              if [[ "$status" == "SUCCESS" && "$stopped" == "false" ]]; then
-                return 0
-              fi
-
-              if [[ "$status" == "FAILURE" || "$status" == "ERROR" || "$status" == "CRASHED" ]]; then
-                echo "Railway deployment failed"
-                railway logs --deployment --lines 200 --latest --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID" || true
-                return 1
-              fi
-
-              sleep "$sleep_seconds"
-            done
-
-            echo "Timed out waiting for Railway deployment"
-            railway logs --deployment --lines 200 --latest --service "$service_id" --environment "$RAILWAY_ENVIRONMENT_ID" || true
+            railway_run logs --deployment --lines 200 --latest \
+              --service "$service_id" \
+              --environment "$RAILWAY_ENVIRONMENT_ID" || true
             return 1
           }
 
