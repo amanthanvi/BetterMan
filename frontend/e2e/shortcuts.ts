@@ -16,3 +16,23 @@ export async function pressShortcutUntilVisible(page: Page, shortcut: string, ta
   }
   await expect(target).toBeVisible()
 }
+
+export async function selectOptionUntilURL(
+  page: Page,
+  select: Locator,
+  value: string,
+  expectedUrl: RegExp,
+  attempts = 3,
+) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    await select.selectOption(value)
+    try {
+      await expect(page).toHaveURL(expectedUrl, { timeout: 1_500 })
+      return
+    } catch {
+      // Retry to absorb listener-attach races in CI.
+    }
+  }
+
+  await expect(page).toHaveURL(expectedUrl, { timeout: 15_000 })
+}

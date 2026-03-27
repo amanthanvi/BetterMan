@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
-import { pressShortcutUntilVisible, waitForInteractiveShell } from './shortcuts'
+import { pressShortcutUntilVisible, selectOptionUntilURL, waitForInteractiveShell } from './shortcuts'
 
 test('man: sticky sidebar renders TOC + Find (desktop)', async ({ page }) => {
   await page.goto('/man/tar/1')
@@ -198,6 +198,7 @@ test('man: extended section URLs work', async ({ page }) => {
 test('man: distro variant selector swaps content', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+  await waitForInteractiveShell(page)
 
   const marker = page.getByText('Ubuntu variant: this page is intentionally different for E2E testing.')
   await expect(marker).toHaveCount(0)
@@ -205,8 +206,7 @@ test('man: distro variant selector swaps content', async ({ page }) => {
   const variantSelect = page.getByLabel('Select distribution variant')
   await expect(variantSelect).toBeVisible()
 
-  await variantSelect.selectOption('ubuntu')
-  await expect(page).toHaveURL(/distro=ubuntu/, { timeout: 15_000 })
+  await selectOptionUntilURL(page, variantSelect, 'ubuntu', /distro=ubuntu/)
   await expect(marker).toBeVisible()
 })
 

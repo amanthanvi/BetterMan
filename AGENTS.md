@@ -87,3 +87,4 @@ This repo follows the global agent guidance in:
 ## Self-Correction Log
 
 - 2026-03-26: E2E local bring-up: keep `app.db.migrate` and `seed_e2e.py` sequential; parallel runs can race the schema creation.
+- 2026-03-26: Playwright on hydrated Next selects can no-op on first try in local/CI; use a retry helper instead of one-shot `selectOption()` when listener attach races appear.
