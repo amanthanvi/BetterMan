@@ -29,7 +29,8 @@
 		"overrides": {
 			"@redocly/openapi-core": "1.34.11",
 			"flatted": "3.4.2",
-			"micromatch@4.0.8>picomatch": "2.3.2"
+			"micromatch@4.0.8>picomatch": "2.3.2",
+			"picomatch@^4.0.0": "4.0.4"
 		}
 	}
 }
