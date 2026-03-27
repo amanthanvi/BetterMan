@@ -24,5 +24,10 @@
 		"ingest:test": "cd ingestion && uv run python -m pytest",
 		"ingest:sample": "cd ingestion && uv run python -m ingestion.cli ingest --sample",
 		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest"
+	},
+	"pnpm": {
+		"overrides": {
+			"flatted": "3.4.2"
+		}
 	}
 }

@@ -83,3 +83,7 @@ This repo follows the global agent guidance in:
 - Backend Python deps use `uv sync --frozen` (in `backend/` and `ingestion/` directories); each has its own `.venv`.
 - All golden commands are in `README.md` and the root `package.json` scripts. Refer to those rather than inventing commands.
 - `next lint` shows a deprecation warning about migrating to ESLint CLI — this is cosmetic and can be ignored.
+
+## Self-Correction Log
+
+- 2026-03-26: E2E local bring-up: keep `app.db.migrate` and `seed_e2e.py` sequential; parallel runs can race the schema creation.

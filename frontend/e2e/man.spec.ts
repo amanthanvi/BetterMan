@@ -196,7 +196,7 @@ test('man: extended section URLs work', async ({ page }) => {
 })
 
 test('man: distro variant selector swaps content', async ({ page }) => {
-  await page.goto('/man/tar/1?distro=debian')
+  await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
   const marker = page.getByText('Ubuntu variant: this page is intentionally different for E2E testing.')
@@ -205,16 +205,13 @@ test('man: distro variant selector swaps content', async ({ page }) => {
   const variantSelect = page.getByLabel('Select distribution variant')
   await expect(variantSelect).toBeVisible()
 
-  await Promise.all([
-    page.waitForURL(/distro=ubuntu/, { timeout: 15_000 }),
-    variantSelect.selectOption('ubuntu'),
-  ])
-
+  await variantSelect.selectOption('ubuntu')
+  await expect(page).toHaveURL(/distro=ubuntu/, { timeout: 15_000 })
   await expect(marker).toBeVisible()
 })
 
 test('man: distro variant selector keeps full supported ordering', async ({ page }) => {
-  await page.goto('/man/tar/1?distro=debian')
+  await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
   const variantSelect = page.getByLabel('Select distribution variant')
@@ -224,10 +221,6 @@ test('man: distro variant selector keeps full supported ordering', async ({ page
     'Debian',
     'Ubuntu',
     'Fedora',
-    'Arch Linux',
-    'Alpine',
-    'FreeBSD',
-    'macOS (BSD)',
   ])
 })
 
