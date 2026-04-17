@@ -42,22 +42,13 @@ jobs:
 
           export RAILWAY_VERSION="4.18.1"
 
-          mkdir -p "$HOME/.local/bin"
-          export PATH="$HOME/.local/bin:$PATH"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
           for attempt in 1 2 3; do
-            echo "Installing Railway CLI v${RAILWAY_VERSION} (attempt $attempt/3)…"
-            if curl -fsSL https://railway.app/install.sh | bash -s -- -y -b "$HOME/.local/bin"; then
+            echo "Installing @railway/cli@${RAILWAY_VERSION} (attempt $attempt/3)…"
+            if npm install -g "@railway/cli@${RAILWAY_VERSION}"; then
               break
             fi
             sleep $((attempt * 10))
           done
-
-          if ! command -v railway >/dev/null 2>&1; then
-            echo "Railway install.sh failed; falling back to npm @railway/cli@4.17.1" >&2
-            npm install -g @railway/cli@4.17.1
-          fi
 
           railway --version
 
