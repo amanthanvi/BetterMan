@@ -113,17 +113,17 @@ async function handleGet(req: NextRequest, path: string[]): Promise<Response> {
     }
 
     if (parts.length === 1 && parts[0] === 'search') {
-      const limited = await enforceRateLimit(req, 'search')
-      if (limited) return limited
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const q = first(req.nextUrl.searchParams.get('q'))
-      if (!q || q.length > 200) return apiError(400, 'INVALID_QUERY', 'Query is required')
+      if (!q || q.length > 120) return apiError(400, 'INVALID_QUERY', 'Query is required')
       const limit = intParam(req, 'limit', { defaultValue: 20, min: 1, max: 50 })
       if (limit instanceof Response) return limit
       const offset = intParam(req, 'offset', { defaultValue: 0, min: 0, max: 200 })
       if (offset instanceof Response) return offset
       const section = first(req.nextUrl.searchParams.get('section'))
+      const limited = await enforceRateLimit(req, 'search')
+      if (limited) return limited
       return cachedJson(await search({ distro, q, section, limit, offset }), SEARCH_CACHE_SECONDS)
     }
 

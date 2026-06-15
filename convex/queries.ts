@@ -32,6 +32,23 @@ function boundedInt(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(Math.floor(value), max));
 }
 
+function shouldUseFullTextSearch(args: {
+  queryNorm: string;
+  prefixCount: number;
+  offset: number;
+  limit: number;
+}): boolean {
+  if (args.queryNorm.length < 3) return false;
+  if (args.prefixCount >= args.offset + args.limit) return false;
+
+  const terms = args.queryNorm.split(" ").filter(Boolean);
+  const isShortCommandLookup =
+    terms.length === 1 && /^[a-z0-9][a-z0-9_.+:-]{0,3}$/.test(args.queryNorm);
+
+  if (isShortCommandLookup) return false;
+  return true;
+}
+
 async function activeRelease(
   ctx: QueryCtx,
   args: { stage: DatasetStage; distro: Distro; locale?: string },
@@ -416,7 +433,7 @@ export const search = query({
     offset: v.number(),
   },
   handler: async (ctx, args) => {
-    const queryText = args.q.trim().replace(/\s+/g, " ");
+    const queryText = args.q.trim().replace(/\s+/g, " ").slice(0, 120).trim();
     if (!queryText) {
       return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
     }
@@ -454,8 +471,12 @@ export const search = query({
       prefixDocs.push(...rows);
     }
 
-    const hasEnoughPrefixResults = prefixDocs.length >= offset + limit;
-    const shouldSearchFullText = queryNorm.length >= 3 && !hasEnoughPrefixResults;
+    const shouldSearchFullText = shouldUseFullTextSearch({
+      queryNorm,
+      prefixCount: prefixDocs.length,
+      offset,
+      limit,
+    });
     const searchedDocs = shouldSearchFullText
       ? section
         ? await ctx.db
