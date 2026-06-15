@@ -27,7 +27,7 @@ function buildSearchHref(opts: { q: string; section: string; distro: Distro }) {
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
   const sp = await searchParams
-  const q = getFirst(sp.q)?.trim() ?? ''
+  const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
   const title = q ? `Search “${q}” — BetterMan` : 'Search — BetterMan'
   const description = q ? `Search results for “${q}”.` : 'Search the BetterMan dataset.'
   return {
@@ -44,7 +44,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const cookieDistro = cookieStore.get('bm-distro')?.value
   const distro = (normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian') satisfies Distro
 
-  const q = getFirst(sp.q)?.trim() ?? ''
+  const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
   const section = getFirst(sp.section)?.trim() || ''
 
   const sectionsPromise = listSections(distro)

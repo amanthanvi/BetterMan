@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import {
   action,
+  internalAction,
   internalMutation,
   internalQuery,
   type MutationCtx,
@@ -485,7 +486,7 @@ export const markPageContentStored = internalMutation({
   },
 });
 
-export const migrateContentToStorageBatch = action({
+export const migrateContentToStorageBatch = internalAction({
   args: {
     target: v.union(v.literal("blobs"), v.literal("contents")),
     cursor: v.union(v.string(), v.null()),

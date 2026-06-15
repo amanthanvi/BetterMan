@@ -32,6 +32,18 @@ function boundedInt(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(Math.floor(value), max));
 }
 
+function shouldUseFullTextSearch(args: {
+  queryNorm: string;
+  prefixCount: number;
+  offset: number;
+  limit: number;
+}): boolean {
+  void args;
+  // Full-text search currently reads the whole text index per query in production.
+  // Keep public search prefix-only until there is a cheaper summary/search table.
+  return false;
+}
+
 async function activeRelease(
   ctx: QueryCtx,
   args: { stage: DatasetStage; distro: Distro; locale?: string },
@@ -416,7 +428,7 @@ export const search = query({
     offset: v.number(),
   },
   handler: async (ctx, args) => {
-    const queryText = args.q.trim().replace(/\s+/g, " ");
+    const queryText = args.q.trim().replace(/\s+/g, " ").slice(0, 120).trim();
     if (!queryText) {
       return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
     }
@@ -454,8 +466,12 @@ export const search = query({
       prefixDocs.push(...rows);
     }
 
-    const hasEnoughPrefixResults = prefixDocs.length >= offset + limit;
-    const shouldSearchFullText = queryNorm.length >= 3 && !hasEnoughPrefixResults;
+    const shouldSearchFullText = shouldUseFullTextSearch({
+      queryNorm,
+      prefixCount: prefixDocs.length,
+      offset,
+      limit,
+    });
     const searchedDocs = shouldSearchFullText
       ? section
         ? await ctx.db
