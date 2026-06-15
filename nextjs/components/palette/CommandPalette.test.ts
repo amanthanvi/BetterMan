@@ -13,7 +13,8 @@ describe('CommandPalette helpers', () => {
 
   it('extracts optional distro prefixes for palette search', () => {
     expect(parseSearchText('@arch tar')).toEqual({ distro: 'arch', text: 'tar' })
-    expect(parseSearchText('@macos printf')).toEqual({ distro: 'macos', text: 'printf' })
+    expect(parseSearchText('@fedora printf')).toEqual({ distro: 'fedora', text: 'printf' })
+    expect(parseSearchText('@macos printf')).toEqual({ text: '@macos printf' })
     expect(parseSearchText('@unknown tar')).toEqual({ text: '@unknown tar' })
     expect(parseSearchText('grep')).toEqual({ text: 'grep' })
   })

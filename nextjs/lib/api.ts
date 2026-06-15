@@ -52,6 +52,21 @@ function apiError(status: number, code: string, message: string): FastApiError {
   return new FastApiError(status, message, JSON.stringify({ error: { code, message } }))
 }
 
+function isMissingActiveReleaseError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes('ACTIVE_RELEASE_NOT_FOUND')
+}
+
+async function mapConvexError<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    if (isMissingActiveReleaseError(err)) {
+      throw apiError(404, 'RELEASE_NOT_FOUND', 'Dataset release not found')
+    }
+    throw err
+  }
+}
+
 function convex() {
   try {
     return getConvexClient()
@@ -165,11 +180,11 @@ const cachedSeoReleases = unstable_cache(
 )
 
 export async function fetchInfo(distro: Distro): Promise<InfoResponse> {
-  return await cachedInfo(getDatasetStage(), distro)
+  return await mapConvexError(() => cachedInfo(getDatasetStage(), distro))
 }
 
 export async function listSections(distro: Distro): Promise<SectionLabel[]> {
-  return await cachedSections(getDatasetStage(), distro)
+  return await mapConvexError(() => cachedSections(getDatasetStage(), distro))
 }
 
 export async function search(opts: {
@@ -179,13 +194,15 @@ export async function search(opts: {
   limit?: number
   offset?: number
 }): Promise<SearchResponse> {
-  return await cachedSearch(
-    getDatasetStage(),
-    opts.distro,
-    opts.q,
-    opts.section ?? null,
-    opts.limit ?? 20,
-    opts.offset ?? 0,
+  return await mapConvexError(() =>
+    cachedSearch(
+      getDatasetStage(),
+      opts.distro,
+      opts.q,
+      opts.section ?? null,
+      opts.limit ?? 20,
+      opts.offset ?? 0,
+    ),
   )
 }
 
@@ -195,12 +212,14 @@ export async function listSection(opts: {
   limit?: number
   offset?: number
 }): Promise<SectionResponse> {
-  const result = await cachedSection(
-    getDatasetStage(),
-    opts.distro,
-    opts.section,
-    opts.limit ?? 200,
-    opts.offset ?? 0,
+  const result = await mapConvexError(() =>
+    cachedSection(
+      getDatasetStage(),
+      opts.distro,
+      opts.section,
+      opts.limit ?? 200,
+      opts.offset ?? 0,
+    ),
   )
   if (!result) throw apiError(404, 'SECTION_NOT_FOUND', 'Section not found')
   return result
@@ -219,10 +238,12 @@ export async function fetchManByName(opts: {
   distro: Distro
   name: string
 }): Promise<ManByNameResult> {
-  const result = (await cachedManByName(
-    getDatasetStage(),
-    opts.distro,
-    opts.name,
+  const result = (await mapConvexError(() =>
+    cachedManByName(
+      getDatasetStage(),
+      opts.distro,
+      opts.name,
+    ),
   )) as ConvexManByNameResult
 
   if (result.kind === 'not_found') {
@@ -239,11 +260,13 @@ export async function fetchManByNameAndSection(opts: {
   name: string
   section: string
 }): Promise<ManPageResponse> {
-  const result = (await cachedManByNameAndSection(
-    getDatasetStage(),
-    opts.distro,
-    opts.name,
-    opts.section,
+  const result = (await mapConvexError(() =>
+    cachedManByNameAndSection(
+      getDatasetStage(),
+      opts.distro,
+      opts.name,
+      opts.section,
+    ),
   )) as ManPageResponse | null
   if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
   return result
@@ -256,21 +279,21 @@ export async function fetchRelated(opts: {
   name: string
   section: string
 }): Promise<RelatedResponse> {
-  const result = await cachedRelated(getDatasetStage(), opts.distro, opts.name, opts.section)
+  const result = await mapConvexError(() => cachedRelated(getDatasetStage(), opts.distro, opts.name, opts.section))
   if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
   return result as RelatedResponse
 }
 
 export async function suggest(opts: { distro: Distro; name: string }): Promise<SuggestResponse> {
-  return await cachedSuggest(getDatasetStage(), opts.distro, opts.name)
+  return await mapConvexError(() => cachedSuggest(getDatasetStage(), opts.distro, opts.name))
 }
 
 export async function fetchLicenses(opts: { distro: Distro }): Promise<LicensesResponse> {
-  return (await cachedLicenses(getDatasetStage(), opts.distro)) as LicensesResponse
+  return (await mapConvexError(() => cachedLicenses(getDatasetStage(), opts.distro))) as LicensesResponse
 }
 
 export async function fetchLicenseText(opts: { distro: Distro; packageName: string }): Promise<LicenseTextResponse> {
-  const result = await cachedLicenseText(getDatasetStage(), opts.distro, opts.packageName)
+  const result = await mapConvexError(() => cachedLicenseText(getDatasetStage(), opts.distro, opts.packageName))
   if (!result) throw apiError(404, 'LICENSE_NOT_FOUND', 'License not found')
   return result as LicenseTextResponse
 }

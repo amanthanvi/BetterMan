@@ -6,27 +6,25 @@ describe('distro helpers', () => {
   it('normalizes supported distros and rejects unsupported values', () => {
     expect(normalizeDistro(' Debian ')).toBe('debian')
     expect(normalizeDistro('ARCH')).toBe('arch')
-    expect(normalizeDistro('freebsd')).toBe('freebsd')
+    expect(normalizeDistro('freebsd')).toBeNull()
+    expect(normalizeDistro('macos')).toBeNull()
     expect(normalizeDistro('solaris')).toBeNull()
     expect(normalizeDistro(undefined)).toBeNull()
   })
 
   it('keeps distro metadata complete and ordered', () => {
-    expect(DISTROS).toEqual(['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos'])
+    expect(DISTROS).toEqual(['debian', 'ubuntu', 'fedora', 'arch', 'alpine'])
     expect(DISTRO_ORDER).toEqual({
       debian: 0,
       ubuntu: 1,
       fedora: 2,
       arch: 3,
       alpine: 4,
-      freebsd: 5,
-      macos: 6,
     })
     expect(DISTRO_GROUPS).toEqual([
       { label: 'Linux', items: ['debian', 'ubuntu', 'fedora', 'arch', 'alpine'] },
-      { label: 'BSD', items: ['freebsd', 'macos'] },
     ])
-    expect(DISTRO_LABEL.macos).toBe('macOS (BSD)')
+    expect(DISTRO_LABEL.alpine).toBe('Alpine')
   })
 
   it('applies distro query params only for non-default distros', () => {
@@ -36,8 +34,8 @@ describe('distro helpers', () => {
     expect(withDistro('/search?q=tar', 'debian')).toBe('/search?q=tar')
     expect(withDistro('/search?q=tar', 'ubuntu')).toBe('/search?q=tar&distro=ubuntu')
     expect(withDistro('/man/tar/1#examples', 'arch')).toBe('/man/tar/1?distro=arch#examples')
-    expect(withDistro('https://betterman.sh/man/tar/1', 'freebsd')).toBe(
-      'https://betterman.sh/man/tar/1?distro=freebsd',
+    expect(withDistro('https://betterman.sh/man/tar/1', 'fedora')).toBe(
+      'https://betterman.sh/man/tar/1?distro=fedora',
     )
   })
 })
