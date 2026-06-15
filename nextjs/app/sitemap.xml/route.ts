@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto'
 import { fetchSeoReleases } from '../../lib/api'
 import { getPublicOrigin } from '../../lib/public-origin'
 
+export const dynamic = 'force-dynamic'
+
 function toIsoZ(iso: string): string | null {
   const dt = new Date(iso)
   if (!Number.isFinite(dt.getTime())) return null

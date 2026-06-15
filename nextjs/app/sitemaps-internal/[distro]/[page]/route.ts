@@ -4,6 +4,8 @@ import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../../..
 import { withDistro } from '../../../../lib/distro'
 import { getPublicOrigin } from '../../../../lib/public-origin'
 
+export const dynamic = 'force-dynamic'
+
 function weakEtag(parts: string[]): string {
   const digest = createHash('sha256').update(parts.join('|')).digest('base64url')
   return `W/"${digest}"`

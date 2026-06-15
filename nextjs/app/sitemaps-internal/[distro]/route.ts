@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto'
 import { fetchSeoReleases } from '../../../lib/api'
 import { getPublicOrigin } from '../../../lib/public-origin'
 
+export const dynamic = 'force-dynamic'
+
 type SeoRelease = Awaited<ReturnType<typeof fetchSeoReleases>>['items'][number]
 
 function toIsoZ(iso: string): string | null {
