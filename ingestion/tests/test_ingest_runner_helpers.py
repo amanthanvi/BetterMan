@@ -3,9 +3,9 @@ from __future__ import annotations
 from uuid import uuid4
 
 from ingestion.ingest_runner import (
+    _build_page_links,
     _content_packages,
     _filter_sources,
-    _insert_links,
     _iter_internal_doc_links,
     _PageRow,
     _parse_man_href,
@@ -45,6 +45,11 @@ def test_content_packages_alpine_avoids_man_db_conflict() -> None:
     assert len(set(pkgs)) == len(pkgs)
 
 
+def test_content_packages_include_tar_for_golden_checks() -> None:
+    for distro in ["debian", "ubuntu", "fedora", "arch", "alpine"]:
+        assert "tar" in _content_packages(sample=False, distro=distro)
+
+
 def test_parse_man_href_supports_extended_sections() -> None:
     assert _parse_man_href("/man/openssl/1ssl") == ("openssl", "1ssl")
     assert _parse_man_href("/man/curl/1") == ("curl", "1")
@@ -70,15 +75,7 @@ def test_iter_internal_doc_links_yields_nested_links() -> None:
     assert links[0]["href"] == "/man/foo/1"
 
 
-class _DummyCursor:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, tuple[str, str, str]]] = []
-
-    def execute(self, sql: str, params: tuple[str, str, str]) -> None:
-        self.calls.append((sql.strip(), params))
-
-
-def test_insert_links_writes_xref_and_see_also() -> None:
+def test_build_page_links_returns_xref_and_see_also_payloads() -> None:
     foo_id = uuid4()
     bar1_id = uuid4()
     bar5_id = uuid4()
@@ -179,9 +176,15 @@ def test_insert_links_writes_xref_and_see_also() -> None:
         ),
     ]
 
-    cur = _DummyCursor()
-    _insert_links(cur, pages=pages)
+    links_by_page = _build_page_links(pages=pages)
+    links = links_by_page[str(foo_id)]
 
-    link_types = [params[2] for _sql, params in cur.calls]
+    link_types = [link["linkType"] for link in links]
     assert link_types.count("see_also") == 1
     assert link_types.count("xref") == 2
+    assert {
+        "toExternalId": str(bar1_id),
+        "toName": "bar",
+        "toSection": "1",
+        "linkType": "see_also",
+    } in links

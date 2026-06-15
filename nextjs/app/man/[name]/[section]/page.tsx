@@ -8,7 +8,7 @@ import { FastApiError, fetchManByName, fetchManByNameAndSection, fetchRelated, s
 import { normalizeDistro, withDistro } from '../../../../lib/distro'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 type SearchParams = Record<string, string | string[] | undefined>
 

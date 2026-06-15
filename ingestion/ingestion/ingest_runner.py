@@ -4,6 +4,7 @@ import gzip
 import logging
 import re
 import uuid
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,7 +32,8 @@ from ingestion.arch import (
     pacman_install,
     pacman_packages,
 )
-from ingestion.db import connect, iso_utc_now, json_dumps, uuid4
+from ingestion.convex_client import ConvexIngestClient
+from ingestion.db import iso_utc_now, json_dumps, uuid4
 from ingestion.debian import (
     apt_install,
     dpkg_arch,
@@ -92,7 +94,9 @@ def ingest(
     *,
     sample: bool,
     activate: bool,
-    database_url: str,
+    convex_url: str,
+    ingest_secret: str,
+    dataset_stage: str,
     image_ref: str,
     image_digest: str,
     git_sha: str,
@@ -212,198 +216,106 @@ def ingest(
 
     total = len(sources)
 
-    conn = connect(database_url)
-    try:
-        cur = conn.cursor()
-        release_uuid = uuid4()
+    _resolve_doc_links_and_see_also(pages=parsed_pages)
 
-        cur.execute(
-            """
-            INSERT INTO dataset_releases
-                (
-                    id,
-                    dataset_release_id,
-                    locale,
-                    distro,
-                    image_ref,
-                    image_digest,
-                    package_manifest,
-                    is_active
-                )
-            VALUES
-                (%s::uuid, %s, %s, %s, %s, %s, %s::jsonb, %s)
-            """,
-            (
-                str(release_uuid),
-                dataset_release_id,
-                locale,
-                distro,
-                image_ref,
-                image_digest,
-                json_dumps(package_manifest),
-                False,
-            ),
+    succeeded = len(parsed_pages)
+    hard_failed = parse_failed
+    hard_fail_rate = (hard_failed / total) if total else 0.0
+    success_rate = (succeeded / total) if total else 0.0
+    publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
+
+    client = ConvexIngestClient(http_url=convex_url, ingest_secret=ingest_secret)
+    page_links = _build_page_links(pages=parsed_pages)
+    sitemap_pages = _build_sitemap_page_map(pages=parsed_pages)
+    licenses = _collect_licenses(pages=parsed_pages)
+    license_packages = _build_license_packages(
+        package_manifest=package_manifest,
+        packages_with_text=set(licenses),
+    )
+
+    client.post(
+        "/ingest/release",
+        {
+            "datasetReleaseId": dataset_release_id,
+            "locale": locale,
+            "distro": distro,
+            "imageRef": image_ref,
+            "imageDigest": image_digest,
+            "ingestedAt": datetime.now(tz=UTC).isoformat(),
+            "packageManifest": package_manifest,
+            "pageCount": succeeded,
+            "sectionTotals": [
+                {"section": section, "total": total}
+                for section, total in sorted(Counter(p.section for p in parsed_pages).items())
+            ],
+            "licensePackages": license_packages,
+        },
+    )
+
+    insert_started = monotonic()
+    batch_size = 20
+    for start in range(0, len(parsed_pages), batch_size):
+        batch = parsed_pages[start : start + batch_size]
+        client.post(
+            "/ingest/pages/storage",
+            {
+                "datasetReleaseId": dataset_release_id,
+                "pages": [
+                    _page_payload(
+                        row,
+                        sitemap_page=sitemap_pages[str(row.page_id)],
+                        links=page_links.get(str(row.page_id), []),
+                    )
+                    for row in batch
+                ],
+            },
         )
 
-        _resolve_doc_links_and_see_also(pages=parsed_pages)
-
-        inserted_pages: list[_PageRow] = []
-        insert_failed = 0
-        insert_started = monotonic()
-
-        for i, row in enumerate(parsed_pages, start=1):
-            sp = f"page_{i}"
-            cur.execute(f"SAVEPOINT {sp}")
-
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO man_pages
-                        (
-                            id, dataset_release_id, name, section, title, description,
-                            source_path, source_package, source_package_version,
-                            content_sha256, has_parse_warnings
-                        )
-                    VALUES
-                        (
-                            %s::uuid, %s::uuid, %s, %s, %s, %s,
-                            %s, %s, %s,
-                            %s, %s
-                        )
-                    """,
-                    (
-                        str(row.page_id),
-                        str(release_uuid),
-                        row.name,
-                        row.section,
-                        row.title,
-                        row.description,
-                        row.source_path,
-                        row.source_package,
-                        row.source_package_version,
-                        row.content_sha256,
-                        row.has_parse_warnings,
-                    ),
-                )
-
-                cur.execute(
-                    """
-                    INSERT INTO man_page_content
-                        (man_page_id, doc, plain_text, synopsis, options, see_also)
-                    VALUES
-                        (%s::uuid, %s::jsonb, %s, %s::jsonb, %s::jsonb, %s::jsonb)
-                    """,
-                    (
-                        str(row.page_id),
-                        json_dumps(row.doc),
-                        row.plain_text,
-                        json_dumps(row.synopsis) if row.synopsis is not None else None,
-                        json_dumps(row.options) if row.options is not None else None,
-                        json_dumps(row.see_also) if row.see_also is not None else None,
-                    ),
-                )
-
-                doc_text = normalize_ws(f"{row.headings_text} {row.plain_text}")
-                cur.execute(
-                    """
-                    INSERT INTO man_page_search (man_page_id, tsv, name_norm, desc_norm)
-                    VALUES
-                        (
-                            %s::uuid,
-                            (
-                                setweight(to_tsvector('simple', %s), 'A') ||
-                                setweight(to_tsvector('simple', %s), 'B') ||
-                                setweight(to_tsvector('simple', %s), 'C')
-                            ),
-                            %s,
-                            %s
-                        )
-                    """,
-                    (
-                        str(row.page_id),
-                        row.name,
-                        row.description,
-                        doc_text,
-                        row.name.lower(),
-                        row.description.lower(),
-                    ),
-                )
-            except Exception as exc:  # noqa: BLE001 (batch ingestion)
-                insert_failed += 1
-                cur.execute(f"ROLLBACK TO SAVEPOINT {sp}")
-                cur.execute(f"RELEASE SAVEPOINT {sp}")
-                _log(
-                    "page_insert_failed",
-                    name=row.name,
-                    section=row.section,
-                    path=row.source_path,
-                    error=str(exc),
-                )
-                continue
-
-            cur.execute(f"RELEASE SAVEPOINT {sp}")
-            inserted_pages.append(row)
-
-            if i % 100 == 0:
-                elapsed = monotonic() - insert_started
-                rate = i / elapsed if elapsed > 0 else 0.0
-                remaining = max(0, len(parsed_pages) - i)
-                eta_s = int(remaining / rate) if rate > 0 else None
-                _log(
-                    "insert_progress",
-                    processed=i,
-                    total=len(parsed_pages),
-                    pct=round((i / len(parsed_pages)) * 100.0, 2) if parsed_pages else 0.0,
-                    etaSeconds=eta_s,
-                )
-
-        if insert_failed:
-            _resolve_doc_links_and_see_also(pages=inserted_pages)
-            for row in inserted_pages:
-                cur.execute(
-                    """
-                    UPDATE man_page_content
-                    SET doc = %s::jsonb, see_also = %s::jsonb
-                    WHERE man_page_id = %s::uuid
-                    """,
-                    (
-                        json_dumps(row.doc),
-                        json_dumps(row.see_also) if row.see_also is not None else None,
-                        str(row.page_id),
-                    ),
-                )
-
-        _insert_links(cur, pages=inserted_pages)
-        _insert_licenses(cur, pages=inserted_pages)
-
-        succeeded = len(inserted_pages)
-        hard_failed = parse_failed + insert_failed
-        hard_fail_rate = (hard_failed / total) if total else 0.0
-        success_rate = (succeeded / total) if total else 0.0
-        publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
-
-        published = False
-        if publish_allowed and activate:
-            cur.execute(
-                """
-                UPDATE dataset_releases
-                SET is_active = FALSE
-                WHERE locale = %s AND distro = %s AND is_active = TRUE
-                """,
-                (locale, distro),
+        processed = min(start + len(batch), len(parsed_pages))
+        if processed % 100 == 0 or processed == len(parsed_pages):
+            elapsed = monotonic() - insert_started
+            rate = processed / elapsed if elapsed > 0 else 0.0
+            remaining = max(0, len(parsed_pages) - processed)
+            eta_s = int(remaining / rate) if rate > 0 else None
+            _log(
+                "insert_progress",
+                processed=processed,
+                total=len(parsed_pages),
+                pct=round((processed / len(parsed_pages)) * 100.0, 2) if parsed_pages else 0.0,
+                etaSeconds=eta_s,
             )
-            cur.execute(
-                "UPDATE dataset_releases SET is_active = TRUE WHERE id = %s::uuid",
-                (str(release_uuid),),
-            )
-            published = True
 
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    if licenses:
+        license_items = [
+            {
+                "packageName": package_name,
+                "licenseId": f"pkg:{package_name}",
+                "licenseName": package_name,
+                "licenseText": text,
+                "sourceUrl": None,
+            }
+            for package_name, text in sorted(licenses.items())
+        ]
+        for start in range(0, len(license_items), 10):
+            client.post(
+                "/ingest/licenses",
+                {
+                    "datasetReleaseId": dataset_release_id,
+                    "licenses": license_items[start : start + 10],
+                },
+            )
+
+    published = False
+    if publish_allowed and activate:
+        client.post(
+            "/ingest/activate",
+            {
+                "stage": dataset_stage,
+                "datasetReleaseId": dataset_release_id,
+                "activatedAt": datetime.now(tz=UTC).isoformat(),
+            },
+        )
+        published = True
 
     _log(
         "ingest_summary",
@@ -664,13 +576,14 @@ def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
             link["linkType"] = "internal" if (name, section) in index else "unresolved"
 
 
-def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
-    index: dict[tuple[str, str], str] = {(p.name, p.section): str(p.page_id) for p in pages}
+def _build_page_links(*, pages: list[_PageRow]) -> dict[str, list[dict[str, str | None]]]:
+    index: dict[tuple[str, str], _PageRow] = {(p.name, p.section): p for p in pages}
+    by_id: dict[str, _PageRow] = {str(p.page_id): p for p in pages}
     by_name: dict[str, list[str]] = {}
     for p in pages:
         by_name.setdefault(p.name, []).append(p.section)
-    inserted_ids = set(index.values())
 
+    out: dict[str, list[dict[str, str | None]]] = {}
     seen: set[tuple[str, str, str]] = set()
     for page in pages:
         from_id = str(page.page_id)
@@ -679,7 +592,8 @@ def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
                 to_id = ref.get("resolvedPageId")
                 if not isinstance(to_id, str) or not to_id:
                     continue
-                if to_id not in inserted_ids:
+                target = by_id.get(to_id)
+                if target is None:
                     continue
                 if to_id == from_id:
                     continue
@@ -688,12 +602,13 @@ def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
                 if key in seen:
                     continue
                 seen.add(key)
-                cur.execute(
-                    """
-                    INSERT INTO man_page_links (from_page_id, to_page_id, link_type)
-                    VALUES (%s::uuid, %s::uuid, %s)
-                    """,
-                    (from_id, to_id, "see_also"),
+                out.setdefault(from_id, []).append(
+                    {
+                        "toExternalId": to_id,
+                        "toName": target.name,
+                        "toSection": target.section,
+                        "linkType": "see_also",
+                    }
                 )
 
         for link in _iter_internal_doc_links(page.doc):
@@ -710,71 +625,113 @@ def _insert_links(cur: object, *, pages: list[_PageRow]) -> None:
 
             if section is None:
                 if len(candidates) == 1:
-                    to_id = index.get((name, candidates[0]))
+                    target = index.get((name, candidates[0]))
+                    to_id = str(target.page_id) if target else None
                 else:
                     # ambiguous, but still linkable via /man/{name}
                     continue
             else:
-                to_id = index.get((name, section))
+                target = index.get((name, section))
+                to_id = str(target.page_id) if target else None
 
             if to_id is None or to_id == from_id:
+                continue
+            target = by_id.get(to_id)
+            if target is None:
                 continue
 
             key = (from_id, to_id, "xref")
             if key in seen:
                 continue
             seen.add(key)
-            cur.execute(
-                """
-                INSERT INTO man_page_links (from_page_id, to_page_id, link_type)
-                VALUES (%s::uuid, %s::uuid, %s)
-                """,
-                (from_id, to_id, "xref"),
+            out.setdefault(from_id, []).append(
+                {
+                    "toExternalId": to_id,
+                    "toName": target.name,
+                    "toSection": target.section,
+                    "linkType": "xref",
+                }
             )
+    return out
 
 
-def _insert_licenses(cur: object, *, pages: list[_PageRow]) -> None:
+def _collect_licenses(*, pages: list[_PageRow]) -> dict[str, str]:
     packages = {p.source_package for p in pages if p.source_package}
     if not packages:
-        return
+        return {}
 
-    license_ids: dict[str, str] = {}
+    licenses: dict[str, str] = {}
     for pkg in sorted(packages):
-        license_uuid = str(uuid4())
         text = _read_debian_copyright(pkg)
         if text is None:
             continue
-        cur.execute(
-            """
-            INSERT INTO licenses (id, license_id, license_name, license_text, source_url)
-            VALUES (%s::uuid, %s, %s, %s, %s)
-            """,
-            (
-                license_uuid,
-                f"pkg:{pkg}",
-                pkg,
-                text,
-                None,
-            ),
-        )
-        license_ids[pkg] = license_uuid
+        licenses[pkg] = text
 
-    for page in pages:
-        if not page.source_package:
+    return licenses
+
+
+def _build_license_packages(
+    *,
+    package_manifest: dict,
+    packages_with_text: set[str],
+) -> list[dict[str, object]]:
+    out: list[dict[str, object]] = []
+    packages = package_manifest.get("packages")
+    if not isinstance(packages, list):
+        return out
+    for pkg in packages:
+        if not isinstance(pkg, dict):
             continue
-        license_uuid = license_ids.get(page.source_package)
-        if license_uuid is None:
+        name = pkg.get("name")
+        version = pkg.get("version")
+        if not isinstance(name, str) or not isinstance(version, str):
             continue
-        attribution = None
-        if page.source_package_version:
-            attribution = f"{page.source_package} {page.source_package_version}"
-        cur.execute(
-            """
-            INSERT INTO man_page_license_map (man_page_id, license_id, attribution_text)
-            VALUES (%s::uuid, %s::uuid, %s)
-            """,
-            (str(page.page_id), license_uuid, attribution),
+        out.append(
+            {
+                "name": name,
+                "version": version,
+                "hasLicenseText": name in packages_with_text,
+            }
         )
+    out.sort(key=lambda item: str(item["name"]))
+    return out
+
+
+def _build_sitemap_page_map(*, pages: list[_PageRow]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for index, page in enumerate(sorted(pages, key=lambda p: (p.name, p.section)), start=1):
+        out[str(page.page_id)] = ((index - 1) // 10_000) + 1
+    return out
+
+
+def _page_payload(
+    row: _PageRow,
+    *,
+    sitemap_page: int,
+    links: list[dict[str, str | None]],
+) -> dict[str, object]:
+    search_text = normalize_ws(f"{row.name} {row.description} {row.headings_text} {row.plain_text}")
+    snippet_text = normalize_ws(f"{row.description} {row.plain_text}")
+    return {
+        "externalId": str(row.page_id),
+        "name": row.name,
+        "section": row.section,
+        "sitemapPage": sitemap_page,
+        "title": row.title,
+        "description": row.description,
+        "sourcePath": row.source_path,
+        "sourcePackage": row.source_package,
+        "sourcePackageVersion": row.source_package_version,
+        "contentSha256": row.content_sha256,
+        "hasParseWarnings": row.has_parse_warnings,
+        "doc": row.doc,
+        "synopsis": row.synopsis,
+        "options": row.options,
+        "seeAlso": row.see_also,
+        "searchText": search_text,
+        "snippetText": snippet_text,
+        "links": links,
+    }
 
 
 def _read_debian_copyright(pkg: str) -> str | None:

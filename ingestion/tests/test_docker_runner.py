@@ -14,7 +14,8 @@ def test_run_ingest_container_rejects_unknown_distro() -> None:
 
 def test_run_ingest_container_builds_debian_command(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_DEBIAN_IMAGE_REF", "debian:custom")
-    monkeypatch.setenv("INGEST_DATABASE_URL", "postgresql://u:p@h:5432/db")
+    monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
     monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: True)
 
     calls: list[list[str]] = []
@@ -43,7 +44,8 @@ def test_run_ingest_container_builds_debian_command(monkeypatch) -> None:
     docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
     assert "--network" in docker_run
     assert "betterman_default" in docker_run
-    assert any(part.startswith("INGEST_DATABASE_URL=") for part in docker_run)
+    assert any(part.startswith("CONVEX_HTTP_URL=") for part in docker_run)
+    assert any(part.startswith("CONVEX_INGEST_SECRET=") for part in docker_run)
     assert any(part.startswith("BETTERMAN_IMAGE_DIGEST=") for part in docker_run)
 
     inner = docker_run[-1]
@@ -52,9 +54,74 @@ def test_run_ingest_container_builds_debian_command(monkeypatch) -> None:
     assert "--no-activate" in inner
 
 
+def test_run_ingest_container_uses_image_id_when_repo_digest_missing(monkeypatch) -> None:
+    monkeypatch.setenv("BETTERMAN_UBUNTU_IMAGE_REF", "ubuntu:custom")
+    monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = False, **_kwargs: object):
+        calls.append(cmd)
+        if cmd[:2] == ["docker", "pull"]:
+            return SimpleNamespace(returncode=0)
+        if cmd[:2] == ["docker", "run"]:
+            return SimpleNamespace(returncode=0)
+        raise AssertionError(f"unexpected run: {cmd}")
+
+    def fake_check_output(cmd: list[str], **_kwargs: object) -> str:
+        if cmd[:3] == ["docker", "image", "inspect"] and cmd[4] == "{{index .RepoDigests 0}}":
+            raise docker_runner.subprocess.CalledProcessError(1, cmd)
+        if cmd[:3] == ["docker", "image", "inspect"] and cmd[4] == "{{.Id}}":
+            return "sha256:local-image-id\n"
+        if cmd[:2] == ["git", "rev-parse"]:
+            return "abc123\n"
+        raise AssertionError(f"unexpected check_output: {cmd}")
+
+    monkeypatch.setattr(docker_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(docker_runner.subprocess, "check_output", fake_check_output)
+
+    assert docker_runner.run_ingest_container(sample=False, activate=True, distro="ubuntu") == 0
+
+    docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
+    assert "BETTERMAN_IMAGE_DIGEST=sha256:local-image-id" in docker_run
+
+
+def test_run_ingest_container_passes_requested_platform(monkeypatch) -> None:
+    monkeypatch.setenv("BETTERMAN_ARCH_DOCKER_PLATFORM", "linux/amd64")
+    monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = False, **_kwargs: object):
+        calls.append(cmd)
+        if cmd[:2] == ["docker", "pull"]:
+            return SimpleNamespace(returncode=0)
+        if cmd[:2] == ["docker", "run"]:
+            return SimpleNamespace(returncode=0)
+        raise AssertionError(f"unexpected run: {cmd}")
+
+    def fake_check_output(cmd: list[str], **_kwargs: object) -> str:
+        if cmd[:3] == ["docker", "image", "inspect"]:
+            return "archlinux:latest@sha256:deadbeef\n"
+        if cmd[:2] == ["git", "rev-parse"]:
+            return "abc123\n"
+        raise AssertionError(f"unexpected check_output: {cmd}")
+
+    monkeypatch.setattr(docker_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(docker_runner.subprocess, "check_output", fake_check_output)
+
+    assert docker_runner.run_ingest_container(sample=False, activate=True, distro="arch") == 0
+
+    assert calls[0] == ["docker", "pull", "--platform", "linux/amd64", "archlinux:latest"]
+    docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
+    assert "--platform" in docker_run
+    assert "linux/amd64" in docker_run
+
+
 def test_run_ingest_container_builds_fedora_command(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_FEDORA_IMAGE_REF", "fedora:custom")
-    monkeypatch.delenv("INGEST_DATABASE_URL", raising=False)
+    monkeypatch.delenv("CONVEX_HTTP_URL", raising=False)
+    monkeypatch.delenv("CONVEX_INGEST_SECRET", raising=False)
     monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
 
     calls: list[list[str]] = []
@@ -90,7 +157,8 @@ def test_run_ingest_container_builds_fedora_command(monkeypatch) -> None:
 
 def test_run_ingest_container_builds_arch_command(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_ARCH_IMAGE_REF", "archlinux:custom")
-    monkeypatch.setenv("INGEST_DATABASE_URL", "postgresql://u:p@h:5432/db")
+    monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
     monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
 
     calls: list[list[str]] = []
@@ -118,13 +186,15 @@ def test_run_ingest_container_builds_arch_command(monkeypatch) -> None:
 
     docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
     inner = docker_run[-1]
+    assert "DisableSandboxSyscalls" in inner
     assert "pacman -Syu" in inner
     assert "--distro arch" in inner
 
 
 def test_run_ingest_container_builds_alpine_command(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_ALPINE_IMAGE_REF", "alpine:custom")
-    monkeypatch.delenv("INGEST_DATABASE_URL", raising=False)
+    monkeypatch.delenv("CONVEX_HTTP_URL", raising=False)
+    monkeypatch.delenv("CONVEX_INGEST_SECRET", raising=False)
     monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
 
     calls: list[list[str]] = []

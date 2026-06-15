@@ -37,7 +37,7 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 
 **Notes**
 
-- The workflow ingests into staging (`BETTERMAN_STAGING_DATABASE_URL`) then promotes the active release into prod (`BETTERMAN_PROD_DATABASE_URL`).
+- The workflow ingests into Convex staging (`BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`) then promotes active staging release pointers to prod.
 - Debian is always required; the remaining distros may be configured to “continue on failure” in workflow steps. When multi-distro is expected live, treat any distro ingestion failures as release blockers.
 
 ## Verify distro API behavior
@@ -54,7 +54,7 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 
 ## Troubleshooting
 
-### Workflow stuck on “Ingest to staging DB”
+### Workflow stuck on “Ingest to Convex staging”
 
 - Inspect the current job’s step timings:
   - `gh run view <RUN_ID> --json jobs --jq '.jobs[] | {name,status,startedAt,completedAt}'`

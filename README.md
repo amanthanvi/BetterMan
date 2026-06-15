@@ -37,8 +37,9 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
 ```text
 /
 ├── nextjs/             # Next.js App Router (public web)
-├── backend/            # FastAPI (API-only; internal)
-├── ingestion/          # Ingestion pipeline (dataset builds)
+├── convex/             # Convex schema/functions for dataset reads, search, rate limits, ingest
+├── backend/            # Legacy FastAPI API service (kept for maintenance/tests during cutover)
+├── ingestion/          # Ingestion pipeline (dataset builds into Convex)
 ├── frontend/           # Legacy Vite SPA (used for CI/e2e harness only; do not add features here)
 ├── docker-compose.yml  # Local Postgres + Redis
 └── SPEC.md
@@ -55,9 +56,8 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
 - Auto-deploy: `.github/workflows/ci.yml` deploys after all jobs pass on pushes to `main`.
 - Manual deploy: `.github/workflows/deploy.yml` (workflow `deploy-railway`, input `ref`).
 - Requires `RAILWAY_TOKEN` GitHub Actions secret (used as Railway project-token auth in CI).
-- `v0.5.0` deploy topology: two Railway services
-  - `nextjs` (public web) → set `FASTAPI_INTERNAL_URL=http://web.railway.internal:8080`
-  - `web` (FastAPI API-only; private networking)
+- Current runtime: `nextjs` reads datasets/search/rate limits from Convex.
+- Legacy `web` FastAPI service may still exist during the infrastructure transition, but the active Next.js app no longer requires `FASTAPI_INTERNAL_URL`.
 
 ## Dataset updates
 
@@ -65,7 +65,9 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
   - `workflow_dispatch` defaults: `ingest=true`, `promote=false` (ingest to staging only).
   - Promote-only: `ingest=false`, `promote=true` (promotes current staging actives without re-ingesting).
   - Targeted ingest (debug): set `linux_distro=arch` and/or `bsd=false`.
-- Requires `BETTERMAN_STAGING_DATABASE_URL` + `BETTERMAN_PROD_DATABASE_URL` GitHub Actions secrets.
+- Requires `BETTERMAN_CONVEX_HTTP_URL` + `BETTERMAN_CONVEX_INGEST_SECRET` GitHub Actions secrets.
+- Ingest activates `staging` release pointers; promotion copies active staging pointers to `prod` in Convex.
+- Production Convex rebuild/import runbook: `docs/runbooks/convex-production-cutover.md`.
 
 ## Security / Quality (CI)
 
@@ -95,15 +97,13 @@ Privacy-friendly analytics (no cookies, GDPR-compliant).
 
 Analytics are disabled if the env var is not set.
 
-### Proxy Trust (Rate Limiting)
-
-For accurate IP-based rate limiting behind a reverse proxy:
+### Convex
 
 **Environment variables:**
 
-- `TRUSTED_PROXY_CIDRS` (backend): Comma-separated list of trusted proxy CIDRs (e.g., `10.0.0.0/8,172.16.0.0/12`)
-
-When set, X-Forwarded-For is only trusted from connections originating within these CIDRs.
+- `NEXT_PUBLIC_CONVEX_URL` / `CONVEX_URL` (Next.js): Convex client URL.
+- `BETTERMAN_DATASET_STAGE` (Next.js): `prod` by default; `staging` for staging previews.
+- `CONVEX_HTTP_URL` + `CONVEX_INGEST_SECRET` (ingestion): Convex HTTP actions URL and ingest bearer token.
 
 ## UX notes
 
@@ -117,7 +117,7 @@ When set, X-Forwarded-For is only trusted from connections originating within th
 
 ### Local services
 
-- `pnpm db:up` — start Postgres + Redis (Docker)
+- `pnpm db:up` — start legacy Postgres + Redis (Docker)
 - `pnpm db:down` — stop services
   - Postgres exposed on `localhost:54320`
 
@@ -129,7 +129,8 @@ When set, X-Forwarded-For is only trusted from connections originating within th
 
 ### Next.js
 
-- `pnpm next:dev` — Next.js dev server
+- `pnpm next:dev` — Convex watcher + Next.js dev server
+- `pnpm convex:check` — one-shot Convex schema/function validation
 - `pnpm next:build` — Next.js production build
 - `pnpm next:lint` — Next.js lint
 
@@ -139,7 +140,7 @@ When set, X-Forwarded-For is only trusted from connections originating within th
 - `pnpm frontend:build` — production build
 - `pnpm frontend:lint` — eslint
 - `pnpm frontend:test` — unit tests (Vitest)
-- `pnpm frontend:e2e` — E2E tests (Playwright; expects backend running)
+- `pnpm frontend:e2e` — E2E tests (Playwright; expects Next.js + Convex running)
 
 ### Ingestion
 

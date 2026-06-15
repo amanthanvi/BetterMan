@@ -40,6 +40,8 @@ def test_main_invokes_run_ingest_on_host_for_macos(monkeypatch) -> None:
 
 
 def test_run_ingest_in_container_requires_image_env(monkeypatch) -> None:
+    monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
     monkeypatch.delenv("BETTERMAN_IMAGE_REF", raising=False)
     monkeypatch.delenv("BETTERMAN_IMAGE_DIGEST", raising=False)
 
@@ -55,6 +57,8 @@ def test_run_ingest_in_container_requires_image_env(monkeypatch) -> None:
 
 
 def test_run_ingest_in_container_runtime_error(monkeypatch) -> None:
+    monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
     monkeypatch.setenv("BETTERMAN_IMAGE_REF", "example:latest")
     monkeypatch.setenv("BETTERMAN_IMAGE_DIGEST", "sha256:deadbeef")
 
@@ -74,7 +78,9 @@ def test_run_ingest_in_container_success_logs_done(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_IMAGE_REF", "example:latest")
     monkeypatch.setenv("BETTERMAN_IMAGE_DIGEST", "sha256:deadbeef")
     monkeypatch.setenv("BETTERMAN_INGEST_GIT_SHA", "abc123")
-    monkeypatch.setenv("INGEST_DATABASE_URL", "postgresql://u:p@h:5432/db")
+    monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
+    monkeypatch.setenv("BETTERMAN_DATASET_STAGE", "staging")
 
     events: list[tuple[str, dict[str, object]]] = []
 
@@ -89,13 +95,17 @@ def test_run_ingest_in_container_success_logs_done(monkeypatch) -> None:
         *,
         sample: bool,
         activate: bool,
-        database_url: str,
+        convex_url: str,
+        ingest_secret: str,
+        dataset_stage: str,
         image_ref: str,
         image_digest: str,
         git_sha: str,
         distro: str,
     ):
-        called["database_url"] = database_url
+        called["convex_url"] = convex_url
+        called["ingest_secret"] = ingest_secret
+        called["dataset_stage"] = dataset_stage
         called["image_ref"] = image_ref
         called["image_digest"] = image_digest
         called["git_sha"] = git_sha
@@ -113,7 +123,9 @@ def test_run_ingest_in_container_success_logs_done(monkeypatch) -> None:
     monkeypatch.setattr(cli, "ingest_dataset", fake_ingest_dataset)
 
     assert cli._run_ingest_in_container(sample=True, activate=False, distro="ubuntu") == 0
-    assert called["database_url"] == "postgresql://u:p@h:5432/db"
+    assert called["convex_url"] == "https://example.convex.site"
+    assert called["ingest_secret"] == "secret"
+    assert called["dataset_stage"] == "staging"
 
     assert events and events[-1][0] == "ingest_done"
 
@@ -122,7 +134,8 @@ def test_run_ingest_in_container_defaults_git_sha_from_repo(monkeypatch) -> None
     monkeypatch.setenv("BETTERMAN_IMAGE_REF", "example:latest")
     monkeypatch.setenv("BETTERMAN_IMAGE_DIGEST", "sha256:deadbeef")
     monkeypatch.delenv("BETTERMAN_INGEST_GIT_SHA", raising=False)
-    monkeypatch.setenv("INGEST_DATABASE_URL", "postgresql://u:p@h:5432/db")
+    monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
 
     monkeypatch.setattr(cli, "_git_sha", lambda _repo_root: "deadbeef")
 
@@ -132,7 +145,9 @@ def test_run_ingest_in_container_defaults_git_sha_from_repo(monkeypatch) -> None
         *,
         sample: bool,
         activate: bool,
-        database_url: str,
+        convex_url: str,
+        ingest_secret: str,
+        dataset_stage: str,
         image_ref: str,
         image_digest: str,
         git_sha: str,
@@ -157,7 +172,8 @@ def test_run_ingest_on_host_defaults_image_fields(monkeypatch) -> None:
     monkeypatch.delenv("BETTERMAN_IMAGE_REF", raising=False)
     monkeypatch.delenv("BETTERMAN_IMAGE_DIGEST", raising=False)
     monkeypatch.setenv("BETTERMAN_INGEST_GIT_SHA", "abc123")
-    monkeypatch.setenv("INGEST_DATABASE_URL", "postgresql://u:p@h:5432/db")
+    monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
 
     called: dict[str, object] = {}
 
@@ -165,13 +181,17 @@ def test_run_ingest_on_host_defaults_image_fields(monkeypatch) -> None:
         *,
         sample: bool,
         activate: bool,
-        database_url: str,
+        convex_url: str,
+        ingest_secret: str,
+        dataset_stage: str,
         image_ref: str,
         image_digest: str,
         git_sha: str,
         distro: str,
     ):
-        called["database_url"] = database_url
+        called["convex_url"] = convex_url
+        called["ingest_secret"] = ingest_secret
+        called["dataset_stage"] = dataset_stage
         called["image_ref"] = image_ref
         called["image_digest"] = image_digest
         called["git_sha"] = git_sha
@@ -189,7 +209,9 @@ def test_run_ingest_on_host_defaults_image_fields(monkeypatch) -> None:
     monkeypatch.setattr(cli, "ingest_dataset", fake_ingest_dataset)
 
     assert cli._run_ingest_on_host(sample=True, activate=False, distro="macos") == 0
-    assert called["database_url"] == "postgresql://u:p@h:5432/db"
+    assert called["convex_url"] == "https://example.convex.site"
+    assert called["ingest_secret"] == "secret"
+    assert called["dataset_stage"] == "staging"
     assert called["image_ref"] == "host:macos"
     assert called["image_digest"] == "unknown"
     assert called["git_sha"] == "abc123"

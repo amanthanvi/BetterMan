@@ -142,32 +142,8 @@ jobs:
     needs:
       - frontend
       - nextjs
-      - backend
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: betterman
-          POSTGRES_PASSWORD: betterman
-          POSTGRES_DB: betterman
-        ports:
-          - 54320:5432
-        options: >-
-          --health-cmd="pg_isready -U betterman -d betterman"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
@@ -180,50 +156,60 @@ jobs:
           node-version: 25
           cache: pnpm
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
-        with:
-          python-version: 3.14
-
       - run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
         run: pnpm -C frontend exec playwright install --with-deps chromium
 
-      - run: pipx install uv
-      - run: cd backend && uv sync --frozen
-
-      - name: Migrate + seed DB
+      - name: Provision local Convex + seed E2E data
         env:
+          CONVEX_AGENT_MODE: anonymous
           BETTERMAN_E2E_SEED: "1"
-        run: |
-          set -euo pipefail
-          cd backend
-          uv run python -m app.db.migrate
-          uv run python scripts/seed_e2e.py
-
-      - name: Start backend (serves SPA + API)
+          BETTERMAN_DATASET_STAGE: prod
+          CONVEX_INGEST_SECRET: e2e-secret
         run: |
           set -euo pipefail
 
-          cd backend
-          nohup uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/betterman-e2e.log 2>&1 &
+          npx convex dev --once
+          npx convex env set CONVEX_INGEST_SECRET "$CONVEX_INGEST_SECRET"
+
+          nohup npx convex dev --tail-logs disable > /tmp/betterman-convex.log 2>&1 &
+          echo $! > /tmp/betterman-convex.pid
 
           for attempt in {1..60}; do
-            if curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
-              exit 0
+            if grep -q "Convex functions ready" /tmp/betterman-convex.log; then
+              break
             fi
             sleep 1
           done
 
-          echo "Timed out waiting for backend"
-          tail -n 200 /tmp/betterman-e2e.log || true
-          exit 1
+          if ! grep -q "Convex functions ready" /tmp/betterman-convex.log; then
+            echo "Timed out waiting for Convex"
+            tail -n 200 /tmp/betterman-convex.log || true
+            exit 1
+          fi
+
+          set -a
+          # shellcheck disable=SC1091
+          . ./.env.local
+          set +a
+
+          CONVEX_HTTP_URL="$CONVEX_SITE_URL" node scripts/seed-convex-e2e.mjs
 
       - name: Start Next.js
         env:
-          FASTAPI_INTERNAL_URL: http://127.0.0.1:8000
+          BETTERMAN_DATASET_STAGE: prod
         run: |
           set -euo pipefail
+
+          set -a
+          # shellcheck disable=SC1091
+          . ./.env.local
+          set +a
+
+          export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
+          export CONVEX_URL="$CONVEX_URL"
+          export CONVEX_INGEST_SECRET="e2e-secret"
 
           pnpm -C nextjs build
 

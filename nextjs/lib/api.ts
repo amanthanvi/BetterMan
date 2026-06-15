@@ -1,12 +1,18 @@
-import { fastapiUrl } from './fastapi'
+import { api } from '../../convex/_generated/api'
+import { unstable_cache } from 'next/cache'
 import type { Distro } from './distro'
 import type {
   AmbiguousPageResponse,
   ManPageResponse,
 } from './docModel'
+import { getConvexClient, getDatasetStage } from './convexClient'
 import type { components } from './openapi.gen'
 
 type Schemas = components['schemas']
+const PUBLIC_REVALIDATE_SECONDS = 60 * 60
+const SEARCH_REVALIDATE_SECONDS = 5 * 60
+const SITEMAP_CHUNK_ITEMS = 5000
+const MAX_SITEMAP_CHUNKS = 10
 
 export type InfoResponse = Schemas['InfoResponse']
 
@@ -42,82 +48,170 @@ export class FastApiError extends Error {
   }
 }
 
-async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(fastapiUrl(path), {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  })
+function apiError(status: number, code: string, message: string): FastApiError {
+  return new FastApiError(status, message, JSON.stringify({ error: { code, message } }))
+}
 
-  if (!res.ok) {
-    let bodyText: string | undefined
-    try {
-      bodyText = await res.text()
-    } catch {
-      // ignore
-    }
-    throw new FastApiError(res.status, `FastAPI request failed: ${res.status} ${res.statusText}`, bodyText)
+function convex() {
+  try {
+    return getConvexClient()
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Convex is not configured'
+    throw apiError(503, 'CONVEX_NOT_CONFIGURED', message)
   }
-
-  return (await res.json()) as T
 }
 
-export function fetchInfo(distro: Distro): Promise<InfoResponse> {
-  const params = new URLSearchParams()
-  if (distro !== 'debian') params.set('distro', distro)
-  const qs = params.toString()
-  return fetchJson<InfoResponse>(`/api/v1/info${qs ? `?${qs}` : ''}`, {
-    next: { revalidate: 60 },
-  })
+const cachedInfo = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro) =>
+    await convex().query(api.queries.getInfo, { stage, distro }),
+  ['betterman', 'convex', 'info'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedSections = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro) =>
+    await convex().query(api.queries.listSections, { stage, distro }),
+  ['betterman', 'convex', 'sections'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedSearch = unstable_cache(
+  async (
+    stage: ReturnType<typeof getDatasetStage>,
+    distro: Distro,
+    q: string,
+    section: string | null,
+    limit: number,
+    offset: number,
+  ) =>
+    await convex().query(api.queries.search, {
+      stage,
+      distro,
+      q,
+      section,
+      limit,
+      offset,
+    }),
+  ['betterman', 'convex', 'search'],
+  { revalidate: SEARCH_REVALIDATE_SECONDS },
+)
+
+const cachedSection = unstable_cache(
+  async (
+    stage: ReturnType<typeof getDatasetStage>,
+    distro: Distro,
+    section: string,
+    limit: number,
+    offset: number,
+  ) =>
+    await convex().query(api.queries.listSection, {
+      stage,
+      distro,
+      section,
+      limit,
+      offset,
+    }),
+  ['betterman', 'convex', 'section'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedManByName = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string) =>
+    await convex().action(api.content.getManByName, { stage, distro, name }),
+  ['betterman', 'convex', 'man-by-name'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedManByNameAndSection = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string, section: string) =>
+    await convex().action(api.content.getManByNameAndSection, { stage, distro, name, section }),
+  ['betterman', 'convex', 'man-by-name-and-section'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedRelated = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string, section: string) =>
+    await convex().query(api.queries.getRelated, { stage, distro, name, section }),
+  ['betterman', 'convex', 'related'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedSuggest = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string) =>
+    await convex().query(api.queries.suggest, { stage, distro, name }),
+  ['betterman', 'convex', 'suggest'],
+  { revalidate: SEARCH_REVALIDATE_SECONDS },
+)
+
+const cachedLicenses = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro) =>
+    await convex().query(api.queries.listLicenses, { stage, distro }),
+  ['betterman', 'convex', 'licenses'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedLicenseText = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, packageName: string) =>
+    await convex().query(api.queries.getLicense, { stage, distro, packageName }),
+  ['betterman', 'convex', 'license-text'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedSeoReleases = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>) =>
+    await convex().query(api.queries.listSeoReleases, { stage }),
+  ['betterman', 'convex', 'seo-releases'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+export async function fetchInfo(distro: Distro): Promise<InfoResponse> {
+  return await cachedInfo(getDatasetStage(), distro)
 }
 
-export function listSections(distro: Distro): Promise<SectionLabel[]> {
-  const params = new URLSearchParams()
-  if (distro !== 'debian') params.set('distro', distro)
-  const qs = params.toString()
-  return fetchJson<SectionLabel[]>(`/api/v1/sections${qs ? `?${qs}` : ''}`, {
-    next: { revalidate: 60 * 60 },
-  })
+export async function listSections(distro: Distro): Promise<SectionLabel[]> {
+  return await cachedSections(getDatasetStage(), distro)
 }
 
-export function search(opts: {
+export async function search(opts: {
   distro: Distro
   q: string
   section?: string
   limit?: number
   offset?: number
 }): Promise<SearchResponse> {
-  const params = new URLSearchParams()
-  params.set('q', opts.q)
-  if (opts.section) params.set('section', opts.section)
-  if (typeof opts.limit === 'number') params.set('limit', String(opts.limit))
-  if (typeof opts.offset === 'number') params.set('offset', String(opts.offset))
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
-  return fetchJson<SearchResponse>(`/api/v1/search?${params.toString()}`, {
-    cache: 'no-store',
-  })
+  return await cachedSearch(
+    getDatasetStage(),
+    opts.distro,
+    opts.q,
+    opts.section ?? null,
+    opts.limit ?? 20,
+    opts.offset ?? 0,
+  )
 }
 
-export function listSection(opts: {
+export async function listSection(opts: {
   distro: Distro
   section: string
   limit?: number
   offset?: number
 }): Promise<SectionResponse> {
-  const params = new URLSearchParams()
-  if (typeof opts.limit === 'number') params.set('limit', String(opts.limit))
-  if (typeof opts.offset === 'number') params.set('offset', String(opts.offset))
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
-  const qs = params.toString()
-  return fetchJson<SectionResponse>(
-    `/api/v1/section/${encodeURIComponent(opts.section)}${qs ? `?${qs}` : ''}`,
-    { next: { revalidate: 300 } },
+  const result = await cachedSection(
+    getDatasetStage(),
+    opts.distro,
+    opts.section,
+    opts.limit ?? 200,
+    opts.offset ?? 0,
   )
+  if (!result) throw apiError(404, 'SECTION_NOT_FOUND', 'Section not found')
+  return result
 }
 
 export type ManByNameResult =
+  | { kind: 'page'; data: ManPageResponse }
+  | { kind: 'ambiguous'; options: AmbiguousPageResponse['options'] }
+
+type ConvexManByNameResult =
+  | { kind: 'not_found' }
   | { kind: 'page'; data: ManPageResponse }
   | { kind: 'ambiguous'; options: AmbiguousPageResponse['options'] }
 
@@ -125,88 +219,60 @@ export async function fetchManByName(opts: {
   distro: Distro
   name: string
 }): Promise<ManByNameResult> {
-  const params = new URLSearchParams()
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
-  const qs = params.toString()
+  const result = (await cachedManByName(
+    getDatasetStage(),
+    opts.distro,
+    opts.name,
+  )) as ConvexManByNameResult
 
-  const res = await fetch(fastapiUrl(`/api/v1/man/${encodeURIComponent(opts.name)}${qs ? `?${qs}` : ''}`), {
-    headers: { Accept: 'application/json' },
-    next: { revalidate: 300 },
-  })
-
-  if (res.status === 409) {
-    const payload = (await res.json()) as AmbiguousPageResponse
-    return { kind: 'ambiguous', options: payload.options ?? [] }
+  if (result.kind === 'not_found') {
+    throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
   }
-
-  if (!res.ok) {
-    let bodyText: string | undefined
-    try {
-      bodyText = await res.text()
-    } catch {
-      // ignore
-    }
-    throw new FastApiError(res.status, `FastAPI request failed: ${res.status} ${res.statusText}`, bodyText)
+  if (result.kind === 'ambiguous') {
+    return { kind: 'ambiguous', options: result.options as AmbiguousPageResponse['options'] }
   }
-
-  return { kind: 'page', data: (await res.json()) as ManPageResponse }
+  return { kind: 'page', data: result.data as ManPageResponse }
 }
 
-export function fetchManByNameAndSection(opts: {
+export async function fetchManByNameAndSection(opts: {
   distro: Distro
   name: string
   section: string
 }): Promise<ManPageResponse> {
-  const params = new URLSearchParams()
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
-  const qs = params.toString()
-  return fetchJson<ManPageResponse>(
-    `/api/v1/man/${encodeURIComponent(opts.name)}/${encodeURIComponent(opts.section)}${qs ? `?${qs}` : ''}`,
-    { next: { revalidate: 300 } },
-  )
+  const result = (await cachedManByNameAndSection(
+    getDatasetStage(),
+    opts.distro,
+    opts.name,
+    opts.section,
+  )) as ManPageResponse | null
+  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  return result
 }
 
 export type RelatedResponse = Schemas['RelatedResponse']
 
-export function fetchRelated(opts: {
+export async function fetchRelated(opts: {
   distro: Distro
   name: string
   section: string
 }): Promise<RelatedResponse> {
-  const params = new URLSearchParams()
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
-  const qs = params.toString()
-  return fetchJson<RelatedResponse>(
-    `/api/v1/man/${encodeURIComponent(opts.name)}/${encodeURIComponent(opts.section)}/related${qs ? `?${qs}` : ''}`,
-    { next: { revalidate: 300 } },
-  )
+  const result = await cachedRelated(getDatasetStage(), opts.distro, opts.name, opts.section)
+  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  return result as RelatedResponse
 }
 
-export function suggest(opts: { distro: Distro; name: string }): Promise<SuggestResponse> {
-  const params = new URLSearchParams()
-  params.set('name', opts.name)
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
-  return fetchJson<SuggestResponse>(`/api/v1/suggest?${params.toString()}`, {
-    next: { revalidate: 300 },
-  })
+export async function suggest(opts: { distro: Distro; name: string }): Promise<SuggestResponse> {
+  return await cachedSuggest(getDatasetStage(), opts.distro, opts.name)
 }
 
-export function fetchLicenses(opts: { distro: Distro }): Promise<LicensesResponse> {
-  const params = new URLSearchParams()
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
-  const qs = params.toString()
-  return fetchJson<LicensesResponse>(`/api/v1/licenses${qs ? `?${qs}` : ''}`, {
-    next: { revalidate: 300 },
-  })
+export async function fetchLicenses(opts: { distro: Distro }): Promise<LicensesResponse> {
+  return (await cachedLicenses(getDatasetStage(), opts.distro)) as LicensesResponse
 }
 
-export function fetchLicenseText(opts: { distro: Distro; packageName: string }): Promise<LicenseTextResponse> {
-  const params = new URLSearchParams()
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
-  const qs = params.toString()
-  return fetchJson<LicenseTextResponse>(`/api/v1/licenses/${encodeURIComponent(opts.packageName)}${qs ? `?${qs}` : ''}`, {
-    next: { revalidate: 300 },
-  })
+export async function fetchLicenseText(opts: { distro: Distro; packageName: string }): Promise<LicenseTextResponse> {
+  const result = await cachedLicenseText(getDatasetStage(), opts.distro, opts.packageName)
+  if (!result) throw apiError(404, 'LICENSE_NOT_FOUND', 'License not found')
+  return result as LicenseTextResponse
 }
 
 export type SeoRelease = {
@@ -231,13 +297,34 @@ export type SeoSitemapPageResponse = {
   page: number
 }
 
-export function fetchSeoReleases(): Promise<SeoReleasesResponse> {
-  return fetchJson<SeoReleasesResponse>('/api/v1/seo/releases', { next: { revalidate: 3600 } })
+type SeoSitemapPageChunkResponse = {
+  items: SeoSitemapItem[]
+  page: number
+  isDone: boolean
+  continueCursor: string
+} | null
+
+export async function fetchSeoReleases(): Promise<SeoReleasesResponse> {
+  return await cachedSeoReleases(getDatasetStage())
 }
 
-export function fetchSeoSitemapPage(opts: { distro: string; page: number }): Promise<SeoSitemapPageResponse> {
-  const params = new URLSearchParams()
-  params.set('distro', opts.distro)
-  params.set('page', String(opts.page))
-  return fetchJson<SeoSitemapPageResponse>(`/api/v1/seo/sitemap-page?${params.toString()}`, { next: { revalidate: 3600 } })
+export async function fetchSeoSitemapPage(opts: { distro: string; page: number }): Promise<SeoSitemapPageResponse> {
+  const stage = getDatasetStage()
+  const items: SeoSitemapItem[] = []
+  let cursor: string | null = null
+
+  for (let chunk = 0; chunk < MAX_SITEMAP_CHUNKS; chunk += 1) {
+    const result: SeoSitemapPageChunkResponse = await convex().query(api.queries.listSitemapPageChunk, {
+      stage,
+      distro: opts.distro as Distro,
+      page: opts.page,
+      paginationOpts: { numItems: SITEMAP_CHUNK_ITEMS, cursor },
+    })
+    if (!result) throw apiError(404, 'SITEMAP_PAGE_NOT_FOUND', 'Sitemap page not found')
+    items.push(...result.items)
+    if (result.isDone) return { items, page: opts.page }
+    cursor = result.continueCursor
+  }
+
+  throw apiError(503, 'SITEMAP_PAGE_TOO_LARGE', 'Sitemap page is too large')
 }

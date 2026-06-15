@@ -21,7 +21,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="betterman-ingestion")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    ingest = sub.add_parser("ingest", help="Ingest man pages into Postgres")
+    ingest = sub.add_parser("ingest", help="Ingest man pages into Convex")
     ingest.add_argument(
         "--distro",
         choices=["debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"],
@@ -68,9 +68,12 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> int:
-    database_url = os.environ.get("INGEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
-    if not database_url:
-        database_url = "postgresql://betterman:betterman@postgres:5432/betterman"
+    convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
+    ingest_secret = os.environ.get("CONVEX_INGEST_SECRET")
+    dataset_stage = os.environ.get("BETTERMAN_DATASET_STAGE", "staging")
+    if not convex_url or not ingest_secret:
+        _log("ingest_error", error="Missing CONVEX_HTTP_URL/CONVEX_URL or CONVEX_INGEST_SECRET")
+        return 2
 
     repo_root = Path(__file__).resolve().parents[2]
 
@@ -86,7 +89,9 @@ def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> in
         result = ingest_dataset(
             sample=sample,
             activate=activate,
-            database_url=database_url,
+            convex_url=convex_url,
+            ingest_secret=ingest_secret,
+            dataset_stage=dataset_stage,
             image_ref=image_ref,
             image_digest=image_digest,
             git_sha=git_sha,
@@ -111,9 +116,12 @@ def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> in
 
 
 def _run_ingest_on_host(*, sample: bool, activate: bool, distro: str) -> int:
-    database_url = os.environ.get("INGEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
-    if not database_url:
-        database_url = "postgresql://betterman:betterman@postgres:5432/betterman"
+    convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
+    ingest_secret = os.environ.get("CONVEX_INGEST_SECRET")
+    dataset_stage = os.environ.get("BETTERMAN_DATASET_STAGE", "staging")
+    if not convex_url or not ingest_secret:
+        _log("ingest_error", error="Missing CONVEX_HTTP_URL/CONVEX_URL or CONVEX_INGEST_SECRET")
+        return 2
 
     repo_root = Path(__file__).resolve().parents[2]
 
@@ -125,7 +133,9 @@ def _run_ingest_on_host(*, sample: bool, activate: bool, distro: str) -> int:
         result = ingest_dataset(
             sample=sample,
             activate=activate,
-            database_url=database_url,
+            convex_url=convex_url,
+            ingest_secret=ingest_secret,
+            dataset_stage=dataset_stage,
             image_ref=image_ref,
             image_digest=image_digest,
             git_sha=git_sha,

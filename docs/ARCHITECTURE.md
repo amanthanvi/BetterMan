@@ -12,8 +12,9 @@ This document is the “quick read” version of `SPEC.md`:
 BetterMan is a multi-service monorepo:
 
 - `nextjs/` — Next.js App Router (public web)
-- `backend/` — FastAPI (API-only; internal)
-- `ingestion/` — dataset pipeline (builds + promotes releases)
+- `convex/` — dataset, search, rate limit, and ingest/promote backend
+- `backend/` — legacy FastAPI API service retained during cutover maintenance
+- `ingestion/` — dataset pipeline (builds + promotes releases into Convex)
 - `frontend/` — legacy Vite SPA (kept for CI/E2E harness; don’t add features)
 
 ### Runtime components
@@ -25,15 +26,15 @@ browser
   ▼
 Next.js (nextjs/)
   │
-  │  internal HTTP (private network in prod)
+  │  Convex client queries/mutations
   ▼
-FastAPI (backend/)
-  │
-  ├─ Postgres (dataset, search index, releases)
-  └─ Redis (caching / rate limiting / transient state)
+Convex (convex/)
+  ├─ dataset releases + active stage pointers
+  ├─ man page metadata/content/search documents
+  └─ rate limit bucket documents
 
 GitHub Actions (ingestion/)
-  └─ builds + promotes dataset releases into Postgres
+  └─ builds + promotes dataset release pointers through Convex HTTP actions
 ```
 
 ## Key flows
@@ -41,26 +42,26 @@ GitHub Actions (ingestion/)
 ### Search
 
 1. User searches from the Next.js UI.
-2. Next.js calls the FastAPI search endpoint.
-3. FastAPI queries Postgres (and/or cached results) and returns ranked results.
+2. Next.js calls Convex text search through server helpers/API routes.
+3. Convex returns ranked results with deterministic snippets.
 4. Next.js renders results with fast previews.
 
 ### Man page view
 
 1. User opens `/man/<name>/<section>`.
-2. Next.js fetches page content + metadata from FastAPI.
+2. Next.js fetches page content + metadata from Convex.
 3. The UI renders a readable page with optional Navigator (TOC + find-in-page).
 
 ### Dataset release lifecycle
 
 - Ingestion runs on GitHub Actions (see `.github/workflows/update-docs.yml`).
-- Releases are staged, verified, then promoted to production.
+- Releases are imported into Convex, activated for `staging`, then promoted by copying active release pointers to `prod`.
 - The app surfaces release metadata (e.g. dataset release id / last updated) via `/api/v1/info`.
 
 ## Contracts
 
-- FastAPI publishes an OpenAPI schema.
-- TypeScript client types are generated and checked in CI.
+- The public JSON response contract remains `/api/v1/*` through Next route handlers.
+- Legacy FastAPI still publishes OpenAPI types during the transition.
   - Runbook: `docs/runbooks/type-gen.md`
   - CI job: `api_types` in `.github/workflows/ci.yml`
 
@@ -72,14 +73,11 @@ Production deploy is handled by GitHub Actions after CI passes on pushes to `mai
 - Deploy workflow: `.github/workflows/deploy.yml`
 - Ops notes: `docs/runbooks/railway-ops.md`
 
-### Railway topology (v0.5.0)
-
-Two services:
+### Runtime topology
 
 - `nextjs` — public web (Next.js)
-- `web` — FastAPI API-only service (private networking)
-
-The Next.js service talks to FastAPI over Railway’s private network.
+- Convex — app data, search, ingestion, and rate-limit state
+- `web` — legacy FastAPI API-only service retained until infrastructure cleanup is approved
 
 ## Where to look next
 

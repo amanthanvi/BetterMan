@@ -9,27 +9,29 @@ This doc is for running BetterMan locally.
 
 - Node.js + pnpm (see `package.json` → `packageManager`)
 - Python + `uv`
-- Docker (for local Postgres + Redis)
+- Docker (only for legacy FastAPI/Postgres maintenance paths)
 
 ## Run it
 
-In one terminal:
+For the active app:
 
 ```bash
-pnpm db:up
-pnpm backend:dev
-```
-
-In another terminal:
-
-```bash
+pnpm install
+pnpm convex:check
 pnpm next:dev
 ```
 
 By default:
 
 - Next.js runs on `http://localhost:3000`
-- FastAPI runs on `http://127.0.0.1:8000`
+- Convex local dev runs on `http://127.0.0.1:3210`
+
+For legacy FastAPI maintenance:
+
+```bash
+pnpm db:up
+pnpm backend:dev
+```
 
 ## Environment variables (optional)
 
@@ -40,6 +42,7 @@ Defaults are sensible for local dev, but you can customize via env vars.
 
 Useful vars:
 
-- `DATABASE_URL` / `REDIS_URL` (backend)
-- `FASTAPI_INTERNAL_URL` (Next.js → FastAPI base URL; defaults to `http://127.0.0.1:8000`)
-
+- `NEXT_PUBLIC_CONVEX_URL` / `CONVEX_URL` (Next.js → Convex)
+- `BETTERMAN_DATASET_STAGE` (`prod` by default)
+- `CONVEX_HTTP_URL` / `CONVEX_INGEST_SECRET` (ingestion)
+- `DATABASE_URL` / `REDIS_URL` (legacy backend only)

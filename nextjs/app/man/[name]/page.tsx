@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { FastApiError, fetchManByName, suggest } from '../../../lib/api'
 import { normalizeDistro, withDistro } from '../../../lib/distro'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 type SearchParams = Record<string, string | string[] | undefined>
 

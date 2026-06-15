@@ -6,7 +6,7 @@ import { Fragment } from 'react'
 import { listSection } from '../../../lib/api'
 import { isDefaultDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 type SearchParams = Record<string, string | string[] | undefined>
 

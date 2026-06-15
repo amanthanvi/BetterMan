@@ -62,16 +62,15 @@ This repo follows the global agent guidance in:
 |---------|---------|------|-------|
 | PostgreSQL + Redis | `pnpm db:up` | `54320` / `6379` | Docker Compose; must start before backend |
 | FastAPI backend | `pnpm backend:dev` | `8000` | Requires DB running; auto-reloads |
-| Next.js frontend | `pnpm next:dev` | `3000` | Connects to backend via `FASTAPI_INTERNAL_URL` (defaults to `http://127.0.0.1:8000`) |
+| Convex + Next.js frontend | `pnpm next:dev` | `3000` | Starts Convex watcher and Next.js; active app uses Convex, not FastAPI |
 
 ### Startup sequence
 
 1. Start Docker daemon: `sudo dockerd &>/tmp/dockerd.log &` (wait ~5 s), then `sudo chmod 666 /var/run/docker.sock`
-2. `pnpm db:up` — start Postgres 16 + Redis 7
-3. `cd backend && uv run python -m app.db.migrate` — run migrations (idempotent)
-4. `BETTERMAN_E2E_SEED=1 uv run python scripts/seed_e2e.py` — seed E2E test data (from `backend/`)
-5. `pnpm backend:dev` — start FastAPI on `:8000`
-6. `pnpm next:dev` — start Next.js on `:3000`
+2. `pnpm install` — install workspace deps
+3. `pnpm convex:check` — provision/validate local Convex and write `.env.local`
+4. `pnpm next:dev` — start Convex watcher + Next.js on `:3000`
+5. Legacy backend only: `pnpm db:up`, `cd backend && uv run python -m app.db.migrate`, `pnpm backend:dev`
 
 ### Non-obvious caveats
 
@@ -88,3 +87,17 @@ This repo follows the global agent guidance in:
 
 - 2026-03-26: E2E local bring-up: keep `app.db.migrate` and `seed_e2e.py` sequential; parallel runs can race the schema creation.
 - 2026-03-26: Playwright on hydrated Next selects can no-op on first try in local/CI; use a retry helper instead of one-shot `selectOption()` when listener attach races appear.
+
+<!-- convex-ai-start -->
+
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read
+`convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
+override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
+<!-- convex-ai-end -->

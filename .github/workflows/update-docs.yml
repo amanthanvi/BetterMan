@@ -60,9 +60,11 @@ jobs:
       - run: pipx install uv
       - run: cd ingestion && uv sync --frozen
 
-      - name: Ingest to staging DB
+      - name: Ingest to Convex staging
         env:
-          INGEST_DATABASE_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+          BETTERMAN_DATASET_STAGE: staging
           BETTERMAN_DEBIAN_IMAGE_REF: debian:trixie
           BETTERMAN_UBUNTU_IMAGE_REF: ubuntu:24.04
           BETTERMAN_FEDORA_IMAGE_REF: fedora:41
@@ -108,9 +110,11 @@ jobs:
       - run: pipx install uv
       - run: cd ingestion && uv sync --frozen
 
-      - name: Ingest macOS (BSD) to staging DB
+      - name: Ingest macOS (BSD) to Convex staging
         env:
-          INGEST_DATABASE_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+          BETTERMAN_DATASET_STAGE: staging
         shell: bash
         run: |
           set -euo pipefail
@@ -126,11 +130,11 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
-      - name: Ingest FreeBSD to staging DB
+      - name: Ingest FreeBSD to Convex staging
         uses: vmactions/freebsd-vm@c9f815bc7aa0d34c9fdd0619b034a32d6ca7b57e # v1
         with:
           release: "15.0"
-          envs: "INGEST_DATABASE_URL BETTERMAN_INGEST_GIT_SHA"
+          envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA"
           usesh: true
           run: |
             set -euo pipefail
@@ -159,7 +163,9 @@ jobs:
             echo "Ingesting FreeBSD…"
             $py -m ingestion.cli ingest --distro freebsd --activate
         env:
-          INGEST_DATABASE_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+          BETTERMAN_DATASET_STAGE: staging
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
 
   promote:
@@ -167,77 +173,34 @@ jobs:
     needs: [ingest_linux, ingest_macos, ingest_freebsd]
     if: ${{ always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.promote == 'true') }}
     steps:
-      - name: Install Postgres client (pg_dump/psql)
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Promote active dataset from staging to prod
+      - name: Promote active Convex staging releases to prod
         env:
-          STAGING_DB_URL: ${{ secrets.BETTERMAN_STAGING_DATABASE_URL }}
-          PROD_DB_URL: ${{ secrets.BETTERMAN_PROD_DATABASE_URL }}
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ -z "${STAGING_DB_URL:-}" || -z "${PROD_DB_URL:-}" ]]; then
-            echo "Missing BETTERMAN_STAGING_DATABASE_URL / BETTERMAN_PROD_DATABASE_URL secrets."
+          if [[ -z "${CONVEX_HTTP_URL:-}" || -z "${CONVEX_INGEST_SECRET:-}" ]]; then
+            echo "Missing BETTERMAN_CONVEX_HTTP_URL / BETTERMAN_CONVEX_INGEST_SECRET secrets."
             exit 1
           fi
 
-          dump_flags=(--data-only --no-owner --no-privileges --column-inserts)
+          python - <<'PY' > promote.json
+          import datetime
+          import json
 
-          for distro in debian ubuntu fedora arch alpine freebsd macos; do
-            row="$(psql "$STAGING_DB_URL" -t -A -c "SELECT id, dataset_release_id FROM dataset_releases WHERE locale = 'en' AND distro = '${distro}' AND is_active = TRUE ORDER BY ingested_at DESC LIMIT 1;")"
-            if [[ -z "$row" ]]; then
-              echo "No active ${distro} dataset release found in staging; skipping."
-              continue
-            fi
+          print(json.dumps({
+              "fromStage": "staging",
+              "toStage": "prod",
+              "distros": ["debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"],
+              "activatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
+          }))
+          PY
 
-            release_uuid="${row%%|*}"
-            release_id="${row#*|}"
-            echo "Staging active ${distro} release: $release_uuid ($release_id)"
-
-            exists="$(psql "$PROD_DB_URL" -t -A -c "SELECT COUNT(*) FROM dataset_releases WHERE dataset_release_id = '$release_id';")"
-            if [[ "${exists:-0}" != "0" ]]; then
-              echo "Release already present in prod; ensuring it is active for ${distro}."
-              psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -c "UPDATE dataset_releases SET is_active = FALSE WHERE locale = 'en' AND distro = '${distro}' AND is_active = TRUE; UPDATE dataset_releases SET is_active = TRUE WHERE id = '$release_uuid'::uuid;"
-              continue
-            fi
-
-            {
-              echo "BEGIN;"
-
-              pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
-                --table=dataset_releases \
-                --where="id = '$release_uuid'::uuid"
-
-              pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
-                --table=licenses \
-                --where="id IN (SELECT license_id FROM man_page_license_map WHERE man_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid))"
-
-              pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
-                --table=man_pages \
-                --where="dataset_release_id = '$release_uuid'::uuid"
-
-              pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
-                --table=man_page_content \
-                --where="man_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid)"
-
-              pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
-                --table=man_page_search \
-                --where="man_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid)"
-
-              pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
-                --table=man_page_links \
-                --where="from_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid)"
-
-              pg_dump "$STAGING_DB_URL" "${dump_flags[@]}" \
-                --table=man_page_license_map \
-                --where="man_page_id IN (SELECT id FROM man_pages WHERE dataset_release_id = '$release_uuid'::uuid)"
-
-              echo "COMMIT;"
-            } > promote.sql
-
-            psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -f promote.sql
-
-            psql "$PROD_DB_URL" -v ON_ERROR_STOP=1 -c "UPDATE dataset_releases SET is_active = FALSE WHERE locale = 'en' AND distro = '${distro}' AND is_active = TRUE; UPDATE dataset_releases SET is_active = TRUE WHERE id = '$release_uuid'::uuid;"
-          done
+          curl -fsS \
+            -X POST \
+            -H "Authorization: Bearer ${CONVEX_INGEST_SECRET}" \
+            -H "Content-Type: application/json" \
+            --data @promote.json \
+            "${CONVEX_HTTP_URL%/}/ingest/promote"

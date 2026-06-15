@@ -7,7 +7,7 @@ import { listSections, search } from '../../lib/api'
 import { isDefaultDistro, normalizeDistro } from '../../lib/distro'
 import { SearchResultsClient } from './SearchResultsClient'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 type SearchParams = Record<string, string | string[] | undefined>
 

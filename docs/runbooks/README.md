@@ -14,3 +14,4 @@ Runbooks referenced by `SPEC.md` Section 17.
 - `docs/runbooks/e2e-debug.md`
 - `docs/runbooks/type-gen.md`
 - `docs/runbooks/multi-distro-ops.md`
+- `docs/runbooks/convex-production-cutover.md`

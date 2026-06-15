@@ -10,7 +10,10 @@
 		"frontend:lint": "pnpm -C frontend lint",
 		"frontend:test": "pnpm -C frontend test",
 		"frontend:e2e": "pnpm -C frontend e2e",
-		"next:dev": "pnpm -C nextjs dev",
+		"convex:dev": "convex dev",
+		"convex:check": "CONVEX_AGENT_MODE=anonymous convex dev --once",
+		"convex:prod-check": "node scripts/check-convex-production.mjs",
+		"next:dev": "convex dev --start \"pnpm -C nextjs dev\"",
 		"next:build": "pnpm -C nextjs build",
 		"next:lint": "pnpm -C nextjs lint",
 		"next:test": "pnpm -C nextjs test",
@@ -34,5 +37,8 @@
 			"webpack@5.105.0>terser-webpack-plugin": "5.4.0",
 			"vite@7.3.1>rollup": "4.60.0"
 		}
+	},
+	"dependencies": {
+		"convex": "^1.39.1"
 	}
 }

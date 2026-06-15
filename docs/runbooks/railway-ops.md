@@ -2,11 +2,11 @@
 
 BetterMan deploys to Railway.
 
-## v0.5.0 notes (two services)
+## Current notes
 
 - `nextjs` is public-facing (custom domains).
-- `web` (FastAPI) is internal-only; Next proxies `/api/*` to it via Railway private networking.
-- Railway private networking uses IPv6-only `.railway.internal` DNS. Services must bind to `::` (not just `0.0.0.0`).
+- The active app reads datasets/search/rate-limit state from Convex.
+- `web` (FastAPI) may still exist as a legacy service during the infrastructure transition, but Next no longer proxies `/api/*` to it.
 
 ## Deploy
 
@@ -25,11 +25,12 @@ BetterMan deploys to Railway.
 
 - Re-run the manual deploy workflow (`deploy-railway`) with a previous known-good `ref` (SHA or tag).
 
-## Custom domains / cutover (v0.5.0)
+## Custom domains / cutover
 
 Prereqs:
 
-- `FASTAPI_INTERNAL_URL` is set on the `nextjs` service (example: `http://web.railway.internal:8080`).
+- `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL` is set on the `nextjs` service.
+- `BETTERMAN_DATASET_STAGE=prod` is set on the `nextjs` service.
 - `/api/v1/info` works on the Next service domain (`https://nextjs-…up.railway.app/api/v1/info`).
 
 DNS (Cloudflare):

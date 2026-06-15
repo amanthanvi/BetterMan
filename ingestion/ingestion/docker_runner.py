@@ -29,12 +29,15 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         raise RuntimeError(f"unsupported distro: {distro}")
 
     image_ref = os.environ.get(image_env[distro], default_images[distro])
-    subprocess.run(["docker", "pull", image_ref], check=True)
-    repodigest = subprocess.check_output(
-        ["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", image_ref],
-        text=True,
-    ).strip()
-    image_digest = repodigest.split("@", 1)[1] if "@" in repodigest else repodigest
+    platform = os.environ.get(f"BETTERMAN_{distro.upper()}_DOCKER_PLATFORM") or os.environ.get(
+        "BETTERMAN_DOCKER_PLATFORM",
+    )
+    pull_cmd = ["docker", "pull"]
+    if platform:
+        pull_cmd.extend(["--platform", platform])
+    pull_cmd.append(image_ref)
+    subprocess.run(pull_cmd, check=True)
+    image_digest = _image_digest(image_ref)
 
     git_sha = subprocess.check_output(
         ["git", "rev-parse", "--short", "HEAD"],
@@ -42,9 +45,9 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         text=True,
     ).strip()
 
-    database_url = os.environ.get("INGEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
-    if not database_url:
-        database_url = "postgresql://betterman:betterman@postgres:5432/betterman"
+    convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL", "")
+    ingest_secret = os.environ.get("CONVEX_INGEST_SECRET", "")
+    dataset_stage = os.environ.get("BETTERMAN_DATASET_STAGE", "staging")
 
     network = os.environ.get("INGEST_DOCKER_NETWORK")
     if not network and _docker_network_exists("betterman_default"):
@@ -55,7 +58,11 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "run",
         "--rm",
         "-e",
-        f"INGEST_DATABASE_URL={database_url}",
+        f"CONVEX_HTTP_URL={convex_url}",
+        "-e",
+        f"CONVEX_INGEST_SECRET={ingest_secret}",
+        "-e",
+        f"BETTERMAN_DATASET_STAGE={dataset_stage}",
         "-e",
         f"BETTERMAN_IMAGE_REF={image_ref}",
         "-e",
@@ -67,6 +74,8 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "-w",
         "/work",
     ]
+    if platform:
+        cmd.extend(["--platform", platform])
     if network:
         cmd.extend(["--network", network])
 
@@ -104,6 +113,7 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
             "set -euo pipefail; "
             "mkdir -p /work; "
             "cp -R /src/. /work; "
+            "sed -i 's/^#DisableSandboxSyscalls/DisableSandboxSyscalls/' /etc/pacman.conf; "
             "pacman -Syu --noconfirm --needed python python-pip ca-certificates >/dev/null; "
             "python -m venv /opt/venv; "
             "/opt/venv/bin/pip install -q /work; "
@@ -128,3 +138,22 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
 def _docker_network_exists(name: str) -> bool:
     out = subprocess.check_output(["docker", "network", "ls", "--format", "{{.Name}}"], text=True)
     return name in {line.strip() for line in out.splitlines() if line.strip()}
+
+
+def _image_digest(image_ref: str) -> str:
+    try:
+        repodigest = subprocess.check_output(
+            ["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", image_ref],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except subprocess.CalledProcessError:
+        repodigest = ""
+
+    if repodigest:
+        return repodigest.split("@", 1)[1] if "@" in repodigest else repodigest
+
+    return subprocess.check_output(
+        ["docker", "image", "inspect", "--format", "{{.Id}}", image_ref],
+        text=True,
+    ).strip()

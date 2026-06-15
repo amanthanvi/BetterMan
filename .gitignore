@@ -26,3 +26,4 @@ venv/
 !.env.example
 .idea/
 .vscode/
+.vercel
