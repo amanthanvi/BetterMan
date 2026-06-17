@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
 import type { Distro } from '../../lib/distro'
-import { listSections, search } from '../../lib/api'
+import { listSections, search, withDistroFallback } from '../../lib/api'
 import { isDefaultDistro, normalizeDistro } from '../../lib/distro'
 import { SearchResultsClient } from './SearchResultsClient'
 
@@ -42,23 +42,26 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = (normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian') satisfies Distro
+  const requestedDistro = (normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian') satisfies Distro
 
   const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
   const section = getFirst(sp.section)?.trim() || ''
 
-  const sectionsPromise = listSections(distro)
-  const initialPromise = q
-    ? search({
-        distro,
-        q,
-        section: section || undefined,
-        limit: 20,
-        offset: 0,
-      })
-    : Promise.resolve(null)
+  const { distro, data } = await withDistroFallback(requestedDistro, async (activeDistro) => {
+    const sectionsPromise = listSections(activeDistro)
+    const initialPromise = q
+      ? search({
+          distro: activeDistro,
+          q,
+          section: section || undefined,
+          limit: 20,
+          offset: 0,
+        })
+      : Promise.resolve(null)
 
-  const [sections, initial] = await Promise.all([sectionsPromise, initialPromise])
+    return Promise.all([sectionsPromise, initialPromise])
+  })
+  const [sections, initial] = data
   const sectionPills = sections
     .filter((s) => /^\d+$/.test(s.section))
     .map((s) => ({ section: s.section, n: Number.parseInt(s.section, 10), label: s.label }))

@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
 import { LicensesClient } from './LicensesClient'
-import { fetchLicenses } from '../../lib/api'
+import { fetchLicenses, withDistroFallback } from '../../lib/api'
 import { normalizeDistro } from '../../lib/distro'
 
 export const revalidate = 3600
@@ -31,8 +31,10 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
 
-  const data = await fetchLicenses({ distro })
+  const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
+    fetchLicenses({ distro: activeDistro }),
+  )
   return <LicensesClient distro={distro} data={data} />
 }

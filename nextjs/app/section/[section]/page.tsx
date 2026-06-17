@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 import { Fragment } from 'react'
 
-import { listSection } from '../../../lib/api'
+import { listSection, withDistroFallback } from '../../../lib/api'
 import { isDefaultDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 
 export const revalidate = 3600
@@ -101,11 +101,13 @@ export default async function SectionPage({
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
   const offset = Number.parseInt(getFirst(sp.offset) ?? '0', 10)
   const safeOffset = Number.isFinite(offset) && offset >= 0 ? offset : 0
 
-  const data = await listSection({ distro, section, limit: 200, offset: safeOffset })
+  const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
+    listSection({ distro: activeDistro, section, limit: 200, offset: safeOffset }),
+  )
   const groups = groupByLeadingChar(data.results)
   const prevOffset = Math.max(0, data.offset - data.limit)
   const nextOffset = data.offset + data.results.length

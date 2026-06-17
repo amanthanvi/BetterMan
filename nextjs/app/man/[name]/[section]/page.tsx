@@ -1,10 +1,19 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
+import { notFound } from 'next/navigation'
 
 import { ManPageView } from '../../../../components/man/ManPageView'
 import { JsonLdHead } from '../../../../components/seo/JsonLdHead'
-import { FastApiError, fetchManByName, fetchManByNameAndSection, fetchRelated, suggest } from '../../../../lib/api'
+import {
+  FastApiError,
+  fetchManByName,
+  fetchManByNameAndSection,
+  fetchRelated,
+  isReleaseNotFoundError,
+  suggest,
+  withDistroFallback,
+} from '../../../../lib/api'
 import { normalizeDistro, withDistro } from '../../../../lib/distro'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
@@ -37,18 +46,20 @@ export async function generateMetadata({
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
 
   const origin = await getRequestOrigin()
-  const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)
-  const canonical = origin ? `${origin}${canonicalPath}` : undefined
 
   try {
-    const data = await fetchManByNameAndSection({
-      distro,
-      name: name.toLowerCase(),
-      section,
-    })
+    const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
+      fetchManByNameAndSection({
+        distro: activeDistro,
+        name: name.toLowerCase(),
+        section,
+      }),
+    )
+    const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)
+    const canonical = origin ? `${origin}${canonicalPath}` : undefined
 
     const title = `${data.page.name}(${data.page.section}) - BetterMan`
     const description = data.page.description || data.page.title || `${data.page.name}(${data.page.section}) man page.`
@@ -68,6 +79,9 @@ export async function generateMetadata({
     if (err instanceof FastApiError && err.status === 404) {
       const title = `${name}(${section}) — Not found — BetterMan`
       const description = `We couldn’t find ${name}(${section}) in the current BetterMan dataset.`
+      const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, requestedDistro)
+      const canonical = origin ? `${origin}${canonicalPath}` : undefined
+
       return {
         title,
         description,
@@ -90,13 +104,17 @@ export default async function ManByNameAndSectionPage({
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  let activeDistro = requestedDistro
 
   try {
-    const pageData = await fetchManByNameAndSection({
-      distro,
-      name: name.toLowerCase(),
-      section,
+    const { distro, data: pageData } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
+      activeDistro = candidateDistro
+      return fetchManByNameAndSection({
+        distro: candidateDistro,
+        name: name.toLowerCase(),
+        section,
+      })
     })
 
     const related = await fetchRelated({
@@ -142,10 +160,13 @@ export default async function ManByNameAndSectionPage({
     if (!(err instanceof FastApiError) || err.status !== 404) {
       throw err
     }
+    if (isReleaseNotFoundError(err)) {
+      notFound()
+    }
 
     const [alternatives, suggestions] = await Promise.all([
-      fetchManByName({ distro, name: name.toLowerCase() }).catch(() => null),
-      suggest({ distro, name: name.toLowerCase() }).catch(() => null),
+      fetchManByName({ distro: activeDistro, name: name.toLowerCase() }).catch(() => null),
+      suggest({ distro: activeDistro, name: name.toLowerCase() }).catch(() => null),
     ])
 
     return (
@@ -168,7 +189,7 @@ export default async function ManByNameAndSectionPage({
               {alternatives.options.map((opt) => (
                 <li key={opt.section}>
                   <Link
-                    href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, distro)}
+                    href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, activeDistro)}
                     className="inline-flex items-center rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-1 text-sm text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
                   >
                     {name}({opt.section})
@@ -183,7 +204,7 @@ export default async function ManByNameAndSectionPage({
             <Link
               href={withDistro(
                 `/man/${encodeURIComponent(alternatives.data.page.name)}/${encodeURIComponent(alternatives.data.page.section)}`,
-                distro,
+                activeDistro,
               )}
               className="underline underline-offset-4"
             >
@@ -200,7 +221,7 @@ export default async function ManByNameAndSectionPage({
               {suggestions.suggestions.map((s) => (
                 <li key={`${s.name}:${s.section}`} className="flex flex-col">
                   <Link
-                    href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, distro)}
+                    href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, activeDistro)}
                     className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
                   >
                     {s.name}({s.section})
@@ -214,7 +235,7 @@ export default async function ManByNameAndSectionPage({
 
         <div className="mt-6">
           <Link
-            href={withDistro(`/search?q=${encodeURIComponent(name)}`, distro)}
+            href={withDistro(`/search?q=${encodeURIComponent(name)}`, activeDistro)}
             className="text-sm underline underline-offset-4"
           >
             Search for “{name}”

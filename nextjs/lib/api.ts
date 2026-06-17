@@ -38,18 +38,38 @@ export type LicenseTextResponse = Schemas['LicenseTextResponse']
 
 export class FastApiError extends Error {
   status: number
+  code: string
   bodyText?: string
 
-  constructor(status: number, message: string, bodyText?: string) {
+  constructor(status: number, code: string, message: string, bodyText?: string) {
     super(message)
     this.name = 'FastApiError'
     this.status = status
+    this.code = code
     this.bodyText = bodyText
   }
 }
 
 function apiError(status: number, code: string, message: string): FastApiError {
-  return new FastApiError(status, message, JSON.stringify({ error: { code, message } }))
+  return new FastApiError(status, code, message, JSON.stringify({ error: { code, message } }))
+}
+
+export function isReleaseNotFoundError(err: unknown): err is FastApiError {
+  return err instanceof FastApiError && err.code === 'RELEASE_NOT_FOUND'
+}
+
+export async function withDistroFallback<T>(
+  distro: Distro,
+  fn: (distro: Distro) => Promise<T>,
+): Promise<{ distro: Distro; data: T }> {
+  try {
+    return { distro, data: await fn(distro) }
+  } catch (err) {
+    if (distro !== 'debian' && isReleaseNotFoundError(err)) {
+      return { distro: 'debian', data: await fn('debian') }
+    }
+    throw err
+  }
 }
 
 function isMissingActiveReleaseError(err: unknown): boolean {

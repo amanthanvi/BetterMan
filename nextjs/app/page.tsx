@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 
 import { HomeDashboardClient } from './HomeDashboardClient'
-import { fetchInfo, listSections } from '../lib/api'
+import { fetchInfo, listSections, withDistroFallback } from '../lib/api'
 import { isDefaultDistro, normalizeDistro, withDistro, type Distro } from '../lib/distro'
 import { formatRelativeTime } from '../lib/time'
 
@@ -19,9 +19,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = (normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian') satisfies Distro
+  const requestedDistro = (normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian') satisfies Distro
 
-  const [info, sections] = await Promise.all([fetchInfo(distro), listSections(distro)])
+  const { distro, data } = await withDistroFallback(requestedDistro, async (activeDistro) =>
+    Promise.all([fetchInfo(activeDistro), listSections(activeDistro)]),
+  )
+  const [info, sections] = data
   const visible = sections.filter((s) => /^\d+$/.test(s.section)).slice(0, 9)
 
   return (

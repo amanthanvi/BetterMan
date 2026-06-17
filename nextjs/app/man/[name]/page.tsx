@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
-import { FastApiError, fetchManByName, suggest } from '../../../lib/api'
+import { FastApiError, fetchManByName, isReleaseNotFoundError, suggest, withDistroFallback } from '../../../lib/api'
 import { normalizeDistro, withDistro } from '../../../lib/distro'
 
 export const revalidate = 3600
@@ -35,14 +35,17 @@ export async function generateMetadata({
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
 
   const origin = await getRequestOrigin()
-  const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}`, distro)
-  const canonical = origin ? `${origin}${canonicalPath}` : undefined
 
   try {
-    const result = await fetchManByName({ distro, name: name.toLowerCase() })
+    const { distro, data: result } = await withDistroFallback(requestedDistro, (activeDistro) =>
+      fetchManByName({ distro: activeDistro, name: name.toLowerCase() }),
+    )
+    const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}`, distro)
+    const canonical = origin ? `${origin}${canonicalPath}` : undefined
+
     if (result.kind === 'page') {
       const title = `${result.data.page.name}(${result.data.page.section}) - BetterMan`
       const description =
@@ -69,6 +72,9 @@ export async function generateMetadata({
     if (err instanceof FastApiError && err.status === 404) {
       const title = `${name} — Not found — BetterMan`
       const description = `We couldn’t find “${name}” in the current BetterMan dataset.`
+      const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}`, requestedDistro)
+      const canonical = origin ? `${origin}${canonicalPath}` : undefined
+
       return {
         title,
         description,
@@ -91,10 +97,14 @@ export default async function ManByNamePage({
   const sp = await searchParams
   const cookieStore = await cookies()
   const cookieDistro = cookieStore.get('bm-distro')?.value
-  const distro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  let activeDistro = requestedDistro
 
   try {
-    const result = await fetchManByName({ distro, name: name.toLowerCase() })
+    const { distro, data: result } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
+      activeDistro = candidateDistro
+      return fetchManByName({ distro: candidateDistro, name: name.toLowerCase() })
+    })
     if (result.kind === 'page') {
       redirect(
         withDistro(
@@ -140,8 +150,11 @@ export default async function ManByNamePage({
     if (!(err instanceof FastApiError) || err.status !== 404) {
       throw err
     }
+    if (isReleaseNotFoundError(err)) {
+      notFound()
+    }
 
-    const suggestions = await suggest({ distro, name: name.toLowerCase() }).catch(() => null)
+    const suggestions = await suggest({ distro: activeDistro, name: name.toLowerCase() }).catch(() => null)
 
     return (
       <div className="mx-auto max-w-5xl">
@@ -159,7 +172,7 @@ export default async function ManByNamePage({
               {suggestions.suggestions.map((s) => (
                 <li key={`${s.name}:${s.section}`} className="flex flex-col">
                   <Link
-                    href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, distro)}
+                    href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, activeDistro)}
                     className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
                   >
                     {s.name}({s.section})
@@ -173,7 +186,7 @@ export default async function ManByNamePage({
 
         <div className="mt-6">
           <Link
-            href={withDistro(`/search?q=${encodeURIComponent(name)}`, distro)}
+            href={withDistro(`/search?q=${encodeURIComponent(name)}`, activeDistro)}
             className="text-sm underline underline-offset-4"
           >
             Search for “{name}”
