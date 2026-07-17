@@ -197,6 +197,7 @@ export const getRelated = query({
       if (seen.has(key)) continue;
       seen.add(key);
       uniqueLinks.push(link);
+      if (uniqueLinks.length >= MAX_RELATED) break;
     }
 
     const linkedPages = await Promise.all(
@@ -209,19 +210,16 @@ export const getRelated = query({
       ),
     );
 
-    const items = [];
-    for (const linkedPage of linkedPages) {
-      if (!linkedPage) continue;
-      items.push({
-        name: linkedPage.name,
-        section: linkedPage.section,
-        title: linkedPage.title,
-        description: linkedPage.description,
-      });
-      if (items.length >= MAX_RELATED) break;
-    }
-
-    return { items };
+    return {
+      items: linkedPages
+        .filter((linkedPage): linkedPage is NonNullable<typeof linkedPage> => linkedPage !== null)
+        .map((linkedPage) => ({
+          name: linkedPage.name,
+          section: linkedPage.section,
+          title: linkedPage.title,
+          description: linkedPage.description,
+        })),
+    };
   },
 });
 
@@ -328,12 +326,12 @@ export const suggest = query({
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const release = await requireActiveRelease(ctx, args);
-    const docs = await ctx.db
-      .query("manPageSearchDocuments")
-      .withIndex("by_releaseId_and_nameNorm", (q) =>
-        q.eq("releaseId", release._id).gte("nameNorm", name).lt("nameNorm", prefixUpperBound(name)),
-      )
-      .take(10);
+    const docs = await searchDocsByNamePrefix(ctx, {
+      releaseId: release._id,
+      section: null,
+      prefix: name,
+      takeCount: 10,
+    });
 
     return {
       query: name,

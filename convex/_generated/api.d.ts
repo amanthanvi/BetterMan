@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as _legacyContent from "../_legacyContent.js";
 import type * as _releaseLookups from "../_releaseLookups.js";
 import type * as content from "../content.js";
 import type * as http from "../http.js";
@@ -24,6 +25,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  _legacyContent: typeof _legacyContent;
   _releaseLookups: typeof _releaseLookups;
   content: typeof content;
   http: typeof http;
