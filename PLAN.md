@@ -349,9 +349,10 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 
 ### Convex performance audit (post-v0.6.4)
 
-- [x] Section browse reads `manPageSearchDocuments` digests instead of full `manPages` rows.
 - [x] Parallelize related-page + distro-variant lookups on man page reads.
-- [x] Drop unused `manPages` indexes (`by_releaseId_and_name`, `by_releaseId_and_section_and_name`).
+- [x] Drop unused `manPages` index `by_releaseId_and_name` (covered by name+section compound index).
 - [x] Remove unused content-loading query exports (man pages go through `content.*` actions).
+- [x] Keep section browse on `manPages` (search docs are larger due to `searchText`/`snippetText`).
 - [ ] Optional follow-up: cursor pagination for deep `listSection` offsets (still offset-based API).
 - [ ] Optional follow-up: denormalize title/description onto `manPageLinks` to remove `getRelated` joins.
+- [ ] Optional follow-up: dedicated slim section-list digest table if insights show high bytes/doc.

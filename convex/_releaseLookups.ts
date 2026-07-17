@@ -1,6 +1,6 @@
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { DISTRO_ORDER, type DatasetStage, type Distro } from "./lib";
+import { DISTRO_ORDER, DISTROS, type DatasetStage, type Distro } from "./lib";
 
 export async function activeRelease(
   ctx: QueryCtx,
@@ -45,13 +45,13 @@ export async function variantsForPage(
     name: string;
     section: string;
   },
-): Promise<Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>> {
+): Promise<Array<{ distro: Distro; datasetReleaseId: string; contentSha256: string }>> {
   const active = await ctx.db
     .query("activeReleases")
     .withIndex("by_stage_and_locale_and_distro", (q) =>
       q.eq("stage", args.stage).eq("locale", args.locale),
     )
-    .take(20);
+    .take(DISTROS.length);
 
   const variants = (
     await Promise.all(

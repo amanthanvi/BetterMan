@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { query } from "./_generated/server";
+import { query, type QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { datasetStageValidator, distroValidator } from "./schema";
 import {
   deterministicSnippet,
@@ -24,12 +25,42 @@ const MAX_SEARCH_OFFSET = 200;
 const MAX_SECTION_LIMIT = 500;
 const MAX_SECTION_OFFSET = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
-const MAX_RELATED_LINKS = 50;
-const MAX_RELATED_ITEMS = 50;
+const MAX_RELATED = 50;
 
 function boundedInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(Math.floor(value), max));
+}
+
+async function searchDocsByNamePrefix(
+  ctx: QueryCtx,
+  args: {
+    releaseId: Id<"datasetReleases">;
+    section: string | null;
+    prefix: string;
+    takeCount: number;
+  },
+): Promise<Array<Doc<"manPageSearchDocuments">>> {
+  const upper = prefixUpperBound(args.prefix);
+  if (args.section !== null) {
+    const section = args.section;
+    return await ctx.db
+      .query("manPageSearchDocuments")
+      .withIndex("by_releaseId_and_section_and_nameNorm", (q) =>
+        q
+          .eq("releaseId", args.releaseId)
+          .eq("section", section)
+          .gte("nameNorm", args.prefix)
+          .lt("nameNorm", upper),
+      )
+      .take(args.takeCount);
+  }
+  return await ctx.db
+    .query("manPageSearchDocuments")
+    .withIndex("by_releaseId_and_nameNorm", (q) =>
+      q.eq("releaseId", args.releaseId).gte("nameNorm", args.prefix).lt("nameNorm", upper),
+    )
+    .take(args.takeCount);
 }
 
 export const getInfo = query({
@@ -101,10 +132,11 @@ export const listSection = query({
       .unique();
     if (!stat) return null;
 
-    // Prefer search digests over manPages: same list fields, smaller rows.
+    // Prefer manPages over search docs: search rows carry searchText/snippetText
+    // payloads that are larger than the list fields this endpoint returns.
     const pages = await ctx.db
-      .query("manPageSearchDocuments")
-      .withIndex("by_releaseId_and_section_and_nameNorm", (q) =>
+      .query("manPages")
+      .withIndex("by_releaseId_and_section_and_name", (q) =>
         q.eq("releaseId", release._id).eq("section", section),
       )
       .take(offset + limit);
@@ -149,13 +181,13 @@ export const getRelated = query({
         .withIndex("by_fromPageId_and_linkType", (q) =>
           q.eq("fromPageId", page._id).eq("linkType", "see_also"),
         )
-        .take(MAX_RELATED_LINKS),
+        .take(MAX_RELATED),
       ctx.db
         .query("manPageLinks")
         .withIndex("by_fromPageId_and_linkType", (q) =>
           q.eq("fromPageId", page._id).eq("linkType", "xref"),
         )
-        .take(MAX_RELATED_LINKS),
+        .take(MAX_RELATED),
     ]);
 
     const uniqueLinks = [];
@@ -165,7 +197,6 @@ export const getRelated = query({
       if (seen.has(key)) continue;
       seen.add(key);
       uniqueLinks.push(link);
-      if (uniqueLinks.length >= MAX_RELATED_ITEMS) break;
     }
 
     const linkedPages = await Promise.all(
@@ -187,26 +218,17 @@ export const getRelated = query({
         title: linkedPage.title,
         description: linkedPage.description,
       });
-      if (items.length >= MAX_RELATED_ITEMS) break;
+      if (items.length >= MAX_RELATED) break;
     }
 
     return { items };
   },
 });
 
-type RankedSearchDocument = {
-  _id: string;
-  name: string;
-  nameNorm: string;
-  section: string;
-  title: string;
-  description: string;
-  snippetText: string;
-  rank: number;
-};
+type RankedSearchDocument = Doc<"manPageSearchDocuments"> & { rank: number };
 
 function rankSearchDocument(
-  doc: { nameNorm: string; descNorm: string },
+  doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
   queryNorm: string,
   index: number,
 ): number {
@@ -249,26 +271,12 @@ export const search = query({
     const prefixDocs = (
       await Promise.all(
         prefixQueries.map((prefix) =>
-          section
-            ? ctx.db
-                .query("manPageSearchDocuments")
-                .withIndex("by_releaseId_and_section_and_nameNorm", (q) =>
-                  q
-                    .eq("releaseId", release._id)
-                    .eq("section", section)
-                    .gte("nameNorm", prefix)
-                    .lt("nameNorm", prefixUpperBound(prefix)),
-                )
-                .take(takeCount)
-            : ctx.db
-                .query("manPageSearchDocuments")
-                .withIndex("by_releaseId_and_nameNorm", (q) =>
-                  q
-                    .eq("releaseId", release._id)
-                    .gte("nameNorm", prefix)
-                    .lt("nameNorm", prefixUpperBound(prefix)),
-                )
-                .take(takeCount),
+          searchDocsByNamePrefix(ctx, {
+            releaseId: release._id,
+            section,
+            prefix,
+            takeCount,
+          }),
         ),
       )
     ).flat();
@@ -277,18 +285,7 @@ export const search = query({
     prefixDocs.forEach((doc, index) => {
       const current = ranked.get(doc._id);
       const rank = rankSearchDocument(doc, queryNorm, index);
-      if (!current || rank > current.rank) {
-        ranked.set(doc._id, {
-          _id: doc._id,
-          name: doc.name,
-          nameNorm: doc.nameNorm,
-          section: doc.section,
-          title: doc.title,
-          description: doc.description,
-          snippetText: doc.snippetText,
-          rank,
-        });
-      }
+      if (!current || rank > current.rank) ranked.set(doc._id, { ...doc, rank });
     });
 
     const ordered = [...ranked.values()].sort((a, b) => {
