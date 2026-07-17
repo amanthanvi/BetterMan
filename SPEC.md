@@ -2855,7 +2855,9 @@ Two Railway services:
 
 1. **Next.js Service** (public-facing):
    - Handles all web traffic (SSR + static assets)
-   - Serves `/api/*` through Next.js route handlers backed by Convex queries/mutations
+   - Serves `/api/*` through Next.js route handlers backed by Convex queries/actions
+   - Man page bodies load via `content.getManByName*` actions (file storage), not query-transaction JSON
+   - Section browse lists from `manPageSearchDocuments` digests (not full `manPages` rows)
    - Serves SEO endpoints directly (Next owns `robots.txt` + sitemaps)
    - Public domain: `betterman.sh`
    - Env: `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`, `BETTERMAN_DATASET_STAGE`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`

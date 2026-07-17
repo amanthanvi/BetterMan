@@ -12,13 +12,16 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { datasetStageValidator, distroValidator } from "./schema";
 import {
   type DatasetStage,
-  DISTRO_ORDER,
-  type Distro,
   type ManPageContentPayload,
   normalizeName,
   normalizeSection,
   pageResponse,
 } from "./lib";
+import {
+  pageByNameAndSection,
+  requireActiveRelease,
+  variantsForPage,
+} from "./_releaseLookups";
 
 type ContentJsonKind = keyof ManPageContentPayload;
 type StoredContentFields = Record<ContentJsonKind, string | null>;
@@ -124,79 +127,6 @@ async function readStoredContent(
   }
 }
 
-async function activeRelease(
-  ctx: QueryCtx,
-  args: { stage: DatasetStage; distro: Distro; locale?: string },
-): Promise<Doc<"datasetReleases"> | null> {
-  const active = await ctx.db
-    .query("activeReleases")
-    .withIndex("by_stage_and_locale_and_distro", (q) =>
-      q.eq("stage", args.stage).eq("locale", args.locale ?? "en").eq("distro", args.distro),
-    )
-    .unique();
-  if (!active) return null;
-  return await ctx.db.get(active.releaseId);
-}
-
-async function requireActiveRelease(
-  ctx: QueryCtx,
-  args: { stage: DatasetStage; distro: Distro; locale?: string },
-): Promise<Doc<"datasetReleases">> {
-  const release = await activeRelease(ctx, args);
-  if (!release) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
-  return release;
-}
-
-async function pageByNameAndSection(
-  ctx: QueryCtx,
-  args: { releaseId: Id<"datasetReleases">; name: string; section: string },
-): Promise<Doc<"manPages"> | null> {
-  return await ctx.db
-    .query("manPages")
-    .withIndex("by_releaseId_and_name_and_section", (q) =>
-      q.eq("releaseId", args.releaseId).eq("name", args.name).eq("section", args.section),
-    )
-    .unique();
-}
-
-async function variantsForPage(
-  ctx: QueryCtx,
-  args: {
-    stage: DatasetStage;
-    locale: string;
-    name: string;
-    section: string;
-  },
-): Promise<Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>> {
-  const active = await ctx.db
-    .query("activeReleases")
-    .withIndex("by_stage_and_locale_and_distro", (q) =>
-      q.eq("stage", args.stage).eq("locale", args.locale),
-    )
-    .take(20);
-
-  const variants: Array<{ distro: string; datasetReleaseId: string; contentSha256: string }> = [];
-  for (const item of active) {
-    const page = await pageByNameAndSection(ctx, {
-      releaseId: item.releaseId,
-      name: args.name,
-      section: args.section,
-    });
-    if (!page) continue;
-    variants.push({
-      distro: item.distro,
-      datasetReleaseId: item.datasetReleaseId,
-      contentSha256: page.contentSha256,
-    });
-  }
-
-  variants.sort((a, b) => {
-    const order = (DISTRO_ORDER[a.distro] ?? 99) - (DISTRO_ORDER[b.distro] ?? 99);
-    return order || a.distro.localeCompare(b.distro);
-  });
-  return variants;
-}
-
 async function contentBlobJsonField(
   ctx: QueryCtx,
   blob: Doc<"manPageContentBlobs">,
@@ -243,24 +173,26 @@ async function legacyBlobFields(
   ctx: QueryCtx,
   blob: Doc<"manPageContentBlobs">,
 ): Promise<StoredContentFields> {
-  return {
-    docJson: await contentBlobJsonField(ctx, blob, "docJson"),
-    synopsisJson: await contentBlobJsonField(ctx, blob, "synopsisJson"),
-    optionsJson: await contentBlobJsonField(ctx, blob, "optionsJson"),
-    seeAlsoJson: await contentBlobJsonField(ctx, blob, "seeAlsoJson"),
-  };
+  const [docJson, synopsisJson, optionsJson, seeAlsoJson] = await Promise.all([
+    contentBlobJsonField(ctx, blob, "docJson"),
+    contentBlobJsonField(ctx, blob, "synopsisJson"),
+    contentBlobJsonField(ctx, blob, "optionsJson"),
+    contentBlobJsonField(ctx, blob, "seeAlsoJson"),
+  ]);
+  return { docJson, synopsisJson, optionsJson, seeAlsoJson };
 }
 
 async function legacyContentFields(
   ctx: QueryCtx,
   content: Doc<"manPageContents">,
 ): Promise<StoredContentFields> {
-  return {
-    docJson: await contentJsonField(ctx, content, "docJson"),
-    synopsisJson: await contentJsonField(ctx, content, "synopsisJson"),
-    optionsJson: await contentJsonField(ctx, content, "optionsJson"),
-    seeAlsoJson: await contentJsonField(ctx, content, "seeAlsoJson"),
-  };
+  const [docJson, synopsisJson, optionsJson, seeAlsoJson] = await Promise.all([
+    contentJsonField(ctx, content, "docJson"),
+    contentJsonField(ctx, content, "synopsisJson"),
+    contentJsonField(ctx, content, "optionsJson"),
+    contentJsonField(ctx, content, "seeAlsoJson"),
+  ]);
+  return { docJson, synopsisJson, optionsJson, seeAlsoJson };
 }
 
 async function deleteContentBlobChunks(ctx: MutationCtx, blobId: Id<"manPageContentBlobs">) {
@@ -310,15 +242,7 @@ async function contentPointer(ctx: QueryCtx, pageId: Id<"manPages">) {
       return { storageId: blob.storageId, fields: null };
     }
     if (blob) {
-      return {
-        storageId: null,
-        fields: {
-          docJson: await contentBlobJsonField(ctx, blob, "docJson"),
-          synopsisJson: await contentBlobJsonField(ctx, blob, "synopsisJson"),
-          optionsJson: await contentBlobJsonField(ctx, blob, "optionsJson"),
-          seeAlsoJson: await contentBlobJsonField(ctx, blob, "seeAlsoJson"),
-        },
-      };
+      return { storageId: null, fields: await legacyBlobFields(ctx, blob) };
     }
   }
 
@@ -326,15 +250,7 @@ async function contentPointer(ctx: QueryCtx, pageId: Id<"manPages">) {
     return { storageId: content.storageId, fields: null };
   }
 
-  return {
-    storageId: null,
-    fields: {
-      docJson: await contentJsonField(ctx, content, "docJson"),
-      synopsisJson: await contentJsonField(ctx, content, "synopsisJson"),
-      optionsJson: await contentJsonField(ctx, content, "optionsJson"),
-      seeAlsoJson: await contentJsonField(ctx, content, "seeAlsoJson"),
-    },
-  };
+  return { storageId: null, fields: await legacyContentFields(ctx, content) };
 }
 
 export const readContentBlobStorageMigrationBatch = internalQuery({

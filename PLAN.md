@@ -346,3 +346,12 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] UI theme selection persisted via `bm-ui-theme` cookie (SSR-compatible).
 - [x] Documentation updated (SPEC.md, CHANGELOG.md).
 - [x] Tag `v0.6.4`
+
+### Convex performance audit (post-v0.6.4)
+
+- [x] Section browse reads `manPageSearchDocuments` digests instead of full `manPages` rows.
+- [x] Parallelize related-page + distro-variant lookups on man page reads.
+- [x] Drop unused `manPages` indexes (`by_releaseId_and_name`, `by_releaseId_and_section_and_name`).
+- [x] Remove unused content-loading query exports (man pages go through `content.*` actions).
+- [ ] Optional follow-up: cursor pagination for deep `listSection` offsets (still offset-based API).
+- [ ] Optional follow-up: denormalize title/description onto `manPageLinks` to remove `getRelated` joins.

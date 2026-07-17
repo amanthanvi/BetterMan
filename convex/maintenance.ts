@@ -160,11 +160,17 @@ async function legacyContentFields(
   ctx: QueryCtx | MutationCtx,
   content: Doc<"manPageContents">,
 ): Promise<ContentField[]> {
+  const [docJson, synopsisJson, optionsJson, seeAlsoJson] = await Promise.all([
+    legacyContentJsonField(ctx, content, "docJson"),
+    legacyContentJsonField(ctx, content, "synopsisJson"),
+    legacyContentJsonField(ctx, content, "optionsJson"),
+    legacyContentJsonField(ctx, content, "seeAlsoJson"),
+  ]);
   return [
-    { kind: "docJson", value: await legacyContentJsonField(ctx, content, "docJson") },
-    { kind: "synopsisJson", value: await legacyContentJsonField(ctx, content, "synopsisJson") },
-    { kind: "optionsJson", value: await legacyContentJsonField(ctx, content, "optionsJson") },
-    { kind: "seeAlsoJson", value: await legacyContentJsonField(ctx, content, "seeAlsoJson") },
+    { kind: "docJson", value: docJson },
+    { kind: "synopsisJson", value: synopsisJson },
+    { kind: "optionsJson", value: optionsJson },
+    { kind: "seeAlsoJson", value: seeAlsoJson },
   ];
 }
 

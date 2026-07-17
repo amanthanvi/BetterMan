@@ -77,9 +77,8 @@ export default defineSchema({
   })
     .index("by_contentSha256", ["contentSha256"])
     .index("by_releaseId_and_externalId", ["releaseId", "externalId"])
-    .index("by_releaseId_and_name", ["releaseId", "name"])
+    // by_releaseId_and_name_and_section also covers releaseId+name lookups.
     .index("by_releaseId_and_name_and_section", ["releaseId", "name", "section"])
-    .index("by_releaseId_and_section_and_name", ["releaseId", "section", "name"])
     .index("by_releaseId_and_sitemapPage_and_name", ["releaseId", "sitemapPage", "name"]),
 
   manPageContents: defineTable({
