@@ -190,6 +190,8 @@ export const getRelated = query({
         .take(MAX_RELATED),
     ]);
 
+    // Deduplicate across see_also + xref (up to 2 * MAX_RELATED candidates), then
+    // resolve in parallel and keep filling until MAX_RELATED valid pages exist.
     const uniqueLinks = [];
     const seen = new Set<string>();
     for (const link of [...seeAlso, ...xrefs]) {
@@ -197,7 +199,6 @@ export const getRelated = query({
       if (seen.has(key)) continue;
       seen.add(key);
       uniqueLinks.push(link);
-      if (uniqueLinks.length >= MAX_RELATED) break;
     }
 
     const linkedPages = await Promise.all(
@@ -210,16 +211,19 @@ export const getRelated = query({
       ),
     );
 
-    return {
-      items: linkedPages
-        .filter((linkedPage): linkedPage is NonNullable<typeof linkedPage> => linkedPage !== null)
-        .map((linkedPage) => ({
-          name: linkedPage.name,
-          section: linkedPage.section,
-          title: linkedPage.title,
-          description: linkedPage.description,
-        })),
-    };
+    const items = [];
+    for (const linkedPage of linkedPages) {
+      if (!linkedPage) continue;
+      items.push({
+        name: linkedPage.name,
+        section: linkedPage.section,
+        title: linkedPage.title,
+        description: linkedPage.description,
+      });
+      if (items.length >= MAX_RELATED) break;
+    }
+
+    return { items };
   },
 });
 
