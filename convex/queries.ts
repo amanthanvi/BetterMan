@@ -300,6 +300,12 @@ export const search = query({
       return a.section.localeCompare(b.section);
     });
     const visible = ordered.slice(offset, offset + limit);
+    const candidateNextOffset = offset + visible.length;
+    // Never advertise an offset the handler will clamp backward (MAX_SEARCH_OFFSET).
+    const nextOffset =
+      ordered.length > candidateNextOffset && offset < MAX_SEARCH_OFFSET
+        ? Math.min(candidateNextOffset, MAX_SEARCH_OFFSET)
+        : null;
 
     const suggestions = [...new Set(ordered.map((doc) => doc.nameNorm))]
       .filter((name) => name !== queryNorm)
@@ -315,8 +321,8 @@ export const search = query({
         highlights: [deterministicSnippet(doc.snippetText, queryText)].filter(Boolean),
       })),
       suggestions,
-      hasMore: ordered.length > offset + limit,
-      nextOffset: ordered.length > offset + limit ? offset + visible.length : null,
+      hasMore: nextOffset !== null,
+      nextOffset,
     };
   },
 });
