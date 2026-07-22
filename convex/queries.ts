@@ -5,19 +5,19 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { datasetStageValidator, distroValidator } from "./schema";
 import {
   deterministicSnippet,
-  type DatasetStage,
-  DISTRO_ORDER,
   DISTROS,
-  type Distro,
-  type ManPageContentPayload,
   normalizeName,
   normalizeSection,
-  pageResponse,
   prefixUpperBound,
   releasePackageManifest,
   sectionLabel,
   sectionSortKey,
 } from "./lib";
+import {
+  activeRelease,
+  pageByNameAndSection,
+  requireActiveRelease,
+} from "./_releaseLookups";
 
 const SITEMAP_URLS_PER_FILE = 10_000;
 const MAX_SEARCH_LIMIT = 50;
@@ -25,161 +25,42 @@ const MAX_SEARCH_OFFSET = 200;
 const MAX_SECTION_LIMIT = 500;
 const MAX_SECTION_OFFSET = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
-type ContentJsonKind = keyof ManPageContentPayload;
+const MAX_RELATED = 50;
 
 function boundedInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(Math.floor(value), max));
 }
 
-function shouldUseFullTextSearch(args: {
-  queryNorm: string;
-  prefixCount: number;
-  offset: number;
-  limit: number;
-}): boolean {
-  void args;
-  // Full-text search currently reads the whole text index per query in production.
-  // Keep public search prefix-only until there is a cheaper summary/search table.
-  return false;
-}
-
-async function activeRelease(
-  ctx: QueryCtx,
-  args: { stage: DatasetStage; distro: Distro; locale?: string },
-): Promise<Doc<"datasetReleases"> | null> {
-  const active = await ctx.db
-    .query("activeReleases")
-    .withIndex("by_stage_and_locale_and_distro", (q) =>
-      q.eq("stage", args.stage).eq("locale", args.locale ?? "en").eq("distro", args.distro),
-    )
-    .unique();
-  if (!active) return null;
-  return await ctx.db.get(active.releaseId);
-}
-
-async function requireActiveRelease(
-  ctx: QueryCtx,
-  args: { stage: DatasetStage; distro: Distro; locale?: string },
-): Promise<Doc<"datasetReleases">> {
-  const release = await activeRelease(ctx, args);
-  if (!release) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
-  return release;
-}
-
-async function pageContent(
-  ctx: QueryCtx,
-  pageId: Id<"manPages">,
-): Promise<ManPageContentPayload | null> {
-  const content = await ctx.db
-    .query("manPageContents")
-    .withIndex("by_pageId", (q) => q.eq("pageId", pageId))
-    .unique();
-  if (!content) return null;
-
-  return {
-    docJson: await contentJsonField(ctx, content, "docJson"),
-    synopsisJson: await contentJsonField(ctx, content, "synopsisJson"),
-    optionsJson: await contentJsonField(ctx, content, "optionsJson"),
-    seeAlsoJson: await contentJsonField(ctx, content, "seeAlsoJson"),
-  };
-}
-
-async function contentJsonField(
-  ctx: QueryCtx,
-  content: Doc<"manPageContents">,
-  kind: ContentJsonKind,
-): Promise<string | undefined> {
-  if (content.blobId) {
-    const blob = await ctx.db.get(content.blobId);
-    if (blob) return await contentBlobJsonField(ctx, blob, kind);
-  }
-
-  const inline = content[kind];
-  if (typeof inline === "string") return inline;
-
-  const chunks = await ctx.db
-    .query("manPageContentChunks")
-    .withIndex("by_contentId_and_kind_and_chunkIndex", (q) =>
-      q.eq("contentId", content._id).eq("kind", kind),
-    )
-    .collect();
-  if (!chunks.length) return undefined;
-  return chunks
-    .sort((a, b) => a.chunkIndex - b.chunkIndex)
-    .map((chunk) => chunk.chunk)
-    .join("");
-}
-
-async function contentBlobJsonField(
-  ctx: QueryCtx,
-  blob: Doc<"manPageContentBlobs">,
-  kind: ContentJsonKind,
-): Promise<string | undefined> {
-  const inline = blob[kind];
-  if (typeof inline === "string") return inline;
-
-  const chunks = await ctx.db
-    .query("manPageContentBlobChunks")
-    .withIndex("by_blobId_and_kind_and_chunkIndex", (q) =>
-      q.eq("blobId", blob._id).eq("kind", kind),
-    )
-    .collect();
-  if (!chunks.length) return undefined;
-  return chunks
-    .sort((a, b) => a.chunkIndex - b.chunkIndex)
-    .map((chunk) => chunk.chunk)
-    .join("");
-}
-
-async function pageByNameAndSection(
-  ctx: QueryCtx,
-  args: { releaseId: Id<"datasetReleases">; name: string; section: string },
-): Promise<Doc<"manPages"> | null> {
-  return await ctx.db
-    .query("manPages")
-    .withIndex("by_releaseId_and_name_and_section", (q) =>
-      q.eq("releaseId", args.releaseId).eq("name", args.name).eq("section", args.section),
-    )
-    .unique();
-}
-
-async function variantsForPage(
+async function searchDocsByNamePrefix(
   ctx: QueryCtx,
   args: {
-    stage: DatasetStage;
-    locale: string;
-    name: string;
-    section: string;
+    releaseId: Id<"datasetReleases">;
+    section: string | null;
+    prefix: string;
+    takeCount: number;
   },
-): Promise<Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>> {
-  const active = await ctx.db
-    .query("activeReleases")
-    .withIndex("by_stage_and_locale_and_distro", (q) =>
-      q.eq("stage", args.stage).eq("locale", args.locale),
-    )
-    .take(20);
-
-  const variants: Array<{ distro: string; datasetReleaseId: string; contentSha256: string }> = [];
-  for (const item of active) {
-    const page = await pageByNameAndSection(ctx, {
-      releaseId: item.releaseId,
-      name: args.name,
-      section: args.section,
-    });
-    if (!page) continue;
-    variants.push({
-      distro: item.distro,
-      datasetReleaseId: item.datasetReleaseId,
-      contentSha256: page.contentSha256,
-    });
+): Promise<Array<Doc<"manPageSearchDocuments">>> {
+  const upper = prefixUpperBound(args.prefix);
+  if (args.section !== null) {
+    const section = args.section;
+    return await ctx.db
+      .query("manPageSearchDocuments")
+      .withIndex("by_releaseId_and_section_and_nameNorm", (q) =>
+        q
+          .eq("releaseId", args.releaseId)
+          .eq("section", section)
+          .gte("nameNorm", args.prefix)
+          .lt("nameNorm", upper),
+      )
+      .take(args.takeCount);
   }
-
-  variants.sort((a, b) => {
-    const order = (DISTRO_ORDER[a.distro] ?? 99) - (DISTRO_ORDER[b.distro] ?? 99);
-    return order || a.distro.localeCompare(b.distro);
-  });
-  return variants;
+  return await ctx.db
+    .query("manPageSearchDocuments")
+    .withIndex("by_releaseId_and_nameNorm", (q) =>
+      q.eq("releaseId", args.releaseId).gte("nameNorm", args.prefix).lt("nameNorm", upper),
+    )
+    .take(args.takeCount);
 }
 
 export const getInfo = query({
@@ -251,6 +132,8 @@ export const listSection = query({
       .unique();
     if (!stat) return null;
 
+    // Prefer manPages over search docs: search rows carry searchText/snippetText
+    // payloads that are larger than the list fields this endpoint returns.
     const pages = await ctx.db
       .query("manPages")
       .withIndex("by_releaseId_and_section_and_name", (q) =>
@@ -274,79 +157,6 @@ export const listSection = query({
   },
 });
 
-export const getManByName = query({
-  args: {
-    stage: datasetStageValidator,
-    distro: distroValidator,
-    name: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const name = normalizeName(args.name);
-    const release = await requireActiveRelease(ctx, args);
-    const pages = await ctx.db
-      .query("manPages")
-      .withIndex("by_releaseId_and_name_and_section", (q) =>
-        q.eq("releaseId", release._id).eq("name", name),
-      )
-      .take(20);
-
-    if (!pages.length) return { kind: "not_found" as const };
-    if (pages.length > 1) {
-      return {
-        kind: "ambiguous" as const,
-        options: pages.map((page) => ({
-          section: page.section,
-          title: page.title,
-          description: page.description,
-        })),
-      };
-    }
-
-    const page = pages[0];
-    const content = await pageContent(ctx, page._id);
-    if (!content) return { kind: "not_found" as const };
-    const variants = await variantsForPage(ctx, {
-      stage: args.stage,
-      locale: release.locale,
-      name: page.name,
-      section: page.section,
-    });
-
-    return { kind: "page" as const, data: pageResponse(release, page, content, variants) };
-  },
-});
-
-export const getManByNameAndSection = query({
-  args: {
-    stage: datasetStageValidator,
-    distro: distroValidator,
-    name: v.string(),
-    section: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const name = normalizeName(args.name);
-    const section = normalizeSection(args.section);
-    const release = await requireActiveRelease(ctx, args);
-    const page = await pageByNameAndSection(ctx, {
-      releaseId: release._id,
-      name,
-      section,
-    });
-    if (!page) return null;
-
-    const content = await pageContent(ctx, page._id);
-    if (!content) return null;
-    const variants = await variantsForPage(ctx, {
-      stage: args.stage,
-      locale: release.locale,
-      name: page.name,
-      section: page.section,
-    });
-
-    return pageResponse(release, page, content, variants);
-  },
-});
-
 export const getRelated = query({
   args: {
     stage: datasetStageValidator,
@@ -365,30 +175,44 @@ export const getRelated = query({
     });
     if (!page) return null;
 
-    const seeAlso = await ctx.db
-      .query("manPageLinks")
-      .withIndex("by_fromPageId_and_linkType", (q) =>
-        q.eq("fromPageId", page._id).eq("linkType", "see_also"),
-      )
-      .take(50);
-    const xrefs = await ctx.db
-      .query("manPageLinks")
-      .withIndex("by_fromPageId_and_linkType", (q) =>
-        q.eq("fromPageId", page._id).eq("linkType", "xref"),
-      )
-      .take(50);
+    const [seeAlso, xrefs] = await Promise.all([
+      ctx.db
+        .query("manPageLinks")
+        .withIndex("by_fromPageId_and_linkType", (q) =>
+          q.eq("fromPageId", page._id).eq("linkType", "see_also"),
+        )
+        .take(MAX_RELATED),
+      ctx.db
+        .query("manPageLinks")
+        .withIndex("by_fromPageId_and_linkType", (q) =>
+          q.eq("fromPageId", page._id).eq("linkType", "xref"),
+        )
+        .take(MAX_RELATED),
+    ]);
 
-    const items = [];
+    // Deduplicate across see_also + xref (up to 2 * MAX_RELATED candidates), then
+    // resolve in parallel and keep filling until MAX_RELATED valid pages exist.
+    const uniqueLinks = [];
     const seen = new Set<string>();
     for (const link of [...seeAlso, ...xrefs]) {
       const key = `${link.toName}:${link.toSection}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const linkedPage = await pageByNameAndSection(ctx, {
-        releaseId: release._id,
-        name: link.toName,
-        section: link.toSection,
-      });
+      uniqueLinks.push(link);
+    }
+
+    const linkedPages = await Promise.all(
+      uniqueLinks.map((link) =>
+        pageByNameAndSection(ctx, {
+          releaseId: release._id,
+          name: link.toName,
+          section: link.toSection,
+        }),
+      ),
+    );
+
+    const items = [];
+    for (const linkedPage of linkedPages) {
       if (!linkedPage) continue;
       items.push({
         name: linkedPage.name,
@@ -396,7 +220,7 @@ export const getRelated = query({
         title: linkedPage.title,
         description: linkedPage.description,
       });
-      if (items.length >= 50) break;
+      if (items.length >= MAX_RELATED) break;
     }
 
     return { items };
@@ -405,7 +229,11 @@ export const getRelated = query({
 
 type RankedSearchDocument = Doc<"manPageSearchDocuments"> & { rank: number };
 
-function rankSearchDocument(doc: Doc<"manPageSearchDocuments">, queryNorm: string, index: number): number {
+function rankSearchDocument(
+  doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
+  queryNorm: string,
+  index: number,
+): number {
   let rank = 1000 - index;
   if (doc.nameNorm === queryNorm) rank += 10_000;
   if (doc.nameNorm.startsWith(queryNorm)) rank += 2_000;
@@ -440,56 +268,23 @@ export const search = query({
     const release = await requireActiveRelease(ctx, args);
     const takeCount = Math.min(offset + limit + 5, MAX_SEARCH_OFFSET + MAX_SEARCH_LIMIT);
 
-    const prefixDocs: Array<Doc<"manPageSearchDocuments">> = [];
+    // Prefix-only: full-text search currently reads the whole text index per query.
     const prefixQueries = fallbackNorm ? [queryNorm, fallbackNorm] : [queryNorm];
-    for (const prefix of prefixQueries) {
-      const rows = section
-        ? await ctx.db
-            .query("manPageSearchDocuments")
-            .withIndex("by_releaseId_and_section_and_nameNorm", (q) =>
-              q
-                .eq("releaseId", release._id)
-                .eq("section", section)
-                .gte("nameNorm", prefix)
-                .lt("nameNorm", prefixUpperBound(prefix)),
-            )
-            .take(takeCount)
-        : await ctx.db
-            .query("manPageSearchDocuments")
-            .withIndex("by_releaseId_and_nameNorm", (q) =>
-              q
-                .eq("releaseId", release._id)
-                .gte("nameNorm", prefix)
-                .lt("nameNorm", prefixUpperBound(prefix)),
-            )
-            .take(takeCount);
-      prefixDocs.push(...rows);
-    }
-
-    const shouldSearchFullText = shouldUseFullTextSearch({
-      queryNorm,
-      prefixCount: prefixDocs.length,
-      offset,
-      limit,
-    });
-    const searchedDocs = shouldSearchFullText
-      ? section
-        ? await ctx.db
-            .query("manPageSearchDocuments")
-            .withSearchIndex("search_searchText", (q) =>
-              q.search("searchText", queryText).eq("releaseId", release._id).eq("section", section),
-            )
-            .take(takeCount)
-        : await ctx.db
-            .query("manPageSearchDocuments")
-            .withSearchIndex("search_searchText", (q) =>
-              q.search("searchText", queryText).eq("releaseId", release._id),
-            )
-            .take(takeCount)
-      : [];
+    const prefixDocs = (
+      await Promise.all(
+        prefixQueries.map((prefix) =>
+          searchDocsByNamePrefix(ctx, {
+            releaseId: release._id,
+            section,
+            prefix,
+            takeCount,
+          }),
+        ),
+      )
+    ).flat();
 
     const ranked = new Map<string, RankedSearchDocument>();
-    [...prefixDocs, ...searchedDocs].forEach((doc, index) => {
+    prefixDocs.forEach((doc, index) => {
       const current = ranked.get(doc._id);
       const rank = rankSearchDocument(doc, queryNorm, index);
       if (!current || rank > current.rank) ranked.set(doc._id, { ...doc, rank });
@@ -505,6 +300,12 @@ export const search = query({
       return a.section.localeCompare(b.section);
     });
     const visible = ordered.slice(offset, offset + limit);
+    const candidateNextOffset = offset + visible.length;
+    // Never advertise an offset the handler will clamp backward (MAX_SEARCH_OFFSET).
+    const nextOffset =
+      ordered.length > candidateNextOffset && offset < MAX_SEARCH_OFFSET
+        ? Math.min(candidateNextOffset, MAX_SEARCH_OFFSET)
+        : null;
 
     const suggestions = [...new Set(ordered.map((doc) => doc.nameNorm))]
       .filter((name) => name !== queryNorm)
@@ -520,9 +321,8 @@ export const search = query({
         highlights: [deterministicSnippet(doc.snippetText, queryText)].filter(Boolean),
       })),
       suggestions,
-      hasMore: ordered.length > offset + limit,
-      nextOffset:
-        ordered.length > offset + limit ? offset + visible.length : null,
+      hasMore: nextOffset !== null,
+      nextOffset,
     };
   },
 });
@@ -536,12 +336,12 @@ export const suggest = query({
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const release = await requireActiveRelease(ctx, args);
-    const docs = await ctx.db
-      .query("manPageSearchDocuments")
-      .withIndex("by_releaseId_and_nameNorm", (q) =>
-        q.eq("releaseId", release._id).gte("nameNorm", name).lt("nameNorm", prefixUpperBound(name)),
-      )
-      .take(10);
+    const docs = await searchDocsByNamePrefix(ctx, {
+      releaseId: release._id,
+      section: null,
+      prefix: name,
+      takeCount: 10,
+    });
 
     return {
       query: name,
@@ -611,19 +411,23 @@ export const listSeoReleases = query({
     stage: datasetStageValidator,
   },
   handler: async (ctx, args) => {
-    const items = [];
-    for (const distro of DISTROS) {
-      const release = await activeRelease(ctx, { stage: args.stage, distro });
-      if (!release) continue;
-      items.push({
-        distro,
-        datasetReleaseId: release.datasetReleaseId,
-        ingestedAt: release.ingestedAt,
-        pageCount: release.pageCount,
-      });
-    }
+    const releases = await Promise.all(
+      DISTROS.map(async (distro) => {
+        const release = await activeRelease(ctx, { stage: args.stage, distro });
+        if (!release) return null;
+        return {
+          distro,
+          datasetReleaseId: release.datasetReleaseId,
+          ingestedAt: release.ingestedAt,
+          pageCount: release.pageCount,
+        };
+      }),
+    );
 
-    return { urlsPerFile: SITEMAP_URLS_PER_FILE, items };
+    return {
+      urlsPerFile: SITEMAP_URLS_PER_FILE,
+      items: releases.filter((item): item is NonNullable<typeof item> => item !== null),
+    };
   },
 });
 

@@ -202,28 +202,19 @@ function searchMetadataFields(page: {
   ];
 }
 
+/** Compact search-doc text for prefix/suggest metadata only (FTS body retired). */
 export function compactManPageSearchText(page: {
   name: string;
   section: string;
   title: string;
   description: string;
-  searchText: string;
+  searchText?: string;
   snippetText: string;
 }): string {
-  const metadataFields = searchMetadataFields(page);
-  const metadata = new Set(metadataFields.map((field) => normalizeSearchDocumentText(field)));
-  const body = page.searchText
-    .split("\n")
-    .map((line) => normalizeSearchDocumentText(line))
-    .filter((line) => line && !metadata.has(line))
-    .join(" ");
-  const fields = [
-    ...metadataFields,
-    truncateText(body, MAX_SEARCH_TEXT_CHARS),
-  ];
+  void page.searchText;
   const seen = new Set<string>();
   const parts = [];
-  for (const field of fields) {
+  for (const field of searchMetadataFields(page)) {
     const normalized = normalizeSearchDocumentText(field);
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);

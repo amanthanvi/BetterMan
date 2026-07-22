@@ -8,6 +8,12 @@ import {
   MAX_SNIPPET_TEXT_CHARS,
   truncateText,
 } from "./lib";
+import {
+  type ContentField,
+  type ContentJsonKind,
+  contentFieldsChars,
+  readManPageContentFieldList,
+} from "./_legacyContent";
 
 const DEFAULT_RELEASE_LIMIT = 5;
 const MAX_RELEASE_LIMIT = 10;
@@ -24,9 +30,6 @@ const MAX_ORPHAN_BLOB_LIMIT = 100;
 const DEFAULT_STORAGE_STATS_LIMIT = 25;
 const MAX_STORAGE_STATS_LIMIT = 100;
 const CONTENT_CHUNK_CHARS = 400_000;
-
-type ContentJsonKind = "docJson" | "synopsisJson" | "optionsJson" | "seeAlsoJson";
-type ContentField = { kind: ContentJsonKind; value: string | undefined };
 
 type ReleaseChildTable =
   | "releaseSectionStats"
@@ -133,43 +136,6 @@ function splitContentFields(contentFields: ContentField[]): {
   }
 
   return { inlinePayload, chunkedFields };
-}
-
-async function legacyContentJsonField(
-  ctx: QueryCtx | MutationCtx,
-  content: Doc<"manPageContents">,
-  kind: ContentJsonKind,
-): Promise<string | undefined> {
-  const inline = content[kind];
-  if (typeof inline === "string") return inline;
-
-  const chunks = await ctx.db
-    .query("manPageContentChunks")
-    .withIndex("by_contentId_and_kind_and_chunkIndex", (q) =>
-      q.eq("contentId", content._id).eq("kind", kind),
-    )
-    .collect();
-  if (!chunks.length) return undefined;
-  return chunks
-    .sort((a, b) => a.chunkIndex - b.chunkIndex)
-    .map((chunk) => chunk.chunk)
-    .join("");
-}
-
-async function legacyContentFields(
-  ctx: QueryCtx | MutationCtx,
-  content: Doc<"manPageContents">,
-): Promise<ContentField[]> {
-  return [
-    { kind: "docJson", value: await legacyContentJsonField(ctx, content, "docJson") },
-    { kind: "synopsisJson", value: await legacyContentJsonField(ctx, content, "synopsisJson") },
-    { kind: "optionsJson", value: await legacyContentJsonField(ctx, content, "optionsJson") },
-    { kind: "seeAlsoJson", value: await legacyContentJsonField(ctx, content, "seeAlsoJson") },
-  ];
-}
-
-function contentFieldsChars(fields: ContentField[]): number {
-  return fields.reduce((total, field) => total + (field.value?.length ?? 0), 0);
 }
 
 async function insertContentBlobChunks(
@@ -708,7 +674,7 @@ export const dedupePageContentBatch = internalMutation({
         continue;
       }
 
-      const fields = await legacyContentFields(ctx, content);
+      const fields = await readManPageContentFieldList(ctx, content);
       const legacyChars = contentFieldsChars(fields);
       if (!legacyChars) {
         missingContent += 1;
