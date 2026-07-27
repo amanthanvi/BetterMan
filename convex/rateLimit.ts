@@ -1,24 +1,35 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { internalMutation, mutation } from "./_generated/server";
+
+// Server-owned limits. These used to arrive as arguments, which let any caller
+// pick the threshold it would be held to.
+const LIMITS = {
+  search: { limit: 60, windowSeconds: 60 },
+  page: { limit: 300, windowSeconds: 60 },
+} as const;
 
 export const enforce = mutation({
   args: {
-    key: v.string(),
-    limit: v.number(),
-    windowSeconds: v.number(),
-    now: v.number(),
+    kind: v.union(v.literal("search"), v.literal("page")),
+    identifier: v.string(),
   },
   handler: async (ctx, args) => {
-    const bucket = Math.floor(args.now / (args.windowSeconds * 1000));
-    const bucketKey = `rl:${args.key}:${bucket}`;
-    const expiresAt = (bucket + 1) * args.windowSeconds * 1000;
+    const { limit, windowSeconds } = LIMITS[args.kind];
+
+    // Derived here rather than accepted from the caller: a caller-supplied
+    // clock lets an attacker choose which bucket a request lands in and so
+    // step around the window entirely.
+    const now = Date.now();
+    const bucket = Math.floor(now / (windowSeconds * 1000));
+    const bucketKey = `rl:${args.kind}:${args.identifier}:${bucket}`;
+    const expiresAt = (bucket + 1) * windowSeconds * 1000;
 
     const existing = await ctx.db
       .query("rateLimitBuckets")
       .withIndex("by_key", (q) => q.eq("key", bucketKey))
       .unique();
 
-    const count = existing && existing.expiresAt > args.now ? existing.count + 1 : 1;
+    const count = existing && existing.expiresAt > now ? existing.count + 1 : 1;
     if (existing) {
       await ctx.db.patch(existing._id, { count, expiresAt });
     } else {
@@ -30,16 +41,18 @@ export const enforce = mutation({
     }
 
     return {
-      allowed: count <= args.limit,
+      allowed: count <= limit,
       count,
-      retryAfterSeconds: Math.max(1, Math.ceil((expiresAt - args.now) / 1000)),
+      retryAfterSeconds: Math.max(1, Math.ceil((expiresAt - now) / 1000)),
     };
   },
 });
 
-export const cleanupExpired = mutation({
+// Internal: this deletes rows on a time predicate. As a public mutation taking
+// a caller-supplied `now`, one call with a far-future timestamp emptied the
+// whole table and turned rate limiting off.
+export const cleanupExpired = internalMutation({
   args: {
-    now: v.number(),
     maxBuckets: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -49,7 +62,7 @@ export const cleanupExpired = mutation({
         : 100;
     const expired = await ctx.db
       .query("rateLimitBuckets")
-      .withIndex("by_expiresAt", (q) => q.lt("expiresAt", args.now))
+      .withIndex("by_expiresAt", (q) => q.lt("expiresAt", Date.now()))
       .take(maxBuckets);
     for (const row of expired) {
       await ctx.db.delete(row._id);

@@ -81,12 +81,9 @@ function requestIp(req: NextRequest): string {
 }
 
 async function enforceRateLimit(req: NextRequest, kind: 'search' | 'page'): Promise<Response | null> {
-  const limit = kind === 'search' ? 60 : 300
   const result = await getConvexClient().mutation(convexApi.rateLimit.enforce, {
-    key: `${kind}:${requestIp(req)}`,
-    limit,
-    windowSeconds: 60,
-    now: Date.now(),
+    kind,
+    identifier: requestIp(req),
   })
 
   if (result.allowed) return null
