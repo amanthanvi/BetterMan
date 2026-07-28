@@ -70,7 +70,7 @@ from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+\\-]*$")
-_PKG_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]*$")
+_PKG_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9.+-]+$")
 _DOC_ROOT = Path("/usr/share/doc")
 _MAN_HREF_RE = re.compile(
     r"^/man/(?P<name>[a-z0-9][a-z0-9._+\\-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
@@ -741,9 +741,21 @@ def _read_debian_copyright(pkg: str) -> str | None:
     # single well-formed package name so it cannot walk out of /usr/share/doc.
     if not _PKG_NAME_RE.fullmatch(pkg):
         return None
-    path = _DOC_ROOT / pkg / "copyright"
-    if not path.is_relative_to(_DOC_ROOT) or not path.exists():
+
+    # Resolve before checking confinement. A lexical check is worthless here:
+    # pkg cannot contain a separator, so the unresolved path is always under
+    # the doc root. What it would miss is a package shipping
+    # /usr/share/doc/<pkg>/copyright as a symlink pointing anywhere on the
+    # host, whose contents we would then publish as license text.
+    try:
+        path = (_DOC_ROOT / pkg / "copyright").resolve(strict=True)
+        doc_root = _DOC_ROOT.resolve(strict=True)
+    except OSError:
         return None
+
+    if not path.is_relative_to(doc_root) or not path.is_file():
+        return None
+
     try:
         return path.read_text(encoding="utf-8", errors="replace")
     except OSError:

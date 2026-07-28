@@ -60,14 +60,17 @@ export const cleanupExpired = internalMutation({
       typeof args.maxBuckets === "number" && Number.isFinite(args.maxBuckets)
         ? Math.max(1, Math.min(Math.floor(args.maxBuckets), 500))
         : 100;
+    // Read one past the page so a full final page is not mistaken for
+    // "more remain", which would loop a caller forever on the last batch.
     const expired = await ctx.db
       .query("rateLimitBuckets")
       .withIndex("by_expiresAt", (q) => q.lt("expiresAt", Date.now()))
-      .take(maxBuckets);
-    for (const row of expired) {
+      .take(maxBuckets + 1);
+    const deletable = expired.slice(0, maxBuckets);
+    for (const row of deletable) {
       await ctx.db.delete(row._id);
     }
 
-    return { deleted: expired.length, hasMore: expired.length === maxBuckets };
+    return { deleted: deletable.length, hasMore: expired.length > maxBuckets };
   },
 });

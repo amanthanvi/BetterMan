@@ -3,7 +3,7 @@
 FROM node:25-bookworm-slim AS deps
 WORKDIR /app
 
-RUN npm install -g pnpm@10.27.0
+RUN npm install -g pnpm@10.34.4
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY nextjs/package.json nextjs/package.json
