@@ -1527,6 +1527,37 @@ Normalized resolved relationships (for related commands):
 -   Integrity:
     -   Dataset release IDs and digests stored; ingestion requires signed CI secrets.
 
+## Hardening Pass (security review)
+
+Observable runtime contracts established by the security review. Each is a
+behavioural guarantee, not an implementation detail.
+
+-   **Runtime environment fails closed.** `Settings.env` defaults to `prod`, not
+    `dev`. An unset or misspelled `ENV` therefore keeps `/docs`, `/redoc` and
+    `/openapi.json` unpublished and keeps HSTS and `upgrade-insecure-requests`
+    enabled. Local development opts into `dev` explicitly via `.env`; the
+    runtime image sets `ENV=prod` so the posture is visible in the Dockerfile.
+-   **Rate-limit policy is server-owned.** `rateLimit.enforce` accepts only
+    `kind` and `identifier`. Thresholds, window length and the clock are all
+    resolved inside the Convex handler, so a caller can neither choose the
+    limit it is held to nor pick which time bucket its request lands in.
+-   **Expired-bucket cleanup is internal.** `rateLimit.cleanupExpired` is an
+    `internalMutation` and reads the clock itself. It is not reachable from a
+    public Convex client, and it reports `hasMore` by reading one row past the
+    page so a full final page is not mistaken for "more remain".
+-   **Ingest secret comparison is constant-time.** The bearer token and the
+    configured secret are SHA-256'd and compared over a fixed 32 bytes, so
+    neither the length nor any prefix of the secret leaks through timing.
+-   **Copyright reads are confined to the documentation root.** Package names
+    are validated against Debian package-name rules, and both the candidate
+    path and `/usr/share/doc` are resolved before the containment check, so a
+    packaged symlink cannot redirect the read outside the doc root.
+-   **Highlight sentinels cannot be forged by content.** `buildMarkedText`
+    strips literal `__BM_FIND_START__`, `__BM_FIND_END__`, `__BM_OPT_START__`
+    and `__BM_OPT_END__` tokens from man page text before markers are applied,
+    so page content cannot render as a find or option highlight the reader's
+    query did not produce.
+
 ## CSP Nonce Implementation (v0.2.0, updated v0.2.1)
 
 **Decision:** Generate nonces per-request in FastAPI middleware for scripts; allow inline styles.

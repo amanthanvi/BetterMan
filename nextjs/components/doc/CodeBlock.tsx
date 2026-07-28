@@ -157,7 +157,14 @@ function escapeHtml(text: string) {
     .replaceAll("'", '&#039;')
 }
 
-function buildMarkedText(text: string, ctx: HighlightCtx) {
+// applyMarkers() turns these sentinels into real <mark> elements after
+// escaping, so a man page containing one literally would render as a
+// highlight it did not earn. Man page text is ingested from distro archives,
+// so strip them from the input first.
+const MARKER_SENTINEL_RE = /__BM_(?:FIND|OPT)_(?:START|END)__/g
+
+function buildMarkedText(rawText: string, ctx: HighlightCtx) {
+  const text = rawText.replace(MARKER_SENTINEL_RE, '')
   const findQuery = ctx.findQuery?.trim()
   const hasFind = Boolean(findQuery && findQuery.length >= 2)
   const hasOpt = Boolean(ctx.optionRegex)

@@ -3,7 +3,7 @@
 FROM node:25-bookworm-slim AS frontend-build
 WORKDIR /app
 
-RUN npm install -g pnpm@10.27.0
+RUN npm install -g pnpm@10.34.4
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json frontend/package.json
@@ -29,6 +29,9 @@ RUN uv sync --no-dev --frozen --no-install-project --active
 FROM python:3.14-slim-bookworm AS runtime
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# Be explicit rather than relying on the Settings default, so the runtime
+# posture of the image is visible here and not just in Python.
+ENV ENV=prod
 
 WORKDIR /app
 

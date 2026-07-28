@@ -27,6 +27,15 @@ jobs:
         uses: actions/dependency-review-action@05fe4576374b728f0c523d6a13d64c25081e0803 # v4
         with:
           fail-on-severity: high
+          # GHSA-mh99-v99m-4gvg (brace-expansion) declares its vulnerable range
+          # as "<=5.0.7", which by semver comparison also matches 1.1.16 and
+          # 2.1.2 -- the releases that carry the fix for their own major lines.
+          # eslint's minimatch needs the 1.x/2.x API, so there is no version
+          # that both satisfies the range and works: forcing 5.0.8 into those
+          # slots makes eslint die with "TypeError: expand is not a function".
+          # Revisit when minimatch moves to a brace-expansion line the advisory
+          # does not cover, and drop this line then.
+          allow-ghsas: GHSA-mh99-v99m-4gvg
 
   frontend:
     runs-on: ubuntu-latest
@@ -36,7 +45,7 @@ jobs:
 
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
         with:
-          version: 10.27.0
+          version: 10.34.4
 
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v4
         with:
@@ -57,7 +66,7 @@ jobs:
 
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
         with:
-          version: 10.27.0
+          version: 10.34.4
 
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v4
         with:
@@ -108,7 +117,7 @@ jobs:
 
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
         with:
-          version: 10.27.0
+          version: 10.34.4
 
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v4
         with:
@@ -149,7 +158,7 @@ jobs:
 
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
         with:
-          version: 10.27.0
+          version: 10.34.4
 
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v4
         with:

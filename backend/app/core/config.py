@@ -12,7 +12,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    env: Literal["dev", "staging", "prod"] = "dev"
+    # Fail closed: an unset or misspelled ENV must not silently downgrade the
+    # app to dev, which would publish /docs, /redoc and /openapi.json and drop
+    # HSTS + upgrade-insecure-requests. Local development sets ENV=dev via
+    # .env (see .env.example).
+    env: Literal["dev", "staging", "prod"] = "prod"
 
     database_url: str = "postgresql+asyncpg://betterman:betterman@localhost:54320/betterman"
     redis_url: str = "redis://localhost:6379/0"

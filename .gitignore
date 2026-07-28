@@ -27,3 +27,4 @@ venv/
 .idea/
 .vscode/
 .vercel
+*.tsbuildinfo

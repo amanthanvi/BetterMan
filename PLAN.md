@@ -360,3 +360,16 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [ ] Optional follow-up: cursor pagination for deep `listSection` offsets (still offset-based API).
 - [ ] Optional follow-up: denormalize title/description onto `manPageLinks` to remove `getRelated` joins.
 - [ ] Optional follow-up: dedicated slim section-list digest table if insights show high bytes/doc.
+
+### Security hardening pass (post-v0.6.4)
+
+- [x] Rate limiter: move thresholds, window and clock server-side (`rateLimit.enforce` takes `kind` + `identifier` only).
+- [x] Rate limiter: make `cleanupExpired` an `internalMutation` and read the clock in-handler; fix `hasMore` off-by-one.
+- [x] Convex ingest: compare the bearer secret in constant time via SHA-256 digests.
+- [x] Backend: default `ENV` to `prod` so a missing variable cannot publish `/docs` or drop HSTS; set `ENV=prod` in the runtime image.
+- [x] Ingestion: validate Debian package names and resolve symlinks before reading `/usr/share/doc/<pkg>/copyright`.
+- [x] Next.js: strip `__BM_*__` highlight sentinels from man page text before marker application.
+- [x] Dependencies: `next` to 15.5.22, `seroval` to 1.5.6 (critical GHSA-mv8w-475r-vwqw), pnpm pin to 10.34.4 (CVE-2026-59195), plus overrides clearing the remaining transitive advisories.
+- [ ] Follow-up: `nextjs/lib/public-origin.ts` falls back to `x-forwarded-host`; set `PUBLIC_BASE_URL` in production or validate the host against an allowlist.
+- [ ] Follow-up: `backend/app/web/{seo,runtime_config}.py` are unmounted and superseded by the Next.js routes — decide which implementation is canonical and delete the other.
+- [ ] Follow-up: public Convex queries accept `stage` from the caller, so `staging` data is readable directly from the deployment; derive it server-side.

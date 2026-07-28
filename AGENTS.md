@@ -76,7 +76,7 @@ This repo follows the global agent guidance in:
 
 - **Node.js 25** is required (not 22). Install via `nvm install 25 && nvm alias default 25`.
 - **Python 3.14** is required. Install via `uv python install 3.14`.
-- **pnpm 10.27.0** is pinned in `package.json`; install via `npm install -g pnpm@10.27.0` after switching to Node 25.
+- **pnpm 10.34.4** is pinned in `package.json`; install via `npm install -g pnpm@10.34.4` after switching to Node 25.
 - **Docker in Cloud VM** needs `fuse-overlayfs` storage driver and `iptables-legacy`; see the one-time setup in the environment snapshot.
 - `pnpm install` emits warnings about ignored build scripts (`@sentry/cli`, `sharp`, `unrs-resolver`). These are transitive deps with JS/WASM fallbacks; the warning is safe to ignore.
 - Backend Python deps use `uv sync --frozen` (in `backend/` and `ingestion/` directories); each has its own `.venv`.
