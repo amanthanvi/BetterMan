@@ -78,58 +78,6 @@ export function HomeIcon({ className }: IconProps) {
   )
 }
 
-export function ClockIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v6l4 2" />
-    </svg>
-  )
-}
-
-export function DotsIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 12h.01M12 12h.01M18 12h.01" />
-    </svg>
-  )
-}
-
-export function CommandIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M18 3a3 3 0 0 0-3 3v2h-2V6a3 3 0 1 0-6 0 3 3 0 0 0 3 3h2v2H9a3 3 0 1 0 0 6 3 3 0 0 0 3-3v-2h2v2a3 3 0 1 0 6 0 3 3 0 0 0-3-3h-2V9h2a3 3 0 0 0 3-3 3 3 0 0 0-3-3Z" />
-    </svg>
-  )
-}
-
 export function StarIcon({ className, filled }: IconProps & { filled?: boolean }) {
   return (
     <svg

@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
 export async function waitForInteractiveShell(page: Page) {
-  await expect(page.getByRole('button', { name: 'Select UI theme' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Cycle theme' })).toBeVisible()
 }
 
 export async function pressShortcutUntilVisible(page: Page, shortcut: string, target: Locator, attempts = 3) {
