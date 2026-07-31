@@ -84,7 +84,7 @@ export function ManPageFindBar({
   onNext: () => void
 }) {
   return (
-    <div data-bm-findbar className={`sticky top-16 z-10 lg:hidden ${hidden ? 'mb-4' : 'mb-8'}`}>
+    <div data-bm-findbar className={`sticky top-[4.5rem] z-10 lg:hidden ${hidden ? 'mb-4' : 'mb-8'}`}>
       {hidden ? (
         <div className="flex justify-end">
           <button

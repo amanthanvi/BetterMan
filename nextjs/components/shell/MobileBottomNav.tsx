@@ -6,12 +6,6 @@ import type { ReactNode } from 'react'
 
 import { HomeIcon, SearchIcon, StarIcon } from '../icons'
 
-function isActive(pathname: string, target: string) {
-  if (target === '/' && pathname === '/') return true
-  if (target !== '/' && pathname === target) return true
-  return false
-}
-
 function MobileBottomNavItem({
   href,
   label,
@@ -26,10 +20,10 @@ function MobileBottomNavItem({
   return (
     <Link
       href={href}
-      className={`relative flex min-h-11 flex-col items-center justify-center gap-1 rounded-md px-3 py-2 font-mono text-[11px] ${
+      className={`relative flex min-h-11 flex-col items-center justify-center gap-1 rounded-md px-3 py-2 font-mono text-xs ${
         active
-          ? 'font-semibold text-[color:var(--bm-fg)] before:absolute before:top-0 before:left-1/2 before:h-0.5 before:w-6 before:-translate-x-1/2 before:rounded-[var(--bm-radius-sm)] before:bg-[var(--bm-accent)]'
-          : 'text-[color:var(--bm-muted)] hover:text-[color:var(--bm-fg)]'
+          ? 'font-semibold text-fg before:absolute before:top-0 before:left-1/2 before:h-0.5 before:w-6 before:-translate-x-1/2 before:rounded-sm before:bg-accent'
+          : 'text-muted hover:text-fg'
       }`}
       aria-current={active ? 'page' : undefined}
     >
@@ -46,12 +40,14 @@ export function MobileBottomNav() {
     <nav
       data-bm-mobile-nav
       aria-label="Main navigation"
-      className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--bm-border)] bg-[var(--bm-surface-2)] sm:hidden"
+      className="fixed bottom-0 left-0 right-0 z-30 border-t border-edge bg-raised sm:hidden"
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2">
-        <MobileBottomNavItem href="/" label="Home" icon={<HomeIcon />} active={isActive(pathname, '/')} />
-        <MobileBottomNavItem href="/search" label="Search" icon={<SearchIcon />} active={isActive(pathname, '/search')} />
-        <MobileBottomNavItem href="/#bookmarks" label="Bookmarks" icon={<StarIcon />} active={isActive(pathname, '/')} />
+        <MobileBottomNavItem href="/" label="Home" icon={<HomeIcon />} active={pathname === '/'} />
+        <MobileBottomNavItem href="/search" label="Search" icon={<SearchIcon />} active={pathname === '/search'} />
+        {/* Anchor into the home dashboard; the hash is invisible to usePathname,
+            so this tab never claims aria-current (Home owns "/"). */}
+        <MobileBottomNavItem href="/#bookmarks" label="Bookmarks" icon={<StarIcon />} active={false} />
       </div>
     </nav>
   )

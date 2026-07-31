@@ -153,7 +153,7 @@ export default async function SectionPage({
           {groups.map((group) => (
             <Fragment key={group.key}>
               <li
-                className="sticky top-12 z-10 border-b border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2"
+                className="sticky top-14 z-10 border-b border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2"
 
               >
                 <span className="inline-flex items-center rounded-[var(--bm-radius-sm)] border border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] px-2 py-1 font-mono text-[11px] font-semibold text-[var(--bm-accent)]">

@@ -84,10 +84,9 @@ test('man: header and footer links work from man pages', async ({ page }) => {
 
   const header = page.getByRole('banner', { name: 'Site header' })
 
-  await header.getByRole('link', { name: 'Search' }).click()
-  await expect(page).toHaveURL(/\/search/)
-
-  await page.goto('/man/tar/1')
+  await header.getByRole('button', { name: 'Search' }).click()
+  await expect(page.getByRole('combobox', { name: 'Command palette input' })).toBeVisible()
+  await page.keyboard.press('Escape')
 
   const footer = page.getByRole('contentinfo', { name: 'Site footer' })
   await footer.getByRole('link', { name: 'Licenses' }).click()
