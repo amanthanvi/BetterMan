@@ -70,7 +70,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
           <summary className="cursor-pointer font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">
             Package manifest
           </summary>
-          <pre className="mt-3 overflow-x-auto rounded-md border border-[var(--bm-code-border)] bg-[#0d0d0d] p-4 font-mono text-[11px] leading-relaxed text-[color:var(--bm-code-muted)]">
+          <pre className="mt-3 overflow-x-auto rounded-md border border-[var(--bm-code-border)] bg-code-bg p-4 font-mono text-[11px] leading-relaxed text-[color:var(--bm-code-muted)]">
             {JSON.stringify(data.packageManifest, null, 2)}
           </pre>
         </details>
@@ -83,7 +83,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter packages…"
-            className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] outline-none placeholder:text-[color:var(--bm-muted)]"
+            className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
             aria-label="Filter packages"
           />
 
@@ -132,7 +132,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                 <h2 className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{license.package}</h2>
                 <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">{license.licenseId}</div>
               </div>
-              <pre className="mt-3 max-h-[70vh] overflow-auto rounded-md border border-[var(--bm-code-border)] bg-[#0d0d0d] p-4 font-mono text-[11px] leading-relaxed text-[color:var(--bm-code-muted)]">
+              <pre className="mt-3 max-h-[70vh] overflow-auto rounded-md border border-[var(--bm-code-border)] bg-code-bg p-4 font-mono text-[11px] leading-relaxed text-[color:var(--bm-code-muted)]">
                 {license.text}
               </pre>
             </div>

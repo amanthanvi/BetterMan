@@ -159,7 +159,7 @@ export function ThemeSwitcher() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={handleTriggerKeyDown}
-        className="inline-flex size-9 items-center justify-center rounded-r-md border-y border-r border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+        className="inline-flex size-9 items-center justify-center rounded-r-md border-y border-r border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)]"
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={open ? menuId : undefined}
@@ -200,7 +200,7 @@ export function ThemeSwitcher() {
                 onMouseEnter={() => setActiveIndex(index)}
                 onFocus={() => setActiveIndex(index)}
                 onClick={() => selectTheme(option.id)}
-                className={`block w-full rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] ${
+                className={`block w-full rounded-sm px-3 py-2 text-left text-sm transition-colors ${
                   selected
                     ? 'bg-[var(--bm-accent)] font-semibold text-[var(--bm-accent-contrast)]'
                     : 'text-[var(--bm-fg)] hover:bg-[var(--bm-surface-2)]'

@@ -231,7 +231,7 @@ export function ManPageView({
                       <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Contents</div>
                       <button
                         type="button"
-                        className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                        className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)]"
                         onClick={() => setSidebarOpen(false)}
                         aria-label="Collapse sidebar"
                         title="Collapse (b)"
@@ -288,7 +288,7 @@ export function ManPageView({
                   <div className="flex h-full items-start justify-center pt-1">
                     <button
                       type="button"
-                      className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                      className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)]"
                       onClick={() => setSidebarOpen(true)}
                       aria-label="Expand sidebar"
                       title="Expand (b)"

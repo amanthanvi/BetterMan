@@ -115,7 +115,7 @@ export function ManPageSidebar({
               onChange={(e) => onFindChange(e.target.value)}
               onKeyDown={onFindKeyDown}
               placeholder="Find in page…"
-              className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)] outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
               aria-label="Find in page"
             />
 

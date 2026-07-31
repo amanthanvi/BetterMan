@@ -56,7 +56,7 @@ export function ManPageFooterSections({
 
                 return (
                   <li key={key} className="w-[min(18rem,80vw)] shrink-0">
-                    <Link href={href} className="group block h-full focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]">
+                    <Link href={href} className="group block h-full">
                       <CardShell>
                         <div className="font-mono text-sm font-semibold text-[color:var(--bm-fg)]">{title}</div>
                       </CardShell>
@@ -78,7 +78,7 @@ export function ManPageFooterSections({
                 <li key={`${item.name}:${item.section}`} className="w-[min(18rem,80vw)] shrink-0">
                   <Link
                     href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, distro)}
-                    className="group block h-full focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                    className="group block h-full"
                   >
                     <CardShell>
                       <div className="font-mono text-sm font-semibold text-[color:var(--bm-fg)]">

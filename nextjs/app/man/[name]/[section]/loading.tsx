@@ -4,7 +4,7 @@ export default function Loading() {
       <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-5 animate-pulse">
         <div className="h-9 w-64 rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-3)]" />
         <div className="mt-3 h-4 w-[min(34rem,92%)] rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-3)]" />
-        <div className="mt-6 h-24 w-full rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-[#0d0d0d]" />
+        <div className="mt-6 h-24 w-full rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-code-bg" />
       </div>
 
       <div className="mt-10 space-y-3">

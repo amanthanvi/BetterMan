@@ -35,7 +35,7 @@ export function TocDrawer() {
       className="fixed inset-0 z-40"
       onClick={() => toc.setOpen(false)}
     >
-      <div className="absolute inset-0 bg-black/50" />
+      <div className="absolute inset-0 bg-scrim" />
       <div
         ref={panelRef}
         className="relative h-full w-[min(90vw,24rem)] overflow-y-auto border-r border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-5  "
@@ -45,7 +45,7 @@ export function TocDrawer() {
           <h2 className="text-sm font-semibold tracking-tight">Table of contents</h2>
           <button
             type="button"
-            className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2 text-sm font-medium text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2 text-sm font-medium text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]"
             onClick={() => toc.setOpen(false)}
           >
             Close

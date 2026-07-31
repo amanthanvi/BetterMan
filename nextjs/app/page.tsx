@@ -46,7 +46,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               autoComplete="off"
               placeholder="search man pages…"
               data-bm-home-search
-              className="h-12 min-w-0 flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)] outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              className="h-12 min-w-0 flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
               aria-label="Search man pages"
             />
             {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
@@ -81,7 +81,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <Link
               key={s.section}
               href={withDistro(`/section/${encodeURIComponent(s.section)}`, distro)}
-              className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-xs transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-xs transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-2)]"
               title={s.label}
             >
               <span className="font-mono text-[color:var(--bm-fg)]">{s.section}</span>{' '}

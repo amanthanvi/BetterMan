@@ -61,7 +61,7 @@ export function ManPageHeaderCard({
             {hasToc ? (
               <button
                 type="button"
-                className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] lg:hidden"
+                className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] lg:hidden"
                 onClick={onOpenContents}
                 aria-label="Open contents"
                 title="Contents (b)"
@@ -72,7 +72,7 @@ export function ManPageHeaderCard({
 
             <button
               type="button"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)]"
               onClick={onOpenPrefs}
               aria-label="Reading preferences"
               title="Reading preferences (P)"
@@ -84,7 +84,7 @@ export function ManPageHeaderCard({
 
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-sm font-medium text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]"
               onClick={onCopyLink}
               aria-label="Copy link to clipboard"
               title={copiedLink ? 'Copied' : 'Copy link'}
@@ -138,7 +138,7 @@ export function ManPageHeaderCard({
                     // ignore
                   }
                 }}
-                className="bg-transparent text-[color:var(--bm-fg)] outline-none"
+                className="bg-transparent text-[color:var(--bm-fg)]"
                 aria-label="Select distribution variant"
               >
                 {variantPicker.ordered.map((v) => {
@@ -172,7 +172,7 @@ export function ManPageHeaderCard({
           <div>
             <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Synopsis</div>
             <pre
-              className="mt-3 overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-[#0d0d0d] p-4 text-[13px] leading-[1.6] text-[color:var(--bm-code-fg)]"
+              className="mt-3 overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-code-bg p-4 text-[13px] leading-[1.6] text-[color:var(--bm-code-fg)]"
               tabIndex={0}
             >
               <code>{synopsis.join('\n')}</code>

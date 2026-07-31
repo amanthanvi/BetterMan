@@ -136,7 +136,7 @@ export default async function SectionPage({
           <input
             name="q"
             placeholder="Search within section…"
-            className="h-10 min-w-[16rem] flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] outline-none placeholder:text-[color:var(--bm-muted)] focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="h-10 min-w-[16rem] flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
             aria-label="Search within section"
           />
           <button

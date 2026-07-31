@@ -83,7 +83,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             placeholder="search man pages…"
             data-bm-page-search
             autoComplete="off"
-            className="h-12 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)] outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="h-12 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
             aria-label="Search man pages"
           />
           {section ? <input type="hidden" name="section" value={section} /> : null}

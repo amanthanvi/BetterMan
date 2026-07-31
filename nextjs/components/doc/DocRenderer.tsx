@@ -373,7 +373,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
       case 'link':
         if (inline.linkType === 'external') {
           return (
-            <a key={idx} href={inline.href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-[color:var(--bm-accent)/0.6]">
+            <a key={idx} href={inline.href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-accent-edge">
               <span className="inline-flex items-center gap-1">
                 {renderInlines(inline.inlines, ctx, distro)}
                 <span aria-hidden="true" className="text-xs text-[color:var(--bm-muted)]">
@@ -396,7 +396,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
           )
         }
         return (
-          <Link key={idx} href={withDistroHref(inline.href, distro)} className="underline underline-offset-4 decoration-[color:var(--bm-accent)/0.6]">
+          <Link key={idx} href={withDistroHref(inline.href, distro)} className="underline underline-offset-4 decoration-accent-edge">
             {renderInlines(inline.inlines, ctx, distro)}
           </Link>
         )

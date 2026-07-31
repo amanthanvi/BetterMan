@@ -61,7 +61,7 @@ export function ManPageNavigatorOverlay({
         className={`fixed inset-0 z-30 ${open ? '' : 'pointer-events-none'}`}
       >
         <div
-          className={`absolute inset-0 bg-black/50 transition-opacity ${open ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 bg-scrim transition-opacity ${open ? 'opacity-100' : 'opacity-0'}`}
           onClick={onClose}
         />
         <div

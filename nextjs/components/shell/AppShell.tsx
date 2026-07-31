@@ -346,7 +346,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
-              className="hidden h-9 w-[min(28rem,42vw)] items-center gap-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 text-sm text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] md:inline-flex"
+              className="hidden h-9 w-[min(28rem,42vw)] items-center gap-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 text-sm text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[var(--bm-fg)] md:inline-flex"
               onClick={() => setPaletteOpen(true)}
               aria-label="Search"
               title="Command palette (Ctrl/⌘ K)"
@@ -360,7 +360,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <button
               type="button"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] md:hidden"
+              className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] md:hidden"
               onClick={() => setPaletteOpen(true)}
               aria-label="Search"
               title="Search (Ctrl/⌘ K)"
@@ -371,7 +371,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="inline-flex">
               <button
                 type="button"
-                className="inline-flex size-9 items-center justify-center rounded-l-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+                className="inline-flex size-9 items-center justify-center rounded-l-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)]"
                 onClick={() => theme.cycle()}
                 title="Cycle theme"
                 aria-label="Cycle theme"

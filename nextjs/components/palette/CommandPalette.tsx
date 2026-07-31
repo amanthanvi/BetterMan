@@ -415,7 +415,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           </div>
 
           {snippet ? (
-            <pre className="overflow-x-auto rounded-md border border-[var(--bm-border)] bg-[#0d0d0d] p-3 font-mono text-[11px] leading-relaxed text-[color:var(--bm-fg)]" tabIndex={0}>
+            <pre className="overflow-x-auto rounded-md border border-[var(--bm-border)] bg-code-bg p-3 font-mono text-[11px] leading-relaxed text-fg" tabIndex={0}>
               {snippet}
             </pre>
           ) : (
@@ -465,7 +465,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       aria-label="Command palette"
       className="fixed inset-0 z-50 flex items-end justify-center pb-[env(safe-area-inset-bottom)] sm:items-center sm:pb-0"
     >
-      <div className="absolute inset-0 bg-black/60" onClick={() => close()} />
+      <div className="absolute inset-0 bg-scrim" onClick={() => close()} />
       <div
         ref={dialogRef}
         className="relative w-full overflow-hidden rounded-t-[var(--bm-radius-lg)] border border-[var(--bm-border-accent)] bg-[var(--bm-surface-2)] sm:w-[min(94vw,56rem)] sm:rounded-[var(--bm-radius-lg)]"
@@ -490,7 +490,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               setActiveIndex(0)
             }}
             placeholder="Search… (use > for actions, # for headings, @distro)"
-            className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] outline-none placeholder:text-[color:var(--bm-muted)] focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] outline-none placeholder:text-[color:var(--bm-muted)]"
             aria-label="Command palette input"
             role="combobox"
             aria-autocomplete="list"

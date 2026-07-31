@@ -89,7 +89,7 @@ export function ManPageFindBar({
         <div className="flex justify-end">
           <button
             type="button"
-            className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-4 py-2 text-sm font-medium text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+            className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-4 py-2 text-sm font-medium text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]"
             aria-label="Show find"
             onClick={onShow}
           >
@@ -106,7 +106,7 @@ export function ManPageFindBar({
               onChange={(e) => onFindChange(e.target.value)}
               onKeyDown={onFindKeyDown}
               placeholder="Find…"
-              className="h-10 min-w-0 flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)] outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              className="h-10 min-w-0 flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
               aria-label="Find in page"
             />
 

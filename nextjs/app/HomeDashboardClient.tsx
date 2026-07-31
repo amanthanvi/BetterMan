@@ -38,7 +38,7 @@ function ManLink({ distro, name, section, children }: { distro: Distro; name: st
   return (
     <Link
       href={href}
-      className="min-w-0 flex-1 rounded-[var(--bm-radius)] px-3 py-2 transition-colors hover:bg-[var(--bm-surface-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+      className="min-w-0 flex-1 rounded-[var(--bm-radius)] px-3 py-2 transition-colors hover:bg-[var(--bm-surface-2)]"
     >
       {children}
     </Link>
