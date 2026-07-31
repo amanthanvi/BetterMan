@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import type { Distro } from '../../lib/distro'
 import { listSections, search, withDistroFallback } from '../../lib/api'
 import { isDefaultDistro, normalizeDistro } from '../../lib/distro'
+import { SearchPageInput } from './SearchPageInput'
 import { SearchResultsClient } from './SearchResultsClient'
 
 export const revalidate = 300
@@ -71,21 +72,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="border-b border-[var(--bm-border)] pb-6">
+      <header className="border-b border-edge pb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
 
         <form className="mt-4" action="/search" method="get" role="search" aria-label="Search man pages">
-          <input
-            key={`${distro}:${section}:${q}`}
-            name="q"
-            type="search"
-            defaultValue={q}
-            placeholder="search man pages…"
-            data-bm-page-search
-            autoComplete="off"
-            className="h-12 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
-            aria-label="Search man pages"
-          />
+          <SearchPageInput initialQ={q} section={section} distro={distro} />
           {section ? <input type="hidden" name="section" value={section} /> : null}
           {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
         </form>
@@ -93,10 +84,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <nav aria-label="Section filter" className="mt-4 flex flex-wrap gap-2">
           <Link
             href={buildSearchHref({ q, section: '', distro })}
-            className={`rounded-[var(--bm-radius-sm)] border px-3 py-1 font-mono text-xs transition-colors ${
+            className={`rounded-sm border px-3 py-1 font-mono text-xs transition-colors hover:no-underline ${
               !section
-                ? 'border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] text-[color:var(--bm-fg)]'
-                : 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]'
+                ? 'border-accent-edge bg-accent-subtle text-fg'
+                : 'border-edge bg-surface text-muted hover:border-edge-strong hover:text-fg'
             }`}
           >
             All
@@ -105,10 +96,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             <Link
               key={s.section}
               href={buildSearchHref({ q, section: s.section, distro })}
-              className={`rounded-[var(--bm-radius-sm)] border px-3 py-1 font-mono text-xs transition-colors ${
+              className={`rounded-sm border px-3 py-1 font-mono text-xs transition-colors hover:no-underline ${
                 section === s.section
-                  ? 'border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] text-[color:var(--bm-fg)]'
-                  : 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]'
+                  ? 'border-accent-edge bg-accent-subtle text-fg'
+                  : 'border-edge bg-surface text-muted hover:border-edge-strong hover:text-fg'
               }`}
               title={s.label}
               aria-label={`Section ${s.section}: ${s.label}`}
@@ -118,7 +109,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           ))}
         </nav>
 
-        <div className="mt-3 text-xs text-[color:var(--bm-muted)]">
+        <div className="mt-3 text-xs text-muted">
           <span className="font-mono">Tip:</span> Use <span className="font-mono">ssh_config</span> or{' '}
           <span className="font-mono">systemd.unit</span> for dotted names.
         </div>

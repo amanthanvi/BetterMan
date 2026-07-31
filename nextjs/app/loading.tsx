@@ -1,15 +1,22 @@
+import { Skeleton } from '../components/ui/Skeleton'
+
 export default function Loading() {
   return (
-    <div role="status" aria-label="Loading" className="mx-auto max-w-5xl">
-      <div className="h-6 w-44 rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
-      <div className="mt-6 space-y-3">
-        <div className="h-4 w-full rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
-        <div className="h-4 w-[92%] rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
-        <div className="h-4 w-[86%] rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
+    <div role="status" aria-label="Loading" className="mx-auto max-w-3xl">
+      <div className="mt-8 sm:mt-16">
+        <Skeleton className="h-7 w-56" />
+        <Skeleton className="mt-2 h-4 w-72" />
+        <Skeleton className="mt-6 h-12 w-full" />
       </div>
-      <div className="mt-10 grid gap-3 sm:grid-cols-2">
-        <div className="h-28 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] animate-pulse" />
-        <div className="h-28 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] animate-pulse" />
+      <div className="mt-12 space-y-10">
+        <div>
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="mt-3 h-24 w-full rounded-lg" />
+        </div>
+        <div>
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="mt-3 h-24 w-full rounded-lg" />
+        </div>
       </div>
       <span className="sr-only">Loading…</span>
     </div>

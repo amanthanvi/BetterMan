@@ -1,18 +1,29 @@
+import { Skeleton } from '../../../../components/ui/Skeleton'
+
 export default function Loading() {
   return (
-    <div role="status" aria-label="Loading man page" className="mx-auto max-w-5xl">
-      <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-5 animate-pulse">
-        <div className="h-9 w-64 rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-3)]" />
-        <div className="mt-3 h-4 w-[min(34rem,92%)] rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-3)]" />
-        <div className="mt-6 h-24 w-full rounded-[var(--bm-radius)] border border-[var(--bm-code-border)] bg-code-bg" />
+    <div role="status" aria-label="Loading man page" className="mx-auto max-w-6xl">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="mt-2 h-4 w-[min(34rem,92%)]" />
+          <Skeleton className="mt-3 h-4 w-72" />
+        </div>
+        <div className="flex gap-2">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <Skeleton key={idx} className="size-9" />
+          ))}
+        </div>
       </div>
 
+      <Skeleton className="mt-6 h-24 w-full" />
+
       <div className="mt-10 space-y-3">
-        <div className="h-5 w-44 rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
-        <div className="h-4 w-full rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
-        <div className="h-4 w-[92%] rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
-        <div className="h-4 w-[86%] rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
-        <div className="h-4 w-[80%] rounded-[var(--bm-radius-sm)] bg-[var(--bm-surface-2)] animate-pulse" />
+        <Skeleton className="h-5 w-44" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-[92%]" />
+        <Skeleton className="h-4 w-[86%]" />
+        <Skeleton className="h-4 w-[80%]" />
       </div>
 
       <span className="sr-only">Loading…</span>

@@ -117,9 +117,9 @@ export default async function ManByNamePage({
     const title = `${name} — Choose section — BetterMan`
     return (
       <div className="mx-auto max-w-5xl">
-        <header className="border-b border-[var(--bm-border)] pb-6">
+        <header className="border-b border-edge pb-6">
           <h1 className="font-mono text-3xl font-semibold tracking-tight">{name}</h1>
-          <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
+          <p className="mt-2 text-sm text-muted">
             Multiple sections match this name. Pick one:
           </p>
         </header>
@@ -128,7 +128,7 @@ export default async function ManByNamePage({
           {result.options.map((opt) => (
             <li
               key={opt.section}
-              className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 "
+              className="rounded-md border border-edge bg-surface p-4 "
             >
               <Link
                 href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, distro)}
@@ -136,12 +136,12 @@ export default async function ManByNamePage({
               >
                 {name}({opt.section})
               </Link>
-              <div className="mt-1 text-sm text-[color:var(--bm-muted)]">{opt.description}</div>
+              <div className="mt-1 text-sm text-muted">{opt.description}</div>
             </li>
           ))}
         </ol>
 
-        <div className="mt-10 text-xs text-[color:var(--bm-muted)]">
+        <div className="mt-10 text-xs text-muted">
           <span className="font-mono">{title}</span>
         </div>
       </div>
@@ -158,15 +158,15 @@ export default async function ManByNamePage({
 
     return (
       <div className="mx-auto max-w-5xl">
-        <header className="border-b border-[var(--bm-border)] pb-6">
+        <header className="border-b border-edge pb-6">
           <h1 className="text-3xl font-semibold tracking-tight">Not found</h1>
-          <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
+          <p className="mt-2 text-sm text-muted">
             We couldn&apos;t find <span className="font-mono">{name}</span> in the current dataset.
           </p>
         </header>
 
         {suggestions?.suggestions?.length ? (
-          <div className="mt-6 space-y-2 text-sm text-[color:var(--bm-muted)]">
+          <div className="mt-6 space-y-2 text-sm text-muted">
             <div>Did you mean:</div>
             <ul className="space-y-2">
               {suggestions.suggestions.map((s) => (
@@ -177,7 +177,7 @@ export default async function ManByNamePage({
                   >
                     {s.name}({s.section})
                   </Link>
-                  {s.description ? <div className="text-xs text-[color:var(--bm-muted)]">{s.description}</div> : null}
+                  {s.description ? <div className="text-xs text-muted">{s.description}</div> : null}
                 </li>
               ))}
             </ul>
@@ -194,7 +194,7 @@ export default async function ManByNamePage({
           .
         </div>
 
-        <div className="mt-10 text-xs text-[color:var(--bm-muted)]">
+        <div className="mt-10 text-xs text-muted">
           <span className="font-mono">{name} — Not found — BetterMan</span>
         </div>
       </div>

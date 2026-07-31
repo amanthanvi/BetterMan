@@ -52,25 +52,25 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
 
   return (
     <div className="mx-auto max-w-6xl">
-      <header className="border-b border-[var(--bm-border)] pb-6">
-        <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-[color:var(--bm-fg)]">Licenses</h1>
-        <p className="mt-2 text-[13px] text-[color:var(--bm-muted)]">
+      <header className="border-b border-edge pb-6">
+        <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-fg">Licenses</h1>
+        <p className="mt-2 text-sm text-muted">
           Attribution and license notices for the current dataset release.
         </p>
-        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] text-[color:var(--bm-muted)]">
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs text-muted">
           <div>
-            Dataset: <span className="text-[color:var(--bm-fg)]">{data.datasetReleaseId}</span>
+            Dataset: <span className="text-fg">{data.datasetReleaseId}</span>
           </div>
           <div>
-            Ingested: <span className="text-[color:var(--bm-fg)]">{data.ingestedAt}</span>
+            Ingested: <span className="text-fg">{data.ingestedAt}</span>
           </div>
         </div>
 
         <details className="mt-4">
-          <summary className="cursor-pointer font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">
+          <summary className="cursor-pointer font-mono text-sm font-semibold text-fg">
             Package manifest
           </summary>
-          <pre className="mt-3 overflow-x-auto rounded-md border border-[var(--bm-code-border)] bg-code-bg p-4 font-mono text-[11px] leading-relaxed text-[color:var(--bm-code-muted)]">
+          <pre className="mt-3 overflow-x-auto rounded-md border border-edge bg-code-bg p-4 font-mono text-xs leading-relaxed text-muted">
             {JSON.stringify(data.packageManifest, null, 2)}
           </pre>
         </details>
@@ -83,29 +83,29 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter packages…"
-            className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
+            className="h-10 w-full rounded-md border border-edge bg-bg px-3 font-mono text-sm text-fg placeholder:text-muted"
             aria-label="Filter packages"
           />
 
-          <div className="overflow-hidden rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)]">
+          <div className="overflow-hidden rounded-md border border-edge bg-surface">
             <ul className="max-h-[70vh] overflow-y-auto">
               {packages.map((p) => {
                 const isSelected = p.name === selected
                 return (
-                  <li key={p.name} className="border-b border-[var(--bm-border)] last:border-b-0">
+                  <li key={p.name} className="border-b border-edge last:border-b-0">
                     <button
                       type="button"
                       className={`w-full px-3 py-2 text-left ${p.hasLicenseText ? '' : 'opacity-50'} ${
-                        isSelected ? 'bg-[var(--bm-accent-muted)]' : 'hover:bg-[var(--bm-surface-3)]'
+                        isSelected ? 'bg-accent-subtle' : 'hover:bg-raised'
                       }`}
                       onClick={() => setSelected(p.hasLicenseText ? p.name : null)}
                       disabled={!p.hasLicenseText}
                     >
                       <div className="flex items-baseline justify-between gap-3">
-                        <div className="min-w-0 truncate font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">
+                        <div className="min-w-0 truncate font-mono text-sm font-semibold text-fg">
                           {p.name}
                         </div>
-                        <div className="shrink-0 font-mono text-[11px] text-[color:var(--bm-muted)]">{p.version}</div>
+                        <div className="shrink-0 font-mono text-xs text-muted">{p.version}</div>
                       </div>
                     </button>
                   </li>
@@ -117,27 +117,27 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
 
         <section className="min-h-[18rem]">
           {!selected ? (
-            <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-[13px] text-[color:var(--bm-muted)]">
+            <div className="rounded-md border border-edge bg-surface p-4 text-sm text-muted">
               Select a package to view its license text.
             </div>
           ) : loading ? (
-            <div className="font-mono text-[13px] text-[color:var(--bm-muted)]">Loading license text…</div>
+            <div className="font-mono text-sm text-muted">Loading license text…</div>
           ) : error ? (
-            <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-[13px] text-[color:var(--bm-muted)]">
+            <div className="rounded-md border border-edge bg-surface p-4 text-sm text-muted">
               {error}
             </div>
           ) : license ? (
             <div>
               <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{license.package}</h2>
-                <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">{license.licenseId}</div>
+                <h2 className="font-mono text-sm font-semibold text-fg">{license.package}</h2>
+                <div className="font-mono text-xs text-muted">{license.licenseId}</div>
               </div>
-              <pre className="mt-3 max-h-[70vh] overflow-auto rounded-md border border-[var(--bm-code-border)] bg-code-bg p-4 font-mono text-[11px] leading-relaxed text-[color:var(--bm-code-muted)]">
+              <pre className="mt-3 max-h-[70vh] overflow-auto rounded-md border border-edge bg-code-bg p-4 font-mono text-xs leading-relaxed text-muted">
                 {license.text}
               </pre>
             </div>
           ) : (
-            <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-[13px] text-[color:var(--bm-muted)]">
+            <div className="rounded-md border border-edge bg-surface p-4 text-sm text-muted">
               No license text.
             </div>
           )}

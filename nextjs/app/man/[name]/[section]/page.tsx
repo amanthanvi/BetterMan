@@ -171,9 +171,9 @@ export default async function ManByNameAndSectionPage({
 
     return (
       <div className="mx-auto max-w-5xl">
-        <header className="border-b border-[var(--bm-border)] pb-6">
+        <header className="border-b border-edge pb-6">
           <h1 className="text-3xl font-semibold tracking-tight">Not found</h1>
-          <p className="mt-2 text-sm text-[color:var(--bm-muted)]">
+          <p className="mt-2 text-sm text-muted">
             We couldn&apos;t find{' '}
             <span className="font-mono">
               {name}({section})
@@ -183,14 +183,14 @@ export default async function ManByNameAndSectionPage({
         </header>
 
         {alternatives?.kind === 'ambiguous' && alternatives.options.length ? (
-          <div className="mt-6 space-y-2 text-sm text-[color:var(--bm-muted)]">
+          <div className="mt-6 space-y-2 text-sm text-muted">
             <div>Available sections:</div>
             <ul className="flex flex-wrap gap-2">
               {alternatives.options.map((opt) => (
                 <li key={opt.section}>
                   <Link
                     href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, activeDistro)}
-                    className="inline-flex items-center rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-1 text-sm text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]"
+                    className="inline-flex items-center rounded-sm border border-edge bg-surface px-3 py-1 text-sm text-fg transition-colors hover:border-edge-strong hover:bg-raised"
                   >
                     {name}({opt.section})
                   </Link>
@@ -199,7 +199,7 @@ export default async function ManByNameAndSectionPage({
             </ul>
           </div>
         ) : alternatives?.kind === 'page' ? (
-          <div className="mt-6 text-sm text-[color:var(--bm-muted)]">
+          <div className="mt-6 text-sm text-muted">
             Found{' '}
             <Link
               href={withDistro(
@@ -215,7 +215,7 @@ export default async function ManByNameAndSectionPage({
         ) : null}
 
         {suggestions?.suggestions?.length ? (
-          <div className="mt-6 space-y-2 text-sm text-[color:var(--bm-muted)]">
+          <div className="mt-6 space-y-2 text-sm text-muted">
             <div>Did you mean:</div>
             <ul className="space-y-2">
               {suggestions.suggestions.map((s) => (
@@ -226,7 +226,7 @@ export default async function ManByNameAndSectionPage({
                   >
                     {s.name}({s.section})
                   </Link>
-                  {s.description ? <div className="text-xs text-[color:var(--bm-muted)]">{s.description}</div> : null}
+                  {s.description ? <div className="text-xs text-muted">{s.description}</div> : null}
                 </li>
               ))}
             </ul>
@@ -243,7 +243,7 @@ export default async function ManByNameAndSectionPage({
           .
         </div>
 
-        <div className="mt-10 text-xs text-[color:var(--bm-muted)]">
+        <div className="mt-10 text-xs text-muted">
           <span className="font-mono">
             {name}({section}) — Not found — BetterMan
           </span>
