@@ -6,25 +6,7 @@ import type { BlockNode } from '../../lib/docModel'
 import type { DocRendererHandle } from '../doc/DocRenderer'
 import { buildFindIndex, locateFindMatch } from './findIndex'
 
-const FIND_BAR_KEY = 'bm-find-bar-hidden'
 const FIND_DEBOUNCE_MS = 150
-
-function readStoredFindBarHidden(): boolean {
-  try {
-    return localStorage.getItem(FIND_BAR_KEY) === '1'
-  } catch {
-    // ignore
-  }
-  return false
-}
-
-function writeStoredFindBarHidden(hidden: boolean) {
-  try {
-    localStorage.setItem(FIND_BAR_KEY, hidden ? '1' : '0')
-  } catch {
-    // ignore
-  }
-}
 
 function getScrollBehavior(): 'auto' | 'smooth' {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
@@ -32,17 +14,12 @@ function getScrollBehavior(): 'auto' | 'smooth' {
 
 export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const [find, setFind] = useState('')
-  const [findBarHidden, setFindBarHidden] = useState(false)
+  const [findOpen, setFindOpen] = useState(false)
   const [activeFindIndex, setActiveFindIndex] = useState(0)
 
   const activeMarkRef = useRef<HTMLElement | null>(null)
-  const findInputDesktopRef = useRef<HTMLInputElement | null>(null)
-  const findInputMobileRef = useRef<HTMLInputElement | null>(null)
+  const findInputRef = useRef<HTMLInputElement | null>(null)
   const docRef = useRef<DocRendererHandle | null>(null)
-
-  useEffect(() => {
-    setFindBarHidden(readStoredFindBarHidden())
-  }, [])
 
   const rawFindQuery = find.trim()
   const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
@@ -80,16 +57,15 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
           ? `${displayIndex + 1}/${matchCount}`
           : '0/0'
 
-  const setFindBarHiddenPersisted = (hidden: boolean) => {
-    setFindBarHidden(hidden)
-    writeStoredFindBarHidden(hidden)
-  }
-
   const focusFindInput = () => {
-    const isDesktop = window.matchMedia('(min-width: 1024px)').matches
-    const el = isDesktop ? findInputDesktopRef.current : findInputMobileRef.current
+    const el = findInputRef.current
     el?.focus()
     el?.select()
+  }
+
+  const openFind = () => {
+    setFindOpen(true)
+    requestAnimationFrame(() => focusFindInput())
   }
 
   const scrollToFind = (idx: number) => {
@@ -162,13 +138,19 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     activeMarkRef.current = null
   }
 
+  const closeFind = () => {
+    onClearFind()
+    setFindOpen(false)
+  }
+
   return {
     docRef,
     find,
-    findBarHidden,
-    findInputDesktopRef,
-    findInputMobileRef,
+    findOpen,
+    findInputRef,
     focusFindInput,
+    openFind,
+    closeFind,
     onClearFind,
     onFindChange,
     findQuery: effectiveFindQuery,
@@ -177,6 +159,5 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     findCountLabel,
     goPrev,
     goNext,
-    setFindBarHiddenPersisted,
   }
 }

@@ -41,9 +41,7 @@ export function Toc({
         }
       }}
     >
-      {showTitle ? (
-        <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">On this page</div>
-      ) : null}
+      {showTitle ? <div className="font-mono text-xs tracking-wide text-muted">On this page</div> : null}
       <ol className="space-y-1">
         {items.map((item) => {
           const active = activeId === item.id
@@ -53,6 +51,7 @@ export function Toc({
             <li key={item.id} className="text-sm">
               <a
                 href={`#${item.id}`}
+                aria-current={active ? 'location' : undefined}
                 onClick={(e) => {
                   if (onNavigateToId) {
                     e.preventDefault()
@@ -68,8 +67,8 @@ export function Toc({
                 }}
                 className={`block border-l-2 py-1.5 pr-2 no-underline transition-colors ${indent} ${
                   active
-                    ? 'border-[var(--bm-accent)] text-[color:var(--bm-fg)]'
-                    : 'border-transparent text-[color:var(--bm-muted)] hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]'
+                    ? 'border-accent font-medium text-fg'
+                    : 'border-transparent text-muted hover:border-edge-strong hover:text-fg'
                 }`}
               >
                 <span className="block truncate">{item.title.length > 52 ? `${item.title.slice(0, 52)}…` : item.title}</span>

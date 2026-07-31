@@ -3,15 +3,18 @@ import { test, expect } from '@playwright/test'
 import { expectNoCriticalOrSeriousViolations } from './a11y'
 import { pressShortcutUntilVisible, selectOptionUntilURL, waitForInteractiveShell } from './shortcuts'
 
-test('man: sticky sidebar renders TOC + Find (desktop)', async ({ page }) => {
+test('man: sticky sidebar renders TOC; find opens from the title bar (desktop)', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
   const sidebar = page.locator('[data-bm-sidebar]')
   await expect(sidebar).toBeVisible()
-  await expect(sidebar.getByText('Quick jumps')).toBeVisible()
-  await expect(sidebar.getByRole('textbox', { name: 'Find in page' })).toBeVisible()
   await expect(sidebar.getByRole('navigation', { name: 'On this page' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Find in page' }).click()
+  await expect(page.locator('[data-bm-findbar]').getByRole('textbox', { name: 'Find in page' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-bm-findbar]')).toHaveCount(0)
 })
 
 test('man: sidebar remains sticky while scrolling (desktop)', async ({ page }) => {
@@ -46,13 +49,13 @@ test('man: sidebar collapses and expands with b', async ({ page }) => {
   await waitForInteractiveShell(page)
 
   const sidebar = page.locator('[data-bm-sidebar]')
-  const findInput = sidebar.getByRole('textbox', { name: 'Find in page' })
+  const tocNav = sidebar.getByRole('navigation', { name: 'On this page' })
   const expandButton = sidebar.getByRole('button', { name: 'Expand sidebar' })
-  await expect(findInput).toBeVisible()
+  await expect(tocNav).toBeVisible()
 
   await pressShortcutUntilVisible(page, 'b', expandButton)
 
-  await pressShortcutUntilVisible(page, 'b', findInput)
+  await pressShortcutUntilVisible(page, 'b', tocNav)
 })
 
 test('man: reading preferences drawer applies settings', async ({ page }) => {
@@ -123,24 +126,26 @@ test('man: find-in-page shows count and navigates matches', async ({ page }) => 
   page.on('pageerror', (err) => pageErrors.push(err.message))
 
   await page.goto('/man/tar/1')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
-  const sidebar = page.locator('[data-bm-sidebar]')
-  await expect(sidebar).toBeVisible()
+  await page.getByRole('button', { name: 'Find in page' }).click()
+  const findbar = page.locator('[data-bm-findbar]')
+  await expect(findbar).toBeVisible()
 
-  await sidebar.getByRole('textbox', { name: 'Find in page' }).fill('tar')
+  await findbar.getByRole('textbox', { name: 'Find in page' }).fill('tar')
   await expect(page.locator('mark[data-bm-find]').first()).toBeVisible()
 
-  const count = sidebar.getByText(/^\d+\/\d+$/)
+  const count = findbar.getByText(/^\d+\/\d+$/)
   const label = (await count.innerText()).trim()
   expect(label).toMatch(/^1\/\d+$/)
   const totalRaw = label.split('/')[1]
   const total = totalRaw ? Number.parseInt(totalRaw, 10) : Number.NaN
   expect(total).toBeGreaterThan(1)
 
-  await sidebar.getByRole('button', { name: 'Next match' }).click()
+  await findbar.getByRole('button', { name: 'Next match' }).click()
   await expect(count).toHaveText(new RegExp(`^2/${total}$`))
 
-  await sidebar.getByRole('button', { name: 'Previous match' }).click()
+  await findbar.getByRole('button', { name: 'Previous match' }).click()
   await expect(count).toHaveText(new RegExp(`^1/${total}$`))
 
   await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
@@ -186,7 +191,7 @@ test('man: TOC navigation updates the URL hash and scrolls', async ({ page }) =>
 
   await expect(page).toHaveURL(/\/man\/tar\/1#examples$/)
   await page.waitForFunction((y) => window.scrollY > y + 30, yBefore)
-  await expect(examples).toHaveAttribute('class', /border-\[var\(--bm-accent\)\]/)
+  await expect(examples).toHaveAttribute('aria-current', 'location')
 })
 
 test('man: extended section URLs work', async ({ page }) => {

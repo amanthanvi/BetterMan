@@ -2,11 +2,12 @@
 
 import type { KeyboardEvent, RefObject } from 'react'
 
+import { IconButton } from '../ui/IconButton'
 import { getFindA11yStatus } from './findA11y'
 
 type IconProps = { className?: string }
 
-function IconChevronLeft({ className }: IconProps) {
+function IconChevronUp({ className }: IconProps) {
   return (
     <svg
       className={className ?? 'size-4'}
@@ -18,12 +19,12 @@ function IconChevronLeft({ className }: IconProps) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="m15 18-6-6 6-6" />
+      <path d="m18 15-6-6-6 6" />
     </svg>
   )
 }
 
-function IconChevronRight({ className }: IconProps) {
+function IconChevronDown({ className }: IconProps) {
   return (
     <svg
       className={className ?? 'size-4'}
@@ -35,7 +36,7 @@ function IconChevronRight({ className }: IconProps) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="m9 18 6-6-6-6" />
+      <path d="m6 9 6 6 6-6" />
     </svg>
   )
 }
@@ -58,10 +59,13 @@ function IconX({ className }: IconProps) {
   )
 }
 
+/**
+ * The one find-in-page UI: a floating bar below the header on desktop,
+ * above the bottom nav on mobile.
+ */
 export function ManPageFindBar({
-  hidden,
-  onShow,
-  onHide,
+  open,
+  onClose,
   find,
   findInputRef,
   onFindChange,
@@ -71,9 +75,8 @@ export function ManPageFindBar({
   onPrev,
   onNext,
 }: {
-  hidden: boolean
-  onShow: () => void
-  onHide: () => void
+  open: boolean
+  onClose: () => void
   find: string
   findInputRef: RefObject<HTMLInputElement | null>
   onFindChange: (next: string) => void
@@ -83,68 +86,45 @@ export function ManPageFindBar({
   onPrev: () => void
   onNext: () => void
 }) {
+  if (!open) return null
+
   return (
-    <div data-bm-findbar className={`sticky top-[4.5rem] z-10 lg:hidden ${hidden ? 'mb-4' : 'mb-8'}`}>
-      {hidden ? (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-4 py-2 text-sm font-medium text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]"
-            aria-label="Show find"
-            onClick={onShow}
-          >
-            Find
-          </button>
+    <div
+      data-bm-findbar
+      className="fixed inset-x-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 rounded-lg border border-edge bg-raised p-2 shadow-lg shadow-black/20 sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-[4.25rem] sm:w-[24rem]"
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape') return
+        e.preventDefault()
+        onClose()
+      }}
+    >
+      <div className="flex items-center gap-1.5">
+        <input
+          ref={findInputRef}
+          name="bm-find"
+          value={find}
+          onChange={(e) => onFindChange(e.target.value)}
+          onKeyDown={onFindKeyDown}
+          placeholder="Find in page…"
+          className="h-9 min-w-0 flex-1 rounded-md border border-edge bg-surface px-3 font-mono text-sm text-fg placeholder:text-muted"
+          aria-label="Find in page"
+        />
+
+        <div className="min-w-[3.5rem] text-center font-mono text-xs text-muted">{findCountLabel}</div>
+        <div aria-live="polite" className="sr-only">
+          {getFindA11yStatus(find, findCountLabel)}
         </div>
-      ) : (
-        <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface-2)] p-2">
-          <div className="flex items-center gap-2">
-            <input
-              ref={findInputRef}
-              name="bm-find"
-              value={find}
-              onChange={(e) => onFindChange(e.target.value)}
-              onKeyDown={onFindKeyDown}
-              placeholder="Find…"
-              className="h-10 min-w-0 flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)]"
-              aria-label="Find in page"
-            />
 
-            <div className="font-mono text-xs text-[color:var(--bm-muted)]">{findCountLabel}</div>
-            <div aria-live="polite" className="sr-only">
-              {getFindA11yStatus(find, findCountLabel)}
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)] disabled:opacity-50"
-              onClick={onPrev}
-              disabled={!matchCount}
-              aria-label="Previous match"
-            >
-              <IconChevronLeft className="size-4" />
-            </button>
-            <button
-              type="button"
-              className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)] disabled:opacity-50"
-              onClick={onNext}
-              disabled={!matchCount}
-              aria-label="Next match"
-            >
-              <IconChevronRight className="size-4" />
-            </button>
-
-            <button
-              type="button"
-              className="inline-flex size-10 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[color:var(--bm-fg)]"
-              onClick={onHide}
-              aria-label="Hide find"
-            >
-              <IconX className="size-4" />
-            </button>
-          </div>
-        </div>
-      )}
+        <IconButton variant="ghost" size="sm" onClick={onPrev} disabled={!matchCount} aria-label="Previous match">
+          <IconChevronUp className="size-4" />
+        </IconButton>
+        <IconButton variant="ghost" size="sm" onClick={onNext} disabled={!matchCount} aria-label="Next match">
+          <IconChevronDown className="size-4" />
+        </IconButton>
+        <IconButton variant="ghost" size="sm" onClick={onClose} aria-label="Close find">
+          <IconX className="size-4" />
+        </IconButton>
+      </div>
     </div>
   )
 }

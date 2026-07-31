@@ -111,14 +111,12 @@ export function CodeBlock({
 
   return (
     <div id={id ?? undefined} className="scroll-mt-32">
-      <div className="-mx-4 overflow-hidden rounded-none border border-[var(--bm-code-border)] bg-code-bg sm:mx-0 sm:rounded-[var(--bm-radius)]">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--bm-code-border)] px-3 py-2">
-          <div className="min-w-0 truncate font-mono text-xs tracking-wide text-[color:var(--bm-code-muted)]">
-            {languageLabel}
-          </div>
+      <div className="-mx-4 overflow-hidden rounded-none border border-edge bg-code-bg sm:mx-0 sm:rounded-md">
+        <div className="flex items-center justify-between gap-3 border-b border-edge px-3 py-1.5">
+          <div className="min-w-0 truncate font-mono text-xs tracking-wide text-muted">{languageLabel}</div>
           <button
             type="button"
-            className="inline-flex size-8 items-center justify-center rounded-[var(--bm-radius-sm)] border border-transparent text-[color:var(--bm-code-muted)] transition-colors hover:border-[var(--bm-code-border)] hover:text-[color:var(--bm-code-fg)]"
+            className="inline-flex size-8 items-center justify-center rounded-sm border border-transparent text-muted transition-colors hover:border-edge hover:text-fg"
             onClick={copy}
             aria-label="Copy code block"
             title={copied ? 'Copied' : 'Copy'}
@@ -127,7 +125,7 @@ export function CodeBlock({
           </button>
         </div>
 
-        <pre className="overflow-x-auto p-4 text-[13px] leading-[1.6]" tabIndex={0}>
+        <pre className="overflow-x-auto p-4 text-sm leading-[1.6]" tabIndex={0}>
           <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />
         </pre>
       </div>
