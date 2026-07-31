@@ -327,7 +327,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <SearchIcon className="size-4" />
               <span className="hidden flex-1 text-left font-mono md:inline">Search manuals…</span>
-              <Kbd className="hidden md:inline-flex">⌘K</Kbd>
+              <span className="hidden md:inline-flex">
+                <Kbd>⌘K</Kbd>
+              </span>
             </button>
 
             <button

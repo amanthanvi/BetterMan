@@ -51,7 +51,7 @@
   --color-edge-strong: light-dark(#cfc8bc, #3a3a42);
   --color-fg: light-dark(#1c1a17, #ededf0);
   --color-muted: light-dark(#6f695f, #9b9ba3);
-  --color-faint: light-dark(#96907f, #6e6e76);
+  --color-faint: light-dark(#767061, #85858d);
   --color-accent: light-dark(#c22126, #e5484d);
   --color-accent-hover: light-dark(#a91d21, #f2555a);
   --color-accent-subtle: color-mix(in oklab, var(--color-accent) 12%, transparent);
