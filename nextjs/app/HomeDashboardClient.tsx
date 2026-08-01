@@ -38,10 +38,7 @@ function ManLink({ distro, name, section, children }: { distro: Distro; name: st
   }, [distro, name, section])
 
   return (
-    <Link
-      href={href}
-      className="min-w-0 flex-1 rounded-md px-3 py-2 transition-colors hover:bg-raised hover:no-underline"
-    >
+    <Link href={href} className="group min-w-0 flex-1 py-2.5 transition-colors hover:no-underline">
       {children}
     </Link>
   )
@@ -62,14 +59,14 @@ function EntryRow({
 }) {
   return (
     <ManLink distro={distro} name={name} section={section}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-mono text-sm font-semibold text-fg">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <span className="shrink-0 font-mono text-sm font-semibold text-fg group-hover:text-accent">
             {name}({section})
-          </div>
-          {description ? <div className="mt-0.5 truncate text-sm text-muted">{description}</div> : null}
+          </span>
+          {description ? <span className="min-w-0 truncate text-sm text-muted">{description}</span> : null}
         </div>
-        <div className="shrink-0 pt-0.5 font-mono text-xs text-faint">{formatRelativeFromMs(timestamp)}</div>
+        <span className="shrink-0 font-mono text-xs text-faint">{formatRelativeFromMs(timestamp)}</span>
       </div>
     </ManLink>
   )
@@ -107,49 +104,53 @@ export function HomeDashboardClient({
   }, [])
 
   return (
-    <div className="mt-12 grid gap-10">
+    <div className="mt-10 grid gap-10">
       <section id="recent" aria-label="Recent">
-        <h2 className="font-mono text-xs tracking-wide text-muted">Recent</h2>
+        <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">RECENT</h2>
 
-        {recentPages.length ? (
-          <div className="mt-3 overflow-hidden rounded-lg border border-edge bg-surface">
-            {recentPages.map((it) => (
-              <div key={`${it.name}:${it.section}:${it.at}`} className="flex items-stretch border-b border-edge last:border-b-0">
-                <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="No recent pages" className="mt-3">
-            Pages you read show up here. Try searching for <span className="font-mono text-fg">tar</span>.
-          </EmptyState>
-        )}
+        <div className="pl-6 sm:pl-8">
+          {recentPages.length ? (
+            <div className="mt-2">
+              {recentPages.map((it) => (
+                <div key={`${it.name}:${it.section}:${it.at}`} className="flex items-stretch border-b border-edge last:border-b-0">
+                  <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="No recent pages" className="mt-2">
+              Pages you read show up here. Try searching for <span className="font-mono text-fg">tar</span>.
+            </EmptyState>
+          )}
+        </div>
       </section>
 
       <section id="bookmarks" aria-label="Bookmarks">
-        <h2 className="font-mono text-xs tracking-wide text-muted">Bookmarks</h2>
+        <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">BOOKMARKS</h2>
 
-        {bookmarks.length ? (
-          <div className="mt-3 overflow-hidden rounded-lg border border-edge bg-surface">
-            {bookmarks.map((it) => (
-              <div key={`${it.name}:${it.section}:${it.addedAt}`} className="group flex items-stretch border-b border-edge last:border-b-0">
-                <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
-                <button
-                  type="button"
-                  className="hidden shrink-0 items-center justify-center px-3 text-xs text-muted opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 sm:flex"
-                  onClick={() => removeBookmark({ name: it.name, section: it.section })}
-                  aria-label={`Remove bookmark for ${it.name}(${it.section})`}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="No bookmarks yet" className="mt-3">
-            Press <Kbd>M</Kbd> on any man page to pin it here.
-          </EmptyState>
-        )}
+        <div className="pl-6 sm:pl-8">
+          {bookmarks.length ? (
+            <div className="mt-2">
+              {bookmarks.map((it) => (
+                <div key={`${it.name}:${it.section}:${it.addedAt}`} className="group/row flex items-stretch border-b border-edge last:border-b-0">
+                  <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
+                  <button
+                    type="button"
+                    className="hidden shrink-0 items-center justify-center px-3 text-xs text-muted opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 sm:flex"
+                    onClick={() => removeBookmark({ name: it.name, section: it.section })}
+                    aria-label={`Remove bookmark for ${it.name}(${it.section})`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="No bookmarks yet" className="mt-2">
+              Press <Kbd>M</Kbd> on any man page to pin it here.
+            </EmptyState>
+          )}
+        </div>
       </section>
     </div>
   )
