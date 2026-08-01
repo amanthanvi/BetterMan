@@ -20,9 +20,9 @@ function MobileBottomNavItem({
   return (
     <Link
       href={href}
-      className={`relative flex min-h-11 flex-col items-center justify-center gap-1 rounded-md px-3 py-2 font-mono text-xs ${
+      className={`relative flex min-h-11 flex-col items-center justify-center gap-1 px-3 py-2 font-mono text-xs ${
         active
-          ? 'font-semibold text-fg before:absolute before:top-0 before:left-1/2 before:h-0.5 before:w-6 before:-translate-x-1/2 before:rounded-sm before:bg-accent'
+          ? 'font-semibold text-fg before:absolute before:top-0 before:left-1/2 before:h-0.5 before:w-6 before:-translate-x-1/2 before:bg-accent'
           : 'text-muted hover:text-fg'
       }`}
       aria-current={active ? 'page' : undefined}

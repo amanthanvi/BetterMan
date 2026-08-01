@@ -302,7 +302,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh bg-bg text-fg">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:border focus:border-edge-strong focus:bg-raised focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-fg"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-edge-strong focus:bg-raised focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-fg"
       >
         Skip to content
       </a>
@@ -317,16 +317,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {themeAnnouncement}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-4">
             <button
               type="button"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-edge bg-surface text-muted transition-colors hover:border-edge-strong hover:text-fg md:h-9 md:w-[min(24rem,38vw)] md:justify-start md:gap-2 md:px-3 md:text-sm"
+              className="group inline-flex h-9 items-center justify-center gap-2 px-1 text-muted transition-colors hover:text-fg"
               onClick={() => setPaletteOpen(true)}
               aria-label="Search"
               title="Command palette (Ctrl/⌘ K)"
             >
               <SearchIcon className="size-4" />
-              <span className="hidden flex-1 text-left font-mono md:inline">Search manuals…</span>
+              <span className="hidden font-mono text-sm group-hover:underline group-hover:underline-offset-4 md:inline">
+                search
+              </span>
               <span className="hidden md:inline-flex">
                 <Kbd>⌘K</Kbd>
               </span>
@@ -334,7 +336,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <button
               type="button"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-edge bg-surface text-muted transition-colors hover:border-edge-strong hover:text-fg"
+              className="inline-flex size-9 items-center justify-center text-muted transition-colors hover:text-fg"
               onClick={() => theme.cycle()}
               title="Cycle theme"
               aria-label="Cycle theme"
