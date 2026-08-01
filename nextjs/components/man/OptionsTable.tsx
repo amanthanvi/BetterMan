@@ -21,17 +21,15 @@ export function OptionsTable({
   onSelect?: (opt: OptionItem) => void
 }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-edge bg-surface">
+    <div className="overflow-x-auto">
       <table className="w-full border-collapse text-left text-sm" aria-label="Command-line options">
         <tbody>
           {options.map((opt) => {
             const selected = selectedAnchorId === opt.anchorId
             const flashing = flashAnchorId === opt.anchorId
             const flagParts = splitFlags(opt.flags)
-            const badgeClass = `inline-flex items-center rounded-sm border px-2 py-1 font-mono text-xs transition-colors ${
-              selected
-                ? 'border-accent-edge bg-accent-subtle text-fg'
-                : 'border-edge bg-raised text-fg hover:border-edge-strong'
+            const flagClass = `font-mono text-sm font-semibold transition-colors group-hover:text-accent ${
+              selected ? 'text-accent underline decoration-2 underline-offset-4' : 'text-fg'
             }`
 
             return (
@@ -39,26 +37,22 @@ export function OptionsTable({
                 key={opt.anchorId}
                 className={`border-b border-edge last:border-b-0 ${flashing ? 'bm-option-flash' : ''}`}
               >
-                <td className="w-[28ch] px-3 py-2 align-top">
+                <td className="w-[28ch] py-2.5 pl-0 pr-4 align-top">
                   <a
                     href={`#${opt.anchorId}`}
                     id={opt.anchorId}
-                    className="scroll-mt-24 inline-flex flex-wrap gap-2 no-underline"
+                    className="group scroll-mt-24 inline-flex flex-wrap gap-x-3 gap-y-1 no-underline"
                     onClick={() => onSelect?.(opt)}
                   >
                     {flagParts.map((flag) => (
-                      <span key={flag} className={badgeClass}>
+                      <span key={flag} className={flagClass}>
                         {flag}
                       </span>
                     ))}
-                    {opt.argument ? (
-                      <span className="inline-flex items-center rounded-sm border border-edge bg-raised px-2 py-1 font-mono text-xs text-muted">
-                        {opt.argument}
-                      </span>
-                    ) : null}
+                    {opt.argument ? <span className="font-mono text-sm italic text-muted">{opt.argument}</span> : null}
                   </a>
                 </td>
-                <td className="px-3 py-2 text-muted">{opt.description}</td>
+                <td className="py-2.5 pl-0 pr-4 text-muted">{opt.description}</td>
               </tr>
             )
           })}

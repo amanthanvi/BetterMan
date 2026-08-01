@@ -8,6 +8,7 @@ import type { ManPage, ManPageVariant } from '../../lib/docModel'
 import { BookmarkButton } from '../bookmarks/BookmarkButton'
 import { CheckIcon, CopyIcon, ListIcon, SearchIcon, SlidersIcon } from '../icons'
 import { IconButton } from '../ui/IconButton'
+import { ManSectionLabel, RunningHead, sectionLabel } from './RunningHead'
 
 function buildVariantPicker(variants: ManPageVariant[]): { ordered: ManPageVariant[] } | null {
   const list = Array.isArray(variants) ? variants : []
@@ -50,7 +51,9 @@ export function ManPageHeaderCard({
 
   return (
     <header>
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+      <RunningHead title={`${page.name.toUpperCase()}(${page.section})`} label={sectionLabel(page.section)} />
+
+      <div className="mt-8 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
           <h1 className="break-words font-mono text-2xl font-semibold leading-tight tracking-tight">
             {page.name}
@@ -113,7 +116,7 @@ export function ManPageHeaderCard({
                 const base = qs ? `${pathname}?${qs}` : pathname
                 router.push(`${base}${window.location.hash || ''}`)
               }}
-              className="rounded-sm border border-edge bg-surface px-1.5 py-0.5 text-xs text-fg"
+              className="border-0 border-b border-edge bg-transparent px-0.5 py-0.5 text-xs text-fg"
               aria-label="Select distribution variant"
             >
               {variantPicker.ordered.map((v) => {
@@ -142,12 +145,9 @@ export function ManPageHeaderCard({
       </div>
 
       {synopsis?.length ? (
-        <div className="mt-6">
-          <div className="font-mono text-xs tracking-wide text-muted">Synopsis</div>
-          <pre
-            className="mt-2 overflow-x-auto rounded-md border border-edge bg-code-bg p-4 text-sm leading-[1.6] text-fg"
-            tabIndex={0}
-          >
+        <div className="mt-8">
+          <ManSectionLabel>SYNOPSIS</ManSectionLabel>
+          <pre className="mt-2 overflow-x-auto bg-code-bg p-4 text-sm leading-[1.6] text-fg" tabIndex={0}>
             <code>{synopsis.join('\n')}</code>
           </pre>
         </div>

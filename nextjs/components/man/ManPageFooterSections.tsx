@@ -23,7 +23,7 @@ export function ManPageFooterSections({
     <>
       {seeAlsoItems.length ? (
         <aside className="mt-12 border-t border-edge pt-6" aria-label="See also">
-          <h2 className="font-mono text-xs tracking-wide text-muted">See also</h2>
+          <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">SEE ALSO</h2>
           <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
             {seeAlsoItems.map((ref) => {
               const key = `${ref.name}:${ref.section ?? ''}`
@@ -57,16 +57,16 @@ export function ManPageFooterSections({
       ) : null}
 
       {related.length ? (
-        <aside className="mt-10" aria-label="Related commands">
-          <h2 className="font-mono text-xs tracking-wide text-muted">Related</h2>
+        <aside className="mt-10 border-t border-edge pt-6" aria-label="Related commands">
+          <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">RELATED</h2>
           <ul className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
             {related.map((item) => (
               <li key={`${item.name}:${item.section}`}>
                 <Link
                   href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, distro)}
-                  className="group flex items-baseline gap-3 rounded-md px-2 py-1.5 -mx-2 transition-colors hover:bg-raised hover:no-underline"
+                  className="group flex items-baseline gap-3 py-1.5 transition-colors hover:no-underline"
                 >
-                  <span className="shrink-0 font-mono text-sm text-accent">
+                  <span className="shrink-0 font-mono text-sm text-accent group-hover:underline group-hover:underline-offset-4">
                     {item.name}({item.section})
                   </span>
                   <span className="min-w-0 truncate text-sm text-muted">{item.description}</span>

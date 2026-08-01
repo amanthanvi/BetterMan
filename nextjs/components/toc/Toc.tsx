@@ -65,10 +65,8 @@ export function Toc({
 
                   onNavigate?.()
                 }}
-                className={`block border-l-2 py-1.5 pr-2 no-underline transition-colors ${indent} ${
-                  active
-                    ? 'border-accent font-medium text-fg'
-                    : 'border-transparent text-muted hover:border-edge-strong hover:text-fg'
+                className={`block py-1 pr-2 no-underline transition-colors ${indent} ${
+                  active ? 'font-medium text-fg' : 'text-muted hover:text-fg'
                 }`}
               >
                 <span className="block truncate">{item.title.length > 52 ? `${item.title.slice(0, 52)}…` : item.title}</span>

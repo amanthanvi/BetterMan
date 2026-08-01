@@ -241,7 +241,7 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
       const base = 'scroll-mt-32 pt-8 first:pt-0 text-fg'
       const headingClass =
         level === 2
-          ? 'font-mono text-base font-semibold tracking-[0.04em] leading-[1.2]'
+          ? 'font-mono text-lg font-semibold tracking-[0.04em] leading-[1.2]'
           : level === 3
             ? 'font-mono text-sm font-semibold tracking-[0.02em] leading-[1.2]'
             : level === 4
@@ -287,14 +287,16 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
     }
 
     case 'definition_list':
+      /* troff .TP: term in a fixed left column, definition flowing beside it;
+         stacked with an indent on narrow screens. */
       return (
         <dl className="space-y-3">
           {block.items.map((item, idx) => (
-            <div key={item.id ?? idx}>
-              <dt id={item.id ?? undefined} className="scroll-mt-32 font-mono text-sm font-semibold text-fg">
+            <div key={item.id ?? idx} className="grid gap-x-6 sm:grid-cols-[minmax(8ch,28ch)_minmax(0,1fr)]">
+              <dt id={item.id ?? undefined} className="scroll-mt-32 break-words font-mono text-sm font-semibold text-fg">
                 {renderInlines(item.termInlines, ctx, distro)}
               </dt>
-              <dd className="mt-1.5 space-y-2 pl-4 text-fg">
+              <dd className="mt-1.5 min-w-0 space-y-2 pl-4 text-fg sm:mt-0 sm:pl-0">
                 {item.definitionBlocks.map((child, childIdx) => (
                   <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} distro={distro} />
                 ))}
@@ -317,12 +319,12 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
 
     case 'table':
       return (
-        <div className="overflow-x-auto rounded-md border border-edge bg-surface">
+        <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left text-fg">
             <thead className="text-muted">
               <tr>
                 {block.headers.map((h, idx) => (
-                  <th key={idx} className="border-b border-edge px-3 py-2 font-mono text-xs font-medium tracking-wide">
+                  <th key={idx} className="border-b border-edge-strong pb-2 pl-0 pr-4 font-mono text-xs font-medium tracking-wide">
                     {highlightText(h, ctx)}
                   </th>
                 ))}
@@ -332,7 +334,7 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
               {block.rows.map((row, rowIdx) => (
                 <tr key={rowIdx} className="border-b border-edge last:border-b-0">
                   {row.map((cell, cellIdx) => (
-                    <td key={cellIdx} className="px-3 py-2 text-sm">
+                    <td key={cellIdx} className="py-2 pl-0 pr-4 text-sm">
                       {highlightText(cell, ctx)}
                     </td>
                   ))}
@@ -354,8 +356,9 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
       case 'text':
         return <span key={idx}>{highlightText(inline.text, ctx)}</span>
       case 'code':
+        /* Bold mono is the troff convention for "type this literally" — no pill. */
         return (
-          <code key={idx} className="rounded-sm border border-edge bg-raised px-1.5 py-0.5 font-mono text-[0.95em] text-fg">
+          <code key={idx} className="font-mono text-[0.95em] font-semibold text-fg">
             {highlightText(inline.text, ctx)}
           </code>
         )

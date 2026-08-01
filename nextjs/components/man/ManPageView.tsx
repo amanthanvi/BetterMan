@@ -235,7 +235,7 @@ export function ManPageView({
                 {desktopSidebarExpanded ? (
                   <>
                     <div className="flex items-center justify-between gap-3">
-                      <div className="font-mono text-xs tracking-wide text-muted">Contents</div>
+                      <div className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">CONTENTS</div>
                       <IconButton
                         variant="ghost"
                         size="sm"

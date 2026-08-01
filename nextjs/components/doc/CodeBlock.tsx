@@ -107,23 +107,18 @@ export function CodeBlock({
     }
   }
 
-  const languageLabel = language
-
   return (
     <div id={id ?? undefined} className="scroll-mt-32">
-      <div className="-mx-4 overflow-hidden rounded-none border border-edge bg-code-bg sm:mx-0 sm:rounded-md">
-        <div className="flex items-center justify-between gap-3 border-b border-edge px-3 py-1.5">
-          <div className="min-w-0 truncate font-mono text-xs tracking-wide text-muted">{languageLabel}</div>
-          <button
-            type="button"
-            className="inline-flex size-8 items-center justify-center rounded-sm border border-transparent text-muted transition-colors hover:border-edge hover:text-fg"
-            onClick={copy}
-            aria-label="Copy code block"
-            title={copied ? 'Copied' : 'Copy'}
-          >
-            {copied ? <CheckIcon /> : <CopyIcon />}
-          </button>
-        </div>
+      <div className="group relative -mx-4 bg-code-bg sm:mx-0">
+        <button
+          type="button"
+          className="absolute right-1.5 top-1.5 inline-flex size-8 items-center justify-center text-muted opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+          onClick={copy}
+          aria-label="Copy code block"
+          title={copied ? 'Copied' : 'Copy'}
+        >
+          {copied ? <CheckIcon /> : <CopyIcon />}
+        </button>
 
         <pre className="overflow-x-auto p-4 text-sm leading-[1.6]" tabIndex={0}>
           <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />

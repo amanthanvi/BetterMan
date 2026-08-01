@@ -37,23 +37,21 @@ export function ManPageOptionsSection({
   return (
     <>
       {optionTerms.length ? (
-        <div className="mb-8 rounded-md border border-edge bg-surface p-4 text-sm text-muted">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <span className="font-mono text-xs tracking-wide">Highlighting</span>{' '}
-              <span className="font-mono text-sm text-fg">{optionTerms.join(' ')}</span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={onClearHighlight}>
-              Clear
-            </Button>
+        <div className="mb-8 flex flex-wrap items-baseline justify-between gap-3 border-b border-edge pb-2 text-sm text-muted">
+          <div className="min-w-0">
+            <span className="font-mono text-xs tracking-wide">Highlighting</span>{' '}
+            <span className="font-mono text-sm text-fg">{optionTerms.join(' ')}</span>
           </div>
+          <Button variant="ghost" size="sm" onClick={onClearHighlight}>
+            Clear
+          </Button>
         </div>
       ) : null}
 
       {hasOptions ? (
         <section className="mb-10" aria-label="Options">
-          <div className="font-mono text-xs tracking-wide text-muted">
-            Options <span className="text-faint">· {optionsCount}</span>
+          <div className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">
+            OPTIONS <span className="font-normal text-faint">· {optionsCount}</span>
           </div>
 
           <div className="mt-3">

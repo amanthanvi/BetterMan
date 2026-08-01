@@ -91,7 +91,7 @@ export function ManPageFindBar({
   return (
     <div
       data-bm-findbar
-      className="bm-rise-in fixed inset-x-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 rounded-lg border border-edge bg-raised p-2 shadow-lg shadow-black/20 sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-[4.25rem] sm:w-[24rem]"
+      className="bm-rise-in fixed inset-x-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 border border-edge bg-raised p-2 shadow-lg shadow-black/20 sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-[4.25rem] sm:w-[24rem]"
       onKeyDown={(e) => {
         if (e.key !== 'Escape') return
         e.preventDefault()
@@ -106,7 +106,7 @@ export function ManPageFindBar({
           onChange={(e) => onFindChange(e.target.value)}
           onKeyDown={onFindKeyDown}
           placeholder="Find in page…"
-          className="h-9 min-w-0 flex-1 rounded-md border border-edge bg-surface px-3 font-mono text-sm text-fg placeholder:text-muted"
+          className="h-9 min-w-0 flex-1 border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg placeholder:text-muted"
           aria-label="Find in page"
         />
 
