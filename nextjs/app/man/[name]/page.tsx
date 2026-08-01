@@ -128,7 +128,7 @@ export default async function ManByNamePage({
           {result.options.map((opt) => (
             <li
               key={opt.section}
-              className="rounded-md border border-edge bg-surface p-4 "
+              className="border-b border-edge py-4 "
             >
               <Link
                 href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, distro)}

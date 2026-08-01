@@ -20,7 +20,7 @@ export default function GlobalError({
     <html lang="en">
       <body className="min-h-dvh bg-bg text-fg">
         <div className="mx-auto max-w-3xl px-6 py-16">
-          <div className="rounded-md border border-edge bg-raised p-6">
+          <div className="mt-8 sm:mt-16">
             <div className="font-mono text-xs tracking-wide text-muted">Error</div>
             <h1 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-fg">
               Something went wrong
@@ -32,14 +32,14 @@ export default function GlobalError({
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
-                className="h-10 rounded-md border border-accent-edge bg-surface px-4 font-mono text-sm font-semibold text-accent hover:bg-raised"
+                className="h-10 bg-accent px-4 font-mono text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-hover"
                 onClick={() => reset()}
               >
                 Retry
               </button>
               <Link
                 href="/"
-                className="inline-flex h-10 items-center justify-center rounded-md border border-edge bg-surface px-4 font-mono text-sm font-semibold text-fg hover:bg-raised"
+                className="inline-flex h-10 items-center justify-center px-1 font-mono text-sm font-semibold text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
               >
                 Go home
               </Link>

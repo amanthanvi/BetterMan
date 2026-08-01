@@ -57,10 +57,10 @@ function PaginationControl({
   disabled: boolean
   children: React.ReactNode
 }) {
-  const className = `rounded-md border px-3 py-2 text-xs font-medium transition-colors hover:no-underline ${
+  const className = `px-1 py-2 font-mono text-xs font-medium transition-colors ${
     disabled
-      ? 'border-edge bg-surface text-muted opacity-50'
-      : 'border-edge bg-surface text-fg hover:border-edge-strong hover:bg-raised'
+      ? 'text-faint'
+      : 'text-fg underline decoration-edge-strong underline-offset-4 hover:decoration-accent'
   }`
 
   if (disabled) {
@@ -134,12 +134,12 @@ export default async function SectionPage({
             <input
               name="q"
               placeholder="Search within section…"
-              className="h-10 min-w-[16rem] flex-1 rounded-md border border-edge bg-surface px-3 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
+              className="h-10 min-w-[16rem] flex-1 border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
               aria-label="Search within section"
             />
             <button
               type="submit"
-              className="h-10 rounded-md border border-edge bg-surface px-4 text-sm font-medium text-fg transition-colors hover:border-edge-strong hover:bg-raised"
+              className="h-10 px-1 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
             >
               Search
             </button>
@@ -148,12 +148,12 @@ export default async function SectionPage({
       </header>
 
       {groups.length > 3 ? (
-        <nav aria-label="Jump to letter" className="mt-6 flex flex-wrap gap-1.5">
+        <nav aria-label="Jump to letter" className="mt-6 flex flex-wrap gap-x-2 gap-y-1">
           {groups.map((group) => (
             <a
               key={group.key}
               href={`#${groupAnchorId(group.key)}`}
-              className="inline-flex size-7 items-center justify-center rounded-sm border border-edge bg-surface font-mono text-xs text-muted transition-colors hover:border-edge-strong hover:text-fg hover:no-underline"
+              className="px-1 py-1 font-mono text-sm text-muted transition-colors hover:text-fg hover:underline hover:underline-offset-4"
             >
               {group.key}
             </a>
@@ -175,10 +175,10 @@ export default async function SectionPage({
                 <li key={`${r.name}:${r.section}`} className="border-b border-edge last:border-b-0">
                   <Link
                     href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, distro)}
-                    className="block px-1 py-3 transition-colors hover:bg-raised hover:no-underline sm:px-2"
+                    className="group block px-1 py-3 transition-colors hover:no-underline sm:px-2"
                   >
                     <div className="flex items-baseline gap-3">
-                      <span className="shrink-0 font-mono text-sm font-semibold leading-tight text-accent">
+                      <span className="shrink-0 font-mono text-sm font-semibold leading-tight text-accent group-hover:underline group-hover:underline-offset-4">
                         {r.name}({r.section})
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm leading-snug text-muted">{r.description}</span>

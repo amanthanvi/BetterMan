@@ -14,13 +14,13 @@ export default function NotFound() {
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/"
-            className="inline-flex h-9 items-center justify-center rounded-md border border-edge bg-surface px-3 text-sm font-medium text-fg transition-colors hover:border-edge-strong hover:bg-raised hover:no-underline"
+            className="inline-flex h-9 items-center justify-center px-1 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
           >
             Go home
           </Link>
           <Link
             href="/search"
-            className="inline-flex h-9 items-center justify-center rounded-md border border-edge bg-surface px-3 text-sm font-medium text-fg transition-colors hover:border-edge-strong hover:bg-raised hover:no-underline"
+            className="inline-flex h-9 items-center justify-center px-1 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
           >
             Search
           </Link>

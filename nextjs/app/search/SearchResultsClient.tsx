@@ -105,7 +105,7 @@ function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResu
         <div className="text-sm text-muted">{highlight(r.description, q)}</div>
 
         {synopsis ? (
-          <pre className="mt-1 whitespace-pre-wrap break-words rounded-md border border-edge bg-code-bg p-3 font-mono text-xs leading-[1.6] text-fg">
+          <pre className="mt-1 whitespace-pre-wrap break-words bg-code-bg p-3 font-mono text-xs leading-[1.6] text-fg">
             <code>{highlight(synopsis, q)}</code>
           </pre>
         ) : null}
@@ -185,7 +185,7 @@ export function SearchResultsClient({
 
   if (!q) {
     return (
-      <div className="mt-8 rounded-lg border border-edge bg-surface p-4 text-sm text-muted">
+      <div className="mt-8 text-sm text-muted">
         Try:{' '}
         <Link
           href={withDistro(`/search?q=${encodeURIComponent('tar')}`, distro)}
@@ -216,7 +216,7 @@ export function SearchResultsClient({
 
   if (!results.length) {
     return (
-      <div className="mt-8 rounded-lg border border-edge bg-surface p-4 text-sm text-muted">
+      <div className="mt-8 text-sm text-muted">
         No results for <span className="font-mono text-fg">{q}</span>.
         {suggestions.length ? (
           <div className="mt-3">
@@ -269,7 +269,7 @@ export function SearchResultsClient({
         <div className="text-xs text-muted">{results.length.toLocaleString()} results loaded</div>
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-md border border-edge bg-surface px-4 py-2 text-sm font-medium text-fg transition-colors hover:border-edge-strong hover:bg-raised disabled:pointer-events-none disabled:opacity-50"
+          className="inline-flex items-center justify-center px-1 py-2 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent disabled:pointer-events-none disabled:no-underline disabled:opacity-50"
           onClick={onLoadMore}
           disabled={!canLoadMore || loading}
           aria-label="Load more results"

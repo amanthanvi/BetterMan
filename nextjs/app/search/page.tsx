@@ -81,13 +81,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
         </form>
 
-        <nav aria-label="Section filter" className="mt-4 flex flex-wrap gap-2">
+        <nav aria-label="Section filter" className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
           <Link
             href={buildSearchHref({ q, section: '', distro })}
-            className={`rounded-sm border px-3 py-1 font-mono text-xs transition-colors hover:no-underline ${
+            className={`px-0.5 py-1 font-mono text-xs transition-colors ${
               !section
-                ? 'border-accent-edge bg-accent-subtle text-fg'
-                : 'border-edge bg-surface text-muted hover:border-edge-strong hover:text-fg'
+                ? 'font-semibold text-fg underline decoration-accent decoration-2 underline-offset-4 hover:no-underline'
+                : 'text-muted hover:text-fg hover:underline hover:underline-offset-4'
             }`}
           >
             All
@@ -96,10 +96,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             <Link
               key={s.section}
               href={buildSearchHref({ q, section: s.section, distro })}
-              className={`rounded-sm border px-3 py-1 font-mono text-xs transition-colors hover:no-underline ${
+              className={`px-0.5 py-1 font-mono text-xs transition-colors ${
                 section === s.section
-                  ? 'border-accent-edge bg-accent-subtle text-fg'
-                  : 'border-edge bg-surface text-muted hover:border-edge-strong hover:text-fg'
+                  ? 'font-semibold text-fg underline decoration-accent decoration-2 underline-offset-4 hover:no-underline'
+                  : 'text-muted hover:text-fg hover:underline hover:underline-offset-4'
               }`}
               title={s.label}
               aria-label={`Section ${s.section}: ${s.label}`}

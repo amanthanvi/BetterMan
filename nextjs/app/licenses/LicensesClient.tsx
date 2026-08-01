@@ -70,7 +70,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
           <summary className="cursor-pointer font-mono text-sm font-semibold text-fg">
             Package manifest
           </summary>
-          <pre className="mt-3 overflow-x-auto rounded-md border border-edge bg-code-bg p-4 font-mono text-xs leading-relaxed text-muted">
+          <pre className="mt-3 overflow-x-auto bg-code-bg p-4 font-mono text-xs leading-relaxed text-muted">
             {JSON.stringify(data.packageManifest, null, 2)}
           </pre>
         </details>
@@ -83,11 +83,11 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter packages…"
-            className="h-10 w-full rounded-md border border-edge bg-bg px-3 font-mono text-sm text-fg placeholder:text-muted"
+            className="h-10 w-full border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
             aria-label="Filter packages"
           />
 
-          <div className="overflow-hidden rounded-md border border-edge bg-surface">
+          <div className="border-t border-edge">
             <ul className="max-h-[70vh] overflow-y-auto">
               {packages.map((p) => {
                 const isSelected = p.name === selected
@@ -95,14 +95,17 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                   <li key={p.name} className="border-b border-edge last:border-b-0">
                     <button
                       type="button"
-                      className={`w-full px-3 py-2 text-left ${p.hasLicenseText ? '' : 'opacity-50'} ${
-                        isSelected ? 'bg-accent-subtle' : 'hover:bg-raised'
-                      }`}
+                      className={`w-full px-1 py-2 text-left transition-colors ${p.hasLicenseText ? '' : 'opacity-50'}`}
+                      aria-pressed={isSelected}
                       onClick={() => setSelected(p.hasLicenseText ? p.name : null)}
                       disabled={!p.hasLicenseText}
                     >
                       <div className="flex items-baseline justify-between gap-3">
-                        <div className="min-w-0 truncate font-mono text-sm font-semibold text-fg">
+                        <div
+                          className={`min-w-0 truncate font-mono text-sm font-semibold ${
+                            isSelected ? 'text-accent' : 'text-fg'
+                          }`}
+                        >
                           {p.name}
                         </div>
                         <div className="shrink-0 font-mono text-xs text-muted">{p.version}</div>
@@ -117,13 +120,13 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
 
         <section className="min-h-[18rem]">
           {!selected ? (
-            <div className="rounded-md border border-edge bg-surface p-4 text-sm text-muted">
+            <div className="py-2 text-sm text-muted">
               Select a package to view its license text.
             </div>
           ) : loading ? (
             <div className="font-mono text-sm text-muted">Loading license text…</div>
           ) : error ? (
-            <div className="rounded-md border border-edge bg-surface p-4 text-sm text-muted">
+            <div className="py-2 text-sm text-muted">
               {error}
             </div>
           ) : license ? (
@@ -132,12 +135,12 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                 <h2 className="font-mono text-sm font-semibold text-fg">{license.package}</h2>
                 <div className="font-mono text-xs text-muted">{license.licenseId}</div>
               </div>
-              <pre className="mt-3 max-h-[70vh] overflow-auto rounded-md border border-edge bg-code-bg p-4 font-mono text-xs leading-relaxed text-muted">
+              <pre className="mt-3 max-h-[70vh] overflow-auto bg-code-bg p-4 font-mono text-xs leading-relaxed text-muted">
                 {license.text}
               </pre>
             </div>
           ) : (
-            <div className="rounded-md border border-edge bg-surface p-4 text-sm text-muted">
+            <div className="py-2 text-sm text-muted">
               No license text.
             </div>
           )}

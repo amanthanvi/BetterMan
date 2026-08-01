@@ -48,7 +48,7 @@ export function SearchPageInput({
       data-bm-page-search
       autoComplete="off"
       autoFocus={!initialQ}
-      className="h-12 w-full rounded-md border border-edge bg-surface px-4 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
+      className="h-12 w-full border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
       aria-label="Search man pages"
     />
   )
