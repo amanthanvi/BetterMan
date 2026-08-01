@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 
 import type { SearchResponse, SearchResult } from '../../lib/api'
@@ -14,6 +15,7 @@ import { isTypingTarget } from '../../lib/dom'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
+import { Kbd } from '../ui/Kbd'
 
 type PaletteMode = 'search' | 'actions' | 'headings'
 
@@ -169,8 +171,6 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const resultsRef = useRef<HTMLDivElement | null>(null)
-  const previewRef = useRef<HTMLDivElement | null>(null)
 
   const [input, setInput] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -350,27 +350,6 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         return
       }
 
-      if (e.key === 'Tab') {
-        const canPreview = window.matchMedia('(min-width: 640px)').matches && Boolean(previewRef.current)
-        if (canPreview) {
-          const activeEl = document.activeElement
-
-          if (e.shiftKey) {
-            if (activeEl === previewRef.current) {
-              e.preventDefault()
-              inputRef.current?.focus()
-            }
-            return
-          }
-
-          if (activeEl === inputRef.current || activeEl === resultsRef.current) {
-            e.preventDefault()
-            previewRef.current?.focus()
-            return
-          }
-        }
-      }
-
       if (isTypingTarget(document.activeElement) && document.activeElement !== inputRef.current) return
 
       if (e.key === 'ArrowDown') {
@@ -398,80 +377,22 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   if (!open) return null
 
-  const renderPreview = (item: PaletteItem | undefined) => {
-    if (!item) {
-      return <div className="text-[13px] text-[color:var(--bm-muted)]">No selection.</div>
-    }
+  const modeHint = parsed.mode === 'actions' ? 'Actions' : parsed.mode === 'headings' ? 'Headings' : null
 
-    if (item.kind === 'page') {
-      const snippet = item.highlights?.filter(Boolean).slice(0, 2).join('\n').trim()
-
-      return (
-        <div className="space-y-3">
-          <div>
-            <div className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{itemLabel(item)}</div>
-            {item.title ? <div className="mt-1 text-[11px] text-[color:var(--bm-muted)]">{item.title}</div> : null}
-            <div className="mt-2 text-[13px] leading-snug text-[color:var(--bm-muted)]">{item.description}</div>
-          </div>
-
-          {snippet ? (
-            <pre className="overflow-x-auto rounded-md border border-[var(--bm-border)] bg-code-bg p-3 font-mono text-[11px] leading-relaxed text-fg" tabIndex={0}>
-              {snippet}
-            </pre>
-          ) : (
-            <div className="text-[11px] text-[color:var(--bm-muted)]">Press Enter to view details.</div>
-          )}
-
-          {item.distro && item.distro !== 'debian' ? (
-            <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">@{item.distro}</div>
-          ) : null}
-        </div>
-      )
-    }
-
-    if (item.kind === 'search') {
-      return (
-        <div className="space-y-2">
-          <div className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{itemLabel(item)}</div>
-          {item.distro && item.distro !== 'debian' ? <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">@{item.distro}</div> : null}
-          <div className="text-[11px] text-[color:var(--bm-muted)]">Press Enter to search.</div>
-        </div>
-      )
-    }
-
-    if (item.kind === 'heading') {
-      return (
-        <div className="space-y-2">
-          <div className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{item.title}</div>
-          <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">Level {item.level}</div>
-          <div className="text-[11px] text-[color:var(--bm-muted)]">Press Enter to jump.</div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="space-y-2">
-        <div className="font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">{item.label}</div>
-        {item.detail ? <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">{item.detail}</div> : null}
-        <div className="text-[11px] text-[color:var(--bm-muted)]">Press Enter to run.</div>
-      </div>
-    )
-  }
-
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
-      className="fixed inset-0 z-50 flex items-end justify-center pb-[env(safe-area-inset-bottom)] sm:items-center sm:pb-0"
+      className="fixed inset-0 z-50 flex items-end justify-center pb-[env(safe-area-inset-bottom)] sm:items-start sm:pt-[16vh] sm:pb-0"
     >
       <div className="absolute inset-0 bg-scrim" onClick={() => close()} />
       <div
         ref={dialogRef}
-        className="relative w-full overflow-hidden rounded-t-[var(--bm-radius-lg)] border border-[var(--bm-border-accent)] bg-[var(--bm-surface-2)] sm:w-[min(94vw,56rem)] sm:rounded-[var(--bm-radius-lg)]"
+        className="relative flex w-full max-h-[70vh] flex-col overflow-hidden rounded-t-lg border border-edge bg-raised shadow-lg shadow-black/25 sm:max-h-[60vh] sm:w-[min(94vw,40rem)] sm:rounded-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-[var(--bm-border)] p-3">
+        <div className="border-b border-edge p-3">
           <div aria-live="polite" className="sr-only">
             {searchState.status === 'loading'
               ? 'Searching'
@@ -481,95 +402,92 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   : 'No matches'
                 : ''}
           </div>
-          <input
-            ref={inputRef}
-            name="bm-palette"
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-              setActiveIndex(0)
-            }}
-            placeholder="Search… (use > for actions, # for headings, @distro)"
-            className="h-10 w-full rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] outline-none placeholder:text-[color:var(--bm-muted)]"
-            aria-label="Command palette input"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded={true}
-            aria-controls="bm-palette-list"
-            aria-activedescendant={items.length ? `bm-palette-option-${safeActiveIndex}` : undefined}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              ref={inputRef}
+              name="bm-palette"
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value)
+                setActiveIndex(0)
+              }}
+              placeholder="Search man pages…"
+              className="h-10 w-full min-w-0 flex-1 rounded-md border border-edge bg-bg px-3 font-mono text-sm text-fg outline-none placeholder:text-muted"
+              aria-label="Command palette input"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={true}
+              aria-controls="bm-palette-list"
+              aria-activedescendant={items.length ? `bm-palette-option-${safeActiveIndex}` : undefined}
+            />
+            {modeHint ? (
+              <span className="shrink-0 rounded-sm border border-accent-edge bg-accent-subtle px-2 py-1 font-mono text-xs text-fg">
+                {modeHint}
+              </span>
+            ) : null}
+          </div>
         </div>
 
-        <div className="flex max-h-[60vh]">
-          <div className="w-full border-r border-[var(--bm-border)] sm:w-[60%]">
-            <div
-              ref={resultsRef}
-              className="max-h-[60vh] overflow-y-auto p-2 outline-none"
-              tabIndex={0}
-              role="region"
-              aria-label="Command palette results"
-            >
-              {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
-                <div className="p-3 text-[13px] text-[color:var(--bm-muted)]">Searching…</div>
-              ) : null}
+        <div className="min-h-0 flex-1 overflow-y-auto p-2" role="region" aria-label="Command palette results">
+          {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
+            <div className="p-3 text-sm text-muted">Searching…</div>
+          ) : null}
 
-              {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'error' ? (
-                <div className="p-3 text-[13px] text-[color:var(--bm-muted)]">Search failed.</div>
-              ) : null}
+          {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'error' ? (
+            <div className="p-3 text-sm text-muted">Search failed.</div>
+          ) : null}
 
-              {!items.length && parsed.text.trim() ? (
-                <div className="p-3 text-[13px] text-[color:var(--bm-muted)]">No matches.</div>
-              ) : null}
+          {!items.length && parsed.text.trim() ? <div className="p-3 text-sm text-muted">No matches.</div> : null}
 
-              <div id="bm-palette-list" role="listbox" className="space-y-1">
-                {items.map((item, idx) => {
-                  const activeRow = idx === safeActiveIndex
-                  const bookmark = item.kind === 'page' ? bookmarkSet.has(`${item.name}:${item.section}`) : false
+          <div id="bm-palette-list" role="listbox" className="space-y-0.5">
+            {items.map((item, idx) => {
+              const activeRow = idx === safeActiveIndex
+              const bookmark = item.kind === 'page' ? bookmarkSet.has(`${item.name}:${item.section}`) : false
 
-                  return (
-                    <div
-                      key={item.id}
-                      id={`bm-palette-option-${idx}`}
-                      role="option"
-                      aria-selected={activeRow}
-                      tabIndex={-1}
-                      className={`w-full rounded-md border px-3 py-2 text-left ${
-                        activeRow
-                          ? 'border-[var(--bm-border-accent)] bg-[var(--bm-surface-3)] text-[color:var(--bm-fg)]'
-                          : 'border-transparent text-[color:var(--bm-muted)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)]'
-                      }`}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      onClick={() => item.run()}
-                    >
-                      <div className="flex items-baseline justify-between gap-3">
-                        <div className="min-w-0 font-mono text-[13px] font-semibold text-[color:var(--bm-fg)]">
-                          {item.kind === 'action' ? `> ${item.label}` : item.kind === 'heading' ? `# ${item.title}` : itemLabel(item)}
-                        </div>
-                        {bookmark ? <div className="text-[11px] text-[color:var(--bm-muted)]">★</div> : null}
-                      </div>
-                      {item.kind === 'page' ? (
-                        <div className="mt-1 truncate text-[11px] text-[color:var(--bm-muted)]">{item.description}</div>
-                      ) : item.kind === 'action' && item.detail ? (
-                        <div className="mt-1 truncate text-[11px] text-[color:var(--bm-muted)]">{item.detail}</div>
-                      ) : null}
+              return (
+                <div
+                  key={item.id}
+                  id={`bm-palette-option-${idx}`}
+                  role="option"
+                  aria-selected={activeRow}
+                  tabIndex={-1}
+                  className={`w-full cursor-pointer rounded-md px-3 py-2 text-left transition-colors ${
+                    activeRow ? 'bg-accent-subtle text-fg' : 'text-muted hover:bg-bg hover:text-fg'
+                  }`}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                  onClick={() => item.run()}
+                >
+                  <div className="flex items-baseline gap-3">
+                    <div className="min-w-0 shrink-0 font-mono text-sm font-semibold text-fg">
+                      {item.kind === 'action' ? `> ${item.label}` : item.kind === 'heading' ? `# ${item.title}` : itemLabel(item)}
                     </div>
-                  )
-                })}
-              </div>
-            </div>
+                    {item.kind === 'page' ? (
+                      <div className="min-w-0 flex-1 truncate text-sm text-muted">{item.description}</div>
+                    ) : item.kind === 'action' && item.detail ? (
+                      <div className="min-w-0 flex-1 truncate text-sm text-muted">{item.detail}</div>
+                    ) : null}
+                    {bookmark ? <div className="shrink-0 text-xs text-muted">★</div> : null}
+                  </div>
+                </div>
+              )
+            })}
           </div>
+        </div>
 
-          <div
-            ref={previewRef}
-            className="hidden max-h-[60vh] w-[40%] overflow-y-auto p-3 outline-none sm:block"
-            tabIndex={0}
-            role="region"
-            aria-label="Command palette preview"
-          >
-            {renderPreview(active)}
-          </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-edge px-3 py-2 text-xs text-muted">
+          <span className="flex items-center gap-1.5">
+            <Kbd>↑↓</Kbd> navigate
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Kbd>↵</Kbd> open
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Kbd>esc</Kbd> close
+          </span>
+          <span className="ml-auto hidden font-mono text-faint sm:inline">&gt; actions · # headings · @distro</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
