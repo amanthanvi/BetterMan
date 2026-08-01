@@ -1,89 +1,110 @@
 # BetterMan Design System
 
-Recorded from the built system after the 2026-07 redesign. The visual identity is
-**terminal DNA, executed quietly**: `>_` wordmark glyph, restrained red accent,
-monospace as identity accent (never body prose), keyboard-first affordances, one
-neutral ramp per theme. Surfaces are Operate (home, search, section, palette) and
+Recorded from the built system after the 2026-08 grammar redesign. The visual
+world is **the typeset Unix manual, on screen** — the Bell Labs printed manual
+as design authority. Surfaces are Operate (home, search, section, palette) and
 Read (the man page).
+
+## The grammar (the actual design system)
+
+1. **Structure is typographic.** Hierarchy comes from type roles, whitespace,
+   hanging indents, and full-width hairline rules (`border-b border-edge` /
+   `border-t border-edge`). There are no enclosing boxes, no panel fills, and no
+   rounded corners anywhere in the document flow.
+2. **Only floating overlays get chrome** — dialog, drawer, command palette, find
+   bar, mobile bottom nav, sticky header, skip link. They carry a single square
+   edge (`border border-edge`), a raised fill, and an offset shadow
+   (`shadow-lg shadow-black/25`). Everything else sits directly on `bg`.
+3. **Controls are text-first.** Actions are underlined mono text
+   (`underline underline-offset-4 decoration-edge-strong hover:decoration-accent`)
+   or unboxed icon glyphs whose hover is an ink change (`text-muted → text-fg`)
+   — never a border or fill change. Inputs are underline-only
+   (`border-0 border-b border-edge bg-transparent`). `Kbd` is the sole bordered
+   micro-chip (keyboard notation). The one solid control is the rare primary
+   action (`bg-accent`, e.g. error Retry).
+4. **Signature furniture:** every man page (and the home page, which is
+   literally `BETTERMAN(1)`) opens with the classic three-part running head over
+   a hairline rule — `TAR(1) · User Commands · TAR(1)` (`RunningHead` +
+   `sectionLabel` in `components/man/RunningHead.tsx`, aria-hidden). Manual
+   sections are labeled in tracked mono small-caps (`ManSectionLabel`:
+   NAME, SYNOPSIS, OPTIONS, SEE ALSO, RELATED, CONTENTS, RECENT, BOOKMARKS,
+   BROWSE) with body content indented `pl-6 sm:pl-8` on document pages.
+5. **Troff conventions in content:** definition lists are true hanging indents
+   (`grid sm:grid-cols-[minmax(8ch,28ch)_minmax(0,1fr)]`); inline code is bold
+   mono (no pill); code/synopsis blocks are `bg-code-bg` tint only, full-bleed on
+   mobile, with a ghost copy glyph on hover/focus; option flags are bold mono
+   links (selected = accent + 2px underline); doc tables use a 1px
+   `edge-strong` header rule and hairline row rules, no shell, no zebra.
+6. **Selection & state:** active nav/TOC = weight + ink (`font-medium text-fg`)
+   with `aria-current`; chosen tabs = 2px accent underline; selected list rows =
+   accent ink + `aria-pressed`; the palette's active row keeps an
+   `bg-accent-subtle` fill (reverse-video, overlay context). Accent is for
+   action, selection, and links — never decoration.
+
+**Enforcement:** `pnpm next:grammar` (`nextjs/scripts/check-visual-grammar.mjs`)
+fails the build style-check if any `rounded-*` class exists, or if
+`border border-edge` / `bg-surface|bg-raised` appear outside the overlay
+allowlist. Run it alongside lint.
 
 ## Tokens
 
-All tokens live in the Tailwind v4 `@theme` block in `nextjs/app/globals.css` and
-generate utilities (`bg-surface`, `text-muted`, `border-edge`, …). Colors use
-`light-dark()`; the active scheme is set via `color-scheme` on `<html>`
-(`data-theme` attribute + `prefers-color-scheme` fallback, SSR'd from the
-`bm-theme-resolved` cookie).
+Tokens live in the Tailwind v4 `@theme` block in `nextjs/app/globals.css` and
+generate utilities. Colors use `light-dark()`; the scheme is set via
+`color-scheme` on `<html>` (`data-theme` + `prefers-color-scheme` fallback,
+SSR'd from the `bm-theme-resolved` cookie).
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg` | `#faf8f5` warm paper | `#0b0b0d` near-black | page ground |
-| `surface` | `#ffffff` | `#121215` | inputs, cards, rows |
-| `raised` | `#ffffff` | `#18181c` | overlays, header chips, hover fills |
-| `edge` / `edge-strong` | `#e6e1d9` / `#cfc8bc` | `#26262b` / `#3a3a42` | default / hover-input borders |
-| `fg` | `#1c1a17` | `#ededf0` | primary text |
-| `muted` | `#6f695f` | `#9b9ba3` | secondary text (≥4.5:1 on surface) |
-| `faint` | `#767061` | `#85858d` | metadata (still AA on bg/surface) |
-| `accent` / `accent-hover` | `#c22126` / `#a91d21` | `#e5484d` / `#f2555a` | links, selection, primary action — never decoration |
-| `accent-subtle` | 12% accent mix | same | selection/active fills, highlights |
-| `accent-edge` | 35% accent mix | same | active borders, find outlines |
-| `code-bg` | `#f4f1ea` | `#111113` | code panels |
-| `scrim` | `rgb(0 0 0 / 0.55)` | same | the one overlay scrim |
+| `bg` | `#faf8f5` warm paper | `#0b0b0d` near-black | the page — almost everything sits on it |
+| `surface` / `raised` | `#ffffff` | `#121215` / `#18181c` | overlay panels only |
+| `edge` / `edge-strong` | `#e6e1d9` / `#cfc8bc` | `#26262b` / `#3a3a42` | hairline rules / input underlines + table header rules |
+| `fg` / `muted` / `faint` | `#1c1a17` / `#6f695f` / `#767061` | `#ededf0` / `#9b9ba3` / `#85858d` | ink hierarchy (all ≥AA) |
+| `accent` / `accent-hover` | `#c22126` / `#a91d21` | `#e5484d` / `#f2555a` | links, selection, primary action |
+| `accent-subtle` / `accent-edge` | 12% / 35% mixes | same | highlight fills / active outlines |
+| `code-bg` | `#f4f1ea` | `#111113` | the only content tint |
+| `scrim` | `rgb(0 0 0 / 0.55)` | same | overlay scrim |
 
-- **Type scale** (~1.2 ratio): 12 / 13.5 / 15 / 18 / 21.5 / 26 / 31 px as
-  `text-xs…text-3xl`. Body is `text-base` (15px/1.5). Prose (man pages) runs on the
-  reading-prefs axes below, default 15px/1.65 at 56rem measure.
-- **Fonts:** Geist Sans (variable, self-hosted) for UI and prose; JetBrains Mono for
-  command names, synopsis, code, kbd, section numbers, metadata labels. CSP allows
-  self-hosted fonts only.
-- **Radii:** `rounded-sm`/`rounded-md` = 6px (controls, chips), `rounded-lg` = 10px
-  (cards, dialogs). Nothing else.
-- **Motion:** `--ease-out` (quad), 150/200ms. Entries only: overlays `bm-pop-in`
-  (scale .98→1 + fade, 200ms), find bar `bm-rise-in` (4px rise, 150ms), option jump
-  `bm-option-flash` (600ms background fade). Hover transitions are
-  `transition-colors` at 150ms. Everything sits inside
-  `@media (prefers-reduced-motion: no-preference)`. No decorative or idle motion.
-- **Focus:** one global rule — `:focus-visible` gets a solid 2px `accent` outline
-  with 2px offset. Components must not add `outline-none` to interactive elements
-  or invent their own rings.
+- **Type scale** (~1.2): 12 / 13.5 / 15 / 18 / 21.5 / 26 / 31 px as
+  `text-xs…3xl`; body `text-base` 15px/1.5; prose via reading-prefs axes
+  (default 15px/1.65, 56rem measure). Geist Sans for prose/UI; JetBrains Mono
+  for names, labels, code, kbd, metadata. Section labels: `font-mono text-xs
+  font-semibold tracking-[0.08em] text-muted`, uppercase.
+- **Radius:** all `--radius-*` tokens are `0px`. Square is the identity.
+- **Motion:** `--ease-out`, 150/200ms, entries only (`bm-pop-in`, `bm-rise-in`,
+  `bm-option-flash`), reduced-motion guarded. No decorative motion.
+- **Focus:** one global rule — 2px solid accent outline on `:focus-visible`,
+  2px offset. Never `outline-none` on interactive elements.
 
 ## Component vocabulary (`nextjs/components/ui/`)
 
-`Button` (outline / ghost / solid, sm / md), `IconButton`, `Input`, `Kbd`,
-`Surface`, `Skeleton`, `EmptyState`, and the portal overlay chassis
-`Overlay` → `Dialog` / `Drawer` (sides: left, right, bottom, sheet-right; focus
-trap + scroll lock + Escape + scrim built in). Compose these instead of
-hand-writing control classes. `cx()` is the only class combinator.
-
-Rules of thumb:
-
-- One accent per view earns attention: the primary action, the active selection, or
-  a link — not borders, headings, or chrome.
-- Loading is a layout-shaped `Skeleton`, never a spinner. Empty states teach the
-  shortcut that fills them.
-- Every interactive element has default, hover, focus-visible, and disabled states;
-  hover reveals must also reveal on `focus-visible` / `group-focus-within`.
-- Overlays render through the portal chassis; no inline fixed-position dialogs.
-- Man-page section headings are tracked monospace (`h2` `text-base`,
-  `h3` `text-sm`), not colored bars.
+`Button` (outline = underlined text action, ghost = quiet ink, solid = rare
+primary), `IconButton` (unboxed glyph, sized hit target), `Kbd`, `Skeleton`
+(text lines, not card mimics), `EmptyState` (plain text), and the portal
+`Overlay` → `Dialog` / `Drawer` chassis. `RunningHead` / `ManSectionLabel` /
+`sectionLabel` in `components/man/RunningHead.tsx`. `cx()` is the only class
+combinator (no merge — primitives own their recipes).
 
 ## Contracts that must not change casually
 
 - **Reading prefs:** `body[data-bm-font-size|font-family|line-height|column-width|code-theme]`
-  drive `--bm-reading-*` and `--bm-code-*` custom properties; the man-page article
-  consumes them (`ManPageView`).
-- **Highlight classes:** `mark[data-bm-find]`, `mark[data-bm-opt]`, `.bm-mark`,
-  `.bm-find-active` (find + option highlighting, asserted by e2e).
-- **Data hooks:** `data-bm-app-header`, `data-bm-app-footer`, `data-bm-mobile-nav`,
-  `data-bm-sidebar`, `data-bm-findbar`, `data-bm-home-search`, `data-bm-page-search`.
+  → `--bm-reading-*` / `--bm-code-*` custom properties consumed by the man-page
+  article.
+- **Highlights:** `mark[data-bm-find]`, `mark[data-bm-opt]`, `.bm-mark`,
+  `.bm-find-active`.
+- **Data hooks:** `data-bm-app-header/app-footer/mobile-nav/sidebar/findbar/home-search/page-search`.
 - **Accessible names asserted by `frontend/e2e/`:** banner "Site header",
   contentinfo "Site footer", searchbox "Search man pages", combobox
-  "Command palette input", textbox "Find in page", nav "On this page", dialogs
-  "Table of contents" / "Reading preferences" / "Keyboard shortcuts", buttons
-  "Cycle theme", "Open contents", "Reading preferences", "Find in page",
-  "Previous/Next match", "Expand/Collapse sidebar", "Load more results", table
-  "Command-line options", TOC active link `aria-current="location"`.
+  "Command palette input", textbox "Find in page", nav "On this page" /
+  "Section filter", dialogs "Table of contents" / "Reading preferences" /
+  "Keyboard shortcuts", radiogroup "Font size" (radio "L"), buttons
+  "Cycle theme" / "Search" / "Open contents" / "Reading preferences" /
+  "Find in page" / "Previous|Next match" / "Expand|Collapse sidebar" /
+  "Load more results", table "Command-line options" (flags as separate exact
+  texts), select "Select distribution variant" (a real `<select>`), regions
+  "Recent" / "Bookmarks", heading "Browse", TOC active link
+  `aria-current="location"`. Section labels may render uppercase — accessible
+  name matching is case-insensitive.
 - **Keyboard map:** ⌘K palette · `/` search · `?` shortcuts · `d` theme ·
   `b` sidebar/TOC · `t` top · `h` home · `p` prefs · `m` bookmark ·
-  Enter/Shift+Enter find navigation (documented in ShortcutsDialog).
-- Print stylesheet forces light monochrome via `--color-*` overrides in
-  `@media print`.
+  Enter/Shift+Enter find navigation.
+- Print stylesheet forces light monochrome via `--color-*` overrides.

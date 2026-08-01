@@ -389,7 +389,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       <div className="absolute inset-0 bg-scrim" onClick={() => close()} />
       <div
         ref={dialogRef}
-        className="bm-pop-in relative flex w-full max-h-[70vh] flex-col overflow-hidden rounded-t-lg border border-edge bg-raised shadow-lg shadow-black/25 sm:max-h-[60vh] sm:w-[min(94vw,40rem)] sm:rounded-lg"
+        className="bm-pop-in relative flex w-full max-h-[70vh] flex-col overflow-hidden border border-edge bg-raised shadow-lg shadow-black/25 sm:max-h-[60vh] sm:w-[min(94vw,40rem)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-edge p-3">
@@ -412,7 +412,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 setActiveIndex(0)
               }}
               placeholder="Search man pages…"
-              className="h-10 w-full min-w-0 flex-1 rounded-md border border-edge bg-bg px-3 font-mono text-sm text-fg outline-none placeholder:text-muted"
+              className="h-10 w-full min-w-0 flex-1 bg-transparent px-1 font-mono text-sm text-fg outline-none placeholder:text-muted"
               aria-label="Command palette input"
               role="combobox"
               aria-autocomplete="list"
@@ -421,7 +421,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               aria-activedescendant={items.length ? `bm-palette-option-${safeActiveIndex}` : undefined}
             />
             {modeHint ? (
-              <span className="shrink-0 rounded-sm border border-accent-edge bg-accent-subtle px-2 py-1 font-mono text-xs text-fg">
+              <span className="shrink-0 font-mono text-xs font-semibold text-accent">
                 {modeHint}
               </span>
             ) : null}
@@ -451,8 +451,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   role="option"
                   aria-selected={activeRow}
                   tabIndex={-1}
-                  className={`w-full cursor-pointer rounded-md px-3 py-2 text-left transition-colors ${
-                    activeRow ? 'bg-accent-subtle text-fg' : 'text-muted hover:bg-bg hover:text-fg'
+                  className={`w-full cursor-pointer px-3 py-2 text-left transition-colors ${
+                    activeRow ? 'bg-accent-subtle text-fg' : 'text-muted hover:text-fg'
                   }`}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => item.run()}

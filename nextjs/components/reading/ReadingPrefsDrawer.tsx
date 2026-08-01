@@ -30,10 +30,7 @@ function SegmentedRadioGroup<T extends string>({
       <div
         role="radiogroup"
         aria-label={label}
-        className={cx(
-          'mt-2 flex w-full rounded-md border border-edge bg-surface',
-          scroll ? 'overflow-x-auto' : 'overflow-hidden',
-        )}
+        className={cx('mt-2 flex w-full border-b border-edge', scroll ? 'overflow-x-auto' : '')}
         onKeyDown={(e) => {
           if (!options.length) return
 
@@ -58,7 +55,7 @@ function SegmentedRadioGroup<T extends string>({
           })
         }}
       >
-        {options.map((o, idx) => (
+        {options.map((o) => (
           <button
             key={o.id}
             type="button"
@@ -66,10 +63,9 @@ function SegmentedRadioGroup<T extends string>({
             aria-checked={value === o.id}
             tabIndex={value === o.id ? 0 : -1}
             className={cx(
-              'px-3 py-2 text-left font-mono text-sm leading-tight transition-colors',
+              '-mb-px border-b-2 px-3 py-2 text-left font-mono text-sm leading-tight transition-colors',
               scroll ? 'shrink-0 min-w-[5.75rem]' : 'flex-1',
-              idx === 0 ? '' : 'border-l border-edge',
-              value === o.id ? 'bg-accent-subtle text-fg' : 'bg-transparent text-muted hover:bg-raised hover:text-fg',
+              value === o.id ? 'border-accent text-fg' : 'border-transparent text-muted hover:text-fg',
             )}
             onClick={() => onChange(o.id)}
           >
@@ -171,7 +167,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
         />
 
         <div className="pt-2">
-          <Button variant="outline" className="w-full font-mono" onClick={() => reset()}>
+          <Button variant="outline" className="font-mono" onClick={() => reset()}>
             Reset to defaults
           </Button>
         </div>
