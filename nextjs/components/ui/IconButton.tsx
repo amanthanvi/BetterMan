@@ -2,9 +2,11 @@ import type { ButtonHTMLAttributes } from 'react'
 
 import { cx } from './cx'
 
+/* Unboxed glyphs: hover is an ink change, never a border or fill. The size
+   classes preserve the hit target. */
 const VARIANT = {
-  outline: 'border border-edge bg-surface text-muted hover:border-edge-strong hover:bg-raised hover:text-fg',
-  ghost: 'text-muted hover:bg-raised hover:text-fg',
+  outline: 'text-muted hover:text-fg',
+  ghost: 'text-muted hover:text-fg',
 } as const
 
 const SIZE = {
@@ -27,7 +29,7 @@ export function IconButton({
     <button
       type={type}
       className={cx(
-        'inline-flex shrink-0 items-center justify-center rounded-md transition-colors',
+        'inline-flex shrink-0 items-center justify-center transition-colors',
         'disabled:pointer-events-none disabled:opacity-50',
         VARIANT[variant],
         SIZE[size],

@@ -60,10 +60,11 @@
   --color-code-bg: light-dark(#f4f1ea, #111113);
   --color-scrim: rgb(0 0 0 / 0.55);
 
-  --radius-sm: 6px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  /* Typeset-manual grammar: square everywhere. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 
   /* One type scale, ~1.2 ratio: 12 / 13.5 / 15 / 18 / 21.5 / 26 / 31 px. */
   --text-xs: 0.75rem;
@@ -332,7 +333,6 @@
   }
 
   .bm-mark {
-    border-radius: var(--radius-sm);
     padding: 0.08rem 0.22rem;
   }
 

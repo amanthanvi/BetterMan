@@ -6,9 +6,9 @@ export default function Loading() {
       <header className="border-b border-edge pb-6">
         <Skeleton className="h-7 w-28" />
         <Skeleton className="mt-4 h-12 w-full" />
-        <div className="mt-4 flex flex-wrap gap-2" aria-hidden="true">
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2" aria-hidden="true">
           {Array.from({ length: 10 }).map((_, idx) => (
-            <Skeleton key={idx} className="h-7 w-11 rounded-sm" />
+            <Skeleton key={idx} className="h-4 w-6" />
           ))}
         </div>
         <Skeleton className="mt-3 h-4 w-80" />
