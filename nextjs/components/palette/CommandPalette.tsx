@@ -389,7 +389,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       <div className="absolute inset-0 bg-scrim" onClick={() => close()} />
       <div
         ref={dialogRef}
-        className="relative flex w-full max-h-[70vh] flex-col overflow-hidden rounded-t-lg border border-edge bg-raised shadow-lg shadow-black/25 sm:max-h-[60vh] sm:w-[min(94vw,40rem)] sm:rounded-lg"
+        className="bm-pop-in relative flex w-full max-h-[70vh] flex-col overflow-hidden rounded-t-lg border border-edge bg-raised shadow-lg shadow-black/25 sm:max-h-[60vh] sm:w-[min(94vw,40rem)] sm:rounded-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-edge p-3">

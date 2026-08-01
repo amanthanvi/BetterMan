@@ -88,25 +88,6 @@
   :root {
     color-scheme: dark;
 
-    /* Legacy aliases: unmigrated call sites still reference --bm-*. They resolve
-       to the token system above and are deleted once migration completes. */
-    --bm-bg: var(--color-bg);
-    --bm-surface: var(--color-surface);
-    --bm-surface-2: var(--color-raised);
-    --bm-surface-3: var(--color-raised);
-    --bm-fg: var(--color-fg);
-    --bm-muted: var(--color-muted);
-    --bm-border: var(--color-edge);
-    --bm-border-accent: var(--color-accent-edge);
-    --bm-accent: var(--color-accent);
-    --bm-accent-hover: var(--color-accent-hover);
-    --bm-accent-muted: var(--color-accent-subtle);
-    --bm-accent-contrast: var(--color-accent-contrast);
-
-    --bm-radius-sm: var(--radius-sm);
-    --bm-radius: var(--radius-md);
-    --bm-radius-lg: var(--radius-lg);
-
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -293,6 +274,36 @@
     .bm-option-flash {
       animation: bm-option-flash 600ms var(--ease-out);
     }
+
+    @keyframes bm-pop-in {
+      from {
+        opacity: 0;
+        transform: scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .bm-pop-in {
+      animation: bm-pop-in 200ms var(--ease-out);
+    }
+
+    @keyframes bm-rise-in {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .bm-rise-in {
+      animation: bm-rise-in 150ms var(--ease-out);
+    }
   }
 
   .hljs {
@@ -321,26 +332,26 @@
   }
 
   .bm-mark {
-    border-radius: var(--bm-radius-sm);
+    border-radius: var(--radius-sm);
     padding: 0.08rem 0.22rem;
   }
 
   .bm-opt {
-    background: var(--bm-accent-muted);
-    color: var(--bm-fg);
-    outline: 1px solid var(--bm-border-accent);
+    background: var(--color-accent-subtle);
+    color: var(--color-fg);
+    outline: 1px solid var(--color-accent-edge);
     outline-offset: -1px;
   }
 
   .bm-find {
-    background: var(--bm-accent-muted);
-    color: var(--bm-fg);
-    outline: 1px solid var(--bm-border-accent);
+    background: var(--color-accent-subtle);
+    color: var(--color-fg);
+    outline: 1px solid var(--color-accent-edge);
     outline-offset: -1px;
   }
 
   .bm-find-active {
-    outline: 2px solid color-mix(in srgb, var(--bm-accent) 35%, transparent);
+    outline: 2px solid var(--color-accent-edge);
     outline-offset: 1px;
     text-decoration: underline;
     text-decoration-thickness: 2px;

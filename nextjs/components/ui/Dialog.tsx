@@ -98,7 +98,7 @@ export function Dialog({
       onOpenChange={onOpenChange}
       label={label}
       positionClassName={cx(
-        'relative mx-auto mt-24 w-[min(92vw,38rem)] rounded-lg border border-edge bg-raised p-6 transition-opacity',
+        'bm-pop-in relative mx-auto mt-24 w-[min(92vw,38rem)] rounded-lg border border-edge bg-raised p-6 transition-opacity',
         open ? 'opacity-100' : 'opacity-0',
       )}
       panelClassName={panelClassName}

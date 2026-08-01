@@ -53,7 +53,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
   return (
     <div className="mx-auto max-w-6xl">
       <header className="border-b border-edge pb-6">
-        <h1 className="text-[24px] font-semibold leading-tight tracking-tight text-fg">Licenses</h1>
+        <h1 className="text-2xl font-semibold leading-tight tracking-tight text-fg">Licenses</h1>
         <p className="mt-2 text-sm text-muted">
           Attribution and license notices for the current dataset release.
         </p>

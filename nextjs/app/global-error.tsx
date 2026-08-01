@@ -22,7 +22,7 @@ export default function GlobalError({
         <div className="mx-auto max-w-3xl px-6 py-16">
           <div className="rounded-md border border-edge bg-raised p-6">
             <div className="font-mono text-xs tracking-wide text-muted">Error</div>
-            <h1 className="mt-2 text-[24px] font-semibold leading-tight tracking-tight text-fg">
+            <h1 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-fg">
               Something went wrong
             </h1>
             <p className="mt-3 text-sm text-muted">Try again, or go back home.</p>

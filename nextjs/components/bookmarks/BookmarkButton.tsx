@@ -60,10 +60,10 @@ export function BookmarkButton({ name, section, description }: { name: string; s
       type="button"
       aria-pressed={active}
       aria-label={active ? `Remove bookmark for ${key}` : `Bookmark ${key}`}
-      className={`inline-flex size-9 items-center justify-center rounded-md border bg-[var(--bm-surface)] transition-colors ${
+      className={`inline-flex size-9 items-center justify-center rounded-md border transition-colors ${
         active
-          ? 'border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] text-[var(--bm-accent)]'
-          : 'border-[var(--bm-border)] text-[color:var(--bm-muted)] hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)] hover:text-[color:var(--bm-fg)]'
+          ? 'border-accent-edge bg-accent-subtle text-accent'
+          : 'border-edge bg-surface text-muted hover:border-edge-strong hover:bg-raised hover:text-fg'
       }`}
       onClick={onToggle}
       title={active ? `Bookmarked: ${key}` : `Bookmark: ${key}`}
