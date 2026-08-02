@@ -8,7 +8,7 @@ import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { useFocusTrap } from '../../lib/useFocusTrap'
 import { cx } from './cx'
 
-const EXIT_MS = 150
+const EXIT_MS = 200
 
 /**
  * Shared overlay chassis: portal, scrim, focus trap, scroll lock, Escape,
@@ -65,9 +65,12 @@ export function Overlay({
       className={cx('fixed inset-0 z-50', open ? 'pointer-events-auto' : 'pointer-events-none')}
       onClick={() => onOpenChange(false)}
     >
-      <div className={cx('absolute inset-0 bg-scrim transition-opacity', open ? 'opacity-100' : 'opacity-0')} />
+      <div
+        className={cx('absolute inset-0 bg-scrim transition-opacity motion-reduce:transition-none', open ? 'opacity-100' : 'opacity-0')}
+      />
       <div
         ref={panelRef}
+        tabIndex={-1}
         data-state={open ? 'open' : 'closed'}
         className={cx(positionClassName, panelClassName)}
         onClick={(e) => e.stopPropagation()}
@@ -98,7 +101,7 @@ export function Dialog({
       onOpenChange={onOpenChange}
       label={label}
       positionClassName={cx(
-        'bm-pop-in relative mx-auto mt-24 w-[min(92vw,38rem)] border border-edge bg-raised p-6 shadow-lg shadow-black/25 transition-opacity',
+        'bm-pop-in relative mx-auto mt-24 w-[min(92vw,38rem)] border border-edge bg-raised p-6 shadow-lg shadow-black/25 transition-opacity motion-reduce:animate-none motion-reduce:transition-none',
         open ? 'opacity-100' : 'opacity-0',
       )}
       panelClassName={panelClassName}

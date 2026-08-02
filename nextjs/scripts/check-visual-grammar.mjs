@@ -47,7 +47,15 @@ function disallowed(hits) {
 
 const failures = []
 
-const rounded = grep('rounded-(sm|md|lg|xl|t-lg|t-xl|full)')
+function hasDisallowedRoundedToken(line) {
+  const source = line.split(':').slice(2).join(':')
+  return source.split(/[\s"'`]+/).some((token) => {
+    const utility = token.split(':').at(-1)?.replace(/^!/, '').replace(/[),}\]]+$/, '')
+    return utility === 'rounded' || (utility?.startsWith('rounded-') && utility !== 'rounded-none')
+  })
+}
+
+const rounded = grep('rounded').filter(hasDisallowedRoundedToken)
 if (rounded.length) failures.push(['rounded corners are banned (typeset grammar is square)', rounded])
 
 const boxes = disallowed(grep('border border-edge'))

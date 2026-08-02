@@ -59,6 +59,7 @@ Every animation must be interruptible and redirectable at any moment. A user mus
 - **Never lock out input during a transition.**
 - **Always animate from the *presentation* (current) value, never the target value.** On interrupt, read the element's live on-screen transform and start the new animation from there. Starting from the logical/target value causes a visible jump.
 - **Avoid CSS transitions and `@keyframes` for anything gesture-driven** — they can't be smoothly grabbed and reversed mid-flight. Springs animate from the current value by default, which is exactly what interruption needs.
+- **Use CSS transitions for rapid non-gesture state changes** such as toggles and toast state. They retarget from the current presentation value; gesture-driven motion still requires a spring that preserves velocity.
 - **When a gesture reverses, blend velocity — don't hard-cut it.** Replacing one animation with another at a reversal creates a velocity discontinuity, a "brick wall." Spring libraries that carry velocity through a re-target avoid it. (This is what iOS's *additive animations* do natively; on the web, choose a spring library that re-targets from the current velocity.)
 - **Decompose 2D motion into independent X and Y springs.** A single spring on a 2D distance desyncs when X and Y have different velocities.
 
@@ -74,6 +75,7 @@ Apple deliberately replaced the physics triplet (mass/stiffness/damping) with tw
 - **Response** — how quickly the value reaches the target, in seconds. Lower = snappier. **This is not "duration"** — a spring has no fixed duration; its settle time emerges from the parameters.
 
 **Defaults:**
+
 - Start most UI at **damping `1.0`** (critically damped) — graceful and non-distracting.
 - Add bounce (**damping ~`0.8`**) **only when the gesture itself carried momentum** (a flick, a throw, a drag release). Overshoot on a menu that just faded in feels wrong; overshoot on a card you flicked feels right.
 
@@ -103,7 +105,7 @@ When a gesture ends, the animation must **continue at the finger's exact velocit
 
 Pass the pointer's release velocity as the spring's initial velocity. Some spring APIs want **relative** velocity — normalize it by the remaining distance to the target:
 
-```
+```text
 relativeVelocity = gestureVelocity / (targetValue − currentValue)
 ```
 

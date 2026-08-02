@@ -34,7 +34,7 @@ export function ManPageView({
   relatedItems: SectionPage[]
 }) {
   const toc = useToc()
-  const { scrollToId, setScrollToId, setItems, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
+  const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
   const distro = useDistro()
 
   const manFind = useManPageFind({ blocks: content.blocks })
@@ -61,6 +61,12 @@ export function ManPageView({
     setItems(content.toc ?? [])
     return () => setItems([])
   }, [content.toc, setItems])
+
+  useEffect(() => {
+    setActiveId(activeTocId)
+  }, [activeTocId, setActiveId])
+
+  useEffect(() => () => setActiveId(null), [setActiveId])
 
   useEffect(() => {
     return () => {

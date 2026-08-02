@@ -26,13 +26,13 @@ Every animation in the diff is measured against these. A violation is a finding.
 
 3. **Responsive easing.** Entering/exiting elements use `ease-out` or a strong custom curve. `ease-in` on UI is a block — it delays the moment the user watches most. Built-in CSS easings are too weak; expect custom cubic-beziers.
 
-4. **Sub-300ms UI.** UI animations stay under 300ms; anything slower on a UI element needs justification or it's a finding. Per-element budgets live in [STANDARDS.md](STANDARDS.md).
+4. **Sub-300ms routine UI.** Routine UI animations stay under 300ms. Large spatial modals/drawers may use 200–500ms only with explicit travel-based justification; marketing/explanatory motion may be longer. Per-element budgets live in [STANDARDS.md](STANDARDS.md).
 
 5. **Origin & physical correctness.** Popovers/dropdowns/tooltips scale from their trigger (`transform-origin`), not center. Never animate from `scale(0)` — start from `scale(0.9–0.97)` + opacity (Modals are exempt — they stay centered.)
 
-6. **Interruptibility.** Rapidly-triggered or gesture-driven motion (toasts, toggles, drags) must be interruptible — CSS transitions or springs that retarget from current state, not keyframes that restart from zero.
+6. **Interruptibility.** Rapidly triggered non-gesture state changes use CSS transitions that retarget from the current state. Gesture-driven motion uses springs that preserve velocity. Neither uses keyframes that restart from zero.
 
-7. **GPU-only properties.** Animate `transform` and `opacity` only. Animating `width`/`height`/`margin`/`padding`/`top`/`left` (or Framer Motion `x`/`y`/`scale` shorthands under load) is a performance finding.
+7. **Compositor-first properties.** Default to `transform` and `opacity`. Layout properties require a small isolated target and measured acceptable cost; bounded `clip-path` and transition-time `filter` require paint profiling. Unjustified exceptions (or Framer Motion `x`/`y`/`scale` shorthands under load) are findings.
 
 8. **Accessibility.** `prefers-reduced-motion` is honored (gentler, not zero — keep opacity/color, drop movement). Hover animations are gated behind `@media (hover: hover) and (pointer: fine)`.
 

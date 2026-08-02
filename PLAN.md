@@ -348,6 +348,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] UI theme selection persisted via `bm-ui-theme` cookie (SSR-compatible).
 - [x] Documentation updated (SPEC.md, CHANGELOG.md).
 - [x] Tag `v0.6.4`
+- [x] Retire the retro/glass experiment and `bm-ui-theme` state in the 2026-08 visual-grammar redesign; retain light/dark/system color modes.
 
 ### Convex performance audit (post-v0.6.4)
 

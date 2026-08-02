@@ -183,7 +183,7 @@
   }
 
   body[data-bm-code-theme="light"] {
-    --bm-code-accent: light-dark(#c22126, #e5484d);
+    --bm-code-accent: #c22126;
   }
 
   body[data-bm-code-theme="dark"] {
@@ -437,4 +437,3 @@
     }
   }
 }
-

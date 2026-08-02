@@ -239,11 +239,7 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 -   Persist user choice in local storage after explicit selection.
 -   Contrast ratios must meet WCAG 2.2 AA.
 -   **Theme transition (v0.2.1):** 150ms CSS transition on background and text colors when switching themes. Respects `prefers-reduced-motion` (instant switch when reduced motion preferred).
--   **UI themes (v0.6.4, experimental):**
-    -   Three visual modes: `default` (current hacker-tool system), `retro` (cyberpunk/matrix), `glass` (glassmorphic minimal).
-    -   Selection is persisted via cookie (`bm-ui-theme`) and applied server-side on `<html data-bm-ui-theme="...">` for SSR-safe initial paint.
-    -   Theme overrides are CSS-only and strictly scoped under `html[data-bm-ui-theme="retro"]` and `html[data-bm-ui-theme="glass"]`.
-    -   UI themes are orthogonal to light/dark/system mode. `data-theme` remains the source of truth for color-scheme mode and continues to work in all UI themes.
+-   **Visual modes:** One visual grammar with light, dark, and system color modes. The v0.6.4 experimental `retro` and `glass` skins and `bm-ui-theme` state were retired by the 2026-08 grammar redesign.
 -   Responsive:
     -   < 768px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
         -   **Mobile TOC access:** Sticky header button toggles TOC drawer. Button is always visible for quick access during reading.
@@ -3333,6 +3329,18 @@ v0.6.0 is a comprehensive design and UI/UX overhaul that transforms BetterMan fr
 
 **This release has no breaking URL, API, or deployment changes.** All URLs, keyboard shortcuts, and features continue to work. The change is purely visual/UX.
 
+## Current Visual Grammar (2026-08)
+
+This contract supersedes earlier v0.6 styling details below where they conflict. The design is the typeset Unix manual on screen: square, text-first, and structured by typography, whitespace, hanging indents, and full-width hairline rules.
+
+- Rounded corners are prohibited. `rounded` and every non-zero `rounded-*` utility fail validation; `rounded-none` is allowed.
+- Document-flow content must not use enclosing `border border-edge` boxes or `bg-surface` / `bg-raised` fills.
+- Floating overlays are the exception: dialogs, drawers, command palette, find bar, sticky navigation, skip link, and keyboard notation may use the explicitly allowlisted square edge/fill chrome.
+- `pnpm next:grammar` enforces the allowlist through `nextjs/scripts/check-visual-grammar.mjs`; the Next.js CI job runs it before lint and build.
+- Light, dark, and system are the only theme modes. The experimental retro/glass skins are retired.
+
+`DESIGN.md` is the detailed component and token reference for this grammar.
+
 ## Design Philosophy
 
 **Identity:** Premium developer tool — think Linear, Warp, Raycast. Dark-first, information-dense, keyboard-native, typographically disciplined.
@@ -3441,18 +3449,9 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
 - **No decorative animation.** No staggered reveals, no parallax, no springs.
 - **Respects `prefers-reduced-motion`:** instant transitions when reduced motion preferred.
 
-### UI Themes (Experimental, v0.6.4)
+### Retired UI Themes (v0.6.4 experiment)
 
-- **Default:** current production hacker-tool system remains the baseline and first-visit default.
-- **Retro (cyberpunk/matrix):**
-  - Bright matrix-green accent, dark terminal surfaces, scanline overlay, mono-first typography, and terminal framing motifs.
-  - Includes optional heading hex artifact metadata via `data-hex` attributes.
-  - Keeps interaction affordances explicit (strong focus ring and bordered controls).
-- **Glass (glassmorphic minimal):**
-  - Rounded translucent surfaces, soft atmospheric gradients, and restrained highlight glow.
-  - Header becomes a rounded floating capsule on desktop and collapses to full-width on mobile.
-  - Prioritizes legibility with conservative text shadow and clear contrast tokens.
-- **Scoping:** all experimental theme behavior is attribute-scoped via `data-bm-ui-theme` so default visuals never inherit retro/glass styles.
+The retro and glass skins, their switcher, and `bm-ui-theme` persistence were removed by the 2026-08 grammar redesign. BetterMan has one square, text-first visual grammar with light, dark, and system color modes.
 
 ### Icons
 

@@ -191,7 +191,9 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'r' || e.key === 'R') mount(current);
 });
 
-setActive((parseInt(new URLSearchParams(location.search).get('v'), 10) || 1) - 1);
+const requestedVariant = parseInt(new URLSearchParams(location.search).get('v'), 10);
+const initialVariant = requestedVariant >= 1 && requestedVariant <= variants.length ? requestedVariant - 1 : 0;
+setActive(initialVariant);
 // Enable the slide only after first paint, so load doesn't animate.
 requestAnimationFrame(() => requestAnimationFrame(() => picker.setAttribute('data-ready', '')));
 ```

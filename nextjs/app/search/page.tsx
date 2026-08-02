@@ -76,7 +76,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
 
         <form className="mt-4" action="/search" method="get" role="search" aria-label="Search man pages">
-          <SearchPageInput initialQ={q} section={section} distro={distro} />
+          <SearchPageInput key={`${q}:${section}:${distro}`} initialQ={q} section={section} distro={distro} />
           {section ? <input type="hidden" name="section" value={section} /> : null}
           {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
         </form>

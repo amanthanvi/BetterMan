@@ -7,6 +7,7 @@ import type { Distro } from '../lib/distro'
 import { withDistro } from '../lib/distro'
 import {
   BOOKMARKS_EVENT,
+  BOOKMARKS_STORAGE_KEY,
   getBookmarks,
   removeBookmark,
   type BookmarkItem,
@@ -14,6 +15,7 @@ import {
 import {
   getRecent,
   RECENT_EVENT,
+  RECENT_STORAGE_KEY,
   type RecentItem,
 } from '../lib/recent'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -94,12 +96,19 @@ export function HomeDashboardClient({
 
     const onRecent = () => read()
     const onBookmarks = () => read()
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea !== window.localStorage) return
+      if (event.key && event.key !== RECENT_STORAGE_KEY && event.key !== BOOKMARKS_STORAGE_KEY) return
+      read()
+    }
 
     window.addEventListener(RECENT_EVENT, onRecent)
     window.addEventListener(BOOKMARKS_EVENT, onBookmarks)
+    window.addEventListener('storage', onStorage)
     return () => {
       window.removeEventListener(RECENT_EVENT, onRecent)
       window.removeEventListener(BOOKMARKS_EVENT, onBookmarks)
+      window.removeEventListener('storage', onStorage)
     }
   }, [])
 
@@ -136,7 +145,7 @@ export function HomeDashboardClient({
                   <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
                   <button
                     type="button"
-                    className="hidden shrink-0 items-center justify-center px-3 text-xs text-muted opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 sm:flex"
+                    className="flex shrink-0 items-center justify-center px-3 text-xs text-muted opacity-100 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0"
                     onClick={() => removeBookmark({ name: it.name, section: it.section })}
                     aria-label={`Remove bookmark for ${it.name}(${it.section})`}
                   >

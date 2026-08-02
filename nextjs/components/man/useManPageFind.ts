@@ -139,7 +139,8 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   }
 
   const closeFind = () => {
-    onClearFind()
+    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+    activeMarkRef.current = null
     setFindOpen(false)
   }
 

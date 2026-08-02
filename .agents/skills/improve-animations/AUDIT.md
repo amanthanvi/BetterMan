@@ -33,7 +33,7 @@ Decision order for easing:
 --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);     /* iOS-like drawer curve */
 ```
 
-Duration budgets — **UI animations stay under 300ms**:
+Duration budgets — **routine UI animations stay under 300ms**; large spatial modals/drawers may use 200–500ms only with explicit travel-based justification, and marketing/explanatory motion may be longer:
 
 | Element | Duration |
 | --- | --- |
@@ -49,9 +49,11 @@ Hunt for: `ease-in` anywhere, bare `ease`/`linear` on entrances, durations > 300
 
 - **Never `scale(0)`** — nothing in the real world appears from nothing. Target: `scale(0.9–0.97)` + `opacity: 0`.
 - **Popovers/dropdowns/tooltips scale from their trigger**, not center:
+
   ```css
   .popover { transform-origin: var(--transform-origin); } /* Base UI */
   ```
+
   **Modals are exempt** — they appear centered; `transform-origin: center` is correct there. Do not report it.
 - **Press feedback**: `transform: scale(0.97)` on `:active` with `transition: transform 160ms ease-out`. Keep it subtle (0.95–0.98).
 
@@ -70,7 +72,7 @@ Hunt for: `@keyframes` on toasts/toggles/rapidly-triggered UI, gesture handlers 
 
 ## 5. Performance
 
-- **Animate `transform` and `opacity` only.** `width`/`height`/`margin`/`padding`/`top`/`left` trigger layout + paint + composite.
+- **Default to `transform` and `opacity`.** Layout properties require a small isolated target and measured acceptable cost. `clip-path` and transition-time `filter` are bounded exceptions that require paint profiling; keep blur under 20px.
 - **`transition: all`** animates unintended properties off-GPU — always a finding.
 - **Framer Motion `x`/`y`/`scale` shorthands are not hardware-accelerated** — they run on the main thread and drop frames under load. Target: the full transform string, `animate={{ transform: "translateX(100px)" }}`.
 - **Don't drive child transforms via a CSS variable on the parent** — it recalcs styles for all children. Set `transform` directly on the element.

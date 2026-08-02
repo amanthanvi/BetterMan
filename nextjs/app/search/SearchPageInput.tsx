@@ -23,7 +23,7 @@ export function SearchPageInput({
   const router = useRouter()
   const [value, setValue] = useState(initialQ)
   const debounced = useDebouncedValue(value, 250)
-  const lastPushedRef = useRef(initialQ)
+  const lastPushedRef = useRef(initialQ.trim().slice(0, 120))
 
   useEffect(() => {
     const next = debounced.trim().slice(0, 120)

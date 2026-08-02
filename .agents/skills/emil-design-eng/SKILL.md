@@ -49,7 +49,7 @@ When reviewing UI code, you MUST use a markdown table with Before/After columns.
 
 Wrong format (never do this):
 
-```
+```text
 Before: transition: all 300ms
 After: transition: transform 200ms ease-out
 ────────────────────────────
@@ -132,7 +132,7 @@ Is the element entering or exiting?
 | Modals, drawers          | 200-500ms     |
 | Marketing/explanatory    | Can be longer |
 
-**Rule: UI animations should stay under 300ms.** A 180ms dropdown feels more responsive than a 400ms one. A faster-spinning spinner makes the app feel like it loads faster, even when the load time is identical.
+**Rule: routine UI animations should stay under 300ms.** A large spatial modal or drawer may use 200–500ms only when its travel needs it and the longer timing is justified; marketing/explanatory motion may be longer. A 180ms dropdown feels more responsive than a 400ms one. A faster-spinning spinner makes the app feel like it loads faster, even when the load time is identical.
 
 ### Perceived performance
 
@@ -160,7 +160,7 @@ Springs feel more natural than duration-based animations because they simulate r
 Tying visual changes directly to mouse position feels artificial because it lacks motion. Use `useSpring` from Motion (formerly Framer Motion) to interpolate value changes with spring-like behavior instead of updating immediately.
 
 ```jsx
-import { useSpring } from 'framer-motion';
+import { useSpring } from 'motion/react';
 
 // Without spring: feels artificial, instant
 const rotation = mouseX * 0.1;
@@ -266,14 +266,14 @@ Tooltips should delay before appearing to prevent accidental activation. But onc
 }
 ```
 
-### Use CSS transitions over keyframes for interruptible UI
+### Use transitions for non-gesture state; springs for gestures
 
-CSS transitions can be interrupted and retargeted mid-animation. Keyframes restart from zero. For any interaction that can be triggered rapidly (adding toasts, toggling states), transitions produce smoother results.
+CSS transitions can be interrupted and retargeted mid-animation. Keyframes restart from zero. For rapidly triggered non-gesture state changes (adding toasts, toggling states), transitions produce smoother results. Gesture-driven motion must use a spring that carries release velocity when retargeted.
 
 ```css
 /* Interruptible - good for UI */
 .toast {
-  transition: transform 400ms ease;
+  transition: transform 200ms ease-out;
 }
 
 /* Not interruptible - avoid for dynamic UI */
@@ -476,9 +476,9 @@ Instead of preventing upward drag entirely, allow it with increasing friction. I
 
 ## Performance Rules
 
-### Only animate transform and opacity
+### Default to transform and opacity
 
-These properties skip layout and paint, running on the GPU. Animating `padding`, `margin`, `height`, or `width` triggers all three rendering steps.
+These properties skip layout and paint, running on the GPU, so they are the default. Layout properties require a small, isolated element plus profiling that shows the cost is acceptable. `clip-path` and short transition-time `filter` effects are controlled exceptions: keep their area bounded, keep blur under 20px, and verify paint performance on Safari and a representative low-end device.
 
 ### CSS variables are inheritable
 

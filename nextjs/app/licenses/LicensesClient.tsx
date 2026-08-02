@@ -96,7 +96,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                     <button
                       type="button"
                       className={`w-full px-1 py-2 text-left transition-colors ${p.hasLicenseText ? '' : 'opacity-50'}`}
-                      aria-pressed={isSelected}
+                      aria-current={isSelected ? 'true' : undefined}
                       onClick={() => setSelected(p.hasLicenseText ? p.name : null)}
                       disabled={!p.hasLicenseText}
                     >

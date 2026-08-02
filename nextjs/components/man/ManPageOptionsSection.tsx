@@ -4,6 +4,7 @@ import type { OptionItem } from '../../lib/docModel'
 
 import { Button } from '../ui/Button'
 import { OptionsTable } from './OptionsTable'
+import { ManSectionLabel } from './RunningHead'
 
 export const OPTIONS_COLLAPSE_THRESHOLD = 20
 export const OPTIONS_PREVIEW_COUNT = 10
@@ -50,9 +51,9 @@ export function ManPageOptionsSection({
 
       {hasOptions ? (
         <section className="mb-10" aria-label="Options">
-          <div className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">
+          <ManSectionLabel>
             OPTIONS <span className="font-normal text-faint">· {optionsCount}</span>
-          </div>
+          </ManSectionLabel>
 
           <div className="mt-3">
             <OptionsTable

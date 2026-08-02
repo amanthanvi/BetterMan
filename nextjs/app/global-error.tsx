@@ -27,7 +27,7 @@ export default function GlobalError({
             </h1>
             <p className="mt-3 text-sm text-muted">Try again, or go back home.</p>
             {error.digest ? (
-              <div className="mt-3 font-mono text-xs text-muted">Digest: {error.digest}</div>
+              <div className="mt-3 font-mono text-xs text-faint">Digest: {error.digest}</div>
             ) : null}
             <div className="mt-6 flex flex-wrap gap-3">
               <button
@@ -39,7 +39,7 @@ export default function GlobalError({
               </button>
               <Link
                 href="/"
-                className="inline-flex h-10 items-center justify-center px-1 font-mono text-sm font-semibold text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
+                className="inline-flex h-9 items-center justify-center px-1 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
               >
                 Go home
               </Link>

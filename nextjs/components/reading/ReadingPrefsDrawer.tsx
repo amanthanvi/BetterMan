@@ -96,7 +96,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
           <div className="text-base font-semibold tracking-tight text-fg">Reading preferences</div>
           <div className="mt-1 text-sm text-muted">Applies to man page reading.</div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+        <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} aria-label="Close reading preferences">
           Esc
         </Button>
       </div>

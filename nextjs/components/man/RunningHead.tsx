@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 const SECTION_LABELS: Record<string, string> = {
   '1': 'User Commands',
   '2': 'System Calls',
@@ -41,7 +43,7 @@ export function ManSectionLabel({
   as: Tag = 'div',
   className,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   as?: 'div' | 'h2'
   className?: string
 }) {

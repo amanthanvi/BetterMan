@@ -21,6 +21,7 @@ export function TocDrawer() {
       <div className="mt-4">
         <Toc
           items={toc.items}
+          activeId={toc.activeId}
           showTitle={false}
           onNavigate={() => toc.setOpen(false)}
           onNavigateToId={(id) => {

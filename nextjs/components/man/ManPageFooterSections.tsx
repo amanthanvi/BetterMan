@@ -6,6 +6,7 @@ import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
 import { withDistro } from '../../lib/distro'
+import { ManSectionLabel } from './RunningHead'
 
 export function ManPageFooterSections({
   distro,
@@ -23,7 +24,7 @@ export function ManPageFooterSections({
     <>
       {seeAlsoItems.length ? (
         <aside className="mt-12 border-t border-edge pt-6" aria-label="See also">
-          <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">SEE ALSO</h2>
+          <ManSectionLabel as="h2">SEE ALSO</ManSectionLabel>
           <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
             {seeAlsoItems.map((ref) => {
               const key = `${ref.name}:${ref.section ?? ''}`
@@ -58,7 +59,7 @@ export function ManPageFooterSections({
 
       {related.length ? (
         <aside className="mt-10 border-t border-edge pt-6" aria-label="Related commands">
-          <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">RELATED</h2>
+          <ManSectionLabel as="h2">RELATED</ManSectionLabel>
           <ul className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
             {related.map((item) => (
               <li key={`${item.name}:${item.section}`}>
