@@ -1057,7 +1057,7 @@ flowchart LR
 ## Frontend Architecture
 
 **Stack Decisions:**
--   **Runtime:** Node 25
+-   **Runtime:** Node 26
 -   **Build Tool:** Vite (**v0.5.0:** Next.js App Router replaces Vite)
 -   **Framework:** React + TypeScript SPA (**v0.5.0:** Next.js with SSR + streaming + client hydration)
 -   **Router:** TanStack Router (type-safe routing with excellent TypeScript integration) (**v0.5.0:** Next.js file-based App Router)
@@ -2495,7 +2495,7 @@ All open questions have been resolved through the interview process:
 -   Linting: **ESLint**
 -   Testing (v0.2.0): **Vitest + Testing Library** (unit), **Playwright** (E2E), **axe-core** (a11y)
 -   Virtualization (v0.2.0): **TanStack Virtual** (100+ blocks threshold)
--   Runtime: **Node 25**
+-   Runtime: **Node 26**
 
 ### Backend Stack
 -   Framework: **FastAPI**

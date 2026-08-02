@@ -49,7 +49,7 @@ jobs:
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: 25
+          node-version: 26
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -70,7 +70,7 @@ jobs:
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: 25
+          node-version: 26
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -121,7 +121,7 @@ jobs:
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: 25
+          node-version: 26
           cache: pnpm
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
@@ -147,6 +147,36 @@ jobs:
           git diff --exit-code frontend/src/api/openapi.gen.ts
           git diff --exit-code nextjs/lib/openapi.gen.ts
 
+  container_build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Build legacy web image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          pull: true
+          tags: betterman-web:ci
+          cache-from: type=gha,scope=betterman-web
+          cache-to: type=gha,mode=max,scope=betterman-web
+
+      - name: Build Next.js image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: nextjs/Dockerfile
+          push: false
+          pull: true
+          tags: betterman-nextjs:ci
+          cache-from: type=gha,scope=betterman-nextjs
+          cache-to: type=gha,mode=max,scope=betterman-nextjs
+
   e2e:
     needs:
       - frontend
@@ -162,13 +192,25 @@ jobs:
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: 25
+          node-version: 26
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm -C frontend exec playwright install --with-deps chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in 1 2; do
+            if timeout 300s pnpm -C frontend exec playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "Playwright browser install failed or timed out (attempt ${attempt}/2)." >&2
+            sleep $((attempt * 5))
+          done
+
+          exit 1
 
       - name: Provision local Convex + seed E2E data
         env:
@@ -247,6 +289,7 @@ jobs:
       - backend
       - ingestion
       - api_types
+      - container_build
       - e2e
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
     continue-on-error: true
@@ -257,7 +300,7 @@ jobs:
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: 25
+          node-version: 26
 
       - name: Install Railway CLI
         shell: bash

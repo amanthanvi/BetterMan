@@ -26,7 +26,7 @@ This is a multi-service monorepo:
 
 ## Prerequisites
 
-- Node.js (CI uses Node `25`)
+- Node.js (CI uses Node `26`)
 - pnpm (see `package.json` → `packageManager`)
 - Python (CI uses Python `3.14`) + `uv`
 - Docker (for local Postgres + Redis via `docker-compose.yml`)

@@ -99,6 +99,8 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 ### M39 — CI + E2E migration
 
 - [x] CI builds/tests Next.js package
+- [x] CI builds both production images on Node 26 with cached Buildx jobs and gates deployment on those images
+- [x] Playwright 1.62 browser installation completes on Node 26 and is bounded by retry timeouts in CI
 - [x] E2E runs against Next.js + FastAPI (two processes)
 - [x] OpenAPI → TypeScript generation remains enforced
 
