@@ -57,7 +57,7 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M33 — Next.js scaffold (side-by-side)
 
-- [x] Add `nextjs/` package (Next.js 15 App Router + TypeScript + Tailwind v4)
+- [x] Add `nextjs/` package (Next.js 16 App Router + TypeScript + Tailwind v4)
 - [x] Add pnpm workspace entry for `nextjs/`
 - [x] Add root scripts (`next:*`) and document them
 - [x] Route shells exist: `/`, `/search`, `/man/[name]`, `/man/[name]/[section]`, `/section/[section]`, `/licenses`
@@ -81,7 +81,7 @@ Theme: **Next.js Migration + Content Expansion + Engagement + PWA**
 
 ### M36 — CSP nonces in Next.js
 
-- [x] Next.js middleware sets CSP + per-request nonce
+- [x] Next.js proxy sets CSP + per-request nonce
 - [x] Inline scripts (theme bootstrap, JSON-LD, analytics) receive nonce
 - [x] CSP runbook updated (`docs/runbooks/csp-violations.md`)
 
