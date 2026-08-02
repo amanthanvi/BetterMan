@@ -25,6 +25,16 @@ export function SearchPageInput({
   const debounced = useDebouncedValue(value, 250)
   const lastPushedRef = useRef(initialQ.trim().slice(0, 120))
 
+  /* Adopt externally-navigated queries (palette search while already on
+     /search) — our own replaces update lastPushedRef first, so this only
+     fires for URL changes we didn't initiate. */
+  useEffect(() => {
+    const next = initialQ.trim().slice(0, 120)
+    if (next === lastPushedRef.current) return
+    lastPushedRef.current = next
+    setValue(initialQ)
+  }, [initialQ])
+
   useEffect(() => {
     const next = debounced.trim().slice(0, 120)
     if (next === lastPushedRef.current) return
