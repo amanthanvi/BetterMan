@@ -41,6 +41,9 @@ jobs:
           set -euo pipefail
 
           export RAILWAY_VERSION="4.18.1"
+          railway_bin="$(npm config get prefix)/bin"
+          export PATH="${railway_bin}:${PATH}"
+          echo "$railway_bin" >> "$GITHUB_PATH"
 
           for attempt in 1 2 3; do
             echo "Installing @railway/cli@${RAILWAY_VERSION} (attempt $attempt/3)…"
@@ -49,6 +52,11 @@ jobs:
             fi
             sleep $((attempt * 10))
           done
+
+          if ! command -v railway >/dev/null 2>&1; then
+            echo "Failed to install Railway CLI (@railway/cli@${RAILWAY_VERSION}) after 3 attempts." >&2
+            exit 1
+          fi
 
           railway --version
 
