@@ -40,8 +40,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          export RAILWAY_VERSION="4.18.1"
-          railway_bin="$(npm config get prefix)/bin"
+          export RAILWAY_VERSION="4.18.2"
+          export npm_config_prefix="${RUNNER_TEMP}/railway-npm"
+          railway_bin="${npm_config_prefix}/bin"
+          mkdir -p "$railway_bin"
           export PATH="${railway_bin}:${PATH}"
           echo "$railway_bin" >> "$GITHUB_PATH"
 
