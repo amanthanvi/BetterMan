@@ -4,6 +4,10 @@ import { Dialog } from '../ui/Dialog'
 import { Kbd } from '../ui/Kbd'
 import { Button } from '../ui/Button'
 
+function shortcutGroupId(title: string): string {
+  return `bm-shortcuts-${title.toLowerCase().replaceAll(' ', '-')}`
+}
+
 export function ShortcutsDialog({
   open,
   onOpenChange,
@@ -69,8 +73,10 @@ export function ShortcutsDialog({
 
       <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
         {groups.map((g) => (
-          <section key={g.title} className="space-y-3">
-            <div className="font-mono text-xs tracking-wide text-muted">{g.title}</div>
+          <section key={g.title} aria-labelledby={shortcutGroupId(g.title)} className="space-y-3">
+            <h3 id={shortcutGroupId(g.title)} className="font-mono text-xs tracking-wide text-muted">
+              {g.title}
+            </h3>
             <ul className="space-y-2">
               {g.items.map((it) => (
                 <li key={`${g.title}:${it.desc}`} className="flex items-start justify-between gap-4">

@@ -7,6 +7,7 @@ import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { isTypingTarget } from '../../lib/dom'
 import { withDistro } from '../../lib/distro'
+import { getScrollBehavior } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
 import { CommandPalette } from '../palette/CommandPalette'
 import { ReadingPrefsDrawer } from '../reading/ReadingPrefsDrawer'
@@ -211,7 +212,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         window.scrollTo({
           top: 0,
           left: 0,
-          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          behavior: getScrollBehavior(),
         })
       }
 

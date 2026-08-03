@@ -47,18 +47,29 @@ function disallowed(hits) {
 
 const failures = []
 
-function hasDisallowedRoundedToken(line) {
+function utilityTokens(line) {
   const source = line.split(':').slice(2).join(':')
-  return source.split(/[\s"'`]+/).some((token) => {
-    const utility = token.split(':').at(-1)?.replace(/^!/, '').replace(/[),}\]]+$/, '')
-    return utility === 'rounded' || (utility?.startsWith('rounded-') && utility !== 'rounded-none')
-  })
+  return source
+    .split(/[\s"'`]+/)
+    .map((token) => token.split(':').at(-1)?.replace(/^!/, '').replace(/[),}\]]+$/, ''))
+    .filter(Boolean)
+}
+
+function hasDisallowedRoundedToken(line) {
+  return utilityTokens(line).some(
+    (utility) => utility === 'rounded' || (utility.startsWith('rounded-') && utility !== 'rounded-none'),
+  )
+}
+
+function hasEnclosingBorderTokens(line) {
+  const tokens = new Set(utilityTokens(line))
+  return tokens.has('border') && tokens.has('border-edge')
 }
 
 const rounded = grep('rounded').filter(hasDisallowedRoundedToken)
 if (rounded.length) failures.push(['rounded corners are banned (typeset grammar is square)', rounded])
 
-const boxes = disallowed(grep('border border-edge'))
+const boxes = disallowed(grep('border(-edge)?').filter(hasEnclosingBorderTokens))
 if (boxes.length) failures.push(['enclosing borders outside overlay files', boxes])
 
 const fills = disallowed(grep('bg-(surface|raised)'))

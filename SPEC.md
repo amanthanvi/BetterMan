@@ -281,11 +281,15 @@ Mobile layout fixes:
 -   Target **WCAG 2.2 AA**.
 -   Focus management:
     -   Command palette traps focus while open; returns focus to trigger element on close.
+    -   Find-in-page returns focus to the control that opened it when closed.
     -   Route changes set focus to the primary heading (`h1`) for screen readers (without breaking scroll). This ensures screen reader users hear the page title immediately upon navigation.
 -   Reduced motion:
     -   Respect `prefers-reduced-motion`; disable non-essential animations.
 -   Semantic structure:
     -   Use proper heading levels and landmarks in the rendered document model.
+    -   Man-page contents, synopsis, and options labels participate in the document heading outline.
+-   Status announcements:
+    -   Copy-link and bookmark changes expose polite live-region confirmation.
 -   Keyboard:
     -   No keyboard traps outside modals.
 -   Color:
@@ -3515,6 +3519,7 @@ The retro and glass skins, their switcher, and `bm-ui-theme` persistence were re
 - Opens from the title-header find action as a separate floating bar.
 - Appears below the header on desktop and above the bottom navigation on mobile.
 - Includes the input, match count, previous/next controls, and close action; Enter advances and Shift+Enter goes back.
+- Returns focus to the opening control when closed.
 
 **Content area:**
 - `max-width` controlled by reading preferences (42rem / 56rem / 72rem).
@@ -3566,18 +3571,13 @@ The retro and glass skins, their switcher, and `bm-ui-theme` persistence were re
 
 - **Trigger:** Cmd/Ctrl+K (unchanged).
 - **Visual:** dark surface, tight radius, 1px accent border, centered modal.
-- **Layout:** Split view — results list (60% left) + preview pane (40% right).
+- **Layout:** Single-column results list; the palette does not render a separate preview pane.
 - **Results list:**
   - On empty query: recent pages (last 8), bookmarked pages (starred indicator).
   - On typing: fuzzy search results, man pages.
   - Each item: `name(section)` mono, description, section badge.
   - Actions (prefixed with `>`): icon + label (Toggle theme, etc.).
-- **Preview pane:**
-  - Shows for selected (arrow-key highlighted) result.
-  - Content: synopsis (code block), description, section label, package info.
-  - No extra API call — uses data already in search response.
-  - If insufficient data: "Press Enter to view full page."
-- **Keyboard:** Up/Down navigate list, Enter opens, Esc closes, Tab focuses preview.
+- **Keyboard:** Up/Down navigate the list, Enter opens, and Esc closes.
 
 ### Licenses Page
 
@@ -3604,15 +3604,15 @@ The retro and glass skins, their switcher, and `bm-ui-theme` persistence were re
 
 ### Desktop Header
 
-- Height: 48px, solid `surface-2` bg, 1px border-bottom.
-- Left: logomark (16px) + "BetterMan" wordmark (Geist Sans 14px semibold).
-- Center: nav links — "Home", "Search", "Licenses" (text, Geist Sans sm, muted, accent on active with subtle bottom indicator).
-- Right: Cmd+K search trigger (bordered input-like element with placeholder text "Search…" and kbd hint), theme toggle (sun/moon icon).
+- Height: 56px, solid page background, 1px border-bottom.
+- Left: linked logomark + "BetterMan" wordmark.
+- Right: Cmd+K search trigger and theme toggle.
+- No primary-nav link row; Home is the linked wordmark, Licenses is in the footer, and search/navigation remain available through the palette and mobile nav.
 - No distro selector in header.
 
 ### Mobile Header
 
-- Same height (48px), solid bg.
+- Same height (56px), solid bg.
 - Left: logomark.
 - Right: search trigger icon + theme toggle icon.
 - No nav links (handled by bottom nav).
@@ -3713,8 +3713,8 @@ v0.6.0 has **no breaking changes** to URLs, API, deployment, or features.
 
 **Components**
 
-- [x] Header: full nav bar, new branding
-- [x] Command palette: preview pane
+- [x] Header: linked branding + search/theme controls
+- [x] Command palette: single-column result list
 - [x] Mobile bottom nav: 3 items
 - [x] Reading preferences drawer: restyled
 - [x] Shortcuts dialog: restyled

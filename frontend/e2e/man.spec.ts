@@ -11,10 +11,13 @@ test('man: sticky sidebar renders TOC; find opens from the title bar (desktop)',
   await expect(sidebar).toBeVisible()
   await expect(sidebar.getByRole('navigation', { name: 'On this page' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Find in page' }).click()
+  await waitForInteractiveShell(page)
+  const findTrigger = page.getByRole('button', { name: 'Find in page' })
+  await findTrigger.click()
   await expect(page.locator('[data-bm-findbar]').getByRole('textbox', { name: 'Find in page' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-bm-findbar]')).toHaveCount(0)
+  await expect(findTrigger).toBeFocused()
 })
 
 test('man: sidebar remains sticky while scrolling (desktop)', async ({ page }) => {
@@ -88,6 +91,7 @@ test('man: header and footer links work from man pages', async ({ page }) => {
 
   const header = page.getByRole('banner', { name: 'Site header' })
 
+  await waitForInteractiveShell(page)
   await header.getByRole('button', { name: 'Search' }).click()
   await expect(page.getByRole('combobox', { name: 'Command palette input' })).toBeVisible()
   await page.keyboard.press('Escape')
@@ -129,6 +133,7 @@ test('man: find-in-page shows count and navigates matches', async ({ page }) => 
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 
+  await waitForInteractiveShell(page)
   await page.getByRole('button', { name: 'Find in page' }).click()
   const findbar = page.locator('[data-bm-findbar]')
   await expect(findbar).toBeVisible()

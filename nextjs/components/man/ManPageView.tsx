@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
 import type { ManPage, ManPageContent, ManPageVariant, OptionItem } from '../../lib/docModel'
+import { getScrollBehavior } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
 import { DocRenderer } from '../doc/DocRenderer'
 import { RecentPageRecorder } from '../recent/RecentPageRecorder'
@@ -16,11 +17,8 @@ import { ManPageFindBar } from './ManPageFindBar'
 import { ManPageFooterSections } from './ManPageFooterSections'
 import { ManPageHeaderCard } from './ManPageHeaderCard'
 import { ManPageOptionsSection, OPTIONS_COLLAPSE_THRESHOLD } from './ManPageOptionsSection'
+import { ManSectionLabel } from './RunningHead'
 import { useManPageFind } from './useManPageFind'
-
-function getScrollBehavior(): 'auto' | 'smooth' {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-}
 
 export function ManPageView({
   page,
@@ -241,7 +239,7 @@ export function ManPageView({
                 {desktopSidebarExpanded ? (
                   <>
                     <div className="flex items-center justify-between gap-3">
-                      <div className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">CONTENTS</div>
+                      <ManSectionLabel as="h2">CONTENTS</ManSectionLabel>
                       <IconButton
                         variant="ghost"
                         size="sm"

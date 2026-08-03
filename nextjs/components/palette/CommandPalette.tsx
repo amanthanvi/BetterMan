@@ -12,6 +12,7 @@ import { useFocusTrap } from '../../lib/useFocusTrap'
 import { normalizeDistro, withDistro, type Distro } from '../../lib/distro'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { isTypingTarget } from '../../lib/dom'
+import { getScrollBehavior } from '../../lib/scroll'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
@@ -318,7 +319,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         title: t.title,
         level: t.level,
         run: () => {
-          const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+          const behavior = getScrollBehavior()
           document.getElementById(t.id)?.scrollIntoView({ behavior, block: 'start' })
           window.location.hash = t.id
           close()
@@ -416,7 +417,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               aria-label="Command palette input"
               role="combobox"
               aria-autocomplete="list"
-              aria-expanded={true}
+              aria-expanded={items.length > 0}
               aria-controls="bm-palette-list"
               aria-activedescendant={items.length ? `bm-palette-option-${safeActiveIndex}` : undefined}
             />
@@ -459,14 +460,31 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 >
                   <div className="flex items-baseline gap-3">
                     <div className="min-w-0 shrink-0 font-mono text-sm font-semibold text-fg">
-                      {item.kind === 'action' ? `> ${item.label}` : item.kind === 'heading' ? `# ${item.title}` : itemLabel(item)}
+                      {item.kind === 'action' ? (
+                        <>
+                          <span aria-hidden="true">&gt; </span>
+                          {item.label}
+                        </>
+                      ) : item.kind === 'heading' ? (
+                        <>
+                          <span aria-hidden="true"># </span>
+                          {item.title}
+                        </>
+                      ) : (
+                        itemLabel(item)
+                      )}
                     </div>
                     {item.kind === 'page' ? (
                       <div className="min-w-0 flex-1 truncate text-sm text-muted">{item.description}</div>
                     ) : item.kind === 'action' && item.detail ? (
                       <div className="min-w-0 flex-1 truncate text-sm text-muted">{item.detail}</div>
                     ) : null}
-                    {bookmark ? <div className="shrink-0 text-xs text-muted">★</div> : null}
+                    {bookmark ? (
+                      <div className="shrink-0 text-xs text-muted">
+                        <span aria-hidden="true">★</span>
+                        <span className="sr-only">Bookmarked</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               )

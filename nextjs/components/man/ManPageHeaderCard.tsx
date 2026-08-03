@@ -81,6 +81,9 @@ export function ManPageHeaderCard({
 
           <IconButton onClick={onCopyLink} aria-label="Copy link to clipboard" title={copiedLink ? 'Copied' : 'Copy link'}>
             {copiedLink ? <CheckIcon className="size-4 text-accent" /> : <CopyIcon className="size-4" />}
+            <span aria-live="polite" className="sr-only">
+              {copiedLink ? 'Link copied' : ''}
+            </span>
           </IconButton>
         </div>
       </div>
@@ -114,7 +117,7 @@ export function ManPageHeaderCard({
 
                 const qs = params.toString()
                 const base = qs ? `${pathname}?${qs}` : pathname
-                router.push(`${base}${window.location.hash || ''}`)
+                router.replace(`${base}${window.location.hash || ''}`)
               }}
               className="border-0 border-b border-edge bg-transparent px-0.5 py-0.5 text-xs text-fg"
               aria-label="Select distribution variant"
@@ -146,7 +149,7 @@ export function ManPageHeaderCard({
 
       {synopsis?.length ? (
         <div className="mt-8">
-          <ManSectionLabel>SYNOPSIS</ManSectionLabel>
+          <ManSectionLabel as="h2">SYNOPSIS</ManSectionLabel>
           <pre className="mt-2 overflow-x-auto bg-code-bg p-4 text-sm leading-[1.6] text-fg" tabIndex={0}>
             <code>{synopsis.join('\n')}</code>
           </pre>

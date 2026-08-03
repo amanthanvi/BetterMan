@@ -168,7 +168,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - Motion: 100–200ms transitions on interactions only. No decorative animation.
 - Code blocks: terminal-in-page (dark bg even in light mode, minimal header bar with language label + copy button, no traffic-light dots).
 - Sidebar: sticky + collapsible on desktop; mobile uses contents drawer.
-- Command palette: refine current + add inline preview pane alongside results.
+- Command palette: refine current as a focused single-column results list.
 - Homepage: command-line prompt metaphor with dashboard (recent + bookmarks merged in).
 - Eliminate /bookmarks and /history routes — merge into homepage dashboard.
 - Mobile: equal priority; simplify bottom nav to 3 items.
@@ -176,7 +176,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - Options table: dedicated collapsible panel with tighter density and tag-style flags.
 - Search results: preview cards with synopsis snippet.
 - Section browse: restyle only, keep current layout.
-- Header: full nav bar (logo, primary nav, search trigger, theme toggle).
+- Header: minimal bar (linked logo, search trigger, theme toggle); footer/mobile nav carry destination links.
 - Reading prefs: keep as drawer, restyle.
 - Man page header: hero card (dark surface, strong type hierarchy).
 - Find-in-page: title-header action opens a floating bar below the header on desktop and above bottom navigation on mobile.
@@ -201,9 +201,9 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 
 ### M46 — Header & navigation redesign
 
-- [x] New header layout (logo + nav + search trigger + theme toggle)
-- [x] Header: 48px height, solid `surface-2` bg, thin border-bottom
-- [x] Active nav link: accent color + subtle bottom border indicator
+- [x] New header layout (linked logo + search trigger + theme toggle)
+- [x] Header: 56px height, solid page background, thin border-bottom
+- [x] Omit desktop primary-nav links; keep destinations in the logo, palette/mobile nav, and footer
 - [x] Remove distro selector from header (contextual-only)
 - [x] Mobile header: logo left, search trigger + theme toggle right
 - [x] Mobile bottom nav: simplify to 3 items — Home, Search, Bookmarks
@@ -222,7 +222,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Content typography updated (H2 accent left border)
 - [x] Code blocks: theme-tinted, full-bleed on mobile, with a headerless ghost copy glyph and checkmark feedback
 - [x] Options table redesign: tag-style flags + collapsible panel
-- [x] Find-in-page: title-header action opens the shared floating bar on desktop and mobile
+- [x] Find-in-page: title-header action opens the shared floating bar on desktop and mobile; close restores trigger focus
 - [x] Related commands footer restyled
 
 ### M49 — Search page redesign
@@ -241,9 +241,9 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 ### M51 — Command palette upgrade
 
 - [x] Visual redesign: dark surface, tight radius, 1px accent border
-- [x] Split layout: results (60%) + preview pane (40%)
+- [x] Single-column results list without a separate preview pane
 - [x] Empty query: recent + bookmarks
-- [x] Keyboard: up/down, enter, esc, tab focus preview
+- [x] Keyboard: up/down, enter, esc
 
 ### M52 — Reading preferences drawer restyle
 
@@ -255,7 +255,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 ### M53 — Shortcuts dialog restyle
 
 - [x] Dark surface modal, tight radius
-- [x] Grouped by category
+- [x] Grouped by category with semantic, labelled sections
 - [x] Shortcut keys as bordered kbd elements
 
 ### M54 — Mobile experience

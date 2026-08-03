@@ -492,23 +492,23 @@ element.style.setProperty('--swipe-amount', `${distance}px`);
 element.style.transform = `translateY(${distance}px)`;
 ```
 
-### Framer Motion hardware acceleration caveat
+### Motion performance depends on the runtime path
 
-Framer Motion's shorthand properties (`x`, `y`, `scale`) are NOT hardware-accelerated. They use `requestAnimationFrame` on the main thread. For hardware acceleration, use the full `transform` string:
+Motion's shorthand transform properties (`x`, `y`, `scale`) map to transforms and are not inherently a performance problem. Hardware acceleration depends on the animated property, browser, animation type, and whether Motion can use WAAPI or must run work on the main thread. Profile the actual interaction under realistic load before changing its representation:
 
 ```jsx
-// NOT hardware accelerated (convenient but drops frames under load)
+// Concise transform shorthand; verify the runtime path when performance matters
 <motion.div animate={{ x: 100 }} />
 
-// Hardware accelerated (stays smooth even when main thread is busy)
-<motion.div animate={{ transform: "translateX(100px)" }} />
+// Predetermined CSS animation can be a good alternative when profiling shows contention
+<div className="slide-with-css" />
 ```
 
-This matters when the browser is simultaneously loading content, running scripts, or painting. At Vercel, the dashboard tab animation used Shared Layout Animations and dropped frames during page loads. Switching to CSS animations (off main thread) fixed it.
+Look for evidence such as layout-triggering properties, a JavaScript fallback path, heavy concurrent rendering, or measured dropped frames. Do not flag shorthand transform props by themselves.
 
-### CSS animations beat JS under load
+### Choose CSS or JavaScript from interaction needs and measurements
 
-CSS animations run off the main thread. When the browser is busy loading a new page, Framer Motion animations (using `requestAnimationFrame`) drop frames. CSS animations remain smooth. Use CSS for predetermined animations; JS for dynamic, interruptible ones.
+CSS or WAAPI is often a strong fit for predetermined animations. JavaScript or springs remain appropriate for dynamic, interruptible, and gesture-driven motion. Neither path guarantees compositor execution; profile the properties and workload that actually ship.
 
 ### Use WAAPI for programmatic CSS animations
 
@@ -669,6 +669,6 @@ When reviewing UI code, check for:
 | Duration > 300ms on UI element             | Reduce to 150-250ms                                              |
 | Hover animation without media query        | Add `@media (hover: hover) and (pointer: fine)`                  |
 | Keyframes on rapidly-triggered element     | Use CSS transitions for interruptibility                         |
-| Framer Motion `x`/`y` props under load     | Use `transform: "translateX()"` for hardware acceleration        |
-| Same enter/exit transition speed           | Make exit faster than enter (e.g., enter 2s, exit 200ms)         |
+| Measured Motion jank under load            | Profile the property/runtime path; prefer CSS or WAAPI when the motion is predetermined |
+| Same timing for a deliberate hold/confirm  | Make the system response faster than the deliberate phase        |
 | Elements all appear at once                | Add stagger delay (30-80ms between items)                        |

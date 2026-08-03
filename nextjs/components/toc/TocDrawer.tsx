@@ -1,5 +1,6 @@
 'use client'
 
+import { getScrollBehavior } from '../../lib/scroll'
 import { useToc } from '../state/toc'
 import { Button } from '../ui/Button'
 import { Drawer } from '../ui/Drawer'
@@ -29,7 +30,7 @@ export function TocDrawer() {
               toc.scrollToId(id)
               return
             }
-            const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+            const behavior = getScrollBehavior()
             document.getElementById(id)?.scrollIntoView({ behavior, block: 'start' })
           }}
         />

@@ -60,16 +60,17 @@ The picker's markup, styles, keyboard wiring, and placement come from [PICKER.md
 
 Run the harness. Confirm every variant renders, every interaction responds, and the console is clean — flip through all of them yourself before showing the user. If browser tooling is available, screenshot each variant.
 
-Then present the set and **stop — the choice belongs to the user**:
+Then present the set and **stop — the choice belongs to the user**. Include one row for every rendered variant:
 
 | # | Variant | Axis | When it's the right choice | Its cost |
 | --- | --- | --- | --- | --- |
 | 1 | Quiet | Minimal motion, borders over shadows | The product is a daily-use tool | Least memorable |
 | 2 | Editorial | Large type, generous whitespace | The moment deserves weight | Eats vertical space |
+| 3 | Playful | Expressive color and responsive motion | Discovery should feel inviting | Less restrained for daily workflows |
 
 Close with where the picker is running (URL or file path) and the keys to flip.
 
-**Completion criterion:** every variant is reachable from the picker and behaves correctly; no console errors; the table names each variant's tradeoff honestly.
+**Completion criterion:** every variant is reachable from the picker and behaves correctly; no console errors; the table includes every rendered variant and names each tradeoff honestly.
 
 ### Phase 6 — Promote on selection
 
