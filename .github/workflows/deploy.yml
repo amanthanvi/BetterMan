@@ -132,7 +132,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          current_main_sha="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          if ! current_main_sha="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')" ||
+            [[ -z "$current_main_sha" ]]; then
+            echo "Unable to resolve refs/heads/main from the application checkout's origin remote." >&2
+            exit 1
+          fi
           if [[ "$current_main_sha" != "$BETTERMAN_DEPLOY_SHA" ]]; then
             echo "Refusing to deploy stale Convex functions: selected ${BETTERMAN_DEPLOY_SHA}, current main ${current_main_sha}." >&2
             exit 1
@@ -140,9 +144,12 @@ jobs:
 
       - name: Deploy current Convex functions
         if: needs.resolve_revision.outputs.require_current_main == 'true'
+        shell: bash
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: |
+          set -euo pipefail
+
           if [[ -z "$CONVEX_DEPLOY_KEY" ]]; then
             echo "CONVEX_DEPLOY_KEY is required in the protected production environment." >&2
             exit 1
@@ -153,14 +160,21 @@ jobs:
             --message "GitHub Actions ${BETTERMAN_DEPLOY_SHA}"
 
       - name: Verify production Convex contract
+        shell: bash
         env:
           CONVEX_URL: ${{ vars.CONVEX_URL }}
           BETTERMAN_DATASET_STAGE: prod
           BETTERMAN_CHECK_DISTROS: debian
           BETTERMAN_MIN_PAGE_COUNT: 1
         run: |
+          set -euo pipefail
+
           if [[ -z "$CONVEX_URL" ]]; then
             echo "CONVEX_URL is required in the protected production environment." >&2
+            exit 1
+          fi
+          if [[ ! -d "$GITHUB_WORKSPACE/app/node_modules" || ! -d "$GITHUB_WORKSPACE/tooling" ]]; then
+            echo "Expected app dependencies and trusted tooling checkouts are missing." >&2
             exit 1
           fi
           ln -s "$GITHUB_WORKSPACE/app/node_modules" "$GITHUB_WORKSPACE/tooling/node_modules"

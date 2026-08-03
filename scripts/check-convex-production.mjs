@@ -132,14 +132,13 @@ async function checkDistro(client, { stage, distro, minPageCount }) {
     })
     if (!metadata || metadata.page?.name !== golden.name || metadata.page?.section !== golden.section) {
       failures.push(`golden metadata ${golden.name}/${golden.section} missing`)
-    }
-    if (!metadata?.page?.title?.trim()) {
-      failures.push(`golden metadata ${golden.name}/${golden.section} has an empty title`)
-    }
-    if (metadata?.page?.datasetReleaseId !== info.datasetReleaseId) {
-      failures.push(
-        `golden metadata release ${metadata?.page?.datasetReleaseId ?? 'missing'} != active ${info.datasetReleaseId}`,
-      )
+    } else {
+      if (!metadata.page.title.trim()) {
+        failures.push(`golden metadata ${golden.name}/${golden.section} has an empty title`)
+      }
+      if (metadata.page.datasetReleaseId !== info.datasetReleaseId) {
+        failures.push(`golden metadata release ${metadata.page.datasetReleaseId} != active ${info.datasetReleaseId}`)
+      }
     }
   } catch (error) {
     failures.push(`golden metadata ${golden.name}/${golden.section} failed: ${error.message}`)
