@@ -220,34 +220,34 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Run privileged apt/dpkg setup once. Browser-download retries then
-          # cannot inherit or worsen package-manager state from a timed-out
-          # --with-deps attempt.
-          # Worst-case setup plus two retries consumes 780s, preserving 420s
-          # of the 20-minute job budget for checkout, build, and tests.
-          timeout --kill-after=15s 240s \
-            pnpm -C frontend exec playwright install-deps chromium
-
-          # Keep each unprivileged browser download in an exact process group
-          # so a timeout cannot leave pnpm or download children behind.
-          install_browser() {
-            setsid --wait timeout --kill-after=15s 240s \
-              pnpm -C frontend exec playwright install chromium &
-            local install_group=$!
-            local status=0
-
-            wait "${install_group}" || status=$?
-            if ((status != 0)); then
-              kill -TERM -- "-${install_group}" 2>/dev/null || true
-              sleep 5
-              kill -KILL -- "-${install_group}" 2>/dev/null || true
+          # A non-timeout apt/mirror failure gets one retry. A timeout stops
+          # immediately so a possibly interrupted dpkg run cannot poison a
+          # second attempt on the same runner.
+          dependencies_ready=false
+          for attempt in 1 2; do
+            status=0
+            timeout --kill-after=15s 180s \
+              pnpm -C frontend exec playwright install-deps chromium || status=$?
+            if ((status == 0)); then
+              dependencies_ready=true
+              break
             fi
+            echo "Playwright dependency install failed (attempt ${attempt}/2, status ${status})." >&2
+            if ((status == 124 || status == 137)); then
+              echo "Dependency setup timed out; refusing an unsafe dpkg retry." >&2
+              exit "${status}"
+            fi
+            if ((attempt < 2)); then sleep 5; fi
+          done
+          if [[ "${dependencies_ready}" != true ]]; then exit 1; fi
 
-            return "${status}"
-          }
+          # GNU timeout owns the unprivileged download process group and kills
+          # remaining children before returning. Two worst-case setup loops use
+          # at most 760s, preserving 440s of the 20-minute job budget.
 
           for attempt in 1 2; do
-            if install_browser; then
+            if timeout --kill-after=15s 180s \
+              pnpm -C frontend exec playwright install chromium; then
               exit 0
             fi
             echo "Playwright browser install failed or timed out (attempt ${attempt}/2)." >&2

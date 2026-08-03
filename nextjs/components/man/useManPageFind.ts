@@ -8,6 +8,7 @@ import type { DocRendererHandle } from '../doc/DocRenderer'
 import { buildFindIndex, locateFindMatch } from './findIndex'
 
 const FIND_DEBOUNCE_MS = 150
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const [find, setFind] = useState('')
@@ -63,7 +64,7 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     el?.select()
   }, [])
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!findOpen) return
     focusFindInput()
   }, [findOpen, focusFindInput])
@@ -165,6 +166,7 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   }
 
   const closeFind = () => {
+    if (focusRestoreFrameRef.current !== null) return
     if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
     activeMarkRef.current = null
     const previouslyFocused = previouslyFocusedRef.current
