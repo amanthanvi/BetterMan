@@ -20,9 +20,13 @@ COPY convex ./convex
 COPY nextjs ./nextjs
 
 RUN pnpm -C nextjs build
+# Reuse the integrity-checked store populated above, but link only production dependencies.
 RUN rm -rf /app/node_modules /app/nextjs/node_modules \
-  && pnpm --filter betterman-nextjs --prod install --frozen-lockfile --offline \
-  && test ! -e /app/node_modules/.bin/vercel
+  && pnpm --filter betterman-nextjs install --prod --frozen-lockfile --offline \
+  && test -x /app/nextjs/node_modules/.bin/next \
+  && test ! -e /app/node_modules/.bin/vercel \
+  && test ! -e /app/nextjs/node_modules/.bin/vercel \
+  && test -z "$(find /app/node_modules/.pnpm -maxdepth 1 -name 'vercel@*' -print -quit)"
 
 
 FROM node:26.5.1-bookworm-slim@sha256:9e6f9357d371591e32ab6f2d8a26d63bdd0d17c29eee3f4f3e7e454d9634bf73 AS runtime
