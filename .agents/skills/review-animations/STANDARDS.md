@@ -112,7 +112,7 @@ Slow where the user is deciding, fast where the system responds.
 
 ## Performance
 
-- **Default to `transform` and `opacity`** — they skip layout/paint and run on the GPU. Layout properties require a small isolated target and measured acceptable cost. Bounded `clip-path` and transition-time `filter` are controlled exceptions that require paint profiling; keep blur under 20px.
+- **Default to `transform` and `opacity`** — they are compositor-friendly: they usually avoid layout/paint and may run on the compositor or GPU (the browser decides layer promotion); verify with profiling. Layout properties require a small isolated target and measured acceptable cost. Bounded `clip-path` and transition-time `filter` are controlled exceptions that require paint profiling; keep blur under 20px.
 - **Don't drive child transforms via a CSS variable on the parent** — it recalcs styles for all children. Set `transform` directly on the element.
 
   ```js
