@@ -24,6 +24,7 @@ test('search: live query updates preserve input focus', async ({ page }) => {
 
   const input = page.getByRole('searchbox', { name: 'Search man pages' })
   await input.fill('tar')
+  await input.click()
 
   await expect(page).toHaveURL(/\/search\?q=tar/)
   await expect(input).toBeFocused()

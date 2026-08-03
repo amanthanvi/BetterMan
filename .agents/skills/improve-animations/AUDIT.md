@@ -66,7 +66,7 @@ CSS **transitions** retarget from the current state mid-animation; **keyframes**
 - Entry without JS: `@starting-style` (legacy fallback: a `data-mounted` attribute set in `useEffect`).
 - Gesture-driven motion should use springs — they carry velocity when interrupted.
 - Spring configs, Apple-style (recommended): `{ type: "spring", duration: 0.5, bounce: 0.2 }`. Keep bounce subtle (0.1–0.3); reserve visible bounce for drag-to-dismiss and playful moments.
-- **Asymmetric timing**: deliberate phases (press, hold, destructive confirm) animate slower; the system's response snaps. Symmetric timing on press-and-release is a finding.
+- **Asymmetric timing for deliberate phases**: a hold or confirmation may animate slower while the system's response snaps. Symmetric timing is valid for normal reversible transitions where continuity is the goal.
 
 Hunt for: `@keyframes` on toasts/toggles/rapidly-triggered UI, gesture handlers that tween with fixed-duration keyframes, drags without velocity-based dismissal (dismiss on `Math.abs(distance)/elapsedMs > ~0.11`, not distance thresholds alone), hard stops at drag boundaries instead of rising friction.
 
@@ -74,12 +74,12 @@ Hunt for: `@keyframes` on toasts/toggles/rapidly-triggered UI, gesture handlers 
 
 - **Default to `transform` and `opacity`.** Layout properties require a small isolated target and measured acceptable cost. `clip-path` and transition-time `filter` are bounded exceptions that require paint profiling; keep blur under 20px.
 - **`transition: all`** animates unintended properties off-GPU — always a finding.
-- **Framer Motion `x`/`y`/`scale` shorthands are not hardware-accelerated** — they run on the main thread and drop frames under load. Target: the full transform string, `animate={{ transform: "translateX(100px)" }}`.
+- **Profile Motion in context.** Do not flag `x`/`y`/`scale` shorthands alone; require evidence of a costly property, JavaScript runtime path, concurrent workload, or measured dropped frames.
 - **Don't drive child transforms via a CSS variable on the parent** — it recalcs styles for all children. Set `transform` directly on the element.
-- CSS (and WAAPI) beat rAF-based JS under load — use CSS for predetermined motion, JS/springs for dynamic and gesture-driven motion.
+- Prefer CSS or WAAPI for predetermined motion when profiling supports it; use JS/springs for dynamic and gesture-driven motion.
 - Keep transition-time `filter: blur()` under 20px — heavy blur is expensive, especially in Safari.
 
-Hunt for: `transition: all`, animated layout properties, Framer Motion shorthand props on busy pages, `setProperty('--x', …)` driving child transforms, rAF loops doing what CSS could.
+Hunt for: `transition: all`, animated layout properties, measured Motion/runtime contention, `setProperty('--x', …)` driving child transforms, and rAF loops doing what CSS could.
 
 ## 6. Accessibility
 

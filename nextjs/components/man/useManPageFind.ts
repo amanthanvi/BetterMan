@@ -3,14 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { BlockNode } from '../../lib/docModel'
+import { getScrollBehavior } from '../../lib/scroll'
 import type { DocRendererHandle } from '../doc/DocRenderer'
 import { buildFindIndex, locateFindMatch } from './findIndex'
 
 const FIND_DEBOUNCE_MS = 150
-
-function getScrollBehavior(): 'auto' | 'smooth' {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-}
 
 export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const [find, setFind] = useState('')
@@ -18,6 +15,7 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const [activeFindIndex, setActiveFindIndex] = useState(0)
 
   const activeMarkRef = useRef<HTMLElement | null>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const findInputRef = useRef<HTMLInputElement | null>(null)
   const docRef = useRef<DocRendererHandle | null>(null)
 
@@ -64,6 +62,9 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   }
 
   const openFind = () => {
+    if (!findOpen) {
+      previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    }
     setFindOpen(true)
     requestAnimationFrame(() => focusFindInput())
   }
@@ -141,7 +142,10 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const closeFind = () => {
     if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
     activeMarkRef.current = null
+    const previouslyFocused = previouslyFocusedRef.current
+    previouslyFocusedRef.current = null
     setFindOpen(false)
+    window.requestAnimationFrame(() => previouslyFocused?.focus({ preventScroll: true }))
   }
 
   return {

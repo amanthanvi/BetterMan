@@ -51,7 +51,7 @@ export function ManPageOptionsSection({
 
       {hasOptions ? (
         <section className="mb-10" aria-label="Options">
-          <ManSectionLabel>
+          <ManSectionLabel as="h2">
             OPTIONS <span className="font-normal text-faint">· {optionsCount}</span>
           </ManSectionLabel>
 

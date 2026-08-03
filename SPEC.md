@@ -281,11 +281,15 @@ Mobile layout fixes:
 -   Target **WCAG 2.2 AA**.
 -   Focus management:
     -   Command palette traps focus while open; returns focus to trigger element on close.
+    -   Find-in-page returns focus to the control that opened it when closed.
     -   Route changes set focus to the primary heading (`h1`) for screen readers (without breaking scroll). This ensures screen reader users hear the page title immediately upon navigation.
 -   Reduced motion:
     -   Respect `prefers-reduced-motion`; disable non-essential animations.
 -   Semantic structure:
     -   Use proper heading levels and landmarks in the rendered document model.
+    -   Man-page contents, synopsis, and options labels participate in the document heading outline.
+-   Status announcements:
+    -   Copy-link and bookmark changes expose polite live-region confirmation.
 -   Keyboard:
     -   No keyboard traps outside modals.
 -   Color:
@@ -3515,6 +3519,7 @@ The retro and glass skins, their switcher, and `bm-ui-theme` persistence were re
 - Opens from the title-header find action as a separate floating bar.
 - Appears below the header on desktop and above the bottom navigation on mobile.
 - Includes the input, match count, previous/next controls, and close action; Enter advances and Shift+Enter goes back.
+- Returns focus to the opening control when closed.
 
 **Content area:**
 - `max-width` controlled by reading preferences (42rem / 56rem / 72rem).

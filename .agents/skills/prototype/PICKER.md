@@ -86,8 +86,10 @@ In a framework, keep the class names and structure; only the rendering syntax ch
   transition: color 150ms ease-out;
 }
 
-.proto-picker-item:hover {
-  color: rgba(255, 255, 255, 0.85);
+@media (hover: hover) and (pointer: fine) {
+  .proto-picker-item:hover {
+    color: rgba(255, 255, 255, 0.85);
+  }
 }
 
 .proto-picker-item:active {
@@ -124,7 +126,7 @@ In a framework, keep the class names and structure; only the rendering syntax ch
 ## Rules
 
 - **Verbatim.** These values are the spec. No project fonts, no brand colors, no theme switching, no extra shadows or borders.
-- **The highlight slides; the variant swap stays instant.** The active pill animates between buttons (250ms, strong ease-out) as spatial feedback on the picker itself — but the variant being previewed still switches with no transition. The `width` transition is a deliberate exception to the transform/opacity rule: the element is 28px tall, absolutely positioned, and has no layout dependents, so the paint cost is negligible.
+- **The highlight slides; the variant swap stays instant.** The active pill animates between buttons (250ms, strong ease-out) as spatial feedback on the picker itself — but the variant being previewed still switches with no transition. The `width` transition is a deliberate exception to the transform/opacity rule: the element is 28px tall, absolutely positioned, and has no layout dependents. Before handoff, profile switches through every variant at 4× CPU slowdown; accept only when the picker causes no animation frame over 16.7ms. If it fails, remove `width` from the transition so width updates instantly.
 - **One allowed modification:** if a variant occupies the bottom-center of the screen (a toast stack, a bottom sheet, a dock), set `data-position="top"` so the picker never covers the work. Nothing else about it may move or change.
 - **Replay is conditional.** Render the replay button and its divider only when at least one variant has an entrance or state animation worth re-triggering; a static comparison gets a shorter pill.
 
@@ -183,7 +185,7 @@ window.addEventListener('resize', moveHighlight);
 
 document.addEventListener('keydown', (e) => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
   const num = parseInt(e.key, 10);
   if (num >= 1 && num <= variants.length) setActive(num - 1);
   else if (e.key === 'ArrowRight') setActive((current + 1) % variants.length);

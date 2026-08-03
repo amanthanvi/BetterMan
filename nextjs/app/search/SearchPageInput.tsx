@@ -33,14 +33,18 @@ export function SearchPageInput({
     const cancelFocusRestore = () => {
       restoreFocusRef.current = false
     }
+    const cancelFocusRestoreOnPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && inputRef.current?.contains(event.target)) return
+      cancelFocusRestore()
+    }
     const cancelFocusRestoreOnTab = (event: KeyboardEvent) => {
       if (event.key === 'Tab') cancelFocusRestore()
     }
 
-    window.addEventListener('pointerdown', cancelFocusRestore, true)
+    window.addEventListener('pointerdown', cancelFocusRestoreOnPointerDown, true)
     window.addEventListener('keydown', cancelFocusRestoreOnTab, true)
     return () => {
-      window.removeEventListener('pointerdown', cancelFocusRestore, true)
+      window.removeEventListener('pointerdown', cancelFocusRestoreOnPointerDown, true)
       window.removeEventListener('keydown', cancelFocusRestoreOnTab, true)
     }
   }, [])
@@ -88,7 +92,7 @@ export function SearchPageInput({
       name="q"
       type="search"
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setValue(e.target.value.slice(0, 120))}
       placeholder="search man pages…"
       data-bm-page-search
       autoComplete="off"

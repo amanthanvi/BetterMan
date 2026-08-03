@@ -168,7 +168,7 @@ Smoothness is about *what's in the frames*, not just the frame rate.
 
 - Keep the per-frame positional change below the perception threshold to avoid strobing.
 - For very fast motion, a subtle **motion blur / stretch** encodes speed and reads better than a hard sharp streak.
-- `requestAnimationFrame` is the web's display-synced clock (Apple uses `CADisplayLink`). Animate only compositor-friendly properties — `transform` and `opacity` — and hint with `will-change` where motion is imminent.
+- `requestAnimationFrame` is the web's display-synced clock (Apple uses `CADisplayLink`). Default to compositor-friendly `transform` and `opacity`, and hint with `will-change` where motion is imminent. Use bounded `filter`, `backdrop-filter`, or `clip-path` exceptions only after paint profiling confirms acceptable cost.
 
 ## 12. Materials & depth — translucency conveys hierarchy
 
@@ -195,7 +195,7 @@ Apple uses translucent materials as a floating functional layer that brings stru
 Three rules for combining senses (from *Designing Audio-Haptic Experiences*):
 
 1. **Causality** — it must be obvious what caused the feedback. Trigger it on the actual causal event (the toggle flipping, the item snapping home), and match its character to the action's physicality.
-2. **Harmony** — the visual, the sound, and the haptic must fire on the **same frame**. Latency between them destroys the illusion. Don't let a CSS transition lag the audio/haptic (Vibration API).
+2. **Harmony** — visual, sound, and haptic feedback must originate from the same causal event and land perceptually close together. Account for Web Audio scheduling and optional or unsupported vibration rather than requiring same-frame dispatch.
 3. **Utility** — add feedback only where it earns its place. Reserve haptics/sound for meaningful moments (success, error, commit, snap). Over-feedback trains users to ignore all of it.
 
 ## 14. Reduced motion & accessibility

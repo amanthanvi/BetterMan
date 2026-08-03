@@ -127,7 +127,7 @@ _A curated snapshot mirroring the project's `/vocabulary` page; keep the two in 
 - **Ease-out** — Starts fast, ends slow. The default for most UI and anything responding to the user.
 - **Ease-in** — Starts slow, ends fast. Usually avoided; can feel sluggish.
 - **Ease-in-out** — Slow, fast, slow. Good for elements already on screen moving from A to B.
-- **Linear** — Constant speed. Avoid for UI; reserve for spinners or marquees.
+- **Linear** — Constant speed. Use for constant-rate feedback such as progress, hold-to-confirm, spinners, or marquees; prefer eased motion for spatial UI transitions.
 - **Cubic-bezier** — A custom easing curve you define for precise control.
 - **Asymmetric easing** — A curve that accelerates and decelerates at different rates. Feels more alive than a symmetric one.
 

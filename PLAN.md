@@ -222,7 +222,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Content typography updated (H2 accent left border)
 - [x] Code blocks: theme-tinted, full-bleed on mobile, with a headerless ghost copy glyph and checkmark feedback
 - [x] Options table redesign: tag-style flags + collapsible panel
-- [x] Find-in-page: title-header action opens the shared floating bar on desktop and mobile
+- [x] Find-in-page: title-header action opens the shared floating bar on desktop and mobile; close restores trigger focus
 - [x] Related commands footer restyled
 
 ### M49 — Search page redesign
@@ -255,7 +255,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 ### M53 — Shortcuts dialog restyle
 
 - [x] Dark surface modal, tight radius
-- [x] Grouped by category
+- [x] Grouped by category with semantic, labelled sections
 - [x] Shortcut keys as bordered kbd elements
 
 ### M54 — Mobile experience
