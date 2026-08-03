@@ -1009,6 +1009,19 @@ Backend:
 -   **LCP fixes:** Font loading optimization, critical CSS, resource prioritization
 -   **Virtualization fixes:** TanStack Virtual configuration tuning, overscan adjustments, memo optimization
 
+## Performance Hardening (v0.6.5)
+
+**Decision:** Prioritize production-path latency and heavy man-page rendering costs discovered in benchmarking.
+
+-   Add metadata-only page reads for both serving paths: FastAPI exposes `/api/v1/man/{name}/{section}/meta`, while Next.js `generateMetadata()` uses the equivalent Convex query without loading page content.
+-   Add `Server-Timing` headers on search/man routes for route-level timing breakdown (`rate_limit`, `active_release`, query phases).
+-   Search path optimization: rank candidate pages first, then compute `ts_headline` for the selected page IDs.
+-   Man page render optimization:
+    -   Load related commands after initial paint (avoid blocking SSR).
+    -   Use heuristic virtualization trigger for large/complex pages.
+    -   Gate code-block syntax highlighting to near-viewport blocks.
+-   Font loading optimization: preload critical body/mono fonts to reduce CLS during initial render.
+
 ## Abuse Controls (Rate limiting, Bot Mitigation)
 
 -   Implement basic per-IP rate limiting at the application layer:
@@ -1230,6 +1243,8 @@ Example response (shape):
 -   `GET /api/v1/man/{name}`
     -   If unambiguous, returns that page; if ambiguous, returns 409 with options.
 -   `GET /api/v1/man/{name}/{section}`
+-   `GET /api/v1/man/{name}/{section}/meta`
+    -   Metadata-only response for SSR metadata generation (avoids fetching full document content).
 
 Response includes:
 
@@ -1269,6 +1284,29 @@ Example response (shape):
 ### Related
 
 -   `GET /api/v1/man/{name}/{section}/related`
+
+### Man Metadata (lightweight)
+
+-   `GET /api/v1/man/{name}/{section}/meta`
+
+Example response (shape):
+
+```json
+{
+	"page": {
+		"id": "uuid-or-int",
+		"locale": "en",
+		"distro": "debian",
+		"name": "tar",
+		"section": "1",
+		"title": "tar(1)",
+		"description": "an archiving utility",
+		"sourcePackage": "tar",
+		"sourcePackageVersion": "x.y.z",
+		"datasetReleaseId": "..."
+	}
+}
+```
 
 Example response (shape):
 

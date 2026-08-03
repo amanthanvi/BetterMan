@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.params import Depends
 from sqlalchemy import case, func, select
@@ -15,6 +17,7 @@ from app.db.session import get_session
 from app.man.normalize import normalize_section, validate_section
 from app.security.deps import rate_limit_search
 from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_headers
+from app.web.server_timing import attach_server_timing, elapsed_ms, mark
 
 router = APIRouter()
 
@@ -35,6 +38,7 @@ async def search(
     _: None = Depends(rate_limit_search),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> SearchResponse | Response:
+    server_timing = _server_timing_seed(request)
     query = _normalize_query(q)
     if not query:
         raise APIError(status_code=400, code="INVALID_QUERY", message="Query is required")
@@ -46,7 +50,9 @@ async def search(
         validate_section(section_norm)
 
     distro_norm = normalize_distro(distro)
+    release_started = mark()
     release = await require_active_release(session, distro=distro_norm)
+    server_timing.append(("active_release", elapsed_ms(release_started)))
 
     cache_control = "public, max-age=300"
     etag = compute_weak_etag(
@@ -59,6 +65,7 @@ async def search(
     )
     not_modified = maybe_not_modified(request, etag=etag, cache_control=cache_control)
     if not_modified is not None:
+        attach_server_timing(not_modified, server_timing)
         return not_modified
 
     tsquery = func.websearch_to_tsquery("simple", query)
@@ -87,22 +94,17 @@ async def search(
     headline_opts = "MaxFragments=2, MinWords=3, MaxWords=15, StartSel=⟪, StopSel=⟫"
 
     try:
-        results = (
+        search_started = mark()
+        ranked_results = (
             await session.execute(
                 select(
+                    ManPage.id,
                     ManPage.name,
                     ManPage.section,
                     ManPage.title,
                     ManPage.description,
-                    func.ts_headline(
-                        "simple",
-                        ManPageContent.plain_text,
-                        tsquery,
-                        headline_opts,
-                    ).label("hl"),
                 )
                 .join(ManPageSearch, ManPageSearch.man_page_id == ManPage.id)
-                .join(ManPageContent, ManPageContent.man_page_id == ManPage.id)
                 .where(*where_clauses)
                 .order_by(
                     score.desc(),
@@ -114,7 +116,34 @@ async def search(
                 .offset(offset)
             )
         ).all()
+        server_timing.append(("search_rank", elapsed_ms(search_started)))
 
+        has_more = len(ranked_results) > limit
+        visible_results = ranked_results[:limit]
+
+        highlights_by_page_id: dict[uuid.UUID, str] = {}
+        if visible_results:
+            headline_started = mark()
+            page_ids = [row.id for row in visible_results]
+            highlights = (
+                await session.execute(
+                    select(
+                        ManPageContent.man_page_id,
+                        func.ts_headline(
+                            "simple",
+                            ManPageContent.plain_text,
+                            tsquery,
+                            headline_opts,
+                        ).label("hl"),
+                    ).where(ManPageContent.man_page_id.in_(page_ids))
+                )
+            ).all()
+            highlights_by_page_id = {row.man_page_id: row.hl for row in highlights if row.hl}
+            server_timing.append(("search_headline", elapsed_ms(headline_started)))
+        else:
+            server_timing.append(("search_headline", 0.0))
+
+        suggestions_started = mark()
         suggestions = (
             await session.execute(
                 select(ManPageSearch.name_norm)
@@ -125,6 +154,7 @@ async def search(
                 .limit(5)
             )
         ).scalars()
+        server_timing.append(("search_suggest", elapsed_ms(suggestions_started)))
     except (DataError, ProgrammingError):
         raise APIError(
             status_code=400,
@@ -132,11 +162,10 @@ async def search(
             message="Invalid search query",
         ) from None
 
-    has_more = len(results) > limit
-    visible_results = results[:limit]
     next_offset = offset + len(visible_results) if has_more else None
 
     set_cache_headers(response, etag=etag, cache_control=cache_control)
+    attach_server_timing(response, server_timing)
     return SearchResponse(
         query=query,
         results=[
@@ -145,7 +174,7 @@ async def search(
                 "section": row.section,
                 "title": row.title,
                 "description": row.description,
-                "highlights": [row.hl] if row.hl else [],
+                "highlights": [hl] if (hl := highlights_by_page_id.get(row.id)) else [],
             }
             for row in visible_results
         ],
@@ -153,3 +182,10 @@ async def search(
         hasMore=has_more,
         nextOffset=next_offset,
     )
+
+
+def _server_timing_seed(request: Request) -> list[tuple[str, float]]:
+    rate_limit_ms = getattr(request.state, "rate_limit_ms", None)
+    if isinstance(rate_limit_ms, (int, float)):
+        return [("rate_limit", float(rate_limit_ms))]
+    return []

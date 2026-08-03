@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/man/{name}/{section}/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Man Meta By Name And Section */
+        get: operations["get_man_meta_by_name_and_section_api_v1_man__name___section__meta_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/man/{name}/{section}/related": {
         parameters: {
             query?: never;
@@ -415,6 +432,10 @@ export interface components {
             synopsis?: string[] | null;
             /** Toc */
             toc: components["schemas"]["TocItem"][];
+        };
+        /** ManPageMetaResponse */
+        ManPageMetaResponse: {
+            page: components["schemas"]["ManPage"];
         };
         /** ManPageResponse */
         ManPageResponse: {
@@ -763,6 +784,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ManPageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_man_meta_by_name_and_section_api_v1_man__name___section__meta_get: {
+        parameters: {
+            query?: {
+                distro?: string | null;
+            };
+            header?: never;
+            path: {
+                name: string;
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManPageMetaResponse"];
                 };
             };
             /** @description Validation Error */

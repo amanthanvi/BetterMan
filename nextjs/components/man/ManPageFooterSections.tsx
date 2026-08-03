@@ -12,10 +12,12 @@ export function ManPageFooterSections({
   distro,
   seeAlso,
   relatedItems,
+  relatedLoading = false,
 }: {
   distro: Distro
   seeAlso?: ManPageContent['seeAlso']
   relatedItems: SectionPage[]
+  relatedLoading?: boolean
 }) {
   const seeAlsoItems = (seeAlso ?? []).slice(0, 24)
   const related = relatedItems.slice(0, 24)
@@ -75,6 +77,13 @@ export function ManPageFooterSections({
               </li>
             ))}
           </ul>
+        </aside>
+      ) : relatedLoading ? (
+        <aside className="mt-10 border-t border-edge pt-6" aria-label="Related commands">
+          <ManSectionLabel as="h2">RELATED</ManSectionLabel>
+          <p className="mt-3 text-sm text-muted" aria-live="polite">
+            Loading related commands…
+          </p>
         </aside>
       ) : null}
     </>

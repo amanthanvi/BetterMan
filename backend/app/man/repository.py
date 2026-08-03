@@ -37,6 +37,19 @@ async def get_page_with_content(
     return row[0], row[1]
 
 
+async def get_page(
+    session: AsyncSession, *, release_id: uuid.UUID, name: str, section: str
+) -> ManPage | None:
+    result = await session.execute(
+        select(ManPage)
+        .where(ManPage.dataset_release_id == release_id)
+        .where(ManPage.name == name)
+        .where(ManPage.section == section)
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_related_pages(session: AsyncSession, *, from_page_id: uuid.UUID) -> list[ManPage]:
     result = await session.execute(
         select(ManPage)

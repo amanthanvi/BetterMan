@@ -23,4 +23,20 @@ describe('api error helpers', () => {
     expect(result).toEqual({ distro: 'debian', data: 'ok:debian' })
     expect(calls).toEqual(['ubuntu', 'debian'])
   })
+
+  it('exposes the Debian attempt when the fallback page is also missing', async () => {
+    const calls: string[] = []
+
+    await expect(
+      withDistroFallback('ubuntu', async (distro) => {
+        calls.push(distro)
+        if (distro === 'ubuntu') {
+          throw new FastApiError(404, 'RELEASE_NOT_FOUND', 'Dataset release not found')
+        }
+        throw new FastApiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+      }),
+    ).rejects.toMatchObject({ code: 'PAGE_NOT_FOUND' })
+
+    expect(calls).toEqual(['ubuntu', 'debian'])
+  })
 })

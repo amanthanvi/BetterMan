@@ -31,6 +31,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" data-theme={theme} suppressHydrationWarning>
+      <head>
+        <link
+          rel="preload"
+          href="/fonts/geist/GeistSans-Variable.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/jetbrains-mono/jetbrainsmono-roman.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body suppressHydrationWarning>
         <Providers initialCookieDistro={initialCookieDistro}>{children}</Providers>
         {plausibleDomain ? (
