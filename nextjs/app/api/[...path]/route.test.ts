@@ -150,6 +150,7 @@ describe('public API property checks', () => {
       fc.asyncProperty(
         fc.string({ minLength: 1, maxLength: 120 }).filter((value) => value.trim().length > 0),
         async (query) => {
+          apiMocks.search.mockClear()
           const params = new URLSearchParams({ q: query })
           const response = await GET(
             request(`/api/v1/search?${params.toString()}`),
@@ -157,7 +158,8 @@ describe('public API property checks', () => {
           )
 
           expect(response.status).toBe(200)
-          expect(apiMocks.search).toHaveBeenLastCalledWith({
+          expect(apiMocks.search).toHaveBeenCalledOnce()
+          expect(apiMocks.search).toHaveBeenCalledWith({
             distro: 'debian',
             q: query.trim(),
             section: undefined,
@@ -177,6 +179,7 @@ describe('public API property checks', () => {
 
     await fc.assert(
       fc.asyncProperty(fc.constantFrom('limit', 'offset'), invalidInteger, async (name, value) => {
+        apiMocks.search.mockClear()
         const params = new URLSearchParams({ q: 'tar', [name]: value })
         const response = await GET(
           request(`/api/v1/search?${params.toString()}`),
@@ -184,10 +187,12 @@ describe('public API property checks', () => {
         )
 
         expect(response.status).toBe(422)
+        await expect(response.json()).resolves.toEqual({
+          error: { code: 'INVALID_QUERY_PARAM', message: `Invalid ${name}` },
+        })
+        expect(apiMocks.search).not.toHaveBeenCalled()
       }),
       { numRuns: 100 },
     )
-
-    expect(apiMocks.search).not.toHaveBeenCalled()
   })
 })
