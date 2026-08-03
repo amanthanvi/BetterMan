@@ -59,9 +59,9 @@ export function Overlay({
 
   return createPortal(
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={label}
+      role={open ? 'dialog' : undefined}
+      aria-modal={open ? true : undefined}
+      aria-label={open ? label : undefined}
       className={cx('fixed inset-0 z-50', open ? 'pointer-events-auto' : 'pointer-events-none')}
       onClick={() => onOpenChange(false)}
     >
