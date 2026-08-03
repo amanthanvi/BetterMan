@@ -107,27 +107,20 @@ export function CodeBlock({
     }
   }
 
-  const languageLabel = language
-
   return (
     <div id={id ?? undefined} className="scroll-mt-32">
-      <div className="-mx-4 overflow-hidden rounded-none border border-[var(--bm-code-border)] bg-[#0d0d0d] sm:mx-0 sm:rounded-[var(--bm-radius)]">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--bm-code-border)] px-3 py-2">
-          <div className="min-w-0 truncate font-mono text-xs tracking-wide text-[color:var(--bm-code-muted)]">
-            {languageLabel}
-          </div>
-          <button
-            type="button"
-            className="inline-flex size-8 items-center justify-center rounded-[var(--bm-radius-sm)] border border-transparent text-[color:var(--bm-code-muted)] transition-colors hover:border-[var(--bm-code-border)] hover:text-[color:var(--bm-code-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-            onClick={copy}
-            aria-label="Copy code block"
-            title={copied ? 'Copied' : 'Copy'}
-          >
-            {copied ? <CheckIcon /> : <CopyIcon />}
-          </button>
-        </div>
+      <div className="group relative -mx-4 bg-code-bg sm:mx-0">
+        <button
+          type="button"
+          className="absolute right-1.5 top-1.5 inline-flex size-8 items-center justify-center text-muted opacity-100 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0"
+          onClick={copy}
+          aria-label="Copy code block"
+          title={copied ? 'Copied' : 'Copy'}
+        >
+          {copied ? <CheckIcon /> : <CopyIcon />}
+        </button>
 
-        <pre className="overflow-x-auto p-4 text-[13px] leading-[1.6]" tabIndex={0}>
+        <pre className="overflow-x-auto p-4 text-sm leading-[1.6]" tabIndex={0}>
           <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />
         </pre>
       </div>

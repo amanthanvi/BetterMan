@@ -74,6 +74,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm next:grammar
       - run: pnpm -C nextjs lint
       - run: pnpm -C nextjs build
 

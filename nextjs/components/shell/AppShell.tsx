@@ -7,6 +7,7 @@ import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { isTypingTarget } from '../../lib/dom'
 import { withDistro } from '../../lib/distro'
+import { getScrollBehavior } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
 import { CommandPalette } from '../palette/CommandPalette'
 import { ReadingPrefsDrawer } from '../reading/ReadingPrefsDrawer'
@@ -17,7 +18,7 @@ import { TocDrawer } from '../toc/TocDrawer'
 import { MobileBottomNav } from './MobileBottomNav'
 import { ShortcutsDialog } from './ShortcutsDialog'
 import { MoonIcon, SearchIcon, SunIcon } from '../icons'
-import { ThemeSwitcher } from '../../app/ThemeSwitcher'
+import { Kbd } from '../ui/Kbd'
 
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
@@ -211,7 +212,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         window.scrollTo({
           top: 0,
           left: 0,
-          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          behavior: getScrollBehavior(),
         })
       }
 
@@ -299,21 +300,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [isManPage, toc])
 
   return (
-    <div className="min-h-dvh bg-[var(--bm-bg)] text-[var(--bm-fg)]">
+    <div className="min-h-dvh bg-bg text-fg">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:border focus:border-[var(--bm-border-accent)] focus:bg-[var(--bm-surface-2)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--bm-fg)]"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-edge-strong focus:bg-raised focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-fg"
       >
         Skip to content
       </a>
-      <header
-        data-bm-app-header
-        aria-label="Site header"
-        className="sticky top-0 z-20 border-b border-[var(--bm-border)] bg-[var(--bm-surface-2)]"
-      >
-        <div className="mx-auto flex h-12 max-w-6xl items-center gap-3 px-4">
-          <a href={withDistro('/', distro.distro)} className="inline-flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold tracking-tight text-[var(--bm-accent)]">&gt;_</span>
+      <header data-bm-app-header aria-label="Site header" className="sticky top-0 z-20 border-b border-edge bg-bg">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
+          <a href={withDistro('/', distro.distro)} className="inline-flex items-center gap-2 text-fg hover:text-fg hover:no-underline">
+            <span className="font-mono text-sm font-semibold tracking-tight text-accent">&gt;_</span>
             <span className="text-sm font-semibold tracking-tight">BetterMan</span>
           </a>
 
@@ -321,71 +318,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {themeAnnouncement}
           </div>
 
-          <nav aria-label="Primary" className="hidden flex-1 items-stretch justify-center gap-6 md:flex">
-            {(
-              [
-                { href: withDistro('/', distro.distro), label: 'Home', active: pathname === '/' },
-                { href: withDistro('/search', distro.distro), label: 'Search', active: pathname === '/search' },
-                { href: withDistro('/licenses', distro.distro), label: 'Licenses', active: pathname === '/licenses' },
-              ] as const
-            ).map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className={`inline-flex h-12 items-center border-b-2 px-1 text-sm font-medium transition-colors ${
-                  item.active
-                    ? 'border-[var(--bm-accent)] text-[var(--bm-accent)]'
-                    : 'border-transparent text-[color:var(--bm-muted)] hover:text-[var(--bm-fg)]'
-                }`}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-4">
             <button
               type="button"
-              className="hidden h-9 w-[min(28rem,42vw)] items-center gap-2 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 text-sm text-[color:var(--bm-muted)] transition-colors hover:border-[var(--bm-border-accent)] hover:text-[var(--bm-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] md:inline-flex"
+              className="group inline-flex h-9 items-center justify-center gap-2 px-1 text-muted transition-colors hover:text-fg"
               onClick={() => setPaletteOpen(true)}
               aria-label="Search"
               title="Command palette (Ctrl/⌘ K)"
             >
               <SearchIcon className="size-4" />
-              <span className="flex-1 text-left font-mono">Search…</span>
-              <kbd className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-2 py-0.5 font-mono text-xs text-[color:var(--bm-muted)]">
-                ⌘K
-              </kbd>
+              <span className="hidden font-mono text-sm group-hover:underline group-hover:underline-offset-4 md:inline">
+                search
+              </span>
+              <span className="hidden md:inline-flex">
+                <Kbd>⌘K</Kbd>
+              </span>
             </button>
 
             <button
               type="button"
-              className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35] md:hidden"
-              onClick={() => setPaletteOpen(true)}
-              aria-label="Search"
-              title="Search (Ctrl/⌘ K)"
+              className="inline-flex size-9 items-center justify-center text-muted transition-colors hover:text-fg"
+              onClick={() => theme.cycle()}
+              title="Cycle theme"
+              aria-label="Cycle theme"
             >
-              <SearchIcon className="size-4" />
+              <SunIcon className="bm-theme-icon bm-theme-icon-sun size-4" />
+              <MoonIcon className="bm-theme-icon bm-theme-icon-moon size-4" />
             </button>
-
-            <div className="inline-flex">
-              <button
-                type="button"
-                className="inline-flex size-9 items-center justify-center rounded-l-md border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] transition-colors hover:border-[var(--bm-border-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-                onClick={() => theme.cycle()}
-                title="Cycle theme"
-                aria-label="Cycle theme"
-              >
-                <SunIcon className="bm-theme-icon bm-theme-icon-sun size-4" />
-                <MoonIcon className="bm-theme-icon bm-theme-icon-moon size-4" />
-              </button>
-              <ThemeSwitcher />
-            </div>
           </div>
         </div>
 
         {offline ? (
-          <div className="border-t border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-4 py-2 text-xs text-[color:var(--bm-muted)]">
+          <div className="border-t border-edge bg-raised px-4 py-2 text-xs text-muted">
             Offline — showing cached content
           </div>
         ) : null}
@@ -400,24 +364,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer data-bm-app-footer aria-label="Site footer" className="border-t border-[var(--bm-border)]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-[color:var(--bm-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-1">
-            <div className="text-[color:var(--bm-fg)]">BetterMan</div>
+      <footer data-bm-app-footer aria-label="Site footer" className="border-t border-edge">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 font-mono">
+            <span aria-hidden="true" className="text-accent">&gt;_</span>
             {info ? (
-              <div className="font-mono text-[10px] sm:text-xs">
+              <span>
                 Dataset {info.datasetReleaseId} · {info.pageCount.toLocaleString()} pages · updated{' '}
                 {formatRelativeTime(info.lastUpdated)}
-              </div>
-            ) : null}
+              </span>
+            ) : (
+              <span>BetterMan</span>
+            )}
           </div>
           <div className="flex items-center gap-4">
-            <a href={withDistro('/licenses', distro.distro)} className="underline underline-offset-4">
+            <a
+              href={withDistro('/licenses', distro.distro)}
+              className="text-muted underline underline-offset-4 hover:text-fg"
+            >
               Licenses
             </a>
             <a
               href="https://github.com/amanthanvi/BetterMan"
-              className="underline underline-offset-4"
+              className="text-muted underline underline-offset-4 hover:text-fg"
               target="_blank"
               rel="noreferrer"
             >

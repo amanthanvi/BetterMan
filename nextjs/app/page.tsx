@@ -4,7 +4,8 @@ import { cookies } from 'next/headers'
 import { HomeDashboardClient } from './HomeDashboardClient'
 import { fetchInfo, listSections, withDistroFallback } from '../lib/api'
 import { isDefaultDistro, normalizeDistro, withDistro, type Distro } from '../lib/distro'
-import { formatRelativeTime } from '../lib/time'
+import { ManSectionLabel, RunningHead } from '../components/man/RunningHead'
+import { Kbd } from '../components/ui/Kbd'
 
 export const revalidate = 3600
 
@@ -28,75 +29,77 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const visible = sections.filter((s) => /^\d+$/.test(s.section)).slice(0, 9)
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="sr-only" data-hex="4265747465724d616e">BetterMan</h1>
+    <div className="mx-auto max-w-3xl">
+      <RunningHead title="BETTERMAN(1)" label="User Commands" />
 
-      <section aria-label="Search" className="mt-6">
-        <form action="/search" method="get" role="search" aria-label="Search man pages">
-          <div className="flex items-center gap-3">
-            <div
-              aria-hidden="true"
-              className="shrink-0 font-mono text-3xl font-bold leading-none tracking-tight text-[var(--bm-accent)]"
-            >
-              $
-            </div>
-            <input
-              name="q"
-              type="search"
-              autoComplete="off"
-              placeholder="search man pages…"
-              data-bm-home-search
-              className="h-12 min-w-0 flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 font-mono text-sm text-[color:var(--bm-fg)] placeholder:text-[color:var(--bm-muted)] outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-              aria-label="Search man pages"
-            />
-            {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
-          </div>
+      <section aria-label="Name" className="mt-10">
+        <ManSectionLabel>NAME</ManSectionLabel>
+        <h1 className="mt-2 pl-6 text-base font-normal text-fg sm:pl-8">
+          betterman — fast, readable Unix manual pages
+        </h1>
+      </section>
 
-          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[color:var(--bm-muted)]">
-            <div className="flex items-center gap-2">
-              <kbd className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-2 py-1 font-mono text-xs text-[color:var(--bm-fg)]">
-                /
-              </kbd>
-              <span className="font-mono">search</span>
+      <section aria-label="Search" className="mt-10">
+        <ManSectionLabel>SYNOPSIS</ManSectionLabel>
+        <div className="pl-6 sm:pl-8">
+          <form action="/search" method="get" role="search" aria-label="Search man pages" className="mt-3">
+            <div className="flex items-center gap-3">
+              <div aria-hidden="true" className="shrink-0 font-mono text-xl font-bold leading-none text-accent">
+                $
+              </div>
+              <input
+                name="q"
+                type="search"
+                autoComplete="off"
+                placeholder="search man pages…"
+                data-bm-home-search
+                className="h-12 min-w-0 flex-1 border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
+                aria-label="Search man pages"
+              />
+              {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
             </div>
-            <div className="flex items-center gap-2">
-              <kbd className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-2 py-1 font-mono text-xs text-[color:var(--bm-fg)]">
-                ⌘K
-              </kbd>
-              <span className="font-mono">palette</span>
+
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 pl-7 text-xs text-muted">
+              <div className="flex items-center gap-1.5">
+                <Kbd>/</Kbd>
+                <span className="font-mono">search</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Kbd>⌘K</Kbd>
+                <span className="font-mono">palette</span>
+              </div>
+              <span className="font-mono text-faint">
+                {info.pageCount.toLocaleString()} pages · keyboard-first · no accounts
+              </span>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </section>
 
       <HomeDashboardClient distro={distro} />
 
-      <section aria-label="Browse sections" className="mt-12">
+      <section aria-label="Browse sections" className="mt-10 mb-4">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]" data-hex="42726f777365">Browse</h2>
-          <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">Sections 1–9</div>
+          <ManSectionLabel as="h2">BROWSE</ManSectionLabel>
+          <div className="font-mono text-xs text-faint">Sections 1–9</div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 grid gap-x-8 gap-y-1.5 pl-6 sm:grid-cols-2 sm:pl-8 lg:grid-cols-3">
           {visible.map((s) => (
             <Link
               key={s.section}
               href={withDistro(`/section/${encodeURIComponent(s.section)}`, distro)}
-              className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface)] px-3 py-2 text-xs transition-colors hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
+              className="group font-mono text-sm hover:no-underline"
               title={s.label}
             >
-              <span className="font-mono text-[color:var(--bm-fg)]">{s.section}</span>{' '}
-              <span className="text-[color:var(--bm-muted)]">{s.label}</span>
+              <span className="text-accent">{s.section}</span>{' '}
+              <span className="text-muted group-hover:text-fg group-hover:underline group-hover:underline-offset-4">
+                {s.label}
+              </span>
             </Link>
           ))}
-          {!visible.length ? <span className="text-sm text-[color:var(--bm-muted)]">Sections unavailable.</span> : null}
+          {!visible.length ? <span className="text-sm text-muted">Sections unavailable.</span> : null}
         </div>
       </section>
-
-      <footer aria-label="Dataset stats" className="mt-12 border-t border-[var(--bm-border)] pt-4">
-        <div className="font-mono text-xs text-[color:var(--bm-muted)]">
-          Dataset {info.datasetReleaseId} · {info.pageCount.toLocaleString()} pages · updated {formatRelativeTime(info.lastUpdated)}
-        </div>
-      </footer>
     </div>
   )
 }

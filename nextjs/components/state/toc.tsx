@@ -9,6 +9,8 @@ type ScrollToId = (id: string) => void
 type TocContextValue = {
   items: TocItem[]
   setItems: (items: TocItem[]) => void
+  activeId: string | null
+  setActiveId: (id: string | null) => void
   open: boolean
   setOpen: (open: boolean) => void
   sidebarOpen: boolean
@@ -21,14 +23,15 @@ const TocContext = createContext<TocContextValue | null>(null)
 
 export function TocProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<TocItem[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [scrollToId, _setScrollToId] = useState<ScrollToId | null>(null)
   const setScrollToId = useCallback((fn: ScrollToId | null) => _setScrollToId(fn ? () => fn : null), [])
 
   const value = useMemo(
-    () => ({ items, setItems, open, setOpen, sidebarOpen, setSidebarOpen, scrollToId, setScrollToId }),
-    [items, open, sidebarOpen, scrollToId, setScrollToId],
+    () => ({ items, setItems, activeId, setActiveId, open, setOpen, sidebarOpen, setSidebarOpen, scrollToId, setScrollToId }),
+    [activeId, items, open, sidebarOpen, scrollToId, setScrollToId],
   )
 
   return <TocContext.Provider value={value}>{children}</TocContext.Provider>
@@ -39,4 +42,3 @@ export function useToc(): TocContextValue {
   if (!ctx) throw new Error('useToc must be used within <TocProvider>')
   return ctx
 }
-

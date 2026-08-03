@@ -164,13 +164,13 @@
 **Man page view structure**
 
 -   Header: `name(section)` + one-line description.
--   Left sidebar (desktop) or collapsible drawer (mobile):
+-   Contents navigation: a sticky, collapsible TOC sidebar on desktop and a TOC drawer on mobile.
     -   TOC (headings).
         -   **Desktop behavior:** TOC is sticky (follows scroll and stays visible). If the TOC is longer than the viewport, it scrolls independently.
         -   **Scroll-spy (v0.2.0):** Use IntersectionObserver API for accurate active heading detection, performant even on large pages.
-    -   Find-in-page: sticky by default; user can hide/show it.
-        -   **Match navigation (v0.2.0):** Show "3 of 15 matches" indicator with Enter (next) and Shift+Enter (previous) keyboard navigation.
-    -   Quick nav: "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES", "SEE ALSO" when available.
+    -   Headings provide quick jumps to sections such as "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES", and "SEE ALSO" when available.
+-   Find-in-page: the title-header action opens a separate floating bar below the header on desktop or above the bottom navigation on mobile.
+    -   **Match navigation (v0.2.0):** Show "3 of 15 matches" indicator with Enter (next) and Shift+Enter (previous) keyboard navigation.
 -   Main article:
     -   Rendered content with clear typographic hierarchy.
     -   Inline cross-references become links.
@@ -206,7 +206,7 @@
 
 -   App must be fully usable with keyboard only.
 -   Visible focus indicator must always be present.
--   Focus order must be logical (header → sidebar → content).
+-   Focus order must be logical (header → active overlay or TOC sidebar → content).
 
 ### Shortcut List (v0.1.0)
 
@@ -239,16 +239,11 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 -   Persist user choice in local storage after explicit selection.
 -   Contrast ratios must meet WCAG 2.2 AA.
 -   **Theme transition (v0.2.1):** 150ms CSS transition on background and text colors when switching themes. Respects `prefers-reduced-motion` (instant switch when reduced motion preferred).
--   **UI themes (v0.6.4, experimental):**
-    -   Three visual modes: `default` (current hacker-tool system), `retro` (cyberpunk/matrix), `glass` (glassmorphic minimal).
-    -   Selection is persisted via cookie (`bm-ui-theme`) and applied server-side on `<html data-bm-ui-theme="...">` for SSR-safe initial paint.
-    -   Theme overrides are CSS-only and strictly scoped under `html[data-bm-ui-theme="retro"]` and `html[data-bm-ui-theme="glass"]`.
-    -   UI themes are orthogonal to light/dark/system mode. `data-theme` remains the source of truth for color-scheme mode and continues to work in all UI themes.
+-   **Visual modes:** One visual grammar with light, dark, and system color modes. The v0.6.4 experimental `retro` and `glass` skins and `bm-ui-theme` state were retired by the 2026-08 grammar redesign.
 -   Responsive:
-    -   < 768px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
+    -   < 1024px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
         -   **Mobile TOC access:** Sticky header button toggles TOC drawer. Button is always visible for quick access during reading.
-    -   768–1024px: compact sidebar; TOC collapsible.
-    -   > 1024px: persistent sidebar (sticky TOC) and wide reading column with max line width (target 70–90 chars).
+    -   ≥ 1024px: persistent, collapsible sidebar (sticky TOC) and wide reading column with max line width (target 70–90 chars).
 
 ## Print Styles (v0.2.0)
 
@@ -286,11 +281,15 @@ Mobile layout fixes:
 -   Target **WCAG 2.2 AA**.
 -   Focus management:
     -   Command palette traps focus while open; returns focus to trigger element on close.
+    -   Find-in-page returns focus to the control that opened it when closed.
     -   Route changes set focus to the primary heading (`h1`) for screen readers (without breaking scroll). This ensures screen reader users hear the page title immediately upon navigation.
 -   Reduced motion:
     -   Respect `prefers-reduced-motion`; disable non-essential animations.
 -   Semantic structure:
     -   Use proper heading levels and landmarks in the rendered document model.
+    -   Man-page contents, synopsis, and options labels participate in the document heading outline.
+-   Status announcements:
+    -   Copy-link and bookmark changes expose polite live-region confirmation.
 -   Keyboard:
     -   No keyboard traps outside modals.
 -   Color:
@@ -3333,6 +3332,18 @@ v0.6.0 is a comprehensive design and UI/UX overhaul that transforms BetterMan fr
 
 **This release has no breaking URL, API, or deployment changes.** All URLs, keyboard shortcuts, and features continue to work. The change is purely visual/UX.
 
+## Current Visual Grammar (2026-08)
+
+This contract supersedes earlier v0.6 styling details below where they conflict. The design is the typeset Unix manual on screen: square, text-first, and structured by typography, whitespace, hanging indents, and full-width hairline rules.
+
+- Rounded corners are prohibited. `rounded` and every non-zero `rounded-*` utility fail validation; `rounded-none` is allowed.
+- Document-flow content must not use enclosing `border border-edge` boxes or `bg-surface` / `bg-raised` fills.
+- Floating overlays are the exception: dialogs, drawers, command palette, find bar, sticky navigation, skip link, and keyboard notation may use the explicitly allowlisted square edge/fill chrome.
+- `pnpm next:grammar` enforces the allowlist through `nextjs/scripts/check-visual-grammar.mjs`; the Next.js CI job runs it before lint and build.
+- Light, dark, and system are the only theme modes. The experimental retro/glass skins are retired.
+
+`DESIGN.md` is the detailed component and token reference for this grammar.
+
 ## Design Philosophy
 
 **Identity:** Premium developer tool — think Linear, Warp, Raycast. Dark-first, information-dense, keyboard-native, typographically disciplined.
@@ -3441,18 +3452,9 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
 - **No decorative animation.** No staggered reveals, no parallax, no springs.
 - **Respects `prefers-reduced-motion`:** instant transitions when reduced motion preferred.
 
-### UI Themes (Experimental, v0.6.4)
+### Retired UI Themes (v0.6.4 experiment)
 
-- **Default:** current production hacker-tool system remains the baseline and first-visit default.
-- **Retro (cyberpunk/matrix):**
-  - Bright matrix-green accent, dark terminal surfaces, scanline overlay, mono-first typography, and terminal framing motifs.
-  - Includes optional heading hex artifact metadata via `data-hex` attributes.
-  - Keeps interaction affordances explicit (strong focus ring and bordered controls).
-- **Glass (glassmorphic minimal):**
-  - Rounded translucent surfaces, soft atmospheric gradients, and restrained highlight glow.
-  - Header becomes a rounded floating capsule on desktop and collapses to full-width on mobile.
-  - Prioritizes legibility with conservative text shadow and clear contrast tokens.
-- **Scoping:** all experimental theme behavior is attribute-scoped via `data-bm-ui-theme` so default visuals never inherit retro/glass styles.
+The retro and glass skins, their switcher, and `bm-ui-theme` persistence were removed by the 2026-08 grammar redesign. BetterMan has one square, text-first visual grammar with light, dark, and system color modes.
 
 ### Icons
 
@@ -3505,27 +3507,30 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
 **Contents sidebar (desktop sticky + collapsible):**
 - Visible by default on desktop (`lg` and up) as a sticky left sidebar.
 - Collapsible via `b` (and a collapse/expand button). Collapsed state becomes a narrow rail.
-- Contains:
-  - Quick jumps: SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES, SEE ALSO (when present).
-  - Find-in-page: input field + match count + prev/next + clear.
-  - TOC: full heading list with scroll-spy active indicator (accent left border on active item).
+- Contains the full heading TOC with a scroll-spy active indicator (accent left border on the active item).
 - Clicking items scrolls content and updates the URL hash.
 
 **Contents drawer (mobile):**
 - Opens via `b`, swipe-from-left, or the header contents button.
-- Shows TOC only (Find remains the separate mobile bar).
+- Shows the same TOC as the desktop sidebar.
 - Closes on `Esc`, `b` again, or tap outside.
+
+**Find-in-page (all viewports):**
+- Opens from the title-header find action as a separate floating bar.
+- Appears below the header on desktop and above the bottom navigation on mobile.
+- Includes the input, match count, previous/next controls, and close action; Enter advances and Shift+Enter goes back.
+- Returns focus to the opening control when closed.
 
 **Content area:**
 - `max-width` controlled by reading preferences (42rem / 56rem / 72rem).
 - Prose: Geist Sans 14px, line-height 1.7.
 - Headings: Geist Sans semibold, accent left border (3px) on H2.
-- Code blocks (terminal-in-page):
-  - Always `#0d0d0d` background regardless of theme mode.
-  - Minimal header bar: language label (left, xs mono muted) + copy button (right, icon).
+- Code blocks:
+  - Use the theme-dependent `bg-code-bg` tint and run full-bleed on mobile.
+  - No header bar; a ghost copy glyph appears on hover or keyboard focus.
   - Code: JetBrains Mono 13px, line-height 1.6.
   - Horizontal scroll, styled scrollbar.
-  - Copy: icon button, shows checkmark for 2s on success.
+  - Copy feedback replaces the glyph with a checkmark for 2s.
 - Options table:
   - Dedicated collapsible section.
   - Each option: flag(s) as monospace bordered badges, description inline.
@@ -3533,7 +3538,7 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
   - Selected: accent border on flag badge, accent-muted bg.
 - Definition lists: term in mono bold, definition in base prose. Tighter vertical spacing.
 - Cross-references: accent-colored `name(section)` links. Unresolved refs stay muted.
-- Find-in-page (mobile): sticky floating bar above content, compact.
+- Find-in-page uses the shared floating bar described above.
 
 **Related commands (footer):**
 - Horizontal scrollable row of bordered cards.
@@ -3565,19 +3570,15 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
 ### Command Palette
 
 - **Trigger:** Cmd/Ctrl+K (unchanged).
-- **Visual:** dark surface, tight radius, 1px accent border, centered modal.
-- **Layout:** Split view — results list (60% left) + preview pane (40% right).
+- **Visual:** square floating sheet on the raised surface with a single hairline edge, centered.
+- **Layout:** Single column — input row on top (with mode hint), results list below. No preview pane.
 - **Results list:**
   - On empty query: recent pages (last 8), bookmarked pages (starred indicator).
   - On typing: fuzzy search results, man pages.
-  - Each item: `name(section)` mono, description, section badge.
-  - Actions (prefixed with `>`): icon + label (Toggle theme, etc.).
-- **Preview pane:**
-  - Shows for selected (arrow-key highlighted) result.
-  - Content: synopsis (code block), description, section label, package info.
-  - No extra API call — uses data already in search response.
-  - If insufficient data: "Press Enter to view full page."
-- **Keyboard:** Up/Down navigate list, Enter opens, Esc closes, Tab focuses preview.
+  - Each item: `name(section)` mono + inline description; bookmarked rows carry a star marker.
+  - Actions (prefixed with `>`): label + optional detail (Toggle theme, etc.).
+- **Preview:** none — each row already shows the description; Enter opens the full page.
+- **Keyboard:** Up/Down navigate list, Enter opens, Esc closes.
 
 ### Licenses Page
 
@@ -3604,17 +3605,17 @@ _Note:_ Dark-mode `--bm-muted` and `--bm-accent` values are chosen to meet WCAG 
 
 ### Desktop Header
 
-- Height: 48px, solid `surface-2` bg, 1px border-bottom.
-- Left: logomark (16px) + "BetterMan" wordmark (Geist Sans 14px semibold).
-- Center: nav links — "Home", "Search", "Licenses" (text, Geist Sans sm, muted, accent on active with subtle bottom indicator).
-- Right: Cmd+K search trigger (bordered input-like element with placeholder text "Search…" and kbd hint), theme toggle (sun/moon icon).
+- 56px sticky bar on the page background with a hairline border-bottom.
+- Left: `>_` logomark + "BetterMan" wordmark (links home).
+- Right: quiet search launcher (search glyph + mono "search" + ⌘K kbd hint) that opens the command palette, and the theme toggle (sun/moon glyph).
+- No primary nav links — Home is the wordmark, Search lives in the palette and mobile nav, Licenses is linked from the footer.
 - No distro selector in header.
 
 ### Mobile Header
 
-- Same height (48px), solid bg.
-- Left: logomark.
-- Right: search trigger icon + theme toggle icon.
+- Same 56px sticky hairline bar.
+- Left: logomark + wordmark.
+- Right: search trigger icon + theme toggle icon (no "search" text or kbd hint).
 - No nav links (handled by bottom nav).
 
 ### Mobile Bottom Nav
@@ -3713,8 +3714,8 @@ v0.6.0 has **no breaking changes** to URLs, API, deployment, or features.
 
 **Components**
 
-- [x] Header: full nav bar, new branding
-- [x] Command palette: preview pane
+- [x] Header: linked branding + search/theme controls
+- [x] Command palette: single-column result list
 - [x] Mobile bottom nav: 3 items
 - [x] Reading preferences drawer: restyled
 - [x] Shortcuts dialog: restyled

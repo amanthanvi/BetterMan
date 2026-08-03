@@ -16,6 +16,7 @@ import {
 
 import type { Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
+import { getScrollBehavior } from '../../lib/scroll'
 import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
 import { CodeBlock } from './CodeBlock'
 
@@ -105,8 +106,7 @@ export const DocRenderer = forwardRef<
     (index: number, opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior }) => {
       if (!isVirtualized) return
 
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const behavior = opts?.behavior ?? (reduced ? 'auto' : 'smooth')
+      const behavior = opts?.behavior ?? getScrollBehavior()
       const align = opts?.align ?? 'start'
 
       virtualizer.scrollToIndex(index, {
@@ -119,8 +119,7 @@ export const DocRenderer = forwardRef<
 
   const scrollToAnchor = useCallback(
     (id: string, opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior }) => {
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const behavior = opts?.behavior ?? (reduced ? 'auto' : 'smooth')
+      const behavior = opts?.behavior ?? getScrollBehavior()
       const align = opts?.align ?? 'start'
       const block = align === 'center' ? 'center' : 'start'
 
@@ -238,23 +237,26 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
       const level = clamp(block.level, 2, 6)
       const Tag = (`h${level}` as unknown) as 'h2'
 
-      const base = 'scroll-mt-32 pt-8 first:pt-0 text-[color:var(--bm-fg)]'
+      const base = 'scroll-mt-32 pt-8 first:pt-0 text-fg'
       const headingClass =
         level === 2
-          ? 'border-l-[3px] border-[var(--bm-accent)] pl-3 text-[20px] font-semibold tracking-tight leading-[1.2]'
+          ? 'font-mono text-lg font-semibold tracking-[0.04em] leading-[1.2]'
           : level === 3
-            ? 'text-[16px] font-semibold tracking-tight leading-[1.2]'
+            ? 'font-mono text-sm font-semibold tracking-[0.02em] leading-[1.2]'
             : level === 4
-              ? 'text-[14px] font-bold leading-[1.2]'
-              : 'text-[13px] font-semibold leading-[1.2]'
+              ? 'text-sm font-bold leading-[1.2]'
+              : 'text-sm font-semibold leading-[1.2]'
 
       return (
         <Tag id={block.id} className={`${base} ${headingClass}`} data-level={level}>
-          <a href={`#${block.id}`} className="group inline-flex min-w-0 items-baseline gap-2 no-underline">
+          <a
+            href={`#${block.id}`}
+            className="group inline-flex min-w-0 items-baseline gap-2 text-fg no-underline hover:text-fg"
+          >
             <span className="min-w-0 flex-1">{highlightText(block.text, ctx)}</span>
             <span
               aria-hidden="true"
-              className="font-mono text-xs text-[color:var(--bm-muted)] opacity-0 transition-opacity group-hover:opacity-100"
+              className="font-mono text-xs text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
             >
               #
             </span>
@@ -264,14 +266,12 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
     }
 
     case 'paragraph':
-      return <p className="text-[color:var(--bm-fg)]">{renderInlines(block.inlines, ctx, distro)}</p>
+      return <p className="text-fg">{renderInlines(block.inlines, ctx, distro)}</p>
 
     case 'list': {
       const ListTag = (block.ordered ? 'ol' : 'ul') as 'ol'
       return (
-        <ListTag
-          className={`ml-6 space-y-1.5 text-[color:var(--bm-fg)] ${block.ordered ? 'list-decimal' : 'list-disc'}`}
-        >
+        <ListTag className={`ml-6 space-y-1.5 text-fg ${block.ordered ? 'list-decimal' : 'list-disc'}`}>
           {block.items.map((itemBlocks, idx) => (
             <li key={idx}>
               <div className="space-y-2">
@@ -286,14 +286,16 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
     }
 
     case 'definition_list':
+      /* troff .TP: term in a fixed left column, definition flowing beside it;
+         stacked with an indent on narrow screens. */
       return (
         <dl className="space-y-3">
           {block.items.map((item, idx) => (
-            <div key={item.id ?? idx}>
-              <dt id={item.id ?? undefined} className="scroll-mt-32 font-mono text-sm font-semibold text-[color:var(--bm-fg)]">
+            <div key={item.id ?? idx} className="grid gap-x-6 sm:grid-cols-[minmax(8ch,28ch)_minmax(0,1fr)]">
+              <dt id={item.id ?? undefined} className="scroll-mt-32 break-words font-mono text-sm font-semibold text-fg">
                 {renderInlines(item.termInlines, ctx, distro)}
               </dt>
-              <dd className="mt-1.5 space-y-2 pl-4 text-[color:var(--bm-fg)]">
+              <dd className="mt-1.5 min-w-0 space-y-2 pl-4 text-fg sm:mt-0 sm:pl-0">
                 {item.definitionBlocks.map((child, childIdx) => (
                   <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} distro={distro} />
                 ))}
@@ -316,12 +318,12 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
 
     case 'table':
       return (
-        <div className="overflow-x-auto rounded-[var(--bm-radius)] border border-[var(--bm-border)] bg-[var(--bm-surface)]">
-          <table className="w-full border-collapse text-left text-[color:var(--bm-fg)]">
-            <thead className="bg-[var(--bm-surface-2)] text-[color:var(--bm-muted)]">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-fg">
+            <thead className="text-muted">
               <tr>
                 {block.headers.map((h, idx) => (
-                  <th key={idx} className="border-b border-[var(--bm-border)] px-3 py-2 font-mono text-xs font-medium tracking-wide">
+                  <th key={idx} className="border-b border-edge-strong pb-2 pl-0 pr-4 font-mono text-xs font-medium tracking-wide">
                     {highlightText(h, ctx)}
                   </th>
                 ))}
@@ -329,9 +331,9 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
             </thead>
             <tbody>
               {block.rows.map((row, rowIdx) => (
-                <tr key={rowIdx} className="border-b border-[var(--bm-border)] last:border-b-0 even:bg-[var(--bm-surface-2)]">
+                <tr key={rowIdx} className="border-b border-edge last:border-b-0">
                   {row.map((cell, cellIdx) => (
-                    <td key={cellIdx} className="px-3 py-2 text-sm">
+                    <td key={cellIdx} className="py-2 pl-0 pr-4 text-sm">
                       {highlightText(cell, ctx)}
                     </td>
                   ))}
@@ -343,7 +345,7 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
       )
 
     case 'horizontal_rule':
-      return <hr className="my-6 border-[var(--bm-border)]" />
+      return <hr className="my-6 border-edge" />
   }
 }
 
@@ -353,8 +355,9 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
       case 'text':
         return <span key={idx}>{highlightText(inline.text, ctx)}</span>
       case 'code':
+        /* Bold mono is the troff convention for "type this literally" — no pill. */
         return (
-          <code key={idx} className="rounded-[var(--bm-radius-sm)] border border-[var(--bm-border)] bg-[var(--bm-surface-2)] px-1.5 py-0.5 font-mono text-[0.95em] text-[color:var(--bm-fg)]">
+          <code key={idx} className="font-mono text-[0.95em] font-semibold text-fg">
             {highlightText(inline.text, ctx)}
           </code>
         )
@@ -373,10 +376,10 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
       case 'link':
         if (inline.linkType === 'external') {
           return (
-            <a key={idx} href={inline.href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-[color:var(--bm-accent)/0.6]">
+            <a key={idx} href={inline.href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-accent-edge">
               <span className="inline-flex items-center gap-1">
                 {renderInlines(inline.inlines, ctx, distro)}
-                <span aria-hidden="true" className="text-xs text-[color:var(--bm-muted)]">
+                <span aria-hidden="true" className="text-xs text-muted">
                   ↗
                 </span>
               </span>
@@ -388,7 +391,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
           return (
             <span
               key={idx}
-              className="cursor-not-allowed text-[color:var(--bm-muted)] underline decoration-dotted decoration-[color:var(--bm-muted)/0.6] underline-offset-4"
+              className="cursor-not-allowed text-muted underline decoration-edge-strong decoration-dotted underline-offset-4"
               title="Not available in this dataset"
             >
               {renderInlines(inline.inlines, ctx, distro)}
@@ -396,7 +399,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
           )
         }
         return (
-          <Link key={idx} href={withDistroHref(inline.href, distro)} className="underline underline-offset-4 decoration-[color:var(--bm-accent)/0.6]">
+          <Link key={idx} href={withDistroHref(inline.href, distro)} className="underline underline-offset-4 decoration-accent-edge">
             {renderInlines(inline.inlines, ctx, distro)}
           </Link>
         )

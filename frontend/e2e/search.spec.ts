@@ -19,6 +19,21 @@ test('search: query returns results and can open a man page', async ({ page }) =
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 })
 
+test('search: live query updates preserve input focus', async ({ page }) => {
+  await page.goto('/search')
+
+  const input = page.getByRole('searchbox', { name: 'Search man pages' })
+  await input.fill('tar')
+  await input.click()
+
+  await expect(page).toHaveURL(/\/search\?q=tar/)
+  await expect(input).toBeFocused()
+
+  await input.pressSequentially(' gzip')
+  await expect(page).toHaveURL(/q=tar(?:\+|%20)gzip/)
+  await expect(input).toBeFocused()
+})
+
 test('search: typo still finds relevant results', async ({ page }) => {
   await page.goto('/search?q=tarr')
   await expect(page.getByRole('link', { name: /tar\(1\)/i })).toBeVisible()

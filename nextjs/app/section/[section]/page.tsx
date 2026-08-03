@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
-import { Fragment } from 'react'
 
 import { listSection, withDistroFallback } from '../../../lib/api'
 import { isDefaultDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
@@ -21,6 +20,10 @@ function getGroupKey(name: string): string {
   if (first >= 'A' && first <= 'Z') return first
   if (first >= '0' && first <= '9') return first
   return '#'
+}
+
+function groupAnchorId(key: string): string {
+  return key === '#' ? 'letter-other' : `letter-${key.toLowerCase()}`
 }
 
 function groupByLeadingChar<T extends { name: string }>(items: readonly T[]): Array<{ key: string; items: T[] }> {
@@ -54,10 +57,10 @@ function PaginationControl({
   disabled: boolean
   children: React.ReactNode
 }) {
-  const className = `rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+  const className = `px-1 py-2 font-mono text-xs font-medium transition-colors ${
     disabled
-      ? 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-muted)] opacity-50'
-      : 'border-[var(--bm-border)] bg-[var(--bm-surface)] text-[color:var(--bm-fg)] hover:border-[var(--bm-border-accent)] hover:bg-[var(--bm-surface-3)]'
+      ? 'text-faint'
+      : 'text-fg underline decoration-edge-strong underline-offset-4 hover:decoration-accent'
   }`
 
   if (disabled) {
@@ -116,94 +119,97 @@ export default async function SectionPage({
 
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="border-b border-[var(--bm-border)] pb-6">
+      <header className="border-b border-edge pb-6">
         <h1 className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-mono text-[32px] font-bold leading-none tracking-tight">{data.section}</span>
-          <span className="text-[color:var(--bm-muted)]">—</span>
-          <span className="text-[24px] font-semibold leading-none tracking-tight">{data.label}</span>
+          <span className="font-mono text-2xl font-semibold leading-none tracking-tight">{data.section}</span>
+          <span className="text-muted">—</span>
+          <span className="text-xl font-semibold leading-none tracking-tight">{data.label}</span>
         </h1>
-        <p className="mt-2 font-mono text-[11px] text-[color:var(--bm-muted)]">{data.total.toLocaleString()} pages</p>
+        <p className="mt-2 font-mono text-xs text-faint">{data.total.toLocaleString()} pages</p>
+
+        <form className="mt-5" action="/search" method="get">
+          <input type="hidden" name="section" value={data.section} />
+          {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              name="q"
+              placeholder="Search within section…"
+              className="h-10 min-w-[16rem] flex-1 border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
+              aria-label="Search within section"
+            />
+            <button
+              type="submit"
+              className="h-10 px-1 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
+            >
+              Search
+            </button>
+          </div>
+        </form>
       </header>
 
-      <form
-        className="mt-6 rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4"
-        action="/search"
-        method="get"
-      >
-        <input type="hidden" name="section" value={data.section} />
-        {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            name="q"
-            placeholder="Search within section…"
-            className="h-10 min-w-[16rem] flex-1 rounded-md border border-[var(--bm-border)] bg-[var(--bm-bg)] px-3 font-mono text-[13px] text-[color:var(--bm-fg)] outline-none placeholder:text-[color:var(--bm-muted)] focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-            aria-label="Search within section"
-          />
-          <button
-            type="submit"
-            className="h-10 rounded-md border border-[var(--bm-border-accent)] bg-[var(--bm-surface)] px-4 text-[13px] font-semibold text-[var(--bm-accent)] hover:bg-[var(--bm-surface-3)]"
-          >
-            Search
-          </button>
-        </div>
-      </form>
-
-      <div className="mt-8">
-        <ol className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)]">
+      {groups.length > 3 ? (
+        <nav aria-label="Jump to letter" className="mt-6 flex flex-wrap gap-x-2 gap-y-1">
           {groups.map((group) => (
-            <Fragment key={group.key}>
-              <li
-                className="sticky top-12 z-10 border-b border-[var(--bm-border)] bg-[var(--bm-surface)] px-4 py-2"
+            <a
+              key={group.key}
+              href={`#${groupAnchorId(group.key)}`}
+              className="px-1 py-1 font-mono text-sm text-muted transition-colors hover:text-fg hover:underline hover:underline-offset-4"
+            >
+              {group.key}
+            </a>
+          ))}
+        </nav>
+      ) : null}
 
-              >
-                <span className="inline-flex items-center rounded-[var(--bm-radius-sm)] border border-[var(--bm-border-accent)] bg-[var(--bm-accent-muted)] px-2 py-1 font-mono text-[11px] font-semibold text-[var(--bm-accent)]">
-                  {group.key}
-                </span>
-              </li>
+      <div className="mt-6">
+        {groups.map((group) => (
+          <section key={group.key} aria-label={`Names starting with ${group.key}`}>
+            <h2
+              id={groupAnchorId(group.key)}
+              className="sticky top-14 z-10 -mx-4 scroll-mt-14 border-b border-edge bg-bg px-4 py-2 font-mono text-xs font-semibold text-muted"
+            >
+              {group.key}
+            </h2>
+            <ul>
               {group.items.map((r) => (
-                <li key={`${r.name}:${r.section}`} className="border-b border-[var(--bm-border)] last:border-b-0">
+                <li key={`${r.name}:${r.section}`} className="border-b border-edge last:border-b-0">
                   <Link
                     href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, distro)}
-                    className="block px-4 py-3"
+                    className="group block px-1 py-3 transition-colors hover:no-underline sm:px-2"
                   >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="font-mono text-[13px] font-semibold leading-tight text-[color:var(--bm-fg)]">
-                          {r.name}({r.section})
-                        </div>
-                        <div className="mt-1 truncate text-[13px] leading-snug text-[color:var(--bm-muted)]">
-                          {r.description}
-                        </div>
-                      </div>
-                      <span className="hidden font-mono text-[11px] text-[color:var(--bm-muted)] sm:block">↵</span>
+                    <div className="flex items-baseline gap-3">
+                      <span className="shrink-0 font-mono text-sm font-semibold leading-tight text-accent group-hover:underline group-hover:underline-offset-4">
+                        {r.name}({r.section})
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm leading-snug text-muted">{r.description}</span>
                     </div>
                   </Link>
                 </li>
               ))}
-            </Fragment>
-          ))}
-        </ol>
+            </ul>
+          </section>
+        ))}
+      </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="font-mono text-[11px] text-[color:var(--bm-muted)]">
-            {data.results.length === 0
-              ? `Showing 0 of ${data.total.toLocaleString()} results.`
-              : `Showing ${data.offset + 1}-${data.offset + data.results.length} of ${data.total.toLocaleString()} results.`}
-          </div>
-          <div className="flex items-center gap-2">
-            <PaginationControl
-              href={buildSectionHref({ section: data.section, distro, offset: prevOffset })}
-              disabled={!hasPrevPage}
-            >
-              Previous
-            </PaginationControl>
-            <PaginationControl
-              href={buildSectionHref({ section: data.section, distro, offset: nextOffset })}
-              disabled={!hasNextPage}
-            >
-              Next
-            </PaginationControl>
-          </div>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="font-mono text-xs text-faint">
+          {data.results.length === 0
+            ? `Showing 0 of ${data.total.toLocaleString()} results.`
+            : `Showing ${data.offset + 1}-${data.offset + data.results.length} of ${data.total.toLocaleString()} results.`}
+        </div>
+        <div className="flex items-center gap-2">
+          <PaginationControl
+            href={buildSectionHref({ section: data.section, distro, offset: prevOffset })}
+            disabled={!hasPrevPage}
+          >
+            Previous
+          </PaginationControl>
+          <PaginationControl
+            href={buildSectionHref({ section: data.section, distro, offset: nextOffset })}
+            disabled={!hasNextPage}
+          >
+            Next
+          </PaginationControl>
         </div>
       </div>
     </div>

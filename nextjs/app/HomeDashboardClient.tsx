@@ -7,6 +7,7 @@ import type { Distro } from '../lib/distro'
 import { withDistro } from '../lib/distro'
 import {
   BOOKMARKS_EVENT,
+  BOOKMARKS_STORAGE_KEY,
   getBookmarks,
   removeBookmark,
   type BookmarkItem,
@@ -14,11 +15,14 @@ import {
 import {
   getRecent,
   RECENT_EVENT,
+  RECENT_STORAGE_KEY,
   type RecentItem,
 } from '../lib/recent'
+import { EmptyState } from '../components/ui/EmptyState'
+import { Kbd } from '../components/ui/Kbd'
+import { formatRelativeTime } from '../lib/time'
 
 type RecentPageItem = Extract<RecentItem, { kind: 'page' }>
-import { formatRelativeTime } from '../lib/time'
 
 function formatRelativeFromMs(ms: number): string {
   try {
@@ -36,21 +40,37 @@ function ManLink({ distro, name, section, children }: { distro: Distro; name: st
   }, [distro, name, section])
 
   return (
-    <Link
-      href={href}
-      className="min-w-0 flex-1 rounded-[var(--bm-radius)] px-3 py-2 transition-colors hover:bg-[var(--bm-surface-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--bm-accent)/0.35]"
-    >
+    <Link href={href} className="group min-w-0 flex-1 py-2.5 transition-colors hover:no-underline">
       {children}
     </Link>
   )
 }
 
-function EmptyState({ title, body }: { title: string; body: string }) {
+function EntryRow({
+  distro,
+  name,
+  section,
+  description,
+  timestamp,
+}: {
+  distro: Distro
+  name: string
+  section: string
+  description?: string
+  timestamp: number
+}) {
   return (
-    <div className="rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)] p-4 text-sm">
-      <div className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">{title}</div>
-      <div className="mt-1 text-[color:var(--bm-muted)]">{body}</div>
-    </div>
+    <ManLink distro={distro} name={name} section={section}>
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <span className="shrink-0 font-mono text-sm font-semibold text-fg group-hover:text-accent">
+            {name}({section})
+          </span>
+          {description ? <span className="min-w-0 truncate text-sm text-muted">{description}</span> : null}
+        </div>
+        <span className="shrink-0 font-mono text-xs text-faint">{formatRelativeFromMs(timestamp)}</span>
+      </div>
+    </ManLink>
   )
 }
 
@@ -76,92 +96,70 @@ export function HomeDashboardClient({
 
     const onRecent = () => read()
     const onBookmarks = () => read()
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea !== window.localStorage) return
+      if (event.key && event.key !== RECENT_STORAGE_KEY && event.key !== BOOKMARKS_STORAGE_KEY) return
+      read()
+    }
 
     window.addEventListener(RECENT_EVENT, onRecent)
     window.addEventListener(BOOKMARKS_EVENT, onBookmarks)
+    window.addEventListener('storage', onStorage)
     return () => {
       window.removeEventListener(RECENT_EVENT, onRecent)
       window.removeEventListener(BOOKMARKS_EVENT, onBookmarks)
+      window.removeEventListener('storage', onStorage)
     }
   }, [])
 
   return (
     <div className="mt-10 grid gap-10">
       <section id="recent" aria-label="Recent">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Recent</h2>
-        </div>
+        <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">RECENT</h2>
 
-        {recentPages.length ? (
-          <div className="mt-3 overflow-hidden rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)]">
-            {recentPages.map((it) => (
-              <div key={`${it.name}:${it.section}:${it.at}`} className="group flex items-stretch border-b border-[var(--bm-border)] last:border-b-0">
-                <ManLink distro={distro} name={it.name} section={it.section}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-mono text-sm font-semibold text-[color:var(--bm-fg)]">
-                        {it.name}({it.section})
-                      </div>
-                      {it.description ? (
-                        <div className="mt-0.5 truncate text-sm text-[color:var(--bm-muted)]">{it.description}</div>
-                      ) : null}
-                    </div>
-                    <div className="shrink-0 pt-0.5 font-mono text-xs text-[color:var(--bm-muted)]">
-                      {formatRelativeFromMs(it.at)}
-                    </div>
-                  </div>
-                </ManLink>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-3">
-            <EmptyState title="No recent pages" body="Open a man page and it will show up here." />
-          </div>
-        )}
+        <div className="pl-6 sm:pl-8">
+          {recentPages.length ? (
+            <div className="mt-2">
+              {recentPages.map((it) => (
+                <div key={`${it.name}:${it.section}:${it.at}`} className="flex items-stretch border-b border-edge last:border-b-0">
+                  <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="No recent pages" className="mt-2">
+              Pages you read show up here. Try searching for <span className="font-mono text-fg">tar</span>.
+            </EmptyState>
+          )}
+        </div>
       </section>
 
       <section id="bookmarks" aria-label="Bookmarks">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-mono text-xs tracking-wide text-[color:var(--bm-muted)]">Bookmarks</h2>
+        <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">BOOKMARKS</h2>
+
+        <div className="pl-6 sm:pl-8">
+          {bookmarks.length ? (
+            <div className="mt-2">
+              {bookmarks.map((it) => (
+                <div key={`${it.name}:${it.section}:${it.addedAt}`} className="group/row flex items-stretch border-b border-edge last:border-b-0">
+                  <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
+                  <button
+                    type="button"
+                    className="flex shrink-0 items-center justify-center px-3 text-xs text-muted opacity-100 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0"
+                    onClick={() => removeBookmark({ name: it.name, section: it.section })}
+                    aria-label={`Remove bookmark for ${it.name}(${it.section})`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="No bookmarks yet" className="mt-2">
+              Press <Kbd>M</Kbd> on any man page to pin it here.
+            </EmptyState>
+          )}
         </div>
-
-        {bookmarks.length ? (
-          <div className="mt-3 overflow-hidden rounded-md border border-[var(--bm-border)] bg-[var(--bm-surface)]">
-            {bookmarks.map((it) => (
-              <div key={`${it.name}:${it.section}:${it.addedAt}`} className="group flex items-stretch border-b border-[var(--bm-border)] last:border-b-0">
-                <ManLink distro={distro} name={it.name} section={it.section}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-mono text-sm font-semibold text-[color:var(--bm-fg)]">
-                        {it.name}({it.section})
-                      </div>
-                      {it.description ? (
-                        <div className="mt-0.5 truncate text-sm text-[color:var(--bm-muted)]">{it.description}</div>
-                      ) : null}
-                    </div>
-                    <div className="shrink-0 pt-0.5 font-mono text-xs text-[color:var(--bm-muted)]">
-                      {formatRelativeFromMs(it.addedAt)}
-                    </div>
-                  </div>
-                </ManLink>
-
-                <button
-                  type="button"
-                  className="hidden shrink-0 items-center justify-center px-3 text-xs text-[color:var(--bm-muted)] opacity-0 transition-opacity hover:text-[color:var(--bm-fg)] group-hover:opacity-100 sm:flex"
-                  onClick={() => removeBookmark({ name: it.name, section: it.section })}
-                  aria-label={`Remove bookmark for ${it.name}(${it.section})`}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-3">
-            <EmptyState title="No bookmarks yet" body="Star a man page to pin it here." />
-          </div>
-        )}
       </section>
     </div>
   )
