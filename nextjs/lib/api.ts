@@ -301,9 +301,7 @@ export async function fetchManByNameAndSection(opts: {
 
 export type RelatedResponse = Schemas['RelatedResponse']
 
-export type ManPageMetaResponse = {
-  page: ManPageResponse['page']
-}
+export type ManPageMetaResponse = Schemas['ManPageMetaResponse']
 
 export async function fetchRelated(opts: {
   distro: Distro

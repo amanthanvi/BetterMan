@@ -76,6 +76,10 @@ export function CodeBlock({
 
     const el = containerRef.current
     if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsNearViewport(true)
+      return
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
