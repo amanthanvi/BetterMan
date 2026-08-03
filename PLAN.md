@@ -409,6 +409,6 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 
 ### CI quality-risk closure (v0.6.5 cycle)
 
-- [x] Remove transient opacity from dialog/palette entrance motion so accessibility checks see stable text contrast.
+- [x] Remove transient opacity from dialog, palette, and findbar entrance motion so accessibility checks see stable text contrast.
 - [x] Focus the man-page find input after commit so Escape handling is deterministic.
 - [x] Upgrade dependency review to its verified Node 24 release.
