@@ -38,7 +38,7 @@ describe('getPublicOrigin', () => {
     expect(getPublicOrigin(request)).toBe('https://betterman.sh')
   })
 
-  it('does not trust forwarding headers for the production canonical origin', () => {
+  it('does not trust forwarding headers when production configuration is missing', () => {
     delete process.env.PUBLIC_BASE_URL
     delete process.env.NEXT_PUBLIC_BASE_URL
     process.env.NODE_ENV = 'production'
@@ -50,7 +50,7 @@ describe('getPublicOrigin', () => {
       },
     })
 
-    expect(getPublicOrigin(request)).toBe('https://betterman.sh')
+    expect(getPublicOrigin(request)).toBe('https://deployment.vercel.app')
   })
 })
 

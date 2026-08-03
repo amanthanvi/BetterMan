@@ -15,7 +15,7 @@ Keep all three secrets only in the protected `production` GitHub environment. Th
 1. Merge to `main`.
 2. `.github/workflows/ci.yml` runs the complete test/build/security matrix.
 3. A non-cancelable `workflow_run` in `.github/workflows/deploy.yml` accepts only a successful `push` CI result for `main`, checks out its exact `head_sha`, installs pinned Vercel CLI `58.4.4`, and runs `scripts/deploy-vercel.sh` from `nextjs/`.
-4. The script pulls production settings, builds a prebuilt artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
+4. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
 5. It requires the staged deployment to pass all of the following:
    - deployment state is `READY`;
    - deployment metadata SHA equals the checked-out `main` SHA;

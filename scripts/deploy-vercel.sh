@@ -47,7 +47,8 @@ if [[ -z "$previous_production_id" ]]; then
   exit 1
 fi
 
-VERCEL_GIT_COMMIT_REF="$BETTERMAN_DEPLOY_REF" \
+PUBLIC_BASE_URL="https://${BETTERMAN_PRODUCTION_DOMAIN}" \
+  VERCEL_GIT_COMMIT_REF="$BETTERMAN_DEPLOY_REF" \
   VERCEL_GIT_COMMIT_SHA="$BETTERMAN_DEPLOY_SHA" \
   vercel build --prod --yes --token="$VERCEL_TOKEN"
 
