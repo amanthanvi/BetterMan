@@ -132,7 +132,7 @@ async function checkDistro(client, { stage, distro, minPageCount }) {
     if (!metadata || metadata.page?.name !== golden.name || metadata.page?.section !== golden.section) {
       failures.push(`golden metadata ${golden.name}/${golden.section} missing`)
     } else {
-      if (!metadata.page.title.trim()) {
+      if (typeof metadata.page.title !== 'string' || !metadata.page.title.trim()) {
         failures.push(`golden metadata ${golden.name}/${golden.section} has an empty title`)
       }
       if (metadata.page.datasetReleaseId !== info.datasetReleaseId) {
