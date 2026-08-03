@@ -393,3 +393,4 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Pin the Vercel CLI and deploy a prebuilt artifact from the exact tested checkout SHA.
 - [x] Verify deployment metadata, Convex-backed API data, canonical robots/sitemaps, a representative man page, and both production aliases in automation.
 - [x] Keep a manual protected-`main` SHA workflow for explicit rollback and recovery.
+- [x] Deploy exact-`main` Convex functions before the frontend and gate promotion on production data, search, page, and metadata contracts.

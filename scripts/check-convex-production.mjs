@@ -114,9 +114,33 @@ async function checkDistro(client, { stage, distro, minPageCount }) {
     })
     if (!page || page.page?.name !== golden.name || page.page?.section !== golden.section) {
       failures.push(`golden page ${golden.name}/${golden.section} missing`)
+    } else if (page.page.datasetReleaseId !== info.datasetReleaseId) {
+      failures.push(`golden page release ${page.page.datasetReleaseId} != active ${info.datasetReleaseId}`)
     }
   } catch (error) {
     failures.push(`golden page ${golden.name}/${golden.section} failed: ${error.message}`)
+  }
+
+  let metadata = null
+  try {
+    metadata = await client.query(api.queries.getManMetaByNameAndSection, {
+      stage,
+      distro,
+      name: golden.name,
+      section: golden.section,
+    })
+    if (!metadata || metadata.page?.name !== golden.name || metadata.page?.section !== golden.section) {
+      failures.push(`golden metadata ${golden.name}/${golden.section} missing`)
+    } else {
+      if (typeof metadata.page.title !== 'string' || !metadata.page.title.trim()) {
+        failures.push(`golden metadata ${golden.name}/${golden.section} has an empty title`)
+      }
+      if (metadata.page.datasetReleaseId !== info.datasetReleaseId) {
+        failures.push(`golden metadata release ${metadata.page.datasetReleaseId} != active ${info.datasetReleaseId}`)
+      }
+    }
+  } catch (error) {
+    failures.push(`golden metadata ${golden.name}/${golden.section} failed: ${error.message}`)
   }
 
   return {
@@ -127,6 +151,7 @@ async function checkDistro(client, { stage, distro, minPageCount }) {
     goldenTop: search?.results?.[0] ? `${search.results[0].name}(${search.results[0].section})` : null,
     goldenExpected: `${golden.name}(${golden.section})`,
     tarTitle: page?.page?.title ?? null,
+    metadataTitle: metadata?.page?.title ?? null,
     ok: failures.length === 0,
     failures,
   }
@@ -163,6 +188,7 @@ async function main() {
           ? `${GOLDEN_CHECKS[distro].name}(${GOLDEN_CHECKS[distro].section})`
           : null,
         tarTitle: null,
+        metadataTitle: null,
         ok: false,
         failures: ['missing from active SEO releases'],
       })

@@ -6,8 +6,7 @@ This runbook rebuilds BetterMan production data from source manpage ingestion in
 
 Convex deploy:
 
-- `CONVEX_DEPLOY_KEY` — Convex production deploy key. In GitHub Actions store this as `BETTERMAN_CONVEX_DEPLOY_KEY`.
-- `CONVEX_DEPLOYMENT` — production deployment reference, for example `prod:<deployment-name>` or the project-specific production deployment. In GitHub Actions store this as `BETTERMAN_CONVEX_DEPLOYMENT`.
+- `CONVEX_DEPLOY_KEY` — deployment-scoped Convex production deploy key. Store it in the protected GitHub `production` environment under the same name. The key selects its deployment, so CI does not also require `CONVEX_DEPLOYMENT`.
 
 App runtime:
 
@@ -27,7 +26,8 @@ GitHub secret names used by repo workflows:
 
 - `BETTERMAN_CONVEX_HTTP_URL`
 - `BETTERMAN_CONVEX_INGEST_SECRET`
-- Recommended before automating Convex deploys: `BETTERMAN_CONVEX_DEPLOY_KEY`, `BETTERMAN_CONVEX_DEPLOYMENT`, `BETTERMAN_CONVEX_URL`
+- Protected `production` environment secret: `CONVEX_DEPLOY_KEY`
+- Protected `production` environment variable: `CONVEX_URL`
 
 Do not set `DATABASE_URL`, `REDIS_URL`, or `FASTAPI_INTERNAL_URL` for the cutover path.
 
@@ -37,7 +37,6 @@ Do not set `DATABASE_URL`, `REDIS_URL`, or `FASTAPI_INTERNAL_URL` for the cutove
 pnpm install --frozen-lockfile
 
 export CONVEX_DEPLOY_KEY="$BETTERMAN_CONVEX_DEPLOY_KEY"
-export CONVEX_DEPLOYMENT="$BETTERMAN_CONVEX_DEPLOYMENT"
 
 npx convex deploy --typecheck enable
 npx convex env set --deployment prod CONVEX_INGEST_SECRET "$CONVEX_INGEST_SECRET"
@@ -96,6 +95,7 @@ The check requires:
 - `pageCount >= BETTERMAN_MIN_PAGE_COUNT`.
 - Search query `tarr` returns `tar(1)`.
 - Direct page query `tar/1` returns a page.
+- Metadata query `tar/1` returns the same page identity.
 
 For machine-readable output:
 
