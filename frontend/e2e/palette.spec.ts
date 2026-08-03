@@ -40,6 +40,9 @@ test('keyboard shortcuts dialog: a11y after immediate reopen', async ({ page }) 
   const closeButton = page.getByRole('button', { name: 'Close keyboard shortcuts' })
   await expect(closeButton).toBeVisible()
   await closeButton.click()
+  await expect(
+    page.locator('[role="dialog"][aria-label="Keyboard shortcuts"] [data-state="closed"]'),
+  ).toBeAttached()
   await page.keyboard.type('?')
   await expect(dialog).toBeVisible()
   await expect(closeButton).toBeVisible()

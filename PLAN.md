@@ -413,5 +413,5 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Remove transient opacity from dialog, palette, and findbar entrance motion so accessibility checks see stable text contrast.
 - [x] Focus the man-page find input after commit so Escape handling is deterministic.
 - [x] Upgrade dependency review to its verified Node 24 release.
-- [x] Bound slow Playwright browser installs with process-group termination so retries cannot inherit stale package-manager locks.
-- [x] Include Vitest and Testing Library matcher declarations in the legacy frontend production typecheck.
+- [x] Separate privileged Playwright dependency setup from bounded browser-download retries so retries cannot inherit stale package-manager locks.
+- [x] Typecheck legacy frontend tests with isolated Vitest and Testing Library declarations, without exposing test globals to production source.

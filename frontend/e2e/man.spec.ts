@@ -51,7 +51,6 @@ test('man: sticky sidebar renders TOC; find opens from the title bar (desktop)',
   await page.evaluate(() => {
     const trigger = document.querySelector<HTMLButtonElement>('button[aria-label="Find in page"]')
     if (!trigger) throw new Error('Find trigger is missing')
-    trigger.focus()
     trigger.click()
   })
   await expect(findInput).toBeFocused()

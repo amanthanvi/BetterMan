@@ -220,20 +220,27 @@ jobs:
         run: |
           set -euo pipefail
 
-          # --with-deps starts root apt children, so keep an exact process
-          # group for privileged cleanup. Both worst cases consume 765s,
-          # leaving 435s of the job budget for setup, build, and tests.
+          # Run privileged apt/dpkg setup once. Browser-download retries then
+          # cannot inherit or worsen package-manager state from a timed-out
+          # --with-deps attempt.
+          # Worst-case setup plus two retries consumes 780s, preserving 420s
+          # of the 20-minute job budget for checkout, build, and tests.
+          timeout --kill-after=15s 240s \
+            pnpm -C frontend exec playwright install-deps chromium
+
+          # Keep each unprivileged browser download in an exact process group
+          # so a timeout cannot leave pnpm or download children behind.
           install_browser() {
-            setsid --wait timeout --kill-after=15s 360s \
-              pnpm -C frontend exec playwright install --with-deps chromium &
+            setsid --wait timeout --kill-after=15s 240s \
+              pnpm -C frontend exec playwright install chromium &
             local install_group=$!
             local status=0
 
             wait "${install_group}" || status=$?
             if ((status != 0)); then
-              sudo kill -TERM -- "-${install_group}" 2>/dev/null || true
+              kill -TERM -- "-${install_group}" 2>/dev/null || true
               sleep 5
-              sudo kill -KILL -- "-${install_group}" 2>/dev/null || true
+              kill -KILL -- "-${install_group}" 2>/dev/null || true
             fi
 
             return "${status}"

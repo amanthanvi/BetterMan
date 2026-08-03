@@ -16,6 +16,7 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
 
   const activeMarkRef = useRef<HTMLElement | null>(null)
   const focusRestoreFrameRef = useRef<number | null>(null)
+  const pendingFocusRestoreTargetRef = useRef<HTMLElement | null>(null)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const findInputRef = useRef<HTMLInputElement | null>(null)
   const docRef = useRef<DocRendererHandle | null>(null)
@@ -70,17 +71,23 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   useEffect(
     () => () => {
       if (focusRestoreFrameRef.current !== null) window.cancelAnimationFrame(focusRestoreFrameRef.current)
+      pendingFocusRestoreTargetRef.current = null
     },
     [],
   )
 
   const openFind = () => {
+    const restoreWasPending = focusRestoreFrameRef.current !== null
     if (focusRestoreFrameRef.current !== null) {
       window.cancelAnimationFrame(focusRestoreFrameRef.current)
       focusRestoreFrameRef.current = null
+      previouslyFocusedRef.current = pendingFocusRestoreTargetRef.current
+      pendingFocusRestoreTargetRef.current = null
     }
     if (!findOpen) {
-      previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      if (!restoreWasPending) {
+        previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      }
       setFindOpen(true)
       return
     }
@@ -162,10 +169,13 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     activeMarkRef.current = null
     const previouslyFocused = previouslyFocusedRef.current
     previouslyFocusedRef.current = null
+    pendingFocusRestoreTargetRef.current = previouslyFocused
     setFindOpen(false)
     focusRestoreFrameRef.current = window.requestAnimationFrame(() => {
       focusRestoreFrameRef.current = null
-      previouslyFocused?.focus({ preventScroll: true })
+      const focusTarget = pendingFocusRestoreTargetRef.current
+      pendingFocusRestoreTargetRef.current = null
+      focusTarget?.focus({ preventScroll: true })
     })
   }
 
