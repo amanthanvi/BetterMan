@@ -20,6 +20,9 @@ COPY convex ./convex
 COPY nextjs ./nextjs
 
 RUN pnpm -C nextjs build
+RUN rm -rf /app/node_modules /app/nextjs/node_modules \
+  && pnpm --filter betterman-nextjs --prod install --frozen-lockfile --offline \
+  && test ! -e /app/node_modules/.bin/vercel
 
 
 FROM node:26.5.1-bookworm-slim@sha256:9e6f9357d371591e32ab6f2d8a26d63bdd0d17c29eee3f4f3e7e454d9634bf73 AS runtime

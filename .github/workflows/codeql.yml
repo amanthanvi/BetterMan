@@ -20,6 +20,7 @@ jobs:
   analyze_python:
     name: Analyze (python)
     runs-on: ubuntu-latest
+    # Read repository/action metadata for analysis; write only the resulting SARIF alerts.
     permissions:
       actions: read
       contents: read
@@ -42,6 +43,7 @@ jobs:
   analyze_javascript:
     name: Analyze (javascript-typescript)
     runs-on: ubuntu-latest
+    # Read repository/action metadata for analysis; write only the resulting SARIF alerts.
     permissions:
       actions: read
       contents: read
