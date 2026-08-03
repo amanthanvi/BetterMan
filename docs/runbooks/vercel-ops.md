@@ -62,7 +62,7 @@ Also verify in a real browser:
 
 ## Failure triage
 
-- Build failure: inspect the `deploy_vercel` job and Vercel build logs; reproduce with `pnpm next:build`.
+- Build failure: inspect the `deploy_production` job in the `deploy-vercel` workflow and Vercel build logs; reproduce with `pnpm next:build`.
 - Missing environment: verify the three GitHub secrets and Vercel production environment variables (`NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`, `BETTERMAN_DATASET_STAGE=prod`). The deploy script enforces `PUBLIC_BASE_URL=https://betterman.sh` on each production deployment.
 - Smoke failure: use `vercel curl` against the immutable deployment URL before changing the production alias.
 - Alias mismatch: inspect both the immutable deployment and both custom domains; the script attempts automatic rollback and must not declare success until their deployment IDs match.

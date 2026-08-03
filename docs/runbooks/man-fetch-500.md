@@ -1,6 +1,6 @@
 # Man page fetch returning 500
 
-> **Current topology note.** Production man-page requests run through Next.js on Vercel and Convex content actions/file storage. Use Vercel request logs and Convex function logs for the active dataset stage. Database-health and `is_active` instructions below apply only to the retained legacy FastAPI/Railway path; current rollback changes the Convex release pointer.
+> **Current topology note.** Production man-page requests run through Next.js on Vercel and Convex content actions/file storage. Current dataset rollback follows the `Rollback` section in `docs/runbooks/convex-production-cutover.md`; application rollback follows `docs/runbooks/vercel-ops.md`.
 
 **Symptoms**
 
@@ -9,14 +9,19 @@
 
 **Immediate checks**
 
-- App logs for the request id (`X-Request-ID`) and exception traces.
+- Vercel request logs and Convex function logs for the active dataset stage, correlated by request time and route.
 - Confirm whether failures are isolated (single page) or broad.
-- Check DB health (timeouts / connection errors).
+- Check `/api/v1/info` for the active `datasetReleaseId` and compare failures across distros.
 
 **Mitigations**
 
 - If isolated to a few pages: mark as known-bad in ingestion validation and re-run ingest.
-- If broad / release-correlated: roll back dataset release (set previous release `is_active = true`).
+- If broad and release-correlated: re-promote the previous known-good Convex release pointer using `docs/runbooks/convex-production-cutover.md`; do not delete the failing release during response.
+- If code/deployment-correlated: roll back the application with `docs/runbooks/vercel-ops.md`.
+
+## Legacy FastAPI/Railway path
+
+For a deliberately retained legacy service, also inspect database health and set the previous release `is_active = true` when rolling back its PostgreSQL data. These instructions do not apply to the active Convex data plane.
 
 **Follow-ups**
 

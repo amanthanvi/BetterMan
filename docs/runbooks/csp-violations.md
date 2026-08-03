@@ -35,6 +35,8 @@ BetterMan uses CSP with **strict script nonces** and **relaxed styles** (see `SP
 
 Disable CSP header injection on the **Next** service:
 
-- Set `CSP_ENABLED=false` in the Vercel production environment and redeploy the selected production SHA.
+- Set `CSP_ENABLED=false` in the Vercel production environment.
+- Redeploy the selected full SHA through the `deploy-vercel` workflow and verify its deployment metadata/aliases using `docs/runbooks/vercel-ops.md`.
+- Confirm in browser Network tools that the emergency deployment omits the `Content-Security-Policy` header and restores the broken flow.
 
-Then redeploy/restart the service.
+After the incident fix is ready, set `CSP_ENABLED=true`, redeploy the selected production SHA, and confirm HTML responses again contain `Content-Security-Policy` with a per-response `nonce-…` in `script-src`. Do not leave the emergency override disabled.
