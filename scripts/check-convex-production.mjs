@@ -114,9 +114,8 @@ async function checkDistro(client, { stage, distro, minPageCount }) {
     })
     if (!page || page.page?.name !== golden.name || page.page?.section !== golden.section) {
       failures.push(`golden page ${golden.name}/${golden.section} missing`)
-    }
-    if (page?.page?.datasetReleaseId !== info.datasetReleaseId) {
-      failures.push(`golden page release ${page?.page?.datasetReleaseId ?? 'missing'} != active ${info.datasetReleaseId}`)
+    } else if (page.page.datasetReleaseId !== info.datasetReleaseId) {
+      failures.push(`golden page release ${page.page.datasetReleaseId} != active ${info.datasetReleaseId}`)
     }
   } catch (error) {
     failures.push(`golden page ${golden.name}/${golden.section} failed: ${error.message}`)

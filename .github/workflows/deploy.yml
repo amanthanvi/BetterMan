@@ -126,6 +126,9 @@ jobs:
       - name: Install application dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install trusted deployment-tool dependencies
+        run: pnpm --dir "$GITHUB_WORKSPACE/tooling" install --frozen-lockfile
+
       - name: Require current main before Convex deployment
         if: needs.resolve_revision.outputs.require_current_main == 'true'
         shell: bash
@@ -173,11 +176,10 @@ jobs:
             echo "CONVEX_URL is required in the protected production environment." >&2
             exit 1
           fi
-          if [[ ! -d "$GITHUB_WORKSPACE/app/node_modules" || ! -d "$GITHUB_WORKSPACE/tooling" ]]; then
-            echo "Expected app dependencies and trusted tooling checkouts are missing." >&2
+          if [[ ! -d "$GITHUB_WORKSPACE/tooling/node_modules" ]]; then
+            echo "Trusted deployment-tool dependencies are missing." >&2
             exit 1
           fi
-          ln -s "$GITHUB_WORKSPACE/app/node_modules" "$GITHUB_WORKSPACE/tooling/node_modules"
           node "$GITHUB_WORKSPACE/tooling/scripts/check-convex-production.mjs"
 
       - name: Install Vercel CLI
