@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Security: upgrade Click to 8.4.2 to resolve PYSEC-2026-2132 command injection exposure in `click.edit()`.
+- Reliability/accessibility: eliminate transient entrance-animation contrast failures, make man-page find focus deterministic, isolate Vitest DOM matcher types from production source, move dependency review to Node 24, and prevent timed-out Playwright browser downloads from retaining child processes.
 - CI/CD: make Vercel the gated production target, deploy the exact tested `main` SHA, stage and verify before promotion, and automatically roll back failed post-promotion checks. ([#140](https://github.com/amanthanvi/BetterMan/pull/140)) — thanks @amanthanvi
 - Performance: metadata-only page reads, split search ranking/headline queries, client-loaded related commands, heuristic document virtualization, near-viewport syntax highlighting, critical-font preloads, and `Server-Timing` diagnostics. ([#139](https://github.com/amanthanvi/BetterMan/pull/139)) — thanks @amanthanvi
 - Security: move transitive `brace-expansion` 1.x/2.x overrides beyond GHSA-mh99-v99m-4gvg vulnerable ranges. ([#139](https://github.com/amanthanvi/BetterMan/pull/139))

@@ -26,7 +26,7 @@ jobs:
           persist-credentials: false
 
       - name: Dependency review
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
           # GHSA-mh99-v99m-4gvg (brace-expansion) declares its vulnerable range
@@ -220,12 +220,38 @@ jobs:
         run: |
           set -euo pipefail
 
+          # A non-timeout apt/mirror failure gets one retry. A timeout stops
+          # immediately so a possibly interrupted dpkg run cannot poison a
+          # second attempt on the same runner.
+          dependencies_ready=false
           for attempt in 1 2; do
-            if timeout 300s pnpm -C frontend exec playwright install --with-deps chromium; then
+            status=0
+            timeout --kill-after=15s 180s \
+              pnpm -C frontend exec playwright install-deps chromium || status=$?
+            if ((status == 0)); then
+              dependencies_ready=true
+              break
+            fi
+            echo "Playwright dependency install failed (attempt ${attempt}/2, status ${status})." >&2
+            if ((status == 124 || status == 137)); then
+              echo "Dependency setup timed out; refusing an unsafe dpkg retry." >&2
+              exit "${status}"
+            fi
+            if ((attempt < 2)); then sleep 5; fi
+          done
+          if [[ "${dependencies_ready}" != true ]]; then exit 1; fi
+
+          # GNU timeout owns the unprivileged download process group and kills
+          # remaining children before returning. Two worst-case setup loops use
+          # at most 760s, preserving 440s of the 20-minute job budget.
+
+          for attempt in 1 2; do
+            if timeout --kill-after=15s 180s \
+              pnpm -C frontend exec playwright install chromium; then
               exit 0
             fi
             echo "Playwright browser install failed or timed out (attempt ${attempt}/2)." >&2
-            sleep $((attempt * 5))
+            if ((attempt < 2)); then sleep $((attempt * 5)); fi
           done
 
           exit 1

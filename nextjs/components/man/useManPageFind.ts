@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { BlockNode } from '../../lib/docModel'
 import { getScrollBehavior } from '../../lib/scroll'
@@ -8,6 +8,7 @@ import type { DocRendererHandle } from '../doc/DocRenderer'
 import { buildFindIndex, locateFindMatch } from './findIndex'
 
 const FIND_DEBOUNCE_MS = 150
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const [find, setFind] = useState('')
@@ -15,6 +16,8 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const [activeFindIndex, setActiveFindIndex] = useState(0)
 
   const activeMarkRef = useRef<HTMLElement | null>(null)
+  const focusRestoreFrameRef = useRef<number | null>(null)
+  const pendingFocusRestoreTargetRef = useRef<HTMLElement | null>(null)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const findInputRef = useRef<HTMLInputElement | null>(null)
   const docRef = useRef<DocRendererHandle | null>(null)
@@ -55,18 +58,41 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
           ? `${displayIndex + 1}/${matchCount}`
           : '0/0'
 
-  const focusFindInput = () => {
+  const focusFindInput = useCallback(() => {
     const el = findInputRef.current
     el?.focus()
     el?.select()
-  }
+  }, [])
+
+  useIsomorphicLayoutEffect(() => {
+    if (!findOpen) return
+    focusFindInput()
+  }, [findOpen, focusFindInput])
+
+  useEffect(
+    () => () => {
+      if (focusRestoreFrameRef.current !== null) window.cancelAnimationFrame(focusRestoreFrameRef.current)
+      pendingFocusRestoreTargetRef.current = null
+    },
+    [],
+  )
 
   const openFind = () => {
-    if (!findOpen) {
-      previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const restoreWasPending = focusRestoreFrameRef.current !== null
+    if (focusRestoreFrameRef.current !== null) {
+      window.cancelAnimationFrame(focusRestoreFrameRef.current)
+      focusRestoreFrameRef.current = null
+      previouslyFocusedRef.current = pendingFocusRestoreTargetRef.current
+      pendingFocusRestoreTargetRef.current = null
     }
-    setFindOpen(true)
-    requestAnimationFrame(() => focusFindInput())
+    if (!findOpen) {
+      if (!restoreWasPending) {
+        previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      }
+      setFindOpen(true)
+      return
+    }
+    focusFindInput()
   }
 
   const scrollToFind = (idx: number) => {
@@ -140,12 +166,19 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   }
 
   const closeFind = () => {
+    if (focusRestoreFrameRef.current !== null) return
     if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
     activeMarkRef.current = null
     const previouslyFocused = previouslyFocusedRef.current
     previouslyFocusedRef.current = null
+    pendingFocusRestoreTargetRef.current = previouslyFocused
     setFindOpen(false)
-    window.requestAnimationFrame(() => previouslyFocused?.focus({ preventScroll: true }))
+    focusRestoreFrameRef.current = window.requestAnimationFrame(() => {
+      focusRestoreFrameRef.current = null
+      const focusTarget = pendingFocusRestoreTargetRef.current
+      pendingFocusRestoreTargetRef.current = null
+      focusTarget?.focus({ preventScroll: true })
+    })
   }
 
   return {

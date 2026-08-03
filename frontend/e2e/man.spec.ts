@@ -13,8 +13,54 @@ test('man: sticky sidebar renders TOC; find opens from the title bar (desktop)',
 
   await waitForInteractiveShell(page)
   const findTrigger = page.getByRole('button', { name: 'Find in page' })
+  const findInput = page.locator('[data-bm-findbar]').getByRole('textbox', { name: 'Find in page' })
   await findTrigger.click()
-  await expect(page.locator('[data-bm-findbar]').getByRole('textbox', { name: 'Find in page' })).toBeVisible()
+  await expect(findInput).toBeFocused()
+  await findTrigger.click()
+  await expect(findInput).toBeFocused()
+  await page.evaluate(() => {
+    const originalRequestAnimationFrame = window.requestAnimationFrame.bind(window)
+    const originalCancelAnimationFrame = window.cancelAnimationFrame.bind(window)
+    const pendingFrames = new Map<number, FrameRequestCallback>()
+    let nextFrameId = 1_000_000
+
+    window.requestAnimationFrame = (callback) => {
+      const frameId = nextFrameId
+      nextFrameId += 1
+      pendingFrames.set(frameId, callback)
+      return frameId
+    }
+    window.cancelAnimationFrame = (frameId) => {
+      pendingFrames.delete(frameId)
+    }
+
+    ;(
+      window as Window & {
+        __bmFlushFocusFrames?: () => void
+      }
+    ).__bmFlushFocusFrames = () => {
+      window.requestAnimationFrame = originalRequestAnimationFrame
+      window.cancelAnimationFrame = originalCancelAnimationFrame
+      const callbacks = [...pendingFrames.values()]
+      pendingFrames.clear()
+      callbacks.forEach((callback) => callback(performance.now()))
+    }
+  })
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-bm-findbar]')).toHaveCount(0)
+  await page.evaluate(() => {
+    const trigger = document.querySelector<HTMLButtonElement>('button[aria-label="Find in page"]')
+    if (!trigger) throw new Error('Find trigger is missing')
+    trigger.click()
+  })
+  await expect(findInput).toBeFocused()
+  await page.evaluate(() => {
+    const testWindow = window as Window & { __bmFlushFocusFrames?: () => void }
+    if (!testWindow.__bmFlushFocusFrames) throw new Error('Focus-frame test harness is missing')
+    testWindow.__bmFlushFocusFrames()
+    delete testWindow.__bmFlushFocusFrames
+  })
+  await expect(findInput).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-bm-findbar]')).toHaveCount(0)
   await expect(findTrigger).toBeFocused()

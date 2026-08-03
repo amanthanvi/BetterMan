@@ -12,7 +12,7 @@ const EXIT_MS = 200
 
 /**
  * Shared overlay chassis: portal, scrim, focus trap, scroll lock, Escape,
- * click-outside, and enter/exit opacity. Dialog and Drawer both sit on it.
+ * click-outside, and scrim transition. Dialog and Drawer both sit on it.
  */
 export function Overlay({
   open,
@@ -59,9 +59,9 @@ export function Overlay({
 
   return createPortal(
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={label}
+      role={open ? 'dialog' : undefined}
+      aria-modal={open ? true : undefined}
+      aria-label={open ? label : undefined}
       className={cx('fixed inset-0 z-50', open ? 'pointer-events-auto' : 'pointer-events-none')}
       onClick={() => onOpenChange(false)}
     >
@@ -101,8 +101,8 @@ export function Dialog({
       onOpenChange={onOpenChange}
       label={label}
       positionClassName={cx(
-        'bm-pop-in relative mx-auto mt-24 w-[min(92vw,38rem)] border border-edge bg-raised p-6 shadow-lg shadow-black/25 transition-opacity motion-reduce:animate-none motion-reduce:transition-none',
-        open ? 'opacity-100' : 'opacity-0',
+        'bm-pop-in relative mx-auto mt-24 w-[min(92vw,38rem)] border border-edge bg-raised p-6 shadow-lg shadow-black/25 motion-reduce:animate-none',
+        open ? 'visible' : 'invisible',
       )}
       panelClassName={panelClassName}
     >

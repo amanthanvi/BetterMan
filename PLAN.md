@@ -406,3 +406,12 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Add property-based API checks and strictly reject malformed decimal pagination values.
 - [x] Remove vulnerable transitive versions from the pinned Vercel CLI dependency graph.
 - [x] Document the bounded OSV exception for Vercel's unrelated `sandbox@3.4.0` package-name collision.
+- [x] Upgrade transitive Click to 8.4.2 after Scorecards identified PYSEC-2026-2132 (fixed in 8.3.3).
+
+### CI quality-risk closure (v0.6.5 cycle)
+
+- [x] Remove transient opacity from dialog, palette, and findbar entrance motion so accessibility checks see stable text contrast.
+- [x] Focus the man-page find input after commit so Escape handling is deterministic.
+- [x] Upgrade dependency review to its verified Node 24 release.
+- [x] Bound Playwright dependency/download retries and refuse unsafe same-runner retries after a package-manager timeout.
+- [x] Typecheck legacy frontend tests with isolated Vitest and Testing Library declarations, without exposing test globals to production source.
