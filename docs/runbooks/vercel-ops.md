@@ -16,8 +16,8 @@ Also set the public `CONVEX_URL` GitHub environment variable to the production `
 1. Merge to `main`.
 2. `.github/workflows/ci.yml` runs the complete test/build/security matrix.
 3. A non-cancelable `workflow_run` in `.github/workflows/deploy.yml` accepts only a successful `push` CI result for `main`, checks out its exact `head_sha`, and confirms that SHA is still current `main` before changing the backend.
-4. The workflow deploys that exact SHA's Convex schema/functions, then checks production release data, search, page content, and metadata functions. Convex changes must remain backward-compatible with the currently promoted frontend during this handoff.
-5. The workflow installs pinned Vercel CLI `58.4.4` and runs `scripts/deploy-vercel.sh` from the repository root. Vercel applies the project's `nextjs` root directory exactly once. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
+4. Under the repository's Node 26 tooling contract, the workflow deploys that exact SHA's Convex schema/functions, then checks production release data, search, page content, and metadata functions. Convex changes must remain backward-compatible with the currently promoted frontend during this handoff.
+5. The workflow switches to the Vercel project's Node 24 build/runtime contract, installs pinned Vercel CLI `58.4.4`, and runs `scripts/deploy-vercel.sh` from the repository root. Vercel applies the project's `nextjs` root directory exactly once. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
 6. It requires the staged deployment to pass all of the following:
    - deployment state is `READY`;
    - deployment metadata SHA equals the checked-out `main` SHA;
