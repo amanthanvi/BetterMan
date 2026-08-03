@@ -31,7 +31,7 @@ function buildCsp(nonce: string): string {
   return csp.join('; ')
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
 
   if (!cspEnabled) {

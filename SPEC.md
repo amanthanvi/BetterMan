@@ -2839,13 +2839,13 @@ v0.5.0 is BetterMan's largest architectural release. It migrates the frontend fr
 
 | Aspect | v0.4.0 (Current) | v0.5.0 (Target) |
 |--------|-------------------|------------------|
-| Frontend build | Vite 7.3 | Next.js 15 App Router |
+| Frontend build | Vite 7.3 | Next.js 16 App Router |
 | Routing | TanStack Router (client) | Next.js file-based (server + client) |
 | Rendering | CSR (SPA) | SSR + streaming + client hydration |
 | Data fetching | TanStack Query (client-only) | RSC server fetch + TanStack Query (client) |
 | Meta/OG tags | react-helmet-async (client) | Next.js Metadata API (server) |
 | Deployment | Single Railway service | Two Railway services (Next.js + FastAPI) |
-| CSP nonces | FastAPI middleware | Next.js middleware |
+| CSP nonces | FastAPI middleware | Next.js proxy |
 
 ### Route Mapping
 
@@ -2901,7 +2901,7 @@ Two Railway services:
 
 ### CSP Nonces in Next.js
 
-- Next.js middleware generates cryptographic nonce per-request
+- Next.js proxy generates cryptographic nonce per-request
 - Nonce passed to layout via `headers()` API
 - `next/script` components receive nonce for inline scripts
 - Plausible injection moves from FastAPI HTML injection → Next.js `<Script>` component
@@ -2943,7 +2943,7 @@ Pipeline unchanged:
 
 1. Initialize Next.js alongside existing `frontend/` (new `nextjs/` directory)
 2. API client setup (server-side fetch + client-side TanStack Query)
-3. Root layout (providers, header, footer, CSP middleware)
+3. Root layout (providers, header, footer, CSP proxy)
 4. Home page migration
 5. Search page (SSR initial results + client infinite scroll)
 6. Man page view (generateMetadata + server fetch + client DocRenderer)
@@ -3243,7 +3243,7 @@ export const STORAGE_KEYS = {
 - [ ] TanStack Query hydration working (no redundant client fetches)
 - [ ] TanStack Virtual working for large pages (client component)
 - [ ] Command palette functional with Next.js router
-- [ ] CSP nonces working via Next.js middleware
+- [ ] CSP nonces working via Next.js proxy
 - [ ] Two-service Railway deployment healthy
 - [ ] FastAPI internal-only (no public static file serving)
 - [ ] Plausible tracking via Next.js `<Script>`
