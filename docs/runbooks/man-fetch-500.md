@@ -1,5 +1,7 @@
 # Man page fetch returning 500
 
+> **Current topology note.** Production man-page requests run through Next.js on Vercel and Convex content actions/file storage. Use Vercel request logs and Convex function logs for the active dataset stage. Database-health and `is_active` instructions below apply only to the retained legacy FastAPI/Railway path; current rollback changes the Convex release pointer.
+
 **Symptoms**
 
 - `/api/v1/man/{name}/{section}` returns 500 for specific pages.

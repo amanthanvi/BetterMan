@@ -48,16 +48,18 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
 ## Status
 
 - Latest release: `v0.6.4` (tag `v0.6.4`)
-- In progress: TBD (see `ROADMAP.md` + `PLAN.md`)
+- In progress: `v0.6.5` (see `ROADMAP.md` + `PLAN.md`)
 - Default branch: `main`
 
-## Deploy (Railway)
+## Deploy (Vercel)
 
-- Auto-deploy: `.github/workflows/ci.yml` deploys after all jobs pass on pushes to `main`.
-- Manual deploy: `.github/workflows/deploy.yml` (workflow `deploy-railway`, input `ref`).
-- Requires `RAILWAY_TOKEN` GitHub Actions secret (used as Railway project-token auth in CI).
-- Current runtime: `nextjs` reads datasets/search/rate limits from Convex.
-- Legacy `web` FastAPI service may still exist during the infrastructure transition, but the active Next.js app no longer requires `FASTAPI_INTERNAL_URL`.
+- Production: Vercel project `betterman`, with `betterman.sh` and `www.betterman.sh` assigned to its production deployment.
+- Auto-deploy: `.github/workflows/deploy.yml` starts only after `.github/workflows/ci.yml` succeeds for a push to `main`, then rechecks that exact SHA before promotion.
+- Manual deploy/rollback: `.github/workflows/deploy.yml` (workflow `deploy-vercel`, input `sha`) accepts only a full commit SHA reachable from protected `main` history.
+- Required `production` environment secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`; the environment is restricted to protected branches and repository-scoped Vercel secrets are prohibited.
+- The deployment root is `nextjs/`; `scripts/deploy-vercel.sh` builds the exact checkout SHA, verifies authenticated deployment metadata, smoke-tests a staged artifact, promotes only a passing artifact, verifies both custom-domain aliases, and rolls back if post-promotion verification fails.
+- Current runtime: Next.js on Vercel reads datasets, search, and rate-limit state from Convex. Legacy Railway services are not on the active request path.
+- Operations and rollback: `docs/runbooks/vercel-ops.md`.
 
 ## Dataset updates
 

@@ -35,6 +35,6 @@ BetterMan uses CSP with **strict script nonces** and **relaxed styles** (see `SP
 
 Disable CSP header injection on the **Next** service:
 
-- Set `CSP_ENABLED=false` in Railway env vars for the Next service.
+- Set `CSP_ENABLED=false` in the Vercel production environment and redeploy the selected production SHA.
 
 Then redeploy/restart the service.

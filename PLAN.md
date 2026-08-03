@@ -372,7 +372,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Ingestion: validate Debian package names and resolve symlinks before reading `/usr/share/doc/<pkg>/copyright`.
 - [x] Next.js: strip `__BM_*__` highlight sentinels from man page text before marker application.
 - [x] Dependencies: `next` to 15.5.22, `seroval` to 1.5.6 (critical GHSA-mv8w-475r-vwqw), pnpm pin to 10.34.4 (CVE-2026-59195), plus patched `brace-expansion` overrides for GHSA-mh99-v99m-4gvg.
-- [ ] Follow-up: `nextjs/lib/public-origin.ts` falls back to `x-forwarded-host`; set `PUBLIC_BASE_URL` in production or validate the host against an allowlist.
+- [x] Public origin: enforce `https://betterman.sh` for production, inject `PUBLIC_BASE_URL` at deploy time, and ignore forwarding headers in production.
 - [ ] Follow-up: `backend/app/web/{seo,runtime_config}.py` are unmounted and superseded by the Next.js routes — decide which implementation is canonical and delete the other.
 - [ ] Follow-up: public Convex queries accept `stage` from the caller, so `staging` data is readable directly from the deployment; derive it server-side.
 
@@ -385,3 +385,11 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Improve large man-page rendering with heuristic virtualization + viewport-gated code highlighting.
 - [x] Preload critical fonts to reduce first-paint CLS on man pages.
 - [ ] Tag `v0.6.5`
+
+### Production delivery hardening (v0.6.5 cycle)
+
+- [x] Make Vercel the documented production host and retain Railway only as legacy infrastructure.
+- [x] Replace the best-effort Railway deploy with a non-cancelable Vercel workflow gated on successful `main` CI.
+- [x] Pin the Vercel CLI and deploy a prebuilt artifact from the exact tested checkout SHA.
+- [x] Verify deployment metadata, Convex-backed API data, canonical robots/sitemaps, a representative man page, and both production aliases in automation.
+- [x] Keep a manual protected-`main` SHA workflow for explicit rollback and recovery.

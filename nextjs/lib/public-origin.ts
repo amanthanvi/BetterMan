@@ -10,6 +10,8 @@ function firstHeaderValue(raw: string | null): string | null {
   return first || null
 }
 
+const DEFAULT_PRODUCTION_ORIGIN = 'https://betterman.sh'
+
 export function getPublicOrigin(request: Request): string {
   const env =
     normalizeBaseUrl(process.env.PUBLIC_BASE_URL) ??
@@ -22,8 +24,7 @@ export function getPublicOrigin(request: Request): string {
     }
   }
 
-  const railwayPublicDomain = normalizeBaseUrl(process.env.RAILWAY_PUBLIC_DOMAIN)
-  if (railwayPublicDomain) return `https://${railwayPublicDomain}`
+  if (process.env.NODE_ENV === 'production') return DEFAULT_PRODUCTION_ORIGIN
 
   const host =
     firstHeaderValue(request.headers.get('x-forwarded-host')) ??

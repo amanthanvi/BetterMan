@@ -1,122 +1,134 @@
-name: deploy-railway
+name: deploy-vercel
 
 on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
-      ref:
-        description: "Git ref (branch, tag, SHA) to deploy"
-        required: false
-        default: main
-
-concurrency:
-  group: deploy-railway-${{ inputs.ref }}
-  cancel-in-progress: false
+      sha:
+        description: "Full 40-character SHA from main history to deploy or roll back to"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  deploy_web:
+  resolve_revision:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_WORKSPACE_ID: ed8a9f0d-ab1b-48a4-a7a1-86a95b0e5f18
-      RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
-      RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
-      RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
-      RAILWAY_NEXTJS_SERVICE_ID: 40fa322d-c334-4662-8858-8edf380d3f10
+    timeout-minutes: 5
+    outputs:
+      ref: ${{ steps.revision.outputs.ref }}
+      sha: ${{ steps.revision.outputs.sha }}
+      require_current_main: ${{ steps.revision.outputs.require_current_main }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve and validate deployment revision
+        id: revision
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_SHA: ${{ inputs.sha }}
+          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
+            sha="$WORKFLOW_SHA"
+            ref="main"
+            require_current_main="true"
+          else
+            sha="$MANUAL_SHA"
+            ref="main-history"
+            require_current_main="false"
+
+            if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Manual deployment requires a full lowercase 40-character commit SHA." >&2
+              exit 1
+            fi
+            if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+              echo "Commit ${sha} is not present in repository history." >&2
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "$sha" origin/main; then
+              echo "Commit ${sha} is not reachable from protected main." >&2
+              exit 1
+            fi
+          fi
+
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Resolved deployment revision is not a full commit SHA." >&2
+            exit 1
+          fi
+
+          {
+            printf 'ref=%s\n' "$ref"
+            printf 'sha=%s\n' "$sha"
+            printf 'require_current_main=%s\n' "$require_current_main"
+          } >> "$GITHUB_OUTPUT"
+
+  deploy_production:
+    needs: resolve_revision
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: deploy-vercel-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      deployments: write
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.deployment_url }}
+    env:
+      BETTERMAN_DEPLOY_REF: ${{ needs.resolve_revision.outputs.ref }}
+      BETTERMAN_DEPLOY_SHA: ${{ needs.resolve_revision.outputs.sha }}
+      BETTERMAN_PRODUCTION_DOMAIN: betterman.sh
+      BETTERMAN_REQUIRE_CURRENT_MAIN: ${{ needs.resolve_revision.outputs.require_current_main }}
+    defaults:
+      run:
+        working-directory: app/nextjs
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          path: tooling
+          persist-credentials: false
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.resolve_revision.outputs.sha }}
+          path: app
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: 10.34.4
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: 26
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
 
-      - name: Install Railway CLI
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Install Vercel CLI
+        run: npm install --global vercel@58.4.4
 
-          export RAILWAY_VERSION="4.18.2"
-          export npm_config_prefix="${RUNNER_TEMP}/railway-npm"
-          railway_bin="${npm_config_prefix}/bin"
-          mkdir -p "$railway_bin"
-          export PATH="${railway_bin}:${PATH}"
-          echo "$railway_bin" >> "$GITHUB_PATH"
-
-          for attempt in 1 2 3; do
-            echo "Installing @railway/cli@${RAILWAY_VERSION} (attempt $attempt/3)…"
-            if npm install -g "@railway/cli@${RAILWAY_VERSION}"; then
-              break
-            fi
-            sleep $((attempt * 10))
-          done
-
-          if ! command -v railway >/dev/null 2>&1; then
-            echo "Failed to install Railway CLI (@railway/cli@${RAILWAY_VERSION}) after 3 attempts." >&2
-            exit 1
-          fi
-
-          railway --version
-
-      - name: Deploy services
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -z "${RAILWAY_TOKEN:-}" ]]; then
-            echo "Missing RAILWAY_TOKEN GitHub Actions secret."
-            exit 1
-          fi
-
-          railway_project_token() {
-            env RAILWAY_TOKEN="$RAILWAY_TOKEN" railway "$@"
-          }
-
-          railway_bearer_token() {
-            env -u RAILWAY_TOKEN RAILWAY_API_TOKEN="$RAILWAY_TOKEN" railway "$@"
-          }
-
-          railway_run() {
-            local output
-            local status
-
-            set +e
-            output="$(railway_project_token "$@" 2>&1)"
-            status=$?
-            set -e
-            printf '%s\n' "$output"
-
-            if [[ $status -eq 0 ]]; then
-              return 0
-            fi
-
-            if ! grep -qi "Unauthorized" <<<"$output"; then
-              return "$status"
-            fi
-
-            echo "Project-token auth rejected; retrying with bearer-token compatibility path..."
-            railway_bearer_token "$@"
-          }
-
-          deploy_service() {
-            local service_id="$1"
-
-            if railway_run up --ci \
-              --project "$RAILWAY_PROJECT_ID" \
-              --service "$service_id" \
-              --environment "$RAILWAY_ENVIRONMENT_ID"; then
-              return 0
-            fi
-
-            railway_run logs --deployment --lines 200 --latest \
-              --service "$service_id" \
-              --environment "$RAILWAY_ENVIRONMENT_ID" || true
-            return 1
-          }
-
-          deploy_service "$RAILWAY_SERVICE_ID"
-          deploy_service "$RAILWAY_NEXTJS_SERVICE_ID"
+      - name: Deploy and verify production
+        id: deploy
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: ../../tooling/scripts/deploy-vercel.sh

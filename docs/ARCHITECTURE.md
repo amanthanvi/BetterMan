@@ -35,6 +35,9 @@ Convex (convex/)
 
 GitHub Actions (ingestion/)
   └─ builds + promotes dataset release pointers through Convex HTTP actions
+
+GitHub Actions (ci → deploy workflow_run)
+  └─ stages, verifies, and promotes the exact tested main SHA to Next.js on Vercel
 ```
 
 ## Key flows
@@ -67,15 +70,15 @@ GitHub Actions (ingestion/)
 
 ## Deployment
 
-Production deploy is handled by GitHub Actions after CI passes on pushes to `main`.
+Production deploy is handled by a non-cancelable GitHub Actions workflow after CI passes on pushes to `main`.
 
 - CI: `.github/workflows/ci.yml`
 - Deploy workflow: `.github/workflows/deploy.yml`
-- Ops notes: `docs/runbooks/railway-ops.md`
+- Ops notes: `docs/runbooks/vercel-ops.md`
 
 ### Runtime topology
 
-- `nextjs` — public web (Next.js)
+- `nextjs` — public web (Next.js on Vercel)
 - Convex — app data, search, ingestion, and rate-limit state
 - `web` — legacy FastAPI API-only service retained until infrastructure cleanup is approved
 

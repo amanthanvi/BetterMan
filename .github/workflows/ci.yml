@@ -21,7 +21,7 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Dependency review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
@@ -70,11 +70,12 @@ jobs:
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: 26
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm next:grammar
+      - run: pnpm next:test
       - run: pnpm -C nextjs lint
       - run: pnpm -C nextjs build
 
@@ -82,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
@@ -98,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
@@ -114,7 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
@@ -152,7 +153,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
@@ -185,7 +186,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
@@ -228,7 +229,7 @@ jobs:
           nohup npx convex dev --tail-logs disable > /tmp/betterman-convex.log 2>&1 &
           echo $! > /tmp/betterman-convex.pid
 
-          for attempt in {1..60}; do
+          for _ in {1..60}; do
             if grep -q "Convex functions ready" /tmp/betterman-convex.log; then
               break
             fi
@@ -267,7 +268,7 @@ jobs:
 
           nohup pnpm -C nextjs exec next start -p 3000 > /tmp/betterman-next.log 2>&1 &
 
-          for attempt in {1..60}; do
+          for _ in {1..60}; do
             if curl -fsS http://127.0.0.1:3000/robots.txt >/dev/null; then
               exit 0
             fi
@@ -282,116 +283,3 @@ jobs:
         env:
           E2E_BASE_URL: http://127.0.0.1:3000
         run: pnpm -C frontend e2e
-
-  deploy_railway:
-    needs:
-      - frontend
-      - nextjs
-      - backend
-      - ingestion
-      - api_types
-      - container_build
-      - e2e
-    if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 26
-
-      - name: Install Railway CLI
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          export RAILWAY_VERSION="4.18.2"
-          export npm_config_prefix="${RUNNER_TEMP}/railway-npm"
-          railway_bin="${npm_config_prefix}/bin"
-          mkdir -p "$railway_bin"
-          export PATH="${railway_bin}:${PATH}"
-          echo "$railway_bin" >> "$GITHUB_PATH"
-
-          for attempt in 1 2 3; do
-            echo "Installing @railway/cli@${RAILWAY_VERSION} (attempt $attempt/3)…"
-            if npm install -g "@railway/cli@${RAILWAY_VERSION}"; then
-              break
-            fi
-            sleep $((attempt * 10))
-          done
-
-          if ! command -v railway >/dev/null 2>&1; then
-            echo "Failed to install Railway CLI (@railway/cli@${RAILWAY_VERSION}) after 3 attempts." >&2
-            exit 1
-          fi
-
-          railway --version
-
-      - name: Deploy web (Railway)
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_WORKSPACE_ID: ed8a9f0d-ab1b-48a4-a7a1-86a95b0e5f18
-          RAILWAY_PROJECT_ID: efecaef3-7389-4b3e-b767-5f56858b845e
-          RAILWAY_ENVIRONMENT_ID: dc10158e-d1fd-4039-9089-4c6068357251
-          RAILWAY_SERVICE_ID: d254e49e-352c-4678-8933-eab6422a02c1
-          RAILWAY_NEXTJS_SERVICE_ID: 40fa322d-c334-4662-8858-8edf380d3f10
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -z "${RAILWAY_TOKEN:-}" ]]; then
-            echo "Missing RAILWAY_TOKEN GitHub Actions secret."
-            exit 1
-          fi
-
-          railway_project_token() {
-            env RAILWAY_TOKEN="$RAILWAY_TOKEN" railway "$@"
-          }
-
-          railway_bearer_token() {
-            env -u RAILWAY_TOKEN RAILWAY_API_TOKEN="$RAILWAY_TOKEN" railway "$@"
-          }
-
-          railway_run() {
-            local output
-            local status
-
-            set +e
-            output="$(railway_project_token "$@" 2>&1)"
-            status=$?
-            set -e
-            printf '%s\n' "$output"
-
-            if [[ $status -eq 0 ]]; then
-              return 0
-            fi
-
-            if ! grep -qi "Unauthorized" <<<"$output"; then
-              return "$status"
-            fi
-
-            echo "Project-token auth rejected; retrying with bearer-token compatibility path..."
-            railway_bearer_token "$@"
-          }
-
-          deploy_service() {
-            local service_id="$1"
-
-            if railway_run up --ci \
-              --project "$RAILWAY_PROJECT_ID" \
-              --service "$service_id" \
-              --environment "$RAILWAY_ENVIRONMENT_ID"; then
-              return 0
-            fi
-
-            railway_run logs --deployment --lines 200 --latest \
-              --service "$service_id" \
-              --environment "$RAILWAY_ENVIRONMENT_ID" || true
-            return 1
-          }
-
-          deploy_service "$RAILWAY_SERVICE_ID"
-          deploy_service "$RAILWAY_NEXTJS_SERVICE_ID"
