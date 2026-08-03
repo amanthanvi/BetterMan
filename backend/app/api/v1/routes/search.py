@@ -17,7 +17,7 @@ from app.db.session import get_session
 from app.man.normalize import normalize_section, validate_section
 from app.security.deps import rate_limit_search
 from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_headers
-from app.web.server_timing import attach_server_timing, elapsed_ms, mark
+from app.web.server_timing import attach_server_timing, elapsed_ms, mark, server_timing_seed
 
 router = APIRouter()
 
@@ -38,7 +38,7 @@ async def search(
     _: None = Depends(rate_limit_search),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> SearchResponse | Response:
-    server_timing = _server_timing_seed(request)
+    server_timing = server_timing_seed(request)
     query = _normalize_query(q)
     if not query:
         raise APIError(status_code=400, code="INVALID_QUERY", message="Query is required")
@@ -182,10 +182,3 @@ async def search(
         hasMore=has_more,
         nextOffset=next_offset,
     )
-
-
-def _server_timing_seed(request: Request) -> list[tuple[str, float]]:
-    rate_limit_ms = getattr(request.state, "rate_limit_ms", None)
-    if isinstance(rate_limit_ms, (int, float)):
-        return [("rate_limit", float(rate_limit_ms))]
-    return []

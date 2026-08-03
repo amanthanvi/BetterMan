@@ -31,7 +31,7 @@ from app.man.repository import (
 )
 from app.security.deps import rate_limit_page
 from app.web.http_cache import compute_weak_etag, maybe_not_modified, set_cache_headers
-from app.web.server_timing import attach_server_timing, elapsed_ms, mark
+from app.web.server_timing import attach_server_timing, elapsed_ms, mark, server_timing_seed
 
 router = APIRouter()
 
@@ -49,7 +49,7 @@ async def get_man_by_name(
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> ManPageResponse | AmbiguousPageResponse | Response:
-    server_timing = _server_timing_seed(request)
+    server_timing = server_timing_seed(request)
     name_norm = normalize_name(name)
     validate_name(name_norm)
 
@@ -151,7 +151,7 @@ async def get_man_by_name_and_section(
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> ManPageResponse | Response:
-    server_timing = _server_timing_seed(request)
+    server_timing = server_timing_seed(request)
     name_norm = normalize_name(name)
     validate_name(name_norm)
     section_norm = normalize_section(section)
@@ -217,7 +217,7 @@ async def get_man_meta_by_name_and_section(
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> ManPageMetaResponse | Response:
-    server_timing = _server_timing_seed(request)
+    server_timing = server_timing_seed(request)
     name_norm = normalize_name(name)
     validate_name(name_norm)
     section_norm = normalize_section(section)
@@ -263,7 +263,7 @@ async def get_related(
     _: None = Depends(rate_limit_page),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> RelatedResponse | Response:
-    server_timing = _server_timing_seed(request)
+    server_timing = server_timing_seed(request)
     name_norm = normalize_name(name)
     validate_name(name_norm)
     section_norm = normalize_section(section)
@@ -372,10 +372,3 @@ def _serialize_page(man_page: ManPage, release: DatasetRelease) -> dict[str, str
         "sourcePackageVersion": man_page.source_package_version,
         "datasetReleaseId": release.dataset_release_id,
     }
-
-
-def _server_timing_seed(request: Request) -> list[tuple[str, float]]:
-    rate_limit_ms = getattr(request.state, "rate_limit_ms", None)
-    if isinstance(rate_limit_ms, (int, float)):
-        return [("rate_limit", float(rate_limit_ms))]
-    return []

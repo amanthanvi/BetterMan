@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from time import perf_counter
 
+from starlette.requests import Request
 from starlette.responses import Response
 
 
@@ -21,3 +22,10 @@ def attach_server_timing(response: Response, metrics: list[tuple[str, float]]) -
     if not metrics:
         return
     response.headers["Server-Timing"] = format_server_timing(metrics)
+
+
+def server_timing_seed(request: Request) -> list[tuple[str, float]]:
+    rate_limit_ms = getattr(request.state, "rate_limit_ms", None)
+    if isinstance(rate_limit_ms, (int, float)):
+        return [("rate_limit", float(rate_limit_ms))]
+    return []

@@ -24,6 +24,24 @@ async def test_man_meta_shape_and_server_timing() -> None:
     assert "Server-Timing" in res.headers
 
 
+async def test_man_meta_not_modified_includes_server_timing() -> None:
+    app = create_app()
+    app.dependency_overrides[rate_limit_page] = _noop
+    app.dependency_overrides[get_session] = _dummy_session_dep
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        first = await client.get("/api/v1/man/bash/1/meta")
+        second = await client.get(
+            "/api/v1/man/bash/1/meta",
+            headers={"If-None-Match": first.headers["ETag"]},
+        )
+
+    assert first.status_code == 200
+    assert second.status_code == 304
+    assert "Server-Timing" in second.headers
+
+
 async def _noop() -> None:
     return None
 

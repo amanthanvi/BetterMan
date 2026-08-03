@@ -24,7 +24,10 @@ async def test_search_returns_results_and_server_timing() -> None:
     assert payload["results"][0]["name"] == "tar"
     assert payload["results"][0]["highlights"] == ["tar archive utility"]
     assert payload["suggestions"] == ["tar", "tarball"]
-    assert "Server-Timing" in res.headers
+    server_timing = res.headers["Server-Timing"]
+    assert "search_rank" in server_timing
+    assert "search_headline" in server_timing
+    assert "search_suggest" in server_timing
 
 
 async def _noop() -> None:
