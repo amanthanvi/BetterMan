@@ -414,3 +414,4 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Focus the man-page find input after commit so Escape handling is deterministic.
 - [x] Upgrade dependency review to its verified Node 24 release.
 - [x] Bound slow Playwright browser installs with process-group termination so retries cannot inherit stale package-manager locks.
+- [x] Include Vitest and Testing Library matcher declarations in the legacy frontend production typecheck.
