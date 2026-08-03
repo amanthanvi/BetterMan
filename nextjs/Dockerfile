@@ -26,6 +26,7 @@ RUN rm -rf /app/node_modules /app/nextjs/node_modules \
   && test -x /app/nextjs/node_modules/.bin/next \
   && test ! -e /app/node_modules/.bin/vercel \
   && test ! -e /app/nextjs/node_modules/.bin/vercel \
+  && test -d /app/node_modules/.pnpm \
   && test -z "$(find /app/node_modules/.pnpm -maxdepth 1 -name 'vercel@*' -print -quit)"
 
 
@@ -34,7 +35,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/nextjs ./nextjs
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/nextjs ./nextjs
 
-CMD ["sh", "-c", "cd nextjs && node_modules/.bin/next start -p ${PORT:-3000} -H ::"]
+USER node
+
+CMD ["sh", "-c", "cd nextjs && exec node_modules/.bin/next start -p \"${PORT:-3000}\" -H ::"]
