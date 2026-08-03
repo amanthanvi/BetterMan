@@ -3570,19 +3570,15 @@ The retro and glass skins, their switcher, and `bm-ui-theme` persistence were re
 ### Command Palette
 
 - **Trigger:** Cmd/Ctrl+K (unchanged).
-- **Visual:** dark surface, tight radius, 1px accent border, centered modal.
-- **Layout:** Split view — results list (60% left) + preview pane (40% right).
+- **Visual:** square floating sheet on the raised surface with a single hairline edge, centered.
+- **Layout:** Single column — input row on top (with mode hint), results list below. No preview pane.
 - **Results list:**
   - On empty query: recent pages (last 8), bookmarked pages (starred indicator).
   - On typing: fuzzy search results, man pages.
-  - Each item: `name(section)` mono, description, section badge.
-  - Actions (prefixed with `>`): icon + label (Toggle theme, etc.).
-- **Preview pane:**
-  - Shows for selected (arrow-key highlighted) result.
-  - Content: synopsis (code block), description, section label, package info.
-  - No extra API call — uses data already in search response.
-  - If insufficient data: "Press Enter to view full page."
-- **Keyboard:** Up/Down navigate list, Enter opens, Esc closes, Tab focuses preview.
+  - Each item: `name(section)` mono + inline description; bookmarked rows carry a star marker.
+  - Actions (prefixed with `>`): label + optional detail (Toggle theme, etc.).
+- **Preview:** none — each row already shows the description; Enter opens the full page.
+- **Keyboard:** Up/Down navigate list, Enter opens, Esc closes.
 
 ### Licenses Page
 
@@ -3609,17 +3605,17 @@ The retro and glass skins, their switcher, and `bm-ui-theme` persistence were re
 
 ### Desktop Header
 
-- Height: 48px, solid `surface-2` bg, 1px border-bottom.
-- Left: logomark (16px) + "BetterMan" wordmark (Geist Sans 14px semibold).
-- Center: nav links — "Home", "Search", "Licenses" (text, Geist Sans sm, muted, accent on active with subtle bottom indicator).
-- Right: Cmd+K search trigger (bordered input-like element with placeholder text "Search…" and kbd hint), theme toggle (sun/moon icon).
+- Sticky bar on the page background with a hairline border-bottom.
+- Left: `>_` logomark + "BetterMan" wordmark (links home).
+- Right: quiet search launcher (search glyph + mono "search" + ⌘K kbd hint) that opens the command palette, and the theme toggle (sun/moon glyph).
+- No primary nav links — Home is the wordmark, Search lives in the palette and mobile nav, Licenses is linked from the footer.
 - No distro selector in header.
 
 ### Mobile Header
 
-- Same height (48px), solid bg.
-- Left: logomark.
-- Right: search trigger icon + theme toggle icon.
+- Same sticky hairline bar.
+- Left: logomark + wordmark.
+- Right: search trigger icon + theme toggle icon (no "search" text or kbd hint).
 - No nav links (handled by bottom nav).
 
 ### Mobile Bottom Nav

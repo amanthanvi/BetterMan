@@ -176,7 +176,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - Options table: dedicated collapsible panel with tighter density and tag-style flags.
 - Search results: preview cards with synopsis snippet.
 - Section browse: restyle only, keep current layout.
-- Header: full nav bar (logo, primary nav, search trigger, theme toggle).
+- Header: minimal bar (logo/wordmark, quiet search launcher, theme toggle); primary nav relocated to the wordmark, palette, mobile nav, and footer.
 - Reading prefs: keep as drawer, restyle.
 - Man page header: hero card (dark surface, strong type hierarchy).
 - Find-in-page: title-header action opens a floating bar below the header on desktop and above bottom navigation on mobile.
@@ -201,9 +201,8 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 
 ### M46 — Header & navigation redesign
 
-- [x] New header layout (logo + nav + search trigger + theme toggle)
-- [x] Header: 48px height, solid `surface-2` bg, thin border-bottom
-- [x] Active nav link: accent color + subtle bottom border indicator
+- [x] New header layout (logo/wordmark + quiet search launcher + theme toggle; primary nav links dropped in the typeset redesign)
+- [x] Header: sticky hairline border-bottom on the page background
 - [x] Remove distro selector from header (contextual-only)
 - [x] Mobile header: logo left, search trigger + theme toggle right
 - [x] Mobile bottom nav: simplify to 3 items — Home, Search, Bookmarks
@@ -240,10 +239,10 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 
 ### M51 — Command palette upgrade
 
-- [x] Visual redesign: dark surface, tight radius, 1px accent border
-- [x] Split layout: results (60%) + preview pane (40%)
+- [x] Visual redesign: square floating sheet, single hairline edge
+- [x] Single-column layout: input row + results list (preview pane dropped in the typeset redesign)
 - [x] Empty query: recent + bookmarks
-- [x] Keyboard: up/down, enter, esc, tab focus preview
+- [x] Keyboard: up/down, enter, esc
 
 ### M52 — Reading preferences drawer restyle
 
