@@ -220,17 +220,20 @@ jobs:
         run: |
           set -euo pipefail
 
+          # --with-deps starts root apt children, so keep an exact process
+          # group for privileged cleanup. Both worst cases consume 765s,
+          # leaving 435s of the job budget for setup, build, and tests.
           install_browser() {
-            setsid --wait timeout --kill-after=30s 600s \
+            setsid --wait timeout --kill-after=15s 360s \
               pnpm -C frontend exec playwright install --with-deps chromium &
             local install_group=$!
             local status=0
 
             wait "${install_group}" || status=$?
             if ((status != 0)); then
-              kill -TERM -- "-${install_group}" 2>/dev/null || true
+              sudo kill -TERM -- "-${install_group}" 2>/dev/null || true
               sleep 5
-              kill -KILL -- "-${install_group}" 2>/dev/null || true
+              sudo kill -KILL -- "-${install_group}" 2>/dev/null || true
             fi
 
             return "${status}"
@@ -241,7 +244,7 @@ jobs:
               exit 0
             fi
             echo "Playwright browser install failed or timed out (attempt ${attempt}/2)." >&2
-            sleep $((attempt * 5))
+            if ((attempt < 2)); then sleep $((attempt * 5)); fi
           done
 
           exit 1
