@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:25-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 WORKDIR /app
 
 RUN npm install -g pnpm@10.34.4
@@ -12,12 +12,13 @@ RUN pnpm install --frozen-lockfile
 
 
 FROM deps AS build
+COPY convex ./convex
 COPY nextjs ./nextjs
 
 RUN pnpm -C nextjs build
 
 
-FROM node:25-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
