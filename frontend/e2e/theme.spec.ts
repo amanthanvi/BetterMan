@@ -22,4 +22,3 @@ test('theme: cycle persists to localStorage', async ({ page }) => {
   await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
   await expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
-
