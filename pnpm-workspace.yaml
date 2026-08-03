@@ -20,6 +20,7 @@ overrides:
   "@opentelemetry/core@<2.8.0": "^2.8.0"
   "esbuild@<0.28.1": "^0.28.1"
   "@babel/core@<7.29.6": "^7.29.6"
+  "typescript-eslint@<8.65.0": "^8.65.0"
 
 onlyBuiltDependencies:
   - esbuild
@@ -30,3 +31,4 @@ peerDependencyRules:
     "eslint-plugin-jsx-a11y>eslint": "^10.0.0"
     "eslint-plugin-react>eslint": "^10.0.0"
     "react-helmet-async>react": "^19.0.0"
+    "openapi-typescript>typescript": ">=6.0.0 <6.1.0"
