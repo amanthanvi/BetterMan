@@ -14,7 +14,7 @@ function stripBackendHighlightMarkers(text: string): string {
 }
 
 function escapeRegExp(text: string) {
-  return text.replace(/[.*+?^${}()|[\[\]\\]/g, '\\$&')
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function highlight(text: string, query: string): ReactNode[] {

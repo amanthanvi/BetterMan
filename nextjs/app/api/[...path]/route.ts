@@ -86,7 +86,10 @@ function intParam(
 ): number | Response {
   const raw = first(req.nextUrl.searchParams.get(name))
   if (!raw) return opts.defaultValue
-  const value = Number.parseInt(raw, 10)
+  if (!/^\d+$/.test(raw)) {
+    return apiError(422, 'INVALID_QUERY_PARAM', `Invalid ${name}`)
+  }
+  const value = Number(raw)
   if (!Number.isFinite(value) || value < opts.min || value > opts.max) {
     return apiError(422, 'INVALID_QUERY_PARAM', `Invalid ${name}`)
   }
