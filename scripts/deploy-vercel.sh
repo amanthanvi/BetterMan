@@ -145,7 +145,7 @@ rollback_on_failure() {
   status="${1:-$?}"
   trap - EXIT INT TERM
   if [[ "$status" -ne 0 && "$promotion_verified" != "true" && "$previous_production_id" != "$deployment_id" ]]; then
-    echo "Production verification failed after promotion; rolling back to ${previous_production_id}." >&2
+    echo "Production promotion or verification failed; rolling back to ${previous_production_id}." >&2
     vercel rollback "$previous_production_id" --yes --token="$VERCEL_TOKEN" >&2 || \
       echo "Automatic rollback failed; restore ${previous_production_id} manually." >&2
   fi
