@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { BlockNode } from '../../lib/docModel'
 import { getScrollBehavior } from '../../lib/scroll'
@@ -61,12 +61,18 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     el?.select()
   }
 
+  useLayoutEffect(() => {
+    if (!findOpen) return
+    const input = findInputRef.current
+    input?.focus()
+    input?.select()
+  }, [findOpen])
+
   const openFind = () => {
     if (!findOpen) {
       previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     }
     setFindOpen(true)
-    requestAnimationFrame(() => focusFindInput())
   }
 
   const scrollToFind = (idx: number) => {
