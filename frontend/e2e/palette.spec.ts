@@ -30,3 +30,18 @@ test('command palette: a11y (no critical/serious violations)', async ({ page }) 
   await expect(page.getByRole('combobox', { name: 'Command palette input' })).toBeVisible()
   await expectNoCriticalOrSeriousViolations(page)
 })
+
+test('keyboard shortcuts dialog: a11y after immediate reopen', async ({ page }) => {
+  await page.goto('/')
+  await waitForInteractiveShell(page)
+
+  await page.keyboard.type('?')
+  const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
+  const closeButton = page.getByRole('button', { name: 'Close keyboard shortcuts' })
+  await expect(closeButton).toBeVisible()
+  await closeButton.click()
+  await page.keyboard.type('?')
+  await expect(dialog).toBeVisible()
+  await expect(closeButton).toBeVisible()
+  await expectNoCriticalOrSeriousViolations(page)
+})
