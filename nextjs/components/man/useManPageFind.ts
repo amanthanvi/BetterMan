@@ -15,6 +15,7 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const [activeFindIndex, setActiveFindIndex] = useState(0)
 
   const activeMarkRef = useRef<HTMLElement | null>(null)
+  const focusRestoreFrameRef = useRef<number | null>(null)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const findInputRef = useRef<HTMLInputElement | null>(null)
   const docRef = useRef<DocRendererHandle | null>(null)
@@ -66,7 +67,18 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     focusFindInput()
   }, [findOpen, focusFindInput])
 
+  useEffect(
+    () => () => {
+      if (focusRestoreFrameRef.current !== null) window.cancelAnimationFrame(focusRestoreFrameRef.current)
+    },
+    [],
+  )
+
   const openFind = () => {
+    if (focusRestoreFrameRef.current !== null) {
+      window.cancelAnimationFrame(focusRestoreFrameRef.current)
+      focusRestoreFrameRef.current = null
+    }
     if (!findOpen) {
       previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
       setFindOpen(true)
@@ -151,7 +163,10 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     const previouslyFocused = previouslyFocusedRef.current
     previouslyFocusedRef.current = null
     setFindOpen(false)
-    window.requestAnimationFrame(() => previouslyFocused?.focus({ preventScroll: true }))
+    focusRestoreFrameRef.current = window.requestAnimationFrame(() => {
+      focusRestoreFrameRef.current = null
+      previouslyFocused?.focus({ preventScroll: true })
+    })
   }
 
   return {
