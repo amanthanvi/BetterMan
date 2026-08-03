@@ -405,3 +405,4 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Remove duplicate regex character-class entries reported by CodeQL.
 - [x] Add property-based API checks and strictly reject malformed decimal pagination values.
 - [x] Remove vulnerable transitive versions from the pinned Vercel CLI dependency graph.
+- [x] Document the bounded OSV exception for Vercel's unrelated `sandbox@3.4.0` package-name collision.
