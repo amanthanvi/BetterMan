@@ -16,6 +16,7 @@ import {
 
 import type { Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
+import { getScrollBehavior } from '../../lib/scroll'
 import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
 import { CodeBlock } from './CodeBlock'
 
@@ -105,8 +106,7 @@ export const DocRenderer = forwardRef<
     (index: number, opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior }) => {
       if (!isVirtualized) return
 
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const behavior = opts?.behavior ?? (reduced ? 'auto' : 'smooth')
+      const behavior = opts?.behavior ?? getScrollBehavior()
       const align = opts?.align ?? 'start'
 
       virtualizer.scrollToIndex(index, {
@@ -119,8 +119,7 @@ export const DocRenderer = forwardRef<
 
   const scrollToAnchor = useCallback(
     (id: string, opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior }) => {
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const behavior = opts?.behavior ?? (reduced ? 'auto' : 'smooth')
+      const behavior = opts?.behavior ?? getScrollBehavior()
       const align = opts?.align ?? 'start'
       const block = align === 'center' ? 'center' : 'start'
 

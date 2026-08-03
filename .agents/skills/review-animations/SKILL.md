@@ -32,7 +32,7 @@ Every animation in the diff is measured against these. A violation is a finding.
 
 6. **Interruptibility.** Rapidly triggered non-gesture state changes use CSS transitions that retarget from the current state. Gesture-driven motion uses springs that preserve velocity. Neither uses keyframes that restart from zero.
 
-7. **Compositor-first properties.** Default to `transform` and `opacity`. Layout properties require a small isolated target and measured acceptable cost; bounded `clip-path` and transition-time `filter` require paint profiling. Unjustified exceptions (or Framer Motion `x`/`y`/`scale` shorthands under load) are findings.
+7. **Compositor-first properties.** Default to `transform` and `opacity`. Layout properties require a small isolated target and measured acceptable cost; bounded `clip-path` and transition-time `filter` require paint profiling. Unjustified exceptions (or Motion `x`/`y`/`scale` shorthands with measured frame drops under load) are findings.
 
 8. **Accessibility.** `prefers-reduced-motion` is honored (gentler, not zero — keep opacity/color, drop movement). Hover animations are gated behind `@media (hover: hover) and (pointer: fine)`.
 

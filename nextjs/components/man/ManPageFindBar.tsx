@@ -2,44 +2,11 @@
 
 import type { KeyboardEvent, RefObject } from 'react'
 
+import { ChevronDownIcon } from '../icons'
 import { IconButton } from '../ui/IconButton'
 import { getFindA11yStatus } from './findA11y'
 
 type IconProps = { className?: string }
-
-function IconChevronUp({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m18 15-6-6-6 6" />
-    </svg>
-  )
-}
-
-function IconChevronDown({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  )
-}
 
 function IconX({ className }: IconProps) {
   return (
@@ -116,10 +83,10 @@ export function ManPageFindBar({
         </div>
 
         <IconButton variant="ghost" size="sm" onClick={onPrev} disabled={!matchCount} aria-label="Previous match">
-          <IconChevronUp className="size-4" />
+          <ChevronDownIcon className="size-4 rotate-180" />
         </IconButton>
         <IconButton variant="ghost" size="sm" onClick={onNext} disabled={!matchCount} aria-label="Next match">
-          <IconChevronDown className="size-4" />
+          <ChevronDownIcon className="size-4" />
         </IconButton>
         <IconButton variant="ghost" size="sm" onClick={onClose} aria-label="Close find">
           <IconX className="size-4" />
