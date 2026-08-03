@@ -1,4 +1,5 @@
 import types
+import uuid
 
 import httpx
 from sqlalchemy.exc import ProgrammingError
@@ -75,30 +76,45 @@ async def _search_session_dep():
         def scalars(self):
             return iter(["tar"])
 
+    page_ids = {
+        "tar": uuid.UUID("11111111-1111-1111-1111-111111111111"),
+        "tarcat": uuid.UUID("22222222-2222-2222-2222-222222222222"),
+        "tarchive": uuid.UUID("33333333-3333-3333-3333-333333333333"),
+    }
+
     class _SearchResult:
         def all(self):
             return [
                 types.SimpleNamespace(
+                    id=page_ids["tar"],
                     name="tar",
                     section="1",
                     title="tar(1)",
                     description="archive utility",
-                    hl="tar archives files",
                 ),
                 types.SimpleNamespace(
+                    id=page_ids["tarcat"],
                     name="tarcat",
                     section="1",
                     title="tarcat(1)",
                     description="inspect tar archives",
-                    hl=None,
                 ),
                 types.SimpleNamespace(
+                    id=page_ids["tarchive"],
                     name="tarchive",
                     section="1",
                     title="tarchive(1)",
                     description="extra result",
-                    hl=None,
                 ),
+            ]
+
+    class _HeadlineResult:
+        def all(self):
+            return [
+                types.SimpleNamespace(
+                    man_page_id=page_ids["tar"],
+                    hl="tar archives files",
+                )
             ]
 
     class _DummySession:
@@ -112,6 +128,8 @@ async def _search_session_dep():
             rendered = str(stmt)
             if "SELECT man_page_search.name_norm" in rendered:
                 return _SuggestionResult()
+            if "ts_headline" in rendered:
+                return _HeadlineResult()
             return _SearchResult()
 
     yield _DummySession()

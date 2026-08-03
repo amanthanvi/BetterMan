@@ -1,4 +1,5 @@
 import types
+import uuid
 
 import httpx
 
@@ -113,15 +114,30 @@ def _dummy_session_dep_with_rows(
                     return _Result(
                         [
                             types.SimpleNamespace(
+                                id=uuid.uuid5(uuid.NAMESPACE_URL, f"betterman:{name}:{section}"),
                                 name=name,
                                 section=section,
                                 title=title,
                                 description=description,
-                                hl=highlight,
                             )
                             for name, section, title, description, highlight in visible_rows
                         ],
                         suggestions=[],
+                    )
+                if self.calls == 2:
+                    visible_rows = rows[search_offset:]
+                    return _Result(
+                        [
+                            types.SimpleNamespace(
+                                man_page_id=uuid.uuid5(
+                                    uuid.NAMESPACE_URL,
+                                    f"betterman:{name}:{section}",
+                                ),
+                                hl=highlight,
+                            )
+                            for name, section, _title, _description, highlight in visible_rows
+                            if highlight
+                        ]
                     )
                 return _Result([], suggestions=["tar"])
 

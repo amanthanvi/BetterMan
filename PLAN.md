@@ -371,7 +371,17 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Backend: default `ENV` to `prod` so a missing variable cannot publish `/docs` or drop HSTS; set `ENV=prod` in the runtime image.
 - [x] Ingestion: validate Debian package names and resolve symlinks before reading `/usr/share/doc/<pkg>/copyright`.
 - [x] Next.js: strip `__BM_*__` highlight sentinels from man page text before marker application.
-- [x] Dependencies: `next` to 15.5.22, `seroval` to 1.5.6 (critical GHSA-mv8w-475r-vwqw), pnpm pin to 10.34.4 (CVE-2026-59195), plus overrides clearing the remaining transitive advisories.
+- [x] Dependencies: `next` to 15.5.22, `seroval` to 1.5.6 (critical GHSA-mv8w-475r-vwqw), pnpm pin to 10.34.4 (CVE-2026-59195), plus patched `brace-expansion` overrides for GHSA-mh99-v99m-4gvg.
 - [ ] Follow-up: `nextjs/lib/public-origin.ts` falls back to `x-forwarded-host`; set `PUBLIC_BASE_URL` in production or validate the host against an allowlist.
 - [ ] Follow-up: `backend/app/web/{seo,runtime_config}.py` are unmounted and superseded by the Next.js routes — decide which implementation is canonical and delete the other.
 - [ ] Follow-up: public Convex queries accept `stage` from the caller, so `staging` data is readable directly from the deployment; derive it server-side.
+
+### Release v0.6.5 (performance hardening)
+
+- [x] Add metadata-only page reads for FastAPI and the Convex-backed Next.js metadata path.
+- [x] Add `Server-Timing` instrumentation on man + search API routes (including rate-limit timing seed).
+- [x] Split search query into rank phase + headline phase to avoid broad content joins in ranking step.
+- [x] Stop blocking man page SSR on related-command fetch (load related client-side after first paint).
+- [x] Improve large man-page rendering with heuristic virtualization + viewport-gated code highlighting.
+- [x] Preload critical fonts to reduce first-paint CLS on man pages.
+- [ ] Tag `v0.6.5`

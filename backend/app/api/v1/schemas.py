@@ -281,6 +281,10 @@ class ManPageResponse(BaseModel):
     variants: list[ManPageVariant]
 
 
+class ManPageMetaResponse(BaseModel):
+    page: ManPage
+
+
 class AmbiguousOption(BaseModel):
     section: str
     title: str

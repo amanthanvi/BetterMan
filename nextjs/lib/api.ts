@@ -164,6 +164,13 @@ const cachedManByNameAndSection = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
+const cachedManMetaByNameAndSection = unstable_cache(
+  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string, section: string) =>
+    await convex().query(api.queries.getManMetaByNameAndSection, { stage, distro, name, section }),
+  ['betterman', 'convex', 'man-meta-by-name-and-section'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
 const cachedRelated = unstable_cache(
   async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string, section: string) =>
     await convex().query(api.queries.getRelated, { stage, distro, name, section }),
@@ -294,6 +301,8 @@ export async function fetchManByNameAndSection(opts: {
 
 export type RelatedResponse = Schemas['RelatedResponse']
 
+export type ManPageMetaResponse = Schemas['ManPageMetaResponse']
+
 export async function fetchRelated(opts: {
   distro: Distro
   name: string
@@ -302,6 +311,18 @@ export async function fetchRelated(opts: {
   const result = await mapConvexError(() => cachedRelated(getDatasetStage(), opts.distro, opts.name, opts.section))
   if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
   return result as RelatedResponse
+}
+
+export async function fetchManMetaByNameAndSection(opts: {
+  distro: Distro
+  name: string
+  section: string
+}): Promise<ManPageMetaResponse> {
+  const result = (await mapConvexError(() =>
+    cachedManMetaByNameAndSection(getDatasetStage(), opts.distro, opts.name, opts.section),
+  )) as ManPageMetaResponse | null
+  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  return result
 }
 
 export async function suggest(opts: { distro: Distro; name: string }): Promise<SuggestResponse> {

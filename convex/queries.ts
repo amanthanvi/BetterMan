@@ -111,6 +111,58 @@ export const listSections = query({
   },
 });
 
+export const getManMetaByNameAndSection = query({
+  args: {
+    stage: datasetStageValidator,
+    distro: distroValidator,
+    name: v.string(),
+    section: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      page: v.object({
+        id: v.string(),
+        locale: v.string(),
+        distro: v.string(),
+        name: v.string(),
+        section: v.string(),
+        title: v.string(),
+        description: v.string(),
+        sourcePackage: v.union(v.string(), v.null()),
+        sourcePackageVersion: v.union(v.string(), v.null()),
+        datasetReleaseId: v.string(),
+      }),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const name = normalizeName(args.name);
+    const section = normalizeSection(args.section);
+    const release = await requireActiveRelease(ctx, args);
+    const page = await pageByNameAndSection(ctx, {
+      releaseId: release._id,
+      name,
+      section,
+    });
+    if (!page) return null;
+
+    return {
+      page: {
+        id: page.externalId,
+        locale: release.locale,
+        distro: release.distro,
+        name: page.name,
+        section: page.section,
+        title: page.title,
+        description: page.description,
+        sourcePackage: page.sourcePackage ?? null,
+        sourcePackageVersion: page.sourcePackageVersion ?? null,
+        datasetReleaseId: release.datasetReleaseId,
+      },
+    };
+  },
+});
+
 export const listSection = query({
   args: {
     stage: datasetStageValidator,

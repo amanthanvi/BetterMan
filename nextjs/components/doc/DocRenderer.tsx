@@ -34,6 +34,10 @@ type HighlightCtx = {
   optionRegex?: RegExp
 }
 
+const VIRTUALIZE_BLOCK_COUNT = 100
+const VIRTUALIZE_ESTIMATED_HEIGHT = 9_000
+const VIRTUALIZE_HEAVY_BLOCK_COUNT = 60
+
 export const DocRenderer = forwardRef<
   DocRendererHandle,
   {
@@ -58,7 +62,7 @@ export const DocRenderer = forwardRef<
 
   const ctx = useMemo((): HighlightCtx => ({ findQuery: stableFind, findRegex, optionRegex }), [findRegex, optionRegex, stableFind])
 
-  const shouldVirtualize = blocks.length >= 100
+  const shouldVirtualize = shouldVirtualizeBlocks(blocks)
   const isVirtualized = mounted && shouldVirtualize
 
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -537,4 +541,16 @@ function withDistroHref(href: string, distro: Distro): string {
   const url = new URL(href, 'https://example.invalid')
   url.searchParams.set('distro', distro)
   return `${url.pathname}${url.search}${url.hash}`
+}
+
+export function shouldVirtualizeBlocks(blocks: BlockNode[]): boolean {
+  if (blocks.length >= VIRTUALIZE_BLOCK_COUNT) return true
+  if (blocks.length < VIRTUALIZE_HEAVY_BLOCK_COUNT) return false
+
+  let estimatedHeight = 0
+  for (const block of blocks) {
+    estimatedHeight += estimateBlockSize(block)
+    if (estimatedHeight >= VIRTUALIZE_ESTIMATED_HEIGHT) return true
+  }
+  return false
 }

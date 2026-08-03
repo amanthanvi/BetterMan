@@ -8,6 +8,7 @@ import {
   fetchLicenses,
   fetchManByName,
   fetchManByNameAndSection,
+  fetchManMetaByNameAndSection,
   fetchRelated,
   fetchSeoReleases,
   fetchSeoSitemapPage,
@@ -22,6 +23,28 @@ import { normalizeDistro, type Distro } from '@/lib/distro'
 export const runtime = 'nodejs'
 const PUBLIC_CACHE_SECONDS = 60 * 60
 const SEARCH_CACHE_SECONDS = 5 * 60
+
+type ServerTimingMetric = {
+  name: string
+  durationMs: number
+}
+
+async function measure<T>(metrics: ServerTimingMetric[], name: string, fn: () => Promise<T>): Promise<T> {
+  const started = performance.now()
+  try {
+    return await fn()
+  } finally {
+    metrics.push({ name, durationMs: performance.now() - started })
+  }
+}
+
+function attachServerTiming(response: Response, metrics: ServerTimingMetric[]): Response {
+  response.headers.set(
+    'Server-Timing',
+    metrics.map(({ name, durationMs }) => `${name};dur=${durationMs.toFixed(1)}`).join(', '),
+  )
+  return response
+}
 
 function json(value: unknown, init?: ResponseInit): Response {
   const headers = new Headers(init?.headers)
@@ -90,7 +113,7 @@ async function enforceRateLimit(req: NextRequest, kind: 'search' | 'page'): Prom
   return apiError(429, 'RATE_LIMITED', 'Too many requests')
 }
 
-async function handleGet(req: NextRequest, path: string[]): Promise<Response> {
+async function handleGet(req: NextRequest, path: string[], metrics: ServerTimingMetric[]): Promise<Response> {
   if (path[0] !== 'v1') return apiError(404, 'NOT_FOUND', 'Not found')
   const parts = path.slice(1)
 
@@ -119,9 +142,10 @@ async function handleGet(req: NextRequest, path: string[]): Promise<Response> {
       const offset = intParam(req, 'offset', { defaultValue: 0, min: 0, max: 200 })
       if (offset instanceof Response) return offset
       const section = first(req.nextUrl.searchParams.get('section'))
-      const limited = await enforceRateLimit(req, 'search')
+      const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'search'))
       if (limited) return limited
-      return cachedJson(await search({ distro, q, section, limit, offset }), SEARCH_CACHE_SECONDS)
+      const result = await measure(metrics, 'convex_search', () => search({ distro, q, section, limit, offset }))
+      return cachedJson(result, SEARCH_CACHE_SECONDS)
     }
 
     if (parts.length === 2 && parts[0] === 'section') {
@@ -137,11 +161,13 @@ async function handleGet(req: NextRequest, path: string[]): Promise<Response> {
     }
 
     if (parts.length === 2 && parts[0] === 'man') {
-      const limited = await enforceRateLimit(req, 'page')
+      const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'page'))
       if (limited) return limited
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
-      const result = await fetchManByName({ distro, name: parts[1].toLowerCase() })
+      const result = await measure(metrics, 'convex_man', () =>
+        fetchManByName({ distro, name: parts[1].toLowerCase() }),
+      )
       if (result.kind === 'ambiguous') {
         return cachedJson(
           {
@@ -156,19 +182,36 @@ async function handleGet(req: NextRequest, path: string[]): Promise<Response> {
     }
 
     if (parts.length === 3 && parts[0] === 'man') {
-      const limited = await enforceRateLimit(req, 'page')
+      const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'page'))
       if (limited) return limited
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
-      return cachedJson(await fetchManByNameAndSection({ distro, name: parts[1].toLowerCase(), section: parts[2] }))
+      const result = await measure(metrics, 'convex_man', () =>
+        fetchManByNameAndSection({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+      )
+      return cachedJson(result)
+    }
+
+    if (parts.length === 4 && parts[0] === 'man' && parts[3] === 'meta') {
+      const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'page'))
+      if (limited) return limited
+      const distro = distroFrom(req)
+      if (distro instanceof Response) return distro
+      const result = await measure(metrics, 'convex_man_meta', () =>
+        fetchManMetaByNameAndSection({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+      )
+      return cachedJson(result)
     }
 
     if (parts.length === 4 && parts[0] === 'man' && parts[3] === 'related') {
-      const limited = await enforceRateLimit(req, 'page')
+      const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'page'))
       if (limited) return limited
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
-      return cachedJson(await fetchRelated({ distro, name: parts[1].toLowerCase(), section: parts[2] }))
+      const result = await measure(metrics, 'convex_related', () =>
+        fetchRelated({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+      )
+      return cachedJson(result)
     }
 
     if (parts.length === 1 && parts[0] === 'suggest') {
@@ -223,7 +266,11 @@ async function handleGet(req: NextRequest, path: string[]): Promise<Response> {
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }): Promise<Response> {
   const { path } = await ctx.params
-  return handleGet(req, path)
+  const metrics: ServerTimingMetric[] = []
+  const started = performance.now()
+  const response = await handleGet(req, path, metrics)
+  metrics.push({ name: 'total', durationMs: performance.now() - started })
+  return attachServerTiming(response, metrics)
 }
 
 export async function HEAD(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }): Promise<Response> {

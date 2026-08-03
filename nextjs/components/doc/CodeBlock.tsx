@@ -50,19 +50,48 @@ export function CodeBlock({
   optionRegex?: RegExp
 }) {
   const [copied, setCopied] = useState(false)
+  const [isNearViewport, setIsNearViewport] = useState(false)
   const language = normalizeLanguageHint(languageHint) ?? 'bash'
   const ctx = useMemo((): HighlightCtx => ({ findQuery, optionRegex }), [findQuery, optionRegex])
   const markedText = useMemo(() => buildMarkedText(text, ctx), [ctx, text])
   const fallbackHtml = useMemo(() => applyMarkers(escapeHtml(markedText)), [markedText])
   const [highlighted, setHighlighted] = useState<{ source: string; html: string } | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const timeoutRef = useRef<number | null>(null)
 
   const allowSyntaxHighlight = shouldHighlight(text) && !ctx.findQuery && !ctx.optionRegex && text.length <= 20_000
+  const shouldSyntaxHighlight = allowSyntaxHighlight && isNearViewport
 
   useEffect(() => {
     if (allowSyntaxHighlight) return
     setHighlighted(null)
   }, [allowSyntaxHighlight])
+
+  useEffect(() => {
+    if (!allowSyntaxHighlight) {
+      setIsNearViewport(false)
+      return
+    }
+    if (isNearViewport) return
+
+    const el = containerRef.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsNearViewport(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        setIsNearViewport(true)
+        observer.disconnect()
+      },
+      { root: null, rootMargin: '600px 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [allowSyntaxHighlight, isNearViewport])
 
   useEffect(() => {
     return () => {
@@ -71,7 +100,7 @@ export function CodeBlock({
   }, [])
 
   useEffect(() => {
-    if (!allowSyntaxHighlight) return
+    if (!shouldSyntaxHighlight) return
 
     let cancelled = false
     void loadHljs().then((hljs) => {
@@ -92,7 +121,7 @@ export function CodeBlock({
     return () => {
       cancelled = true
     }
-  }, [allowSyntaxHighlight, language, markedText, text])
+  }, [language, markedText, shouldSyntaxHighlight])
 
   const html = highlighted?.source === markedText ? highlighted.html : fallbackHtml
 
@@ -108,7 +137,7 @@ export function CodeBlock({
   }
 
   return (
-    <div id={id ?? undefined} className="scroll-mt-32">
+    <div id={id ?? undefined} ref={containerRef} className="scroll-mt-32">
       <div className="group relative -mx-4 bg-code-bg sm:mx-0">
         <button
           type="button"

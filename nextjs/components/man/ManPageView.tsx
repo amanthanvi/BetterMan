@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import type { SectionPage } from '../../lib/api'
+import type { RelatedResponse, SectionPage } from '../../lib/api'
 import type { ManPage, ManPageContent, ManPageVariant, OptionItem } from '../../lib/docModel'
 import { getScrollBehavior } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
-import { DocRenderer } from '../doc/DocRenderer'
+import { DocRenderer, shouldVirtualizeBlocks } from '../doc/DocRenderer'
 import { RecentPageRecorder } from '../recent/RecentPageRecorder'
 import { useDistro } from '../state/distro'
 import { useToc } from '../state/toc'
@@ -24,12 +24,10 @@ export function ManPageView({
   page,
   content,
   variants,
-  relatedItems,
 }: {
   page: ManPage
   content: ManPageContent
   variants: ManPageVariant[]
-  relatedItems: SectionPage[]
 }) {
   const toc = useToc()
   const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
@@ -48,9 +46,11 @@ export function ManPageView({
   const optionsCount = content.options?.length ?? 0
   const [optionsExpanded, setOptionsExpanded] = useState(() => optionsCount <= OPTIONS_COLLAPSE_THRESHOLD)
   const flashTimeoutRef = useRef<number | null>(null)
+  const [relatedItems, setRelatedItems] = useState<SectionPage[]>([])
+  const [relatedLoading, setRelatedLoading] = useState(true)
 
   const optionTerms = useMemo(() => (selectedOption ? parseOptionTerms(selectedOption.flags) : []), [selectedOption])
-  const shouldVirtualize = content.blocks.length >= 100
+  const shouldVirtualize = useMemo(() => shouldVirtualizeBlocks(content.blocks), [content.blocks])
 
   const hasToc = (content.toc ?? []).length > 0
   const desktopSidebarExpanded = hasToc && sidebarOpen
@@ -148,6 +148,36 @@ export function ManPageView({
     window.addEventListener('hashchange', applyHash)
     return () => window.removeEventListener('hashchange', applyHash)
   }, [content.options, page.id])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const params = new URLSearchParams()
+    if (page.distro !== 'debian') params.set('distro', page.distro)
+    const qs = params.toString()
+    const route = `/api/v1/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}/related${qs ? `?${qs}` : ''}`
+
+    setRelatedItems([])
+    setRelatedLoading(true)
+    void fetch(route, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return (await res.json()) as RelatedResponse
+      })
+      .then((payload) => {
+        setRelatedItems(payload.items ?? [])
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setRelatedItems([])
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRelatedLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [page.distro, page.name, page.section])
 
   const copyLink = async () => {
     try {
@@ -300,7 +330,12 @@ export function ManPageView({
             onActiveHeadingChange={shouldVirtualize ? setActiveHeadingId : undefined}
           />
 
-          <ManPageFooterSections distro={distro.distro} seeAlso={content.seeAlso} relatedItems={relatedItems} />
+          <ManPageFooterSections
+            distro={distro.distro}
+            seeAlso={content.seeAlso}
+            relatedItems={relatedItems}
+            relatedLoading={relatedLoading}
+          />
         </article>
       </div>
     </div>

@@ -9,7 +9,7 @@ import {
   FastApiError,
   fetchManByName,
   fetchManByNameAndSection,
-  fetchRelated,
+  fetchManMetaByNameAndSection,
   isReleaseNotFoundError,
   suggest,
   withDistroFallback,
@@ -52,7 +52,7 @@ export async function generateMetadata({
 
   try {
     const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
-      fetchManByNameAndSection({
+      fetchManMetaByNameAndSection({
         distro: activeDistro,
         name: name.toLowerCase(),
         section,
@@ -108,7 +108,7 @@ export default async function ManByNameAndSectionPage({
   let activeDistro = requestedDistro
 
   try {
-    const { distro, data: pageData } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
+    const { data: pageData } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
       activeDistro = candidateDistro
       return fetchManByNameAndSection({
         distro: candidateDistro,
@@ -116,12 +116,6 @@ export default async function ManByNameAndSectionPage({
         section,
       })
     })
-
-    const related = await fetchRelated({
-      distro,
-      name: pageData.page.name,
-      section: pageData.page.section,
-    }).catch(() => null)
 
     const nonce = (await headers()).get('x-nonce') ?? undefined
     const jsonLd = safeJsonLdStringify({
@@ -152,7 +146,6 @@ export default async function ManByNameAndSectionPage({
           page={pageData.page}
           content={pageData.content}
           variants={pageData.variants}
-          relatedItems={related?.items ?? []}
         />
       </>
     )
