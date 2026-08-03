@@ -99,7 +99,7 @@ jobs:
       BETTERMAN_REQUIRE_CURRENT_MAIN: ${{ needs.resolve_revision.outputs.require_current_main }}
     defaults:
       run:
-        working-directory: app/nextjs
+        working-directory: app
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:

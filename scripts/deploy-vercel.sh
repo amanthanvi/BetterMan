@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+if [[ ! -f "nextjs/vercel.json" ]]; then
+  echo "Run this script from the repository root so Vercel can apply rootDirectory=nextjs exactly once." >&2
+  exit 1
+fi
+
 required_env=(
   BETTERMAN_DEPLOY_REF
   BETTERMAN_DEPLOY_SHA
