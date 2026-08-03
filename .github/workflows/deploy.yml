@@ -123,6 +123,49 @@ jobs:
           cache: pnpm
           cache-dependency-path: app/pnpm-lock.yaml
 
+      - name: Install application dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require current main before Convex deployment
+        if: needs.resolve_revision.outputs.require_current_main == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current_main_sha="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          if [[ "$current_main_sha" != "$BETTERMAN_DEPLOY_SHA" ]]; then
+            echo "Refusing to deploy stale Convex functions: selected ${BETTERMAN_DEPLOY_SHA}, current main ${current_main_sha}." >&2
+            exit 1
+          fi
+
+      - name: Deploy current Convex functions
+        if: needs.resolve_revision.outputs.require_current_main == 'true'
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          if [[ -z "$CONVEX_DEPLOY_KEY" ]]; then
+            echo "CONVEX_DEPLOY_KEY is required in the protected production environment." >&2
+            exit 1
+          fi
+          pnpm exec convex deploy \
+            --typecheck enable \
+            --codegen disable \
+            --message "GitHub Actions ${BETTERMAN_DEPLOY_SHA}"
+
+      - name: Verify production Convex contract
+        env:
+          CONVEX_URL: ${{ vars.CONVEX_URL }}
+          BETTERMAN_DATASET_STAGE: prod
+          BETTERMAN_CHECK_DISTROS: debian
+          BETTERMAN_MIN_PAGE_COUNT: 1
+        run: |
+          if [[ -z "$CONVEX_URL" ]]; then
+            echo "CONVEX_URL is required in the protected production environment." >&2
+            exit 1
+          fi
+          ln -s "$GITHUB_WORKSPACE/app/node_modules" "$GITHUB_WORKSPACE/tooling/node_modules"
+          node "$GITHUB_WORKSPACE/tooling/scripts/check-convex-production.mjs"
+
       - name: Install Vercel CLI
         run: npm install --global vercel@58.4.4
 

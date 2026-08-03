@@ -1074,7 +1074,7 @@ flowchart LR
   FA[Legacy FastAPI on Railway] -. not on active request path .-> VX
 ```
 
-**Deployment Platform:** Vercel is the active public Next.js host and Convex owns production data, search, and rate limits. Legacy FastAPI/Railway infrastructure may remain during cleanup but is not required by the active request path. A non-cancelable GitHub Actions workflow stages the exact tested `main` SHA, verifies it before promotion, and confirms both production aliases.
+**Deployment Platform:** Vercel is the active public Next.js host and Convex owns production data, search, and rate limits. Legacy FastAPI/Railway infrastructure may remain during cleanup but is not required by the active request path. A non-cancelable GitHub Actions workflow deploys the exact tested, still-current `main` SHA's Convex functions, verifies the production Convex contract, stages that SHA's Vercel artifact, verifies it before promotion, and confirms both production aliases. Historical frontend rollbacks retain the current backward-compatible Convex backend.
 
 ## Frontend Architecture
 

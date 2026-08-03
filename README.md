@@ -56,7 +56,8 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
 - Production: Vercel project `betterman`, with `betterman.sh` and `www.betterman.sh` assigned to its production deployment.
 - Auto-deploy: `.github/workflows/deploy.yml` starts only after `.github/workflows/ci.yml` succeeds for a push to `main`, then rechecks that exact SHA before promotion.
 - Manual deploy/rollback: `.github/workflows/deploy.yml` (workflow `deploy-vercel`, input `sha`) accepts only a full commit SHA reachable from protected `main` history.
-- Required `production` environment secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`; the environment is restricted to protected branches and repository-scoped Vercel secrets are prohibited.
+- Required `production` environment secrets: `CONVEX_DEPLOY_KEY`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`; required environment variable: `CONVEX_URL`. The environment is restricted to protected branches, and repository-scoped production secrets are prohibited.
+- Automatic releases recheck current `main`, deploy that exact SHA's Convex schema/functions, verify the production data and metadata contract, then stage the Vercel artifact. Manual historical-SHA rollbacks keep the current backward-compatible Convex backend and verify the selected app against it.
 - Vercel's project root is `nextjs/`, while CI runs `scripts/deploy-vercel.sh` from the repository root so that setting is applied exactly once. The script builds the exact checkout SHA, verifies authenticated deployment metadata, smoke-tests a staged artifact, promotes only a passing artifact, verifies both custom-domain aliases, and rolls back if post-promotion verification fails.
 - Current runtime: Next.js on Vercel reads datasets, search, and rate-limit state from Convex. Legacy Railway services are not on the active request path.
 - Operations and rollback: `docs/runbooks/vercel-ops.md`.
