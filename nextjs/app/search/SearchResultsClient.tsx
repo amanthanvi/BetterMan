@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { SearchResponse, SearchResult } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
@@ -149,7 +149,12 @@ export function SearchResultsClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  /* Bumped whenever the query context resets so an in-flight load-more from a
+     previous query can never append to the new result list. */
+  const requestEpochRef = useRef(0)
+
   useEffect(() => {
+    requestEpochRef.current += 1
     setResults(initial?.results ?? [])
     setHasMore(initial?.hasMore ?? false)
     setError(null)
@@ -160,10 +165,12 @@ export function SearchResultsClient({
 
   const onLoadMore = useCallback(async () => {
     if (!q || loading) return
+    const epoch = requestEpochRef.current
     setLoading(true)
     setError(null)
     try {
       const next = await fetchMore({ distro, q, section, limit: 20, offset: results.length })
+      if (epoch !== requestEpochRef.current) return
       setHasMore(next.hasMore)
       setResults((prev) => {
         const seen = new Set(prev.map((r) => `${r.name}:${r.section}`))
@@ -177,9 +184,10 @@ export function SearchResultsClient({
         return merged
       })
     } catch (e) {
+      if (epoch !== requestEpochRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load more')
     } finally {
-      setLoading(false)
+      if (epoch === requestEpochRef.current) setLoading(false)
     }
   }, [distro, loading, q, results.length, section])
 
