@@ -13,8 +13,11 @@ test('man: sticky sidebar renders TOC; find opens from the title bar (desktop)',
 
   await waitForInteractiveShell(page)
   const findTrigger = page.getByRole('button', { name: 'Find in page' })
+  const findInput = page.locator('[data-bm-findbar]').getByRole('textbox', { name: 'Find in page' })
   await findTrigger.click()
-  await expect(page.locator('[data-bm-findbar]').getByRole('textbox', { name: 'Find in page' })).toBeVisible()
+  await expect(findInput).toBeFocused()
+  await findTrigger.click()
+  await expect(findInput).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-bm-findbar]')).toHaveCount(0)
   await expect(findTrigger).toBeFocused()

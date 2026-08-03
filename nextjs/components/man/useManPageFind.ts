@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { BlockNode } from '../../lib/docModel'
 import { getScrollBehavior } from '../../lib/scroll'
@@ -55,24 +55,24 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
           ? `${displayIndex + 1}/${matchCount}`
           : '0/0'
 
-  const focusFindInput = () => {
+  const focusFindInput = useCallback(() => {
     const el = findInputRef.current
     el?.focus()
     el?.select()
-  }
+  }, [])
 
   useLayoutEffect(() => {
     if (!findOpen) return
-    const input = findInputRef.current
-    input?.focus()
-    input?.select()
-  }, [findOpen])
+    focusFindInput()
+  }, [findOpen, focusFindInput])
 
   const openFind = () => {
     if (!findOpen) {
       previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      setFindOpen(true)
+      return
     }
-    setFindOpen(true)
+    focusFindInput()
   }
 
   const scrollToFind = (idx: number) => {
