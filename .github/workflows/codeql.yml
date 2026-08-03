@@ -9,18 +9,22 @@ on:
     - cron: "0 6 * * 1" # Weekly Mondays 06:00 UTC
 
 concurrency:
-  group: codeql-${{ github.ref }}
-  cancel-in-progress: true
+  group: codeql-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   actions: read
   contents: read
-  security-events: write
 
 jobs:
   analyze_python:
     name: Analyze (python)
     runs-on: ubuntu-latest
+    # actions: read (runs); contents: read (source); security-events: write (SARIF upload).
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -39,6 +43,11 @@ jobs:
   analyze_javascript:
     name: Analyze (javascript-typescript)
     runs-on: ubuntu-latest
+    # actions: read (runs); contents: read (source); security-events: write (SARIF upload).
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -48,17 +57,6 @@ jobs:
           languages: javascript-typescript
           build-mode: none
           queries: security-extended,security-and-quality
-
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          version: 10.34.4
-
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 26
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
 
       - name: Analyze
         uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13 # v4

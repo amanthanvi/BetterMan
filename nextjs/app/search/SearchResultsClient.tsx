@@ -6,15 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { SearchResponse, SearchResult } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
 import { withDistro } from '../../lib/distro'
+import { escapeRegExp } from '../../lib/textRanges'
 
 const BACKEND_HIGHLIGHT_MARKER_RE = /[\u27ea\u27eb]/g
 
 function stripBackendHighlightMarkers(text: string): string {
   return text.replace(BACKEND_HIGHLIGHT_MARKER_RE, '')
-}
-
-function escapeRegExp(text: string) {
-  return text.replace(/[.*+?^${}()|[\[\]\\]/g, '\\$&')
 }
 
 function highlight(text: string, query: string): ReactNode[] {

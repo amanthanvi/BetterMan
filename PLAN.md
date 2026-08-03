@@ -394,3 +394,14 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Verify deployment metadata, Convex-backed API data, canonical robots/sitemaps, a representative man page, and both production aliases in automation.
 - [x] Keep a manual protected-`main` SHA workflow for explicit rollback and recovery.
 - [x] Deploy exact-`main` Convex functions before the frontend and gate promotion on production data, search, page, and metadata contracts.
+
+### Supply-chain alert closure (v0.6.5 cycle)
+
+- [x] Re-enable weekly OpenSSF Scorecards and refresh stale SARIF against current `main`.
+- [x] Pin production container bases and the uv tool image to multi-architecture manifest digests.
+- [x] Bootstrap pnpm from a checksum-verified immutable tarball in container builds.
+- [x] Install the Vercel CLI from the repository lockfile instead of a mutable global CI install.
+- [x] Scope CodeQL SARIF write access to the two analysis jobs.
+- [x] Remove duplicate regex character-class entries reported by CodeQL.
+- [x] Add property-based API checks and strictly reject malformed decimal pagination values.
+- [x] Remove vulnerable transitive versions from the pinned Vercel CLI dependency graph.

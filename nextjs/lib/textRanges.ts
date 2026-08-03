@@ -19,5 +19,5 @@ export function getRanges(text: string, regex: RegExp): TextRange[] {
 }
 
 export function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\[\]\\]/g, '\\$&')
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

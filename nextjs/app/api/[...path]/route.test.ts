@@ -1,3 +1,4 @@
+import fc from 'fast-check'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
@@ -132,5 +133,66 @@ describe('public API timing and metadata', () => {
     expect(apiMocks.search).not.toHaveBeenCalled()
     expect(response.headers.get('Server-Timing')).toMatch(/rate_limit;dur=\d+\.\d, total;dur=\d+\.\d/)
     expect(response.headers.get('Server-Timing')).not.toContain('convex_search')
+  })
+})
+
+describe('public API property checks', () => {
+  it('preserves arbitrary bounded search text as literal input', async () => {
+    apiMocks.search.mockResolvedValue({
+      query: '',
+      results: [],
+      suggestions: [],
+      hasMore: false,
+      nextOffset: null,
+    })
+
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 120 }).filter((value) => value.trim().length > 0),
+        async (query) => {
+          apiMocks.search.mockClear()
+          const params = new URLSearchParams({ q: query })
+          const response = await GET(
+            request(`/api/v1/search?${params.toString()}`),
+            context(['v1', 'search']),
+          )
+
+          expect(response.status).toBe(200)
+          expect(apiMocks.search).toHaveBeenCalledOnce()
+          expect(apiMocks.search).toHaveBeenCalledWith({
+            distro: 'debian',
+            q: query.trim(),
+            section: undefined,
+            limit: 20,
+            offset: 0,
+          })
+        },
+      ),
+      { numRuns: 100 },
+    )
+  })
+
+  it('rejects non-decimal pagination values without querying Convex', async () => {
+    const invalidInteger = fc
+      .string({ minLength: 1, maxLength: 32 })
+      .filter((value) => value.trim().length > 0 && !/^\d+$/.test(value.trim()))
+
+    await fc.assert(
+      fc.asyncProperty(fc.constantFrom('limit', 'offset'), invalidInteger, async (name, value) => {
+        apiMocks.search.mockClear()
+        const params = new URLSearchParams({ q: 'tar', [name]: value })
+        const response = await GET(
+          request(`/api/v1/search?${params.toString()}`),
+          context(['v1', 'search']),
+        )
+
+        expect(response.status).toBe(422)
+        await expect(response.json()).resolves.toEqual({
+          error: { code: 'INVALID_QUERY_PARAM', message: `Invalid ${name}` },
+        })
+        expect(apiMocks.search).not.toHaveBeenCalled()
+      }),
+      { numRuns: 100 },
+    )
   })
 })
