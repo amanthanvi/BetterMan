@@ -73,6 +73,7 @@ test('man: reading preferences drawer applies settings', async ({ page }) => {
   await page.getByRole('button', { name: 'Reading preferences' }).click()
   const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
   await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Close reading preferences' })).toBeFocused()
 
   await dialog.getByRole('radiogroup', { name: 'Font size' }).getByRole('radio', { name: 'L', exact: true }).click()
   await expect(page.locator('body')).toHaveAttribute('data-bm-font-size', 'large')

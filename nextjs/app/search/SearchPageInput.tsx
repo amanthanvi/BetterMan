@@ -23,20 +23,53 @@ export function SearchPageInput({
   const router = useRouter()
   const [value, setValue] = useState(initialQ)
   const debounced = useDebouncedValue(value, 250)
-  const lastPushedRef = useRef(initialQ.trim().slice(0, 120))
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const initialQuery = initialQ.trim().slice(0, 120)
+  const lastPushedRef = useRef(initialQuery)
+  const restoreFocusRef = useRef(false)
+  const isExternalNavigation = initialQuery !== lastPushedRef.current
+
+  useEffect(() => {
+    const cancelFocusRestore = () => {
+      restoreFocusRef.current = false
+    }
+    const cancelFocusRestoreOnTab = (event: KeyboardEvent) => {
+      if (event.key === 'Tab') cancelFocusRestore()
+    }
+
+    window.addEventListener('pointerdown', cancelFocusRestore, true)
+    window.addEventListener('keydown', cancelFocusRestoreOnTab, true)
+    return () => {
+      window.removeEventListener('pointerdown', cancelFocusRestore, true)
+      window.removeEventListener('keydown', cancelFocusRestoreOnTab, true)
+    }
+  }, [])
 
   /* Adopt externally-navigated queries (palette search while already on
      /search) — our own replaces update lastPushedRef first, so this only
      fires for URL changes we didn't initiate. */
   useEffect(() => {
     const next = initialQ.trim().slice(0, 120)
-    if (next === lastPushedRef.current) return
+    if (next === lastPushedRef.current) {
+      if (restoreFocusRef.current) {
+        const frame = window.requestAnimationFrame(() => {
+          if (!restoreFocusRef.current) return
+          restoreFocusRef.current = false
+          inputRef.current?.focus({ preventScroll: true })
+        })
+        return () => window.cancelAnimationFrame(frame)
+      }
+      return
+    }
+    restoreFocusRef.current = false
     lastPushedRef.current = next
     setValue(initialQ)
   }, [initialQ])
 
   useEffect(() => {
     const next = debounced.trim().slice(0, 120)
+    const current = value.trim().slice(0, 120)
+    if (isExternalNavigation || next !== current) return
     if (next === lastPushedRef.current) return
     lastPushedRef.current = next
 
@@ -45,11 +78,13 @@ export function SearchPageInput({
     if (section) params.set('section', section)
     if (distro !== 'debian') params.set('distro', distro)
     const qs = params.toString()
+    restoreFocusRef.current = document.activeElement === inputRef.current
     router.replace(qs ? `/search?${qs}` : '/search', { scroll: false })
-  }, [debounced, distro, router, section])
+  }, [debounced, distro, isExternalNavigation, router, section, value])
 
   return (
     <input
+      ref={inputRef}
       name="q"
       type="search"
       value={value}

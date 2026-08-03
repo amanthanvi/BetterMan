@@ -164,13 +164,13 @@
 **Man page view structure**
 
 -   Header: `name(section)` + one-line description.
--   Left sidebar (desktop) or collapsible drawer (mobile):
+-   Contents navigation: a sticky, collapsible TOC sidebar on desktop and a TOC drawer on mobile.
     -   TOC (headings).
         -   **Desktop behavior:** TOC is sticky (follows scroll and stays visible). If the TOC is longer than the viewport, it scrolls independently.
         -   **Scroll-spy (v0.2.0):** Use IntersectionObserver API for accurate active heading detection, performant even on large pages.
-    -   Find-in-page: sticky by default; user can hide/show it.
-        -   **Match navigation (v0.2.0):** Show "3 of 15 matches" indicator with Enter (next) and Shift+Enter (previous) keyboard navigation.
-    -   Quick nav: "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES", "SEE ALSO" when available.
+    -   Headings provide quick jumps to sections such as "SYNOPSIS", "DESCRIPTION", "OPTIONS", "EXAMPLES", and "SEE ALSO" when available.
+-   Find-in-page: the title-header action opens a separate floating bar below the header on desktop or above the bottom navigation on mobile.
+    -   **Match navigation (v0.2.0):** Show "3 of 15 matches" indicator with Enter (next) and Shift+Enter (previous) keyboard navigation.
 -   Main article:
     -   Rendered content with clear typographic hierarchy.
     -   Inline cross-references become links.
@@ -206,7 +206,7 @@
 
 -   App must be fully usable with keyboard only.
 -   Visible focus indicator must always be present.
--   Focus order must be logical (header → sidebar → content).
+-   Focus order must be logical (header → active overlay or TOC sidebar → content).
 
 ### Shortcut List (v0.1.0)
 
@@ -241,10 +241,9 @@ If optional shortcuts are not implemented, they must not be documented in UI.
 -   **Theme transition (v0.2.1):** 150ms CSS transition on background and text colors when switching themes. Respects `prefers-reduced-motion` (instant switch when reduced motion preferred).
 -   **Visual modes:** One visual grammar with light, dark, and system color modes. The v0.6.4 experimental `retro` and `glass` skins and `bm-ui-theme` state were retired by the 2026-08 grammar redesign.
 -   Responsive:
-    -   < 768px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
+    -   < 1024px: sidebar becomes a drawer; header remains sticky and always visible (no hide-on-scroll); content uses larger line-height.
         -   **Mobile TOC access:** Sticky header button toggles TOC drawer. Button is always visible for quick access during reading.
-    -   768–1024px: compact sidebar; TOC collapsible.
-    -   > 1024px: persistent sidebar (sticky TOC) and wide reading column with max line width (target 70–90 chars).
+    -   ≥ 1024px: persistent, collapsible sidebar (sticky TOC) and wide reading column with max line width (target 70–90 chars).
 
 ## Print Styles (v0.2.0)
 
@@ -3504,27 +3503,29 @@ The retro and glass skins, their switcher, and `bm-ui-theme` persistence were re
 **Contents sidebar (desktop sticky + collapsible):**
 - Visible by default on desktop (`lg` and up) as a sticky left sidebar.
 - Collapsible via `b` (and a collapse/expand button). Collapsed state becomes a narrow rail.
-- Contains:
-  - Quick jumps: SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES, SEE ALSO (when present).
-  - Find-in-page: input field + match count + prev/next + clear.
-  - TOC: full heading list with scroll-spy active indicator (accent left border on active item).
+- Contains the full heading TOC with a scroll-spy active indicator (accent left border on the active item).
 - Clicking items scrolls content and updates the URL hash.
 
 **Contents drawer (mobile):**
 - Opens via `b`, swipe-from-left, or the header contents button.
-- Shows TOC only (Find remains the separate mobile bar).
+- Shows the same TOC as the desktop sidebar.
 - Closes on `Esc`, `b` again, or tap outside.
+
+**Find-in-page (all viewports):**
+- Opens from the title-header find action as a separate floating bar.
+- Appears below the header on desktop and above the bottom navigation on mobile.
+- Includes the input, match count, previous/next controls, and close action; Enter advances and Shift+Enter goes back.
 
 **Content area:**
 - `max-width` controlled by reading preferences (42rem / 56rem / 72rem).
 - Prose: Geist Sans 14px, line-height 1.7.
 - Headings: Geist Sans semibold, accent left border (3px) on H2.
-- Code blocks (terminal-in-page):
-  - Always `#0d0d0d` background regardless of theme mode.
-  - Minimal header bar: language label (left, xs mono muted) + copy button (right, icon).
+- Code blocks:
+  - Use the theme-dependent `bg-code-bg` tint and run full-bleed on mobile.
+  - No header bar; a ghost copy glyph appears on hover or keyboard focus.
   - Code: JetBrains Mono 13px, line-height 1.6.
   - Horizontal scroll, styled scrollbar.
-  - Copy: icon button, shows checkmark for 2s on success.
+  - Copy feedback replaces the glyph with a checkmark for 2s.
 - Options table:
   - Dedicated collapsible section.
   - Each option: flag(s) as monospace bordered badges, description inline.
@@ -3532,7 +3533,7 @@ The retro and glass skins, their switcher, and `bm-ui-theme` persistence were re
   - Selected: accent border on flag badge, accent-muted bg.
 - Definition lists: term in mono bold, definition in base prose. Tighter vertical spacing.
 - Cross-references: accent-colored `name(section)` links. Unresolved refs stay muted.
-- Find-in-page (mobile): sticky floating bar above content, compact.
+- Find-in-page uses the shared floating bar described above.
 
 **Related commands (footer):**
 - Horizontal scrollable row of bordered cards.

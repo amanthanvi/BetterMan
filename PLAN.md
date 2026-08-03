@@ -179,7 +179,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - Header: full nav bar (logo, primary nav, search trigger, theme toggle).
 - Reading prefs: keep as drawer, restyle.
 - Man page header: hero card (dark surface, strong type hierarchy).
-- Find-in-page: desktop in toggle panel, mobile sticky bar above content.
+- Find-in-page: title-header action opens a floating bar below the header on desktop and above bottom navigation on mobile.
 - Branding: new logomark + restyled wordmark.
 - Scope: big-bang (full design system + all pages in one pass).
 - Small UX additions OK (better empty states, skeletons, transitions).
@@ -218,11 +218,11 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 ### M48 — Man page view redesign
 
 - [x] Hero card header (dark surface even in light mode)
-- [x] Desktop: sticky sidebar (TOC + Find), collapsible via `b`; mobile uses contents drawer
+- [x] Desktop: sticky TOC-only sidebar, collapsible via `b`; mobile uses the TOC drawer
 - [x] Content typography updated (H2 accent left border)
-- [x] Code blocks: terminal-in-page (always #0d0d0d, minimal header, copy feedback)
+- [x] Code blocks: theme-tinted, full-bleed on mobile, with a headerless ghost copy glyph and checkmark feedback
 - [x] Options table redesign: tag-style flags + collapsible panel
-- [x] Find-in-page: desktop in sidebar panel, mobile sticky floating bar
+- [x] Find-in-page: title-header action opens the shared floating bar on desktop and mobile
 - [x] Related commands footer restyled
 
 ### M49 — Search page redesign

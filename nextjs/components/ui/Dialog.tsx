@@ -32,7 +32,7 @@ export function Overlay({
   const panelRef = useRef<HTMLDivElement | null>(null)
   const [mounted, setMounted] = useState(open)
 
-  useFocusTrap(open, panelRef)
+  useFocusTrap(open && mounted, panelRef)
   useBodyScrollLock(open)
 
   useEffect(() => {
