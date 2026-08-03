@@ -220,8 +220,24 @@ jobs:
         run: |
           set -euo pipefail
 
+          install_browser() {
+            setsid --wait timeout --kill-after=30s 600s \
+              pnpm -C frontend exec playwright install --with-deps chromium &
+            local install_group=$!
+            local status=0
+
+            wait "${install_group}" || status=$?
+            if ((status != 0)); then
+              kill -TERM -- "-${install_group}" 2>/dev/null || true
+              sleep 5
+              kill -KILL -- "-${install_group}" 2>/dev/null || true
+            fi
+
+            return "${status}"
+          }
+
           for attempt in 1 2; do
-            if timeout 300s pnpm -C frontend exec playwright install --with-deps chromium; then
+            if install_browser; then
               exit 0
             fi
             echo "Playwright browser install failed or timed out (attempt ${attempt}/2)." >&2
