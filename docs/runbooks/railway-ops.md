@@ -1,6 +1,6 @@
-# Railway operations
+# Legacy Railway operations
 
-BetterMan deploys to Railway.
+BetterMan's active public Next.js application deploys to Vercel. Railway services may remain available during infrastructure cleanup, but they are not on the active `betterman.sh` request path. See `docs/runbooks/vercel-ops.md` for current production operations.
 
 ## Current notes
 
@@ -8,24 +8,21 @@ BetterMan deploys to Railway.
 - The active app reads datasets/search/rate-limit state from Convex.
 - `web` (FastAPI) may still exist as a legacy service during the infrastructure transition, but Next no longer proxies `/api/*` to it.
 
-## Deploy
+## Legacy deploy
 
-### Automatic (default)
+There is no automatic Railway deployment from `main`.
 
-- Push to `main`.
-- GitHub Actions runs `.github/workflows/ci.yml`.
-- If all CI jobs pass, the `deploy_railway` job deploys via Railway CLI.
-
-### Manual (workflow dispatch)
-
-- Run the GitHub Actions workflow `.github/workflows/deploy.yml` (`deploy-railway`).
-- Input `ref` can be a branch, tag, or SHA to deploy.
+- Use Railway's dashboard or CLI only when deliberately maintaining or recovering a legacy service.
+- Do not point `betterman.sh` back to Railway without an explicit cutover and rollback plan.
 
 ## Rollback
 
-- Re-run the manual deploy workflow (`deploy-railway`) with a previous known-good `ref` (SHA or tag).
+- Public production rollback is a Vercel operation; follow `docs/runbooks/vercel-ops.md`.
+- Legacy Railway rollback is manual and service-specific.
 
-## Custom domains / cutover
+## Historical custom domains / cutover (do not execute for current production)
+
+The records below describe the former Railway topology. Current production DNS targets Vercel; follow `docs/runbooks/vercel-ops.md`. Retain these notes only for forensic or emergency legacy-service work.
 
 Prereqs:
 

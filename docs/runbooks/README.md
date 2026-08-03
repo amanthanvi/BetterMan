@@ -10,6 +10,7 @@ Runbooks referenced by `SPEC.md` Section 17.
 - `docs/runbooks/backups-restore.md`
 - `docs/runbooks/logging-redaction.md`
 - `docs/runbooks/csp-violations.md`
+- `docs/runbooks/vercel-ops.md`
 - `docs/runbooks/railway-ops.md`
 - `docs/runbooks/e2e-debug.md`
 - `docs/runbooks/type-gen.md`

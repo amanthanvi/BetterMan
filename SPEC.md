@@ -1064,12 +1064,22 @@ flowchart LR
   NX -->|SSR + Static Assets| U
 ```
 
-**Deployment Platform:** Railway for all services (web, PostgreSQL, Redis). v0.5.0 splits the single web service into Next.js (public-facing) and FastAPI (internal API via Railway private networking).
+**Current production topology (v0.6.5 delivery hardening):**
+
+```mermaid
+flowchart LR
+  U[User Browser] -->|HTTPS| VX[Next.js on Vercel]
+  VX -->|Queries, Actions, File Storage| CV[(Convex Production)]
+  VX -->|SSR + Static Assets + /api/*| U
+  FA[Legacy FastAPI on Railway] -. not on active request path .-> VX
+```
+
+**Deployment Platform:** Vercel is the active public Next.js host and Convex owns production data, search, and rate limits. Legacy FastAPI/Railway infrastructure may remain during cleanup but is not required by the active request path. A non-cancelable GitHub Actions workflow stages the exact tested `main` SHA, verifies it before promotion, and confirms both production aliases.
 
 ## Frontend Architecture
 
 **Stack Decisions:**
--   **Runtime:** Node 26
+-   **Runtime:** Node 24 for the active Next.js/Vercel build and runtime; Node 26 remains in legacy frontend/container tooling
 -   **Build Tool:** Vite (**v0.5.0:** Next.js App Router replaces Vite)
 -   **Framework:** React + TypeScript SPA (**v0.5.0:** Next.js with SSR + streaming + client hydration)
 -   **Router:** TanStack Router (type-safe routing with excellent TypeScript integration) (**v0.5.0:** Next.js file-based App Router)
@@ -1814,16 +1824,16 @@ Detailed step-by-step runbooks located in `docs/runbooks/`:
     - Check browser DevTools console for CSP violation reports
     - Identify source of violation (inline styles, scripts, third-party)
     - Verify nonce injection is working correctly
-    - If emergency: set `CSP_ENABLED=false` in Railway env vars
+    - If emergency: set `CSP_ENABLED=false` in the Vercel production environment and redeploy the selected SHA
     - For style violations from TanStack Virtual: expected (documented tradeoff)
 
-7. **Railway operations** (`docs/runbooks/railway-ops.md`)
-    - Deploy: automatic on push to `main` after CI passes
-    - Manual deploy: `gh workflow run deploy.yml -f ref=<branch>`
-    - View logs: Railway dashboard or `railway logs`
-    - Restart service: Railway dashboard "Restart" button
-    - Scale: adjust instance count in Railway settings
-    - Environment variables: Railway dashboard "Variables" tab
+7. **Vercel operations** (`docs/runbooks/vercel-ops.md`)
+    - Deploy: non-cancelable workflow after successful `main` CI
+    - Manual deploy/rollback: `gh workflow run deploy.yml -f sha=<full-main-history-sha>`
+    - View runtime and build logs in Vercel
+    - Promote only after immutable deployment smoke checks pass
+    - Automatically restore the prior deployment when post-promotion verification fails
+    - Keep Railway operations limited to explicitly labeled legacy services
 
 8. **E2E test failures** (`docs/runbooks/e2e-debug.md`)
     - Check CI artifacts for Playwright traces and screenshots
@@ -1897,14 +1907,13 @@ Staging and prod must be isolated:
     -   Backend + ingestion uv lockfiles
     -   Docker base images
 
-### `deploy.yml` (deploy/promote/rollback)
+### `deploy.yml` (Vercel stage/promote/rollback)
 
--   Deploy to staging on merge to main
--   Run smoke tests against staging
--   Manual approval step to promote to prod
--   Rollback:
-    -   redeploy previous artifact
-    -   optionally flip dataset release pointer to previous release
+-   Trigger only after successful CI for a push to `main`, or by explicit manual dispatch with a full SHA from protected `main` history
+-   Build an immutable production-targeted deployment without moving domains
+-   Verify exact-SHA metadata and smoke-test API, robots, sitemaps, and a representative man page
+-   Recheck current `main`, promote, and verify both production aliases
+-   Roll back to the previously captured deployment if post-promotion verification fails
 
 ### `update-docs.yml` (ingest/parse/validate/index/publish)
 
@@ -2532,7 +2541,7 @@ All open questions have been resolved through the interview process:
 -   Linting: **ESLint**
 -   Testing (v0.2.0): **Vitest + Testing Library** (unit), **Playwright** (E2E), **axe-core** (a11y)
 -   Virtualization (v0.2.0): **TanStack Virtual** (100+ blocks threshold)
--   Runtime: **Node 26**
+-   Runtime: **Node 24** for Next.js/Vercel; **Node 26** for retained legacy frontend/container tooling
 
 ### Backend Stack
 -   Framework: **FastAPI**
@@ -2842,7 +2851,7 @@ v0.4.0 is **non-breaking**. All changes are additive or internal improvements.
 
 **Testing**
 
--   [x] CI green on `main` (including `deploy_railway`)
+-   [x] CI was green on `main` for this historical release (including the then-current `deploy_railway` job)
 -   [x] Coverage >= 60% and increased test suite (backend + frontend + ingestion + E2E)
 
 **Release**
@@ -2919,9 +2928,9 @@ frontend/src/routes/licenses.tsx  →  app/licenses/page.tsx
 
 ### Deployment Topology
 
-Two Railway services:
+Current production services:
 
-1. **Next.js Service** (public-facing):
+1. **Next.js Service on Vercel** (public-facing):
    - Handles all web traffic (SSR + static assets)
    - Serves `/api/*` through Next.js route handlers backed by Convex queries/actions
    - Man page bodies load via `content.getManByName*` actions (file storage), not query-transaction JSON
@@ -2931,7 +2940,11 @@ Two Railway services:
    - Public domain: `betterman.sh`
    - Env: `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`, `BETTERMAN_DATASET_STAGE`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`
 
-2. **FastAPI Service** (legacy/internal during cutover):
+2. **Convex Production** (active data plane):
+   - Owns dataset reads, search, content actions, file storage, and rate-limit state
+   - Selected with `BETTERMAN_DATASET_STAGE=prod`
+
+3. **FastAPI Service on Railway** (legacy/internal during cleanup):
    - No longer required by active Next.js runtime
    - Retained for maintenance until infrastructure cleanup is explicitly approved
    - Keeps PostgreSQL/Redis connections, rate limiting, Sentry backend

@@ -22,8 +22,7 @@ export function getPublicOrigin(request: Request): string {
     }
   }
 
-  const railwayPublicDomain = normalizeBaseUrl(process.env.RAILWAY_PUBLIC_DOMAIN)
-  if (railwayPublicDomain) return `https://${railwayPublicDomain}`
+  if (process.env.NODE_ENV === 'production') return new URL(request.url).origin
 
   const host =
     firstHeaderValue(request.headers.get('x-forwarded-host')) ??

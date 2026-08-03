@@ -1,5 +1,7 @@
 # Backups & restore drill
 
+> **Legacy PostgreSQL reference.** Current production data is owned by Convex. Use Convex production backup/restore controls and validate the active release pointer before applying this PostgreSQL drill to any retained Railway service.
+
 **Goal**
 
 - Maintain daily automated Postgres backups with ≥14 day retention.

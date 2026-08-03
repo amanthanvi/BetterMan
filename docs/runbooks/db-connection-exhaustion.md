@@ -1,5 +1,7 @@
 # DB connection exhaustion
 
+> **Legacy FastAPI/Railway reference.** The active Vercel + Convex request path does not use the PostgreSQL pool described below. For current incidents, inspect Vercel function errors and Convex dashboard health first.
+
 **Symptoms**
 
 - Rising latency across all endpoints.
