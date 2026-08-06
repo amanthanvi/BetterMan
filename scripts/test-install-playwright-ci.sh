@@ -9,8 +9,13 @@ source "${repo_root}/scripts/install-playwright-ci.sh"
 declare -a fake_statuses=()
 declare -a fake_commands=()
 declare -a fake_sleeps=()
+fake_timeout_version="timeout (GNU coreutils) test"
 
 timeout() {
+  if [[ "${1:-}" == "--version" ]]; then
+    printf '%s\n' "$fake_timeout_version"
+    return 0
+  fi
   fake_commands+=("$*")
   local index=$((${#fake_commands[@]} - 1))
   return "${fake_statuses[$index]:-0}"
@@ -77,6 +82,12 @@ run_case() {
   assert_equal "$case_name" sleeps "$expected_sleeps" "$sleep_csv" || return 1
 }
 
+fake_timeout_version="BusyBox timeout"
+status=0
+install_playwright_ci >/dev/null 2>&1 || status=$?
+assert_equal timeout-compatibility status 127 "$status" || exit 1
+fake_timeout_version="timeout (GNU coreutils) test"
+
 run_case success 0 dependencies,browser "" 0 0 || exit 1
 run_case dependency-retry 0 dependencies,dependencies,browser 5 1 0 0 || exit 1
 run_case dependency-timeout 124 dependencies "" 124 || exit 1
@@ -85,4 +96,4 @@ run_case dependency-exhausted 1 dependencies,dependencies 5 2 3 || exit 1
 run_case browser-retry 0 dependencies,browser,browser 5 0 1 0 || exit 1
 run_case browser-exhausted 1 dependencies,browser,browser 5 0 1 2 || exit 1
 
-echo "Playwright CI installer tests passed (7 scenarios)."
+echo "Playwright CI installer tests passed (8 scenarios)."

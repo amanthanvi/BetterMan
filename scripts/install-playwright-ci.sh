@@ -6,8 +6,14 @@ install_playwright_ci() {
   local attempt
   local status
   local dependencies_ready=false
+  local timeout_version
 
   if ! command -v timeout >/dev/null 2>&1; then
+    echo "GNU timeout is required by the Linux CI Playwright installer." >&2
+    return 127
+  fi
+  if ! timeout_version="$(timeout --version 2>&1)" ||
+    [[ "$timeout_version" != *"GNU coreutils"* ]]; then
     echo "GNU timeout is required by the Linux CI Playwright installer." >&2
     return 127
   fi
