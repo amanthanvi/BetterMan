@@ -13,7 +13,13 @@ const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
 const tomlParser = `
 import json
 import sys
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    raise SystemExit(
+        "OSV exception parsing requires Python 3.11+ with the tomllib standard library"
+    )
 
 with open(sys.argv[1], "rb") as stream:
     config = tomllib.load(stream)

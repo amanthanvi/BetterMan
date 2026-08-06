@@ -5,7 +5,7 @@ BetterMan E2E tests live in `frontend/e2e/` and run in CI in `.github/workflows/
 ## Triage in CI
 
 1. Open the failing workflow run.
-2. If browser setup failed, run `bash scripts/test-install-playwright-ci.sh`; its seven scenarios distinguish dependency timeout/kill handling from safe browser-download retries.
+2. If browser setup failed, run `bash scripts/test-install-playwright-ci.sh`; its eight scenarios distinguish GNU-timeout compatibility and dependency timeout/kill handling from safe browser-download retries.
 3. Check the failed test name and the step output.
 4. If Playwright traces/screenshots are present, use them to pinpoint the failure cause (timing, selector ambiguity, missing seed data).
 
