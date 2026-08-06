@@ -62,7 +62,8 @@ permissions:
 
 jobs:
   ingest_linux:
-    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.linux != 'false') }}
+    name: Ingest Linux
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.linux) }}
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
@@ -87,7 +88,8 @@ jobs:
           BETTERMAN_FEDORA_IMAGE_REF: fedora:41
           BETTERMAN_ARCH_IMAGE_REF: archlinux:latest
           BETTERMAN_ALPINE_IMAGE_REF: alpine:3.20
-          BETTERMAN_INGEST_SAMPLE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sample == 'true' && 'true' || 'false' }}
+          BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
+          BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -99,8 +101,16 @@ jobs:
             ingest_args=(--sample --no-activate)
           fi
 
-          target="${{ github.event.inputs.linux_distro }}"
-          if [[ -z "${target}" || "${target}" == "all" ]]; then
+          target="${BETTERMAN_LINUX_DISTRO:-all}"
+          case "${target}" in
+            all|debian|ubuntu|fedora|arch|alpine) ;;
+            *)
+              echo "Unsupported Linux distro target: ${target}" >&2
+              exit 2
+              ;;
+          esac
+
+          if [[ "${target}" == "all" ]]; then
             echo "Ingesting Debian…"
             uv run python -m ingestion.cli ingest --distro debian "${ingest_args[@]}"
 
@@ -121,7 +131,8 @@ jobs:
           fi
 
   ingest_macos:
-    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.bsd != 'false' && (github.event.inputs.bsd_distro == 'all' || github.event.inputs.bsd_distro == 'macos')) }}
+    name: Ingest macOS
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.bsd && (inputs.bsd_distro == 'all' || inputs.bsd_distro == 'macos')) }}
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
@@ -141,7 +152,7 @@ jobs:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
-          BETTERMAN_INGEST_SAMPLE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sample == 'true' && 'true' || 'false' }}
+          BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -157,7 +168,8 @@ jobs:
           uv run python -m ingestion.cli ingest --distro macos "${ingest_args[@]}"
 
   ingest_freebsd:
-    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.bsd != 'false' && (github.event.inputs.bsd_distro == 'all' || github.event.inputs.bsd_distro == 'freebsd')) }}
+    name: Ingest FreeBSD
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.bsd && (inputs.bsd_distro == 'all' || inputs.bsd_distro == 'freebsd')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -208,9 +220,10 @@ jobs:
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
-          BETTERMAN_INGEST_SAMPLE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sample == 'true' && 'true' || 'false' }}
+          BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
 
   promote:
+    name: Promote dataset
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [ingest_linux, ingest_macos, ingest_freebsd]
@@ -219,8 +232,8 @@ jobs:
     if: >-
       ${{
         always() &&
-        (github.event_name != 'workflow_dispatch' || github.event.inputs.promote == 'true') &&
-        (github.event_name != 'workflow_dispatch' || github.event.inputs.sample != 'true') &&
+        (github.event_name != 'workflow_dispatch' || inputs.promote) &&
+        (github.event_name != 'workflow_dispatch' || !inputs.sample) &&
         (needs.ingest_linux.result == 'success' || needs.ingest_linux.result == 'skipped') &&
         (needs.ingest_macos.result == 'success' || needs.ingest_macos.result == 'skipped') &&
         (needs.ingest_freebsd.result == 'success' || needs.ingest_freebsd.result == 'skipped')

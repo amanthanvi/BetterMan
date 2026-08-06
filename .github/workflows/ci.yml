@@ -14,8 +14,10 @@ permissions:
 
 jobs:
   ci_contracts:
+    name: ci_contracts
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # actions: read queries workflow activation; contents: read checks out source.
     permissions:
       actions: read
       contents: read
