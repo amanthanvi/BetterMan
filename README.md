@@ -69,13 +69,15 @@ BetterMan is a fast, readable web UI for `man` pages — built to feel like a to
   - `workflow_dispatch` defaults: `ingest=true`, `promote=false` (ingest to staging only).
   - Promote-only: `ingest=false`, `promote=true` (promotes current staging actives without re-ingesting).
   - Targeted ingest (debug): set `linux_distro=arch` and/or `bsd=false`.
+  - FreeBSD VM smoke: `linux=false`, `bsd=true`, `bsd_distro=freebsd`, `sample=true`, `promote=false`; the sample is written to staging but never activated or promoted.
 - Requires `BETTERMAN_CONVEX_HTTP_URL` + `BETTERMAN_CONVEX_INGEST_SECRET` GitHub Actions secrets.
 - Ingest activates `staging` release pointers; promotion copies active staging pointers to `prod` in Convex.
+- Scheduled promotion requires every selected ingest job to succeed. Failed, timed-out, cancelled, and sample runs cannot promote.
 - Production Convex rebuild/import runbook: `docs/runbooks/convex-production-cutover.md`.
 
 ## Security / Quality (CI)
 
-- Required PR checks for `main`: `dependency_review`, `frontend`, `nextjs`, `backend`, `ingestion`, `api_types`, `container_build`, `e2e`.
+- Required PR checks for `main`: `ci_contracts`, `dependency_review`, `frontend`, `nextjs`, `backend`, `ingestion`, `api_types`, `container_build`, `e2e`.
 - Code scanning: `.github/workflows/codeql.yml` (CodeQL) + `.github/workflows/scorecards.yml` (OSSF Scorecards → SARIF).
 - Dependency updates: `.github/dependabot.yml` (GitHub Actions, frontend npm, backend/ingestion uv, Dockerfile base images).
 - API contract: generated OpenAPI types for both `frontend/src/api/openapi.gen.ts` and `nextjs/lib/openapi.gen.ts` are enforced in CI.

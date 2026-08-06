@@ -13,6 +13,39 @@ permissions:
   contents: read
 
 jobs:
+  ci_contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 26
+
+      - name: Test Playwright installer failure handling
+        run: bash scripts/test-install-playwright-ci.sh
+
+      - name: Check bounded OSV exceptions
+        run: node scripts/check-osv-exceptions.mjs
+
+      - name: Check monthly dataset workflow is active
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/update-docs.yml" \
+            --jq .state)"
+          if [[ "$state" != "active" ]]; then
+            echo "update-dataset workflow is ${state:-unknown}; re-enable the monthly schedule." >&2
+            exit 1
+          fi
+
   dependency_review:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
@@ -217,44 +250,7 @@ jobs:
 
       - name: Install Playwright browsers
         shell: bash
-        run: |
-          set -euo pipefail
-
-          # A non-timeout apt/mirror failure gets one retry. A timeout stops
-          # immediately so a possibly interrupted dpkg run cannot poison a
-          # second attempt on the same runner.
-          dependencies_ready=false
-          for attempt in 1 2; do
-            status=0
-            timeout --kill-after=15s 180s \
-              pnpm -C frontend exec playwright install-deps chromium || status=$?
-            if ((status == 0)); then
-              dependencies_ready=true
-              break
-            fi
-            echo "Playwright dependency install failed (attempt ${attempt}/2, status ${status})." >&2
-            if ((status == 124 || status == 137)); then
-              echo "Dependency setup timed out; refusing an unsafe dpkg retry." >&2
-              exit "${status}"
-            fi
-            if ((attempt < 2)); then sleep 5; fi
-          done
-          if [[ "${dependencies_ready}" != true ]]; then exit 1; fi
-
-          # GNU timeout owns the unprivileged download process group and kills
-          # remaining children before returning. Two worst-case setup loops use
-          # at most 760s, preserving 440s of the 20-minute job budget.
-
-          for attempt in 1 2; do
-            if timeout --kill-after=15s 180s \
-              pnpm -C frontend exec playwright install chromium; then
-              exit 0
-            fi
-            echo "Playwright browser install failed or timed out (attempt ${attempt}/2)." >&2
-            if ((attempt < 2)); then sleep $((attempt * 5)); fi
-          done
-
-          exit 1
+        run: bash scripts/install-playwright-ci.sh
 
       - name: Provision local Convex + seed E2E data
         env:

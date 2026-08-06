@@ -415,3 +415,13 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Upgrade dependency review to its verified Node 24 release.
 - [x] Bound Playwright dependency/download retries and refuse unsafe same-runner retries after a package-manager timeout.
 - [x] Typecheck legacy frontend tests with isolated Vitest and Testing Library declarations, without exposing test globals to production source.
+
+### Residual automation-risk closure (v0.6.5 cycle)
+
+- [x] Re-enable the monthly dataset workflow and make CI fail if it is disabled again.
+- [x] Block dataset promotion when any selected ingest fails, times out, or is cancelled; keep explicit promote-only recovery.
+- [x] Add a targeted, non-active FreeBSD sample dispatch for current VM-path validation.
+- [x] Extract the Playwright installer and permanently test success, retry, timeout, kill, and exhaustion branches.
+- [x] Fail closed when the bounded OSV exception's advisory set, Vercel dependency edge, package version, evidence, or 30-day review window drifts.
+- [x] Move `brace-expansion` 5.x to 5.0.9 after registry audit identified GHSA-rgw5-rvv9-x895.
+- [ ] Run the FreeBSD sample on the merged workflow and verify the resulting production deploy independently.

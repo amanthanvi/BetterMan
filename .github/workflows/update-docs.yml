@@ -18,6 +18,15 @@ on:
         type: boolean
         required: false
         default: true
+      bsd_distro:
+        description: BSD distro to ingest (workflow_dispatch only)
+        type: choice
+        required: false
+        default: all
+        options:
+          - all
+          - freebsd
+          - macos
       linux_distro:
         description: Linux distro to ingest (workflow_dispatch only)
         type: choice
@@ -30,6 +39,11 @@ on:
           - fedora
           - arch
           - alpine
+      sample:
+        description: Ingest a non-active sample release (workflow_dispatch only)
+        type: boolean
+        required: false
+        default: false
       promote:
         description: Promote active staging releases to prod
         type: boolean
@@ -50,8 +64,11 @@ jobs:
   ingest_linux:
     if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.linux != 'false') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
@@ -70,38 +87,47 @@ jobs:
           BETTERMAN_FEDORA_IMAGE_REF: fedora:41
           BETTERMAN_ARCH_IMAGE_REF: archlinux:latest
           BETTERMAN_ALPINE_IMAGE_REF: alpine:3.20
+          BETTERMAN_INGEST_SAMPLE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sample == 'true' && 'true' || 'false' }}
         shell: bash
         run: |
           set -euo pipefail
 
           cd ingestion
 
+          ingest_args=(--activate)
+          if [[ "${BETTERMAN_INGEST_SAMPLE}" == "true" ]]; then
+            ingest_args=(--sample --no-activate)
+          fi
+
           target="${{ github.event.inputs.linux_distro }}"
           if [[ -z "${target}" || "${target}" == "all" ]]; then
             echo "Ingesting Debian…"
-            uv run python -m ingestion.cli ingest --distro debian --activate
+            uv run python -m ingestion.cli ingest --distro debian "${ingest_args[@]}"
 
             echo "Ingesting Arch…"
-            uv run python -m ingestion.cli ingest --distro arch --activate
+            uv run python -m ingestion.cli ingest --distro arch "${ingest_args[@]}"
 
             echo "Ingesting Alpine…"
-            uv run python -m ingestion.cli ingest --distro alpine --activate
+            uv run python -m ingestion.cli ingest --distro alpine "${ingest_args[@]}"
 
             echo "Ingesting Ubuntu…"
-            uv run python -m ingestion.cli ingest --distro ubuntu --activate || echo "Ubuntu ingest failed (continuing)"
+            uv run python -m ingestion.cli ingest --distro ubuntu "${ingest_args[@]}"
 
             echo "Ingesting Fedora…"
-            uv run python -m ingestion.cli ingest --distro fedora --activate || echo "Fedora ingest failed (continuing)"
+            uv run python -m ingestion.cli ingest --distro fedora "${ingest_args[@]}"
           else
             echo "Ingesting ${target}…"
-            uv run python -m ingestion.cli ingest --distro "${target}" --activate
+            uv run python -m ingestion.cli ingest --distro "${target}" "${ingest_args[@]}"
           fi
 
   ingest_macos:
-    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.bsd != 'false') }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.bsd != 'false' && (github.event.inputs.bsd_distro == 'all' || github.event.inputs.bsd_distro == 'macos')) }}
     runs-on: macos-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
@@ -115,20 +141,29 @@ jobs:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
+          BETTERMAN_INGEST_SAMPLE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sample == 'true' && 'true' || 'false' }}
         shell: bash
         run: |
           set -euo pipefail
 
           cd ingestion
 
+          ingest_args=(--activate)
+          if [[ "${BETTERMAN_INGEST_SAMPLE}" == "true" ]]; then
+            ingest_args=(--sample --no-activate)
+          fi
+
           echo "Ingesting macOS (BSD)…"
-          uv run python -m ingestion.cli ingest --distro macos --activate
+          uv run python -m ingestion.cli ingest --distro macos "${ingest_args[@]}"
 
   ingest_freebsd:
-    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.bsd != 'false') }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (github.event.inputs.ingest != 'false' && github.event.inputs.bsd != 'false' && (github.event.inputs.bsd_distro == 'all' || github.event.inputs.bsd_distro == 'freebsd')) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Ingest FreeBSD to Convex staging
         uses: vmactions/freebsd-vm@77ed28d336d03fe19a3f4f7266c1d2c4714dd79d # v1
@@ -160,18 +195,34 @@ jobs:
             $py -m pip install --upgrade pip
             $py -m pip install ./ingestion
 
+            ingest_args="--activate"
+            if [ "${BETTERMAN_INGEST_SAMPLE}" = "true" ]; then
+              ingest_args="--sample --no-activate"
+            fi
+
             echo "Ingesting FreeBSD…"
-            $py -m ingestion.cli ingest --distro freebsd --activate
+            # shellcheck disable=SC2086
+            $py -m ingestion.cli ingest --distro freebsd $ingest_args
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
+          BETTERMAN_INGEST_SAMPLE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.sample == 'true' && 'true' || 'false' }}
 
   promote:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [ingest_linux, ingest_macos, ingest_freebsd]
-    if: ${{ always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.promote == 'true') }}
+    if: >-
+      ${{
+        always() &&
+        (github.event_name != 'workflow_dispatch' || github.event.inputs.promote == 'true') &&
+        (github.event_name != 'workflow_dispatch' || github.event.inputs.sample != 'true') &&
+        (needs.ingest_linux.result == 'success' || needs.ingest_linux.result == 'skipped') &&
+        (needs.ingest_macos.result == 'success' || needs.ingest_macos.result == 'skipped') &&
+        (needs.ingest_freebsd.result == 'success' || needs.ingest_freebsd.result == 'skipped')
+      }}
     steps:
       - name: Promote active Convex staging releases to prod
         env:
