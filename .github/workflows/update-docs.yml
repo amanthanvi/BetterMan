@@ -23,6 +23,8 @@ on:
         type: choice
         required: false
         default: all
+        # Keep choices aligned with BETTERMAN_BSD_DISTROS below; GitHub Actions
+        # does not allow expressions in workflow_dispatch option lists.
         options:
           - all
           - freebsd
@@ -32,6 +34,8 @@ on:
         type: choice
         required: false
         default: all
+        # Keep choices aligned with BETTERMAN_LINUX_DISTROS below; GitHub Actions
+        # does not allow expressions in workflow_dispatch option lists.
         options:
           - all
           - debian
@@ -59,6 +63,12 @@ concurrency:
 
 permissions:
   contents: read
+
+# Canonical full-ingestion and promotion sets. The workflow_dispatch choices
+# above must remain literal because GitHub does not support expressions there.
+env:
+  BETTERMAN_LINUX_DISTROS: debian,ubuntu,fedora,arch,alpine
+  BETTERMAN_BSD_DISTROS: freebsd,macos
 
 jobs:
   ingest_linux:
@@ -101,34 +111,21 @@ jobs:
             ingest_args=(--sample --no-activate)
           fi
 
+          IFS=',' read -r -a available_distros <<< "${BETTERMAN_LINUX_DISTROS}"
           target="${BETTERMAN_LINUX_DISTRO:-all}"
-          case "${target}" in
-            all|debian|ubuntu|fedora|arch|alpine) ;;
-            *)
-              echo "Unsupported Linux distro target: ${target}" >&2
-              exit 2
-              ;;
-          esac
-
           if [[ "${target}" == "all" ]]; then
-            echo "Ingesting Debian…"
-            uv run python -m ingestion.cli ingest --distro debian "${ingest_args[@]}"
-
-            echo "Ingesting Arch…"
-            uv run python -m ingestion.cli ingest --distro arch "${ingest_args[@]}"
-
-            echo "Ingesting Alpine…"
-            uv run python -m ingestion.cli ingest --distro alpine "${ingest_args[@]}"
-
-            echo "Ingesting Ubuntu…"
-            uv run python -m ingestion.cli ingest --distro ubuntu "${ingest_args[@]}"
-
-            echo "Ingesting Fedora…"
-            uv run python -m ingestion.cli ingest --distro fedora "${ingest_args[@]}"
+            selected_distros=("${available_distros[@]}")
+          elif [[ ",${BETTERMAN_LINUX_DISTROS}," == *",${target},"* ]]; then
+            selected_distros=("${target}")
           else
-            echo "Ingesting ${target}…"
-            uv run python -m ingestion.cli ingest --distro "${target}" "${ingest_args[@]}"
+            echo "Unsupported Linux distro target: ${target}" >&2
+            exit 2
           fi
+
+          for distro in "${selected_distros[@]}"; do
+            echo "Ingesting ${distro}…"
+            uv run python -m ingestion.cli ingest --distro "${distro}" "${ingest_args[@]}"
+          done
 
   ingest_macos:
     name: Ingest macOS
@@ -262,8 +259,8 @@ jobs:
           import json
           import os
 
-          linux_distros = ["debian", "ubuntu", "fedora", "arch", "alpine"]
-          bsd_distros = ["freebsd", "macos"]
+          linux_distros = os.environ["BETTERMAN_LINUX_DISTROS"].split(",")
+          bsd_distros = os.environ["BETTERMAN_BSD_DISTROS"].split(",")
 
           is_dispatch = os.environ["BETTERMAN_WORKFLOW_EVENT"] == "workflow_dispatch"
           is_promote_only = is_dispatch and os.environ["BETTERMAN_INGEST_ENABLED"] != "true"

@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 
+# Linux CI helper: requires GNU timeout semantics (`--kill-after`). Local
+# diagnostics should run test-install-playwright-ci.sh, which mocks timeout.
 install_playwright_ci() {
   local attempt
   local status
   local dependencies_ready=false
+
+  if ! command -v timeout >/dev/null 2>&1; then
+    echo "GNU timeout is required by the Linux CI Playwright installer." >&2
+    return 127
+  fi
 
   # A non-timeout apt/mirror failure gets one retry. A timeout stops
   # immediately so a possibly interrupted dpkg run cannot poison a second
