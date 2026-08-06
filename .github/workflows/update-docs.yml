@@ -242,6 +242,12 @@ jobs:
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+          BETTERMAN_WORKFLOW_EVENT: ${{ github.event_name }}
+          BETTERMAN_INGEST_ENABLED: ${{ inputs.ingest && 'true' || 'false' }}
+          BETTERMAN_LINUX_ENABLED: ${{ inputs.linux && 'true' || 'false' }}
+          BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
+          BETTERMAN_BSD_ENABLED: ${{ inputs.bsd && 'true' || 'false' }}
+          BETTERMAN_BSD_DISTRO: ${{ inputs.bsd_distro || 'all' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -254,11 +260,32 @@ jobs:
           python - <<'PY' > promote.json
           import datetime
           import json
+          import os
+
+          linux_distros = ["debian", "ubuntu", "fedora", "arch", "alpine"]
+          bsd_distros = ["freebsd", "macos"]
+
+          is_dispatch = os.environ["BETTERMAN_WORKFLOW_EVENT"] == "workflow_dispatch"
+          is_promote_only = is_dispatch and os.environ["BETTERMAN_INGEST_ENABLED"] != "true"
+
+          if not is_dispatch or is_promote_only:
+              distros = linux_distros + bsd_distros
+          else:
+              distros = []
+              if os.environ["BETTERMAN_LINUX_ENABLED"] == "true":
+                  target = os.environ["BETTERMAN_LINUX_DISTRO"]
+                  distros.extend(linux_distros if target == "all" else [target])
+              if os.environ["BETTERMAN_BSD_ENABLED"] == "true":
+                  target = os.environ["BETTERMAN_BSD_DISTRO"]
+                  distros.extend(bsd_distros if target == "all" else [target])
+
+          if not distros:
+              raise SystemExit("Refusing to promote without a selected distro")
 
           print(json.dumps({
               "fromStage": "staging",
               "toStage": "prod",
-              "distros": ["debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"],
+              "distros": distros,
               "activatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
           }))
           PY

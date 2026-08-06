@@ -418,8 +418,8 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 
 ### Residual automation-risk closure (v0.6.5 cycle)
 
-- [x] Re-enable the monthly dataset workflow and make CI fail if it is disabled again.
-- [x] Block dataset promotion when any selected ingest fails, times out, or is cancelled; keep explicit promote-only recovery.
+- [x] Re-enable the monthly dataset workflow and make CI fail if it is disabled or loses its exact monthly cron.
+- [x] Block dataset promotion when any selected ingest fails, times out, or is cancelled; promote only selected distro pointers while keeping all-distro promote-only recovery.
 - [x] Add a targeted, non-active FreeBSD sample dispatch for current VM-path validation.
 - [x] Extract the Playwright installer and permanently test success, retry, timeout, kill, and exhaustion branches.
 - [x] Fail closed when the bounded OSV exception's advisory set, Vercel dependency edge, package version, evidence, or 30-day review window drifts.

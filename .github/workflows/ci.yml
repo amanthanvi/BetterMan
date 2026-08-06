@@ -44,6 +44,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          cron_count="$(grep -Fxc '    - cron: "0 5 1 * *"' .github/workflows/update-docs.yml || true)"
+          if [[ "$cron_count" != "1" ]]; then
+            echo 'update-dataset must retain exactly one monthly cron: 0 5 1 * *' >&2
+            exit 1
+          fi
+
           state="$(gh api \
             "repos/${GITHUB_REPOSITORY}/actions/workflows/update-docs.yml" \
             --jq .state)"

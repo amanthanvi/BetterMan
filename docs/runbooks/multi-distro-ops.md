@@ -37,12 +37,13 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 - Watch:
   - `gh run list --workflow update-docs.yml --limit 5`
   - `gh run watch <RUN_ID>`
-  - `gh api repos/{owner}/{repo}/actions/workflows/update-docs.yml --jq .state` must return `active`; `ci_contracts` enforces this on every PR/push.
+  - `gh api repos/{owner}/{repo}/actions/workflows/update-docs.yml --jq .state` must return `active`; `ci_contracts` enforces this and the exact monthly `0 5 1 * *` cron on every PR/push.
 
 **Notes**
 
 - The workflow ingests into Convex staging (`BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`) then promotes active staging release pointers to prod.
 - Every selected distro is required. A failed, timed-out, or cancelled ingest blocks promotion.
+- Ingest+promote dispatches promote only the selected distro pointers. Scheduled and explicit promote-only dispatches promote all active staging pointers.
 - Sample dispatches use `--sample --no-activate` and cannot promote. They validate the real acquisition/parser/upload path without moving staging or production active pointers.
 - Promote-only dispatches intentionally allow skipped ingest jobs and copy an already-validated staging release.
 

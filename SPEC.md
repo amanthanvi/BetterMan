@@ -1888,7 +1888,7 @@ Staging and prod must be isolated:
 -   Dependency review for PRs (block vulnerable dependency additions)
 -   **Bundle size reporting (v0.2.0):** Comment on PR with size diff
 -   **API contract check (v0.2.0):** Export OpenAPI + run openapi-typescript; fail if generated types differ
--   **Automation contract checks:** Exercise Playwright installer success/failure branches, fail closed when the bounded OSV exception assumptions drift, and require the monthly dataset workflow to remain enabled
+-   **Automation contract checks:** Exercise Playwright installer success/failure branches, fail closed when the bounded OSV exception assumptions drift, and require the monthly dataset workflow to remain enabled with its `0 5 1 * *` schedule
 
 ### `codeql.yml` (code scanning)
 
@@ -1934,6 +1934,7 @@ Staging and prod must be isolated:
 -   Publish step:
     -   **Auto-promote if checks pass:** Copy dataset release to prod DB automatically
     -   Require every selected distro job to succeed; if any selected ingest fails, times out, or is cancelled, alert and do not promote
+    -   Promote only the distro pointers selected by an ingest+promote dispatch; scheduled and explicit promote-only recovery runs promote all validated staging actives
     -   Never promote a sample run; preserve explicit promote-only manual dispatches for an already-validated staging release
     -   Keep previous release for rollback
 
