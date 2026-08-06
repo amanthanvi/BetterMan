@@ -424,4 +424,5 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Extract the Playwright installer and permanently test success, retry, timeout, kill, and exhaustion branches.
 - [x] Fail closed when the bounded OSV exception's advisory set, Vercel dependency edge, package version, evidence, or 30-day review window drifts.
 - [x] Move `brace-expansion` 5.x to 5.0.9 after registry audit identified GHSA-rgw5-rvv9-x895.
+- [x] Move `js-yaml` 4.x to 4.3.1 after registry audit identified GHSA-5p4m-2wfm-xmqj.
 - [ ] Run the FreeBSD sample on the merged workflow and verify the resulting production deploy independently.
