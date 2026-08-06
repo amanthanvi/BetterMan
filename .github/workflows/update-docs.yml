@@ -207,14 +207,13 @@ jobs:
             $py -m pip install --upgrade pip
             $py -m pip install ./ingestion
 
-            ingest_args="--activate"
+            set -- --activate
             if [ "${BETTERMAN_INGEST_SAMPLE}" = "true" ]; then
-              ingest_args="--sample --no-activate"
+              set -- --sample --no-activate
             fi
 
             echo "Ingesting FreeBSD…"
-            # shellcheck disable=SC2086
-            $py -m ingestion.cli ingest --distro freebsd $ingest_args
+            $py -m ingestion.cli ingest --distro freebsd "$@"
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
