@@ -85,6 +85,22 @@ if (!vercelNode) throw new Error('pnpm list did not return the root Vercel CLI d
 const sandboxNode = vercelNode.dependencies?.sandbox
 if (!sandboxNode) throw new Error('pnpm list did not return the Vercel CLI -> sandbox dependency edge')
 
+const sandboxOccurrences = []
+function collectSandboxOccurrences(value, path = 'projects') {
+  if (!value || typeof value !== 'object') return
+  if (value.from === 'sandbox') sandboxOccurrences.push({ node: value, path })
+
+  for (const [key, child] of Object.entries(value)) {
+    collectSandboxOccurrences(child, `${path}.${key}`)
+  }
+}
+collectSandboxOccurrences(projects)
+
+if (sandboxOccurrences.length !== 1 || sandboxOccurrences[0].node !== sandboxNode) {
+  const found = sandboxOccurrences.map(({ node, path }) => `${path}@${node.version ?? 'unknown'}`).join(', ')
+  throw new Error(`Expected only the Vercel CLI sandbox@3.4.0 edge; found: ${found || 'none'}`)
+}
+
 const sandboxVersion = sandboxNode.version
 if (sandboxVersion !== '3.4.0') {
   throw new Error('Expected Vercel CLI 58.4.4 to retain its sandbox@3.4.0 dependency edge')
