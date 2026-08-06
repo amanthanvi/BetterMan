@@ -34,6 +34,10 @@ jobs:
         with:
           node-version: 26
 
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
+        with:
+          python-version: 3.14
+
       - name: Test Playwright installer failure handling
         run: bash scripts/test-install-playwright-ci.sh
 
@@ -44,7 +48,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cron_count="$(grep -Fxc '    - cron: "0 5 1 * *"' .github/workflows/update-docs.yml || true)"
+          cron_count="$(grep -Ec "^[[:space:]]*-[[:space:]]*cron:[[:space:]]*['\"]?0[[:space:]]+5[[:space:]]+1[[:space:]]+\\*[[:space:]]+\\*['\"]?([[:space:]]*#.*)?$" .github/workflows/update-docs.yml || true)"
           if [[ "$cron_count" != "1" ]]; then
             echo 'update-dataset must retain exactly one monthly cron: 0 5 1 * *' >&2
             exit 1

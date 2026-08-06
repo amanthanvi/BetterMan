@@ -2,28 +2,41 @@
 
 import fs from 'node:fs'
 import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 const configPath = new URL('../osv-scanner.toml', import.meta.url)
 const packagePath = new URL('../package.json', import.meta.url)
 
 const expectedIds = new Set(['GHSA-fm4j-4xhm-xpwx', 'GHSA-gc25-3vc5-2jf9'])
-const config = fs.readFileSync(configPath, 'utf8')
 const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
 
-function readField(block, name) {
-  const match = block.match(new RegExp(`^${name}\\s*=\\s*(?:"([^"]+)"|([^\\s#]+))\\s*$`, 'm'))
-  if (!match) throw new Error(`Missing ${name} in an [[IgnoredVulns]] entry`)
-  return match[1] || match[2]
-}
+const tomlParser = `
+import json
+import sys
+import tomllib
 
-const entries = config
-  .split('[[IgnoredVulns]]')
-  .slice(1)
-  .map((block) => ({
-    id: readField(block, 'id'),
-    ignoreUntil: readField(block, 'ignoreUntil'),
-    reason: readField(block, 'reason'),
-  }))
+with open(sys.argv[1], "rb") as stream:
+    config = tomllib.load(stream)
+
+entries = []
+for item in config.get("IgnoredVulns", []):
+    for field in ("id", "ignoreUntil", "reason"):
+        if field not in item:
+            raise SystemExit(f"Missing {field} in an [[IgnoredVulns]] entry")
+    entries.append({
+        "id": str(item["id"]),
+        "ignoreUntil": str(item["ignoreUntil"]),
+        "reason": str(item["reason"]),
+    })
+
+print(json.dumps(entries))
+`
+const entries = JSON.parse(
+  execFileSync('python3', ['-c', tomlParser, fileURLToPath(configPath)], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  }),
+)
 
 if (entries.length !== expectedIds.size) {
   throw new Error(`Expected exactly ${expectedIds.size} OSV exceptions, found ${entries.length}`)
@@ -62,7 +75,17 @@ const projects = JSON.parse(
   ),
 )
 const rootProject = projects.find((project) => project.name === packageJson.name)
-const sandboxVersion = rootProject?.devDependencies?.vercel?.dependencies?.sandbox?.version
+if (!rootProject) {
+  throw new Error(`pnpm list did not return the expected root project: ${packageJson.name}`)
+}
+
+const vercelNode = rootProject.devDependencies?.vercel
+if (!vercelNode) throw new Error('pnpm list did not return the root Vercel CLI dependency')
+
+const sandboxNode = vercelNode.dependencies?.sandbox
+if (!sandboxNode) throw new Error('pnpm list did not return the Vercel CLI -> sandbox dependency edge')
+
+const sandboxVersion = sandboxNode.version
 if (sandboxVersion !== '3.4.0') {
   throw new Error('Expected Vercel CLI 58.4.4 to retain its sandbox@3.4.0 dependency edge')
 }
