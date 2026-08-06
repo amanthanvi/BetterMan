@@ -169,7 +169,7 @@ jobs:
         uses: vmactions/freebsd-vm@77ed28d336d03fe19a3f4f7266c1d2c4714dd79d # v1
         with:
           release: "15.0"
-          envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA"
+          envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA BETTERMAN_INGEST_SAMPLE"
           usesh: true
           run: |
             set -euo pipefail
@@ -214,6 +214,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [ingest_linux, ingest_macos, ingest_freebsd]
+    # Unselected jobs and an explicit promote-only dispatch are skipped. Any
+    # selected failure/cancellation blocks promotion, and samples never promote.
     if: >-
       ${{
         always() &&
