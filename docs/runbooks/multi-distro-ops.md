@@ -4,6 +4,8 @@ BetterMan supports multiple distributions (Debian default; optional `?distro=ubu
 
 ## Quick checks (prod)
 
+Anonymous command-line requests may receive Vercel's intentional bot challenge. If a check returns `429` with `x-vercel-mitigated: challenge`, use authenticated `vercel curl` as documented in `docs/runbooks/vercel-ops.md`; do not weaken the checkpoint.
+
 - Active releases:
   - `curl -fsS https://betterman.sh/api/v1/info`
   - `curl -fsS 'https://betterman.sh/api/v1/info?distro=ubuntu'`
@@ -29,16 +31,21 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 - Trigger manually:
   - Ingest to staging: `gh workflow run update-dataset`
   - Arch-only (skip BSD): `gh workflow run update-dataset -f linux_distro=arch -f bsd=false`
+  - FreeBSD sample only: `gh workflow run update-dataset -f linux=false -f bsd=true -f bsd_distro=freebsd -f sample=true -f promote=false`
   - Ingest + promote: `gh workflow run update-dataset -f promote=true`
   - Promote-only: `gh workflow run update-dataset -f ingest=false -f promote=true`
 - Watch:
   - `gh run list --workflow update-docs.yml --limit 5`
   - `gh run watch <RUN_ID>`
+  - `gh api repos/{owner}/{repo}/actions/workflows/update-docs.yml --jq .state` must return `active`; `ci_contracts` enforces this and the exact monthly `0 5 1 * *` cron on every PR/push.
 
 **Notes**
 
 - The workflow ingests into Convex staging (`BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`) then promotes active staging release pointers to prod.
-- Debian is always required; the remaining distros may be configured to “continue on failure” in workflow steps. When multi-distro is expected live, treat any distro ingestion failures as release blockers.
+- Every selected distro is required. A failed, timed-out, or cancelled ingest blocks promotion.
+- Ingest+promote dispatches promote only the selected distro pointers. Scheduled and explicit promote-only dispatches promote all active staging pointers.
+- Sample dispatches use `--sample --no-activate` and cannot promote. They validate the real acquisition/parser/upload path without moving staging or production active pointers.
+- Promote-only dispatches intentionally allow skipped ingest jobs and copy an already-validated staging release.
 
 ## Verify distro API behavior
 

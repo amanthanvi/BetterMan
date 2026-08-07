@@ -1888,6 +1888,7 @@ Staging and prod must be isolated:
 -   Dependency review for PRs (block vulnerable dependency additions)
 -   **Bundle size reporting (v0.2.0):** Comment on PR with size diff
 -   **API contract check (v0.2.0):** Export OpenAPI + run openapi-typescript; fail if generated types differ
+-   **Automation contract checks:** Exercise Playwright installer success/failure branches, fail closed when the bounded OSV exception assumptions drift, and require the monthly dataset workflow to remain enabled with its `0 5 1 * *` schedule
 
 ### `codeql.yml` (code scanning)
 
@@ -1920,6 +1921,7 @@ Staging and prod must be isolated:
 **Decision:** Staging first, auto-promote.
 
 -   Scheduled monthly + manual dispatch
+-   Bound every distro job with an explicit timeout; manual dispatch can target a non-active sample for one distro (including the real FreeBSD VM path)
 -   Ingestion steps:
     -   resolve container image digest
     -   extract man sources
@@ -1931,7 +1933,9 @@ Staging and prod must be isolated:
     -   Check parse success rates, search functionality, sample page renders
 -   Publish step:
     -   **Auto-promote if checks pass:** Copy dataset release to prod DB automatically
-    -   If validation fails, alert and do not promote
+    -   Require every selected distro job to succeed; if any selected ingest fails, times out, or is cancelled, alert and do not promote
+    -   Promote only the distro pointers selected by an ingest+promote dispatch; scheduled and explicit promote-only recovery runs promote all validated staging actives
+    -   Never promote a sample run; preserve explicit promote-only manual dispatches for an already-validated staging release
     -   Keep previous release for rollback
 
 **Security note**
