@@ -29,6 +29,7 @@ Living execution plan for shipping `v0.6.0` from `SPEC.md`.
 - [x] v0.6.2 shipped (tag `v0.6.2`)
 - [x] v0.6.3 shipped (tag `v0.6.3`)
 - [x] v0.6.4 shipped (tag `v0.6.4`)
+- [x] v0.6.5 shipped (tag `v0.6.5`)
 
 ## Golden Commands (current; proven)
 
@@ -384,7 +385,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Stop blocking man page SSR on related-command fetch (load related client-side after first paint).
 - [x] Improve large man-page rendering with heuristic virtualization + viewport-gated code highlighting.
 - [x] Preload critical fonts to reduce first-paint CLS on man pages.
-- [ ] Tag `v0.6.5`
+- [x] Tag `v0.6.5`
 
 ### Production delivery hardening (v0.6.5 cycle)
 
@@ -427,4 +428,4 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Fail closed when the bounded OSV exception's advisory set, Vercel dependency edge, package version, evidence, or 30-day review window drifts.
 - [x] Move `brace-expansion` 5.x to 5.0.9 after registry audit identified GHSA-rgw5-rvv9-x895.
 - [x] Move `js-yaml` 4.x to 4.3.1 after registry audit identified GHSA-5p4m-2wfm-xmqj.
-- [ ] Run the FreeBSD sample on the merged workflow; verify promotion stays skipped and production remains on the independently deployed main SHA.
+- [x] Run the FreeBSD sample on the merged workflow; run `31330645098` ingested 4/4 pages with `published:false`, skipped promotion, and left production on the independently deployed main SHA.

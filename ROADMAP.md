@@ -7,7 +7,7 @@ This project is actively evolving.
 
 ## Current focus
 
-- `v0.6.0` shipped. Next: papercuts + follow-ups (TBD).
+- `v0.6.5` shipped. Next: papercuts + follow-ups (TBD).
 
 ## How to help
 
