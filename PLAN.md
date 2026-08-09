@@ -407,6 +407,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Remove vulnerable transitive versions from the pinned Vercel CLI dependency graph.
 - [x] Document the bounded OSV exception for Vercel's unrelated `sandbox@3.4.0` package-name collision.
 - [x] Upgrade transitive Click to 8.4.2 after Scorecards identified PYSEC-2026-2132 (fixed in 8.3.3).
+- [x] Pin transitive `nanoid` 3.x to 3.3.17 after Dependabot identified GHSA-2v37-7h3g-55p8.
 
 ### CI quality-risk closure (v0.6.5 cycle)
 

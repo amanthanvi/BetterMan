@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Security: pin transitive `nanoid` 3.x to 3.3.17 to resolve GHSA-2v37-7h3g-55p8.
 - Security: remove caller-controlled dataset routing from anonymous Convex queries/actions, force public reads to `prod`, and contract-test the rollback-compatible boundary in CI.
 - Reliability: scope Convex ingestion credentials to the protected GitHub `production` environment and validate them before starting Linux, macOS, or FreeBSD ingestion runners.
 - Reliability: restore and contract-test the monthly dataset schedule, gate promotion on all selected ingests and distro pointers, add a non-active FreeBSD VM sample path, and enforce Playwright/OSV automation contracts in CI.
