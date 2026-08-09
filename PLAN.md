@@ -1,6 +1,6 @@
-# BetterMan — PLAN (v0.6.0)
+# BetterMan — PLAN
 
-Living execution plan for shipping `v0.6.0` from `SPEC.md`.
+Living execution plan for BetterMan from `SPEC.md`.
 
 - Branch: `main` (small/medium diffs; commit + push frequently)
 - Principle: fix root causes; no drive‑by refactors
