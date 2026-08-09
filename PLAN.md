@@ -374,7 +374,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Dependencies: `next` to 15.5.22, `seroval` to 1.5.6 (critical GHSA-mv8w-475r-vwqw), pnpm pin to 10.34.4 (CVE-2026-59195), plus patched `brace-expansion` overrides for GHSA-mh99-v99m-4gvg.
 - [x] Public origin: enforce `https://betterman.sh` for production, inject `PUBLIC_BASE_URL` at deploy time, and ignore forwarding headers in production.
 - [ ] Follow-up: `backend/app/web/{seo,runtime_config}.py` are unmounted and superseded by the Next.js routes — decide which implementation is canonical and delete the other.
-- [ ] Follow-up: public Convex queries accept `stage` from the caller, so `staging` data is readable directly from the deployment; derive it server-side.
+- [x] Public Convex queries/actions resolve `prod` server-side; ignore the deprecated rollback-compatible `stage` field and contract-test the anonymous API boundary.
 
 ### Release v0.6.5 (performance hardening)
 
@@ -419,10 +419,11 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 ### Residual automation-risk closure (v0.6.5 cycle)
 
 - [x] Re-enable the monthly dataset workflow and make CI fail if it is disabled or loses its exact monthly cron.
+- [x] Bind ingestion to the protected `production` environment and fail fast on missing Convex credentials before starting platform runners.
 - [x] Block dataset promotion when any selected ingest fails, times out, or is cancelled; promote only selected distro pointers while keeping all-distro promote-only recovery.
 - [x] Add a targeted, non-active FreeBSD sample dispatch for current VM-path validation.
 - [x] Extract the Playwright installer and permanently test success, retry, timeout, kill, and exhaustion branches.
 - [x] Fail closed when the bounded OSV exception's advisory set, Vercel dependency edge, package version, evidence, or 30-day review window drifts.
 - [x] Move `brace-expansion` 5.x to 5.0.9 after registry audit identified GHSA-rgw5-rvv9-x895.
 - [x] Move `js-yaml` 4.x to 4.3.1 after registry audit identified GHSA-5p4m-2wfm-xmqj.
-- [ ] Run the FreeBSD sample on the merged workflow and verify the resulting production deploy independently.
+- [ ] Run the FreeBSD sample on the merged workflow; verify promotion stays skipped and production remains on the independently deployed main SHA.

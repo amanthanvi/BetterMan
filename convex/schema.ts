@@ -16,6 +16,11 @@ export const datasetStageValidator = v.union(
   v.literal("prod"),
 );
 
+// Convex functions deploy before the frontend. Keep accepting the legacy field
+// so the previous frontend and historical rollbacks remain compatible; public
+// handlers ignore it and resolve PUBLIC_DATASET_STAGE instead.
+export const publicStageCompatibilityValidator = v.optional(datasetStageValidator);
+
 const contentJsonKindValidator = v.union(
   v.literal("docJson"),
   v.literal("synopsisJson"),

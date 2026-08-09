@@ -13,7 +13,8 @@ App runtime:
 - `NEXT_PUBLIC_CONVEX_URL` — Convex client URL, usually `https://<deployment>.convex.cloud`.
 - `CONVEX_URL` — same value for server-side Next.js code.
 - `VITE_CONVEX_URL` — only needed for a Vite frontend deployment; set it to the same Convex client URL if that frontend is deployed.
-- `BETTERMAN_DATASET_STAGE=prod`
+
+Public Convex queries/actions resolve the `prod` pointer internally. The app runtime cannot select `staging`.
 
 Ingestion and promotion:
 
@@ -22,12 +23,10 @@ Ingestion and promotion:
 - `BETTERMAN_DATASET_STAGE=staging` for import, `prod` only for direct emergency prod imports.
 - `BETTERMAN_INGEST_GIT_SHA` — source revision for dataset release IDs.
 
-GitHub secret names used by repo workflows:
+Protected GitHub `production` environment values used by repo workflows:
 
-- `BETTERMAN_CONVEX_HTTP_URL`
-- `BETTERMAN_CONVEX_INGEST_SECRET`
-- Protected `production` environment secret: `CONVEX_DEPLOY_KEY`
-- Protected `production` environment variable: `CONVEX_URL`
+- Secrets: `BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`, `CONVEX_DEPLOY_KEY`
+- Variable: `CONVEX_URL`
 
 Do not set `DATABASE_URL`, `REDIS_URL`, or `FASTAPI_INTERNAL_URL` for the cutover path.
 
@@ -77,31 +76,7 @@ Scheduled production imports should continue to use `.github/workflows/update-do
 
 ## Verify staging import
 
-Use the read-only Convex check before promotion. Choose a realistic page-count floor for the distros included in the import.
-
-```bash
-export NEXT_PUBLIC_CONVEX_URL="$BETTERMAN_CONVEX_URL"
-export CONVEX_URL="$BETTERMAN_CONVEX_URL"
-export BETTERMAN_DATASET_STAGE=staging
-export BETTERMAN_CHECK_DISTROS=debian,ubuntu,fedora,arch,alpine
-export BETTERMAN_MIN_PAGE_COUNT=1000
-
-pnpm convex:prod-check
-```
-
-The check requires:
-
-- An active release for every requested distro.
-- `pageCount >= BETTERMAN_MIN_PAGE_COUNT`.
-- Search query `tarr` returns `tar(1)`.
-- Direct page query `tar/1` returns a page.
-- Metadata query `tar/1` returns the same page identity.
-
-For machine-readable output:
-
-```bash
-BETTERMAN_CHECK_JSON=1 pnpm convex:prod-check
-```
+Staging is intentionally absent from the anonymous Convex API. Before promotion, require successful ingest output for every selected distro, including its release ID, page count, parse-quality gates, and activation result. Confirm the corresponding `staging` active pointers through the authenticated Convex dashboard or other deployment-admin tooling. Do not add a caller-selected stage back to public queries for previewing.
 
 ## Promote staging to prod
 
@@ -138,7 +113,6 @@ gh workflow run update-dataset -f ingest=false -f promote=true
 ```bash
 export NEXT_PUBLIC_CONVEX_URL="$BETTERMAN_CONVEX_URL"
 export CONVEX_URL="$BETTERMAN_CONVEX_URL"
-export BETTERMAN_DATASET_STAGE=prod
 export BETTERMAN_CHECK_DISTROS=debian,ubuntu,fedora,arch,alpine
 export BETTERMAN_MIN_PAGE_COUNT=1000
 

@@ -167,7 +167,6 @@ jobs:
         shell: bash
         env:
           CONVEX_URL: ${{ vars.CONVEX_URL }}
-          BETTERMAN_DATASET_STAGE: prod
           BETTERMAN_CHECK_DISTROS: debian
           BETTERMAN_MIN_PAGE_COUNT: 1
         run: |

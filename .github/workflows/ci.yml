@@ -44,6 +44,9 @@ jobs:
       - name: Check bounded OSV exceptions
         run: node scripts/check-osv-exceptions.mjs
 
+      - name: Check public Convex release isolation
+        run: node scripts/check-convex-public-api.mjs
+
       - name: Check monthly dataset workflow is active
         env:
           GH_TOKEN: ${{ github.token }}
@@ -304,8 +307,6 @@ jobs:
           CONVEX_HTTP_URL="$CONVEX_SITE_URL" node scripts/seed-convex-e2e.mjs
 
       - name: Start Next.js
-        env:
-          BETTERMAN_DATASET_STAGE: prod
         run: |
           set -euo pipefail
 

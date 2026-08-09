@@ -14,6 +14,7 @@ export const DATASET_STAGES = ["staging", "prod"] as const;
 
 export type Distro = (typeof DISTROS)[number];
 export type DatasetStage = (typeof DATASET_STAGES)[number];
+export const PUBLIC_DATASET_STAGE: DatasetStage = "prod";
 export type ManPageContentPayload = {
   docJson?: string;
   synopsisJson?: string;
