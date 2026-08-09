@@ -1,6 +1,6 @@
 # Search latency spike
 
-> **Legacy FastAPI/Railway reference.** Current production search runs through Next.js on Vercel and Convex. For a current incident, correlate Vercel function latency/errors with Convex function logs and query metrics for the active `BETTERMAN_DATASET_STAGE`; the PostgreSQL procedures below apply only to the retained legacy service.
+> **Legacy FastAPI/Railway reference.** Current production search runs through Next.js on Vercel and the Convex `prod` pointer. For a current incident, correlate Vercel function latency/errors with Convex function logs and query metrics; the PostgreSQL procedures below apply only to the retained legacy service.
 
 **Symptoms**
 

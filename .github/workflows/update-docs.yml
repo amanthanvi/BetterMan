@@ -71,10 +71,32 @@ env:
   BETTERMAN_BSD_DISTROS: freebsd,macos
 
 jobs:
+  preflight:
+    name: Validate ingestion configuration
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.ingest || inputs.promote }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 1
+    steps:
+      - name: Require protected Convex ingestion secrets
+        env:
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CONVEX_HTTP_URL:-}" || -z "${CONVEX_INGEST_SECRET:-}" ]]; then
+            echo "Missing protected production environment secrets: BETTERMAN_CONVEX_HTTP_URL / BETTERMAN_CONVEX_INGEST_SECRET." >&2
+            exit 1
+          fi
+
   ingest_linux:
     name: Ingest Linux
     if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.linux) }}
+    needs: [preflight]
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -130,7 +152,9 @@ jobs:
   ingest_macos:
     name: Ingest macOS
     if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.bsd && (inputs.bsd_distro == 'all' || inputs.bsd_distro == 'macos')) }}
+    needs: [preflight]
     runs-on: macos-latest
+    environment: production
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -167,7 +191,9 @@ jobs:
   ingest_freebsd:
     name: Ingest FreeBSD
     if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.bsd && (inputs.bsd_distro == 'all' || inputs.bsd_distro == 'freebsd')) }}
+    needs: [preflight]
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -221,8 +247,9 @@ jobs:
   promote:
     name: Promote dataset
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 10
-    needs: [ingest_linux, ingest_macos, ingest_freebsd]
+    needs: [preflight, ingest_linux, ingest_macos, ingest_freebsd]
     # Unselected jobs and an explicit promote-only dispatch are skipped. Any
     # selected failure/cancellation blocks promotion, and samples never promote.
     if: >-
@@ -230,6 +257,7 @@ jobs:
         always() &&
         (github.event_name != 'workflow_dispatch' || inputs.promote) &&
         (github.event_name != 'workflow_dispatch' || !inputs.sample) &&
+        needs.preflight.result == 'success' &&
         (needs.ingest_linux.result == 'success' || needs.ingest_linux.result == 'skipped') &&
         (needs.ingest_macos.result == 'success' || needs.ingest_macos.result == 'skipped') &&
         (needs.ingest_freebsd.result == 'success' || needs.ingest_freebsd.result == 'skipped')

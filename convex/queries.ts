@@ -2,13 +2,14 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { datasetStageValidator, distroValidator } from "./schema";
+import { distroValidator, publicStageCompatibilityValidator } from "./schema";
 import {
   deterministicSnippet,
   DISTROS,
   normalizeName,
   normalizeSection,
   prefixUpperBound,
+  PUBLIC_DATASET_STAGE,
   releasePackageManifest,
   sectionLabel,
   sectionSortKey,
@@ -65,11 +66,11 @@ async function searchDocsByNamePrefix(
 
 export const getInfo = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
   },
   handler: async (ctx, args) => {
-    const release = await activeRelease(ctx, args);
+    const release = await activeRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro });
     if (!release) {
       return {
         datasetReleaseId: "uninitialized",
@@ -92,11 +93,14 @@ export const getInfo = query({
 
 export const listSections = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
   },
   handler: async (ctx, args) => {
-    const release = await requireActiveRelease(ctx, args);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     const stats = await ctx.db
       .query("releaseSectionStats")
       .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", release._id))
@@ -113,7 +117,7 @@ export const listSections = query({
 
 export const getManMetaByNameAndSection = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     name: v.string(),
     section: v.string(),
@@ -138,7 +142,10 @@ export const getManMetaByNameAndSection = query({
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const section = normalizeSection(args.section);
-    const release = await requireActiveRelease(ctx, args);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     const page = await pageByNameAndSection(ctx, {
       releaseId: release._id,
       name,
@@ -165,7 +172,7 @@ export const getManMetaByNameAndSection = query({
 
 export const listSection = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     section: v.string(),
     limit: v.number(),
@@ -175,7 +182,10 @@ export const listSection = query({
     const section = normalizeSection(args.section);
     const limit = boundedInt(args.limit, 1, MAX_SECTION_LIMIT);
     const offset = boundedInt(args.offset, 0, MAX_SECTION_OFFSET);
-    const release = await requireActiveRelease(ctx, args);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     const stat = await ctx.db
       .query("releaseSectionStats")
       .withIndex("by_releaseId_and_section", (q) =>
@@ -211,7 +221,7 @@ export const listSection = query({
 
 export const getRelated = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     name: v.string(),
     section: v.string(),
@@ -219,7 +229,10 @@ export const getRelated = query({
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const section = normalizeSection(args.section);
-    const release = await requireActiveRelease(ctx, args);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     const page = await pageByNameAndSection(ctx, {
       releaseId: release._id,
       name,
@@ -300,7 +313,7 @@ function typoFallbackQuery(queryNorm: string): string | null {
 
 export const search = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     q: v.string(),
     section: v.union(v.string(), v.null()),
@@ -317,7 +330,10 @@ export const search = query({
     const section = args.section ? normalizeSection(args.section) : null;
     const limit = boundedInt(args.limit, 1, MAX_SEARCH_LIMIT);
     const offset = boundedInt(args.offset, 0, MAX_SEARCH_OFFSET);
-    const release = await requireActiveRelease(ctx, args);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     const takeCount = Math.min(offset + limit + 5, MAX_SEARCH_OFFSET + MAX_SEARCH_LIMIT);
 
     // Prefix-only: full-text search currently reads the whole text index per query.
@@ -381,13 +397,16 @@ export const search = query({
 
 export const suggest = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     name: v.string(),
   },
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
-    const release = await requireActiveRelease(ctx, args);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     const docs = await searchDocsByNamePrefix(ctx, {
       releaseId: release._id,
       section: null,
@@ -408,11 +427,14 @@ export const suggest = query({
 
 export const listLicenses = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
   },
   handler: async (ctx, args) => {
-    const release = await requireActiveRelease(ctx, args);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     const packages = await ctx.db
       .query("licensePackages")
       .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", release._id))
@@ -435,13 +457,16 @@ export const listLicenses = query({
 
 export const getLicense = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     packageName: v.string(),
   },
   handler: async (ctx, args) => {
     const pkg = args.packageName.trim().toLowerCase();
-    const release = await requireActiveRelease(ctx, args);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     const license = await ctx.db
       .query("licenses")
       .withIndex("by_releaseId_and_packageName", (q) =>
@@ -460,12 +485,12 @@ export const getLicense = query({
 
 export const listSeoReleases = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const releases = await Promise.all(
       DISTROS.map(async (distro) => {
-        const release = await activeRelease(ctx, { stage: args.stage, distro });
+        const release = await activeRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro });
         if (!release) return null;
         return {
           distro,
@@ -485,12 +510,15 @@ export const listSeoReleases = query({
 
 export const listSitemapPage = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     page: v.number(),
   },
   handler: async (ctx, args) => {
-    const release = await activeRelease(ctx, args);
+    const release = await activeRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     if (!release) return null;
     const pages = await ctx.db
       .query("manPages")
@@ -508,13 +536,16 @@ export const listSitemapPage = query({
 
 export const listSitemapPageChunk = query({
   args: {
-    stage: datasetStageValidator,
+    stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     page: v.number(),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const release = await activeRelease(ctx, args);
+    const release = await activeRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
     if (!release) return null;
     const paginationOpts = {
       ...args.paginationOpts,

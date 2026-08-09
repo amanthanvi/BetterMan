@@ -1871,8 +1871,9 @@ Staging and prod must be isolated:
 -   separate Convex stage pointers (`staging` and `prod`)
 -   separate secrets
 -   separate dataset releases (publish to staging first)
+-   anonymous Convex queries/actions resolve only `prod`; staging inspection requires protected ingestion/admin tooling
 
-**Note:** `update-dataset` in GitHub Actions imports releases through Convex HTTP actions (`BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`). Promotion copies active `staging` release pointers to `prod`.
+**Note:** `update-dataset` in GitHub Actions imports releases through Convex HTTP actions using `BETTERMAN_CONVEX_HTTP_URL` and `BETTERMAN_CONVEX_INGEST_SECRET` from the protected `production` environment. A preflight validates both before ingestion runners start. Promotion copies active `staging` release pointers to `prod`.
 
 ## GitHub Actions Workflows (Responsibilities)
 
@@ -2942,11 +2943,11 @@ Current production services:
    - Public search is prefix/suggest only (Convex full-text search index retired; search docs store compact metadata)
    - Serves SEO endpoints directly (Next owns `robots.txt` + sitemaps)
    - Public domain: `betterman.sh`
-   - Env: `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`, `BETTERMAN_DATASET_STAGE`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`
+   - Env: `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`
 
 2. **Convex Production** (active data plane):
    - Owns dataset reads, search, content actions, file storage, and rate-limit state
-   - Selected with `BETTERMAN_DATASET_STAGE=prod`
+   - Anonymous queries/actions resolve the `prod` dataset pointer internally; callers cannot select `staging`
 
 3. **FastAPI Service on Railway** (legacy/internal during cleanup):
    - No longer required by active Next.js runtime
@@ -3262,7 +3263,7 @@ export const STORAGE_KEYS = {
 | Variable | Service | Description |
 |----------|---------|-------------|
 | `NEXT_PUBLIC_CONVEX_URL` / `CONVEX_URL` | Next.js | Convex client URL |
-| `BETTERMAN_DATASET_STAGE` | Next.js | Active dataset pointer stage (`prod` default, `staging` for previews) |
+| `BETTERMAN_DATASET_STAGE` | Ingestion | Protected import target (`staging` default; `prod` only for direct emergency imports) |
 | `CONVEX_HTTP_URL` / `CONVEX_INGEST_SECRET` | Ingestion | Convex HTTP actions URL and bearer token |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Next.js | Plausible analytics domain |
 | `NEXT_PUBLIC_SENTRY_DSN` | Next.js | Sentry DSN for frontend |
@@ -3371,7 +3372,7 @@ v0.5.0 has **deployment breaking changes**:
 
 **Recommended deployment order:**
 1. Deploy Convex functions/schema and configure `CONVEX_INGEST_SECRET`
-2. Deploy Next.js service with Convex URL env vars and `BETTERMAN_DATASET_STAGE=prod`
+2. Deploy Next.js service with Convex URL env vars; public Convex reads resolve `prod` internally
 3. Route public domain to Next.js service (update DNS to Railway-provided traffic route targets)
 4. Verify SSR, `/api/v1/*` Convex-backed route handlers, Sentry, Plausible
 5. Verify all 7 distros ingested and active

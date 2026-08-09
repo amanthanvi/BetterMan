@@ -27,7 +27,7 @@ The records below describe the former Railway topology. Current production DNS t
 Prereqs:
 
 - `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL` is set on the `nextjs` service.
-- `BETTERMAN_DATASET_STAGE=prod` is set on the `nextjs` service.
+- Legacy Railway `nextjs` configuration may still contain `BETTERMAN_DATASET_STAGE`; current public Convex reads ignore it and resolve `prod` internally.
 - `/api/v1/info` works on the Next service domain (`https://nextjs-…up.railway.app/api/v1/info`).
 
 DNS (Cloudflare):

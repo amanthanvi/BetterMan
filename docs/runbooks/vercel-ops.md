@@ -65,8 +65,8 @@ Also verify in a real browser:
 ## Failure triage
 
 - Build failure: inspect the `deploy_production` job in the `deploy-vercel` workflow and Vercel build logs; reproduce with `pnpm next:build`.
-- Convex deploy/check failure: verify `CONVEX_DEPLOY_KEY` and the `CONVEX_URL` GitHub environment variable, then run `CONVEX_URL=<production-url> BETTERMAN_DATASET_STAGE=prod pnpm convex:prod-check` locally. Do not continue to Vercel until the data, search, page, and metadata checks pass.
-- Missing environment: verify the four GitHub secrets, the GitHub `CONVEX_URL` environment variable, and Vercel production environment variables (`NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`, `BETTERMAN_DATASET_STAGE=prod`). The deploy script enforces `PUBLIC_BASE_URL=https://betterman.sh` on each production deployment.
+- Convex deploy/check failure: verify `CONVEX_DEPLOY_KEY` and the `CONVEX_URL` GitHub environment variable, then run `CONVEX_URL=<production-url> pnpm convex:prod-check` locally. Do not continue to Vercel until the data, search, page, and metadata checks pass.
+- Missing environment: verify the protected GitHub `production` environment secrets and `CONVEX_URL` variable, plus the Vercel production Convex URL (`NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`). The deploy script enforces `PUBLIC_BASE_URL=https://betterman.sh` on each production deployment.
 - Smoke failure: use `vercel curl` against the immutable deployment URL before changing the production alias.
 - Alias mismatch: inspect both the immutable deployment and both custom domains; the script attempts automatic rollback and must not declare success until their deployment IDs match.
 - Runtime errors: inspect Vercel runtime logs/errors and correlate the deployment ID before rolling back.

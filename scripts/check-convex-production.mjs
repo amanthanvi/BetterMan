@@ -2,7 +2,6 @@
 import { ConvexHttpClient } from 'convex/browser'
 import { anyApi as api } from 'convex/server'
 
-const VALID_STAGES = new Set(['staging', 'prod'])
 const VALID_DISTROS = new Set(['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos'])
 
 function usage() {
@@ -14,7 +13,6 @@ Required:
   NEXT_PUBLIC_CONVEX_URL, CONVEX_URL, or VITE_CONVEX_URL
 
 Optional:
-  BETTERMAN_DATASET_STAGE=prod
   BETTERMAN_CHECK_DISTROS=debian
   BETTERMAN_MIN_PAGE_COUNT=1
   BETTERMAN_CHECK_JSON=1
@@ -27,14 +25,6 @@ function firstEnv(...names) {
     if (value) return value
   }
   return ''
-}
-
-function parseStage() {
-  const stage = process.env.BETTERMAN_DATASET_STAGE?.trim() || 'prod'
-  if (!VALID_STAGES.has(stage)) {
-    throw new Error(`BETTERMAN_DATASET_STAGE must be one of: ${[...VALID_STAGES].join(', ')}`)
-  }
-  return stage
 }
 
 function parseDistros() {
@@ -76,10 +66,10 @@ function hasGoldenPage(results, golden) {
   return results.some((result) => result.name === golden.name && result.section === golden.section)
 }
 
-async function checkDistro(client, { stage, distro, minPageCount }) {
+async function checkDistro(client, { distro, minPageCount }) {
   const failures = []
   const golden = GOLDEN_CHECKS[distro]
-  const info = await client.query(api.queries.getInfo, { stage, distro })
+  const info = await client.query(api.queries.getInfo, { distro })
   if (info.datasetReleaseId === 'uninitialized') {
     failures.push('no active release')
   }
@@ -90,7 +80,6 @@ async function checkDistro(client, { stage, distro, minPageCount }) {
   let search = null
   try {
     search = await client.query(api.queries.search, {
-      stage,
       distro,
       q: golden.query,
       section: null,
@@ -107,7 +96,6 @@ async function checkDistro(client, { stage, distro, minPageCount }) {
   let page = null
   try {
     page = await client.action(api.content.getManByNameAndSection, {
-      stage,
       distro,
       name: golden.name,
       section: golden.section,
@@ -124,7 +112,6 @@ async function checkDistro(client, { stage, distro, minPageCount }) {
   let metadata = null
   try {
     metadata = await client.query(api.queries.getManMetaByNameAndSection, {
-      stage,
       distro,
       name: golden.name,
       section: golden.section,
@@ -168,11 +155,10 @@ async function main() {
     throw new Error('NEXT_PUBLIC_CONVEX_URL, CONVEX_URL, or VITE_CONVEX_URL is required')
   }
 
-  const stage = parseStage()
   const distros = parseDistros()
   const minPageCount = parseMinPageCount()
   const client = new ConvexHttpClient(convexUrl)
-  const releases = await client.query(api.queries.listSeoReleases, { stage })
+  const releases = await client.query(api.queries.listSeoReleases, {})
   const activeDistros = new Set(releases.items.map((item) => item.distro))
   const results = []
 
@@ -194,11 +180,11 @@ async function main() {
       })
       continue
     }
-    results.push(await checkDistro(client, { stage, distro, minPageCount }))
+    results.push(await checkDistro(client, { distro, minPageCount }))
   }
 
   const payload = {
-    stage,
+    stage: 'prod',
     checkedDistros: distros,
     activeReleaseCount: releases.items.length,
     urlsPerFile: releases.urlsPerFile,
