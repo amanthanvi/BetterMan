@@ -1,17 +1,15 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { getPublicOrigin } from './public-origin'
 
 const originalPublicBaseUrl = process.env.PUBLIC_BASE_URL
 const originalNextPublicBaseUrl = process.env.NEXT_PUBLIC_BASE_URL
 const originalRailwayPublicDomain = process.env.RAILWAY_PUBLIC_DOMAIN
-const originalNodeEnv = process.env.NODE_ENV
-
 afterEach(() => {
+  vi.unstubAllEnvs()
   restoreEnv('PUBLIC_BASE_URL', originalPublicBaseUrl)
   restoreEnv('NEXT_PUBLIC_BASE_URL', originalNextPublicBaseUrl)
   restoreEnv('RAILWAY_PUBLIC_DOMAIN', originalRailwayPublicDomain)
-  restoreEnv('NODE_ENV', originalNodeEnv)
 })
 
 describe('getPublicOrigin', () => {
@@ -26,7 +24,7 @@ describe('getPublicOrigin', () => {
     delete process.env.PUBLIC_BASE_URL
     delete process.env.NEXT_PUBLIC_BASE_URL
     process.env.RAILWAY_PUBLIC_DOMAIN = 'stale-legacy.up.railway.app'
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('NODE_ENV', 'development')
 
     const request = new Request('http://internal/robots.txt', {
       headers: {
@@ -41,7 +39,7 @@ describe('getPublicOrigin', () => {
   it('does not trust forwarding headers when production configuration is missing', () => {
     delete process.env.PUBLIC_BASE_URL
     delete process.env.NEXT_PUBLIC_BASE_URL
-    process.env.NODE_ENV = 'production'
+    vi.stubEnv('NODE_ENV', 'production')
 
     const request = new Request('https://deployment.vercel.app/robots.txt', {
       headers: {
