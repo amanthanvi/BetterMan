@@ -30,7 +30,7 @@
 		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest"
 	},
 	"dependencies": {
-		"convex": "^1.39.1"
+		"convex": "^1.44.0"
 	},
 	"devDependencies": {
 		"@types/node": "^26.1.2",
