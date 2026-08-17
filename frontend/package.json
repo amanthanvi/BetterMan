@@ -15,7 +15,7 @@
 	},
 	"dependencies": {
 		"@radix-ui/react-dialog": "^1.1.23",
-		"@sentry/react": "^10.46.0",
+		"@sentry/react": "^10.70.0",
 		"@tailwindcss/vite": "^4.2.2",
 		"@tanstack/react-query": "^5.101.4",
 		"@tanstack/react-router": "^1.160.0",
