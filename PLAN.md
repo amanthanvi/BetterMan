@@ -375,7 +375,7 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Next.js: strip `__BM_*__` highlight sentinels from man page text before marker application.
 - [x] Dependencies: `next` to 15.5.22, `seroval` to 1.5.6 (critical GHSA-mv8w-475r-vwqw), pnpm pin to 10.34.4 (CVE-2026-59195), plus patched `brace-expansion` overrides for GHSA-mh99-v99m-4gvg.
 - [x] Public origin: enforce `https://betterman.sh` for production, inject `PUBLIC_BASE_URL` at deploy time, and ignore forwarding headers in production.
-- [ ] Follow-up: `backend/app/web/{seo,runtime_config}.py` are unmounted and superseded by the Next.js routes — decide which implementation is canonical and delete the other.
+- [x] Remove unmounted `backend/app/web/{seo,runtime_config}.py`; Next.js is canonical for public SEO routes and runtime configuration.
 - [x] Public Convex queries/actions resolve `prod` server-side; ignore the deprecated rollback-compatible `stage` field and contract-test the anonymous API boundary.
 
 ### Release v0.6.5 (performance hardening)
