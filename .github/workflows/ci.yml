@@ -318,6 +318,7 @@ jobs:
           export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
           export CONVEX_URL="$CONVEX_URL"
           export CONVEX_INGEST_SECRET="e2e-secret"
+          export PUBLIC_BASE_URL="http://127.0.0.1:3000"
 
           pnpm -C nextjs build
 
