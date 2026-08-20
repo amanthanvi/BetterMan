@@ -373,3 +373,9 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [ ] Follow-up: `nextjs/lib/public-origin.ts` falls back to `x-forwarded-host`; set `PUBLIC_BASE_URL` in production or validate the host against an allowlist.
 - [ ] Follow-up: `backend/app/web/{seo,runtime_config}.py` are unmounted and superseded by the Next.js routes — decide which implementation is canonical and delete the other.
 - [ ] Follow-up: public Convex queries accept `stage` from the caller, so `staging` data is readable directly from the deployment; derive it server-side.
+
+### Ingestion parser maintenance (post-v0.6.4)
+
+- [x] Normalize mandoc `.IP` bullet output into semantic lists, keep one-line no-fill
+  continuations as prose, preserve real code-block line breaks, and prevent unrelated definition
+  lists from contaminating derived options.

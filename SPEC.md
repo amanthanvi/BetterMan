@@ -835,6 +835,19 @@ Block node types:
 -   `horizontal_rule`
 -   `note` / `warning` (optional mapping from common patterns)
 
+Mandoc compatibility normalization:
+
+-   Treat tag-list HTML as an unordered list only when every term begins with a standalone
+    bullet marker (`*`, `+`, `-`, or `•`); option terms such as `-a` and mixed tag lists remain
+    definition lists.
+-   Within those normalized bullet lists, join a single-line no-fill (`pre`) definition to its
+    term as prose. Preserve multi-line no-fill content as a code block.
+-   Preserve `<br>` inside preformatted content as an actual newline; never persist an escaped
+    `\\n` separator.
+-   Derive structured options from definition lists inside `OPTION`/`OPTIONS`-named sections.
+    For pages without such a section, use flag-shaped definition terms as a compatibility
+    fallback; never promote arbitrary glossary or description terms into options.
+
 Inline node types:
 
 -   `text`: `{text}`
