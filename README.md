@@ -102,7 +102,8 @@ Analytics are disabled if the env var is not set.
 **Environment variables:**
 
 - `NEXT_PUBLIC_CONVEX_URL` / `CONVEX_URL` (Next.js): Convex client URL.
-- `BETTERMAN_DATASET_STAGE` (Next.js): `prod` by default; `staging` for staging previews.
+- `BETTERMAN_DATASET_STAGE` (Convex deployment): server-owned public dataset pointer; unset defaults to `prod`. A staging preview must point Next.js at a distinct Convex deployment configured as `staging`.
+- `BETTERMAN_DATASET_STAGE` (ingestion process): authenticated ingest target (`staging` normally).
 - `CONVEX_HTTP_URL` + `CONVEX_INGEST_SECRET` (ingestion): Convex HTTP actions URL and ingest bearer token.
 
 ## UX notes

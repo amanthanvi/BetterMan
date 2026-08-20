@@ -43,6 +43,7 @@ Defaults are sensible for local dev, but you can customize via env vars.
 Useful vars:
 
 - `NEXT_PUBLIC_CONVEX_URL` / `CONVEX_URL` (Next.js → Convex)
-- `BETTERMAN_DATASET_STAGE` (`prod` by default)
+- `BETTERMAN_DATASET_STAGE` (set on the Convex deployment; public reads default to `prod`)
+- `BETTERMAN_DATASET_STAGE` (set separately in the ingestion process to choose its authenticated write target)
 - `CONVEX_HTTP_URL` / `CONVEX_INGEST_SECRET` (ingestion)
 - `DATABASE_URL` / `REDIS_URL` (legacy backend only)

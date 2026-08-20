@@ -12,6 +12,7 @@
 		"frontend:e2e": "pnpm -C frontend e2e",
 		"convex:dev": "convex dev",
 		"convex:check": "CONVEX_AGENT_MODE=anonymous convex dev --once",
+		"convex:test": "vitest run --config vitest.convex.config.ts",
 		"convex:prod-check": "node scripts/check-convex-production.mjs",
 		"next:dev": "convex dev --start \"pnpm -C nextjs dev\"",
 		"next:build": "pnpm -C nextjs build",
@@ -51,5 +52,11 @@
 	},
 	"dependencies": {
 		"convex": "^1.39.1"
+	},
+	"devDependencies": {
+		"@edge-runtime/vm": "5.0.0",
+		"convex-test": "0.0.54",
+		"vite": "7.3.6",
+		"vitest": "4.1.11"
 	}
 }

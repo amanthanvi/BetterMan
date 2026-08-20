@@ -30,8 +30,12 @@ BetterMan deploys to Railway.
 Prereqs:
 
 - `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL` is set on the `nextjs` service.
-- `BETTERMAN_DATASET_STAGE=prod` is set on the `nextjs` service.
+- The target Convex deployment has `BETTERMAN_DATASET_STAGE=prod` set with `npx convex env set --deployment prod BETTERMAN_DATASET_STAGE prod` (unset also defaults to prod, but explicit production configuration is preferred).
 - `/api/v1/info` works on the Next service domain (`https://nextjs-…up.railway.app/api/v1/info`).
+
+A staging Next service must use a distinct Convex deployment/URL configured
+with `BETTERMAN_DATASET_STAGE=staging`; the stage is not selected by Railway or
+by a public Convex call.
 
 DNS (Cloudflare):
 

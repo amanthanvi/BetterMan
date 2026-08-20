@@ -372,4 +372,4 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Dependencies: `next` to 15.5.22, `seroval` to 1.5.6 (critical GHSA-mv8w-475r-vwqw), pnpm pin to 10.34.4 (CVE-2026-59195), plus overrides clearing the remaining transitive advisories.
 - [ ] Follow-up: `nextjs/lib/public-origin.ts` falls back to `x-forwarded-host`; set `PUBLIC_BASE_URL` in production or validate the host against an allowlist.
 - [ ] Follow-up: `backend/app/web/{seo,runtime_config}.py` are unmounted and superseded by the Next.js routes — decide which implementation is canonical and delete the other.
-- [ ] Follow-up: public Convex queries accept `stage` from the caller, so `staging` data is readable directly from the deployment; derive it server-side.
+- [x] Follow-up: bind public Convex dataset reads to deployment-owned `BETTERMAN_DATASET_STAGE` (prod default), remove caller `stage` arguments, and cover every public read/action validator against forged staging access. Staging previews now require a distinct Convex deployment/URL configured for `staging`.

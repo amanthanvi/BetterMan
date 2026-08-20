@@ -58,6 +58,11 @@ export function normalizeStage(value: string | null): DatasetStage {
   throw new Error("INVALID_DATASET_STAGE");
 }
 
+/** Public dataset reads are bound to the Convex deployment, never the caller. */
+export function publicDatasetStage(): DatasetStage {
+  return normalizeStage(process.env.BETTERMAN_DATASET_STAGE ?? null);
+}
+
 export function normalizeName(value: string): string {
   return value.trim().toLowerCase();
 }

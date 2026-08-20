@@ -1541,6 +1541,14 @@ behavioural guarantee, not an implementation detail.
     `kind` and `identifier`. Thresholds, window length and the clock are all
     resolved inside the Convex handler, so a caller can neither choose the
     limit it is held to nor pick which time bucket its request lands in.
+-   **Public dataset stage is deployment-owned.** Public Convex dataset queries
+    and actions do not accept `stage`; they resolve `BETTERMAN_DATASET_STAGE`
+    inside Convex, defaulting an unset value to `prod` and rejecting invalid
+    values. A public staging preview must use a distinct Convex deployment/URL
+    configured with `BETTERMAN_DATASET_STAGE=staging`; one anonymous public
+    deployment cannot safely serve caller-selectable prod and staging views.
+    Authenticated ingestion and promotion endpoints retain explicit stage
+    inputs because they are protected by `CONVEX_INGEST_SECRET`.
 -   **Expired-bucket cleanup is internal.** `rateLimit.cleanupExpired` is an
     `internalMutation` and reads the clock itself. It is not reachable from a
     public Convex client, and it reports `hasMore` by reading one row past the
@@ -2892,7 +2900,7 @@ Two Railway services:
    - Public search is prefix/suggest only (Convex full-text search index retired; search docs store compact metadata)
    - Serves SEO endpoints directly (Next owns `robots.txt` + sitemaps)
    - Public domain: `betterman.sh`
-   - Env: `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`, `BETTERMAN_DATASET_STAGE`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`
+   - Env: `NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`
 
 2. **FastAPI Service** (legacy/internal during cutover):
    - No longer required by active Next.js runtime
@@ -3208,7 +3216,8 @@ export const STORAGE_KEYS = {
 | Variable | Service | Description |
 |----------|---------|-------------|
 | `NEXT_PUBLIC_CONVEX_URL` / `CONVEX_URL` | Next.js | Convex client URL |
-| `BETTERMAN_DATASET_STAGE` | Next.js | Active dataset pointer stage (`prod` default, `staging` for previews) |
+| `BETTERMAN_DATASET_STAGE` | Convex deployment | Public active dataset pointer (`prod` default; configure a distinct staging deployment as `staging`) |
+| `BETTERMAN_DATASET_STAGE` | Ingestion runner | Authenticated ingest target stage (`staging` normally; `prod` only for emergency direct imports) |
 | `CONVEX_HTTP_URL` / `CONVEX_INGEST_SECRET` | Ingestion | Convex HTTP actions URL and bearer token |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Next.js | Plausible analytics domain |
 | `NEXT_PUBLIC_SENTRY_DSN` | Next.js | Sentry DSN for frontend |
@@ -3316,8 +3325,8 @@ v0.5.0 has **deployment breaking changes**:
 - FastAPI stops serving static files
 
 **Recommended deployment order:**
-1. Deploy Convex functions/schema and configure `CONVEX_INGEST_SECRET`
-2. Deploy Next.js service with Convex URL env vars and `BETTERMAN_DATASET_STAGE=prod`
+1. Configure `CONVEX_INGEST_SECRET` plus deployment env `BETTERMAN_DATASET_STAGE=prod`; provision and populate a distinct `staging` Convex deployment before routing a staging preview to it
+2. Coordinate the breaking public-argument cutover: use the two-release compatibility procedure in `docs/runbooks/convex-production-cutover.md` for zero downtime, or deploy final Convex + Next during a maintenance window
 3. Route public domain to Next.js service (update DNS to Railway-provided traffic route targets)
 4. Verify SSR, `/api/v1/*` Convex-backed route handlers, Sentry, Plausible
 5. Verify all 7 distros ingested and active

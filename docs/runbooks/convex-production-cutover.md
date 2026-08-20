@@ -8,13 +8,19 @@ Convex deploy:
 
 - `CONVEX_DEPLOY_KEY` — Convex production deploy key. In GitHub Actions store this as `BETTERMAN_CONVEX_DEPLOY_KEY`.
 - `CONVEX_DEPLOYMENT` — production deployment reference, for example `prod:<deployment-name>` or the project-specific production deployment. In GitHub Actions store this as `BETTERMAN_CONVEX_DEPLOYMENT`.
+- `BETTERMAN_DATASET_STAGE=prod` — set on the Convex deployment; public dataset reads derive the stage here and do not accept a caller override.
 
 App runtime:
 
 - `NEXT_PUBLIC_CONVEX_URL` — Convex client URL, usually `https://<deployment>.convex.cloud`.
 - `CONVEX_URL` — same value for server-side Next.js code.
 - `VITE_CONVEX_URL` — only needed for a Vite frontend deployment; set it to the same Convex client URL if that frontend is deployed.
-- `BETTERMAN_DATASET_STAGE=prod`
+
+Required for a staging preview:
+
+- `BETTERMAN_STAGING_CONVEX_URL` — client URL for a distinct Convex deployment whose deployment env is `BETTERMAN_DATASET_STAGE=staging`.
+- Point the staging Next service's `NEXT_PUBLIC_CONVEX_URL` and `CONVEX_URL` at this URL. Never point it at the production deployment and try to select staging from the caller.
+- Configure that deployment's own `CONVEX_INGEST_SECRET` and ingest/activate its data separately. The current `update-docs.yml` target populates only the single deployment named by `BETTERMAN_CONVEX_HTTP_URL`; it does not mirror data into a second deployment.
 
 Ingestion and promotion:
 
@@ -33,6 +39,23 @@ Do not set `DATABASE_URL`, `REDIS_URL`, or `FASTAPI_INTERNAL_URL` for the cutove
 
 ## Push Convex schema and functions
 
+### Coordinated rollout requirement
+
+Removing `stage` is an argument-shape breaking change. Old Next code sends the
+field and the final Convex validators reject it; new Next code omits the field
+and old Convex validators require it. There is no zero-downtime one-step order.
+
+For zero downtime, use two releases:
+
+1. Deploy a temporary Convex compatibility version where `stage` is optional
+   but ignored and the effective stage is still derived server-side.
+2. Deploy this Next.js version, which sends no stage.
+3. Deploy this final Convex version, which removes the argument entirely.
+
+Otherwise schedule a brief maintenance window and deploy the final Convex and
+Next.js versions as one coordinated cutover. Set the deployment environment
+before directing traffic.
+
 ```bash
 pnpm install --frozen-lockfile
 
@@ -41,6 +64,7 @@ export CONVEX_DEPLOYMENT="$BETTERMAN_CONVEX_DEPLOYMENT"
 
 npx convex deploy --typecheck enable
 npx convex env set --deployment prod CONVEX_INGEST_SECRET "$CONVEX_INGEST_SECRET"
+npx convex env set --deployment prod BETTERMAN_DATASET_STAGE prod
 ```
 
 If the hosting pipeline builds the app through Convex deploy, pass the URL into the build:
@@ -78,17 +102,30 @@ Scheduled production imports should continue to use `.github/workflows/update-do
 
 ## Verify staging import
 
-Use the read-only Convex check before promotion. Choose a realistic page-count floor for the distros included in the import.
+Public dataset stage is immutable per Convex deployment. A staging preview must
+use a distinct Convex deployment configured with
+`BETTERMAN_DATASET_STAGE=staging`; its Next service and this check must target
+that deployment's URL. Do not temporarily change the production deployment's
+stage: that would change live reads and expose the staging pointer publicly.
+
+Choose a realistic page-count floor for the distros included in the staging
+deployment import.
 
 ```bash
-export NEXT_PUBLIC_CONVEX_URL="$BETTERMAN_CONVEX_URL"
-export CONVEX_URL="$BETTERMAN_CONVEX_URL"
-export BETTERMAN_DATASET_STAGE=staging
+export NEXT_PUBLIC_CONVEX_URL="$BETTERMAN_STAGING_CONVEX_URL"
+export CONVEX_URL="$BETTERMAN_STAGING_CONVEX_URL"
 export BETTERMAN_CHECK_DISTROS=debian,ubuntu,fedora,arch,alpine
 export BETTERMAN_MIN_PAGE_COUNT=1000
 
 pnpm convex:prod-check
 ```
+
+If ingestion writes the hidden `staging` pointer in the production Convex
+deployment for same-deployment promotion, the public check intentionally cannot
+select that pointer. Use the ingestion pipeline's authenticated validation, or
+run the same import against the dedicated staging deployment before promotion.
+The dedicated staging import is a preview/validation mirror; promotion still
+copies pointers within the production deployment and does not cross deployments.
 
 The check requires:
 
@@ -138,7 +175,6 @@ gh workflow run update-dataset -f ingest=false -f promote=true
 ```bash
 export NEXT_PUBLIC_CONVEX_URL="$BETTERMAN_CONVEX_URL"
 export CONVEX_URL="$BETTERMAN_CONVEX_URL"
-export BETTERMAN_DATASET_STAGE=prod
 export BETTERMAN_CHECK_DISTROS=debian,ubuntu,fedora,arch,alpine
 export BETTERMAN_MIN_PAGE_COUNT=1000
 

@@ -5,7 +5,7 @@ import type {
   AmbiguousPageResponse,
   ManPageResponse,
 } from './docModel'
-import { getConvexClient, getDatasetStage } from './convexClient'
+import { getConvexClient } from './convexClient'
 import type { components } from './openapi.gen'
 
 type Schemas = components['schemas']
@@ -97,22 +97,19 @@ function convex() {
 }
 
 const cachedInfo = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro) =>
-    await convex().query(api.queries.getInfo, { stage, distro }),
+  async (distro: Distro) => await convex().query(api.queries.getInfo, { distro }),
   ['betterman', 'convex', 'info'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedSections = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro) =>
-    await convex().query(api.queries.listSections, { stage, distro }),
+  async (distro: Distro) => await convex().query(api.queries.listSections, { distro }),
   ['betterman', 'convex', 'sections'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedSearch = unstable_cache(
   async (
-    stage: ReturnType<typeof getDatasetStage>,
     distro: Distro,
     q: string,
     section: string | null,
@@ -120,7 +117,6 @@ const cachedSearch = unstable_cache(
     offset: number,
   ) =>
     await convex().query(api.queries.search, {
-      stage,
       distro,
       q,
       section,
@@ -133,14 +129,12 @@ const cachedSearch = unstable_cache(
 
 const cachedSection = unstable_cache(
   async (
-    stage: ReturnType<typeof getDatasetStage>,
     distro: Distro,
     section: string,
     limit: number,
     offset: number,
   ) =>
     await convex().query(api.queries.listSection, {
-      stage,
       distro,
       section,
       limit,
@@ -151,60 +145,58 @@ const cachedSection = unstable_cache(
 )
 
 const cachedManByName = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string) =>
-    await convex().action(api.content.getManByName, { stage, distro, name }),
+  async (distro: Distro, name: string) =>
+    await convex().action(api.content.getManByName, { distro, name }),
   ['betterman', 'convex', 'man-by-name'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedManByNameAndSection = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string, section: string) =>
-    await convex().action(api.content.getManByNameAndSection, { stage, distro, name, section }),
+  async (distro: Distro, name: string, section: string) =>
+    await convex().action(api.content.getManByNameAndSection, { distro, name, section }),
   ['betterman', 'convex', 'man-by-name-and-section'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedRelated = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string, section: string) =>
-    await convex().query(api.queries.getRelated, { stage, distro, name, section }),
+  async (distro: Distro, name: string, section: string) =>
+    await convex().query(api.queries.getRelated, { distro, name, section }),
   ['betterman', 'convex', 'related'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedSuggest = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, name: string) =>
-    await convex().query(api.queries.suggest, { stage, distro, name }),
+  async (distro: Distro, name: string) =>
+    await convex().query(api.queries.suggest, { distro, name }),
   ['betterman', 'convex', 'suggest'],
   { revalidate: SEARCH_REVALIDATE_SECONDS },
 )
 
 const cachedLicenses = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro) =>
-    await convex().query(api.queries.listLicenses, { stage, distro }),
+  async (distro: Distro) => await convex().query(api.queries.listLicenses, { distro }),
   ['betterman', 'convex', 'licenses'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedLicenseText = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>, distro: Distro, packageName: string) =>
-    await convex().query(api.queries.getLicense, { stage, distro, packageName }),
+  async (distro: Distro, packageName: string) =>
+    await convex().query(api.queries.getLicense, { distro, packageName }),
   ['betterman', 'convex', 'license-text'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedSeoReleases = unstable_cache(
-  async (stage: ReturnType<typeof getDatasetStage>) =>
-    await convex().query(api.queries.listSeoReleases, { stage }),
+  async () => await convex().query(api.queries.listSeoReleases, {}),
   ['betterman', 'convex', 'seo-releases'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 export async function fetchInfo(distro: Distro): Promise<InfoResponse> {
-  return await mapConvexError(() => cachedInfo(getDatasetStage(), distro))
+  return await mapConvexError(() => cachedInfo(distro))
 }
 
 export async function listSections(distro: Distro): Promise<SectionLabel[]> {
-  return await mapConvexError(() => cachedSections(getDatasetStage(), distro))
+  return await mapConvexError(() => cachedSections(distro))
 }
 
 export async function search(opts: {
@@ -216,7 +208,6 @@ export async function search(opts: {
 }): Promise<SearchResponse> {
   return await mapConvexError(() =>
     cachedSearch(
-      getDatasetStage(),
       opts.distro,
       opts.q,
       opts.section ?? null,
@@ -234,7 +225,6 @@ export async function listSection(opts: {
 }): Promise<SectionResponse> {
   const result = await mapConvexError(() =>
     cachedSection(
-      getDatasetStage(),
       opts.distro,
       opts.section,
       opts.limit ?? 200,
@@ -260,7 +250,6 @@ export async function fetchManByName(opts: {
 }): Promise<ManByNameResult> {
   const result = (await mapConvexError(() =>
     cachedManByName(
-      getDatasetStage(),
       opts.distro,
       opts.name,
     ),
@@ -282,7 +271,6 @@ export async function fetchManByNameAndSection(opts: {
 }): Promise<ManPageResponse> {
   const result = (await mapConvexError(() =>
     cachedManByNameAndSection(
-      getDatasetStage(),
       opts.distro,
       opts.name,
       opts.section,
@@ -299,21 +287,21 @@ export async function fetchRelated(opts: {
   name: string
   section: string
 }): Promise<RelatedResponse> {
-  const result = await mapConvexError(() => cachedRelated(getDatasetStage(), opts.distro, opts.name, opts.section))
+  const result = await mapConvexError(() => cachedRelated(opts.distro, opts.name, opts.section))
   if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
   return result as RelatedResponse
 }
 
 export async function suggest(opts: { distro: Distro; name: string }): Promise<SuggestResponse> {
-  return await mapConvexError(() => cachedSuggest(getDatasetStage(), opts.distro, opts.name))
+  return await mapConvexError(() => cachedSuggest(opts.distro, opts.name))
 }
 
 export async function fetchLicenses(opts: { distro: Distro }): Promise<LicensesResponse> {
-  return (await mapConvexError(() => cachedLicenses(getDatasetStage(), opts.distro))) as LicensesResponse
+  return (await mapConvexError(() => cachedLicenses(opts.distro))) as LicensesResponse
 }
 
 export async function fetchLicenseText(opts: { distro: Distro; packageName: string }): Promise<LicenseTextResponse> {
-  const result = await mapConvexError(() => cachedLicenseText(getDatasetStage(), opts.distro, opts.packageName))
+  const result = await mapConvexError(() => cachedLicenseText(opts.distro, opts.packageName))
   if (!result) throw apiError(404, 'LICENSE_NOT_FOUND', 'License not found')
   return result as LicenseTextResponse
 }
@@ -348,17 +336,15 @@ type SeoSitemapPageChunkResponse = {
 } | null
 
 export async function fetchSeoReleases(): Promise<SeoReleasesResponse> {
-  return await cachedSeoReleases(getDatasetStage())
+  return await cachedSeoReleases()
 }
 
 export async function fetchSeoSitemapPage(opts: { distro: string; page: number }): Promise<SeoSitemapPageResponse> {
-  const stage = getDatasetStage()
   const items: SeoSitemapItem[] = []
   let cursor: string | null = null
 
   for (let chunk = 0; chunk < MAX_SITEMAP_CHUNKS; chunk += 1) {
     const result: SeoSitemapPageChunkResponse = await convex().query(api.queries.listSitemapPageChunk, {
-      stage,
       distro: opts.distro as Distro,
       page: opts.page,
       paginationOpts: { numItems: SITEMAP_CHUNK_ITEMS, cursor },

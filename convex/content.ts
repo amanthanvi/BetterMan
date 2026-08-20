@@ -16,6 +16,7 @@ import {
   normalizeName,
   normalizeSection,
   pageResponse,
+  publicDatasetStage,
 } from "./lib";
 import {
   CONTENT_KINDS,
@@ -491,12 +492,14 @@ async function resolveContent(
 
 export const getManByName = action({
   args: {
-    stage: datasetStageValidator,
     distro: distroValidator,
     name: v.string(),
   },
   handler: async (ctx, args): Promise<unknown> => {
-    const result = await ctx.runQuery(internal.content.getManByNameReadModel, args);
+    const result = await ctx.runQuery(internal.content.getManByNameReadModel, {
+      ...args,
+      stage: publicDatasetStage(),
+    });
     if (result.kind !== "page") return result;
 
     const content = await resolveContent(ctx, result.data.content);
@@ -511,13 +514,15 @@ export const getManByName = action({
 
 export const getManByNameAndSection = action({
   args: {
-    stage: datasetStageValidator,
     distro: distroValidator,
     name: v.string(),
     section: v.string(),
   },
   handler: async (ctx, args): Promise<unknown> => {
-    const result = await ctx.runQuery(internal.content.getManByNameAndSectionReadModel, args);
+    const result = await ctx.runQuery(internal.content.getManByNameAndSectionReadModel, {
+      ...args,
+      stage: publicDatasetStage(),
+    });
     if (!result) return null;
 
     const content = await resolveContent(ctx, result.content);

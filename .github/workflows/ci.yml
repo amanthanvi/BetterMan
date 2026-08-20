@@ -74,6 +74,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm convex:test
       - run: pnpm -C nextjs lint
       - run: pnpm -C nextjs build
 
@@ -181,6 +182,7 @@ jobs:
 
           npx convex dev --once
           npx convex env set CONVEX_INGEST_SECRET "$CONVEX_INGEST_SECRET"
+          npx convex env set BETTERMAN_DATASET_STAGE prod
 
           nohup npx convex dev --tail-logs disable > /tmp/betterman-convex.log 2>&1 &
           echo $! > /tmp/betterman-convex.pid
@@ -206,8 +208,6 @@ jobs:
           CONVEX_HTTP_URL="$CONVEX_SITE_URL" node scripts/seed-convex-e2e.mjs
 
       - name: Start Next.js
-        env:
-          BETTERMAN_DATASET_STAGE: prod
         run: |
           set -euo pipefail
 
