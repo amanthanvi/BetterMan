@@ -1,5 +1,7 @@
 import { getPublicOrigin } from '../../lib/public-origin'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   const origin = getPublicOrigin(request)
   const body = [

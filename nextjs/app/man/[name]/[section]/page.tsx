@@ -15,6 +15,7 @@ import {
   withDistroFallback,
 } from '../../../../lib/api'
 import { normalizeDistro, withDistro } from '../../../../lib/distro'
+import { getPublicOrigin } from '../../../../lib/public-origin'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
 export const revalidate = 3600
@@ -24,15 +25,6 @@ type SearchParams = Record<string, string | string[] | undefined>
 function getFirst(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0]
   return value
-}
-
-async function getRequestOrigin(): Promise<string | null> {
-  const h = await headers()
-  const host = h.get('x-forwarded-host') ?? h.get('host')
-  if (!host) return null
-
-  const proto = h.get('x-forwarded-proto') ?? 'https'
-  return `${proto}://${host}`
 }
 
 export async function generateMetadata({
@@ -48,7 +40,7 @@ export async function generateMetadata({
   const cookieDistro = cookieStore.get('bm-distro')?.value
   const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
 
-  const origin = await getRequestOrigin()
+  const origin = getPublicOrigin({ headers: await headers() })
 
   try {
     const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
@@ -59,7 +51,7 @@ export async function generateMetadata({
       }),
     )
     const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)
-    const canonical = origin ? `${origin}${canonicalPath}` : undefined
+    const canonical = `${origin}${canonicalPath}`
 
     const title = `${data.page.name}(${data.page.section}) - BetterMan`
     const description = data.page.description || data.page.title || `${data.page.name}(${data.page.section}) man page.`
@@ -67,7 +59,7 @@ export async function generateMetadata({
     return {
       title,
       description,
-      alternates: canonical ? { canonical } : undefined,
+      alternates: { canonical },
       openGraph: {
         title,
         description,
@@ -80,12 +72,12 @@ export async function generateMetadata({
       const title = `${name}(${section}) — Not found — BetterMan`
       const description = `We couldn’t find ${name}(${section}) in the current BetterMan dataset.`
       const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, requestedDistro)
-      const canonical = origin ? `${origin}${canonicalPath}` : undefined
+      const canonical = `${origin}${canonicalPath}`
 
       return {
         title,
         description,
-        alternates: canonical ? { canonical } : undefined,
+        alternates: { canonical },
         robots: { index: false },
       }
     }
