@@ -1,0 +1,58 @@
+<!--
+  Golden mandoc -Thtml output for curl/wcurl@4bba04da27098cc9b8cb08462deec0ec53fa59e1.
+  Kept as generated markup so parser tests detect upstream HTML-shape regressions.
+-->
+<div class="manual-text">
+<section class="Sh">
+<h1 class="Sh" id="DESCRIPTION"><a class="permalink" href="#DESCRIPTION">DESCRIPTION</a></h1>
+<p class="Pp"><b>wcurl</b> is a simple curl wrapper which lets you use curl to
+    download files without having to remember any parameters.</p>
+<p class="Pp">Call <b>wcurl</b> with a list of URLs you want to download and
+    <b>wcurl</b> picks sane defaults.</p>
+<p class="Pp">If you need anything more complex, you can provide any of curl's
+    supported parameters via the <b>--curl-options</b> option. Beware that you
+    likely should be using curl directly if your use case is not covered.</p>
+<p class="Pp">By default, <b>wcurl</b> does:</p>
+<dl class="Bl-tag">
+  <dt>* Percent-encode whitespace in URLs;</dt>
+  <dd></dd>
+  <dt>* Download multiple URLs in parallel</dt>
+  <dd>
+    <pre>if the installed curl's version is &gt;= 7.66.0 (--parallel);</pre>
+  </dd>
+  <dt>* Use a total number of 5 parallel connections to the same protocol +
+    hostname + port number target</dt>
+  <dd>
+    <pre>if the installed curl's version is &gt;= 8.16.0 (--parallel-max-host);</pre>
+  </dd>
+  <dt>* Follow redirects;</dt>
+  <dd></dd>
+  <dt>* Automatically choose a filename as output;</dt>
+  <dd></dd>
+  <dt>* Avoid overwriting files</dt>
+  <dd>
+    <pre>if the installed curl's version is &gt;= 7.83.0 (--no-clobber);</pre>
+  </dd>
+  <dt>* Perform retries;</dt>
+  <dd></dd>
+  <dt>* Set the downloaded file timestamp</dt>
+  <dd>
+    <pre>to the value provided by the server, if available;</pre>
+  </dd>
+  <dt>* Default to https</dt>
+  <dd>
+    <pre>if the URL does not contain any scheme;</pre>
+  </dd>
+  <dt>* Disable curl's URL globbing parser</dt>
+  <dd>
+    <pre>so {} and [] characters in URLs are not treated specially;</pre>
+  </dd>
+  <dt>* Percent-decode the resulting filename;</dt>
+  <dd></dd>
+  <dt>* Use 'index.html' as the default filename</dt>
+  <dd>
+    <pre>if there is none in the URL.</pre>
+  </dd>
+</dl>
+</section>
+</div>
