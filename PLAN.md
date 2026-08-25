@@ -378,6 +378,12 @@ Theme: **Design & UI/UX Overhaul — Hacker-Tool Aesthetic**
 - [x] Remove unmounted `backend/app/web/{seo,runtime_config}.py`; Next.js is canonical for public SEO routes and runtime configuration.
 - [x] Public Convex queries/actions resolve `prod` server-side; ignore the deprecated rollback-compatible `stage` field and contract-test the anonymous API boundary.
 
+### Ingestion parser maintenance (post-v0.6.4)
+
+- [x] Normalize mandoc `.IP` bullet output into semantic lists, keep one-line no-fill
+  continuations as prose, preserve real code-block line breaks, and prevent unrelated definition
+  lists from contaminating derived options.
+
 ### Release v0.6.5 (performance hardening)
 
 - [x] Add metadata-only page reads for FastAPI and the Convex-backed Next.js metadata path.

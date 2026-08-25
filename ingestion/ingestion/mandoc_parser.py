@@ -28,6 +28,9 @@ from ingestion.doc_model import (
 from ingestion.util import normalize_ws, stable_unique_id, stable_unique_slug
 
 _xref_re = re.compile(r"^(?P<name>.+?)\((?P<section>[^)]+)\)$")
+_bullet_term_re = re.compile(r"^\s*(?:\*|\+|-|\u2022)(?:\s+|$)")
+_options_heading_re = re.compile(r"\bOPTIONS?\b", re.IGNORECASE)
+_option_term_re = re.compile(r"^\s*[\[(]?(?:--?|\+)(?:[^\s,|\])]|$)")
 
 
 @dataclass(frozen=True)
@@ -69,8 +72,8 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
 
     def inlines_from_node(node: object) -> list[InlineNode]:
         if isinstance(node, NavigableString):
-            text = re.sub(r"\\s+", " ", str(node))
-            if not text.strip():
+            text = re.sub(r"\s+", " ", str(node))
+            if not text:
                 return []
             return [InlineText(text=text)]
 
@@ -151,7 +154,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             return [BlockParagraph(inlines=inlines)]
 
         if tname == "pre":
-            text = tag.get_text("\\n")
+            text = _pre_text(tag)
             text = text.rstrip()
             if not text.strip():
                 return []
@@ -175,18 +178,52 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
         if tname == "dl":
             items: list[DefinitionListItem] = []
             children = [c for c in tag.children if isinstance(c, Tag)]
-            i = 0
-            while i < len(children):
-                if children[i].name.lower() != "dt":
-                    i += 1
-                    continue
-                dt = children[i]
-                dd = (
-                    children[i + 1]
-                    if i + 1 < len(children) and children[i + 1].name.lower() == "dd"
-                    else None
-                )
+            term_pairs = _definition_list_pairs(children)
+            if _is_bullet_definition_list(term_pairs):
+                list_items: list[list[object]] = []
+                for dt, dd in term_pairs:
+                    term_inlines = _strip_bullet_marker(inlines_from_container(dt))
+                    item_blocks: list[object] = []
 
+                    if dd is not None:
+                        dd_children = [c for c in dd.children if isinstance(c, Tag)]
+                        if len(dd_children) == 1 and dd_children[0].name.lower() == "pre":
+                            pre = dd_children[0]
+                            pre_text = _pre_text(pre).strip()
+                            if pre_text and "\n" not in pre_text:
+                                continuation = inlines_from_container(pre)
+                                item_blocks.append(
+                                    BlockParagraph(
+                                        inlines=_join_inline_phrases(term_inlines, continuation)
+                                    )
+                                )
+
+                        if not item_blocks:
+                            definition_blocks = blocks_from_container(dd)
+                            if not definition_blocks:
+                                definition_inlines = inlines_from_container(dd)
+                                if _has_meaningful_inlines(definition_inlines):
+                                    item_blocks.append(
+                                        BlockParagraph(
+                                            inlines=_join_inline_phrases(
+                                                term_inlines, definition_inlines
+                                            )
+                                        )
+                                    )
+                            else:
+                                if _has_meaningful_inlines(term_inlines):
+                                    item_blocks.append(BlockParagraph(inlines=term_inlines))
+                                item_blocks.extend(definition_blocks)
+
+                    if not item_blocks and _has_meaningful_inlines(term_inlines):
+                        item_blocks = [BlockParagraph(inlines=term_inlines)]
+                    if item_blocks:
+                        list_items.append(item_blocks)
+
+                if list_items:
+                    return [BlockList(ordered=False, items=list_items)]
+
+            for dt, dd in term_pairs:
                 term_inlines = inlines_from_container(dt)
                 definition_blocks = blocks_from_container(dd) if dd is not None else []
                 if dd is not None and not definition_blocks:
@@ -208,7 +245,6 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                         definitionBlocks=definition_blocks,
                     )
                 )
-                i += 2
 
             if not items:
                 return []
@@ -277,6 +313,82 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
         see_also=see_also or None,
         headings_text=headings_text,
     )
+
+
+def _pre_text(tag: Tag) -> str:
+    parts: list[str] = []
+    for descendant in tag.descendants:
+        if isinstance(descendant, NavigableString):
+            parts.append(str(descendant))
+        elif isinstance(descendant, Tag) and descendant.name.lower() == "br":
+            parts.append("\n")
+    return "".join(parts)
+
+
+def _definition_list_pairs(children: list[Tag]) -> list[tuple[Tag, Tag | None]]:
+    pairs: list[tuple[Tag, Tag | None]] = []
+    index = 0
+    while index < len(children):
+        term = children[index]
+        if term.name.lower() != "dt":
+            index += 1
+            continue
+
+        definition = (
+            children[index + 1]
+            if index + 1 < len(children) and children[index + 1].name.lower() == "dd"
+            else None
+        )
+        pairs.append((term, definition))
+        index += 2 if definition is not None else 1
+    return pairs
+
+
+def _is_bullet_definition_list(term_pairs: list[tuple[Tag, Tag | None]]) -> bool:
+    return bool(term_pairs) and all(
+        _bullet_term_re.match(term.get_text()) for term, _definition in term_pairs
+    )
+
+
+def _strip_bullet_marker(inlines: list[InlineNode]) -> list[InlineNode]:
+    match = _bullet_term_re.match(_inlines_to_text(inlines))
+    if match is None:
+        return inlines
+
+    remaining = match.end()
+
+    def strip_prefix(nodes: list[InlineNode]) -> list[InlineNode]:
+        nonlocal remaining
+        stripped: list[InlineNode] = []
+        for inline in nodes:
+            if isinstance(inline, InlineText) or isinstance(inline, InlineCode):
+                if remaining:
+                    consumed = min(remaining, len(inline.text))
+                    inline.text = inline.text[consumed:]
+                    remaining -= consumed
+                if inline.text:
+                    stripped.append(inline)
+                continue
+
+            if (
+                isinstance(inline, InlineEmphasis)
+                or isinstance(inline, InlineStrong)
+                or isinstance(inline, InlineLink)
+            ):
+                inline.inlines = strip_prefix(inline.inlines)
+                if inline.inlines:
+                    stripped.append(inline)
+        return stripped
+
+    return _trim_inline_ws(strip_prefix(inlines))
+
+
+def _join_inline_phrases(first: list[InlineNode], second: list[InlineNode]) -> list[InlineNode]:
+    if not first:
+        return second
+    if not second:
+        return first
+    return _trim_inline_ws(_merge_adjacent_text([*first, InlineText(text=" "), *second]))
 
 
 def _merge_adjacent_text(inlines: list[InlineNode]) -> list[InlineNode]:
@@ -381,23 +493,51 @@ def _extract_section_lines(manual_text: Tag, heading_id: str) -> list[str]:
 def _extract_options_from_doc(doc: DocumentModel) -> list[OptionItem]:
     out: list[OptionItem] = []
     used: set[str] = set()
-    for block in doc.blocks:
-        if isinstance(block, BlockDefinitionList):
-            for item in block.items:
-                flags = normalize_ws(_inlines_to_text(item.termInlines))
-                desc = normalize_ws(_blocks_to_text(item.definitionBlocks))
-                if not flags or not desc:
-                    continue
-                anchor = item.id or stable_unique_slug(flags, used)
-                out.append(
-                    OptionItem(
-                        flags=flags,
-                        argument=None,
-                        description=desc,
-                        anchorId=anchor,
-                    )
+    definition_lists, require_flag_shape = _option_definition_lists(doc)
+    for block in definition_lists:
+        for item in block.items:
+            flags = normalize_ws(_inlines_to_text(item.termInlines))
+            desc = normalize_ws(_blocks_to_text(item.definitionBlocks))
+            if not flags or not desc:
+                continue
+            if require_flag_shape and _option_term_re.search(flags) is None:
+                continue
+            anchor = item.id or stable_unique_slug(flags, used)
+            out.append(
+                OptionItem(
+                    flags=flags,
+                    argument=None,
+                    description=desc,
+                    anchorId=anchor,
                 )
+            )
     return out
+
+
+def _option_definition_lists(doc: DocumentModel) -> tuple[list[BlockDefinitionList], bool]:
+    scoped: list[BlockDefinitionList] = []
+    fallback: list[BlockDefinitionList] = []
+    options_level: int | None = None
+    saw_options_heading = False
+
+    for block in doc.blocks:
+        if isinstance(block, BlockHeading):
+            if _options_heading_re.search(normalize_ws(block.text)):
+                saw_options_heading = True
+                options_level = block.level
+            elif options_level is not None and block.level <= options_level:
+                options_level = None
+            continue
+
+        if not isinstance(block, BlockDefinitionList):
+            continue
+        fallback.append(block)
+        if options_level is not None:
+            scoped.append(block)
+
+    if saw_options_heading:
+        return scoped, False
+    return fallback, True
 
 
 def _extract_see_also(manual_text: Tag) -> list[SeeAlsoRef] | None:
