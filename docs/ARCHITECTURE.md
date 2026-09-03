@@ -28,6 +28,8 @@ Personalization (theme, distro, bookmarks, history, reading preferences) lives i
 
 `ingestion/` runs `mandoc -Thtml` on each page and converts the HTML into the document model in `ingestion/ingestion/doc_model.py`. The TypeScript mirror is `nextjs/lib/docModel.ts`. Golden fixtures in both packages keep them aligned.
 
+A `.so` include stub is recorded as an alias rather than a page; its URL permanently redirects to the target. Pages where mandoc reported warnings carry a `hasParseWarnings` flag that the page renders as a one-line note.
+
 A release is one distro at one point in time. Ingestion writes a release, activates it for `staging`, and promotion copies the pointer to `prod`. Content is stored by hash so identical pages across distros share one blob.
 
 ## Deploy

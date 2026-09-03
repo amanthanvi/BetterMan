@@ -101,7 +101,7 @@ def test_man7_xrefs_link_and_see_also_is_populated() -> None:
     assert "/man/gzip/1" in hrefs
     assert parsed.see_also is not None
     assert ("gzip", "1") in [(r.name, r.section) for r in parsed.see_also]
-    assert all(" " not in item.title.strip() or "\n" not in item.title for item in parsed.doc.toc)
+    assert all("\n" not in item.title for item in parsed.doc.toc)
     assert "SEE ALSO" in [item.title for item in parsed.doc.toc]
 
 
@@ -115,6 +115,15 @@ def test_tbl_first_row_becomes_headers() -> None:
     parsed = parse_mandoc_html(_render(_ROFF / "ascii.7"))
     tables = [block for block in parsed.doc.blocks if block.type == "table"]
     assert tables and tables[0].headers[:2] == ["Oct", "Dec"]
+
+
+def test_bare_see_also_references_become_links() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "rbash.1"))
+    see_also = next(b for b in parsed.doc.blocks if b.type == "heading" and b.text == "SEE ALSO")
+    idx = parsed.doc.blocks.index(see_also)
+    paragraph = parsed.doc.blocks[idx + 1]
+    assert paragraph.type == "paragraph"
+    assert any(i.type == "link" and i.href == "/man/bash/1" for i in paragraph.inlines)
 
 
 def test_stub_is_detected() -> None:

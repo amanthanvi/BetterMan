@@ -38,30 +38,28 @@ const BLOCK_TYPES = new Set([
 ])
 const INLINE_TYPES = new Set(['text', 'code', 'emphasis', 'strong', 'link'])
 
-function walkBlocks(blocks: BlockNode[], seen: Set<string>) {
+function walkBlocks(blocks: BlockNode[]) {
   for (const block of blocks) {
     expect(BLOCK_TYPES.has(block.type)).toBe(true)
-    seen.add(block.type)
-    if (block.type === 'paragraph') walkInlines(block.inlines, seen)
-    if (block.type === 'list') block.items.forEach((item) => walkBlocks(item, seen))
+    if (block.type === 'paragraph') walkInlines(block.inlines)
+    if (block.type === 'list') block.items.forEach((item) => walkBlocks(item))
     if (block.type === 'definition_list') {
       for (const item of block.items) {
-        walkInlines(item.termInlines, seen)
-        walkBlocks(item.definitionBlocks, seen)
+        walkInlines(item.termInlines)
+        walkBlocks(item.definitionBlocks)
       }
     }
   }
 }
 
-function walkInlines(inlines: InlineNode[], seen: Set<string>) {
-  for (const inline of inlines) walkInline(inline, seen)
+function walkInlines(inlines: InlineNode[]) {
+  for (const inline of inlines) walkInline(inline)
 }
 
-function walkInline(inline: InlineNode, seen: Set<string>) {
+function walkInline(inline: InlineNode) {
   expect(INLINE_TYPES.has(inline.type)).toBe(true)
-  seen.add(`inline:${inline.type}`)
   if (inline.type === 'emphasis' || inline.type === 'strong' || inline.type === 'link') {
-    for (const child of inline.inlines) walkInline(child, seen)
+    for (const child of inline.inlines) walkInline(child)
   }
 }
 
@@ -74,8 +72,7 @@ describe('DocRenderer goldens', () => {
         return
       }
 
-      const seen = new Set<string>()
-      walkBlocks(golden.doc.blocks, seen)
+      walkBlocks(golden.doc.blocks)
 
       const html = renderToStaticMarkup(<DocRenderer blocks={golden.doc.blocks} distro="debian" />)
       expect(html.length).toBeGreaterThan(200)

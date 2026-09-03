@@ -121,6 +121,8 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             text = re.sub(r"\s+", " ", str(node))
             if not text:
                 return []
+            if _in_see_also(node):
+                return _link_bare_xrefs(text)
             return [InlineText(text=text)]
 
         if not isinstance(node, Tag):
@@ -450,6 +452,35 @@ def _whole_tag_xref(tag: Tag) -> InlineLink | None:
     if href is None:
         return None
     return InlineLink(href=href, inlines=[InlineText(text=text)], linkType=link_type)
+
+
+def _in_see_also(node: NavigableString) -> bool:
+    section = node.find_parent("section")
+    if section is None:
+        return False
+    heading = section.find(re.compile(r"^h[1-6]$"), recursive=False)
+    if heading is None:
+        return False
+    return normalize_ws(heading.get_text(" ")).upper() == "SEE ALSO"
+
+
+def _link_bare_xrefs(text: str) -> list[InlineNode]:
+    """`bash(1), sh(1)` written with no markup at all, inside SEE ALSO only."""
+    out: list[InlineNode] = []
+    cursor = 0
+    for match in _bare_xref_re.finditer(text):
+        if match.start() > cursor:
+            out.append(InlineText(text=text[cursor : match.start()]))
+        label = match.group(0)
+        href, link_type = _xref_to_href(label)
+        if href is None:
+            out.append(InlineText(text=label))
+        else:
+            out.append(InlineLink(href=href, inlines=[InlineText(text=label)], linkType=link_type))
+        cursor = match.end()
+    if cursor < len(text):
+        out.append(InlineText(text=text[cursor:]))
+    return out or [InlineText(text=text)]
 
 
 def _compact_text(tag: Tag) -> str:
@@ -793,22 +824,21 @@ def _extract_see_also(manual_text: Tag) -> list[SeeAlsoRef] | None:
         if match:
             add(match.group("name"), match.group("section"))
 
-    if not refs:
-        for tag in section.find_all(["b", "i"]):
-            text = tag.get_text("", strip=True)
-            whole = _whole_xref_re.match(text)
-            if whole:
-                add(whole.group("name"), whole.group("section"))
-                continue
-            if not text or not _xref_name_re.match(text):
-                continue
-            nxt = tag.next_sibling
-            if not isinstance(nxt, NavigableString):
-                continue
-            match = _trailing_section_re.match(str(nxt))
-            if match is None:
-                continue
-            add(text, match.group("section"))
+    for tag in section.find_all(["b", "i"]):
+        text = tag.get_text("", strip=True)
+        whole = _whole_xref_re.match(text)
+        if whole:
+            add(whole.group("name"), whole.group("section"))
+            continue
+        if not text or not _xref_name_re.match(text):
+            continue
+        nxt = tag.next_sibling
+        if not isinstance(nxt, NavigableString):
+            continue
+        match = _trailing_section_re.match(str(nxt))
+        if match is None:
+            continue
+        add(text, match.group("section"))
 
     if not refs:
         # Plain text `bash(1), sh(1)` with no markup at all.
