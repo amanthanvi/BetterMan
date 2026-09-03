@@ -224,12 +224,11 @@ def _alias(name: str, target: str) -> _AliasRow:
     )
 
 
-def test_resolve_aliases_follows_multi_hop_chains_and_drops_cycles() -> None:
+def test_resolve_aliases_follows_long_chains_and_drops_cycles() -> None:
     pages = [_page("real", "1")]
+    chain = [_alias(f"s{i}", f"s{i + 1}") for i in range(12)] + [_alias("s12", "real")]
     aliases = [
-        _alias("a", "b"),
-        _alias("b", "c"),
-        _alias("c", "real"),
+        *chain,
         _alias("loop1", "loop2"),
         _alias("loop2", "loop1"),
         _alias("dangling", "missing"),
@@ -237,8 +236,5 @@ def test_resolve_aliases_follows_multi_hop_chains_and_drops_cycles() -> None:
 
     resolved = _resolve_aliases(aliases=aliases, pages=pages)
 
-    assert [(a.name, a.target_name) for a in resolved] == [
-        ("a", "real"),
-        ("b", "real"),
-        ("c", "real"),
-    ]
+    assert [a.name for a in resolved] == [f"s{i}" for i in range(13)]
+    assert {a.target_name for a in resolved} == {"real"}
