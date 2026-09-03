@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const apiMocks = vi.hoisted(() => ({
+  fetchManByNameAndSectionOrAlias: vi.fn(),
   FastApiError: class FastApiError extends Error {
     status: number
     bodyText?: string
@@ -28,6 +29,7 @@ vi.mock('@/lib/api', () => ({
   fetchLicenses: vi.fn(),
   fetchManByName: vi.fn(),
   fetchManByNameAndSection: vi.fn(),
+  fetchManByNameAndSectionOrAlias: apiMocks.fetchManByNameAndSectionOrAlias,
   fetchManMetaByNameAndSection: apiMocks.fetchManMetaByNameAndSection,
   fetchRelated: vi.fn(),
   fetchSeoReleases: vi.fn(),
@@ -133,6 +135,17 @@ describe('public API timing and metadata', () => {
     expect(apiMocks.search).not.toHaveBeenCalled()
     expect(response.headers.get('Server-Timing')).toMatch(/rate_limit;dur=\d+\.\d, total;dur=\d+\.\d/)
     expect(response.headers.get('Server-Timing')).not.toContain('convex_search')
+  })
+})
+
+describe('public API aliases', () => {
+  it('redirects a .so alias to its target with the distro preserved', async () => {
+    apiMocks.fetchManByNameAndSectionOrAlias.mockResolvedValueOnce({ kind: 'alias', name: 'gzip', section: '1' })
+
+    const res = await GET(request('/api/v1/man/gunzip/1?distro=ubuntu'), context(['v1', 'man', 'gunzip', '1']))
+
+    expect(res.status).toBe(308)
+    expect(res.headers.get('location')).toBe('/api/v1/man/gzip/1?distro=ubuntu')
   })
 })
 

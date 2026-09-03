@@ -52,8 +52,15 @@
    {
     "inlines": [
      {
-      "text": "bash(1)",
-      "type": "text"
+      "href": "/man/bash/1",
+      "inlines": [
+       {
+        "text": "bash(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
      }
     ],
     "type": "paragraph"

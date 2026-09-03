@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { distroValidator } from "./schema";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import {
@@ -804,23 +805,32 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
 });
 
 
-const MAX_STATS_SAMPLE = 4000;
+const MAX_STATS_SAMPLE = 2000;
+const MAX_STATS_LINKS = 8000;
 
 /**
- * Read-only staging check: per active release, how many pages link anywhere,
- * how many have SEE ALSO, how many look like stubs, and how many aliases exist.
+ * Read-only staging check: per active release, how many sampled pages have a
+ * SEE ALSO link, a cross-reference link, parse warnings, or an empty
+ * description, and how many aliases exist. Costs three index ranges per
+ * release (pages, links, aliases), so it stays well inside the transaction
+ * budget. Pass `distro` to check one release at a time.
  * Run with `npx convex run maintenance:releaseStats '{"stage":"staging"}'`.
  */
 export const releaseStats = internalQuery({
   args: {
     stage: v.union(v.literal("staging"), v.literal("prod")),
+    distro: v.optional(distroValidator),
     sampleLimit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const sampleLimit = Math.min(MAX_STATS_SAMPLE, Math.max(1, args.sampleLimit ?? 1000));
+    const sampleLimit = Math.min(MAX_STATS_SAMPLE, Math.max(1, args.sampleLimit ?? 500));
     const active = await ctx.db
       .query("activeReleases")
-      .withIndex("by_stage_and_locale_and_distro", (q) => q.eq("stage", args.stage))
+      .withIndex("by_stage_and_locale_and_distro", (q) =>
+        args.distro
+          ? q.eq("stage", args.stage).eq("locale", "en").eq("distro", args.distro)
+          : q.eq("stage", args.stage),
+      )
       .take(20);
 
     const releases = [];
@@ -832,28 +842,18 @@ export const releaseStats = internalQuery({
         .query("manPages")
         .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", release._id))
         .take(sampleLimit);
+      const sampledIds = new Set(pages.map((page) => page._id));
 
-      let withSeeAlso = 0;
-      let withXref = 0;
-      let withParseWarnings = 0;
-      let emptyDescription = 0;
-      for (const page of pages) {
-        if (page.hasParseWarnings) withParseWarnings += 1;
-        if (!page.description) emptyDescription += 1;
-        const seeAlso = await ctx.db
-          .query("manPageLinks")
-          .withIndex("by_fromPageId_and_linkType", (q) =>
-            q.eq("fromPageId", page._id).eq("linkType", "see_also"),
-          )
-          .first();
-        if (seeAlso) withSeeAlso += 1;
-        const xref = await ctx.db
-          .query("manPageLinks")
-          .withIndex("by_fromPageId_and_linkType", (q) =>
-            q.eq("fromPageId", page._id).eq("linkType", "xref"),
-          )
-          .first();
-        if (xref) withXref += 1;
+      const links = await ctx.db
+        .query("manPageLinks")
+        .withIndex("by_releaseId", (q) => q.eq("releaseId", release._id))
+        .take(MAX_STATS_LINKS);
+      const seeAlsoFrom = new Set<string>();
+      const xrefFrom = new Set<string>();
+      for (const link of links) {
+        if (!sampledIds.has(link.fromPageId)) continue;
+        if (link.linkType === "see_also") seeAlsoFrom.add(link.fromPageId);
+        else xrefFrom.add(link.fromPageId);
       }
 
       const aliases = await ctx.db
@@ -868,11 +868,13 @@ export const releaseStats = internalQuery({
         datasetReleaseId: release.datasetReleaseId,
         pageCount: release.pageCount,
         sampled,
+        linksScanned: links.length,
+        linksTruncated: links.length >= MAX_STATS_LINKS,
         aliases: aliases.length,
-        withSeeAlsoPct: pct(withSeeAlso),
-        withXrefPct: pct(withXref),
-        withParseWarningsPct: pct(withParseWarnings),
-        emptyDescriptionPct: pct(emptyDescription),
+        withSeeAlsoPct: pct(seeAlsoFrom.size),
+        withXrefPct: pct(xrefFrom.size),
+        withParseWarningsPct: pct(pages.filter((page) => page.hasParseWarnings).length),
+        emptyDescriptionPct: pct(pages.filter((page) => !page.description).length),
       });
     }
     return { stage: args.stage, releases };
