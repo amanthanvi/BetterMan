@@ -381,10 +381,13 @@ export const search = query({
       )
     ).flat();
 
-    const descriptionDocs =
-      offset === 0 || prefixDocs.length < takeCount
-        ? await searchDocsByDescription(ctx, { releaseId: release._id, section, queryNorm })
-        : [];
+    // Always merge the same description candidates so every offset slices one
+    // stable ranked set. The index read is bounded by MAX_DESCRIPTION_HITS.
+    const descriptionDocs = await searchDocsByDescription(ctx, {
+      releaseId: release._id,
+      section,
+      queryNorm,
+    });
 
     const ranked = new Map<string, RankedSearchDocument>();
     prefixDocs.forEach((doc, index) => {
