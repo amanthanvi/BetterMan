@@ -226,10 +226,13 @@ def ingest(
     _resolve_doc_links_and_see_also(pages=parsed_pages)
     aliases = _resolve_aliases(aliases=aliases, pages=parsed_pages)
 
-    succeeded = len(parsed_pages) + len(aliases)
+    # Aliases count as handled sources for the success gate, but the release
+    # page count, section totals, and sitemaps only cover parsed pages.
+    succeeded = len(parsed_pages)
+    handled = succeeded + len(aliases)
     hard_failed = parse_failed
     hard_fail_rate = (hard_failed / total) if total else 0.0
-    success_rate = (succeeded / total) if total else 0.0
+    success_rate = (handled / total) if total else 0.0
     publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
 
     client = ConvexIngestClient(http_url=convex_url, ingest_secret=ingest_secret)
