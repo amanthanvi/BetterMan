@@ -1,0 +1,7878 @@
+{
+ "description": "OpenSSH client configuration file",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "ssh_config",
+      "type": "code"
+     },
+     {
+      "text": " — OpenSSH client configuration file",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "href": "/man/ssh/1",
+      "inlines": [
+       {
+        "text": "ssh(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " obtains configuration data from the following sources in the following order:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "command-line options",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ],
+     [
+      {
+       "inlines": [
+        {
+         "text": "user's configuration file ( ~/.ssh/config )",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ],
+     [
+      {
+       "inlines": [
+        {
+         "text": "system-wide configuration file ( /etc/ssh/ssh_config )",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": true,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Unless noted otherwise, for each parameter, the first obtained value will be used. The configuration files contain sections separated by ",
+      "type": "text"
+     },
+     {
+      "text": "Host",
+      "type": "code"
+     },
+     {
+      "text": " specifications, and that section is only applied for hosts that match one of the patterns given in the specification. The matched host name is usually the one given on the command line (see the ",
+      "type": "text"
+     },
+     {
+      "text": "CanonicalizeHostname",
+      "type": "code"
+     },
+     {
+      "text": " option for exceptions).",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Since the first obtained value for each parameter is used, more host-specific declarations should be given near the beginning of the file, and general defaults at the end.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Note that the Debian ",
+      "type": "text"
+     },
+     {
+      "text": "openssh-client",
+      "type": "code"
+     },
+     {
+      "text": " package sets several options as standard in ",
+      "type": "text"
+     },
+     {
+      "text": "/etc/ssh/ssh_config",
+      "type": "code"
+     },
+     {
+      "text": " which are not the default in ",
+      "type": "text"
+     },
+     {
+      "href": "/man/ssh/1",
+      "inlines": [
+       {
+        "text": "ssh(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ":",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Include /etc/ssh/ssh_config.d/*.conf",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ],
+     [
+      {
+       "inlines": [
+        {
+         "text": "SendEnv LANG LC_* COLORTERM NO_COLOR",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ],
+     [
+      {
+       "inlines": [
+        {
+         "text": "HashKnownHosts yes",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ],
+     [
+      {
+       "inlines": [
+        {
+         "text": "GSSAPIAuthentication yes",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "/etc/ssh/ssh_config.d/*.conf",
+      "type": "code"
+     },
+     {
+      "text": " files are included at the start of the system-wide configuration file, so options set there will override those in ",
+      "type": "text"
+     },
+     {
+      "text": "/etc/ssh/ssh_config.",
+      "type": "code"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The file contains keyword-argument pairs, one per line. Lines starting with ‘",
+      "type": "text"
+     },
+     {
+      "text": "#",
+      "type": "code"
+     },
+     {
+      "text": "’ and empty lines are interpreted as comments. Arguments may optionally be enclosed in double quotes (\") in order to represent arguments containing spaces. Configuration options may be separated by whitespace or optional whitespace and exactly one ‘",
+      "type": "text"
+     },
+     {
+      "text": "=",
+      "type": "code"
+     },
+     {
+      "text": "’; the latter format is useful to avoid the need to quote whitespace when specifying configuration options using the ",
+      "type": "text"
+     },
+     {
+      "text": "ssh",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "scp",
+      "type": "code"
+     },
+     {
+      "text": ", and ",
+      "type": "text"
+     },
+     {
+      "text": "sftp",
+      "type": "code"
+     },
+     {
+      "text": " ",
+      "type": "text"
+     },
+     {
+      "text": "-o",
+      "type": "code"
+     },
+     {
+      "text": " option.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The possible keywords and their meanings are as follows (note that keywords are case-insensitive and arguments are case-sensitive):",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "A pattern entry may be negated by prefixing it with an exclamation mark (‘!’). If a negated entry is matched, then the ",
+          "type": "text"
+         },
+         {
+          "text": "Host",
+          "type": "code"
+         },
+         {
+          "text": " entry is ignored, regardless of whether any other patterns on the line match. Negated matches are therefore useful to provide exceptions for wildcard matches.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "See PATTERNS for more information on patterns.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Host",
+      "termInlines": [
+       {
+        "text": "Host",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "text": "canonical",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches only when the configuration file is being re-parsed after hostname canonicalization (see the ",
+          "type": "text"
+         },
+         {
+          "text": "CanonicalizeHostname",
+          "type": "code"
+         },
+         {
+          "text": " option). This may be useful to specify conditions that work with canonical host names only.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "text": "final",
+          "type": "code"
+         },
+         {
+          "text": " keyword requests that the configuration be re-parsed (regardless of whether ",
+          "type": "text"
+         },
+         {
+          "text": "CanonicalizeHostname",
+          "type": "code"
+         },
+         {
+          "text": " is enabled), and matches only during this final pass. If ",
+          "type": "text"
+         },
+         {
+          "text": "CanonicalizeHostname",
+          "type": "code"
+         },
+         {
+          "text": " is enabled, then ",
+          "type": "text"
+         },
+         {
+          "text": "canonical",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "final",
+          "type": "code"
+         },
+         {
+          "text": " match during the same pass.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "text": "exec",
+          "type": "code"
+         },
+         {
+          "text": " keyword executes the specified command under the user's shell. If the command returns a zero exit status then the condition is considered true. Commands containing whitespace characters must be quoted. Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "exec",
+          "type": "code"
+         },
+         {
+          "text": " accept the tokens described in the TOKENS section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "text": "localnetwork",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches the addresses of active local network interfaces against the supplied list of networks in CIDR format. This may be convenient for varying the effective configuration on devices that roam between networks. Note that network address is not a trustworthy criteria in many situations (e.g. when the network is automatically configured using DHCP) and so caution should be applied if using it to control security-sensitive configuration.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The other keywords' criteria must be single entries or comma-separated lists and may use the wildcard and negation operators described in the PATTERNS section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The criteria for the ",
+          "type": "text"
+         },
+         {
+          "text": "host",
+          "type": "code"
+         },
+         {
+          "text": " keyword are matched against the target hostname, after any substitution by the ",
+          "type": "text"
+         },
+         {
+          "text": "Hostname",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "CanonicalizeHostname",
+          "type": "code"
+         },
+         {
+          "text": " options. The ",
+          "type": "text"
+         },
+         {
+          "text": "originalhost",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches against the hostname as it was specified on the command-line.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "text": "tagged",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches a tag name specified by a prior ",
+          "type": "text"
+         },
+         {
+          "text": "Tag",
+          "type": "code"
+         },
+         {
+          "text": " directive or on the ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " command-line using the ",
+          "type": "text"
+         },
+         {
+          "text": "-P",
+          "type": "code"
+         },
+         {
+          "text": " flag. The ",
+          "type": "text"
+         },
+         {
+          "text": "command",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches the remote command that has been requested, or the subsystem name that is being invoked (e.g. \"sftp\" for an SFTP session). The empty string will match the case where a command or tag has not been specified, i.e. ‘Match tag \"\"’. The ",
+          "type": "text"
+         },
+         {
+          "text": "version",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches against the version string of ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", for example “OpenSSH_10.0”.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "text": "user",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches against the target username on the remote host. The ",
+          "type": "text"
+         },
+         {
+          "text": "localuser",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches against the name of the local user running ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " (this keyword may be useful in system-wide ",
+          "type": "text"
+         },
+         {
+          "text": "ssh_config",
+          "type": "code"
+         },
+         {
+          "text": " files).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Finally, the ",
+          "type": "text"
+         },
+         {
+          "text": "sessiontype",
+          "type": "code"
+         },
+         {
+          "text": " keyword matches the requested session type, which may be one of ",
+          "type": "text"
+         },
+         {
+          "text": "shell",
+          "type": "code"
+         },
+         {
+          "text": " for interactive sessions, ",
+          "type": "text"
+         },
+         {
+          "text": "exec",
+          "type": "code"
+         },
+         {
+          "text": " for command execution sessions, ",
+          "type": "text"
+         },
+         {
+          "text": "subsystem",
+          "type": "code"
+         },
+         {
+          "text": " for subsystem invocations such as ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sftp/1",
+          "inlines": [
+           {
+            "text": "sftp(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", or ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " for transport-only sessions, such as when ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " is started with the ",
+          "type": "text"
+         },
+         {
+          "text": "-N",
+          "type": "code"
+         },
+         {
+          "text": " flag.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Match",
+      "termInlines": [
+       {
+        "text": "Match",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether keys should be automatically added to a running ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-agent/1",
+          "inlines": [
+           {
+            "text": "ssh-agent(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". If this option is set to ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " and a key is loaded from a file, the key and its passphrase are added to the agent with the default lifetime, as if by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-add/1",
+          "inlines": [
+           {
+            "text": "ssh-add(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". If this option is set to ",
+          "type": "text"
+         },
+         {
+          "text": "ask",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " will require confirmation using the ",
+          "type": "text"
+         },
+         {
+          "text": "SSH_ASKPASS",
+          "type": "code"
+         },
+         {
+          "text": " program before adding a key (see ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-add/1",
+          "inlines": [
+           {
+            "text": "ssh-add(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for details). If this option is set to ",
+          "type": "text"
+         },
+         {
+          "text": "confirm",
+          "type": "code"
+         },
+         {
+          "text": ", each use of the key must be confirmed, as if the ",
+          "type": "text"
+         },
+         {
+          "text": "-c",
+          "type": "code"
+         },
+         {
+          "text": " option was specified to ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-add/1",
+          "inlines": [
+           {
+            "text": "ssh-add(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". If this option is set to ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ", no keys are added to the agent. Alternately, this option may be specified as a time interval using the format described in the TIME FORMATS section of ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sshd_config/5",
+          "inlines": [
+           {
+            "text": "sshd_config(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " to specify the key's lifetime in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-agent/1",
+          "inlines": [
+           {
+            "text": "ssh-agent(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", after which it will automatically be removed. The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default), ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "confirm",
+          "type": "code"
+         },
+         {
+          "text": " (optionally followed by a time interval), ",
+          "type": "text"
+         },
+         {
+          "text": "ask",
+          "type": "code"
+         },
+         {
+          "text": " or a time interval.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "AddKeysToAgent",
+      "termInlines": [
+       {
+        "text": "AddKeysToAgent",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies which address family to use when connecting. Valid arguments are ",
+          "type": "text"
+         },
+         {
+          "text": "any",
+          "type": "code"
+         },
+         {
+          "text": " (the default), ",
+          "type": "text"
+         },
+         {
+          "text": "inet",
+          "type": "code"
+         },
+         {
+          "text": " (use IPv4 only), or ",
+          "type": "text"
+         },
+         {
+          "text": "inet6",
+          "type": "code"
+         },
+         {
+          "text": " (use IPv6 only).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "AddressFamily",
+      "termInlines": [
+       {
+        "text": "AddressFamily",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If set to ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": ", user interaction such as password prompts and host key confirmation requests will be disabled. In addition, the ",
+          "type": "text"
+         },
+         {
+          "text": "ServerAliveInterval",
+          "type": "code"
+         },
+         {
+          "text": " option will be set to 300 seconds by default (Debian-specific). This option is useful in scripts and other batch jobs where no user is present to interact with ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", and where it is desirable to detect a broken network swiftly. The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "BatchMode",
+      "termInlines": [
+       {
+        "text": "BatchMode",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use the specified address on the local machine as the source address of the connection. Only useful on systems with more than one address.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "BindAddress",
+      "termInlines": [
+       {
+        "text": "BindAddress",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use the address of the specified interface on the local machine as the source address of the connection.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "BindInterface",
+      "termInlines": [
+       {
+        "text": "BindInterface",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When ",
+          "type": "text"
+         },
+         {
+          "text": "CanonicalizeHostname",
+          "type": "code"
+         },
+         {
+          "text": " is enabled, this option specifies the list of domain suffixes in which to search for the specified destination host.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CanonicalDomains",
+      "termInlines": [
+       {
+        "text": "CanonicalDomains",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether to fail with an error when hostname canonicalization fails. The default, ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": ", will attempt to look up the unqualified hostname using the system resolver's search rules. A value of ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " will cause ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " to fail instantly if ",
+          "type": "text"
+         },
+         {
+          "text": "CanonicalizeHostname",
+          "type": "code"
+         },
+         {
+          "text": " is enabled and the target hostname cannot be found in any of the domains specified by ",
+          "type": "text"
+         },
+         {
+          "text": "CanonicalDomains",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CanonicalizeFallbackLocal",
+      "termInlines": [
+       {
+        "text": "CanonicalizeFallbackLocal",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If this option is enabled, then the configuration files are processed again using the new target name to pick up any new configuration in matching ",
+          "type": "text"
+         },
+         {
+          "text": "Host",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "Match",
+          "type": "code"
+         },
+         {
+          "text": " stanzas. A value of ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " disables the use of a ",
+          "type": "text"
+         },
+         {
+          "text": "ProxyJump",
+          "type": "code"
+         },
+         {
+          "text": " host.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CanonicalizeHostname",
+      "termInlines": [
+       {
+        "text": "CanonicalizeHostname",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the maximum number of dot characters in a hostname before canonicalization is disabled. The default, 1, allows a single dot (i.e. hostname.subdomain).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CanonicalizeMaxDots",
+      "termInlines": [
+       {
+        "text": "CanonicalizeMaxDots",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "For example, \"*.a.example.com:*.b.example.com,*.c.example.com\" will allow hostnames matching \"*.a.example.com\" to be canonicalized to names in the \"*.b.example.com\" or \"*.c.example.com\" domains.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "A single argument of \"none\" causes no CNAMEs to be considered for canonicalization. This is the default behaviour.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CanonicalizePermittedCNAMEs",
+      "termInlines": [
+       {
+        "text": "CanonicalizePermittedCNAMEs",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "ssh-ed25519,ecdsa-sha2-nistp256,\necdsa-sha2-nistp384,ecdsa-sha2-nistp521,\nsk-ssh-ed25519@openssh.com,\nsk-ecdsa-sha2-nistp256@openssh.com,\nrsa-sha2-512,rsa-sha2-256",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "If the specified list begins with a ‘+’ character, then the specified algorithms will be appended to the default set instead of replacing them. If the specified list begins with a ‘-’ character, then the specified algorithms (including wildcards) will be removed from the default set instead of replacing them.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " will not accept host certificates signed using algorithms other than those specified.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CASignatureAlgorithms",
+      "termInlines": [
+       {
+        "text": "CASignatureAlgorithms",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "CertificateFile",
+          "type": "code"
+         },
+         {
+          "text": " may use the tilde syntax to refer to a user's home directory, the tokens described in the TOKENS section and environment variables as described in the ENVIRONMENT VARIABLES section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "It is possible to have multiple certificate files specified in configuration files; these certificates will be tried in sequence. Multiple ",
+          "type": "text"
+         },
+         {
+          "text": "CertificateFile",
+          "type": "code"
+         },
+         {
+          "text": " directives will add to the list of certificates used for authentication.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CertificateFile",
+      "termInlines": [
+       {
+        "text": "CertificateFile",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The timeout value “interval” is specified in seconds or may use any of the units documented in the TIME FORMATS section. For example, “session=5m” would cause interactive sessions to terminate after five minutes of inactivity. Specifying a zero value disables the inactivity timeout.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The special timeout “global” applies to all active channels, taken together. Traffic on any active channel will reset the timeout, but when the timeout expires then all open channels will be closed. Note that this global timeout is not matched by wildcards and must be specified explicitly.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The available channel type names include:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         {
+          "definitionBlocks": [
+           {
+            "inlines": [
+             {
+              "text": "Open connections to ",
+              "type": "text"
+             },
+             {
+              "href": "/man/ssh-agent/1",
+              "inlines": [
+               {
+                "text": "ssh-agent(1)",
+                "type": "text"
+               }
+              ],
+              "linkType": "internal",
+              "type": "link"
+             },
+             {
+              "text": ".",
+              "type": "text"
+             }
+            ],
+            "type": "paragraph"
+           }
+          ],
+          "id": "agent-connection",
+          "termInlines": [
+           {
+            "text": "agent-connection",
+            "type": "code"
+           }
+          ]
+         },
+         {
+          "definitionBlocks": [
+           {
+            "inlines": [
+             {
+              "text": "Open TCP or Unix socket (respectively) connections that have been established from a ",
+              "type": "text"
+             },
+             {
+              "href": "/man/ssh/1",
+              "inlines": [
+               {
+                "text": "ssh(1)",
+                "type": "text"
+               }
+              ],
+              "linkType": "internal",
+              "type": "link"
+             },
+             {
+              "text": " local forwarding, i.e. ",
+              "type": "text"
+             },
+             {
+              "text": "LocalForward",
+              "type": "code"
+             },
+             {
+              "text": " or ",
+              "type": "text"
+             },
+             {
+              "text": "DynamicForward",
+              "type": "code"
+             },
+             {
+              "text": ".",
+              "type": "text"
+             }
+            ],
+            "type": "paragraph"
+           }
+          ],
+          "id": "direct-tcpip",
+          "termInlines": [
+           {
+            "text": "direct-tcpip",
+            "type": "code"
+           },
+           {
+            "text": ", ",
+            "type": "text"
+           },
+           {
+            "text": "direct-streamlocal@openssh.com",
+            "type": "code"
+           }
+          ]
+         },
+         {
+          "definitionBlocks": [
+           {
+            "inlines": [
+             {
+              "text": "Open TCP or Unix socket (respectively) connections that have been established to a ",
+              "type": "text"
+             },
+             {
+              "href": "/man/sshd/8",
+              "inlines": [
+               {
+                "text": "sshd(8)",
+                "type": "text"
+               }
+              ],
+              "linkType": "internal",
+              "type": "link"
+             },
+             {
+              "text": " listening on behalf of a ",
+              "type": "text"
+             },
+             {
+              "href": "/man/ssh/1",
+              "inlines": [
+               {
+                "text": "ssh(1)",
+                "type": "text"
+               }
+              ],
+              "linkType": "internal",
+              "type": "link"
+             },
+             {
+              "text": " remote forwarding, i.e. ",
+              "type": "text"
+             },
+             {
+              "text": "RemoteForward",
+              "type": "code"
+             },
+             {
+              "text": ".",
+              "type": "text"
+             }
+            ],
+            "type": "paragraph"
+           }
+          ],
+          "id": "forwarded-tcpip",
+          "termInlines": [
+           {
+            "text": "forwarded-tcpip",
+            "type": "code"
+           },
+           {
+            "text": ", ",
+            "type": "text"
+           },
+           {
+            "text": "forwarded-streamlocal@openssh.com",
+            "type": "code"
+           }
+          ]
+         },
+         {
+          "definitionBlocks": [
+           {
+            "inlines": [
+             {
+              "text": "The interactive main session, including shell session, command execution, ",
+              "type": "text"
+             },
+             {
+              "href": "/man/scp/1",
+              "inlines": [
+               {
+                "text": "scp(1)",
+                "type": "text"
+               }
+              ],
+              "linkType": "internal",
+              "type": "link"
+             },
+             {
+              "text": ", ",
+              "type": "text"
+             },
+             {
+              "href": "/man/sftp/1",
+              "inlines": [
+               {
+                "text": "sftp(1)",
+                "type": "text"
+               }
+              ],
+              "linkType": "internal",
+              "type": "link"
+             },
+             {
+              "text": ", etc.",
+              "type": "text"
+             }
+            ],
+            "type": "paragraph"
+           }
+          ],
+          "id": "session",
+          "termInlines": [
+           {
+            "text": "session",
+            "type": "code"
+           }
+          ]
+         },
+         {
+          "definitionBlocks": [
+           {
+            "inlines": [
+             {
+              "text": "Open ",
+              "type": "text"
+             },
+             {
+              "text": "TunnelForward",
+              "type": "code"
+             },
+             {
+              "text": " connections.",
+              "type": "text"
+             }
+            ],
+            "type": "paragraph"
+           }
+          ],
+          "id": "tun-connection",
+          "termInlines": [
+           {
+            "text": "tun-connection",
+            "type": "code"
+           }
+          ]
+         },
+         {
+          "definitionBlocks": [
+           {
+            "inlines": [
+             {
+              "text": "Open X11 forwarding sessions.",
+              "type": "text"
+             }
+            ],
+            "type": "paragraph"
+           }
+          ],
+          "id": "x11-connection",
+          "termInlines": [
+           {
+            "text": "x11-connection",
+            "type": "code"
+           }
+          ]
+         }
+        ],
+        "type": "definition_list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Note that in all the above cases, terminating an inactive session does not guarantee to remove all resources associated with the session, e.g. shell processes or X11 clients relating to the session may continue to execute.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Moreover, terminating an inactive channel or session does not necessarily close the SSH connection, nor does it prevent a client from requesting another channel of the same type. In particular, expiring an inactive forwarding session does not prevent another identical forwarding from being subsequently created.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The default is not to expire channels of any type for inactivity.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ChannelTimeout",
+      "termInlines": [
+       {
+        "text": "ChannelTimeout",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If set to ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " will additionally check the host IP address in the ",
+          "type": "text"
+         },
+         {
+          "text": "known_hosts",
+          "type": "code"
+         },
+         {
+          "text": " file. This allows it to detect if a host key changed due to DNS spoofing and will add addresses of destination hosts to ",
+          "type": "text"
+         },
+         {
+          "text": "~/.ssh/known_hosts",
+          "type": "code"
+         },
+         {
+          "text": " in the process, regardless of the setting of ",
+          "type": "text"
+         },
+         {
+          "text": "StrictHostKeyChecking",
+          "type": "code"
+         },
+         {
+          "text": ". If the option is set to ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default), the check will not be executed.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CheckHostIP",
+      "termInlines": [
+       {
+        "text": "CheckHostIP",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The supported ciphers are:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "3des-cbc\naes128-cbc\naes192-cbc\naes256-cbc\naes128-ctr\naes192-ctr\naes256-ctr\naes128-gcm@openssh.com\naes256-gcm@openssh.com\nchacha20-poly1305@openssh.com",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The default is:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "chacha20-poly1305@openssh.com,\naes128-gcm@openssh.com,aes256-gcm@openssh.com,\naes128-ctr,aes192-ctr,aes256-ctr",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The list of available ciphers may also be obtained using \"ssh -Q cipher\".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Ciphers",
+      "termInlines": [
+       {
+        "text": "Ciphers",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies that all local, remote, and dynamic port forwardings specified in the configuration files or on the command line be cleared. This option is primarily useful when used from the ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " command line to clear port forwardings set in configuration files, and is automatically set by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/scp/1",
+          "inlines": [
+           {
+            "text": "scp(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sftp/1",
+          "inlines": [
+           {
+            "text": "sftp(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ClearAllForwardings",
+      "termInlines": [
+       {
+        "text": "ClearAllForwardings",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether to use compression. The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Compression",
+      "termInlines": [
+       {
+        "text": "Compression",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the number of tries (one per second) to make before exiting. The argument must be an integer. This may be useful in scripts if the connection sometimes fails. The default is 1.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ConnectionAttempts",
+      "termInlines": [
+       {
+        "text": "ConnectionAttempts",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the timeout (in seconds) used when connecting to the SSH server, instead of using the default system TCP timeout. This timeout is applied both to establishing the connection and to performing the initial SSH protocol handshake and key exchange. ",
+          "type": "text"
+         },
+         {
+          "text": "SetupTimeOut",
+          "type": "code"
+         },
+         {
+          "text": " is a Debian-specific compatibility alias for this option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ConnectTimeout",
+      "termInlines": [
+       {
+        "text": "ConnectTimeout",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Setting this to ",
+          "type": "text"
+         },
+         {
+          "text": "ask",
+          "type": "code"
+         },
+         {
+          "text": " will cause ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " to listen for control connections, but require confirmation using ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-askpass/1",
+          "inlines": [
+           {
+            "text": "ssh-askpass(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". If the ",
+          "type": "text"
+         },
+         {
+          "text": "ControlPath",
+          "type": "code"
+         },
+         {
+          "text": " cannot be opened, ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " will continue without connecting to a master instance.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "X11 and ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-agent/1",
+          "inlines": [
+           {
+            "text": "ssh-agent(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " forwarding is supported over these multiplexed connections, however the display and agent forwarded will be the one belonging to the master connection i.e. it is not possible to forward multiple displays or agents.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Two additional options allow for opportunistic multiplexing: try to use a master connection but fall back to creating a new one if one does not already exist. These options are: ",
+          "type": "text"
+         },
+         {
+          "text": "auto",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "autoask",
+          "type": "code"
+         },
+         {
+          "text": ". The latter requires confirmation like the ",
+          "type": "text"
+         },
+         {
+          "text": "ask",
+          "type": "code"
+         },
+         {
+          "text": " option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ControlMaster",
+      "termInlines": [
+       {
+        "text": "ControlMaster",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specify the path to the control socket used for connection sharing as described in the ",
+          "type": "text"
+         },
+         {
+          "text": "ControlMaster",
+          "type": "code"
+         },
+         {
+          "text": " section above or the string ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " to disable connection sharing. Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "ControlPath",
+          "type": "code"
+         },
+         {
+          "text": " may use the tilde syntax to refer to a user's home directory, the tokens described in the TOKENS section and environment variables as described in the ENVIRONMENT VARIABLES section. It is recommended that any ",
+          "type": "text"
+         },
+         {
+          "text": "ControlPath",
+          "type": "code"
+         },
+         {
+          "text": " used for opportunistic connection sharing include at least %h, %p, and %r (or alternatively %C) and be placed in a directory that is not writable by other users. This ensures that shared connections are uniquely identified.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ControlPath",
+      "termInlines": [
+       {
+        "text": "ControlPath",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When used in conjunction with ",
+          "type": "text"
+         },
+         {
+          "text": "ControlMaster",
+          "type": "code"
+         },
+         {
+          "text": ", specifies that the master connection should remain open in the background (waiting for future client connections) after the initial client connection has been closed. If set to ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default), then the master connection will not be placed into the background, and will close as soon as the initial client connection is closed. If set to ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or 0, then the master connection will remain in the background indefinitely (until killed or closed via a mechanism such as the \"ssh -O exit\"). If set to a time in seconds, or a time in any of the formats documented in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sshd_config/5",
+          "inlines": [
+           {
+            "text": "sshd_config(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", then the backgrounded master connection will automatically terminate after it has remained idle (with no client connections) for the specified time.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ControlPersist",
+      "termInlines": [
+       {
+        "text": "ControlPersist",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The argument must be [",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "bind_address",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ":]",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "port",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". IPv6 addresses can be specified by enclosing addresses in square brackets. By default, the local port is bound in accordance with the ",
+          "type": "text"
+         },
+         {
+          "text": "GatewayPorts",
+          "type": "code"
+         },
+         {
+          "text": " setting. However, an explicit ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "bind_address",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " may be used to bind the connection to a specific address. The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "bind_address",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " of ",
+          "type": "text"
+         },
+         {
+          "text": "localhost",
+          "type": "code"
+         },
+         {
+          "text": " indicates that the listening port be bound for local use only, while an empty address or ‘*’ indicates that the port should be available from all interfaces.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Currently the SOCKS4 and SOCKS5 protocols are supported, and ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " will act as a SOCKS server. Multiple forwardings may be specified, and additional forwardings can be given on the command line. Only the superuser can forward privileged ports.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "DynamicForward",
+      "termInlines": [
+       {
+        "text": "DynamicForward",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Enables the command line option in the ",
+          "type": "text"
+         },
+         {
+          "text": "EscapeChar",
+          "type": "code"
+         },
+         {
+          "text": " menu for interactive sessions (default ‘",
+          "type": "text"
+         },
+         {
+          "text": "~C",
+          "type": "code"
+         },
+         {
+          "text": "’). By default, the command line is disabled.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "EnableEscapeCommandline",
+      "termInlines": [
+       {
+        "text": "EnableEscapeCommandline",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Setting this option to ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " in the global client configuration file ",
+          "type": "text"
+         },
+         {
+          "text": "/etc/ssh/ssh_config",
+          "type": "code"
+         },
+         {
+          "text": " enables the use of the helper program ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-keysign/8",
+          "inlines": [
+           {
+            "text": "ssh-keysign(8)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " during ",
+          "type": "text"
+         },
+         {
+          "text": "HostbasedAuthentication",
+          "type": "code"
+         },
+         {
+          "text": ". The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default). This option should be placed in the non-hostspecific section. See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-keysign/8",
+          "inlines": [
+           {
+            "text": "ssh-keysign(8)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for more information.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "EnableSSHKeysign",
+      "termInlines": [
+       {
+        "text": "EnableSSHKeysign",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Sets the escape character (default: ‘",
+          "type": "text"
+         },
+         {
+          "text": "~",
+          "type": "code"
+         },
+         {
+          "text": "’). The escape character can also be set on the command line. The argument should be a single character, ‘",
+          "type": "text"
+         },
+         {
+          "text": "^",
+          "type": "code"
+         },
+         {
+          "text": "’ followed by a letter, or ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " to disable the escape character entirely (making the connection transparent for binary data).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "EscapeChar",
+      "termInlines": [
+       {
+        "text": "EscapeChar",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " should terminate the connection if it cannot set up all requested dynamic, tunnel, local, and remote port forwardings, (e.g. if either end is unable to bind and listen on a specified port). Note that ",
+          "type": "text"
+         },
+         {
+          "text": "ExitOnForwardFailure",
+          "type": "code"
+         },
+         {
+          "text": " does not apply to connections made over port forwardings and will not, for example, cause ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " to exit if TCP connections to the ultimate forwarding destination fail. The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ExitOnForwardFailure",
+      "termInlines": [
+       {
+        "text": "ExitOnForwardFailure",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the hash algorithm used when displaying key fingerprints. Valid options are: ",
+          "type": "text"
+         },
+         {
+          "text": "md5",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "sha256",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "FingerprintHash",
+      "termInlines": [
+       {
+        "text": "FingerprintHash",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If the ",
+          "type": "text"
+         },
+         {
+          "text": "ExitOnForwardFailure",
+          "type": "code"
+         },
+         {
+          "text": " configuration option is set to “yes”, then a client started with the ",
+          "type": "text"
+         },
+         {
+          "text": "ForkAfterAuthentication",
+          "type": "code"
+         },
+         {
+          "text": " configuration option being set to “yes” will wait for all remote port forwards to be successfully established before placing itself in the background. The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " (same as the ",
+          "type": "text"
+         },
+         {
+          "text": "-f",
+          "type": "code"
+         },
+         {
+          "text": " option) or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ForkAfterAuthentication",
+      "termInlines": [
+       {
+        "text": "ForkAfterAuthentication",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Agent forwarding should be enabled with caution. Users with the ability to bypass file permissions on the remote host (for the agent's Unix-domain socket) can access the local agent through the forwarded connection. An attacker cannot obtain key material from the agent, however they can perform operations on the keys that enable them to authenticate using the identities loaded into the agent.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ForwardAgent",
+      "termInlines": [
+       {
+        "text": "ForwardAgent",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "X11 forwarding should be enabled with caution. Users with the ability to bypass file permissions on the remote host (for the user's X11 authorization database) can access the local X11 display through the forwarded connection. An attacker may then be able to perform activities such as keystroke monitoring if the ",
+          "type": "text"
+         },
+         {
+          "text": "ForwardX11Trusted",
+          "type": "code"
+         },
+         {
+          "text": " option is also enabled.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ForwardX11",
+      "termInlines": [
+       {
+        "text": "ForwardX11",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specify a timeout for untrusted X11 forwarding using the format described in the TIME FORMATS section of ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sshd_config/5",
+          "inlines": [
+           {
+            "text": "sshd_config(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". X11 connections received by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " after this time will be refused. Setting ",
+          "type": "text"
+         },
+         {
+          "text": "ForwardX11Timeout",
+          "type": "code"
+         },
+         {
+          "text": " to zero will disable the timeout and permit X11 forwarding for the life of the connection. The default is to disable untrusted X11 forwarding after twenty minutes has elapsed.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ForwardX11Timeout",
+      "termInlines": [
+       {
+        "text": "ForwardX11Timeout",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If this option is set to ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the upstream default), remote X11 clients will be considered untrusted and prevented from stealing or tampering with data belonging to trusted X11 clients. Furthermore, the ",
+          "type": "text"
+         },
+         {
+          "href": "/man/xauth/1",
+          "inlines": [
+           {
+            "text": "xauth(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " token used for the session will be set to expire after 20 minutes. Remote clients will be refused access after this time.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "See the X11 SECURITY extension specification for full details on the restrictions imposed on untrusted clients.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ForwardX11Trusted",
+      "termInlines": [
+       {
+        "text": "ForwardX11Trusted",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether remote hosts are allowed to connect to local forwarded ports. By default, ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " binds local port forwardings to the loopback address. This prevents other remote hosts from connecting to forwarded ports. ",
+          "type": "text"
+         },
+         {
+          "text": "GatewayPorts",
+          "type": "code"
+         },
+         {
+          "text": " can be used to specify that ssh should bind local port forwardings to the wildcard address, thus allowing remote hosts to connect to forwarded ports. The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GatewayPorts",
+      "termInlines": [
+       {
+        "text": "GatewayPorts",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies one or more files to use for the global host key database, separated by whitespace. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "/etc/ssh/ssh_known_hosts",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "/etc/ssh/ssh_known_hosts2",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GlobalKnownHostsFile",
+      "termInlines": [
+       {
+        "text": "GlobalKnownHostsFile",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether user authentication based on GSSAPI is allowed. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GSSAPIAuthentication~2",
+      "termInlines": [
+       {
+        "text": "GSSAPIAuthentication",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If set, specifies the GSSAPI client identity that ssh should use when connecting to the server. The default is unset, which means that the default identity will be used.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GSSAPIClientIdentity",
+      "termInlines": [
+       {
+        "text": "GSSAPIClientIdentity",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Forward (delegate) credentials to the server. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GSSAPIDelegateCredentials",
+      "termInlines": [
+       {
+        "text": "GSSAPIDelegateCredentials",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether key exchange based on GSSAPI may be used. When using GSSAPI key exchange the server need not have a host key. The default is “no”.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GSSAPIKeyExchange",
+      "termInlines": [
+       {
+        "text": "GSSAPIKeyExchange",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Checks are made to ensure that credentials are only propagated when the new credentials match the old ones on the originating client and where the receiving server still has the old set in its cache.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The default is “no”.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "For this to work ",
+          "type": "text"
+         },
+         {
+          "text": "GSSAPIKeyExchange",
+          "type": "code"
+         },
+         {
+          "text": " needs to be enabled in the server and also used by the client.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GSSAPIRenewalForcesRekey",
+      "termInlines": [
+       {
+        "text": "GSSAPIRenewalForcesRekey",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If set, specifies the GSSAPI server identity that ssh should expect when connecting to the server. The default is unset, which means that the expected GSSAPI server identity will be determined from the target hostname.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GSSAPIServerIdentity",
+      "termInlines": [
+       {
+        "text": "GSSAPIServerIdentity",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Set to “yes” to indicate that the DNS is trusted to securely canonicalize the name of the host being connected to. If “no”, the hostname entered on the command line will be passed untouched to the GSSAPI library. The default is “no”.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GSSAPITrustDns",
+      "termInlines": [
+       {
+        "text": "GSSAPITrustDns",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "gss-gex-sha1-,\ngss-group1-sha1-,\ngss-group14-sha1-,\ngss-group14-sha256-,\ngss-group16-sha512-,\ngss-nistp256-sha256-,\ngss-curve25519-sha256-",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The default is “gss-group14-sha256-,gss-group16-sha512-,gss-nistp256-sha256-,gss-curve25519-sha256-,gss-gex-sha1-,gss-group14-sha1-”. This option only applies to connections using GSSAPI.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "GSSAPIKexAlgorithms",
+      "termInlines": [
+       {
+        "text": "GSSAPIKexAlgorithms",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Indicates that ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " should hash host names and addresses when they are added to ",
+          "type": "text"
+         },
+         {
+          "text": "~/.ssh/known_hosts",
+          "type": "code"
+         },
+         {
+          "text": ". These hashed names may be used normally by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sshd/8",
+          "inlines": [
+           {
+            "text": "sshd(8)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", but they do not visually reveal identifying information if the file's contents are disclosed. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ". Note that existing names and addresses in known hosts files will not be converted automatically, but may be manually hashed using ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-keygen/1",
+          "inlines": [
+           {
+            "text": "ssh-keygen(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". Use of this option may break facilities such as tab-completion that rely on being able to read unhashed host names from ",
+          "type": "text"
+         },
+         {
+          "text": "~/.ssh/known_hosts",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "HashKnownHosts~2",
+      "termInlines": [
+       {
+        "text": "HashKnownHosts",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "ssh-ed25519-cert-v01@openssh.com,\necdsa-sha2-nistp256-cert-v01@openssh.com,\necdsa-sha2-nistp384-cert-v01@openssh.com,\necdsa-sha2-nistp521-cert-v01@openssh.com,\nsk-ssh-ed25519-cert-v01@openssh.com,\nsk-ecdsa-sha2-nistp256-cert-v01@openssh.com,\nrsa-sha2-512-cert-v01@openssh.com,\nrsa-sha2-256-cert-v01@openssh.com,\nssh-ed25519,\necdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,\nsk-ssh-ed25519@openssh.com,\nsk-ecdsa-sha2-nistp256@openssh.com,\nrsa-sha2-512,rsa-sha2-256",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "text": "-Q",
+          "type": "code"
+         },
+         {
+          "text": " option of ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " may be used to list supported signature algorithms. This was formerly named HostbasedKeyTypes.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "HostbasedAcceptedAlgorithms",
+      "termInlines": [
+       {
+        "text": "HostbasedAcceptedAlgorithms",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether to try rhosts based authentication with public key authentication. The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "HostbasedAuthentication",
+      "termInlines": [
+       {
+        "text": "HostbasedAuthentication",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "ssh-ed25519-cert-v01@openssh.com,\necdsa-sha2-nistp256-cert-v01@openssh.com,\necdsa-sha2-nistp384-cert-v01@openssh.com,\necdsa-sha2-nistp521-cert-v01@openssh.com,\nsk-ssh-ed25519-cert-v01@openssh.com,\nsk-ecdsa-sha2-nistp256-cert-v01@openssh.com,\nrsa-sha2-512-cert-v01@openssh.com,\nrsa-sha2-256-cert-v01@openssh.com,\nssh-ed25519,\necdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,\nsk-ecdsa-sha2-nistp256@openssh.com,\nsk-ssh-ed25519@openssh.com,\nrsa-sha2-512,rsa-sha2-256",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "If hostkeys are known for the destination host then this default is modified to prefer their algorithms.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The list of available signature algorithms may also be obtained using \"ssh -Q HostKeyAlgorithms\".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "HostKeyAlgorithms",
+      "termInlines": [
+       {
+        "text": "HostKeyAlgorithms",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies an alias that should be used instead of the real host name when looking up or saving the host key in the host key database files and when validating host certificates. This option is useful for tunneling SSH connections or for multiple servers running on a single host.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "HostKeyAlias",
+      "termInlines": [
+       {
+        "text": "HostKeyAlias",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the real host name to log into. This can be used to specify nicknames or abbreviations for hosts. Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "Hostname",
+          "type": "code"
+         },
+         {
+          "text": " accept the tokens described in the TOKENS section. Numeric IP addresses are also permitted (both on the command line and in ",
+          "type": "text"
+         },
+         {
+          "text": "Hostname",
+          "type": "code"
+         },
+         {
+          "text": " specifications). The default is the name given on the command line.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Hostname",
+      "termInlines": [
+       {
+        "text": "Hostname",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies that ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " should only use the configured authentication identity and certificate files (either the default files, or those explicitly configured in the ",
+          "type": "text"
+         },
+         {
+          "text": "ssh_config",
+          "type": "code"
+         },
+         {
+          "text": " files or passed on the ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " command-line), even if ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-agent/1",
+          "inlines": [
+           {
+            "text": "ssh-agent(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " or a ",
+          "type": "text"
+         },
+         {
+          "text": "PKCS11Provider",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "SecurityKeyProvider",
+          "type": "code"
+         },
+         {
+          "text": " offers more identities. The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default). This option is intended for situations where ssh-agent offers many different identities.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "IdentitiesOnly",
+      "termInlines": [
+       {
+        "text": "IdentitiesOnly",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This option overrides the ",
+          "type": "text"
+         },
+         {
+          "text": "SSH_AUTH_SOCK",
+          "type": "code"
+         },
+         {
+          "text": " environment variable and can be used to select a specific agent. Setting the socket name to ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " disables the use of an authentication agent. If the string \"SSH_AUTH_SOCK\" is specified, the location of the socket will be read from the ",
+          "type": "text"
+         },
+         {
+          "text": "SSH_AUTH_SOCK",
+          "type": "code"
+         },
+         {
+          "text": " environment variable. Otherwise if the specified value begins with a ‘$’ character, then it will be treated as an environment variable containing the location of the socket.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "IdentityAgent",
+          "type": "code"
+         },
+         {
+          "text": " may use the tilde syntax to refer to a user's home directory, the tokens described in the TOKENS section and environment variables as described in the ENVIRONMENT VARIABLES section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "IdentityAgent",
+      "termInlines": [
+       {
+        "text": "IdentityAgent",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "IdentityFile",
+          "type": "code"
+         },
+         {
+          "text": " may use the tilde syntax to refer to a user's home directory or the tokens described in the TOKENS section. Alternately an argument of ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " may be used to indicate no identity files should be loaded.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "It is possible to have multiple identity files specified in configuration files; all these identities will be tried in sequence. Multiple ",
+          "type": "text"
+         },
+         {
+          "text": "IdentityFile",
+          "type": "code"
+         },
+         {
+          "text": " directives will add to the list of identities tried (this behaviour differs from that of other configuration directives).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "IdentityFile",
+          "type": "code"
+         },
+         {
+          "text": " may be used in conjunction with ",
+          "type": "text"
+         },
+         {
+          "text": "IdentitiesOnly",
+          "type": "code"
+         },
+         {
+          "text": " to select which identities in an agent are offered during authentication. ",
+          "type": "text"
+         },
+         {
+          "text": "IdentityFile",
+          "type": "code"
+         },
+         {
+          "text": " may also be used in conjunction with ",
+          "type": "text"
+         },
+         {
+          "text": "CertificateFile",
+          "type": "code"
+         },
+         {
+          "text": " in order to provide any certificate also needed for authentication with the identity.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "IdentityFile",
+      "termInlines": [
+       {
+        "text": "IdentityFile",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies a pattern-list of unknown options to be ignored if they are encountered in configuration parsing. This may be used to suppress errors if ",
+          "type": "text"
+         },
+         {
+          "text": "ssh_config",
+          "type": "code"
+         },
+         {
+          "text": " contains options that are unrecognised by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". It is recommended that ",
+          "type": "text"
+         },
+         {
+          "text": "IgnoreUnknown",
+          "type": "code"
+         },
+         {
+          "text": " be listed early in the configuration file as it will not be applied to unknown options that appear before it.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "IgnoreUnknown",
+      "termInlines": [
+       {
+        "text": "IgnoreUnknown",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Include the specified configuration file(s). Multiple pathnames may be specified and each pathname may contain ",
+          "type": "text"
+         },
+         {
+          "href": "/man/glob/7",
+          "inlines": [
+           {
+            "text": "glob(7)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " wildcards, tokens as described in the TOKENS section, environment variables as described in the ENVIRONMENT VARIABLES section and, for user configurations, shell-like ‘~’ references to user home directories. Wildcards will be expanded and processed in lexical order. Files without absolute paths are assumed to be in ",
+          "type": "text"
+         },
+         {
+          "text": "~/.ssh",
+          "type": "code"
+         },
+         {
+          "text": " if included in a user configuration file or ",
+          "type": "text"
+         },
+         {
+          "text": "/etc/ssh",
+          "type": "code"
+         },
+         {
+          "text": " if included from the system configuration file. ",
+          "type": "text"
+         },
+         {
+          "text": "Include",
+          "type": "code"
+         },
+         {
+          "text": " directive may appear inside a ",
+          "type": "text"
+         },
+         {
+          "text": "Match",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "Host",
+          "type": "code"
+         },
+         {
+          "text": " block to perform conditional inclusion.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Include~2",
+      "termInlines": [
+       {
+        "text": "Include",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "Differentiated Services Field Codepoint",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " (DSCP) value for connections. Accepted values are ",
+          "type": "text"
+         },
+         {
+          "text": "af11",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af12",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af13",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af21",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af22",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af23",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af31",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af32",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af33",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af41",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af42",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "af43",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "cs0",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "cs1",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "cs2",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "cs3",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "cs4",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "cs5",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "cs6",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "cs7",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "ef",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "le",
+          "type": "code"
+         },
+         {
+          "text": ", a numeric value, or ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " to use the operating system default. This option may take one or two arguments, separated by whitespace. If one argument is specified, it is used as the packet class unconditionally. If two values are specified, the first is automatically selected for interactive sessions and the second for non-interactive sessions. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "ef",
+          "type": "code"
+         },
+         {
+          "text": " (Expedited Forwarding) for interactive sessions and ",
+          "type": "text"
+         },
+         {
+          "text": "cs1",
+          "type": "code"
+         },
+         {
+          "text": " (Lower Effort) for non-interactive sessions.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "IPQoS",
+      "termInlines": [
+       {
+        "text": "IPQoS",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether to use keyboard-interactive authentication. The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " (the default) or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ". ",
+          "type": "text"
+         },
+         {
+          "text": "ChallengeResponseAuthentication",
+          "type": "code"
+         },
+         {
+          "text": " is a deprecated alias for this.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "KbdInteractiveAuthentication",
+      "termInlines": [
+       {
+        "text": "KbdInteractiveAuthentication",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the list of methods to use in keyboard-interactive authentication. Multiple method names must be comma-separated. The default is to use the server specified list. The methods available vary depending on what the server supports. For an OpenSSH server, it may be zero or more of: ",
+          "type": "text"
+         },
+         {
+          "text": "bsdauth",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "pam",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "KbdInteractiveDevices",
+      "termInlines": [
+       {
+        "text": "KbdInteractiveDevices",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If the specified list begins with a ‘+’ character, then the specified algorithms will be appended to the default set instead of replacing them. If the specified list begins with a ‘-’ character, then the specified algorithms (including wildcards) will be removed from the default set instead of replacing them. If the specified list begins with a ‘^’ character, then the specified algorithms will be placed at the head of the default set.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The default is:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "mlkem768x25519-sha256,\nsntrup761x25519-sha512,sntrup761x25519-sha512@openssh.com,\ncurve25519-sha256,curve25519-sha256@libssh.org,\necdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,\ndiffie-hellman-group-exchange-sha256,\ndiffie-hellman-group16-sha512,\ndiffie-hellman-group18-sha512,\ndiffie-hellman-group14-sha256",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The list of supported key exchange algorithms may also be obtained using \"ssh -Q kex\".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "KexAlgorithms",
+      "termInlines": [
+       {
+        "text": "KexAlgorithms",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies a command to use to obtain a list of host keys, in addition to those listed in ",
+          "type": "text"
+         },
+         {
+          "text": "UserKnownHostsFile",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "GlobalKnownHostsFile",
+          "type": "code"
+         },
+         {
+          "text": ". This command is executed after the files have been read. It may write host key lines to standard output in identical format to the usual files (described in the VERIFYING HOST KEYS section in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": "). Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "KnownHostsCommand",
+          "type": "code"
+         },
+         {
+          "text": " accept the tokens described in the TOKENS section. The command may be invoked multiple times per connection: once when preparing the preference list of host key algorithms to use, again to obtain the host key for the requested host name and, if ",
+          "type": "text"
+         },
+         {
+          "text": "CheckHostIP",
+          "type": "code"
+         },
+         {
+          "text": " is enabled, one more time to obtain the host key matching the server's address. If the command exits abnormally or returns a non-zero exit status then the connection is terminated.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "KnownHostsCommand",
+      "termInlines": [
+       {
+        "text": "KnownHostsCommand",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The command is run synchronously and does not have access to the session of the ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " that spawned it. It should not be used for interactive commands.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "This directive is ignored unless ",
+          "type": "text"
+         },
+         {
+          "text": "PermitLocalCommand",
+          "type": "code"
+         },
+         {
+          "text": " has been enabled.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "LocalCommand",
+      "termInlines": [
+       {
+        "text": "LocalCommand",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "IPv6 addresses can be specified by enclosing addresses in square brackets.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "If either argument contains a '/' in it, that argument will be interpreted as a Unix-domain socket (on the corresponding host) rather than a TCP port.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Multiple forwardings may be specified, and additional forwardings can be given on the command line. Only the superuser can forward privileged ports. By default, the local port is bound in accordance with the ",
+          "type": "text"
+         },
+         {
+          "text": "GatewayPorts",
+          "type": "code"
+         },
+         {
+          "text": " setting. However, an explicit ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "bind_address",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " may be used to bind the connection to a specific address. The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "bind_address",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " of ",
+          "type": "text"
+         },
+         {
+          "text": "localhost",
+          "type": "code"
+         },
+         {
+          "text": " indicates that the listening port be bound for local use only, while an empty address or ‘*’ indicates that the port should be available from all interfaces. Unix domain socket paths may use the tokens described in the TOKENS section and environment variables as described in the ENVIRONMENT VARIABLES section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "LocalForward",
+      "termInlines": [
+       {
+        "text": "LocalForward",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Gives the verbosity level that is used when logging messages from ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". The possible values are: QUIET, FATAL, ERROR, INFO, VERBOSE, DEBUG, DEBUG1, DEBUG2, and DEBUG3. The default is INFO. DEBUG and DEBUG1 are equivalent. DEBUG2 and DEBUG3 each specify higher levels of verbose output.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "LogLevel",
+      "termInlines": [
+       {
+        "text": "LogLevel",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "kex.c:*:1000,*:kex_exchange_identification():*,packet.c:*",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "would enable detailed logging for line 1000 of ",
+          "type": "text"
+         },
+         {
+          "text": "kex.c",
+          "type": "code"
+         },
+         {
+          "text": ", everything in the ",
+          "type": "text"
+         },
+         {
+          "text": "kex_exchange_identification",
+          "type": "code"
+         },
+         {
+          "text": "() function, and all code in the ",
+          "type": "text"
+         },
+         {
+          "text": "packet.c",
+          "type": "code"
+         },
+         {
+          "text": " file. This option is intended for debugging and no overrides are enabled by default.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "LogVerbose",
+      "termInlines": [
+       {
+        "text": "LogVerbose",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The algorithms that contain \"-etm\" calculate the MAC after encryption (encrypt-then-mac). These are considered safer and their use recommended.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The default is:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "umac-64-etm@openssh.com,umac-128-etm@openssh.com,\nhmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,\nhmac-sha1-etm@openssh.com,\numac-64@openssh.com,umac-128@openssh.com,\nhmac-sha2-256,hmac-sha2-512,hmac-sha1",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The list of available MAC algorithms may also be obtained using \"ssh -Q mac\".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "MACs",
+      "termInlines": [
+       {
+        "text": "MACs",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Disable host authentication for localhost (loopback addresses). The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "NoHostAuthenticationForLocalhost",
+      "termInlines": [
+       {
+        "text": "NoHostAuthenticationForLocalhost",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the number of password prompts before giving up. The argument to this keyword must be an integer. The default is 3.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "NumberOfPasswordPrompts",
+      "termInlines": [
+       {
+        "text": "NumberOfPasswordPrompts",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " should try to obscure inter-keystroke timings from passive observers of network traffic. If enabled, then for interactive sessions, ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " will send keystrokes at fixed intervals of a few tens of milliseconds and will send fake keystroke packets for some time after typing ceases. The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " or an interval specifier of the form ",
+          "type": "text"
+         },
+         {
+          "text": "interval:milliseconds",
+          "type": "code"
+         },
+         {
+          "text": " (e.g. ",
+          "type": "text"
+         },
+         {
+          "text": "interval:80",
+          "type": "code"
+         },
+         {
+          "text": " for 80 milliseconds). The default is to obscure keystrokes using a 20ms packet interval. Note that smaller intervals will result in higher fake keystroke packet rates.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ObscureKeystrokeTiming",
+      "termInlines": [
+       {
+        "text": "ObscureKeystrokeTiming",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether to use password authentication. The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " (the default) or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "PasswordAuthentication",
+      "termInlines": [
+       {
+        "text": "PasswordAuthentication",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Allow local command execution via the ",
+          "type": "text"
+         },
+         {
+          "text": "LocalCommand",
+          "type": "code"
+         },
+         {
+          "text": " option or using the ",
+          "type": "text"
+         },
+         {
+          "text": "!",
+          "type": "code"
+         },
+         {
+          "inlines": [
+           {
+            "text": "command",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " escape sequence in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "PermitLocalCommand",
+      "termInlines": [
+       {
+        "text": "PermitLocalCommand",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "PermitRemoteOpen host : port",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "PermitRemoteOpen IPv4_addr : port",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "PermitRemoteOpen [IPv6_addr] : port",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Multiple forwards may be specified by separating them with whitespace. An argument of ",
+          "type": "text"
+         },
+         {
+          "text": "any",
+          "type": "code"
+         },
+         {
+          "text": " can be used to remove all restrictions and permit any forwarding requests. An argument of ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " can be used to prohibit all forwarding requests. The wildcard ‘*’ can be used for host or port to allow all hosts or ports respectively. Otherwise, no pattern matching or address lookups are performed on supplied names.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "PermitRemoteOpen",
+      "termInlines": [
+       {
+        "text": "PermitRemoteOpen",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies which PKCS#11 provider to use or ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " to indicate that no provider should be used (the default). The argument to this keyword is a path to the PKCS#11 shared library ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " should use to communicate with a PKCS#11 token providing keys for user authentication.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "PKCS11Provider",
+      "termInlines": [
+       {
+        "text": "PKCS11Provider",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the port number to connect on the remote host. The default is 22.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Port",
+      "termInlines": [
+       {
+        "text": "Port",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "gssapi-with-mic,hostbased,publickey,\nkeyboard-interactive,password",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       }
+      ],
+      "id": "PreferredAuthentications",
+      "termInlines": [
+       {
+        "text": "PreferredAuthentications",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "ProxyCommand",
+          "type": "code"
+         },
+         {
+          "text": " accept the tokens described in the TOKENS section. The command can be basically anything, and should read from its standard input and write to its standard output. It should eventually connect an ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sshd/8",
+          "inlines": [
+           {
+            "text": "sshd(8)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " server running on some machine, or execute ",
+          "type": "text"
+         },
+         {
+          "text": "sshd -i",
+          "type": "code"
+         },
+         {
+          "text": " somewhere. Host key management will be done using the ",
+          "type": "text"
+         },
+         {
+          "text": "Hostname",
+          "type": "code"
+         },
+         {
+          "text": " of the host being connected (defaulting to the name typed by the user). Setting the command to ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " disables this option entirely. Note that ",
+          "type": "text"
+         },
+         {
+          "text": "CheckHostIP",
+          "type": "code"
+         },
+         {
+          "text": " is not available for connects with a proxy command.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "This directive is useful in conjunction with ",
+          "type": "text"
+         },
+         {
+          "href": "/man/nc/1",
+          "inlines": [
+           {
+            "text": "nc(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " and its proxy support. For example, the following directive would connect via an HTTP proxy at 192.0.2.0:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "ProxyCommand /usr/bin/nc -X connect -x 192.0.2.0:8080 %h %p",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       }
+      ],
+      "id": "ProxyCommand",
+      "termInlines": [
+       {
+        "text": "ProxyCommand",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Note that this option will compete with the ",
+          "type": "text"
+         },
+         {
+          "text": "ProxyCommand",
+          "type": "code"
+         },
+         {
+          "text": " option - whichever is specified first will prevent later instances of the other from taking effect.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Note also that the configuration for the destination host (either supplied via the command-line or the configuration file) is not generally applied to jump hosts. ",
+          "type": "text"
+         },
+         {
+          "text": "~/.ssh/config",
+          "type": "code"
+         },
+         {
+          "text": " should be used if specific configuration is required for jump hosts.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ProxyJump",
+      "termInlines": [
+       {
+        "text": "ProxyJump",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies that ",
+          "type": "text"
+         },
+         {
+          "text": "ProxyCommand",
+          "type": "code"
+         },
+         {
+          "text": " will pass a connected file descriptor back to ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " instead of continuing to execute and pass data. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ProxyUseFdpass",
+      "termInlines": [
+       {
+        "text": "ProxyUseFdpass",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "ssh-ed25519-cert-v01@openssh.com,\necdsa-sha2-nistp256-cert-v01@openssh.com,\necdsa-sha2-nistp384-cert-v01@openssh.com,\necdsa-sha2-nistp521-cert-v01@openssh.com,\nsk-ssh-ed25519-cert-v01@openssh.com,\nsk-ecdsa-sha2-nistp256-cert-v01@openssh.com,\nrsa-sha2-512-cert-v01@openssh.com,\nrsa-sha2-256-cert-v01@openssh.com,\nssh-ed25519,\necdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,\nsk-ssh-ed25519@openssh.com,\nsk-ecdsa-sha2-nistp256@openssh.com,\nrsa-sha2-512,rsa-sha2-256",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The list of available signature algorithms may also be obtained using \"ssh -Q PubkeyAcceptedAlgorithms\".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "PubkeyAcceptedAlgorithms",
+      "termInlines": [
+       {
+        "text": "PubkeyAcceptedAlgorithms",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether to try public key authentication. The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " (the default), ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "unbound",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "host-bound",
+          "type": "code"
+         },
+         {
+          "text": ". The final two options enable public key authentication while respectively disabling or enabling the OpenSSH host-bound authentication protocol extension required for restricted ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-agent/1",
+          "inlines": [
+           {
+            "text": "ssh-agent(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " forwarding.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "PubkeyAuthentication",
+      "termInlines": [
+       {
+        "text": "PubkeyAuthentication",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the maximum amount of data that may be transmitted or received before the session key is renegotiated, optionally followed by a maximum amount of time that may pass before the session key is renegotiated. The first argument is specified in bytes and may have a suffix of ‘K’, ‘M’, or ‘G’ to indicate Kilobytes, Megabytes, or Gigabytes, respectively. The default is between ‘1G’ and ‘4G’, depending on the cipher. The optional second value is specified in seconds and may use any of the units documented in the TIME FORMATS section of ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sshd_config/5",
+          "inlines": [
+           {
+            "text": "sshd_config(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". The default value for ",
+          "type": "text"
+         },
+         {
+          "text": "RekeyLimit",
+          "type": "code"
+         },
+         {
+          "text": " is ",
+          "type": "text"
+         },
+         {
+          "text": "default none",
+          "type": "code"
+         },
+         {
+          "text": ", which means that rekeying is performed after the cipher's default amount of data has been sent or received and no time based rekeying is done.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "RekeyLimit",
+      "termInlines": [
+       {
+        "text": "RekeyLimit",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies a command to execute on the remote machine after successfully connecting to the server. The command string extends to the end of the line, and is executed with the user's shell. Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "RemoteCommand",
+          "type": "code"
+         },
+         {
+          "text": " accept the tokens described in the TOKENS section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "RemoteCommand",
+      "termInlines": [
+       {
+        "text": "RemoteCommand",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "IPv6 addresses can be specified by enclosing addresses in square brackets.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "If either argument contains a '/' in it, that argument will be interpreted as a Unix-domain socket (on the corresponding host) rather than a TCP port.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Multiple forwardings may be specified, and additional forwardings can be given on the command line. Privileged ports can be forwarded only when logging in as root on the remote machine. Unix domain socket paths may use the tokens described in the TOKENS section and environment variables as described in the ENVIRONMENT VARIABLES section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "If the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "port",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " argument is 0, the listen port will be dynamically allocated on the server and reported to the client at run time.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "If the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "bind_address",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is not specified, the default is to only bind to loopback addresses. If the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "bind_address",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is ‘",
+          "type": "text"
+         },
+         {
+          "text": "*",
+          "type": "code"
+         },
+         {
+          "text": "’ or an empty string, then the forwarding is requested to listen on all interfaces. Specifying a remote ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "bind_address",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " will only succeed if the server's ",
+          "type": "text"
+         },
+         {
+          "text": "GatewayPorts",
+          "type": "code"
+         },
+         {
+          "text": " option is enabled (see ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sshd_config/5",
+          "inlines": [
+           {
+            "text": "sshd_config(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ").",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "RemoteForward",
+      "termInlines": [
+       {
+        "text": "RemoteForward",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies whether to request a pseudo-tty for the session. The argument may be one of: ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (never request a TTY), ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " (always request a TTY when standard input is a TTY), ",
+          "type": "text"
+         },
+         {
+          "text": "force",
+          "type": "code"
+         },
+         {
+          "text": " (always request a TTY) or ",
+          "type": "text"
+         },
+         {
+          "text": "auto",
+          "type": "code"
+         },
+         {
+          "text": " (request a TTY when opening a login session). This option mirrors the ",
+          "type": "text"
+         },
+         {
+          "text": "-t",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "-T",
+          "type": "code"
+         },
+         {
+          "text": " flags for ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "RequestTTY",
+      "termInlines": [
+       {
+        "text": "RequestTTY",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the minimum RSA key size (in bits) that ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " will accept. User authentication keys smaller than this limit will be ignored. Servers that present host keys smaller than this limit will cause the connection to be terminated. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "1024",
+          "type": "code"
+         },
+         {
+          "text": " bits. Note that this limit may only be raised from the default.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "RequiredRSASize",
+      "termInlines": [
+       {
+        "text": "RequiredRSASize",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies revoked host public keys. Keys listed in this file will be refused for host authentication. Note that if this file does not exist or is not readable, then host authentication will be refused for all hosts. Keys may be specified as a text file, listing one public key per line, or as an OpenSSH Key Revocation List (KRL) as generated by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-keygen/1",
+          "inlines": [
+           {
+            "text": "ssh-keygen(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". For more information on KRLs, see the KEY REVOCATION LISTS section in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh-keygen/1",
+          "inlines": [
+           {
+            "text": "ssh-keygen(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "RevokedHostKeys",
+          "type": "code"
+         },
+         {
+          "text": " may use the tilde syntax to refer to a user's home directory, the tokens described in the TOKENS section and environment variables as described in the ENVIRONMENT VARIABLES section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "RevokedHostKeys",
+      "termInlines": [
+       {
+        "text": "RevokedHostKeys",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If the specified value begins with a ‘$’ character, then it will be treated as an environment variable containing the path to the library.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "SecurityKeyProvider",
+      "termInlines": [
+       {
+        "text": "SecurityKeyProvider",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "See PATTERNS for more information on patterns.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "It is possible to clear previously set ",
+          "type": "text"
+         },
+         {
+          "text": "SendEnv",
+          "type": "code"
+         },
+         {
+          "text": " variable names by prefixing patterns with ",
+          "type": "text"
+         },
+         {
+          "text": "-",
+          "type": "code"
+         },
+         {
+          "text": ". The default is not to send any environment variables.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "SendEnv~2",
+      "termInlines": [
+       {
+        "text": "SendEnv",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The default value is 3. If, for example, ",
+          "type": "text"
+         },
+         {
+          "text": "ServerAliveInterval",
+          "type": "code"
+         },
+         {
+          "text": " (see below) is set to 15 and ",
+          "type": "text"
+         },
+         {
+          "text": "ServerAliveCountMax",
+          "type": "code"
+         },
+         {
+          "text": " is left at the default, if the server becomes unresponsive, ssh will disconnect after approximately 45 seconds.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ServerAliveCountMax",
+      "termInlines": [
+       {
+        "text": "ServerAliveCountMax",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Sets a timeout interval in seconds after which if no data has been received from the server, ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " will send a message through the encrypted channel to request a response from the server. The default is 0, indicating that these messages will not be sent to the server, or 300 if the ",
+          "type": "text"
+         },
+         {
+          "text": "BatchMode",
+          "type": "code"
+         },
+         {
+          "text": " option is set (Debian-specific). ",
+          "type": "text"
+         },
+         {
+          "text": "ProtocolKeepAlives",
+          "type": "code"
+         },
+         {
+          "text": " is a Debian-specific compatibility alias for this option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ServerAliveInterval",
+      "termInlines": [
+       {
+        "text": "ServerAliveInterval",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "May be used to either request invocation of a subsystem on the remote system, or to prevent the execution of a remote command at all. The latter is useful for just forwarding ports. The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " (same as the ",
+          "type": "text"
+         },
+         {
+          "text": "-N",
+          "type": "code"
+         },
+         {
+          "text": " option), ",
+          "type": "text"
+         },
+         {
+          "text": "subsystem",
+          "type": "code"
+         },
+         {
+          "text": " (same as the ",
+          "type": "text"
+         },
+         {
+          "text": "-s",
+          "type": "code"
+         },
+         {
+          "text": " option) or ",
+          "type": "text"
+         },
+         {
+          "text": "default",
+          "type": "code"
+         },
+         {
+          "text": " (shell or command execution).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "SessionType",
+      "termInlines": [
+       {
+        "text": "SessionType",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The “VALUE” may use the tokens described in the TOKENS section and environment variables as described in the ENVIRONMENT VARIABLES section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "SetEnv",
+      "termInlines": [
+       {
+        "text": "SetEnv",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Redirects stdin from ",
+          "type": "text"
+         },
+         {
+          "text": "/dev/null",
+          "type": "code"
+         },
+         {
+          "text": " (actually, prevents reading from stdin). Either this or the equivalent ",
+          "type": "text"
+         },
+         {
+          "text": "-n",
+          "type": "code"
+         },
+         {
+          "text": " option must be used when ",
+          "type": "text"
+         },
+         {
+          "text": "ssh",
+          "type": "code"
+         },
+         {
+          "text": " is run in the background. The argument to this keyword must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " (same as the ",
+          "type": "text"
+         },
+         {
+          "text": "-n",
+          "type": "code"
+         },
+         {
+          "text": " option) or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "StdinNull",
+      "termInlines": [
+       {
+        "text": "StdinNull",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The default value is 0177, which creates a Unix-domain socket file that is readable and writable only by the owner. Note that not all operating systems honor the file mode on Unix-domain socket files.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "StreamLocalBindMask",
+      "termInlines": [
+       {
+        "text": "StreamLocalBindMask",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "StreamLocalBindUnlink",
+      "termInlines": [
+       {
+        "text": "StreamLocalBindUnlink",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If this flag is set to ",
+          "type": "text"
+         },
+         {
+          "text": "accept-new",
+          "type": "code"
+         },
+         {
+          "text": " then ssh will automatically add new host keys to the user's ",
+          "type": "text"
+         },
+         {
+          "text": "known_hosts",
+          "type": "code"
+         },
+         {
+          "text": " file, but will not permit connections to hosts with changed host keys. If this flag is set to ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "off",
+          "type": "code"
+         },
+         {
+          "text": ", ssh will automatically add new host keys to the user known hosts files and allow connections to hosts with changed hostkeys to proceed, subject to some restrictions. If this flag is set to ",
+          "type": "text"
+         },
+         {
+          "text": "ask",
+          "type": "code"
+         },
+         {
+          "text": " (the default), new host keys will be added to the user known host files only after the user has confirmed that is what they really want to do, and ssh will refuse to connect to hosts whose host key has changed. The host keys of known hosts will be verified automatically in all cases.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "StrictHostKeyChecking",
+      "termInlines": [
+       {
+        "text": "StrictHostKeyChecking",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Gives the facility code that is used when logging messages from ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". The possible values are: DAEMON, USER, AUTH, LOCAL0, LOCAL1, LOCAL2, LOCAL3, LOCAL4, LOCAL5, LOCAL6, LOCAL7. The default is USER.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "SyslogFacility",
+      "termInlines": [
+       {
+        "text": "SyslogFacility",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The default is ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " (to send TCP keepalive messages), and the client will notice if the network goes down or the remote host dies. This is important in scripts, and many users want it too.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "To disable TCP keepalive messages, the value should be set to ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ". See also ",
+          "type": "text"
+         },
+         {
+          "text": "ServerAliveInterval",
+          "type": "code"
+         },
+         {
+          "text": " for protocol-level keepalives.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "TCPKeepAlive",
+      "termInlines": [
+       {
+        "text": "TCPKeepAlive",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specify a configuration tag name that may be later used by a ",
+          "type": "text"
+         },
+         {
+          "text": "Match",
+          "type": "code"
+         },
+         {
+          "text": " directive to select a block of configuration.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Tag",
+      "termInlines": [
+       {
+        "text": "Tag",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Request ",
+          "type": "text"
+         },
+         {
+          "href": "/man/tun/4",
+          "inlines": [
+           {
+            "text": "tun(4)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " device forwarding between the client and the server. The argument must be ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "point-to-point",
+          "type": "code"
+         },
+         {
+          "text": " (layer 3), ",
+          "type": "text"
+         },
+         {
+          "text": "ethernet",
+          "type": "code"
+         },
+         {
+          "text": " (layer 2), or ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default). Specifying ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " requests the default tunnel mode, which is ",
+          "type": "text"
+         },
+         {
+          "text": "point-to-point",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Tunnel",
+      "termInlines": [
+       {
+        "text": "Tunnel",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The argument must be ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "local_tun",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": "[:",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "remote_tun",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": "]. The devices may be specified by numerical ID or the keyword ",
+          "type": "text"
+         },
+         {
+          "text": "any",
+          "type": "code"
+         },
+         {
+          "text": ", which uses the next available tunnel device. If ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "remote_tun",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is not specified, it defaults to ",
+          "type": "text"
+         },
+         {
+          "text": "any",
+          "type": "code"
+         },
+         {
+          "text": ". The default is ",
+          "type": "text"
+         },
+         {
+          "text": "any:any",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "TunnelDevice",
+      "termInlines": [
+       {
+        "text": "TunnelDevice",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Additional hostkeys are only accepted if the key used to authenticate the host was already trusted or explicitly accepted by the user, the host was authenticated via ",
+          "type": "text"
+         },
+         {
+          "text": "UserKnownHostsFile",
+          "type": "code"
+         },
+         {
+          "text": " (i.e. not ",
+          "type": "text"
+         },
+         {
+          "text": "GlobalKnownHostsFile",
+          "type": "code"
+         },
+         {
+          "text": ") and the host was authenticated using a plain key and not a certificate.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "UpdateHostKeys",
+          "type": "code"
+         },
+         {
+          "text": " is enabled by default if the user has not overridden the default ",
+          "type": "text"
+         },
+         {
+          "text": "UserKnownHostsFile",
+          "type": "code"
+         },
+         {
+          "text": " setting and has not enabled ",
+          "type": "text"
+         },
+         {
+          "text": "VerifyHostKeyDNS",
+          "type": "code"
+         },
+         {
+          "text": ", otherwise ",
+          "type": "text"
+         },
+         {
+          "text": "UpdateHostKeys",
+          "type": "code"
+         },
+         {
+          "text": " will be set to ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "If ",
+          "type": "text"
+         },
+         {
+          "text": "UpdateHostKeys",
+          "type": "code"
+         },
+         {
+          "text": " is set to ",
+          "type": "text"
+         },
+         {
+          "text": "ask",
+          "type": "code"
+         },
+         {
+          "text": ", then the user is asked to confirm the modifications to the known_hosts file. Confirmation is currently incompatible with ",
+          "type": "text"
+         },
+         {
+          "text": "ControlPersist",
+          "type": "code"
+         },
+         {
+          "text": ", and will be disabled if it is enabled.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Presently, only ",
+          "type": "text"
+         },
+         {
+          "href": "/man/sshd/8",
+          "inlines": [
+           {
+            "text": "sshd(8)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " from OpenSSH 6.8 and greater support the \"hostkeys@openssh.com\" protocol extension used to inform the client of all the server's hostkeys.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "UpdateHostKeys",
+      "termInlines": [
+       {
+        "text": "UpdateHostKeys",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the user to log in as. This can be useful when a different user name is used on different machines. This saves the trouble of having to remember to give the user name on the command line. Arguments to ",
+          "type": "text"
+         },
+         {
+          "text": "User",
+          "type": "code"
+         },
+         {
+          "text": " may use the tokens described in the TOKENS section (with the exception of %r and %C) and environment variables as described in the ENVIRONMENT VARIABLES section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "User",
+      "termInlines": [
+       {
+        "text": "User",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies one or more files to use for the user host key database, separated by whitespace. Each filename may use tilde notation to refer to the user's home directory, the tokens described in the TOKENS section and environment variables as described in the ENVIRONMENT VARIABLES section. A value of ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " causes ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " to ignore any user-specific known hosts files. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "~/.ssh/known_hosts",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "~/.ssh/known_hosts2",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "UserKnownHostsFile",
+      "termInlines": [
+       {
+        "text": "UserKnownHostsFile",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "See also VERIFYING HOST KEYS in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ssh/1",
+          "inlines": [
+           {
+            "text": "ssh(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "VerifyHostKeyDNS",
+      "termInlines": [
+       {
+        "text": "VerifyHostKeyDNS",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Optionally specifies additional text to append to the SSH protocol banner sent by the client upon connection. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "VersionAddendum",
+      "termInlines": [
+       {
+        "text": "VersionAddendum",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If this flag is set to ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": ", an ASCII art representation of the remote host key fingerprint is printed in addition to the fingerprint string at login and for unknown host keys. If this flag is set to ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " (the default), no fingerprint strings are printed at login and only the fingerprint string will be printed for unknown host keys.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "VisualHostKey",
+      "termInlines": [
+       {
+        "text": "VisualHostKey",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the full pathname of the ",
+          "type": "text"
+         },
+         {
+          "href": "/man/xauth/1",
+          "inlines": [
+           {
+            "text": "xauth(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " program. The default is ",
+          "type": "text"
+         },
+         {
+          "text": "/usr/bin/xauth",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "XAuthLocation",
+      "termInlines": [
+       {
+        "text": "XAuthLocation",
+        "type": "code"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "patterns",
+    "level": 2,
+    "text": "PATTERNS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "A ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "pattern",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": " consists of zero or more non-whitespace characters, ‘*’ (a wildcard that matches zero or more characters), or ‘?’ (a wildcard that matches exactly one character). For example, to specify a set of declarations for any host in the \".co.uk\" set of domains, the following pattern could be used:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Host *.co.uk",
+         "type": "code"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The following pattern would match any host in the 192.168.0.[0-9] network range:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Host 192.168.0.?",
+         "type": "code"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "A ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "pattern-list",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": " is a comma-separated list of patterns. Patterns within pattern-lists may be negated by preceding them with an exclamation mark (‘!’). For example, to allow a key to be used from anywhere within an organization except from the \"dialup\" pool, the following entry (in authorized_keys) could be used:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "from=\"!*.dialup.example.com,*.example.com\"",
+         "type": "code"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Note that a negated match will never produce a positive result by itself. For example, attempting to match \"host3\" against the following pattern-list will fail:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "from=\"!host1,!host2\"",
+         "type": "code"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The solution here is to include a term that will yield a positive match, such as a wildcard:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "from=\"!host1,!host2,*\"",
+         "type": "code"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "tokens",
+    "level": 2,
+    "text": "TOKENS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Arguments to some keywords can make use of tokens, which are expanded at runtime:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A literal ‘%’.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def",
+         "termInlines": [
+          {
+           "text": "%%",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Hash of %l%h%p%r%j.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-c",
+         "termInlines": [
+          {
+           "text": "%C",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Local user's home directory.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-d",
+         "termInlines": [
+          {
+           "text": "%d",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The fingerprint of the server's host key.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-f",
+         "termInlines": [
+          {
+           "text": "%f",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The ",
+             "type": "text"
+            },
+            {
+             "text": "known_hosts",
+             "type": "code"
+            },
+            {
+             "text": " hostname or address that is being searched for.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-h",
+         "termInlines": [
+          {
+           "text": "%H",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The remote hostname.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-h-2",
+         "termInlines": [
+          {
+           "text": "%h",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A string describing the reason for a ",
+             "type": "text"
+            },
+            {
+             "text": "KnownHostsCommand",
+             "type": "code"
+            },
+            {
+             "text": " execution: either ",
+             "type": "text"
+            },
+            {
+             "text": "ADDRESS",
+             "type": "code"
+            },
+            {
+             "text": " when looking up a host by address (only when ",
+             "type": "text"
+            },
+            {
+             "text": "CheckHostIP",
+             "type": "code"
+            },
+            {
+             "text": " is enabled), ",
+             "type": "text"
+            },
+            {
+             "text": "HOSTNAME",
+             "type": "code"
+            },
+            {
+             "text": " when searching by hostname, or ",
+             "type": "text"
+            },
+            {
+             "text": "ORDER",
+             "type": "code"
+            },
+            {
+             "text": " when preparing the host key algorithm preference list to use for the destination host.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-i",
+         "termInlines": [
+          {
+           "text": "%I",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The local user ID.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-i-2",
+         "termInlines": [
+          {
+           "text": "%i",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The contents of the ProxyJump option, or the empty string if this option is unset.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-j",
+         "termInlines": [
+          {
+           "text": "%j",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The base64 encoded host key.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-k",
+         "termInlines": [
+          {
+           "text": "%K",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The host key alias if specified, otherwise the original remote hostname given on the command line.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-k-2",
+         "termInlines": [
+          {
+           "text": "%k",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The local hostname.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-l",
+         "termInlines": [
+          {
+           "text": "%L",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The local hostname, including the domain name.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-l-2",
+         "termInlines": [
+          {
+           "text": "%l",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The original remote hostname, as given on the command line.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-n",
+         "termInlines": [
+          {
+           "text": "%n",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The remote port.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-p",
+         "termInlines": [
+          {
+           "text": "%p",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The remote username.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-r",
+         "termInlines": [
+          {
+           "text": "%r",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The local ",
+             "type": "text"
+            },
+            {
+             "href": "/man/tun/4",
+             "inlines": [
+              {
+               "text": "tun(4)",
+               "type": "text"
+              }
+             ],
+             "linkType": "internal",
+             "type": "link"
+            },
+            {
+             "text": " or ",
+             "type": "text"
+            },
+            {
+             "href": "/man/tap/4",
+             "inlines": [
+              {
+               "text": "tap(4)",
+               "type": "text"
+              }
+             ],
+             "linkType": "internal",
+             "type": "link"
+            },
+            {
+             "text": " network interface assigned if tunnel forwarding was requested, or \"NONE\" otherwise.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-t",
+         "termInlines": [
+          {
+           "text": "%T",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The type of the server host key, e.g. ",
+             "type": "text"
+            },
+            {
+             "text": "ssh-ed25519",
+             "type": "code"
+            },
+            {
+             "text": ".",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-t-2",
+         "termInlines": [
+          {
+           "text": "%t",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The local username.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-u",
+         "termInlines": [
+          {
+           "text": "%u",
+           "type": "text"
+          }
+         ]
+        }
+       ],
+       "type": "definition_list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "CertificateFile",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "ControlPath",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "IdentityAgent",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "IdentityFile",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "Include",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "KnownHostsCommand",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "LocalForward",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "Match exec",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "RemoteCommand",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "RemoteForward",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "RevokedHostKeys",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "UserKnownHostsFile",
+      "type": "code"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "text": "VersionAddendum",
+      "type": "code"
+     },
+     {
+      "text": " accept the tokens %%, %C, %d, %h, %i, %j, %k, %L, %l, %n, %p, %r, and %u.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "KnownHostsCommand",
+      "type": "code"
+     },
+     {
+      "text": " additionally accepts the tokens %f, %H, %I, %K and %t.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Hostname",
+      "type": "code"
+     },
+     {
+      "text": " accepts the tokens %% and %h.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "LocalCommand",
+      "type": "code"
+     },
+     {
+      "text": " accepts all tokens.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "ProxyCommand",
+      "type": "code"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "text": "ProxyJump",
+      "type": "code"
+     },
+     {
+      "text": " accept the tokens %%, %h, %n, %p, and %r.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Note that some of these directives build commands for execution via the shell. Because ",
+      "type": "text"
+     },
+     {
+      "href": "/man/ssh/1",
+      "inlines": [
+       {
+        "text": "ssh(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " performs no filtering or escaping of characters that have special meaning in shell commands (e.g. quotes), it is the user's responsibility to ensure that the arguments passed to ",
+      "type": "text"
+     },
+     {
+      "href": "/man/ssh/1",
+      "inlines": [
+       {
+        "text": "ssh(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " do not contain such characters and that tokens are appropriately quoted when used.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "environment-variables",
+    "level": 2,
+    "text": "ENVIRONMENT VARIABLES",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Arguments to some keywords can be expanded at runtime from environment variables on the client by enclosing them in ",
+      "type": "text"
+     },
+     {
+      "text": "${}",
+      "type": "code"
+     },
+     {
+      "text": ", for example ",
+      "type": "text"
+     },
+     {
+      "text": "${HOME}/.ssh",
+      "type": "code"
+     },
+     {
+      "text": " would refer to the user's .ssh directory. If a specified environment variable does not exist then an error will be returned and the setting for that keyword will be ignored.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The keywords ",
+      "type": "text"
+     },
+     {
+      "text": "CertificateFile",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "ControlPath",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "IdentityAgent",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "IdentityFile",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "Include",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "KnownHostsCommand",
+      "type": "code"
+     },
+     {
+      "text": ", and ",
+      "type": "text"
+     },
+     {
+      "text": "UserKnownHostsFile",
+      "type": "code"
+     },
+     {
+      "text": " support environment variables. The keywords ",
+      "type": "text"
+     },
+     {
+      "text": "LocalForward",
+      "type": "code"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "text": "RemoteForward",
+      "type": "code"
+     },
+     {
+      "text": " support environment variables only for Unix domain socket paths.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "files",
+    "level": 2,
+    "text": "FILES",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This is the per-user configuration file. The format of this file is described above. This file is used by the SSH client. Because of the potential for abuse, this file must have strict permissions: read/write for the user, and not writable by others. It may be group-writable provided that the group in question contains only the user.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-ssh-config",
+      "termInlines": [
+       {
+        "text": "~/.ssh/config",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Systemwide configuration file. This file provides defaults for those values that are not specified in the user's configuration file, and for those users who do not have a configuration file. This file must be world-readable.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-etc-ssh-ssh-config",
+      "termInlines": [
+       {
+        "text": "/etc/ssh/ssh_config",
+        "type": "code"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "text": "SEE ALSO",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "href": "/man/ssh/1",
+      "inlines": [
+       {
+        "text": "ssh(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "authors",
+    "level": 2,
+    "text": "AUTHORS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "OpenSSH is a derivative of the original and free ssh 1.2.12 release by Tatu Ylonen. Aaron Campbell, Bob Beck, Markus Friedl, Niels Provos, Theo de Raadt and Dug Song removed many bugs, re-added newer features and created OpenSSH. Markus Friedl contributed the support for SSH protocol versions 1.5 and 2.0.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   },
+   {
+    "id": "patterns",
+    "level": 2,
+    "title": "PATTERNS"
+   },
+   {
+    "id": "tokens",
+    "level": 2,
+    "title": "TOKENS"
+   },
+   {
+    "id": "environment-variables",
+    "level": 2,
+    "title": "ENVIRONMENT VARIABLES"
+   },
+   {
+    "id": "files",
+    "level": 2,
+    "title": "FILES"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "title": "SEE ALSO"
+   },
+   {
+    "id": "authors",
+    "level": 2,
+    "title": "AUTHORS"
+   }
+  ]
+ },
+ "options": [],
+ "seeAlso": [
+  {
+   "name": "ssh",
+   "resolvedPageId": null,
+   "section": "1"
+  }
+ ],
+ "synopsis": null
+}

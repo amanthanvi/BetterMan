@@ -1,0 +1,9 @@
+{
+ "alias": {
+  "raw": "man7/groff_man.7",
+  "target": [
+   "groff_man",
+   "7"
+  ]
+ }
+}

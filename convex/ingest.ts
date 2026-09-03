@@ -72,6 +72,13 @@ const storedPageInput = v.object({
   links: v.array(pageLinkInput),
 });
 
+const aliasInput = v.object({
+  name: v.string(),
+  section: v.string(),
+  targetName: v.string(),
+  targetSection: v.string(),
+});
+
 const licenseInput = v.object({
   packageName: v.string(),
   licenseId: v.string(),
@@ -452,6 +459,47 @@ export const insertStoredPages = internalMutation({
       inserted += 1;
     }
 
+    return { inserted, skipped };
+  },
+});
+
+export const insertAliases = internalMutation({
+  args: {
+    datasetReleaseId: v.string(),
+    aliases: v.array(aliasInput),
+  },
+  handler: async (ctx, args) => {
+    const release = await ctx.db
+      .query("datasetReleases")
+      .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
+      .unique();
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+
+    let inserted = 0;
+    let skipped = 0;
+    for (const alias of args.aliases) {
+      const name = alias.name.trim().toLowerCase();
+      const section = alias.section.trim().toLowerCase();
+      const existing = await ctx.db
+        .query("manPageAliases")
+        .withIndex("by_releaseId_and_name_and_section", (q) =>
+          q.eq("releaseId", release._id).eq("name", name).eq("section", section),
+        )
+        .unique();
+      if (existing) {
+        skipped += 1;
+        continue;
+      }
+      await ctx.db.insert("manPageAliases", {
+        releaseId: release._id,
+        datasetReleaseId: release.datasetReleaseId,
+        name,
+        section,
+        targetName: alias.targetName.trim().toLowerCase(),
+        targetSection: alias.targetSection.trim().toLowerCase(),
+      });
+      inserted += 1;
+    }
     return { inserted, skipped };
   },
 });

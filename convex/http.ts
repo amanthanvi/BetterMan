@@ -181,6 +181,18 @@ http.route({
 });
 
 http.route({
+  path: "/ingest/aliases",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const auth = await requireIngestSecret(req);
+    if (auth) return auth;
+    const body = await readJson(req);
+    const result = await ctx.runMutation(internal.ingest.insertAliases, body as never);
+    return jsonResponse(result);
+  }),
+});
+
+http.route({
   path: "/ingest/licenses",
   method: "POST",
   handler: httpAction(async (ctx, req) => {

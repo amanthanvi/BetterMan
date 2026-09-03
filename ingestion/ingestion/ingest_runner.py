@@ -64,8 +64,8 @@ from ingestion.freebsd import (
 )
 from ingestion.macos import is_permissive_manpage, macos_arch, macos_version
 from ingestion.man_scan import ManSource, scan_man_sources
-from ingestion.mandoc import render_html
-from ingestion.mandoc_parser import parse_mandoc_html
+from ingestion.mandoc import read_roff, render_html
+from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import normalize_ws, sha256_hex
 
@@ -186,10 +186,15 @@ def ingest(
         package_manifest["osVersion"] = macos_version()
 
     parsed_pages: list[_PageRow] = []
+    aliases: list[_AliasRow] = []
     parse_failed = 0
     parse_started = monotonic()
     for src in sources:
         try:
+            alias = _alias_for_source(src)
+            if alias is not None:
+                aliases.append(alias)
+                continue
             parsed_pages.append(
                 _parse_source(
                     src,
@@ -202,7 +207,7 @@ def ingest(
             parse_failed += 1
             _log("page_parse_failed", path=str(src.path), error=str(exc))
 
-        processed = len(parsed_pages) + parse_failed
+        processed = len(parsed_pages) + len(aliases) + parse_failed
         if processed and processed % 100 == 0:
             elapsed = monotonic() - parse_started
             rate = processed / elapsed if elapsed > 0 else 0.0
@@ -219,8 +224,9 @@ def ingest(
     total = len(sources)
 
     _resolve_doc_links_and_see_also(pages=parsed_pages)
+    aliases = _resolve_aliases(aliases=aliases, pages=parsed_pages)
 
-    succeeded = len(parsed_pages)
+    succeeded = len(parsed_pages) + len(aliases)
     hard_failed = parse_failed
     hard_fail_rate = (hard_failed / total) if total else 0.0
     success_rate = (succeeded / total) if total else 0.0
@@ -307,6 +313,25 @@ def ingest(
                 },
             )
 
+    if aliases:
+        alias_items = [
+            {
+                "name": alias.name,
+                "section": alias.section,
+                "targetName": alias.target_name,
+                "targetSection": alias.target_section,
+            }
+            for alias in aliases
+        ]
+        for start in range(0, len(alias_items), 200):
+            client.post(
+                "/ingest/aliases",
+                {
+                    "datasetReleaseId": dataset_release_id,
+                    "aliases": alias_items[start : start + 200],
+                },
+            )
+
     published = False
     if publish_allowed and activate:
         client.post(
@@ -324,6 +349,7 @@ def ingest(
         datasetReleaseId=dataset_release_id,
         total=total,
         succeeded=succeeded,
+        aliases=len(aliases),
         failed=hard_failed,
         published=published,
         publishAllowed=publish_allowed,
@@ -362,6 +388,60 @@ class _PageRow:
     see_also: list[dict] | None
     headings_text: str
     see_also_refs: list[tuple[str, str | None]]
+
+
+@dataclass
+class _AliasRow:
+    name: str
+    section: str
+    target_name: str
+    target_section: str
+    source_path: str
+
+
+def _alias_for_source(src: ManSource) -> _AliasRow | None:
+    """Return an alias row when the source is a bare `.so` include stub."""
+    target = is_so_stub(read_roff(src.path))
+    if target is None:
+        return None
+    parsed = so_target_name_section(target)
+    if parsed is None:
+        return None
+    target_name, target_section = parsed
+    if (target_name, target_section) == (src.name, src.section):
+        return None
+    return _AliasRow(
+        name=src.name,
+        section=src.section,
+        target_name=target_name,
+        target_section=target_section,
+        source_path=str(src.path),
+    )
+
+
+def _resolve_aliases(*, aliases: list[_AliasRow], pages: list[_PageRow]) -> list[_AliasRow]:
+    """Keep aliases whose target is a parsed page; follow one level of chains."""
+    index = {(p.name, p.section) for p in pages}
+    by_key = {(a.name, a.section): a for a in aliases}
+    out: list[_AliasRow] = []
+    for alias in aliases:
+        target = (alias.target_name, alias.target_section)
+        if target not in index and target in by_key:
+            nxt = by_key[target]
+            target = (nxt.target_name, nxt.target_section)
+        if target not in index:
+            _log("alias_unresolved", path=alias.source_path, target=f"{target[0]}({target[1]})")
+            continue
+        out.append(
+            _AliasRow(
+                name=alias.name,
+                section=alias.section,
+                target_name=target[0],
+                target_section=target[1],
+                source_path=alias.source_path,
+            )
+        )
+    return out
 
 
 def _filter_sources(sources: list[ManSource]) -> list[ManSource]:

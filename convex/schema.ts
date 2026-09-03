@@ -155,6 +155,18 @@ export default defineSchema({
       "nameNorm",
     ]),
 
+  // `.so` include stubs: /man/<name>/<section> redirects to the target page.
+  manPageAliases: defineTable({
+    releaseId: v.id("datasetReleases"),
+    datasetReleaseId: v.string(),
+    name: v.string(),
+    section: v.string(),
+    targetName: v.string(),
+    targetSection: v.string(),
+  })
+    .index("by_releaseId_and_name_and_section", ["releaseId", "name", "section"])
+    .index("by_releaseId_and_name", ["releaseId", "name"]),
+
   manPageLinks: defineTable({
     releaseId: v.id("datasetReleases"),
     fromPageId: v.id("manPages"),

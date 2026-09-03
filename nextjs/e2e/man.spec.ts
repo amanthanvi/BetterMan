@@ -291,3 +291,14 @@ test('man: a11y (no critical/serious violations)', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expectNoCriticalOrSeriousViolations(page)
 })
+
+test('man: .so alias redirects to its target page', async ({ page }) => {
+  const res = await page.goto('/man/gunzip/1')
+  expect(res?.ok()).toBeTruthy()
+  await expect(page).toHaveURL(/\/man\/gzip\/1$/)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('gzip')
+
+  const api = await page.request.get('/api/v1/man/gunzip/1', { maxRedirects: 0 })
+  expect(api.status()).toBe(308)
+  expect(api.headers()['location']).toBe('/api/v1/man/gzip/1')
+})

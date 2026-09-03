@@ -129,6 +129,7 @@ export function pageResponse(
       sourcePackage: page.sourcePackage ?? null,
       sourcePackageVersion: page.sourcePackageVersion ?? null,
       datasetReleaseId: release.datasetReleaseId,
+      hasParseWarnings: page.hasParseWarnings,
     },
     content: contentPayload,
     variants,

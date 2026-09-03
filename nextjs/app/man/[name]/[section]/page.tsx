@@ -1,14 +1,14 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 
 import { ManPageView } from '../../../../components/man/ManPageView'
 import { JsonLdHead } from '../../../../components/seo/JsonLdHead'
 import {
   FastApiError,
   fetchManByName,
-  fetchManByNameAndSection,
+  fetchManByNameAndSectionOrAlias,
   fetchManMetaByNameAndSection,
   isReleaseNotFoundError,
   suggest,
@@ -21,6 +21,8 @@ import { safeJsonLdStringify } from '../../../../lib/seo'
 export const revalidate = 3600
 
 type SearchParams = Record<string, string | string[] | undefined>
+
+class AliasRedirect extends Error {}
 
 function getFirst(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0]
@@ -99,15 +101,21 @@ export default async function ManByNameAndSectionPage({
   const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
   let activeDistro = requestedDistro
 
+  let aliasTarget: { name: string; section: string } | null = null
   try {
-    const { data: pageData } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
+    const { data: resolved } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
       activeDistro = candidateDistro
-      return fetchManByNameAndSection({
+      return fetchManByNameAndSectionOrAlias({
         distro: candidateDistro,
         name: name.toLowerCase(),
         section,
       })
     })
+    if (resolved.kind === 'alias') {
+      aliasTarget = { name: resolved.name, section: resolved.section }
+      throw new AliasRedirect()
+    }
+    const pageData = resolved.data
 
     const nonce = (await headers()).get('x-nonce') ?? undefined
     const jsonLd = safeJsonLdStringify({
@@ -142,6 +150,14 @@ export default async function ManByNameAndSectionPage({
       </>
     )
   } catch (err) {
+    if (err instanceof AliasRedirect && aliasTarget) {
+      permanentRedirect(
+        withDistro(
+          `/man/${encodeURIComponent(aliasTarget.name)}/${encodeURIComponent(aliasTarget.section)}`,
+          activeDistro,
+        ),
+      )
+    }
     if (!(err instanceof FastApiError) || err.status !== 404) {
       throw err
     }
