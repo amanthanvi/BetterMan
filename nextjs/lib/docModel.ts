@@ -56,6 +56,7 @@ export type ManPage = {
   description: string
   sourcePackage?: string | null
   sourcePackageVersion?: string | null
+  hasParseWarnings?: boolean
 }
 
 export type ManPageContent = {

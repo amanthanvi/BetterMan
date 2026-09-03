@@ -173,14 +173,14 @@ const cachedSection = unstable_cache(
 const cachedManByName = unstable_cache(
   async (distro: Distro, name: string) =>
     await convex().action(api.content.getManByName, { distro, name }),
-  ['betterman', 'convex', 'man-by-name'],
+  ['betterman', 'convex', 'man-by-name', 'v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string) =>
     await convex().action(api.content.getManByNameAndSection, { distro, name, section }),
-  ['betterman', 'convex', 'man-by-name-and-section'],
+  ['betterman', 'convex', 'man-by-name-and-section', 'v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -268,14 +268,20 @@ export async function listSection(opts: {
   return result
 }
 
+export type ManAlias = { kind: 'alias'; name: string; section: string }
+
 export type ManByNameResult =
   | { kind: 'page'; data: ManPageResponse }
   | { kind: 'ambiguous'; options: AmbiguousPageResponse['options'] }
+  | ManAlias
 
 type ConvexManByNameResult =
   | { kind: 'not_found' }
   | { kind: 'page'; data: ManPageResponse }
   | { kind: 'ambiguous'; options: AmbiguousPageResponse['options'] }
+  | ManAlias
+
+type ConvexManByNameAndSectionResult = { kind: 'page'; data: ManPageResponse } | ManAlias | null
 
 export async function fetchManByName(opts: {
   distro: Distro
@@ -294,7 +300,25 @@ export async function fetchManByName(opts: {
   if (result.kind === 'ambiguous') {
     return { kind: 'ambiguous', options: result.options as AmbiguousPageResponse['options'] }
   }
+  if (result.kind === 'alias') {
+    return { kind: 'alias', name: result.name, section: result.section }
+  }
   return { kind: 'page', data: result.data as ManPageResponse }
+}
+
+export type ManByNameAndSectionResult = { kind: 'page'; data: ManPageResponse } | ManAlias
+
+/** Resolves a page, or reports the alias target when the URL is a `.so` stub. */
+export async function fetchManByNameAndSectionOrAlias(opts: {
+  distro: Distro
+  name: string
+  section: string
+}): Promise<ManByNameAndSectionResult> {
+  const result = (await mapConvexError(() =>
+    cachedManByNameAndSection(opts.distro, opts.name, opts.section),
+  )) as ConvexManByNameAndSectionResult
+  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  return result
 }
 
 export async function fetchManByNameAndSection(opts: {
@@ -302,15 +326,9 @@ export async function fetchManByNameAndSection(opts: {
   name: string
   section: string
 }): Promise<ManPageResponse> {
-  const result = (await mapConvexError(() =>
-    cachedManByNameAndSection(
-      opts.distro,
-      opts.name,
-      opts.section,
-    ),
-  )) as ManPageResponse | null
-  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
-  return result
+  const result = await fetchManByNameAndSectionOrAlias(opts)
+  if (result.kind === 'alias') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  return result.data
 }
 
 export type RelatedResponse = { items: SectionPage[] }

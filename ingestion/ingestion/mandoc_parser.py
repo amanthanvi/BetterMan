@@ -28,9 +28,22 @@ from ingestion.doc_model import (
 from ingestion.util import normalize_ws, stable_unique_id, stable_unique_slug
 
 _xref_re = re.compile(r"^(?P<name>.+?)\((?P<section>[^)]+)\)$")
-_bullet_term_re = re.compile(r"^\s*(?:\*|\+|-|\u2022)(?:\s+|$)")
+_section_re = re.compile(r"[1-9][a-z0-9]*")
+# A man(7) cross reference is `<b>name</b>(N)` or `<i>name</i>(N)`: the bold
+# or italic name immediately followed by a parenthesised section in the
+# surrounding text.
+_trailing_section_re = re.compile(r"^\((?P<section>[1-9][a-z0-9]*)\)")
+_xref_name_re = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.+:-]*$")
+_bare_xref_re = re.compile(
+    r"(?<![\w./-])(?P<name>[A-Za-z0-9_][A-Za-z0-9_.+:-]*)\((?P<section>[1-9][a-z0-9]*)\)"
+)
+_bullet_term_re = re.compile(r"^\s*(?:\*|\+|-|•)(?:\s+|$)")
 _options_heading_re = re.compile(r"\bOPTIONS?\b", re.IGNORECASE)
 _option_term_re = re.compile(r"^\s*[\[(]?(?:--?|\+)(?:[^\s,|\])]|$)")
+# mdoc semantic classes that mandoc renders as bare <code>/<var>/<span>.
+_MDOC_CODE_CLASSES = {"Pa", "Fl", "Cm", "Nm", "Ev", "Ic", "Li", "Dv", "Fn", "Fd", "In", "Cd"}
+_MDOC_EMPHASIS_CLASSES = {"Ar", "Va", "Fa", "Ft", "Vt", "Em"}
+_MDOC_STRONG_CLASSES = {"Sy"}
 
 
 @dataclass(frozen=True)
@@ -66,9 +79,42 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
 
     def inlines_from_container(container: Tag) -> list[InlineNode]:
         out: list[InlineNode] = []
-        for child in container.children:
+        children = list(container.children)
+        index = 0
+        while index < len(children):
+            child = children[index]
+            nxt = children[index + 1] if index + 1 < len(children) else None
+            xref = _man7_xref(child, nxt)
+            if xref is not None:
+                link, consumed_text = xref
+                out.append(link)
+                if consumed_text:
+                    out.append(InlineText(text=consumed_text))
+                index += 2
+                continue
             out.extend(inlines_from_node(child))
+            index += 1
         return _trim_inline_ws(_merge_adjacent_text(out))
+
+    def _man7_xref(node: object, nxt: object) -> tuple[InlineLink, str] | None:
+        if not isinstance(node, Tag) or node.name.lower() not in {"b", "i"}:
+            return None
+        if not isinstance(nxt, NavigableString):
+            return None
+        name = node.get_text("", strip=True)
+        if not name or not _xref_name_re.match(name):
+            return None
+        match = _trailing_section_re.match(str(nxt))
+        if match is None:
+            return None
+        section = match.group("section")
+        label = f"{name}({section})"
+        href, link_type = _xref_to_href(label)
+        if href is None:
+            return None
+        rest = str(nxt)[match.end() :]
+        rest = re.sub(r"\s+", " ", rest)
+        return InlineLink(href=href, inlines=[InlineText(text=label)], linkType=link_type), rest
 
     def inlines_from_node(node: object) -> list[InlineNode]:
         if isinstance(node, NavigableString):
@@ -86,18 +132,27 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
         if name == "br":
             return [InlineText(text=" ")]
 
-        if name == "b":
-            return [InlineStrong(inlines=inlines_from_container(node))]
-
-        if name == "i":
+        if name in {"b", "i"}:
+            whole = _whole_tag_xref(node)
+            if whole is not None:
+                return [whole]
+            if name == "b":
+                return [InlineStrong(inlines=inlines_from_container(node))]
             return [InlineEmphasis(inlines=inlines_from_container(node))]
 
         if name == "code":
-            return [InlineCode(text=node.get_text(" ", strip=True))]
+            return [InlineCode(text=_compact_text(node))]
+
+        if name == "var":
+            return [InlineEmphasis(inlines=inlines_from_container(node))]
 
         if name == "span":
-            if "Pa" in classes:
-                return [InlineCode(text=node.get_text(" ", strip=True))]
+            if classes & _MDOC_CODE_CLASSES:
+                return [InlineCode(text=_compact_text(node))]
+            if classes & _MDOC_EMPHASIS_CLASSES:
+                return [InlineEmphasis(inlines=inlines_from_container(node))]
+            if classes & _MDOC_STRONG_CLASSES:
+                return [InlineStrong(inlines=inlines_from_container(node))]
             return inlines_from_container(node)
 
         if name == "a":
@@ -105,7 +160,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                 return inlines_from_container(node)
 
             if "Xr" in classes:
-                label = node.get_text(" ", strip=True)
+                label = _compact_text(node)
                 href, link_type = _xref_to_href(label)
                 if href is None:
                     return [InlineText(text=label)]
@@ -142,7 +197,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
         tname = tag.name.lower()
 
         if re.fullmatch(r"h[1-6]", tname):
-            text = tag.get_text(" ", strip=True)
+            text = _compact_text(tag)
             if not text:
                 return []
             return [add_heading(text=text, source_level=int(tname[1]))]
@@ -166,7 +221,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             for li in tag.find_all("li", recursive=False):
                 item_blocks = blocks_from_container(li)
                 if not item_blocks:
-                    leaf = li.get_text(" ", strip=True)
+                    leaf = _compact_text(li)
                     if leaf:
                         item_blocks = [BlockParagraph(inlines=[InlineText(text=leaf)])]
                 if item_blocks:
@@ -181,13 +236,17 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             term_pairs = _definition_list_pairs(children)
             if _is_bullet_definition_list(term_pairs):
                 list_items: list[list[object]] = []
-                for dt, dd in term_pairs:
+                for dt, dds in term_pairs:
                     term_inlines = _strip_bullet_marker(inlines_from_container(dt))
                     item_blocks: list[object] = []
 
-                    if dd is not None:
+                    for dd in dds:
                         dd_children = [c for c in dd.children if isinstance(c, Tag)]
-                        if len(dd_children) == 1 and dd_children[0].name.lower() == "pre":
+                        if (
+                            not item_blocks
+                            and len(dd_children) == 1
+                            and dd_children[0].name.lower() == "pre"
+                        ):
                             pre = dd_children[0]
                             pre_text = _pre_text(pre).strip()
                             if pre_text and "\n" not in pre_text:
@@ -197,12 +256,15 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                                         inlines=_join_inline_phrases(term_inlines, continuation)
                                     )
                                 )
+                                continue
 
-                        if not item_blocks:
-                            definition_blocks = blocks_from_container(dd)
-                            if not definition_blocks:
-                                definition_inlines = inlines_from_container(dd)
-                                if _has_meaningful_inlines(definition_inlines):
+                        definition_blocks = blocks_from_container(dd)
+                        if not definition_blocks:
+                            definition_inlines = inlines_from_container(dd)
+                            if _has_meaningful_inlines(definition_inlines):
+                                if item_blocks:
+                                    item_blocks.append(BlockParagraph(inlines=definition_inlines))
+                                else:
                                     item_blocks.append(
                                         BlockParagraph(
                                             inlines=_join_inline_phrases(
@@ -210,10 +272,10 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                                             )
                                         )
                                     )
-                            else:
-                                if _has_meaningful_inlines(term_inlines):
-                                    item_blocks.append(BlockParagraph(inlines=term_inlines))
-                                item_blocks.extend(definition_blocks)
+                        else:
+                            if not item_blocks and _has_meaningful_inlines(term_inlines):
+                                item_blocks.append(BlockParagraph(inlines=term_inlines))
+                            item_blocks.extend(definition_blocks)
 
                     if not item_blocks and _has_meaningful_inlines(term_inlines):
                         item_blocks = [BlockParagraph(inlines=term_inlines)]
@@ -223,19 +285,22 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                 if list_items:
                     return [BlockList(ordered=False, items=list_items)]
 
-            for dt, dd in term_pairs:
+            for dt, dds in term_pairs:
                 term_inlines = inlines_from_container(dt)
-                definition_blocks = blocks_from_container(dd) if dd is not None else []
-                if dd is not None and not definition_blocks:
-                    dd_inlines = inlines_from_container(dd)
-                    if _has_meaningful_inlines(dd_inlines):
-                        definition_blocks = [BlockParagraph(inlines=dd_inlines)]
+                definition_blocks: list[object] = []
+                for dd in dds:
+                    dd_blocks = blocks_from_container(dd)
+                    if not dd_blocks:
+                        dd_inlines = inlines_from_container(dd)
+                        if _has_meaningful_inlines(dd_inlines):
+                            dd_blocks = [BlockParagraph(inlines=dd_inlines)]
+                    definition_blocks.extend(dd_blocks)
 
                 raw_id = dt.get("id") if isinstance(dt.get("id"), str) else None
                 if raw_id:
                     item_id = stable_unique_id(raw_id, used_ids)
                 else:
-                    term_text = dt.get_text(" ", strip=True) or "definition"
+                    term_text = _compact_text(dt) or "definition"
                     item_id = stable_unique_slug(f"def-{term_text}", used_ids)
 
                 items.append(
@@ -251,19 +316,28 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             return [BlockDefinitionList(items=items)]
 
         if tname == "table":
-            headers: list[str] = []
-            header_row = tag.find("tr")
-            if header_row is not None:
-                ths = header_row.find_all("th")
-                if ths:
-                    headers = [th.get_text(" ", strip=True) for th in ths]
+            classes = set(tag.get("class") or [])
+            if "Nm" in classes:
+                # mdoc SYNOPSIS: each row is one usage line. Render as a code block.
+                lines = [_synopsis_row_text(tr) for tr in tag.find_all("tr", recursive=False)]
+                lines = [ln for ln in lines if ln]
+                if not lines:
+                    return []
+                return [BlockCode(text="\n".join(lines), languageHint=None)]
 
+            rows_tags = tag.find_all("tr")
+            headers: list[str] = []
             rows: list[list[str]] = []
-            for tr in tag.find_all("tr"):
-                tds = tr.find_all("td")
-                if not tds:
+            for index, tr in enumerate(rows_tags):
+                cells = tr.find_all(["td", "th"], recursive=False)
+                if not cells:
                     continue
-                rows.append([td.get_text(" ", strip=True) for td in tds])
+                values = [_compact_text(cell) for cell in cells]
+                is_header = index == 0 and _looks_like_header_row(tr, cells, len(rows_tags))
+                if is_header:
+                    headers = values
+                else:
+                    rows.append(values)
 
             if not headers and not rows:
                 return []
@@ -272,7 +346,21 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
         if tname == "hr":
             return [BlockHorizontalRule()]
 
-        if tname in {"div", "section"}:
+        if tname == "div":
+            classes = set(tag.get("class") or [])
+            if "Bd-indent" in classes:
+                # troff .RS: an indented region. Keep it as a one-item unordered
+                # list so the nesting survives in the document model.
+                inner = blocks_from_container(tag)
+                if not inner:
+                    inlines = inlines_from_container(tag)
+                    if not _has_meaningful_inlines(inlines):
+                        return []
+                    inner = [BlockParagraph(inlines=inlines)]
+                return [BlockList(ordered=False, items=[inner])]
+            return blocks_from_container(tag)
+
+        if tname == "section":
             return blocks_from_container(tag)
 
         return []
@@ -297,7 +385,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
     doc = DocumentModel(toc=toc, blocks=blocks)  # validates node shapes
 
     description = _extract_description(manual_text) or ""
-    synopsis = _extract_section_lines(manual_text, "SYNOPSIS")
+    synopsis = _extract_synopsis(manual_text)
     options = _extract_options_from_doc(doc)
     see_also = _extract_see_also(manual_text)
 
@@ -315,6 +403,79 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
     )
 
 
+def is_so_stub(source: bytes) -> str | None:
+    """Return the include target when the roff source is a bare `.so` stub."""
+    text = source.decode("utf-8", errors="replace")
+    target: str | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(('.\\"', "'\\\"", ".\\#")):
+            continue
+        if stripped.startswith(".so ") and target is None:
+            target = stripped[4:].strip().strip('"')
+            continue
+        # Anything beyond comments and the include means the page has its own body.
+        return None
+    return target
+
+
+def so_target_name_section(target: str) -> tuple[str, str] | None:
+    base = target.rsplit("/", 1)[-1]
+    if base.endswith(".gz"):
+        base = base[:-3]
+    dot = base.rfind(".")
+    if dot <= 0 or dot == len(base) - 1:
+        return None
+    name = base[:dot].strip().lower()
+    section = base[dot + 1 :].strip().lower()
+    if not name or not _section_re.fullmatch(section):
+        return None
+    return name, section
+
+
+_whole_xref_re = re.compile(
+    r"^(?P<name>[A-Za-z0-9_][A-Za-z0-9_.+:-]*)\((?P<section>[1-9][a-z0-9]*)\)$"
+)
+
+
+def _whole_tag_xref(tag: Tag) -> InlineLink | None:
+    """`<b>ftp(1)</b>`: the whole reference, section included, inside one tag."""
+    if tag.find(True) is not None:
+        return None
+    text = tag.get_text("", strip=True)
+    match = _whole_xref_re.match(text)
+    if match is None:
+        return None
+    href, link_type = _xref_to_href(text)
+    if href is None:
+        return None
+    return InlineLink(href=href, inlines=[InlineText(text=text)], linkType=link_type)
+
+
+def _compact_text(tag: Tag) -> str:
+    return normalize_ws(tag.get_text(" "))
+
+
+def _synopsis_row_text(tr: Tag) -> str:
+    cells = tr.find_all("td", recursive=False)
+    return normalize_ws(" ".join(cell.get_text(" ") for cell in cells))
+
+
+def _looks_like_header_row(tr: Tag, cells: list[Tag], row_count: int) -> bool:
+    if row_count < 2:
+        return False
+    if any(cell.name.lower() == "th" for cell in cells):
+        return True
+    style = tr.get("style")
+    if isinstance(style, str) and "border-bottom" in style:
+        return True
+    texts = [_compact_text(cell) for cell in cells]
+    if not any(texts):
+        return False
+    bold = all(cell.find("b") is not None or not _compact_text(cell) for cell in cells)
+    return bold and any(texts)
+
+
 def _pre_text(tag: Tag) -> str:
     parts: list[str] = []
     for descendant in tag.descendants:
@@ -325,8 +486,8 @@ def _pre_text(tag: Tag) -> str:
     return "".join(parts)
 
 
-def _definition_list_pairs(children: list[Tag]) -> list[tuple[Tag, Tag | None]]:
-    pairs: list[tuple[Tag, Tag | None]] = []
+def _definition_list_pairs(children: list[Tag]) -> list[tuple[Tag, list[Tag]]]:
+    pairs: list[tuple[Tag, list[Tag]]] = []
     index = 0
     while index < len(children):
         term = children[index]
@@ -334,19 +495,18 @@ def _definition_list_pairs(children: list[Tag]) -> list[tuple[Tag, Tag | None]]:
             index += 1
             continue
 
-        definition = (
-            children[index + 1]
-            if index + 1 < len(children) and children[index + 1].name.lower() == "dd"
-            else None
-        )
-        pairs.append((term, definition))
-        index += 2 if definition is not None else 1
+        definitions: list[Tag] = []
+        index += 1
+        while index < len(children) and children[index].name.lower() == "dd":
+            definitions.append(children[index])
+            index += 1
+        pairs.append((term, definitions))
     return pairs
 
 
-def _is_bullet_definition_list(term_pairs: list[tuple[Tag, Tag | None]]) -> bool:
+def _is_bullet_definition_list(term_pairs: list[tuple[Tag, list[Tag]]]) -> bool:
     return bool(term_pairs) and all(
-        _bullet_term_re.match(term.get_text()) for term, _definition in term_pairs
+        _bullet_term_re.match(term.get_text()) for term, _definitions in term_pairs
     )
 
 
@@ -449,7 +609,7 @@ def _xref_to_href(label: str) -> tuple[str | None, str]:
     section = match.group("section").strip().lower()
     if not name:
         return None, "internal"
-    if re.fullmatch(r"[1-9][a-z0-9]*", section):
+    if _section_re.fullmatch(section):
         return f"/man/{name}/{section}", "internal"
     return f"/man/{name}", "internal"
 
@@ -466,7 +626,7 @@ def _extract_description(manual_text: Tag) -> str | None:
         return None
     text = normalize_ws(first_p.get_text(" "))
     # Common patterns: "foo - desc" or "foo — desc"
-    for sep in (" - ", " \u2014 ", " \u2013 "):
+    for sep in (" - ", " — ", " – "):
         if sep in text:
             _lhs, rhs = text.split(sep, 1)
             rhs = rhs.strip()
@@ -474,20 +634,82 @@ def _extract_description(manual_text: Tag) -> str | None:
     return None
 
 
-def _extract_section_lines(manual_text: Tag, heading_id: str) -> list[str]:
-    heading = manual_text.find(id=heading_id)
+def _extract_synopsis(manual_text: Tag) -> list[str]:
+    heading = manual_text.find(id="SYNOPSIS")
     if heading is None:
         return []
     section = heading.find_parent("section")
     if section is None:
         return []
     lines: list[str] = []
-    for p in section.find_all(["p", "pre"], recursive=False):
-        text = p.get_text("\n")
-        text = text.strip()
-        if text:
-            lines.extend([ln for ln in text.splitlines() if ln.strip()])
+    nodes: list[Tag] = []
+    for node in section.find_all(["p", "pre", "table", "div", "section"], recursive=False):
+        if node.name.lower() == "section":
+            nodes.extend(node.find_all(["p", "pre", "table", "div"], recursive=False))
+        else:
+            nodes.append(node)
+    for node in nodes:
+        tname = node.name.lower()
+        if tname == "table":
+            classes = set(node.get("class") or [])
+            if "Nm" not in classes:
+                continue
+            for tr in node.find_all("tr", recursive=False):
+                text = _synopsis_row_text(tr)
+                if text:
+                    lines.append(text)
+            continue
+        if tname == "pre":
+            text = _pre_text(node).strip()
+            lines.extend(ln.rstrip() for ln in text.splitlines() if ln.strip())
+            continue
+        if tname == "div":
+            for inner in node.find_all(["p", "pre"], recursive=False):
+                inner_text = (
+                    _pre_text(inner) if inner.name.lower() == "pre" else _paragraph_lines(inner)
+                )
+                lines.extend(ln.rstrip() for ln in inner_text.splitlines() if ln.strip())
+            continue
+        lines.extend(ln for ln in _paragraph_lines(node).splitlines() if ln.strip())
     return lines
+
+
+def _paragraph_lines(tag: Tag) -> str:
+    """Paragraph text with `<br>` as line breaks and inline markup flattened."""
+    parts: list[str] = []
+    for descendant in tag.descendants:
+        if isinstance(descendant, NavigableString):
+            parts.append(re.sub(r"\s+", " ", str(descendant)))
+        elif isinstance(descendant, Tag) and descendant.name.lower() == "br":
+            parts.append("\n")
+    text = "".join(parts)
+    return "\n".join(normalize_ws(ln) for ln in text.split("\n"))
+
+
+_option_split_re = re.compile(
+    r"^(?P<flags>.*(?:^|[\s,])(?:--?|\+)[^\s=\[<,]+)(?P<arg>(?:=|\[=|\s+)[^\s,-][^,]*)?$"
+)
+
+
+def _split_option_argument(flags: str) -> tuple[str, str | None]:
+    """Split `-f, --file=ARCHIVE` into (`-f, --file`, `ARCHIVE`).
+
+    Only the argument attached to the last flag is split off. Optional
+    arguments keep their brackets: `--color[=WHEN]` becomes `[WHEN]`.
+    """
+    match = _option_split_re.match(flags)
+    if not match or not match.group("arg"):
+        return flags, None
+    arg = match.group("arg")
+    if arg.startswith("[="):
+        argument = f"[{arg[2:].strip()}"
+    elif arg.startswith("="):
+        argument = arg[1:].strip()
+    else:
+        argument = arg.strip()
+    if not argument or argument.startswith(("-", "+")):
+        return flags, None
+    return match.group("flags").rstrip(), argument
 
 
 def _extract_options_from_doc(doc: DocumentModel) -> list[OptionItem]:
@@ -496,17 +718,18 @@ def _extract_options_from_doc(doc: DocumentModel) -> list[OptionItem]:
     definition_lists, require_flag_shape = _option_definition_lists(doc)
     for block in definition_lists:
         for item in block.items:
-            flags = normalize_ws(_inlines_to_text(item.termInlines))
+            flags_raw = normalize_ws(_inlines_to_text(item.termInlines))
             desc = normalize_ws(_blocks_to_text(item.definitionBlocks))
-            if not flags or not desc:
+            if not flags_raw or not desc:
                 continue
-            if require_flag_shape and _option_term_re.search(flags) is None:
+            if require_flag_shape and _option_term_re.search(flags_raw) is None:
                 continue
+            flags, argument = _split_option_argument(flags_raw)
             anchor = item.id or stable_unique_slug(flags, used)
             out.append(
                 OptionItem(
                     flags=flags,
-                    argument=None,
+                    argument=argument,
                     description=desc,
                     anchorId=anchor,
                 )
@@ -550,18 +773,47 @@ def _extract_see_also(manual_text: Tag) -> list[SeeAlsoRef] | None:
         return None
 
     refs: list[SeeAlsoRef] = []
-    for a in section.find_all("a", class_="Xr"):
-        label = a.get_text(" ", strip=True)
-        match = _xref_re.match(label)
-        if not match:
-            continue
-        name = match.group("name").strip().lower()
-        sec = match.group("section").strip().lower()
+    seen: set[tuple[str, str]] = set()
+
+    def add(name: str, sec: str) -> None:
+        name = name.strip().lower()
+        sec = sec.strip().lower()
         if not name:
-            continue
-        if not re.fullmatch(r"[1-9][a-z0-9]*", sec):
+            return
+        if not _section_re.fullmatch(sec):
             sec = ""
+        key = (name, sec)
+        if key in seen:
+            return
+        seen.add(key)
         refs.append(SeeAlsoRef(name=name, section=sec or None))
+
+    for a in section.find_all("a", class_="Xr"):
+        match = _xref_re.match(_compact_text(a))
+        if match:
+            add(match.group("name"), match.group("section"))
+
+    if not refs:
+        for tag in section.find_all(["b", "i"]):
+            text = tag.get_text("", strip=True)
+            whole = _whole_xref_re.match(text)
+            if whole:
+                add(whole.group("name"), whole.group("section"))
+                continue
+            if not text or not _xref_name_re.match(text):
+                continue
+            nxt = tag.next_sibling
+            if not isinstance(nxt, NavigableString):
+                continue
+            match = _trailing_section_re.match(str(nxt))
+            if match is None:
+                continue
+            add(text, match.group("section"))
+
+    if not refs:
+        # Plain text `bash(1), sh(1)` with no markup at all.
+        for match in _bare_xref_re.finditer(section.get_text(" ")):
+            add(match.group("name"), match.group("section"))
 
     return refs or None
 

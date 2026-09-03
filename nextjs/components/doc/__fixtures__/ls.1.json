@@ -1,0 +1,3360 @@
+{
+ "description": "list directory contents",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "ls - list directory contents",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "synopsis",
+    "level": 2,
+    "text": "SYNOPSIS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "ls",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " [",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "OPTION",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": "]... [",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "FILE",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": "]...",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "List information about the FILEs (the current directory by default). Sort entries alphabetically if none of ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "-cftuvSUX",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " nor ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "--sort",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " is specified.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Mandatory arguments to long options are mandatory for short options too.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "do not ignore entries starting with .",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "a",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-a",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--all",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "do not list implied . and ..",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "A",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-A",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--almost-all",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", print the author of each file",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "author",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--author",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "print C-style escapes for nongraphic characters",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "b",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-b",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--escape",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", scale sizes by SIZE when printing them; e.g., '--block-size=M'; see SIZE format below",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "block",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--block-size",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "SIZE",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "do not list implied entries ending with ~",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "B",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-B",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--ignore-backups",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-lt",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ": sort by, and show, ctime (time of last change of file status information); with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ": show ctime and sort by name; otherwise: sort by ctime, newest first",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "c",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-c",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "list entries by columns",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "C",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-C",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "color the output WHEN; more info below",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "color",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--color",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "WHEN",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": "]",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "list directories themselves, not their contents",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "d",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-d",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--directory",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "generate output designed for Emacs' dired mode",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "D",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-D",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--dired",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "same as ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-a",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-U",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "f",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-f",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "append indicator (one of */=>@|) to entries WHEN",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "F",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-F",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--classify",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "WHEN",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": "]",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "likewise, except do not append '*'",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "file",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--file-type",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "across,horizontal (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-x",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), commas (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-m",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), long (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), single-column (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-1",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), verbose (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), vertical (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-C",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ")",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "format",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--format",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "WORD",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "like ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--time-style",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "=",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "full-iso",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "full",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--full-time",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "like ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", but do not list owner",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "g",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-g",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "group directories before files",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "group",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--group-directories-first",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "in a long listing, don't print group names",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "G",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-G",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--no-group",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-s",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", print sizes like 1K 234M 2G etc.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "h",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-h",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--human-readable",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "likewise, but use powers of 1000 not 1024",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "si",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--si",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "follow symbolic links listed on the command line",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "H",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-H",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--dereference-command-line",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "follow each command line symbolic link that points to a directory",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "dereference",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--dereference-command-line-symlink-to-dir",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "do not list implied entries matching shell PATTERN (overridden by ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-a",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-A",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ")",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "hide",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--hide",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "PATTERN",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "hyperlink file names WHEN",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "hyperlink",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--hyperlink",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "WHEN",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": "]",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "append indicator with style WORD to entry names: none (default), slash (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-p",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), file-type (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--file-type",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), classify (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-F",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ")",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "indicator",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--indicator-style",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "WORD",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "print the index number of each file",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "i",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-i",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--inode",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "do not list implied entries matching shell PATTERN",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "I",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-I",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--ignore",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "PATTERN",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "default to 1024-byte blocks for file system usage; used only with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-s",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " and per directory totals",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "k",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-k",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--kibibytes",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "use a long listing format",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "l",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-l",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "when showing file information for a symbolic link, show information for the file the link references rather than for the link itself",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "L",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-L",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--dereference",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "fill width with a comma separated list of entries",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "m",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-m",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "like ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", but list numeric user and group IDs",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "n",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-n",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--numeric-uid-gid",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "print entry names without quoting",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "N",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-N",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--literal",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "like ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", but do not list group information",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "o",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-o",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "append / indicator to directories",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "p",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-p",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--indicator-style",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "slash",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "print ? instead of nongraphic characters",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "q",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-q",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--hide-control-chars",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "show nongraphic characters as-is (the default, unless program is 'ls' and output is a terminal)",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "show",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--show-control-chars",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "enclose entry names in double quotes",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Q",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-Q",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--quote-name",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "use quoting style WORD for entry names: literal, locale, shell, shell-always, shell-escape, shell-escape-always, c, escape (overrides QUOTING_STYLE environment variable)",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "quoting",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--quoting-style",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "WORD",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "reverse order while sorting",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "r",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-r",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--reverse",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "list subdirectories recursively",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "R",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-R",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--recursive",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "print the allocated size of each file, in blocks",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "s",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-s",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--size",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "sort by file size, largest first",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "S",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-S",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "change default 'name' sort to WORD: none (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-U",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), size (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-S",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), time (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-t",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), version (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-v",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), extension (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-X",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "), name, width",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "sort",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--sort",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "WORD",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "select which timestamp used to display or sort; access time (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-u",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "): atime, access, use; metadata change time (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-c",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "): ctime, status; modified time (default): mtime, modification; birth time: birth, creation;",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "time",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--time",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "WORD",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", WORD determines which time to show; with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--sort",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "=",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "time",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ", sort by WORD (newest first)",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-definition",
+      "termInlines": []
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "time/date format with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "; see TIME_STYLE below",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "time~2",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--time-style",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "TIME_STYLE",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "sort by time, newest first; see ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--time",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "t",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-t",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "assume tab stops at each COLS instead of 8",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "T",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-T",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--tabsize",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "COLS",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-lt",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ": sort by, and show, access time; with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-l",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ": show access time and sort by name; otherwise: sort by access time, newest first",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "u",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-u",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "do not sort directory entries",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "U",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-U",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "natural sort of (version) numbers within text",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "v",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-v",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "set output width to COLS. 0 means no limit",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "w",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-w",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--width",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "COLS",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "list entries by lines instead of by columns",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "x",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-x",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "sort alphabetically by entry extension",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "X",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-X",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "print any security context of each file",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "Z",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-Z",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--context",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "end each output line with NUL, not newline",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "zero",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--zero",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "list one file per line",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-1",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-1",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "display this help and exit",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "help",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--help",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "output version information and exit",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "version",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--version",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The SIZE argument is an integer and optional unit (example: 10K is 10*1024). Units are K,M,G,T,P,E,Z,Y,R,Q (powers of 1024) or KB,MB,... (powers of 1000). Binary prefixes can be used, too: KiB=K, MiB=M, and so on.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The TIME_STYLE argument can be full-iso, long-iso, iso, locale, or +FORMAT. FORMAT is interpreted like in ",
+      "type": "text"
+     },
+     {
+      "href": "/man/date/1",
+      "inlines": [
+       {
+        "text": "date(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ". If FORMAT is FORMAT1<newline>FORMAT2, then FORMAT1 applies to non-recent files and FORMAT2 to recent files. TIME_STYLE prefixed with 'posix-' takes effect only outside the POSIX locale. Also the TIME_STYLE environment variable sets the default style to use.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The WHEN argument defaults to 'always' and can also be 'auto' or 'never'.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Using color to distinguish file types is disabled both by default and with ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "--color",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": "=",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "never",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": ". With ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "--color",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": "=",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "auto",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": ", ls emits color codes only when standard output is connected to a terminal. The LS_COLORS environment variable can change the settings. Use the ",
+      "type": "text"
+     },
+     {
+      "href": "/man/dircolors/1",
+      "inlines": [
+       {
+        "text": "dircolors(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " command to set it.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "exit-status",
+    "level": 3,
+    "text": "Exit status:",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "if OK,",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-0",
+      "termInlines": [
+       {
+        "text": "0",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "if minor problems (e.g., cannot access subdirectory),",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-1-2",
+      "termInlines": [
+       {
+        "text": "1",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "if serious trouble (e.g., cannot access command-line argument).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-2",
+      "termInlines": [
+       {
+        "text": "2",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "author-2",
+    "level": 2,
+    "text": "AUTHOR",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Written by Richard M. Stallman and David MacKenzie.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "reporting-bugs",
+    "level": 2,
+    "text": "REPORTING BUGS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "GNU coreutils online help: <https://www.gnu.org/software/coreutils/>   Report any translation bugs to <https://translationproject.org/team/>",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "text": "SEE ALSO",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "href": "/man/dircolors/1",
+      "inlines": [
+       {
+        "text": "dircolors(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Full documentation <https://www.gnu.org/software/coreutils/ls>   or available locally via: info '(coreutils) ls invocation'",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Packaged by Debian (9.7-3)   Copyright © 2025 Free Software Foundation, Inc.   License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.   This is free software: you are free to change and redistribute it.   There is NO WARRANTY, to the extent permitted by law.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "synopsis",
+    "level": 2,
+    "title": "SYNOPSIS"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   },
+   {
+    "id": "exit-status",
+    "level": 3,
+    "title": "Exit status:"
+   },
+   {
+    "id": "author-2",
+    "level": 2,
+    "title": "AUTHOR"
+   },
+   {
+    "id": "reporting-bugs",
+    "level": 2,
+    "title": "REPORTING BUGS"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "title": "SEE ALSO"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "a",
+   "argument": null,
+   "description": "do not ignore entries starting with .",
+   "flags": "-a, --all"
+  },
+  {
+   "anchorId": "A",
+   "argument": null,
+   "description": "do not list implied . and ..",
+   "flags": "-A, --almost-all"
+  },
+  {
+   "anchorId": "author",
+   "argument": null,
+   "description": "with -l, print the author of each file",
+   "flags": "--author"
+  },
+  {
+   "anchorId": "b",
+   "argument": null,
+   "description": "print C-style escapes for nongraphic characters",
+   "flags": "-b, --escape"
+  },
+  {
+   "anchorId": "block",
+   "argument": "SIZE",
+   "description": "with -l, scale sizes by SIZE when printing them; e.g., '--block-size=M'; see SIZE format below",
+   "flags": "--block-size"
+  },
+  {
+   "anchorId": "B",
+   "argument": null,
+   "description": "do not list implied entries ending with ~",
+   "flags": "-B, --ignore-backups"
+  },
+  {
+   "anchorId": "c",
+   "argument": null,
+   "description": "with -lt: sort by, and show, ctime (time of last change of file status information); with -l: show ctime and sort by name; otherwise: sort by ctime, newest first",
+   "flags": "-c"
+  },
+  {
+   "anchorId": "C",
+   "argument": null,
+   "description": "list entries by columns",
+   "flags": "-C"
+  },
+  {
+   "anchorId": "color",
+   "argument": "[WHEN]",
+   "description": "color the output WHEN; more info below",
+   "flags": "--color"
+  },
+  {
+   "anchorId": "d",
+   "argument": null,
+   "description": "list directories themselves, not their contents",
+   "flags": "-d, --directory"
+  },
+  {
+   "anchorId": "D",
+   "argument": null,
+   "description": "generate output designed for Emacs' dired mode",
+   "flags": "-D, --dired"
+  },
+  {
+   "anchorId": "f",
+   "argument": null,
+   "description": "same as -a -U",
+   "flags": "-f"
+  },
+  {
+   "anchorId": "F",
+   "argument": "[WHEN]",
+   "description": "append indicator (one of */=>@|) to entries WHEN",
+   "flags": "-F, --classify"
+  },
+  {
+   "anchorId": "file",
+   "argument": null,
+   "description": "likewise, except do not append '*'",
+   "flags": "--file-type"
+  },
+  {
+   "anchorId": "format",
+   "argument": "WORD",
+   "description": "across,horizontal (-x), commas (-m), long (-l), single-column (-1), verbose (-l), vertical (-C)",
+   "flags": "--format"
+  },
+  {
+   "anchorId": "full",
+   "argument": null,
+   "description": "like -l --time-style=full-iso",
+   "flags": "--full-time"
+  },
+  {
+   "anchorId": "g",
+   "argument": null,
+   "description": "like -l, but do not list owner",
+   "flags": "-g"
+  },
+  {
+   "anchorId": "group",
+   "argument": null,
+   "description": "group directories before files",
+   "flags": "--group-directories-first"
+  },
+  {
+   "anchorId": "G",
+   "argument": null,
+   "description": "in a long listing, don't print group names",
+   "flags": "-G, --no-group"
+  },
+  {
+   "anchorId": "h",
+   "argument": null,
+   "description": "with -l and -s, print sizes like 1K 234M 2G etc.",
+   "flags": "-h, --human-readable"
+  },
+  {
+   "anchorId": "si",
+   "argument": null,
+   "description": "likewise, but use powers of 1000 not 1024",
+   "flags": "--si"
+  },
+  {
+   "anchorId": "H",
+   "argument": null,
+   "description": "follow symbolic links listed on the command line",
+   "flags": "-H, --dereference-command-line"
+  },
+  {
+   "anchorId": "dereference",
+   "argument": null,
+   "description": "follow each command line symbolic link that points to a directory",
+   "flags": "--dereference-command-line-symlink-to-dir"
+  },
+  {
+   "anchorId": "hide",
+   "argument": "PATTERN",
+   "description": "do not list implied entries matching shell PATTERN (overridden by -a or -A)",
+   "flags": "--hide"
+  },
+  {
+   "anchorId": "hyperlink",
+   "argument": "[WHEN]",
+   "description": "hyperlink file names WHEN",
+   "flags": "--hyperlink"
+  },
+  {
+   "anchorId": "indicator",
+   "argument": "WORD",
+   "description": "append indicator with style WORD to entry names: none (default), slash (-p), file-type (--file-type), classify (-F)",
+   "flags": "--indicator-style"
+  },
+  {
+   "anchorId": "i",
+   "argument": null,
+   "description": "print the index number of each file",
+   "flags": "-i, --inode"
+  },
+  {
+   "anchorId": "I",
+   "argument": "PATTERN",
+   "description": "do not list implied entries matching shell PATTERN",
+   "flags": "-I, --ignore"
+  },
+  {
+   "anchorId": "k",
+   "argument": null,
+   "description": "default to 1024-byte blocks for file system usage; used only with -s and per directory totals",
+   "flags": "-k, --kibibytes"
+  },
+  {
+   "anchorId": "l",
+   "argument": null,
+   "description": "use a long listing format",
+   "flags": "-l"
+  },
+  {
+   "anchorId": "L",
+   "argument": null,
+   "description": "when showing file information for a symbolic link, show information for the file the link references rather than for the link itself",
+   "flags": "-L, --dereference"
+  },
+  {
+   "anchorId": "m",
+   "argument": null,
+   "description": "fill width with a comma separated list of entries",
+   "flags": "-m"
+  },
+  {
+   "anchorId": "n",
+   "argument": null,
+   "description": "like -l, but list numeric user and group IDs",
+   "flags": "-n, --numeric-uid-gid"
+  },
+  {
+   "anchorId": "N",
+   "argument": null,
+   "description": "print entry names without quoting",
+   "flags": "-N, --literal"
+  },
+  {
+   "anchorId": "o",
+   "argument": null,
+   "description": "like -l, but do not list group information",
+   "flags": "-o"
+  },
+  {
+   "anchorId": "p",
+   "argument": "slash",
+   "description": "append / indicator to directories",
+   "flags": "-p, --indicator-style"
+  },
+  {
+   "anchorId": "q",
+   "argument": null,
+   "description": "print ? instead of nongraphic characters",
+   "flags": "-q, --hide-control-chars"
+  },
+  {
+   "anchorId": "show",
+   "argument": null,
+   "description": "show nongraphic characters as-is (the default, unless program is 'ls' and output is a terminal)",
+   "flags": "--show-control-chars"
+  },
+  {
+   "anchorId": "Q",
+   "argument": null,
+   "description": "enclose entry names in double quotes",
+   "flags": "-Q, --quote-name"
+  },
+  {
+   "anchorId": "quoting",
+   "argument": "WORD",
+   "description": "use quoting style WORD for entry names: literal, locale, shell, shell-always, shell-escape, shell-escape-always, c, escape (overrides QUOTING_STYLE environment variable)",
+   "flags": "--quoting-style"
+  },
+  {
+   "anchorId": "r",
+   "argument": null,
+   "description": "reverse order while sorting",
+   "flags": "-r, --reverse"
+  },
+  {
+   "anchorId": "R",
+   "argument": null,
+   "description": "list subdirectories recursively",
+   "flags": "-R, --recursive"
+  },
+  {
+   "anchorId": "s",
+   "argument": null,
+   "description": "print the allocated size of each file, in blocks",
+   "flags": "-s, --size"
+  },
+  {
+   "anchorId": "S",
+   "argument": null,
+   "description": "sort by file size, largest first",
+   "flags": "-S"
+  },
+  {
+   "anchorId": "sort",
+   "argument": "WORD",
+   "description": "change default 'name' sort to WORD: none (-U), size (-S), time (-t), version (-v), extension (-X), name, width",
+   "flags": "--sort"
+  },
+  {
+   "anchorId": "time",
+   "argument": "WORD",
+   "description": "select which timestamp used to display or sort; access time (-u): atime, access, use; metadata change time (-c): ctime, status; modified time (default): mtime, modification; birth time: birth, creation;",
+   "flags": "--time"
+  },
+  {
+   "anchorId": "time~2",
+   "argument": "TIME_STYLE",
+   "description": "time/date format with -l; see TIME_STYLE below",
+   "flags": "--time-style"
+  },
+  {
+   "anchorId": "t",
+   "argument": null,
+   "description": "sort by time, newest first; see --time",
+   "flags": "-t"
+  },
+  {
+   "anchorId": "T",
+   "argument": "COLS",
+   "description": "assume tab stops at each COLS instead of 8",
+   "flags": "-T, --tabsize"
+  },
+  {
+   "anchorId": "u",
+   "argument": null,
+   "description": "with -lt: sort by, and show, access time; with -l: show access time and sort by name; otherwise: sort by access time, newest first",
+   "flags": "-u"
+  },
+  {
+   "anchorId": "U",
+   "argument": null,
+   "description": "do not sort directory entries",
+   "flags": "-U"
+  },
+  {
+   "anchorId": "v",
+   "argument": null,
+   "description": "natural sort of (version) numbers within text",
+   "flags": "-v"
+  },
+  {
+   "anchorId": "w",
+   "argument": "COLS",
+   "description": "set output width to COLS. 0 means no limit",
+   "flags": "-w, --width"
+  },
+  {
+   "anchorId": "x",
+   "argument": null,
+   "description": "list entries by lines instead of by columns",
+   "flags": "-x"
+  },
+  {
+   "anchorId": "X",
+   "argument": null,
+   "description": "sort alphabetically by entry extension",
+   "flags": "-X"
+  },
+  {
+   "anchorId": "Z",
+   "argument": null,
+   "description": "print any security context of each file",
+   "flags": "-Z, --context"
+  },
+  {
+   "anchorId": "zero",
+   "argument": null,
+   "description": "end each output line with NUL, not newline",
+   "flags": "--zero"
+  },
+  {
+   "anchorId": "def-1",
+   "argument": null,
+   "description": "list one file per line",
+   "flags": "-1"
+  },
+  {
+   "anchorId": "help",
+   "argument": null,
+   "description": "display this help and exit",
+   "flags": "--help"
+  },
+  {
+   "anchorId": "version",
+   "argument": null,
+   "description": "output version information and exit",
+   "flags": "--version"
+  }
+ ],
+ "seeAlso": [
+  {
+   "name": "dircolors",
+   "resolvedPageId": null,
+   "section": "1"
+  }
+ ],
+ "synopsis": [
+  "ls [OPTION]... [FILE]..."
+ ]
+}

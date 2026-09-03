@@ -260,7 +260,7 @@ def test_parse_mandoc_html_scopes_derived_options_to_options_sections() -> None:
     parsed = parse_mandoc_html(html)
 
     assert parsed.options is not None
-    assert [(option.flags, option.description) for option in parsed.options] == [
-        ("-a, --all", "include every item"),
-        ("+O [shopt_option]", "disable a shell option"),
+    assert [(option.flags, option.argument, option.description) for option in parsed.options] == [
+        ("-a, --all", None, "include every item"),
+        ("+O", "[shopt_option]", "disable a shell option"),
     ]

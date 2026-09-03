@@ -36,6 +36,7 @@ type ReleaseChildTable =
   | "manPages"
   | "manPageSearchDocuments"
   | "manPageLinks"
+  | "manPageAliases"
   | "licensePackages"
   | "licenses";
 
@@ -43,6 +44,7 @@ const RELEASE_CHILD_TABLES: ReleaseChildTable[] = [
   "releaseSectionStats",
   "manPageSearchDocuments",
   "manPageLinks",
+  "manPageAliases",
   "licensePackages",
   "licenses",
   "manPages",
@@ -267,6 +269,11 @@ async function sampleReleaseChildren(
                 .query("manPageLinks")
                 .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId))
                 .take(takeLimit)
+            : table === "manPageAliases"
+              ? await ctx.db
+                  .query("manPageAliases")
+                  .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", releaseId))
+                  .take(takeLimit)
             : table === "licensePackages"
               ? await ctx.db
                   .query("licensePackages")
@@ -316,6 +323,14 @@ async function deleteReleaseChildrenByTable(
     const rows = await ctx.db
       .query("manPageLinks")
       .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId))
+      .take(limit);
+    for (const row of rows) await ctx.db.delete(row._id);
+    return rows.length;
+  }
+  if (table === "manPageAliases") {
+    const rows = await ctx.db
+      .query("manPageAliases")
+      .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", releaseId))
       .take(limit);
     for (const row of rows) await ctx.db.delete(row._id);
     return rows.length;
@@ -785,5 +800,81 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
       isDone: result.isDone,
       continueCursor: result.continueCursor,
     };
+  },
+});
+
+
+const MAX_STATS_SAMPLE = 4000;
+
+/**
+ * Read-only staging check: per active release, how many pages link anywhere,
+ * how many have SEE ALSO, how many look like stubs, and how many aliases exist.
+ * Run with `npx convex run maintenance:releaseStats '{"stage":"staging"}'`.
+ */
+export const releaseStats = internalQuery({
+  args: {
+    stage: v.union(v.literal("staging"), v.literal("prod")),
+    sampleLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const sampleLimit = Math.min(MAX_STATS_SAMPLE, Math.max(1, args.sampleLimit ?? 1000));
+    const active = await ctx.db
+      .query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", (q) => q.eq("stage", args.stage))
+      .take(20);
+
+    const releases = [];
+    for (const pointer of active) {
+      const release = await ctx.db.get(pointer.releaseId);
+      if (!release) continue;
+
+      const pages = await ctx.db
+        .query("manPages")
+        .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", release._id))
+        .take(sampleLimit);
+
+      let withSeeAlso = 0;
+      let withXref = 0;
+      let withParseWarnings = 0;
+      let emptyDescription = 0;
+      for (const page of pages) {
+        if (page.hasParseWarnings) withParseWarnings += 1;
+        if (!page.description) emptyDescription += 1;
+        const seeAlso = await ctx.db
+          .query("manPageLinks")
+          .withIndex("by_fromPageId_and_linkType", (q) =>
+            q.eq("fromPageId", page._id).eq("linkType", "see_also"),
+          )
+          .first();
+        if (seeAlso) withSeeAlso += 1;
+        const xref = await ctx.db
+          .query("manPageLinks")
+          .withIndex("by_fromPageId_and_linkType", (q) =>
+            q.eq("fromPageId", page._id).eq("linkType", "xref"),
+          )
+          .first();
+        if (xref) withXref += 1;
+      }
+
+      const aliases = await ctx.db
+        .query("manPageAliases")
+        .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", release._id))
+        .take(MAX_STATS_SAMPLE);
+
+      const sampled = pages.length;
+      const pct = (n: number) => (sampled ? Math.round((n / sampled) * 1000) / 10 : 0);
+      releases.push({
+        distro: release.distro,
+        datasetReleaseId: release.datasetReleaseId,
+        pageCount: release.pageCount,
+        sampled,
+        aliases: aliases.length,
+        withSeeAlsoPct: pct(withSeeAlso),
+        withXrefPct: pct(withXref),
+        withParseWarningsPct: pct(withParseWarnings),
+        emptyDescriptionPct: pct(emptyDescription),
+      });
+    }
+    return { stage: args.stage, releases };
   },
 });

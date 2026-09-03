@@ -335,6 +335,7 @@ export function ManPageView({
             seeAlso={content.seeAlso}
             relatedItems={relatedItems}
             relatedLoading={relatedLoading}
+            hasParseWarnings={page.hasParseWarnings === true}
           />
         </article>
       </div>

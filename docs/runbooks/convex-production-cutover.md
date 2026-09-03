@@ -74,7 +74,13 @@ Scheduled production imports should continue to use `.github/workflows/update-do
 
 ## Verify staging import
 
-Staging is intentionally absent from the anonymous Convex API. Before promotion, require successful ingest output for every selected distro, including its release ID, page count, parse-quality gates, and activation result. Confirm the corresponding `staging` active pointers through the authenticated Convex dashboard or other deployment-admin tooling. Do not add a caller-selected stage back to public queries for previewing.
+Staging is intentionally absent from the anonymous Convex API. Before promotion, require successful ingest output for every selected distro, including its release ID, page count, parse-quality gates, and activation result. Then run the read-only stats query with deployment-admin credentials:
+
+```bash
+npx convex run maintenance:releaseStats '{"stage":"staging"}' --prod
+```
+
+It reports, per active staging release, the sampled page count, alias count, and the percentage of pages with SEE ALSO links, cross-reference links, parse warnings, and empty descriptions. Linux distros should show SEE ALSO coverage well above zero; a release where it is near zero has lost cross-reference parsing. Do not add a caller-selected stage back to public queries for previewing.
 
 ## Promote staging to prod
 

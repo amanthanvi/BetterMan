@@ -38,6 +38,9 @@ export async function generateMetadata({
     const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}`, distro)
     const canonical = `${origin}${canonicalPath}`
 
+    if (result.kind === 'alias') {
+      return { title: `${result.name}(${result.section}) - BetterMan`, alternates: { canonical } }
+    }
     if (result.kind === 'page') {
       const title = `${result.data.page.name}(${result.data.page.section}) - BetterMan`
       const description =
@@ -103,6 +106,11 @@ export default async function ManByNamePage({
           `/man/${encodeURIComponent(result.data.page.name)}/${encodeURIComponent(result.data.page.section)}`,
           distro,
         ),
+      )
+    }
+    if (result.kind === 'alias') {
+      redirect(
+        withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, distro),
       )
     }
 

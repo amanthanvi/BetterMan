@@ -13,11 +13,13 @@ export function ManPageFooterSections({
   seeAlso,
   relatedItems,
   relatedLoading = false,
+  hasParseWarnings = false,
 }: {
   distro: Distro
   seeAlso?: ManPageContent['seeAlso']
   relatedItems: SectionPage[]
   relatedLoading?: boolean
+  hasParseWarnings?: boolean
 }) {
   const seeAlsoItems = (seeAlso ?? []).slice(0, 24)
   const related = relatedItems.slice(0, 24)
@@ -85,6 +87,12 @@ export function ManPageFooterSections({
             Loading related commands…
           </p>
         </aside>
+      ) : null}
+
+      {hasParseWarnings ? (
+        <p className="mt-10 border-t border-edge pt-4 font-mono text-xs text-faint">
+          mandoc reported formatting warnings for this page. Some structure may be lost.
+        </p>
       ) : null}
     </>
   )
