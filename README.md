@@ -26,10 +26,12 @@ pnpm convex:check   # provisions a local Convex deployment and writes .env.local
 pnpm next:dev       # Convex watcher plus Next.js on http://localhost:3000
 ```
 
-The local deployment starts empty. Seed it with the E2E fixture:
+The local deployment starts empty. Seed it with the E2E fixture while `pnpm next:dev` is running:
 
 ```bash
-CONVEX_HTTP_URL=<CONVEX_SITE_URL from .env.local> CONVEX_INGEST_SECRET=dev node scripts/seed-convex-e2e.mjs
+npx convex env set CONVEX_INGEST_SECRET dev
+set -a; . ./.env.local; set +a
+BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="$CONVEX_SITE_URL" node scripts/seed-convex-e2e.mjs
 ```
 
 ## Commands
