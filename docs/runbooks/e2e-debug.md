@@ -1,6 +1,6 @@
 # E2E test failures (Playwright)
 
-BetterMan E2E tests live in `frontend/e2e/` and run in CI in `.github/workflows/ci.yml` (`e2e` job).
+BetterMan E2E tests live in `nextjs/e2e/` and run in CI in `.github/workflows/ci.yml` (`e2e` job).
 
 ## Triage in CI
 
@@ -13,9 +13,8 @@ BetterMan E2E tests live in `frontend/e2e/` and run in CI in `.github/workflows/
 
 Follow the exact Convex seed + Next.js startup sequence in CI’s `e2e` job. After the app is ready on port 3000, run:
 
-- `E2E_BASE_URL=http://127.0.0.1:3000 pnpm frontend:e2e`
+- `E2E_BASE_URL=http://127.0.0.1:3000 pnpm next:e2e`
 
-The legacy FastAPI service and Vite build are not part of the current E2E request path.
 
 ## Common causes
 

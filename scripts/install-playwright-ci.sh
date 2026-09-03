@@ -24,7 +24,7 @@ install_playwright_ci() {
   for attempt in 1 2; do
     status=0
     timeout --kill-after=15s 165s \
-      pnpm -C frontend exec playwright install-deps chromium || status=$?
+      pnpm -C nextjs exec playwright install-deps chromium || status=$?
     if ((status == 0)); then
       dependencies_ready=true
       break
@@ -47,7 +47,7 @@ install_playwright_ci() {
   for attempt in 1 2; do
     status=0
     timeout --kill-after=15s 165s \
-      pnpm -C frontend exec playwright install chromium || status=$?
+      pnpm -C nextjs exec playwright install chromium || status=$?
     if ((status == 0)); then
       return 0
     fi

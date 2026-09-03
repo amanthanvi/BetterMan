@@ -2,12 +2,12 @@
   "id": "/",
   "name": "BetterMan",
   "short_name": "BetterMan",
-  "description": "A fast, readable web UI for Linux man pages.",
+  "description": "Unix manual pages, typeset for the screen.",
   "scope": "/",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
   "icons": [
     {
       "src": "/icon-192.png",

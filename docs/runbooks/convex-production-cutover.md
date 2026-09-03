@@ -1,6 +1,6 @@
 # Convex production cutover
 
-This runbook rebuilds BetterMan production data from source manpage ingestion into Convex. It does not require a Railway Postgres dump. Current persistent app data is generated dataset content, search documents, license text, active release pointers, and ephemeral rate-limit buckets; there is no live-only user data to preserve from Postgres or Redis.
+This runbook rebuilds BetterMan production data from source man page ingestion into Convex. Persistent app data is generated dataset content, search documents, license text, active release pointers, and ephemeral rate-limit buckets. There is no user data to preserve.
 
 ## Required envs
 
@@ -12,7 +12,6 @@ App runtime:
 
 - `NEXT_PUBLIC_CONVEX_URL` — Convex client URL, usually `https://<deployment>.convex.cloud`.
 - `CONVEX_URL` — same value for server-side Next.js code.
-- `VITE_CONVEX_URL` — only needed for a Vite frontend deployment; set it to the same Convex client URL if that frontend is deployed.
 
 Public Convex queries/actions resolve the `prod` pointer internally. The app runtime cannot select `staging`.
 
@@ -28,7 +27,6 @@ Protected GitHub `production` environment values used by repo workflows:
 - Secrets: `BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`, `CONVEX_DEPLOY_KEY`
 - Variable: `CONVEX_URL`
 
-Do not set `DATABASE_URL`, `REDIS_URL`, or `FASTAPI_INTERNAL_URL` for the cutover path.
 
 ## Push Convex schema and functions
 

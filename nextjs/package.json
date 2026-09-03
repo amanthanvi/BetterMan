@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "openapi:gen": "openapi-typescript /tmp/betterman-openapi.json --output lib/openapi.gen.ts"
+    "e2e": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.46.0",
@@ -23,6 +23,8 @@
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
@@ -32,7 +34,6 @@
     "eslint": "^10.9.1",
     "eslint-config-next": "^16.3.0",
     "fast-check": "4.9.0",
-    "openapi-typescript": "^7.13.0",
     "typescript": "~6.0.3",
     "vitest": "^4.1.2"
   }

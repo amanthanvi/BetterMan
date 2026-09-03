@@ -1,6 +1,6 @@
 # CSP violations debugging
 
-BetterMan uses CSP with **strict script nonces** and **relaxed styles** (see `SPEC.md`).
+BetterMan uses CSP with strict script nonces and relaxed styles.
 
 ## Symptoms
 
@@ -22,7 +22,7 @@ BetterMan uses CSP with **strict script nonces** and **relaxed styles** (see `SP
 - A new third‑party script/style was added (should not happen; avoid CDNs).
 - A route is accidentally serving HTML without the middleware (misconfigured mount).
 
-**v0.5.0 (Next.js):** CSP is injected by `nextjs/proxy.ts` (Next service), not by FastAPI.
+CSP is injected by `nextjs/proxy.ts`.
 
 ## Local reproduction
 
