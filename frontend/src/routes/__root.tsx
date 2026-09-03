@@ -83,7 +83,7 @@ function RootLayoutInner() {
   })
 
   const routeKey = useRouterState({
-    select: (s) => `${s.location.pathname}${s.location.search}`,
+    select: (s) => `${s.location.pathname}${s.location.searchStr}`,
   })
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
