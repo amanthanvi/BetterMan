@@ -95,12 +95,16 @@ async function checkDistro(client, { distro, minPageCount }) {
 
   let page = null
   try {
-    page = await client.action(api.content.getManByNameAndSection, {
+    // getManByNameAndSection returns { kind: 'page', data } or { kind: 'alias', ... }.
+    const result = await client.action(api.content.getManByNameAndSection, {
       distro,
       name: golden.name,
       section: golden.section,
     })
-    if (!page || page.page?.name !== golden.name || page.page?.section !== golden.section) {
+    page = result?.kind === 'page' ? result.data : null
+    if (result?.kind === 'alias') {
+      failures.push(`golden page ${golden.name}/${golden.section} is an alias of ${result.name}(${result.section})`)
+    } else if (!page || page.page?.name !== golden.name || page.page?.section !== golden.section) {
       failures.push(`golden page ${golden.name}/${golden.section} missing`)
     } else if (page.page.datasetReleaseId !== info.datasetReleaseId) {
       failures.push(`golden page release ${page.page.datasetReleaseId} != active ${info.datasetReleaseId}`)
