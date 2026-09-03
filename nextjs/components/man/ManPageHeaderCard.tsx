@@ -80,7 +80,7 @@ export function ManPageHeaderCard({
           <BookmarkButton name={page.name} section={page.section} description={page.description || page.title} />
 
           <IconButton onClick={onCopyLink} aria-label="Copy link to clipboard" title={copiedLink ? 'Copied' : 'Copy link'}>
-            {copiedLink ? <CheckIcon className="size-4 text-accent" /> : <CopyIcon className="size-4" />}
+            {copiedLink ? <CheckIcon className="bm-pop-in size-4 text-accent motion-reduce:animate-none" /> : <CopyIcon className="size-4" />}
             <span aria-live="polite" className="sr-only">
               {copiedLink ? 'Link copied' : ''}
             </span>
@@ -135,16 +135,14 @@ export function ManPageHeaderCard({
           </label>
         ) : null}
 
+        {variantPicker ? null : <span className="text-muted">{DISTRO_LABEL[distro]}</span>}
+
         {page.sourcePackage ? (
-          <span className="min-w-0 max-w-full break-words">
-            pkg <span className="text-muted">{page.sourcePackage}</span>
-            {page.sourcePackageVersion ? <span>@{page.sourcePackageVersion}</span> : null}
+          <span className="min-w-0 max-w-full break-words" title="Source package">
+            <span className="text-muted">{page.sourcePackage}</span>
+            {page.sourcePackageVersion ? <span> {page.sourcePackageVersion}</span> : null}
           </span>
         ) : null}
-
-        <span className="min-w-0 max-w-full break-words">
-          dataset <span className="text-muted">{page.datasetReleaseId}</span>
-        </span>
       </div>
 
       {synopsis?.length ? (

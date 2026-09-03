@@ -6,6 +6,10 @@ All notable changes to BetterMan are documented here.
 
 - Security: pin transitive `fast-uri` 3.x to 3.1.6 and `@humanfs/node` to 0.16.8 to close URL normalization and symlink-copy vulnerabilities. ([#231](https://github.com/amanthanvi/BetterMan/pull/231)) — thanks @amanthanvi
 - Dependencies: consolidate the September 2026 runtime, tooling, container, and GitHub Actions updates; keep paired CodeQL and React Query packages version-aligned.
+- Man page: the options table now sits below the synopsis instead of above NAME, NAME and SYNOPSIS are no longer repeated in the body, RELATED is rendered on the server and hidden when empty, and the header shows the distro and source package instead of the raw release id.
+- Mobile: the bottom navigation bar is removed. The header carries search; bookmarks stay on the home page.
+- Motion: dialogs, drawers, the palette, and the find bar animate out as well as in; the table-of-contents marker slides between headings; the long options table expands in place. All inside the 150 to 200 ms entries-only budget and disabled under reduced motion.
+- Share images are generated per page from the running-head grammar. The static `og-image.png` is gone.
 - Search: queries now match the one-line description as well as the name, so "copy files" finds `cp(1)`. Name matches still rank first.
 - Ingestion: man(7) cross-references (`ls(1)` written as bold or italic name) now link and populate SEE ALSO and RELATED. Previously only mdoc pages got links, so most Linux pages had none.
 - Ingestion: `.so` include stubs become aliases. `/man/man/7` now redirects to `groff_man(7)` instead of publishing a one-line page.

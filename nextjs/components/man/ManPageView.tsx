@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import type { RelatedResponse, SectionPage } from '../../lib/api'
-import type { ManPage, ManPageContent, ManPageVariant, OptionItem } from '../../lib/docModel'
+import type { SectionPage } from '../../lib/api'
+import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
 import { getScrollBehavior } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
 import { DocRenderer, shouldVirtualizeBlocks } from '../doc/DocRenderer'
@@ -20,25 +20,93 @@ import { ManPageOptionsSection, OPTIONS_COLLAPSE_THRESHOLD } from './ManPageOpti
 import { ManSectionLabel } from './RunningHead'
 import { useManPageFind } from './useManPageFind'
 
+/**
+ * The header shows NAME and the extracted synopsis lines. Drop NAME from the
+ * body always. Drop SYNOPSIS only when it holds nothing the header lacks: a
+ * single paragraph or code block and no subsections. tar(1) keeps its
+ * "Traditional usage" subsections in the body.
+ */
+export function stripHeaderSections(
+  blocks: BlockNode[],
+  toc: TocItem[],
+  opts: { hasSynopsis: boolean },
+): { blocks: BlockNode[]; toc: TocItem[] } {
+  const sections = splitSections(blocks)
+  const removed = new Set<string>()
+  const outBlocks: BlockNode[] = []
+
+  for (const section of sections) {
+    const title = section.heading?.text.trim().toUpperCase()
+    const drop =
+      title === 'NAME' ||
+      (title === 'SYNOPSIS' && opts.hasSynopsis && isBareSynopsis(section.heading!.level, section.body))
+    if (drop) {
+      for (const block of [section.heading!, ...section.body]) {
+        if (block.type === 'heading') removed.add(block.id)
+      }
+      continue
+    }
+    if (section.heading) outBlocks.push(section.heading)
+    outBlocks.push(...section.body)
+  }
+
+  return { blocks: outBlocks, toc: toc.filter((item) => !removed.has(item.id)) }
+}
+
+type Section = { heading: HeadingBlock | null; body: BlockNode[] }
+
+/** Group blocks under their nearest top-level heading. */
+function splitSections(blocks: BlockNode[]): Section[] {
+  const out: Section[] = []
+  let current: Section = { heading: null, body: [] }
+  let topLevel: number | null = null
+
+  for (const block of blocks) {
+    if (block.type === 'heading') {
+      if (topLevel === null) topLevel = block.level
+      if (block.level <= topLevel) {
+        if (current.heading || current.body.length) out.push(current)
+        current = { heading: block, body: [] }
+        continue
+      }
+    }
+    current.body.push(block)
+  }
+  if (current.heading || current.body.length) out.push(current)
+  return out
+}
+
+function isBareSynopsis(level: number, body: BlockNode[]): boolean {
+  if (body.some((b) => b.type === 'heading' && b.level > level)) return false
+  const content = body.filter((b) => b.type === 'paragraph' || b.type === 'code_block')
+  return body.length === content.length && content.length <= 1
+}
+
 export function ManPageView({
   page,
   content,
   variants,
+  relatedItems,
 }: {
   page: ManPage
   content: ManPageContent
   variants: ManPageVariant[]
+  relatedItems: SectionPage[]
 }) {
   const toc = useToc()
   const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
   const distro = useDistro()
 
-  const manFind = useManPageFind({ blocks: content.blocks })
+  const body = useMemo(
+    () => stripHeaderSections(content.blocks, content.toc ?? [], { hasSynopsis: Boolean(content.synopsis?.length) }),
+    [content.blocks, content.synopsis, content.toc],
+  )
+  const manFind = useManPageFind({ blocks: body.blocks })
 
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
   const [flashAnchorId, setFlashAnchorId] = useState<string | null>(null)
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
-  const activeTocId = activeHeadingId ?? content.toc[0]?.id ?? null
+  const activeTocId = activeHeadingId ?? body.toc[0]?.id ?? null
 
   const [copiedLink, setCopiedLink] = useState(false)
   const copyTimeoutRef = useRef<number | null>(null)
@@ -46,19 +114,17 @@ export function ManPageView({
   const optionsCount = content.options?.length ?? 0
   const [optionsExpanded, setOptionsExpanded] = useState(() => optionsCount <= OPTIONS_COLLAPSE_THRESHOLD)
   const flashTimeoutRef = useRef<number | null>(null)
-  const [relatedItems, setRelatedItems] = useState<SectionPage[]>([])
-  const [relatedLoading, setRelatedLoading] = useState(true)
 
   const optionTerms = useMemo(() => (selectedOption ? parseOptionTerms(selectedOption.flags) : []), [selectedOption])
-  const shouldVirtualize = useMemo(() => shouldVirtualizeBlocks(content.blocks), [content.blocks])
+  const shouldVirtualize = useMemo(() => shouldVirtualizeBlocks(body.blocks), [body.blocks])
 
-  const hasToc = (content.toc ?? []).length > 0
+  const hasToc = body.toc.length > 0
   const desktopSidebarExpanded = hasToc && sidebarOpen
 
   useEffect(() => {
-    setItems(content.toc ?? [])
+    setItems(body.toc)
     return () => setItems([])
-  }, [content.toc, setItems])
+  }, [body.toc, setItems])
 
   useEffect(() => {
     setActiveId(activeTocId)
@@ -90,7 +156,7 @@ export function ManPageView({
   useEffect(() => {
     if (shouldVirtualize) return
 
-    const ids = content.toc.map((t) => t.id).filter(Boolean)
+    const ids = body.toc.map((t) => t.id).filter(Boolean)
     const els = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => Boolean(el))
@@ -111,7 +177,7 @@ export function ManPageView({
 
     for (const el of els) observer.observe(el)
     return () => observer.disconnect()
-  }, [content.toc, shouldVirtualize, page.id])
+  }, [body.toc, shouldVirtualize, page.id])
 
   useEffect(() => {
     const options = content.options ?? []
@@ -148,36 +214,6 @@ export function ManPageView({
     window.addEventListener('hashchange', applyHash)
     return () => window.removeEventListener('hashchange', applyHash)
   }, [content.options, page.id])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    const params = new URLSearchParams()
-    if (page.distro !== 'debian') params.set('distro', page.distro)
-    const qs = params.toString()
-    const route = `/api/v1/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}/related${qs ? `?${qs}` : ''}`
-
-    setRelatedItems([])
-    setRelatedLoading(true)
-    void fetch(route, {
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return (await res.json()) as RelatedResponse
-      })
-      .then((payload) => {
-        setRelatedItems(payload.items ?? [])
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setRelatedItems([])
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setRelatedLoading(false)
-      })
-
-    return () => controller.abort()
-  }, [page.distro, page.name, page.section])
 
   const copyLink = async () => {
     try {
@@ -283,7 +319,7 @@ export function ManPageView({
 
                     <div className="mt-3">
                       <Toc
-                        items={content.toc}
+                        items={body.toc}
                         activeId={activeTocId}
                         showTitle={false}
                         onNavigateToId={scrollToId ?? undefined}
@@ -323,7 +359,7 @@ export function ManPageView({
 
           <DocRenderer
             ref={manFind.docRef}
-            blocks={content.blocks}
+            blocks={body.blocks}
             distro={distro.distro}
             findQuery={manFind.findEnabled ? manFind.findQuery : undefined}
             optionTerms={optionTerms}
@@ -334,7 +370,6 @@ export function ManPageView({
             distro={distro.distro}
             seeAlso={content.seeAlso}
             relatedItems={relatedItems}
-            relatedLoading={relatedLoading}
             hasParseWarnings={page.hasParseWarnings === true}
           />
         </article>

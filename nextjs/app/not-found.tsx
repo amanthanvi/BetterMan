@@ -9,7 +9,7 @@ export default function NotFound() {
         <div className="font-mono text-xs tracking-wide text-muted">404</div>
         <h1 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-fg">Not found</h1>
         <p className="mt-3 text-sm text-muted">
-          That page doesn&apos;t exist. Try searching — press <Kbd>⌘K</Kbd> anywhere, or <Kbd>/</Kbd> from home.
+          No page at this address. Press <Kbd>⌘K</Kbd> to search.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link

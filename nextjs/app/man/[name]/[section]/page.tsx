@@ -10,6 +10,7 @@ import {
   fetchManByName,
   fetchManByNameAndSectionOrAlias,
   fetchManMetaByNameAndSection,
+  fetchRelated,
   isReleaseNotFoundError,
   suggest,
   withDistroFallback,
@@ -66,7 +67,6 @@ export async function generateMetadata({
         title,
         description,
         type: 'article',
-        images: ['/og-image.png'],
       },
     }
   } catch (err) {
@@ -116,6 +116,11 @@ export default async function ManByNameAndSectionPage({
       throw new AliasRedirect()
     }
     const pageData = resolved.data
+    const related = await fetchRelated({
+      distro: activeDistro,
+      name: pageData.page.name,
+      section: pageData.page.section,
+    }).catch(() => ({ items: [] }))
 
     const nonce = (await headers()).get('x-nonce') ?? undefined
     const jsonLd = safeJsonLdStringify({
@@ -146,6 +151,7 @@ export default async function ManByNameAndSectionPage({
           page={pageData.page}
           content={pageData.content}
           variants={pageData.variants}
+          relatedItems={related.items}
         />
       </>
     )

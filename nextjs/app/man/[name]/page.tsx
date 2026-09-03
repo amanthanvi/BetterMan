@@ -51,7 +51,7 @@ export async function generateMetadata({
         title,
         description,
         alternates: { canonical },
-        openGraph: { title, description, type: 'article', images: ['/og-image.png'] },
+        openGraph: { title, description, type: 'article' },
       }
     }
 
@@ -61,7 +61,7 @@ export async function generateMetadata({
       title,
       description,
       alternates: { canonical },
-      openGraph: { title, description, type: 'website', images: ['/og-image.png'] },
+      openGraph: { title, description, type: 'website' },
     }
   } catch (err) {
     if (err instanceof FastApiError && err.status === 404) {

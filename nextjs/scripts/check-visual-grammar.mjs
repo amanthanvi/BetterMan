@@ -22,7 +22,6 @@ const OVERLAY_FILES = [
   'components/palette/CommandPalette.tsx',
   'components/man/ManPageFindBar.tsx',
   'components/shell/AppShell.tsx', // skip link + offline banner + sticky header bg-bg
-  'components/shell/MobileBottomNav.tsx',
 ]
 
 function grep(pattern) {

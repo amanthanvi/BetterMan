@@ -9,13 +9,13 @@ import { isTypingTarget } from '../../lib/dom'
 import { withDistro } from '../../lib/distro'
 import { getScrollBehavior } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
+import { parseReleaseId } from '../../lib/release'
 import { CommandPalette } from '../palette/CommandPalette'
 import { ReadingPrefsDrawer } from '../reading/ReadingPrefsDrawer'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
 import { TocDrawer } from '../toc/TocDrawer'
-import { MobileBottomNav } from './MobileBottomNav'
 import { ShortcutsDialog } from './ShortcutsDialog'
 import { MoonIcon, SearchIcon, SunIcon } from '../icons'
 import { Kbd } from '../ui/Kbd'
@@ -327,7 +327,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               title="Command palette (Ctrl/⌘ K)"
             >
               <SearchIcon className="size-4" />
-              <span className="hidden font-mono text-sm group-hover:underline group-hover:underline-offset-4 md:inline">
+              <span className="font-mono text-sm group-hover:underline group-hover:underline-offset-4">
                 search
               </span>
               <span className="hidden md:inline-flex">
@@ -360,7 +360,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
-      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:pb-10 outline-none">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-10 outline-none">
         {children}
       </main>
 
@@ -369,9 +369,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 font-mono">
             <span aria-hidden="true" className="text-accent">&gt;_</span>
             {info ? (
-              <span>
-                Dataset {info.datasetReleaseId} · {info.pageCount.toLocaleString()} pages · updated{' '}
-                {formatRelativeTime(info.lastUpdated)}
+              <span title={`Dataset ${info.datasetReleaseId}`}>
+                {info.pageCount.toLocaleString()} pages · updated {formatRelativeTime(info.lastUpdated)}
+                {parseReleaseId(info.datasetReleaseId).mandocVersion
+                  ? ` · mandoc ${parseReleaseId(info.datasetReleaseId).mandocVersion}`
+                  : ''}
               </span>
             ) : (
               <span>BetterMan</span>
@@ -396,7 +398,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      <MobileBottomNav />
     </div>
   )
 }

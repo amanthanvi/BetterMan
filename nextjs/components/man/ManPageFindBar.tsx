@@ -1,6 +1,6 @@
 'use client'
 
-import type { KeyboardEvent, RefObject } from 'react'
+import { useEffect, useState, type KeyboardEvent, type RefObject } from 'react'
 
 import { ChevronDownIcon } from '../icons'
 import { IconButton } from '../ui/IconButton'
@@ -53,12 +53,35 @@ export function ManPageFindBar({
   onPrev: () => void
   onNext: () => void
 }) {
-  if (!open) return null
+  const [rendered, setRendered] = useState(open)
+  useEffect(() => {
+    if (open) {
+      setRendered(true)
+      return
+    }
+    const t = window.setTimeout(() => setRendered(false), 150)
+    return () => window.clearTimeout(t)
+  }, [open])
+
+  // The input mounts one render after `open` flips true; focus it then.
+  useEffect(() => {
+    if (!open || !rendered) return
+    const el = findInputRef.current
+    if (el && document.activeElement !== el) {
+      el.focus()
+      el.select()
+    }
+  }, [open, rendered, findInputRef])
+
+  if (!rendered) return null
 
   return (
     <div
       data-bm-findbar
-      className="bm-rise-in fixed inset-x-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 border border-edge bg-raised p-2 shadow-lg shadow-black/20 sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-[4.25rem] sm:w-[24rem]"
+      aria-hidden={open ? undefined : true}
+      className={`fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 border border-edge bg-raised p-2 shadow-lg shadow-black/20 motion-reduce:animate-none sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-[4.25rem] sm:w-[24rem] ${
+        open ? 'bm-rise-in' : 'bm-rise-out pointer-events-none motion-reduce:invisible'
+      }`}
       onKeyDown={(e) => {
         if (e.key !== 'Escape') return
         e.preventDefault()

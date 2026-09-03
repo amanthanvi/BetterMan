@@ -22,11 +22,13 @@ test('dashboard shortcuts and redirects preserve section intent', async ({ page 
   await expect(page.getByRole('region', { name: 'Bookmarks' }).first()).toBeVisible()
 })
 
-test('mobile bottom nav bookmark tab lands on dashboard bookmarks section', async ({ page }) => {
+test('mobile: header search opens the palette and bookmarks live on the home page', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
 
-  await page.getByRole('link', { name: 'Bookmarks' }).click()
-  await expect(page).toHaveURL(/\/#bookmarks$/)
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Search' }).click()
+  await expect(page.getByRole('combobox', { name: 'Command palette input' })).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(page.getByRole('region', { name: 'Bookmarks' }).first()).toBeVisible()
 })

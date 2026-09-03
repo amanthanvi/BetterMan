@@ -195,7 +195,6 @@
     body,
     [data-bm-app-header],
     [data-bm-app-footer],
-    [data-bm-mobile-nav],
     [data-bm-sidebar],
     [data-bm-findbar],
     main,
@@ -272,7 +271,8 @@
       }
     }
 
-    .bm-option-flash {
+    .bm-option-flash,
+    .bm-find-active {
       animation: bm-option-flash 600ms var(--ease-out);
     }
 
@@ -300,6 +300,46 @@
 
     .bm-rise-in {
       animation: bm-rise-in 150ms var(--ease-out);
+    }
+
+    @keyframes bm-pop-out {
+      to {
+        transform: scale(0.98);
+        opacity: 0;
+      }
+    }
+
+    .bm-pop-out {
+      animation: bm-pop-out 150ms var(--ease-out) forwards;
+    }
+
+    @keyframes bm-rise-out {
+      to {
+        transform: translateY(4px);
+        opacity: 0;
+      }
+    }
+
+    .bm-rise-out {
+      animation: bm-rise-out 150ms var(--ease-out) forwards;
+    }
+
+    .bm-toc-marker {
+      transition: transform 150ms var(--ease-out), height 150ms var(--ease-out);
+    }
+
+    .bm-expand {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 200ms var(--ease-out);
+    }
+
+    .bm-expand[data-collapsed="true"] {
+      grid-template-rows: 0fr;
+    }
+
+    .bm-expand > * {
+      overflow: hidden;
     }
   }
 
@@ -385,7 +425,6 @@
 
     [data-bm-app-header],
     [data-bm-app-footer],
-    [data-bm-mobile-nav],
     [data-bm-sidebar],
     [data-bm-findbar],
     [role="dialog"] {

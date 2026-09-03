@@ -12,7 +12,7 @@ Read (the man page).
    `border-t border-edge`). There are no enclosing boxes, no panel fills, and no
    rounded corners anywhere in the document flow.
 2. **Only floating overlays get chrome** — dialog, drawer, command palette, find
-   bar, mobile bottom nav, sticky header, skip link. They carry a single square
+   bar, sticky header, skip link. They carry a single square
    edge (`border border-edge`), a raised fill, and an offset shadow
    (`shadow-lg shadow-black/25`). Everything else sits directly on `bg`.
 3. **Controls are text-first.** Actions are underlined mono text
@@ -70,8 +70,11 @@ SSR'd from the `bm-theme-resolved` cookie).
   for names, labels, code, kbd, metadata. Section labels: `font-mono text-xs
   font-semibold tracking-[0.08em] text-muted`, uppercase.
 - **Radius:** all `--radius-*` tokens are `0px`. Square is the identity.
-- **Motion:** `--ease-out`, 150/200ms, entries only (`bm-pop-in`, `bm-rise-in`,
-  `bm-option-flash`), reduced-motion guarded. No decorative motion.
+- **Motion:** `--ease-out`, 150/200ms, state changes only. Entries `bm-pop-in`,
+  `bm-rise-in`; exits `bm-pop-out`, `bm-rise-out`; `bm-option-flash` for the
+  option and find-match jump; `bm-toc-marker` slides between headings;
+  `bm-expand` grows the long options table. Everything sits inside
+  `prefers-reduced-motion: no-preference`. No page transitions, no decoration.
 - **Focus:** one global rule — 2px solid accent outline on `:focus-visible`,
   2px offset. Never `outline-none` on interactive elements.
 
@@ -91,7 +94,7 @@ combinator (no merge — primitives own their recipes).
   article.
 - **Highlights:** `mark[data-bm-find]`, `mark[data-bm-opt]`, `.bm-mark`,
   `.bm-find-active`.
-- **Data hooks:** `data-bm-app-header/app-footer/mobile-nav/sidebar/findbar/home-search/page-search`.
+- **Data hooks:** `data-bm-app-header/app-footer/sidebar/findbar/home-search/page-search`.
 - **Accessible names asserted by `nextjs/e2e/`:** banner "Site header",
   contentinfo "Site footer", searchbox "Search man pages", combobox
   "Command palette input", textbox "Find in page", nav "On this page" /
