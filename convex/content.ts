@@ -445,7 +445,20 @@ export const getManByNameReadModel = internalQuery({
       )
       .take(20);
 
-    if (!pages.length) return { kind: "not_found" as const };
+    if (!pages.length) {
+      const aliases = await ctx.db
+        .query("manPageAliases")
+        .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", release._id).eq("name", name))
+        .take(2);
+      if (aliases.length === 1) {
+        return {
+          kind: "alias" as const,
+          name: aliases[0].targetName,
+          section: aliases[0].targetSection,
+        };
+      }
+      return { kind: "not_found" as const };
+    }
     if (pages.length > 1) {
       return {
         kind: "ambiguous" as const,
@@ -463,6 +476,20 @@ export const getManByNameReadModel = internalQuery({
   },
 });
 
+async function aliasTarget(
+  ctx: QueryCtx,
+  args: { releaseId: Id<"datasetReleases">; name: string; section: string },
+): Promise<{ name: string; section: string } | null> {
+  const alias = await ctx.db
+    .query("manPageAliases")
+    .withIndex("by_releaseId_and_name_and_section", (q) =>
+      q.eq("releaseId", args.releaseId).eq("name", args.name).eq("section", args.section),
+    )
+    .unique();
+  if (!alias) return null;
+  return { name: alias.targetName, section: alias.targetSection };
+}
+
 export const getManByNameAndSectionReadModel = internalQuery({
   args: {
     stage: datasetStageValidator,
@@ -479,9 +506,15 @@ export const getManByNameAndSectionReadModel = internalQuery({
       name,
       section,
     });
-    if (!page) return null;
+    if (!page) {
+      const target = await aliasTarget(ctx, { releaseId: release._id, name, section });
+      if (target) return { kind: "alias" as const, ...target };
+      return null;
+    }
 
-    return await pageReadModel(ctx, { stage: args.stage, release, page });
+    const data = await pageReadModel(ctx, { stage: args.stage, release, page });
+    if (!data) return null;
+    return { kind: "page" as const, data };
   },
 });
 
@@ -530,10 +563,16 @@ export const getManByNameAndSection = action({
       stage: PUBLIC_DATASET_STAGE,
     });
     if (!result) return null;
+    if (result.kind === "alias") {
+      return { kind: "alias" as const, name: result.name, section: result.section };
+    }
 
-    const content = await resolveContent(ctx, result.content);
+    const content = await resolveContent(ctx, result.data.content);
     if (!content) return null;
 
-    return pageResponse(result.release, result.page, content, result.variants);
+    return {
+      kind: "page" as const,
+      data: pageResponse(result.data.release, result.data.page, content, result.data.variants),
+    };
   },
 });

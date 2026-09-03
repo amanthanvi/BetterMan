@@ -1,0 +1,5044 @@
+{
+ "description": "list directory contents",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": " — list directory contents",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "synopsis",
+    "level": 2,
+    "text": "SYNOPSIS",
+    "type": "heading"
+   },
+   {
+    "id": null,
+    "languageHint": null,
+    "text": "ls [ -@ABCFGHILOPRSTUWabcdefghiklmnopqrstuvwxy1%, ] [ --color = when ] [ -D format ] [ file ... ]",
+    "type": "code_block"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "For each operand that names a ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "file",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": " of a type other than directory, ",
+      "type": "text"
+     },
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": " displays its name as well as any requested, associated information. For each operand that names a ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "file",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": " of type directory, ",
+      "type": "text"
+     },
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": " displays the names of files contained within that directory, as well as any requested, associated information.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "If no operands are given, the contents of the current directory are displayed. If more than one operand is given, non-directory operands are displayed first; directory and non-directory operands are sorted separately and in lexicographical order.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The following options are available:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Display extended attribute keys and sizes in long (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") output.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "@",
+      "termInlines": [
+       {
+        "text": "-@",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Include directory entries whose names begin with a dot (‘",
+          "type": "text"
+         },
+         {
+          "text": ".",
+          "type": "code"
+         },
+         {
+          "text": "’) except for ",
+          "type": "text"
+         },
+         {
+          "text": ".",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "..",
+          "type": "code"
+         },
+         {
+          "text": ". Automatically set for the super-user unless ",
+          "type": "text"
+         },
+         {
+          "text": "-I",
+          "type": "code"
+         },
+         {
+          "text": " is specified.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "A",
+      "termInlines": [
+       {
+        "text": "-A",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Force printing of non-printable characters (as defined by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/ctype/3",
+          "inlines": [
+           {
+            "text": "ctype(3)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " and current locale settings) in file names as ",
+          "type": "text"
+         },
+         {
+          "text": "\\",
+          "type": "code"
+         },
+         {
+          "inlines": [
+           {
+            "text": "xxx",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ", where ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "xxx",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is the numeric value of the character in octal. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "B",
+      "termInlines": [
+       {
+        "text": "-B",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Force multi-column output; this is the default when output is to a terminal.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "C",
+      "termInlines": [
+       {
+        "text": "-C",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When printing in the long (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") format, use ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "format",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " to format the date and time output. The argument ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "format",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is a string used by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/strftime/3",
+          "inlines": [
+           {
+            "text": "strftime(3)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". Depending on the choice of format string, this may result in a different number of columns in the output. This option overrides the ",
+          "type": "text"
+         },
+         {
+          "text": "-T",
+          "type": "code"
+         },
+         {
+          "text": " option. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "D",
+      "termInlines": [
+       {
+        "text": "-D",
+        "type": "code"
+       },
+       {
+        "text": " ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "format",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Display a slash (‘",
+          "type": "text"
+         },
+         {
+          "text": "/",
+          "type": "code"
+         },
+         {
+          "text": "’) immediately after each pathname that is a directory, an asterisk (‘",
+          "type": "text"
+         },
+         {
+          "text": "*",
+          "type": "code"
+         },
+         {
+          "text": "’) after each that is executable, an at sign (‘",
+          "type": "text"
+         },
+         {
+          "text": "@",
+          "type": "code"
+         },
+         {
+          "text": "’) after each symbolic link, an equals sign (‘",
+          "type": "text"
+         },
+         {
+          "text": "=",
+          "type": "code"
+         },
+         {
+          "text": "’) after each socket, a percent sign (‘",
+          "type": "text"
+         },
+         {
+          "text": "%",
+          "type": "code"
+         },
+         {
+          "text": "’) after each whiteout, and a vertical bar (‘",
+          "type": "text"
+         },
+         {
+          "text": "|",
+          "type": "code"
+         },
+         {
+          "text": "’) after each that is a FIFO.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "F",
+      "termInlines": [
+       {
+        "text": "-F",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Enable colorized output. This option is equivalent to defining ",
+          "type": "text"
+         },
+         {
+          "text": "CLICOLOR",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "COLORTERM",
+          "type": "code"
+         },
+         {
+          "text": " in the environment and setting ",
+          "type": "text"
+         },
+         {
+          "text": "--color",
+          "type": "code"
+         },
+         {
+          "text": "=",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "auto",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". (See below.) This functionality can be compiled out by removing the definition of ",
+          "type": "text"
+         },
+         {
+          "text": "COLORLS",
+          "type": "code"
+         },
+         {
+          "text": ". This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "G",
+      "termInlines": [
+       {
+        "text": "-G",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Symbolic links on the command line are followed. This option is assumed if none of the ",
+          "type": "text"
+         },
+         {
+          "text": "-F",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "-d",
+          "type": "code"
+         },
+         {
+          "text": ", or ",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": " options are specified.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "H",
+      "termInlines": [
+       {
+        "text": "-H",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Prevent ",
+          "type": "text"
+         },
+         {
+          "text": "-A",
+          "type": "code"
+         },
+         {
+          "text": " from being automatically set for the super-user. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "I",
+      "termInlines": [
+       {
+        "text": "-I",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Follow all symbolic links to final target and list the file or directory the link references rather than the link itself. This option cancels the ",
+          "type": "text"
+         },
+         {
+          "text": "-P",
+          "type": "code"
+         },
+         {
+          "text": " option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "L",
+      "termInlines": [
+       {
+        "text": "-L",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Include the file flags in a long (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") output. This option is incompatible with IEEE Std 1003.1-2008 (“POSIX.1”). See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/chflags/1",
+          "inlines": [
+           {
+            "text": "chflags(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for a list of file flags and their meanings.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "O",
+      "termInlines": [
+       {
+        "text": "-O",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If argument is a symbolic link, list the link itself rather than the object the link references. This option cancels the ",
+          "type": "text"
+         },
+         {
+          "text": "-H",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "-L",
+          "type": "code"
+         },
+         {
+          "text": " options.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "P",
+      "termInlines": [
+       {
+        "text": "-P",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Recursively list subdirectories encountered.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "R",
+      "termInlines": [
+       {
+        "text": "-R",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Sort by size (largest file first) before sorting the operands in lexicographical order.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "S",
+      "termInlines": [
+       {
+        "text": "-S",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When printing in the long (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") format, display complete time information for the file, including month, day, hour, minute, second, and year. The ",
+          "type": "text"
+         },
+         {
+          "text": "-D",
+          "type": "code"
+         },
+         {
+          "text": " option gives even more control over the output format. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "T",
+      "termInlines": [
+       {
+        "text": "-T",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use time when file was created for sorting or printing. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "U",
+      "termInlines": [
+       {
+        "text": "-U",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Display whiteouts when scanning directories. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "W",
+      "termInlines": [
+       {
+        "text": "-W",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When listing recursively, do not descend into directories that would cross file system boundaries. More specifically, this option will prevent descending into directories that have a different device number.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "X",
+      "termInlines": [
+       {
+        "text": "-X",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Include directory entries whose names begin with a dot (‘",
+          "type": "text"
+         },
+         {
+          "text": ".",
+          "type": "code"
+         },
+         {
+          "text": "’).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "a",
+      "termInlines": [
+       {
+        "text": "-a",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "As ",
+          "type": "text"
+         },
+         {
+          "text": "-B",
+          "type": "code"
+         },
+         {
+          "text": ", but use C escape codes whenever possible. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "b",
+      "termInlines": [
+       {
+        "text": "-b",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use time when file status was last changed for sorting or printing.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "c",
+      "termInlines": [
+       {
+        "text": "-c",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "always",
+          "type": "code"
+         },
+         {
+          "text": " will make ",
+          "type": "text"
+         },
+         {
+          "text": "ls",
+          "type": "code"
+         },
+         {
+          "text": " always output color. If ",
+          "type": "text"
+         },
+         {
+          "text": "TERM",
+          "type": "code"
+         },
+         {
+          "text": " is unset or set to an invalid terminal, then ",
+          "type": "text"
+         },
+         {
+          "text": "ls",
+          "type": "code"
+         },
+         {
+          "text": " will fall back to explicit ANSI escape sequences without the help of ",
+          "type": "text"
+         },
+         {
+          "href": "/man/termcap/5",
+          "inlines": [
+           {
+            "text": "termcap(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ". ",
+          "type": "text"
+         },
+         {
+          "text": "always",
+          "type": "code"
+         },
+         {
+          "text": " is the default if ",
+          "type": "text"
+         },
+         {
+          "text": "--color",
+          "type": "code"
+         },
+         {
+          "text": " is specified without an argument.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "auto",
+          "type": "code"
+         },
+         {
+          "text": " will make ",
+          "type": "text"
+         },
+         {
+          "text": "ls",
+          "type": "code"
+         },
+         {
+          "text": " output escape sequences based on ",
+          "type": "text"
+         },
+         {
+          "href": "/man/termcap/5",
+          "inlines": [
+           {
+            "text": "termcap(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", but only if ",
+          "type": "text"
+         },
+         {
+          "text": "stdout",
+          "type": "code"
+         },
+         {
+          "text": " is a tty and either the ",
+          "type": "text"
+         },
+         {
+          "text": "-G",
+          "type": "code"
+         },
+         {
+          "text": " flag is specified or the ",
+          "type": "text"
+         },
+         {
+          "text": "COLORTERM",
+          "type": "code"
+         },
+         {
+          "text": " environment variable is set and not empty.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "never",
+          "type": "code"
+         },
+         {
+          "text": " will disable color regardless of environment variables. ",
+          "type": "text"
+         },
+         {
+          "text": "never",
+          "type": "code"
+         },
+         {
+          "text": " is the default when neither ",
+          "type": "text"
+         },
+         {
+          "text": "--color",
+          "type": "code"
+         },
+         {
+          "text": " nor ",
+          "type": "text"
+         },
+         {
+          "text": "-G",
+          "type": "code"
+         },
+         {
+          "text": " is specified.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "For compatibility with GNU coreutils, ",
+          "type": "text"
+         },
+         {
+          "text": "ls",
+          "type": "code"
+         },
+         {
+          "text": " supports ",
+          "type": "text"
+         },
+         {
+          "text": "yes",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "force",
+          "type": "code"
+         },
+         {
+          "text": " as equivalent to ",
+          "type": "text"
+         },
+         {
+          "text": "always",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "no",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "none",
+          "type": "code"
+         },
+         {
+          "text": " as equivalent to ",
+          "type": "text"
+         },
+         {
+          "text": "never",
+          "type": "code"
+         },
+         {
+          "text": ", and ",
+          "type": "text"
+         },
+         {
+          "text": "tty",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "if-tty",
+          "type": "code"
+         },
+         {
+          "text": " as equivalent to ",
+          "type": "text"
+         },
+         {
+          "text": "auto",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "color",
+      "termInlines": [
+       {
+        "text": "--color",
+        "type": "code"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "when",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Directories are listed as plain files (not searched recursively).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "d",
+      "termInlines": [
+       {
+        "text": "-d",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Print the Access Control List (ACL) associated with the file, if present, in long (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") output.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "e",
+      "termInlines": [
+       {
+        "text": "-e",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Output is not sorted. This option turns on ",
+          "type": "text"
+         },
+         {
+          "text": "-a",
+          "type": "code"
+         },
+         {
+          "text": ". It also negates the effect of the ",
+          "type": "text"
+         },
+         {
+          "text": "-r",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "-S",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "-t",
+          "type": "code"
+         },
+         {
+          "text": " options. As allowed by IEEE Std 1003.1-2008 (“POSIX.1”), this option has no effect on the ",
+          "type": "text"
+         },
+         {
+          "text": "-d",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "-R",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "-s",
+          "type": "code"
+         },
+         {
+          "text": " options.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "f",
+      "termInlines": [
+       {
+        "text": "-f",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This option has no effect. It is only available for compatibility with 4.3BSD, where it was used to display the group name in the long (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") format output. This option is incompatible with IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "g",
+      "termInlines": [
+       {
+        "text": "-g",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When used with the ",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": " option, use unit suffixes: Byte, Kilobyte, Megabyte, Gigabyte, Terabyte and Petabyte in order to reduce the number of digits to four or fewer using base 2 for sizes. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "h",
+      "termInlines": [
+       {
+        "text": "-h",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "For each file, print the file's file serial number (inode number).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "i",
+      "termInlines": [
+       {
+        "text": "-i",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This has the same effect as setting environment variable ",
+          "type": "text"
+         },
+         {
+          "text": "BLOCKSIZE",
+          "type": "code"
+         },
+         {
+          "text": " to 1024, except that it also nullifies any ",
+          "type": "text"
+         },
+         {
+          "text": "-h",
+          "type": "code"
+         },
+         {
+          "text": " options to its left.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "k",
+      "termInlines": [
+       {
+        "text": "-k",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "(The lowercase letter “ell”.) List files in the long format, as described in the The Long Format subsection below.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "l",
+      "termInlines": [
+       {
+        "text": "-l",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Stream output format; list files across the page, separated by commas.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "m",
+      "termInlines": [
+       {
+        "text": "-m",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Display user and group IDs numerically rather than converting to a user or group name in a long (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") output. This option turns on the ",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": " option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "n",
+      "termInlines": [
+       {
+        "text": "-n",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "List in long format, but omit the group id.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "o",
+      "termInlines": [
+       {
+        "text": "-o",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Write a slash (‘",
+          "type": "text"
+         },
+         {
+          "text": "/",
+          "type": "code"
+         },
+         {
+          "text": "’) after each filename if that file is a directory.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "p",
+      "termInlines": [
+       {
+        "text": "-p",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Force printing of non-graphic characters in file names as the character ‘",
+          "type": "text"
+         },
+         {
+          "text": "?",
+          "type": "code"
+         },
+         {
+          "text": "’; this is the default when output is to a terminal.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "q",
+      "termInlines": [
+       {
+        "text": "-q",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Reverse the order of the sort.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "r",
+      "termInlines": [
+       {
+        "text": "-r",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Display the number of blocks used in the file system by each file. Block sizes and directory totals are handled as described in The Long Format subsection below, except (if the long format is not also requested) the directory totals are not output when the output is in a single column, even if multi-column output is requested. (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") format, display complete time information for the file, including month, day, hour, minute, second, and year. The ",
+          "type": "text"
+         },
+         {
+          "text": "-D",
+          "type": "code"
+         },
+         {
+          "text": " option gives even more control over the output format. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "s",
+      "termInlines": [
+       {
+        "text": "-s",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Note that these sort orders are contradictory: the time sequence is in descending order, the lexicographical sort is in ascending order. This behavior is mandated by IEEE Std 1003.2 (“POSIX.2”). This feature can cause problems listing files stored with sequential names on FAT file systems, such as from digital cameras, where it is possible to have more than one image with the same timestamp. In such a case, the photos cannot be listed in the sequence in which they were taken. To ensure the same sort order for time and for lexicographical sorting, set the environment variable ",
+          "type": "text"
+         },
+         {
+          "text": "LS_SAMESORT",
+          "type": "code"
+         },
+         {
+          "text": " or use the ",
+          "type": "text"
+         },
+         {
+          "text": "-y",
+          "type": "code"
+         },
+         {
+          "text": " option. This causes ",
+          "type": "text"
+         },
+         {
+          "text": "ls",
+          "type": "code"
+         },
+         {
+          "text": " to reverse the lexicographical sort order when sorting files with the same modification timestamp.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "t",
+      "termInlines": [
+       {
+        "text": "-t",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use time of last access, instead of time of last modification of the file for sorting (",
+          "type": "text"
+         },
+         {
+          "text": "-t",
+          "type": "code"
+         },
+         {
+          "text": ") or long printing (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ").",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "u",
+      "termInlines": [
+       {
+        "text": "-u",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Force unedited printing of non-graphic characters; this is the default when output is not to a terminal.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "v",
+      "termInlines": [
+       {
+        "text": "-v",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Force raw printing of non-printable characters. This is the default when output is not to a terminal. This option is not defined in IEEE Std 1003.1-2001 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "w",
+      "termInlines": [
+       {
+        "text": "-w",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The same as ",
+          "type": "text"
+         },
+         {
+          "text": "-C",
+          "type": "code"
+         },
+         {
+          "text": ", except that the multi-column output is produced with entries sorted across, rather than down, the columns.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "x",
+      "termInlines": [
+       {
+        "text": "-x",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When the ",
+          "type": "text"
+         },
+         {
+          "text": "-t",
+          "type": "code"
+         },
+         {
+          "text": " option is set, sort the alphabetical output in the same order as the time output. This has the same effect as setting ",
+          "type": "text"
+         },
+         {
+          "text": "LS_SAMESORT",
+          "type": "code"
+         },
+         {
+          "text": ". See the description of the ",
+          "type": "text"
+         },
+         {
+          "text": "-t",
+          "type": "code"
+         },
+         {
+          "text": " option for more details. This option is not defined in IEEE Std 1003.1-2001 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "y",
+      "termInlines": [
+       {
+        "text": "-y",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Distinguish dataless files and directories with a '%' character in long (",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": ") output, and don't materialize dataless directories when listing them.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "_",
+      "termInlines": [
+       {
+        "text": "-%",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "(The numeric digit “one”.) Force output to be one entry per line. This is the default when output is not to a terminal.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "1",
+      "termInlines": [
+       {
+        "text": "-1",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "(Comma) When the ",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": " option is set, print file sizes grouped and separated by thousands using the non-monetary separator returned by ",
+          "type": "text"
+         },
+         {
+          "href": "/man/localeconv/3",
+          "inlines": [
+           {
+            "text": "localeconv(3)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", typically a comma or period. If no locale is set, or the locale does not have a non-monetary separator, this option has no effect. This option is not defined in IEEE Std 1003.1-2001 (“POSIX.1”).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "text": "-",
+        "type": "code"
+       },
+       {
+        "text": ",",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "text": "-1",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-C",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-x",
+      "type": "code"
+     },
+     {
+      "text": ", and ",
+      "type": "text"
+     },
+     {
+      "text": "-l",
+      "type": "code"
+     },
+     {
+      "text": " options all override each other; the last one specified determines the format used.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "text": "-c",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-u",
+      "type": "code"
+     },
+     {
+      "text": ", and ",
+      "type": "text"
+     },
+     {
+      "text": "-U",
+      "type": "code"
+     },
+     {
+      "text": " options all override each other; the last one specified determines the file time used.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "text": "-S",
+      "type": "code"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "text": "-t",
+      "type": "code"
+     },
+     {
+      "text": " options override each other; the last one specified determines the sort order used.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "text": "-B",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-b",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-w",
+      "type": "code"
+     },
+     {
+      "text": ", and ",
+      "type": "text"
+     },
+     {
+      "text": "-q",
+      "type": "code"
+     },
+     {
+      "text": " options all override each other; the last one specified determines the format used for non-printable characters.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "text": "-H",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-L",
+      "type": "code"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "text": "-P",
+      "type": "code"
+     },
+     {
+      "text": " options all override each other (either partially or fully); they are applied in the order specified.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "By default, ",
+      "type": "text"
+     },
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": " lists one entry per line to standard output; the exceptions are to terminals or when the ",
+      "type": "text"
+     },
+     {
+      "text": "-C",
+      "type": "code"
+     },
+     {
+      "text": " or ",
+      "type": "text"
+     },
+     {
+      "text": "-x",
+      "type": "code"
+     },
+     {
+      "text": " options are specified.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "File information is displayed with one or more ⟨blank⟩s separating the information associated with the ",
+      "type": "text"
+     },
+     {
+      "text": "-i",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-s",
+      "type": "code"
+     },
+     {
+      "text": ", and ",
+      "type": "text"
+     },
+     {
+      "text": "-l",
+      "type": "code"
+     },
+     {
+      "text": " options.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "the-long-format",
+    "level": 3,
+    "text": "The Long Format",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "If the ",
+      "type": "text"
+     },
+     {
+      "text": "-l",
+      "type": "code"
+     },
+     {
+      "text": " option is given, the following information is displayed for each file: file mode, number of links, owner name, group name, number of bytes in the file, abbreviated month, day-of-month file was last modified, hour file last modified, minute file last modified, and the pathname. If the file or directory has extended attributes, the permissions field printed by the ",
+      "type": "text"
+     },
+     {
+      "text": "-l",
+      "type": "code"
+     },
+     {
+      "text": " option is followed by a '@' character. Otherwise, if the file or directory has extended security information (such as an access control list), the permissions field printed by the ",
+      "type": "text"
+     },
+     {
+      "text": "-l",
+      "type": "code"
+     },
+     {
+      "text": " option is followed by a '+' character. If the ",
+      "type": "text"
+     },
+     {
+      "text": "-%",
+      "type": "code"
+     },
+     {
+      "text": " option is given, a '%' character follows the permissions field for dataless files and directories, possibly replacing the '@' or '+' character.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "If the modification time of the file is more than 6 months in the past or future, and the ",
+      "type": "text"
+     },
+     {
+      "text": "-D",
+      "type": "code"
+     },
+     {
+      "text": " or ",
+      "type": "text"
+     },
+     {
+      "text": "-T",
+      "type": "code"
+     },
+     {
+      "text": " are not specified, then the year of the last modification is displayed in place of the hour and minute fields.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "If the owner or group names are not a known user or group name, or the ",
+      "type": "text"
+     },
+     {
+      "text": "-n",
+      "type": "code"
+     },
+     {
+      "text": " option is given, the numeric ID's are displayed.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "If the file is a character special or block special file, the device number for the file is displayed in the size field. If the file is a symbolic link the pathname of the linked-to file is preceded by “",
+      "type": "text"
+     },
+     {
+      "text": "->",
+      "type": "code"
+     },
+     {
+      "text": "”.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The listing of a directory's contents is preceded by a labeled total number of blocks used in the file system by the files which are listed as the directory's contents (which may or may not include ",
+      "type": "text"
+     },
+     {
+      "text": ".",
+      "type": "code"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "text": "..",
+      "type": "code"
+     },
+     {
+      "text": " and other files which start with a dot, depending on other options).",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The default block size is 512 bytes. The block size may be set with option ",
+      "type": "text"
+     },
+     {
+      "text": "-k",
+      "type": "code"
+     },
+     {
+      "text": " or environment variable ",
+      "type": "text"
+     },
+     {
+      "text": "BLOCKSIZE",
+      "type": "code"
+     },
+     {
+      "text": ". Numbers of blocks in the output will have been rounded up so the numbers of bytes is at least as many as used by the corresponding file system blocks (which might have a different size).",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The file mode printed under the ",
+      "type": "text"
+     },
+     {
+      "text": "-l",
+      "type": "code"
+     },
+     {
+      "text": " option consists of the entry type and the permissions. The entry type character describes the type of file, as follows:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Regular file.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "-",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Block special file.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "b~2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "b",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Character special file.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "c~2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "c",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Directory.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "d~2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "d",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Symbolic link.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "l~2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "l",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "FIFO.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "p~2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "p",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Socket.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "s~2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "s",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Whiteout.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "w~2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "w",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        }
+       ],
+       "type": "definition_list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The next three fields are three characters each: owner permissions, group permissions, and other permissions. Each field has three character positions:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "If r , the file is readable; if - , it is not readable.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ],
+     [
+      {
+       "inlines": [
+        {
+         "text": "If w , the file is writable; if - , it is not writable.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ],
+     [
+      {
+       "items": [
+        [
+         {
+          "items": [
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "If in the owner permissions, the file is not executable and set-user-ID mode is set. If in the group permissions, the file is not executable and set-group-ID mode is set.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "S~2",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "S",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "If in the owner permissions, the file is executable and set-user-ID mode is set. If in the group permissions, the file is executable and setgroup-ID mode is set.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "s~3",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "s",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "The file is executable or the directory is searchable.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "x~2",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "x",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "The file is neither readable, writable, executable, nor set-user-ID nor set-group-ID mode, nor sticky. (See below.)",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-3",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "-",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             }
+            ]
+           }
+          ],
+          "type": "definition_list"
+         }
+        ]
+       ],
+       "ordered": false,
+       "type": "list"
+      },
+      {
+       "inlines": [
+        {
+         "text": "These next two apply only to the third character in the last group (other permissions).",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
+      {
+       "items": [
+        [
+         {
+          "items": [
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "The sticky bit is set (mode ",
+                "type": "text"
+               },
+               {
+                "text": "1000",
+                "type": "code"
+               },
+               {
+                "text": "), but not execute or search permission. (See ",
+                "type": "text"
+               },
+               {
+                "href": "/man/chmod/1",
+                "inlines": [
+                 {
+                  "text": "chmod(1)",
+                  "type": "text"
+                 }
+                ],
+                "linkType": "internal",
+                "type": "link"
+               },
+               {
+                "text": " or ",
+                "type": "text"
+               },
+               {
+                "href": "/man/sticky/7",
+                "inlines": [
+                 {
+                  "text": "sticky(7)",
+                  "type": "text"
+                 }
+                ],
+                "linkType": "internal",
+                "type": "link"
+               },
+               {
+                "text": ".)",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "T~2",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "T",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "The sticky bit is set (mode ",
+                "type": "text"
+               },
+               {
+                "text": "1000",
+                "type": "code"
+               },
+               {
+                "text": "), and is searchable or executable. (See ",
+                "type": "text"
+               },
+               {
+                "href": "/man/chmod/1",
+                "inlines": [
+                 {
+                  "text": "chmod(1)",
+                  "type": "text"
+                 }
+                ],
+                "linkType": "internal",
+                "type": "link"
+               },
+               {
+                "text": " or ",
+                "type": "text"
+               },
+               {
+                "href": "/man/sticky/7",
+                "inlines": [
+                 {
+                  "text": "sticky(7)",
+                  "type": "text"
+                 }
+                ],
+                "linkType": "internal",
+                "type": "link"
+               },
+               {
+                "text": ".)",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "t~2",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "t",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             }
+            ]
+           }
+          ],
+          "type": "definition_list"
+         }
+        ]
+       ],
+       "ordered": false,
+       "type": "list"
+      }
+     ]
+    ],
+    "ordered": true,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The next field contains a plus (‘",
+      "type": "text"
+     },
+     {
+      "text": "+",
+      "type": "code"
+     },
+     {
+      "text": "’) character if the file has an ACL, or a space (‘",
+      "type": "text"
+     },
+     {
+      "text": "",
+      "type": "code"
+     },
+     {
+      "text": "’) if it does not. The ",
+      "type": "text"
+     },
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": " utility does not show the actual ACL unless the ",
+      "type": "text"
+     },
+     {
+      "text": "-e",
+      "type": "code"
+     },
+     {
+      "text": " option is used in conjunction with the ",
+      "type": "text"
+     },
+     {
+      "text": "-l",
+      "type": "code"
+     },
+     {
+      "text": " option.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "environment",
+    "level": 2,
+    "text": "ENVIRONMENT",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The following environment variables affect the execution of ",
+      "type": "text"
+     },
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": ":",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If this is set, its value, rounded up to 512 or down to a multiple of 512, will be used as the block size in bytes by the ",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "-s",
+          "type": "code"
+         },
+         {
+          "text": " options. See The Long Format subsection for more information.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "BLOCKSIZE",
+      "termInlines": [
+       {
+        "text": "BLOCKSIZE",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use ANSI color sequences to distinguish file types. See ",
+          "type": "text"
+         },
+         {
+          "text": "LSCOLORS",
+          "type": "code"
+         },
+         {
+          "text": " below. In addition to the file types mentioned in the ",
+          "type": "text"
+         },
+         {
+          "text": "-F",
+          "type": "code"
+         },
+         {
+          "text": " option some extra attributes (setuid bit set, etc.) are also displayed. The colorization is dependent on a terminal type with the proper ",
+          "type": "text"
+         },
+         {
+          "href": "/man/termcap/5",
+          "inlines": [
+           {
+            "text": "termcap(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " capabilities. The default “",
+          "type": "text"
+         },
+         {
+          "text": "cons25",
+          "type": "code"
+         },
+         {
+          "text": "” console has the proper capabilities, but to display the colors in an ",
+          "type": "text"
+         },
+         {
+          "href": "/man/xterm/1",
+          "inlines": [
+           {
+            "text": "xterm(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", for example, the ",
+          "type": "text"
+         },
+         {
+          "text": "TERM",
+          "type": "code"
+         },
+         {
+          "text": " variable must be set to “",
+          "type": "text"
+         },
+         {
+          "text": "xterm-color",
+          "type": "code"
+         },
+         {
+          "text": "”. Other terminal types may require similar adjustments. Colorization is silently disabled if the output is not directed to a terminal unless the ",
+          "type": "text"
+         },
+         {
+          "text": "CLICOLOR_FORCE",
+          "type": "code"
+         },
+         {
+          "text": " variable is defined or ",
+          "type": "text"
+         },
+         {
+          "text": "--color",
+          "type": "code"
+         },
+         {
+          "text": " is set to “always”.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CLICOLOR",
+      "termInlines": [
+       {
+        "text": "CLICOLOR",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Color sequences are normally disabled if the output is not directed to a terminal. This can be overridden by setting this variable. The ",
+          "type": "text"
+         },
+         {
+          "text": "TERM",
+          "type": "code"
+         },
+         {
+          "text": " variable still needs to reference a color capable terminal however otherwise it is not possible to determine which color sequences to use.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "CLICOLOR_FORCE",
+      "termInlines": [
+       {
+        "text": "CLICOLOR_FORCE",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "See description for ",
+          "type": "text"
+         },
+         {
+          "text": "CLICOLOR",
+          "type": "code"
+         },
+         {
+          "text": " above.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "COLORTERM",
+      "termInlines": [
+       {
+        "text": "COLORTERM",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If this variable contains a string representing a decimal integer, it is used as the column position width for displaying multiple-text-column output. The ",
+          "type": "text"
+         },
+         {
+          "text": "ls",
+          "type": "code"
+         },
+         {
+          "text": " utility calculates how many pathname text columns to display based on the width provided. (See ",
+          "type": "text"
+         },
+         {
+          "text": "-C",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "-x",
+          "type": "code"
+         },
+         {
+          "text": ".)",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "COLUMNS",
+      "termInlines": [
+       {
+        "text": "COLUMNS",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The locale to use when determining the order of day and month in the long ",
+          "type": "text"
+         },
+         {
+          "text": "-l",
+          "type": "code"
+         },
+         {
+          "text": " format output. See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/environ/7",
+          "inlines": [
+           {
+            "text": "environ(7)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for more information.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "LANG",
+      "termInlines": [
+       {
+        "text": "LANG",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The color designators are as follows:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "items": [
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "black",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "a~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "a",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "red",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "b~3",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "b",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "green",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "c~3",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "c",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "brown",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "d~3",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "d",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "blue",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "e~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "e",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "magenta",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "f~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "f",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "cyan",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "g~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "g",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "light grey",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "h~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "h",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "bold black, usually shows up as dark grey",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "A~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "A",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "bold red",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "B~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "B",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "bold green",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "C~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "C",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "bold brown, usually shows up as yellow",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "D~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "D",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "bold blue",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "E",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "E",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "bold magenta",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "F~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "F",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "bold cyan",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "G~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "G",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "bold light grey; looks like bright white",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "H~2",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "H",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            },
+            {
+             "definitionBlocks": [
+              {
+               "inlines": [
+                {
+                 "text": "default foreground or background",
+                 "type": "text"
+                }
+               ],
+               "type": "paragraph"
+              }
+             ],
+             "id": "x~3",
+             "termInlines": [
+              {
+               "inlines": [
+                {
+                 "text": "x",
+                 "type": "text"
+                }
+               ],
+               "type": "strong"
+              }
+             ]
+            }
+           ],
+           "type": "definition_list"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Note that the above are standard ANSI colors. The actual display may differ depending on the color capabilities of the terminal in use.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The order of the attributes are as follows:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "directory",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "symbolic link",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "socket",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "pipe",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "executable",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "block special",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "character special",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "executable with setuid bit set",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "executable with setgid bit set",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "directory writable to others, with sticky bit",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "directory writable to others, without sticky bit",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         [
+          {
+           "inlines": [
+            {
+             "text": "dataless file",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": true,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The default is \"exfxcxdxbxegedabagacadah\", i.e., blue foreground and default background for regular directories, black foreground and red background for setuid executables, etc.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "LSCOLORS",
+      "termInlines": [
+       {
+        "text": "LSCOLORS",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If this variable is set, it is considered to be a colon-delimited list of minimum column widths. Unreasonable and insufficient widths are ignored (thus zero signifies a dynamically sized column). Not all columns have changeable widths. The fields are, in order: inode, block count, number of links, user name, group name, flags, file size, file name.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "LS_COLWIDTHS",
+      "termInlines": [
+       {
+        "text": "LS_COLWIDTHS",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "If this variable is set, the ",
+          "type": "text"
+         },
+         {
+          "text": "-t",
+          "type": "code"
+         },
+         {
+          "text": " option sorts the names of files with the same modification timestamp in the same sense as the time sort. See the description of the ",
+          "type": "text"
+         },
+         {
+          "text": "-t",
+          "type": "code"
+         },
+         {
+          "text": " option for more details.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "LS_SAMESORT",
+      "termInlines": [
+       {
+        "text": "LS_SAMESORT",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "text": "CLICOLOR",
+          "type": "code"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "text": "COLORTERM",
+          "type": "code"
+         },
+         {
+          "text": " functionality depends on a terminal type with color capabilities.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "TERM",
+      "termInlines": [
+       {
+        "text": "TERM",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The timezone to use when displaying dates. See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/environ/7",
+          "inlines": [
+           {
+            "text": "environ(7)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for more information.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "TZ",
+      "termInlines": [
+       {
+        "text": "TZ",
+        "type": "code"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "exit-status",
+    "level": 2,
+    "text": "EXIT STATUS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": " utility exits 0 on success, and >0 if an error occurs.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "examples",
+    "level": 2,
+    "text": "EXAMPLES",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "List the contents of the current working directory in long format:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "$ ls -l",
+         "type": "code"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "In addition to listing the contents of the current working directory in long format, show inode numbers, file flags (see ",
+      "type": "text"
+     },
+     {
+      "href": "/man/chflags/1",
+      "inlines": [
+       {
+        "text": "chflags(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": "), and suffix each filename with a symbol representing its file type:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "$ ls -lioF",
+         "type": "code"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "List the files in ",
+      "type": "text"
+     },
+     {
+      "text": "/var/log",
+      "type": "code"
+     },
+     {
+      "text": ", sorting the output such that the most recently modified entries are printed first:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "$ ls -lt /var/log",
+         "type": "code"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "compatibility",
+    "level": 2,
+    "text": "COMPATIBILITY",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The group field is now automatically included in the long listing for files in order to be compatible with the IEEE Std 1003.2 (“POSIX.2”) specification.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "legacy-description",
+    "level": 2,
+    "text": "LEGACY DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "In legacy mode, the ",
+      "type": "text"
+     },
+     {
+      "text": "-f",
+      "type": "code"
+     },
+     {
+      "text": " option does not turn on the ",
+      "type": "text"
+     },
+     {
+      "text": "-a",
+      "type": "code"
+     },
+     {
+      "text": " option and the ",
+      "type": "text"
+     },
+     {
+      "text": "-g",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-n",
+      "type": "code"
+     },
+     {
+      "text": ", and ",
+      "type": "text"
+     },
+     {
+      "text": "-o",
+      "type": "code"
+     },
+     {
+      "text": " options do not turn on the ",
+      "type": "text"
+     },
+     {
+      "text": "-l",
+      "type": "code"
+     },
+     {
+      "text": " option.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Also, the ",
+      "type": "text"
+     },
+     {
+      "text": "-o",
+      "type": "code"
+     },
+     {
+      "text": " option causes the file flags to be included in a long (-l) output; there is no ",
+      "type": "text"
+     },
+     {
+      "text": "-O",
+      "type": "code"
+     },
+     {
+      "text": " option.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "When ",
+      "type": "text"
+     },
+     {
+      "text": "-H",
+      "type": "code"
+     },
+     {
+      "text": " is specified (and not overridden by ",
+      "type": "text"
+     },
+     {
+      "text": "-L",
+      "type": "code"
+     },
+     {
+      "text": " or ",
+      "type": "text"
+     },
+     {
+      "text": "-P",
+      "type": "code"
+     },
+     {
+      "text": ") and a file argument is a symlink that resolves to a non-directory file, the output will reflect the nature of the link, rather than that of the file. In legacy operation, the output will describe the file.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "For more information about legacy mode, see ",
+      "type": "text"
+     },
+     {
+      "href": "/man/compat/5",
+      "inlines": [
+       {
+        "text": "compat(5)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ".",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "text": "SEE ALSO",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "href": "/man/chflags/1",
+      "inlines": [
+       {
+        "text": "chflags(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/chmod/1",
+      "inlines": [
+       {
+        "text": "chmod(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/sort/1",
+      "inlines": [
+       {
+        "text": "sort(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/xterm/1",
+      "inlines": [
+       {
+        "text": "xterm(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/localeconv/3",
+      "inlines": [
+       {
+        "text": "localeconv(3)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/strftime/3",
+      "inlines": [
+       {
+        "text": "strftime(3)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/strmode/3",
+      "inlines": [
+       {
+        "text": "strmode(3)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/compat/5",
+      "inlines": [
+       {
+        "text": "compat(5)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/termcap/5",
+      "inlines": [
+       {
+        "text": "termcap(5)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/sticky/7",
+      "inlines": [
+       {
+        "text": "sticky(7)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/symlink/7",
+      "inlines": [
+       {
+        "text": "symlink(7)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "standards",
+    "level": 2,
+    "text": "STANDARDS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "With the exception of options ",
+      "type": "text"
+     },
+     {
+      "text": "-g",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-n",
+      "type": "code"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "text": "-o",
+      "type": "code"
+     },
+     {
+      "text": ", the ",
+      "type": "text"
+     },
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": " utility conforms to IEEE Std 1003.1-2001 (“POSIX.1”) and IEEE Std 1003.1-2008 (“POSIX.1”). The options ",
+      "type": "text"
+     },
+     {
+      "text": "-B",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-D",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-G",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-I",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-T",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-U",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-W",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-Z",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-b",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-h",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-w",
+      "type": "code"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "text": "-y",
+      "type": "code"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "text": "-",
+      "type": "code"
+     },
+     {
+      "text": ", are non-standard extensions.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ACL support is compatible with IEEE Std 1003.2c (“POSIX.2c”) Draft 17 (withdrawn).",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "history",
+    "level": 2,
+    "text": "HISTORY",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "An ",
+      "type": "text"
+     },
+     {
+      "text": "ls",
+      "type": "code"
+     },
+     {
+      "text": " command appeared in Version 1 AT&T UNIX.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "bugs",
+    "level": 2,
+    "text": "BUGS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "To maintain backward compatibility, the relationships between the many options are quite complex.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The exception mentioned in the ",
+      "type": "text"
+     },
+     {
+      "text": "-s",
+      "type": "code"
+     },
+     {
+      "text": " option description might be a feature that was based on the fact that single-column output usually goes to something other than a terminal. It is debatable whether this is a design bug.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "IEEE Std 1003.2 (“POSIX.2”) mandates opposite sort orders for files with the same timestamp when sorting with the ",
+      "type": "text"
+     },
+     {
+      "text": "-t",
+      "type": "code"
+     },
+     {
+      "text": " option.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "synopsis",
+    "level": 2,
+    "title": "SYNOPSIS"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   },
+   {
+    "id": "the-long-format",
+    "level": 3,
+    "title": "The Long Format"
+   },
+   {
+    "id": "environment",
+    "level": 2,
+    "title": "ENVIRONMENT"
+   },
+   {
+    "id": "exit-status",
+    "level": 2,
+    "title": "EXIT STATUS"
+   },
+   {
+    "id": "examples",
+    "level": 2,
+    "title": "EXAMPLES"
+   },
+   {
+    "id": "compatibility",
+    "level": 2,
+    "title": "COMPATIBILITY"
+   },
+   {
+    "id": "legacy-description",
+    "level": 2,
+    "title": "LEGACY DESCRIPTION"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "title": "SEE ALSO"
+   },
+   {
+    "id": "standards",
+    "level": 2,
+    "title": "STANDARDS"
+   },
+   {
+    "id": "history",
+    "level": 2,
+    "title": "HISTORY"
+   },
+   {
+    "id": "bugs",
+    "level": 2,
+    "title": "BUGS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "@",
+   "argument": null,
+   "description": "Display extended attribute keys and sizes in long (-l) output.",
+   "flags": "-@"
+  },
+  {
+   "anchorId": "A",
+   "argument": null,
+   "description": "Include directory entries whose names begin with a dot (‘.’) except for . and ... Automatically set for the super-user unless -I is specified.",
+   "flags": "-A"
+  },
+  {
+   "anchorId": "B",
+   "argument": null,
+   "description": "Force printing of non-printable characters (as defined by ctype(3) and current locale settings) in file names as \\xxx, where xxx is the numeric value of the character in octal. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-B"
+  },
+  {
+   "anchorId": "C",
+   "argument": null,
+   "description": "Force multi-column output; this is the default when output is to a terminal.",
+   "flags": "-C"
+  },
+  {
+   "anchorId": "D",
+   "argument": "format",
+   "description": "When printing in the long (-l) format, use format to format the date and time output. The argument format is a string used by strftime(3). Depending on the choice of format string, this may result in a different number of columns in the output. This option overrides the -T option. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-D"
+  },
+  {
+   "anchorId": "F",
+   "argument": null,
+   "description": "Display a slash (‘/’) immediately after each pathname that is a directory, an asterisk (‘*’) after each that is executable, an at sign (‘@’) after each symbolic link, an equals sign (‘=’) after each socket, a percent sign (‘%’) after each whiteout, and a vertical bar (‘|’) after each that is a FIFO.",
+   "flags": "-F"
+  },
+  {
+   "anchorId": "G",
+   "argument": null,
+   "description": "Enable colorized output. This option is equivalent to defining CLICOLOR or COLORTERM in the environment and setting --color=auto. (See below.) This functionality can be compiled out by removing the definition of COLORLS. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-G"
+  },
+  {
+   "anchorId": "H",
+   "argument": null,
+   "description": "Symbolic links on the command line are followed. This option is assumed if none of the -F, -d, or -l options are specified.",
+   "flags": "-H"
+  },
+  {
+   "anchorId": "I",
+   "argument": null,
+   "description": "Prevent -A from being automatically set for the super-user. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-I"
+  },
+  {
+   "anchorId": "L",
+   "argument": null,
+   "description": "Follow all symbolic links to final target and list the file or directory the link references rather than the link itself. This option cancels the -P option.",
+   "flags": "-L"
+  },
+  {
+   "anchorId": "O",
+   "argument": null,
+   "description": "Include the file flags in a long (-l) output. This option is incompatible with IEEE Std 1003.1-2008 (“POSIX.1”). See chflags(1) for a list of file flags and their meanings.",
+   "flags": "-O"
+  },
+  {
+   "anchorId": "P",
+   "argument": null,
+   "description": "If argument is a symbolic link, list the link itself rather than the object the link references. This option cancels the -H and -L options.",
+   "flags": "-P"
+  },
+  {
+   "anchorId": "R",
+   "argument": null,
+   "description": "Recursively list subdirectories encountered.",
+   "flags": "-R"
+  },
+  {
+   "anchorId": "S",
+   "argument": null,
+   "description": "Sort by size (largest file first) before sorting the operands in lexicographical order.",
+   "flags": "-S"
+  },
+  {
+   "anchorId": "T",
+   "argument": null,
+   "description": "When printing in the long (-l) format, display complete time information for the file, including month, day, hour, minute, second, and year. The -D option gives even more control over the output format. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-T"
+  },
+  {
+   "anchorId": "U",
+   "argument": null,
+   "description": "Use time when file was created for sorting or printing. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-U"
+  },
+  {
+   "anchorId": "W",
+   "argument": null,
+   "description": "Display whiteouts when scanning directories. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-W"
+  },
+  {
+   "anchorId": "X",
+   "argument": null,
+   "description": "When listing recursively, do not descend into directories that would cross file system boundaries. More specifically, this option will prevent descending into directories that have a different device number.",
+   "flags": "-X"
+  },
+  {
+   "anchorId": "a",
+   "argument": null,
+   "description": "Include directory entries whose names begin with a dot (‘.’).",
+   "flags": "-a"
+  },
+  {
+   "anchorId": "b",
+   "argument": null,
+   "description": "As -B, but use C escape codes whenever possible. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-b"
+  },
+  {
+   "anchorId": "c",
+   "argument": null,
+   "description": "Use time when file status was last changed for sorting or printing.",
+   "flags": "-c"
+  },
+  {
+   "anchorId": "color",
+   "argument": "when",
+   "description": "always will make ls always output color. If TERM is unset or set to an invalid terminal, then ls will fall back to explicit ANSI escape sequences without the help of termcap(5). always is the default if --color is specified without an argument. auto will make ls output escape sequences based on termcap(5), but only if stdout is a tty and either the -G flag is specified or the COLORTERM environment variable is set and not empty. never will disable color regardless of environment variables. never is the default when neither --color nor -G is specified. For compatibility with GNU coreutils, ls supports yes or force as equivalent to always, no or none as equivalent to never, and tty or if-tty as equivalent to auto.",
+   "flags": "--color"
+  },
+  {
+   "anchorId": "d",
+   "argument": null,
+   "description": "Directories are listed as plain files (not searched recursively).",
+   "flags": "-d"
+  },
+  {
+   "anchorId": "e",
+   "argument": null,
+   "description": "Print the Access Control List (ACL) associated with the file, if present, in long (-l) output.",
+   "flags": "-e"
+  },
+  {
+   "anchorId": "f",
+   "argument": null,
+   "description": "Output is not sorted. This option turns on -a. It also negates the effect of the -r, -S and -t options. As allowed by IEEE Std 1003.1-2008 (“POSIX.1”), this option has no effect on the -d, -l, -R and -s options.",
+   "flags": "-f"
+  },
+  {
+   "anchorId": "g",
+   "argument": null,
+   "description": "This option has no effect. It is only available for compatibility with 4.3BSD, where it was used to display the group name in the long (-l) format output. This option is incompatible with IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-g"
+  },
+  {
+   "anchorId": "h",
+   "argument": null,
+   "description": "When used with the -l option, use unit suffixes: Byte, Kilobyte, Megabyte, Gigabyte, Terabyte and Petabyte in order to reduce the number of digits to four or fewer using base 2 for sizes. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-h"
+  },
+  {
+   "anchorId": "i",
+   "argument": null,
+   "description": "For each file, print the file's file serial number (inode number).",
+   "flags": "-i"
+  },
+  {
+   "anchorId": "k",
+   "argument": null,
+   "description": "This has the same effect as setting environment variable BLOCKSIZE to 1024, except that it also nullifies any -h options to its left.",
+   "flags": "-k"
+  },
+  {
+   "anchorId": "l",
+   "argument": null,
+   "description": "(The lowercase letter “ell”.) List files in the long format, as described in the The Long Format subsection below.",
+   "flags": "-l"
+  },
+  {
+   "anchorId": "m",
+   "argument": null,
+   "description": "Stream output format; list files across the page, separated by commas.",
+   "flags": "-m"
+  },
+  {
+   "anchorId": "n",
+   "argument": null,
+   "description": "Display user and group IDs numerically rather than converting to a user or group name in a long (-l) output. This option turns on the -l option.",
+   "flags": "-n"
+  },
+  {
+   "anchorId": "o",
+   "argument": null,
+   "description": "List in long format, but omit the group id.",
+   "flags": "-o"
+  },
+  {
+   "anchorId": "p",
+   "argument": null,
+   "description": "Write a slash (‘/’) after each filename if that file is a directory.",
+   "flags": "-p"
+  },
+  {
+   "anchorId": "q",
+   "argument": null,
+   "description": "Force printing of non-graphic characters in file names as the character ‘?’; this is the default when output is to a terminal.",
+   "flags": "-q"
+  },
+  {
+   "anchorId": "r",
+   "argument": null,
+   "description": "Reverse the order of the sort.",
+   "flags": "-r"
+  },
+  {
+   "anchorId": "s",
+   "argument": null,
+   "description": "Display the number of blocks used in the file system by each file. Block sizes and directory totals are handled as described in The Long Format subsection below, except (if the long format is not also requested) the directory totals are not output when the output is in a single column, even if multi-column output is requested. (-l) format, display complete time information for the file, including month, day, hour, minute, second, and year. The -D option gives even more control over the output format. This option is not defined in IEEE Std 1003.1-2008 (“POSIX.1”).",
+   "flags": "-s"
+  },
+  {
+   "anchorId": "t",
+   "argument": null,
+   "description": "Note that these sort orders are contradictory: the time sequence is in descending order, the lexicographical sort is in ascending order. This behavior is mandated by IEEE Std 1003.2 (“POSIX.2”). This feature can cause problems listing files stored with sequential names on FAT file systems, such as from digital cameras, where it is possible to have more than one image with the same timestamp. In such a case, the photos cannot be listed in the sequence in which they were taken. To ensure the same sort order for time and for lexicographical sorting, set the environment variable LS_SAMESORT or use the -y option. This causes ls to reverse the lexicographical sort order when sorting files with the same modification timestamp.",
+   "flags": "-t"
+  },
+  {
+   "anchorId": "u",
+   "argument": null,
+   "description": "Use time of last access, instead of time of last modification of the file for sorting (-t) or long printing (-l).",
+   "flags": "-u"
+  },
+  {
+   "anchorId": "v",
+   "argument": null,
+   "description": "Force unedited printing of non-graphic characters; this is the default when output is not to a terminal.",
+   "flags": "-v"
+  },
+  {
+   "anchorId": "w",
+   "argument": null,
+   "description": "Force raw printing of non-printable characters. This is the default when output is not to a terminal. This option is not defined in IEEE Std 1003.1-2001 (“POSIX.1”).",
+   "flags": "-w"
+  },
+  {
+   "anchorId": "x",
+   "argument": null,
+   "description": "The same as -C, except that the multi-column output is produced with entries sorted across, rather than down, the columns.",
+   "flags": "-x"
+  },
+  {
+   "anchorId": "y",
+   "argument": null,
+   "description": "When the -t option is set, sort the alphabetical output in the same order as the time output. This has the same effect as setting LS_SAMESORT. See the description of the -t option for more details. This option is not defined in IEEE Std 1003.1-2001 (“POSIX.1”).",
+   "flags": "-y"
+  },
+  {
+   "anchorId": "_",
+   "argument": null,
+   "description": "Distinguish dataless files and directories with a '%' character in long (-l) output, and don't materialize dataless directories when listing them.",
+   "flags": "-%"
+  },
+  {
+   "anchorId": "1",
+   "argument": null,
+   "description": "(The numeric digit “one”.) Force output to be one entry per line. This is the default when output is not to a terminal.",
+   "flags": "-1"
+  }
+ ],
+ "seeAlso": [
+  {
+   "name": "chflags",
+   "resolvedPageId": null,
+   "section": "1"
+  },
+  {
+   "name": "chmod",
+   "resolvedPageId": null,
+   "section": "1"
+  },
+  {
+   "name": "sort",
+   "resolvedPageId": null,
+   "section": "1"
+  },
+  {
+   "name": "xterm",
+   "resolvedPageId": null,
+   "section": "1"
+  },
+  {
+   "name": "localeconv",
+   "resolvedPageId": null,
+   "section": "3"
+  },
+  {
+   "name": "strftime",
+   "resolvedPageId": null,
+   "section": "3"
+  },
+  {
+   "name": "strmode",
+   "resolvedPageId": null,
+   "section": "3"
+  },
+  {
+   "name": "compat",
+   "resolvedPageId": null,
+   "section": "5"
+  },
+  {
+   "name": "termcap",
+   "resolvedPageId": null,
+   "section": "5"
+  },
+  {
+   "name": "sticky",
+   "resolvedPageId": null,
+   "section": "7"
+  },
+  {
+   "name": "symlink",
+   "resolvedPageId": null,
+   "section": "7"
+  }
+ ],
+ "synopsis": [
+  "ls [ -@ABCFGHILOPRSTUWabcdefghiklmnopqrstuvwxy1%, ] [ --color = when ] [ -D format ] [ file ... ]"
+ ]
+}

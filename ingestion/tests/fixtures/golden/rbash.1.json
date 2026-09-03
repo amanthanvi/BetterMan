@@ -1,0 +1,96 @@
+{
+ "description": "restricted bash, see bash (1)",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "rbash - restricted bash, see ",
+      "type": "text"
+     },
+     {
+      "href": "/man/bash/1",
+      "inlines": [
+       {
+        "text": "bash(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "restricted-shell",
+    "level": 2,
+    "text": "RESTRICTED SHELL",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "See the file man1/bash.1.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "text": "SEE ALSO",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "href": "/man/bash/1",
+      "inlines": [
+       {
+        "text": "bash(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     }
+    ],
+    "type": "paragraph"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "restricted-shell",
+    "level": 2,
+    "title": "RESTRICTED SHELL"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "title": "SEE ALSO"
+   }
+  ]
+ },
+ "options": [],
+ "seeAlso": [
+  {
+   "name": "bash",
+   "resolvedPageId": null,
+   "section": "1"
+  }
+ ],
+ "synopsis": null
+}

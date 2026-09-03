@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { distroValidator } from "./schema";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import {
@@ -36,6 +37,7 @@ type ReleaseChildTable =
   | "manPages"
   | "manPageSearchDocuments"
   | "manPageLinks"
+  | "manPageAliases"
   | "licensePackages"
   | "licenses";
 
@@ -43,6 +45,7 @@ const RELEASE_CHILD_TABLES: ReleaseChildTable[] = [
   "releaseSectionStats",
   "manPageSearchDocuments",
   "manPageLinks",
+  "manPageAliases",
   "licensePackages",
   "licenses",
   "manPages",
@@ -267,6 +270,11 @@ async function sampleReleaseChildren(
                 .query("manPageLinks")
                 .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId))
                 .take(takeLimit)
+            : table === "manPageAliases"
+              ? await ctx.db
+                  .query("manPageAliases")
+                  .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", releaseId))
+                  .take(takeLimit)
             : table === "licensePackages"
               ? await ctx.db
                   .query("licensePackages")
@@ -316,6 +324,14 @@ async function deleteReleaseChildrenByTable(
     const rows = await ctx.db
       .query("manPageLinks")
       .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId))
+      .take(limit);
+    for (const row of rows) await ctx.db.delete(row._id);
+    return rows.length;
+  }
+  if (table === "manPageAliases") {
+    const rows = await ctx.db
+      .query("manPageAliases")
+      .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", releaseId))
       .take(limit);
     for (const row of rows) await ctx.db.delete(row._id);
     return rows.length;
@@ -785,5 +801,82 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
       isDone: result.isDone,
       continueCursor: result.continueCursor,
     };
+  },
+});
+
+
+const MAX_STATS_SAMPLE = 2000;
+const MAX_STATS_LINKS = 8000;
+
+/**
+ * Read-only staging check: per active release, how many sampled pages have a
+ * SEE ALSO link, a cross-reference link, parse warnings, or an empty
+ * description, and how many aliases exist. Costs three index ranges per
+ * release (pages, links, aliases), so it stays well inside the transaction
+ * budget. Pass `distro` to check one release at a time.
+ * Run with `npx convex run maintenance:releaseStats '{"stage":"staging"}'`.
+ */
+export const releaseStats = internalQuery({
+  args: {
+    stage: v.union(v.literal("staging"), v.literal("prod")),
+    distro: v.optional(distroValidator),
+    sampleLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const sampleLimit = Math.min(MAX_STATS_SAMPLE, Math.max(1, args.sampleLimit ?? 500));
+    const active = await ctx.db
+      .query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", (q) =>
+        args.distro
+          ? q.eq("stage", args.stage).eq("locale", "en").eq("distro", args.distro)
+          : q.eq("stage", args.stage),
+      )
+      .take(20);
+
+    const releases = [];
+    for (const pointer of active) {
+      const release = await ctx.db.get(pointer.releaseId);
+      if (!release) continue;
+
+      const pages = await ctx.db
+        .query("manPages")
+        .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", release._id))
+        .take(sampleLimit);
+      const sampledIds = new Set(pages.map((page) => page._id));
+
+      const links = await ctx.db
+        .query("manPageLinks")
+        .withIndex("by_releaseId", (q) => q.eq("releaseId", release._id))
+        .take(MAX_STATS_LINKS);
+      const seeAlsoFrom = new Set<string>();
+      const xrefFrom = new Set<string>();
+      for (const link of links) {
+        if (!sampledIds.has(link.fromPageId)) continue;
+        if (link.linkType === "see_also") seeAlsoFrom.add(link.fromPageId);
+        else xrefFrom.add(link.fromPageId);
+      }
+
+      const aliases = await ctx.db
+        .query("manPageAliases")
+        .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", release._id))
+        .take(MAX_STATS_SAMPLE);
+
+      const sampled = pages.length;
+      const pct = (n: number) => (sampled ? Math.round((n / sampled) * 1000) / 10 : 0);
+      releases.push({
+        distro: release.distro,
+        datasetReleaseId: release.datasetReleaseId,
+        pageCount: release.pageCount,
+        sampled,
+        linksScanned: links.length,
+        linksTruncated: links.length >= MAX_STATS_LINKS,
+        aliases: aliases.length,
+        withSeeAlsoPct: pct(seeAlsoFrom.size),
+        withXrefPct: pct(xrefFrom.size),
+        withParseWarningsPct: pct(pages.filter((page) => page.hasParseWarnings).length),
+        emptyDescriptionPct: pct(pages.filter((page) => !page.description).length),
+      });
+    }
+    return { stage: args.stage, releases };
   },
 });

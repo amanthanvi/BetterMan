@@ -216,5 +216,10 @@ for (const distro of ['debian', 'ubuntu', 'fedora']) {
     licensePackages: [],
   })
   await post('/ingest/pages', { datasetReleaseId, pages })
+  // `.so` stub: /man/gunzip/1 redirects to gzip(1).
+  await post('/ingest/aliases', {
+    datasetReleaseId,
+    aliases: [{ name: 'gunzip', section: '1', targetName: 'gzip', targetSection: '1' }],
+  })
   await post('/ingest/activate', { stage, datasetReleaseId, activatedAt: now })
 }

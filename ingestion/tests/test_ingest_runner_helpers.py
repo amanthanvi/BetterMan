@@ -3,12 +3,14 @@ from __future__ import annotations
 from uuid import uuid4
 
 from ingestion.ingest_runner import (
+    _AliasRow,
     _build_page_links,
     _content_packages,
     _filter_sources,
     _iter_internal_doc_links,
     _PageRow,
     _parse_man_href,
+    _resolve_aliases,
 )
 from ingestion.man_scan import ManSource
 
@@ -188,3 +190,51 @@ def test_build_page_links_returns_xref_and_see_also_payloads() -> None:
         "toSection": "1",
         "linkType": "see_also",
     } in links
+
+
+def _page(name: str, section: str) -> _PageRow:
+    return _PageRow(
+        page_id=uuid4(),
+        name=name,
+        section=section,
+        title=f"{name}({section})",
+        description="",
+        source_path=f"/usr/share/man/man{section}/{name}.{section}",
+        source_package=None,
+        source_package_version=None,
+        content_sha256="x",
+        has_parse_warnings=False,
+        doc={"toc": [], "blocks": []},
+        plain_text="",
+        synopsis=None,
+        options=None,
+        see_also=None,
+        headings_text="",
+        see_also_refs=[],
+    )
+
+
+def _alias(name: str, target: str) -> _AliasRow:
+    return _AliasRow(
+        name=name,
+        section="1",
+        target_name=target,
+        target_section="1",
+        source_path=f"/usr/share/man/man1/{name}.1",
+    )
+
+
+def test_resolve_aliases_follows_long_chains_and_drops_cycles() -> None:
+    pages = [_page("real", "1")]
+    chain = [_alias(f"s{i}", f"s{i + 1}") for i in range(12)] + [_alias("s12", "real")]
+    aliases = [
+        *chain,
+        _alias("loop1", "loop2"),
+        _alias("loop2", "loop1"),
+        _alias("dangling", "missing"),
+    ]
+
+    resolved = _resolve_aliases(aliases=aliases, pages=pages)
+
+    assert [a.name for a in resolved] == [f"s{i}" for i in range(13)]
+    assert {a.target_name for a in resolved} == {"real"}

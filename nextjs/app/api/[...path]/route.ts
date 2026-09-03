@@ -7,7 +7,7 @@ import {
   fetchLicenseText,
   fetchLicenses,
   fetchManByName,
-  fetchManByNameAndSection,
+  fetchManByNameAndSectionOrAlias,
   fetchManMetaByNameAndSection,
   fetchRelated,
   fetchSeoReleases,
@@ -59,6 +59,17 @@ function cachedJson(value: unknown, seconds = PUBLIC_CACHE_SECONDS, init?: Respo
       ...(init?.headers ?? {}),
       'Cache-Control': `public, max-age=60, s-maxage=${seconds}, stale-while-revalidate=${seconds}`,
     },
+  })
+}
+
+function aliasRedirect(req: Request, distro: string, name: string, section: string): Response {
+  const url = new URL(req.url)
+  url.pathname = `/api/v1/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`
+  if (distro === 'debian') url.searchParams.delete('distro')
+  else url.searchParams.set('distro', distro)
+  return new Response(null, {
+    status: 308,
+    headers: { Location: `${url.pathname}${url.search}`, 'Cache-Control': `public, max-age=${PUBLIC_CACHE_SECONDS}` },
   })
 }
 
@@ -181,6 +192,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
           { status: 409 },
         )
       }
+      if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section)
       return cachedJson(result.data)
     }
 
@@ -190,9 +202,10 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const result = await measure(metrics, 'convex_man', () =>
-        fetchManByNameAndSection({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+        fetchManByNameAndSectionOrAlias({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
       )
-      return cachedJson(result)
+      if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section)
+      return cachedJson(result.data)
     }
 
     if (parts.length === 4 && parts[0] === 'man' && parts[3] === 'meta') {

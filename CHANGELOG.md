@@ -6,6 +6,11 @@ All notable changes to BetterMan are documented here.
 
 - Security: pin transitive `fast-uri` 3.x to 3.1.6 and `@humanfs/node` to 0.16.8 to close URL normalization and symlink-copy vulnerabilities. ([#231](https://github.com/amanthanvi/BetterMan/pull/231)) — thanks @amanthanvi
 - Dependencies: consolidate the September 2026 runtime, tooling, container, and GitHub Actions updates; keep paired CodeQL and React Query packages version-aligned.
+- Ingestion: man(7) cross-references (`ls(1)` written as bold or italic name) now link and populate SEE ALSO and RELATED. Previously only mdoc pages got links, so most Linux pages had none.
+- Ingestion: `.so` include stubs become aliases. `/man/man/7` now redirects to `groff_man(7)` instead of publishing a one-line page.
+- Ingestion: headings keep single-line text, synopses are extracted from man(7) subsections and mdoc `.Nm` tables, tables get their header row, `.RS` indents keep their nesting, a term with several definitions keeps all of them, and option arguments are split from flags.
+- Pages with mandoc warnings show a one-line note at the foot.
+- Tests: roff sources for nine pages are checked in and rendered with the host `mandoc`; both the Python and TypeScript sides of the document model are checked against the same golden JSON.
 - Repo: remove the legacy Vite frontend, FastAPI backend, Railway build files, and their CI jobs. Playwright specs move to `nextjs/e2e/`; the document model types are now hand-written in `nextjs/lib/docModel.ts`.
 - Docs: replace SPEC, PLAN, ROADMAP, GOVERNANCE, SUPPORT, the performance audits, legacy runbooks, and vendored agent skills with a short README, AGENTS, CONTRIBUTING, and ARCHITECTURE. One tagline everywhere: "Unix manual pages, typeset for the screen."
 - Ingestion: normalize mandoc bullet-style definition lists into semantic lists, preserve real code-block line breaks, and scope derived options to OPTIONS sections. ([#203](https://github.com/amanthanvi/BetterMan/pull/203)) — thanks @amanthanvi
