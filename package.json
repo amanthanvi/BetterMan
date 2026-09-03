@@ -18,7 +18,7 @@
 		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest"
 	},
 	"dependencies": {
-		"convex": "^1.44.0"
+		"convex": "^1.45.0"
 	},
 	"devDependencies": {
 		"@types/node": "^26.2.0",
