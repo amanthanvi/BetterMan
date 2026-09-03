@@ -419,14 +419,13 @@ def _alias_for_source(src: ManSource) -> _AliasRow | None:
     )
 
 
-_MAX_ALIAS_CHAIN = 8
-
-
 def _resolve_aliases(*, aliases: list[_AliasRow], pages: list[_PageRow]) -> list[_AliasRow]:
     """Keep aliases whose target is a parsed page, following stub chains.
 
-    A stub may point at another stub. Walk up to `_MAX_ALIAS_CHAIN` hops and
-    stop on cycles; anything that never reaches a real page is dropped.
+    A stub may point at another stub. Follow the chain until it reaches a
+    parsed page; the visited set stops cycles, and an acyclic chain can never
+    be longer than the number of aliases. Chains that never reach a real page
+    are dropped.
     """
     index = {(p.name, p.section) for p in pages}
     by_key = {(a.name, a.section): a for a in aliases}
@@ -434,14 +433,10 @@ def _resolve_aliases(*, aliases: list[_AliasRow], pages: list[_PageRow]) -> list
     for alias in aliases:
         target = (alias.target_name, alias.target_section)
         seen = {(alias.name, alias.section)}
-        hops = 0
         while target not in index and target in by_key and target not in seen:
-            if hops >= _MAX_ALIAS_CHAIN:
-                break
             seen.add(target)
             nxt = by_key[target]
             target = (nxt.target_name, nxt.target_section)
-            hops += 1
         if target not in index:
             _log("alias_unresolved", path=alias.source_path, target=f"{target[0]}({target[1]})")
             continue
