@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- CI: the production Convex verifier reads the page-or-alias result from `getManByNameAndSection` and reports a golden page that resolves to an alias as a failure.
 - Security: pin transitive `fast-uri` 3.x to 3.1.6 and `@humanfs/node` to 0.16.8 to close URL normalization and symlink-copy vulnerabilities. ([#231](https://github.com/amanthanvi/BetterMan/pull/231)) — thanks @amanthanvi
 - Dependencies: consolidate the September 2026 runtime, tooling, container, and GitHub Actions updates; keep paired CodeQL and React Query packages version-aligned.
 - Man page: the options table now sits below the synopsis instead of above NAME, NAME and SYNOPSIS are no longer repeated in the body, RELATED is rendered on the server and hidden when empty, and the header shows the distro and source package instead of the raw release id.
