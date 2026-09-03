@@ -109,10 +109,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           ))}
         </nav>
 
-        <div className="mt-3 text-xs text-muted">
-          <span className="font-mono">Tip:</span> Use <span className="font-mono">ssh_config</span> or{' '}
-          <span className="font-mono">systemd.unit</span> for dotted names.
-        </div>
       </header>
 
       <SearchResultsClient distro={distro} q={q} section={section} initial={initial} />

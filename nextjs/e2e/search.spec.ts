@@ -57,3 +57,11 @@ test('search: a11y (no critical/serious violations)', async ({ page }) => {
   await page.goto('/search?q=tar')
   await expectNoCriticalOrSeriousViolations(page)
 })
+
+test('search: description words find a page whose name does not match', async ({ page }) => {
+  await page.goto('/search?q=archiving')
+  await expect(page.getByRole('link', { name: /tar\(1\)/i })).toBeVisible()
+
+  await page.goto('/search?q=expand files')
+  await expect(page.getByRole('link', { name: /gzip\(1\)/i })).toBeVisible()
+})

@@ -21,3 +21,7 @@
 
 - Re-evaluate default UI debounce and paging behavior.
 - Add alerts for unusual traffic patterns.
+
+## Search index cost
+
+`manPageSearchDocuments` has a Convex search index over `descNorm`, the one-line NAME description. It is read only when a query does not fill from the name-prefix indexes. Body full-text search was retired because each query scanned the corpus; descriptions are a few dozen characters, so this index stays bounded. If the Convex dashboard shows `queries:search` reading more bytes per call than `queries:listSection`, drop the `search_desc` index before anything else.

@@ -133,8 +133,10 @@ export default defineSchema({
     .index("by_contentId_and_kind_and_chunkIndex", ["contentId", "kind", "chunkIndex"])
     .index("by_pageId_and_kind_and_chunkIndex", ["pageId", "kind", "chunkIndex"]),
 
-  // Prefix/suggest indexes only — full-text searchIndex retired (too expensive per query).
-  // searchText remains a compact metadata string for ops/compaction, not an FTS corpus.
+  // Name prefix indexes plus a search index over the one-line NAME description.
+  // Body full-text search was retired: it read the whole corpus per query.
+  // Descriptions are short, so this index stays cheap and lets "copy files"
+  // find cp(1). searchText remains a compact metadata string for ops only.
   manPageSearchDocuments: defineTable({
     pageId: v.id("manPages"),
     releaseId: v.id("datasetReleases"),
@@ -153,7 +155,11 @@ export default defineSchema({
       "releaseId",
       "section",
       "nameNorm",
-    ]),
+    ])
+    .searchIndex("search_desc", {
+      searchField: "descNorm",
+      filterFields: ["releaseId", "section"],
+    }),
 
   // `.so` include stubs: /man/<name>/<section> redirects to the target page.
   manPageAliases: defineTable({

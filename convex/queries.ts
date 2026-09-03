@@ -27,6 +27,7 @@ const MAX_SECTION_LIMIT = 500;
 const MAX_SECTION_OFFSET = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
 const MAX_RELATED = 50;
+const MAX_DESCRIPTION_HITS = 24;
 
 function boundedInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -306,6 +307,35 @@ function rankSearchDocument(
   return rank;
 }
 
+/** Description hits rank below every name-prefix hit; whole-phrase matches first. */
+function rankDescriptionDocument(
+  doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
+  queryNorm: string,
+  index: number,
+): number {
+  let rank = 400 - index;
+  if (doc.descNorm.includes(queryNorm)) rank += 300;
+  if (doc.descNorm.startsWith(queryNorm)) rank += 100;
+  return rank;
+}
+
+async function searchDocsByDescription(
+  ctx: QueryCtx,
+  args: {
+    releaseId: Id<"datasetReleases">;
+    section: string | null;
+    queryNorm: string;
+  },
+): Promise<Array<Doc<"manPageSearchDocuments">>> {
+  return await ctx.db
+    .query("manPageSearchDocuments")
+    .withSearchIndex("search_desc", (q) => {
+      const base = q.search("descNorm", args.queryNorm).eq("releaseId", args.releaseId);
+      return args.section === null ? base : base.eq("section", args.section);
+    })
+    .take(MAX_DESCRIPTION_HITS);
+}
+
 function typoFallbackQuery(queryNorm: string): string | null {
   const collapsed = queryNorm.replace(/([a-z0-9])\1+$/i, "$1");
   return collapsed !== queryNorm && collapsed.length >= 2 ? collapsed : null;
@@ -336,7 +366,7 @@ export const search = query({
     });
     const takeCount = Math.min(offset + limit + 5, MAX_SEARCH_OFFSET + MAX_SEARCH_LIMIT);
 
-    // Prefix-only: full-text search currently reads the whole text index per query.
+    // Name prefix first, then the description search index (one line per page).
     const prefixQueries = fallbackNorm ? [queryNorm, fallbackNorm] : [queryNorm];
     const prefixDocs = (
       await Promise.all(
@@ -351,11 +381,23 @@ export const search = query({
       )
     ).flat();
 
+    // Always merge the same description candidates so every offset slices one
+    // stable ranked set. The index read is bounded by MAX_DESCRIPTION_HITS.
+    const descriptionDocs = await searchDocsByDescription(ctx, {
+      releaseId: release._id,
+      section,
+      queryNorm,
+    });
+
     const ranked = new Map<string, RankedSearchDocument>();
     prefixDocs.forEach((doc, index) => {
       const current = ranked.get(doc._id);
       const rank = rankSearchDocument(doc, queryNorm, index);
       if (!current || rank > current.rank) ranked.set(doc._id, { ...doc, rank });
+    });
+    descriptionDocs.forEach((doc, index) => {
+      if (ranked.has(doc._id)) return;
+      ranked.set(doc._id, { ...doc, rank: rankDescriptionDocument(doc, queryNorm, index) });
     });
 
     const ordered = [...ranked.values()].sort((a, b) => {

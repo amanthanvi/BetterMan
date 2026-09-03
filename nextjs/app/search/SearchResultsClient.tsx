@@ -191,7 +191,7 @@ export function SearchResultsClient({
   if (!q) {
     return (
       <div className="mt-8 text-sm text-muted">
-        Try:{' '}
+        Search by command name or by what it does. Try{' '}
         <Link
           href={withDistro(`/search?q=${encodeURIComponent('tar')}`, distro)}
           className="font-mono"
@@ -207,10 +207,10 @@ export function SearchResultsClient({
         </Link>
         ,{' '}
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent('curl')}`, distro)}
+          href={withDistro(`/search?q=${encodeURIComponent('copy files')}`, distro)}
           className="font-mono"
         >
-          curl
+          copy files
         </Link>
         .
       </div>
@@ -223,6 +223,9 @@ export function SearchResultsClient({
     return (
       <div className="mt-8 text-sm text-muted">
         No results for <span className="font-mono text-fg">{q}</span>.
+        {q.includes('.') || q.includes('_') ? null : (
+          <span> Names with dots or underscores are searched as written, like <span className="font-mono">ssh_config</span>.</span>
+        )}
         {suggestions.length ? (
           <div className="mt-3">
             <span className="text-muted">Did you mean:</span>{' '}
