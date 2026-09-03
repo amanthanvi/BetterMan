@@ -23,7 +23,7 @@ export default function Error({
       <div className="mt-8 sm:mt-16">
         <div className="font-mono text-xs tracking-wide text-muted">Error</div>
         <h1 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-fg">Something went wrong</h1>
-        <p className="mt-3 text-sm text-muted">Try again, or go back home.</p>
+        <p className="mt-3 text-sm text-muted">The page failed to render.</p>
         {error.digest ? <div className="mt-3 font-mono text-xs text-faint">Digest: {error.digest}</div> : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <Button variant="solid" onClick={() => reset()}>

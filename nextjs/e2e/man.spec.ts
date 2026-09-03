@@ -302,3 +302,14 @@ test('man: .so alias redirects to its target page', async ({ page }) => {
   expect(api.status()).toBe(308)
   expect(api.headers()['location']).toBe('/api/v1/man/gzip/1')
 })
+
+test('man: NAME is not repeated in the body and RELATED hides when empty', async ({ page }) => {
+  await page.goto('/man/printf/3')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('printf')
+  await expect(page.getByRole('heading', { name: /^NAME$/ })).toHaveCount(0)
+  await expect(page.getByRole('complementary', { name: 'Related commands' })).toHaveCount(0)
+  await expect(page.getByText('Loading related commands')).toHaveCount(0)
+
+  await page.goto('/man/tar/1')
+  await expect(page.getByRole('complementary', { name: 'Related commands' })).toBeVisible()
+})

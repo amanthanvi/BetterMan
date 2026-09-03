@@ -35,7 +35,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     title,
     description,
     robots: { index: false },
-    openGraph: { title, description, type: 'website', images: ['/og-image.png'] },
+    openGraph: { title, description, type: 'website' },
   }
 }
 

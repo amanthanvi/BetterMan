@@ -33,7 +33,8 @@ export function ManPageOptionsSection({
   const allOptions = options ?? []
   const hasOptions = allOptions.length > 0
   const collapsible = optionsCount > OPTIONS_COLLAPSE_THRESHOLD
-  const visibleOptions = collapsible && !optionsExpanded ? allOptions.slice(0, OPTIONS_PREVIEW_COUNT) : allOptions
+  const previewOptions = collapsible ? allOptions.slice(0, OPTIONS_PREVIEW_COUNT) : allOptions
+  const restOptions = collapsible ? allOptions.slice(OPTIONS_PREVIEW_COUNT) : []
 
   return (
     <>
@@ -57,16 +58,29 @@ export function ManPageOptionsSection({
 
           <div className="mt-3">
             <OptionsTable
-              options={visibleOptions}
+              options={previewOptions}
               selectedAnchorId={selectedAnchorId}
               onSelect={onSelectOption}
               flashAnchorId={flashAnchorId}
             />
           </div>
 
+          {restOptions.length ? (
+            <div className="bm-expand" data-collapsed={optionsExpanded ? 'false' : 'true'}>
+              <div aria-hidden={optionsExpanded ? undefined : true} {...(optionsExpanded ? {} : { inert: true })}>
+                <OptionsTable
+                  options={restOptions}
+                  selectedAnchorId={selectedAnchorId}
+                  onSelect={onSelectOption}
+                  flashAnchorId={flashAnchorId}
+                />
+              </div>
+            </div>
+          ) : null}
+
           {collapsible ? (
             <div className="mt-2">
-              <Button variant="ghost" size="sm" onClick={onToggleOptionsExpanded}>
+              <Button variant="ghost" size="sm" onClick={onToggleOptionsExpanded} aria-expanded={optionsExpanded}>
                 {optionsExpanded ? 'Show fewer options' : `Show all ${optionsCount} options`}
               </Button>
             </div>

@@ -13,7 +13,6 @@ export const metadata: Metadata = {
     title: 'BetterMan',
     description: 'Unix manual pages, typeset for the screen.',
     type: 'website',
-    images: ['/og-image.png'],
   },
 }
 

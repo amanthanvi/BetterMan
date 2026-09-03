@@ -1,5 +1,7 @@
 'use client'
 
+import { useLayoutEffect, useRef, useState } from 'react'
+
 import type { TocItem } from '../../lib/docModel'
 
 const TOC_INDENT_CLASSES = [
@@ -24,6 +26,23 @@ export function Toc({
   onNavigateToId?: (id: string) => void
   showTitle?: boolean
 }) {
+  const listRef = useRef<HTMLOListElement | null>(null)
+  const [marker, setMarker] = useState<{ top: number; height: number } | null>(null)
+
+  useLayoutEffect(() => {
+    const list = listRef.current
+    if (!list || !activeId) {
+      setMarker(null)
+      return
+    }
+    const el = list.querySelector<HTMLElement>(`a[aria-current="location"]`)
+    if (!el) {
+      setMarker(null)
+      return
+    }
+    setMarker({ top: el.offsetTop, height: el.offsetHeight })
+  }, [activeId, items])
+
   if (!items.length) return null
 
   return (
@@ -42,7 +61,14 @@ export function Toc({
       }}
     >
       {showTitle ? <div className="font-mono text-xs tracking-wide text-muted">On this page</div> : null}
-      <ol className="space-y-1">
+      <ol ref={listRef} className="relative space-y-1">
+        {marker ? (
+          <span
+            aria-hidden="true"
+            className="bm-toc-marker pointer-events-none absolute left-0 w-0.5 bg-accent"
+            style={{ transform: `translateY(${marker.top}px)`, height: marker.height }}
+          />
+        ) : null}
         {items.map((item) => {
           const active = activeId === item.id
           const indent = TOC_INDENT_CLASSES[Math.min(5, Math.max(0, item.level - 2))]

@@ -128,7 +128,7 @@ export function HomeDashboardClient({
             </div>
           ) : (
             <EmptyState title="No recent pages" className="mt-2">
-              Pages you read show up here. Try searching for <span className="font-mono text-fg">tar</span>.
+              Pages you open are listed here.
             </EmptyState>
           )}
         </div>
@@ -156,7 +156,7 @@ export function HomeDashboardClient({
             </div>
           ) : (
             <EmptyState title="No bookmarks yet" className="mt-2">
-              Press <Kbd>M</Kbd> on any man page to pin it here.
+              Press <Kbd>M</Kbd> on a page to keep it here.
             </EmptyState>
           )}
         </div>

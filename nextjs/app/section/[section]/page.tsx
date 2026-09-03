@@ -88,7 +88,6 @@ export async function generateMetadata({ params }: { params: Promise<{ section: 
       title,
       description: `Browse BetterMan man pages in section ${section}.`,
       type: 'website',
-      images: ['/og-image.png'],
     },
   }
 }

@@ -188,6 +188,17 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange])
 
+  // Keep the panel mounted for one exit animation after `open` flips false.
+  const [rendered, setRendered] = useState(open)
+  useEffect(() => {
+    if (open) {
+      setRendered(true)
+      return
+    }
+    const t = window.setTimeout(() => setRendered(false), 150)
+    return () => window.clearTimeout(t)
+  }, [open])
+
   const runSearch = (q: string, distroOverride?: Distro) => {
     const query = q.trim()
     if (!query) return
@@ -376,21 +387,29 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     el?.scrollIntoView({ block: 'nearest' })
   }, [items.length, open, safeActiveIndex])
 
-  if (!open) return null
+  if (!rendered) return null
 
   const modeHint = parsed.mode === 'actions' ? 'Actions' : parsed.mode === 'headings' ? 'Headings' : null
 
   return createPortal(
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Command palette"
-      className="fixed inset-0 z-50 flex items-end justify-center pb-[env(safe-area-inset-bottom)] sm:items-start sm:pt-[16vh] sm:pb-0"
+      role={open ? 'dialog' : undefined}
+      aria-modal={open ? 'true' : undefined}
+      aria-label={open ? 'Command palette' : undefined}
+      aria-hidden={open ? undefined : true}
+      className={`fixed inset-0 z-50 flex items-end justify-center pb-[env(safe-area-inset-bottom)] sm:items-start sm:pt-[16vh] sm:pb-0 ${
+        open ? '' : 'pointer-events-none'
+      }`}
     >
-      <div className="absolute inset-0 bg-scrim" onClick={() => close()} />
+      <div
+        className={`absolute inset-0 bg-scrim transition-opacity duration-150 motion-reduce:transition-none ${open ? 'opacity-100' : 'opacity-0'}`}
+        onClick={() => close()}
+      />
       <div
         ref={dialogRef}
-        className="bm-pop-in relative flex w-full max-h-[70vh] flex-col overflow-hidden border border-edge bg-raised shadow-lg shadow-black/25 sm:max-h-[60vh] sm:w-[min(94vw,40rem)]"
+        className={`relative flex w-full max-h-[70vh] flex-col overflow-hidden border border-edge bg-raised shadow-lg shadow-black/25 motion-reduce:animate-none sm:max-h-[60vh] sm:w-[min(94vw,40rem)] ${
+          open ? 'bm-pop-in' : 'bm-pop-out motion-reduce:invisible'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-edge p-3">
