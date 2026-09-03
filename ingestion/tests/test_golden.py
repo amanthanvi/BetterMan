@@ -29,7 +29,11 @@ _GOLDEN = Path(__file__).parent / "fixtures" / "golden"
 _LARGE = {"bash.1", "curl.1"}
 _CASES = sorted(p.name for p in _ROFF.iterdir() if p.is_file() and p.name not in _LARGE)
 
-pytestmark = pytest.mark.skipif(shutil.which("mandoc") is None, reason="mandoc not installed")
+# CI installs mandoc; locally the suite skips rather than fails without it.
+pytestmark = pytest.mark.skipif(
+    shutil.which("mandoc") is None and not os.environ.get("CI"),
+    reason="mandoc not installed",
+)
 
 
 def _render(path: Path) -> str:
