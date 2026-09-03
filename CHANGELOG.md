@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Security: pin transitive `fast-uri` 3.x to 3.1.6 and `@humanfs/node` to 0.16.8 to close URL normalization and symlink-copy vulnerabilities.
 - Dependencies: consolidate the September 2026 runtime, tooling, container, and GitHub Actions updates; keep paired CodeQL and React Query packages version-aligned.
 - Ingestion: normalize mandoc bullet-style definition lists into semantic lists, preserve real code-block line breaks, and scope derived options to OPTIONS sections. ([#203](https://github.com/amanthanvi/BetterMan/pull/203)) — thanks @amanthanvi
 

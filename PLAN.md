@@ -32,6 +32,7 @@ Living execution plan for BetterMan from `SPEC.md`.
 - [x] v0.6.5 shipped (tag `v0.6.5`)
 - [x] Enable Greptile reviews for Dependabot PRs while retaining the Aikido Autofix exclusion.
 - [x] Consolidate and resolve the September 2026 dependency update batch.
+- [x] Remediate the `fast-uri` and `@humanfs/node` Dependabot alerts disclosed on 2026-09-03.
 
 ## Golden Commands (current; proven)
 
