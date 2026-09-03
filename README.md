@@ -1,167 +1,56 @@
 # BetterMan
 
+Unix manual pages, typeset for the screen. Live at [betterman.sh](https://betterman.sh).
+
 [![ci](https://github.com/amanthanvi/BetterMan/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/amanthanvi/BetterMan/actions/workflows/ci.yml)
 
-<p align="center">
-  <img src="nextjs/public/betterman-mark.svg" width="96" height="96" alt="BetterMan logo" />
-</p>
+BetterMan renders man pages from Debian, Ubuntu, Fedora, Arch, Alpine, FreeBSD, and macOS as readable, linked, searchable web pages. It is keyboard-first and has no accounts. Bookmarks, history, and reading preferences stay in the browser.
 
-BetterMan is a fast, readable web UI for `man` pages — built to feel like a tool: crisp type, keyboard-first, and no accounts.
-
-- Live: https://betterman.sh
-- Spec / architecture: `SPEC.md`
-- Architecture overview (quick read): `docs/ARCHITECTURE.md`
-- Getting started (local): `docs/GETTING_STARTED.md`
-- Governance: `GOVERNANCE.md`
-- Roadmap (high-level): `ROADMAP.md`
-- Execution plan (living checklist): `PLAN.md`
-- Changelog: `CHANGELOG.md`
-- Releasing: `docs/RELEASING.md`
-- Support: `SUPPORT.md`
-- Contributing: `CONTRIBUTING.md`
-
-<p align="center">
-  <img src="nextjs/public/og-image.png" alt="BetterMan preview" />
-</p>
-
-## What you get
-
-- Search with clean previews
-- Multiple distros (Linux + BSD + macOS BSD-licensed pages)
-- Local-only bookmarks, history, and reading preferences
-- Command palette + shortcuts
-- PWA + offline caching for recently read pages
-
-## Repo layout
+## Layout
 
 ```text
-/
-├── nextjs/             # Next.js App Router (public web)
-├── convex/             # Convex schema/functions for dataset reads, search, rate limits, ingest
-├── backend/            # Legacy FastAPI API service (kept for maintenance/tests during cutover)
-├── ingestion/          # Ingestion pipeline (dataset builds into Convex)
-├── frontend/           # Legacy Vite SPA (used for CI/e2e harness only; do not add features here)
-├── docker-compose.yml  # Local Postgres + Redis
-└── SPEC.md
+nextjs/      Next.js app: pages, API routes, rendering
+convex/      Convex schema and functions: dataset reads, search, rate limits, ingest
+ingestion/   Python pipeline: mandoc to document model, uploads releases to Convex
+scripts/     CI and deploy helpers
+docs/        Architecture, releasing, runbooks
 ```
 
-## Status
+## Run it locally
 
-- Latest release: `v0.6.5` (tag `v0.6.5`)
-- Default branch: `main`
+Needs Node 26, pnpm 10.34, Python 3.14, and `uv`.
 
-## Deploy (Vercel)
+```bash
+pnpm install
+pnpm convex:check   # provisions a local Convex deployment and writes .env.local
+pnpm next:dev       # Convex watcher plus Next.js on http://localhost:3000
+```
 
-- Production: Vercel project `betterman`, with `betterman.sh` and `www.betterman.sh` assigned to its production deployment.
-- Auto-deploy: `.github/workflows/deploy.yml` starts only after `.github/workflows/ci.yml` succeeds for a push to `main`, then rechecks that exact SHA before promotion.
-- Manual deploy/rollback: `.github/workflows/deploy.yml` (workflow `deploy-vercel`, input `sha`) accepts only a full commit SHA reachable from protected `main` history.
-- Required `production` environment secrets: `CONVEX_DEPLOY_KEY`, `BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`; required environment variable: `CONVEX_URL`. The environment is restricted to protected branches, and repository-scoped production secrets are prohibited.
-- Automatic releases recheck current `main`, deploy that exact SHA's Convex schema/functions, verify the production data and metadata contract, then stage the Vercel artifact. Manual historical-SHA rollbacks keep the current backward-compatible Convex backend and verify the selected app against it.
-- Release tooling runs under the repository's Node 26 contract, then switches to the Vercel project's Node 24 build/runtime contract before building the production artifact.
-- Vercel's project root is `nextjs/`, while CI runs `scripts/deploy-vercel.sh` from the repository root so that setting is applied exactly once. The script builds the exact checkout SHA, verifies authenticated deployment metadata, smoke-tests a staged artifact, promotes only a passing artifact, verifies both custom-domain aliases, and rolls back if post-promotion verification fails.
-- Current runtime: Next.js on Vercel reads datasets, search, and rate-limit state from Convex. Legacy Railway services are not on the active request path.
-- Operations and rollback: `docs/runbooks/vercel-ops.md`.
+The local deployment starts empty. Seed it with the E2E fixture:
 
-## Dataset updates
+```bash
+CONVEX_HTTP_URL=<CONVEX_SITE_URL from .env.local> CONVEX_INGEST_SECRET=dev node scripts/seed-convex-e2e.mjs
+```
 
-- Monthly ingest + promote: `.github/workflows/update-docs.yml` (workflow `update-dataset`).
-  - `workflow_dispatch` defaults: `ingest=true`, `promote=false` (ingest to staging only).
-  - Promote-only: `ingest=false`, `promote=true` (promotes current staging actives without re-ingesting).
-  - Targeted ingest (debug): set `linux_distro=arch` and/or `bsd=false`.
-  - FreeBSD VM smoke: `linux=false`, `bsd=true`, `bsd_distro=freebsd`, `sample=true`, `promote=false`; the sample is written to staging but never activated or promoted.
-- Requires `BETTERMAN_CONVEX_HTTP_URL` + `BETTERMAN_CONVEX_INGEST_SECRET` in the protected GitHub `production` environment; a preflight checks them before any ingestion runner starts.
-- Ingest activates `staging` release pointers; ingest+promote dispatches copy only selected distro pointers to `prod`, while scheduled and promote-only runs copy all active staging pointers.
-- Scheduled promotion requires every selected ingest job to succeed. Failed, timed-out, cancelled, and sample runs cannot promote.
-- Production Convex rebuild/import runbook: `docs/runbooks/convex-production-cutover.md`.
+## Commands
 
-## Security / Quality (CI)
+| Command | What it does |
+| --- | --- |
+| `pnpm next:lint` | ESLint over the Next.js app |
+| `pnpm next:grammar` | Enforces the visual grammar in `DESIGN.md` |
+| `pnpm next:test` | Vitest |
+| `pnpm next:e2e` | Playwright, expects the app on port 3000 |
+| `pnpm next:build` | Production build |
+| `pnpm convex:check` | Validates Convex schema and functions |
+| `pnpm ingest:test` / `pnpm ingest:lint` | Ingestion tests and Ruff |
+| `pnpm ingest:sample` | Ingests five pages into the configured Convex stage |
 
-- Required PR checks for `main`: `ci_contracts`, `dependency_review`, `frontend`, `nextjs`, `backend`, `ingestion`, `api_types`, `container_build`, `e2e`.
-- `ci_contracts` also requires `update-dataset` to remain active with the monthly `0 5 1 * *` cron and rejects caller-controlled stage routing in public Convex functions.
-- Code scanning: `.github/workflows/codeql.yml` (CodeQL) + `.github/workflows/scorecards.yml` (OSSF Scorecards → SARIF).
-- Dependency updates: `.github/dependabot.yml` (GitHub Actions, frontend npm, backend/ingestion uv, Dockerfile base images).
-- API contract: generated OpenAPI types for both `frontend/src/api/openapi.gen.ts` and `nextjs/lib/openapi.gen.ts` are enforced in CI.
+## Deploy and data
 
-## Observability (v0.5.0)
-
-### Sentry (Error Tracking)
-
-Error tracking for both services.
-
-**Environment variables:**
-
-- `SENTRY_DSN` (backend)
-- `NEXT_PUBLIC_SENTRY_DSN` (Next.js)
-
-### Plausible (Analytics)
-
-Privacy-friendly analytics (no cookies, GDPR-compliant).
-
-**Environment variables:**
-
-- `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (Next.js): Domain configured in Plausible (e.g., `betterman.sh`)
-
-Analytics are disabled if the env var is not set.
-
-### Convex
-
-**Environment variables:**
-
-- `NEXT_PUBLIC_CONVEX_URL` / `CONVEX_URL` (Next.js): Convex client URL.
-- Public Convex reads always resolve the `prod` pointer inside Convex; callers cannot select `staging`.
-- `CONVEX_HTTP_URL` + `CONVEX_INGEST_SECRET` + `BETTERMAN_DATASET_STAGE` (ingestion): Convex HTTP actions URL, ingest bearer token, and protected import target.
-
-## UX notes
-
-- Desktop man pages: sticky sidebar (TOC + Find), collapsible via `b`.
-- Mobile man pages: contents drawer (swipe from left edge, `b`, or the header contents button).
-- Find-in-page: desktop in sidebar; mobile uses a compact sticky bar above content.
-- `/bookmarks` and `/history` redirect to `/` (homepage dashboard includes Recent + Bookmarks).
-- Man sections support extended suffixes (e.g. `/man/openssl/1ssl`, `/section/3p`).
-
-## Golden commands
-
-### Local services
-
-- `pnpm db:up` — start legacy Postgres + Redis (Docker)
-- `pnpm db:down` — stop services
-  - Postgres exposed on `localhost:54320`
-
-### Backend
-
-- `pnpm backend:dev` — FastAPI dev server (port 8000)
-- `pnpm backend:test` — backend tests (pytest)
-- `pnpm backend:lint` — ruff check + format check
-
-### Next.js
-
-- `pnpm next:dev` — Convex watcher + Next.js dev server
-- `pnpm convex:check` — one-shot Convex schema/function validation
-- `pnpm next:build` — Next.js production build
-- `pnpm next:lint` — Next.js lint
-
-### Frontend
-
-- `pnpm frontend:dev` — Vite dev server
-- `pnpm frontend:build` — production build
-- `pnpm frontend:lint` — eslint
-- `pnpm frontend:test` — unit tests (Vitest)
-- `pnpm frontend:e2e` — E2E tests (Playwright; expects Next.js + Convex running)
-
-### Ingestion
-
-- `pnpm ingest:sample` — ingest a small sample set
-- `pnpm ingest:run` — ingest full dataset
-- `pnpm ingest:lint` — ruff check + format check
-- `pnpm ingest:test` — ingestion tests (pytest)
+Pushes to `main` that pass CI deploy to Vercel through `.github/workflows/deploy.yml`. The dataset is rebuilt monthly by `.github/workflows/update-docs.yml`, which ingests to a staging pointer in Convex and promotes it to production. Details live in `docs/ARCHITECTURE.md` and `docs/runbooks/`.
 
 ## Contributing
 
-- Read `CONTRIBUTING.md`.
-- Be kind: `CODE_OF_CONDUCT.md`.
-- Security issues: `SECURITY.md`.
-- Support/questions: `SUPPORT.md`.
+See `CONTRIBUTING.md`. Report security issues as described in `SECURITY.md`.
 
-## License
-
-MIT — see `LICENSE`.
+MIT licensed. See `LICENSE`.

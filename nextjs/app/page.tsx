@@ -35,7 +35,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <section aria-label="Name" className="mt-10">
         <ManSectionLabel>NAME</ManSectionLabel>
         <h1 className="mt-2 pl-6 text-base font-normal text-fg sm:pl-8">
-          betterman — fast, readable Unix manual pages
+          betterman — Unix manual pages, typeset for the screen
         </h1>
       </section>
 

@@ -1,62 +1,26 @@
 # Contributing
 
-Thanks for contributing — BetterMan is built to be a sharp, reliable tool, and small improvements compound quickly.
+BetterMan is maintained by one person. Small, scoped pull requests get reviewed fastest.
 
-If you’re new here:
+## Before you start
 
-- Support / questions: `SUPPORT.md`
-- Product + architecture spec: `SPEC.md`
-- Current execution plan: `PLAN.md`
+Run the app locally with the steps in `README.md`. Read `DESIGN.md` before changing anything visual, since CI enforces the grammar it describes.
 
-## What we value
+## Pull requests
 
-- **Small/medium diffs** (easy to review, easy to revert)
-- **Root-cause fixes** over band-aids
-- **Keyboard + accessibility** as first-class UX
-- **Docs updated** when behavior changes
+- Use Conventional Commits in titles: `feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `perf:`, `test:`.
+- Run the checks that match your change: `pnpm next:lint`, `pnpm next:grammar`, `pnpm next:test` for the app; `pnpm ingest:lint`, `pnpm ingest:test` for ingestion.
+- Add or adjust a test alongside a bug fix when practical.
+- Add a line under Unreleased in `CHANGELOG.md` when behavior changes.
 
-## Repo structure
+## Questions and bugs
 
-This is a multi-service monorepo:
+Open a GitHub issue. For questions, use Discussions. Security reports go through `SECURITY.md`, not issues.
 
-- `nextjs/` — public website (Next.js App Router)
-- `backend/` — API-only FastAPI (private networking in prod)
-- `ingestion/` — dataset pipeline (scheduled via GitHub Actions)
-- `frontend/` — legacy Vite SPA (kept for CI/E2E harness; don’t add features)
+## Decisions
 
-## Prerequisites
+The maintainer decides what merges. Anything that changes the product's shape, such as accounts, server-side user state, or a new visual grammar, needs a discussion before a pull request.
 
-- Node.js (CI uses Node `26`)
-- pnpm (see `package.json` → `packageManager`)
-- Python (CI uses Python `3.14`) + `uv`
-- Docker (for local Postgres + Redis via `docker-compose.yml`)
+## Conduct
 
-## Quick start (local)
-
-```bash
-pnpm install
-pnpm db:up
-pnpm backend:dev
-pnpm next:dev
-```
-
-## Common workflows
-
-### Run checks
-
-- Next.js: `pnpm next:lint` / `pnpm next:build`
-- Backend: `pnpm backend:lint` / `pnpm backend:test`
-- Ingestion: `pnpm ingest:lint` / `pnpm ingest:test`
-
-### E2E (Playwright)
-
-E2E expects backend + Next.js running (see `.github/workflows/ci.yml` for the exact CI sequence).
-
-## PR expectations
-
-- Use Conventional Commits for PR titles / commit messages (e.g. `feat: …`, `fix: …`, `docs: …`).
-- Keep changes scoped; avoid drive-by refactors.
-- Update `SPEC.md` when behavior/API decisions change.
-- Add/adjust tests alongside bug fixes where practical.
-
-Thanks again — shipping small, sharp improvements is the fastest way to make this project great.
+Be respectful. See `CODE_OF_CONDUCT.md`.

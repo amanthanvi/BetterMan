@@ -7,11 +7,11 @@ import { Providers } from './providers'
 export const metadata: Metadata = {
   metadataBase: new URL('https://betterman.sh'),
   title: 'BetterMan',
-  description: 'Fast, modern web interface for Linux man pages.',
+  description: 'Unix manual pages, typeset for the screen.',
   manifest: '/site.webmanifest',
   openGraph: {
     title: 'BetterMan',
-    description: 'Fast, modern web interface for Linux man pages.',
+    description: 'Unix manual pages, typeset for the screen.',
     type: 'website',
     images: ['/og-image.png'],
   },

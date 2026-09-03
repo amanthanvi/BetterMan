@@ -91,28 +91,6 @@ jobs:
           # does not cover, and drop this line then.
           allow-ghsas: GHSA-mh99-v99m-4gvg
 
-  frontend:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          version: 10.34.4
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
-        with:
-          node-version: 26
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm -C frontend lint
-      - run: pnpm -C frontend test
-      - run: pnpm -C frontend build
-      - run: pnpm -C frontend bundle:report
 
   nextjs:
     runs-on: ubuntu-latest
@@ -137,23 +115,6 @@ jobs:
       - run: pnpm -C nextjs lint
       - run: pnpm -C nextjs build
 
-  backend:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: 3.14
-
-      - run: pipx install uv
-      - run: cd backend && uv sync --frozen
-      - run: cd backend && uv run ruff check .
-      - run: cd backend && uv run ruff format --check .
-      - run: cd backend && uv run pytest
 
   ingestion:
     runs-on: ubuntu-latest
@@ -173,45 +134,6 @@ jobs:
       - run: cd ingestion && uv run ruff format --check .
       - run: cd ingestion && uv run python -m pytest
 
-  api_types:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          version: 10.34.4
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
-        with:
-          node-version: 26
-          cache: pnpm
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: 3.14
-
-      - run: pnpm install --frozen-lockfile
-
-      - run: pipx install uv
-      - run: cd backend && uv sync --frozen
-
-      - name: OpenAPI types are up to date
-        run: |
-          set -euo pipefail
-
-          cd backend
-          uv run python scripts/export_openapi.py /tmp/betterman-openapi.json
-
-          cd ..
-          pnpm -C frontend exec openapi-typescript /tmp/betterman-openapi.json --output src/api/openapi.gen.ts
-          pnpm -C nextjs exec openapi-typescript /tmp/betterman-openapi.json --output lib/openapi.gen.ts
-
-          git diff --exit-code frontend/src/api/openapi.gen.ts
-          git diff --exit-code nextjs/lib/openapi.gen.ts
 
   container_build:
     runs-on: ubuntu-latest
@@ -222,17 +144,6 @@ jobs:
           persist-credentials: false
 
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
-
-      - name: Build legacy web image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        with:
-          context: .
-          file: Dockerfile
-          push: false
-          pull: true
-          tags: betterman-web:ci
-          cache-from: type=gha,scope=betterman-web
-          cache-to: type=gha,mode=max,scope=betterman-web
 
       - name: Build Next.js image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
@@ -247,7 +158,6 @@ jobs:
 
   e2e:
     needs:
-      - frontend
       - nextjs
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -338,4 +248,4 @@ jobs:
       - name: Run Playwright E2E + a11y
         env:
           E2E_BASE_URL: http://127.0.0.1:3000
-        run: pnpm -C frontend e2e
+        run: pnpm -C nextjs e2e

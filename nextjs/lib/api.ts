@@ -1,40 +1,66 @@
 import { api } from '../../convex/_generated/api'
 import { unstable_cache } from 'next/cache'
 import type { Distro } from './distro'
-import type {
-  AmbiguousPageResponse,
-  ManPageResponse,
-} from './docModel'
+import type { AmbiguousPageResponse, ManPage, ManPageResponse } from './docModel'
 import { getConvexClient } from './convexClient'
-import type { components } from './openapi.gen'
-
-type Schemas = components['schemas']
 const PUBLIC_REVALIDATE_SECONDS = 60 * 60
 const SEARCH_REVALIDATE_SECONDS = 5 * 60
 const SITEMAP_CHUNK_ITEMS = 5000
 const MAX_SITEMAP_CHUNKS = 10
 
-export type InfoResponse = Schemas['InfoResponse']
+export type InfoResponse = {
+  datasetReleaseId: string
+  distro: string
+  locale: string
+  pageCount: number
+  lastUpdated: string
+}
 
-export type SectionLabel = Schemas['SectionLabel']
+export type SectionLabel = { section: string; label: string }
 
-export type SearchResult = Schemas['SearchResult']
+export type SearchResult = {
+  name: string
+  section: string
+  title: string
+  description: string
+  highlights: string[]
+}
 
-export type SearchResponse = Schemas['SearchResponse']
+export type SearchResponse = {
+  query: string
+  results: SearchResult[]
+  suggestions: string[]
+  hasMore: boolean
+  nextOffset?: number | null
+}
 
-export type SectionPage = Schemas['SectionPage']
+export type SectionPage = { name: string; section: string; title: string; description: string }
 
-export type SectionResponse = Schemas['SectionResponse']
+export type SectionResponse = {
+  section: string
+  label: string
+  total: number
+  limit: number
+  offset: number
+  results: SectionPage[]
+}
 
-export type Suggestion = Schemas['Suggestion']
+export type Suggestion = { name: string; section: string; description: string }
 
-export type SuggestResponse = Schemas['SuggestResponse']
+export type SuggestResponse = { query: string; suggestions: Suggestion[] }
 
-export type LicensePackage = Schemas['LicensePackage']
+export type LicensePackage = { name: string; version: string; hasLicenseText: boolean }
 
-export type LicensesResponse = Schemas['LicensesResponse']
+export type LicensesResponse = {
+  datasetReleaseId: string
+  imageRef: string
+  imageDigest: string
+  ingestedAt: string
+  packageManifest: Record<string, unknown> | null
+  packages: LicensePackage[]
+}
 
-export type LicenseTextResponse = Schemas['LicenseTextResponse']
+export type LicenseTextResponse = { package: string; licenseId: string; licenseName: string; text: string }
 
 export class FastApiError extends Error {
   status: number
@@ -287,9 +313,9 @@ export async function fetchManByNameAndSection(opts: {
   return result
 }
 
-export type RelatedResponse = Schemas['RelatedResponse']
+export type RelatedResponse = { items: SectionPage[] }
 
-export type ManPageMetaResponse = Schemas['ManPageMetaResponse']
+export type ManPageMetaResponse = { page: ManPage }
 
 export async function fetchRelated(opts: {
   distro: Distro

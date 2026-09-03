@@ -92,7 +92,7 @@ combinator (no merge — primitives own their recipes).
 - **Highlights:** `mark[data-bm-find]`, `mark[data-bm-opt]`, `.bm-mark`,
   `.bm-find-active`.
 - **Data hooks:** `data-bm-app-header/app-footer/mobile-nav/sidebar/findbar/home-search/page-search`.
-- **Accessible names asserted by `frontend/e2e/`:** banner "Site header",
+- **Accessible names asserted by `nextjs/e2e/`:** banner "Site header",
   contentinfo "Site footer", searchbox "Search man pages", combobox
   "Command palette input", textbox "Find in page", nav "On this page" /
   "Section filter", dialogs "Table of contents" / "Reading preferences" /

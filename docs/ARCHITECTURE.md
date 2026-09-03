@@ -1,91 +1,37 @@
-# Architecture overview
+# Architecture
 
-BetterMan is a public, read-only web UI for man pages.
-
-This document is the “quick read” version of `SPEC.md`:
-
-- **Want full details?** Read `SPEC.md`.
-- **Want the shipping checklist?** Read `PLAN.md`.
-
-## Big picture
-
-BetterMan is a multi-service monorepo:
-
-- `nextjs/` — Next.js App Router (public web)
-- `convex/` — dataset, search, rate limit, and ingest/promote backend
-- `backend/` — legacy FastAPI API service retained during cutover maintenance
-- `ingestion/` — dataset pipeline (builds + promotes releases into Convex)
-- `frontend/` — legacy Vite SPA (kept for CI/E2E harness; don’t add features)
-
-### Runtime components
+BetterMan is a read-only web UI for man pages.
 
 ```text
 browser
-  │
-  │  (SSR + API routes)
+  │  SSR pages and /api/v1/* route handlers
   ▼
-Next.js (nextjs/)
-  │
-  │  Convex client queries/mutations
+Next.js on Vercel (nextjs/)
+  │  Convex queries and actions, server side only
   ▼
 Convex (convex/)
-  ├─ dataset releases + active stage pointers
-  ├─ man page metadata/content/search documents
-  └─ rate limit bucket documents
+  ├─ dataset releases and active stage pointers (staging, prod)
+  ├─ man page metadata, content blobs, search documents, links
+  └─ rate-limit buckets
 
 GitHub Actions (ingestion/)
-  └─ builds + promotes dataset release pointers through Convex HTTP actions
-
-GitHub Actions (ci → deploy workflow_run)
-  └─ stages, verifies, and promotes the exact tested main SHA to Next.js on Vercel
+  └─ builds a release per distro and uploads it through Convex HTTP actions
 ```
 
-## Key flows
+## Requests
 
-### Search
+A man page request hits `nextjs/app/man/[name]/[section]/page.tsx`, which calls `fetchManPage` in `nextjs/lib/api.ts`. That resolves the `prod` pointer inside Convex, loads metadata and content, and renders through `components/doc/DocRenderer.tsx`. Search works the same way through `convex/queries.ts`. Public Convex functions cannot be pointed at `staging`; CI checks this.
 
-1. User searches from the Next.js UI.
-2. Next.js calls Convex text search through server helpers/API routes.
-3. Convex returns ranked results with deterministic snippets.
-4. Next.js renders results with fast previews.
+Personalization (theme, distro, bookmarks, history, reading preferences) lives in the browser. Theme and distro are mirrored into cookies so the server can render the right first paint.
 
-### Man page view
+## Data
 
-1. User opens `/man/<name>/<section>`.
-2. Next.js fetches page content + metadata from Convex.
-3. The UI renders a readable page with optional Navigator (TOC + find-in-page).
+`ingestion/` runs `mandoc -Thtml` on each page and converts the HTML into the document model in `ingestion/ingestion/doc_model.py`. The TypeScript mirror is `nextjs/lib/docModel.ts`. Golden fixtures in both packages keep them aligned.
 
-### Dataset release lifecycle
+A release is one distro at one point in time. Ingestion writes a release, activates it for `staging`, and promotion copies the pointer to `prod`. Content is stored by hash so identical pages across distros share one blob.
 
-- Ingestion runs on GitHub Actions (see `.github/workflows/update-docs.yml`).
-- Releases are imported into Convex, activated for `staging`, then promoted by copying active release pointers to `prod`.
-- The app surfaces release metadata (e.g. dataset release id / last updated) via `/api/v1/info`.
+## Deploy
 
-## Contracts
+CI runs on every push and pull request (`.github/workflows/ci.yml`). A successful CI run on `main` triggers `.github/workflows/deploy.yml`, which deploys the Convex functions for that exact SHA, builds and stages the Next.js app, verifies it, and promotes it. `docs/runbooks/vercel-ops.md` covers rollback.
 
-- The public JSON response contract remains `/api/v1/*` through Next route handlers.
-- Legacy FastAPI still publishes OpenAPI types during the transition.
-  - Runbook: `docs/runbooks/type-gen.md`
-  - CI job: `api_types` in `.github/workflows/ci.yml`
-
-## Deployment
-
-Production deploy is handled by a non-cancelable GitHub Actions workflow after CI passes on pushes to `main`.
-
-- CI: `.github/workflows/ci.yml`
-- Deploy workflow: `.github/workflows/deploy.yml`
-- Ops notes: `docs/runbooks/vercel-ops.md`
-
-### Runtime topology
-
-- `nextjs` — public web (Next.js on Vercel)
-- Convex — app data, search, ingestion, and rate-limit state
-- `web` — legacy FastAPI API-only service retained until infrastructure cleanup is approved
-
-## Where to look next
-
-- Product + architecture spec: `SPEC.md`
-- Execution plan: `PLAN.md`
-- Runbooks: `docs/runbooks/README.md`
-- Support process: `SUPPORT.md`
-- Contributing guide: `CONTRIBUTING.md`
+The dataset is refreshed monthly by `.github/workflows/update-docs.yml`. `docs/runbooks/multi-distro-ops.md` covers manual dispatch and promotion.
