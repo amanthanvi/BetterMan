@@ -1,12 +1,56 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalMutation, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { pageByNameAndSection } from "./_releaseLookups";
 import { cachedRelatedItem } from "./_relatedLinks";
 import { DATASET_STAGES, DISTROS } from "./lib";
+import { datasetStageValidator, distroValidator } from "./schema";
 
 const BACKFILL_BATCH_SIZE = 100;
+
+export const activeMetadataStatus = internalQuery({
+  args: {},
+  returns: v.object({
+    complete: v.boolean(),
+    releases: v.array(v.object({
+      datasetReleaseId: v.string(),
+      stage: datasetStageValidator,
+      distro: distroValidator,
+      currentVersion: v.union(v.number(), v.null()),
+      completedVersion: v.union(v.number(), v.null()),
+      complete: v.boolean(),
+    })),
+  }),
+  handler: async (ctx) => {
+    const releases = [];
+    for (const stage of DATASET_STAGES) {
+      for (const distro of DISTROS) {
+        // Schema validators bound the supported pairs. Unique lookups fail
+        // closed on duplicate pointers rather than hiding them behind a cap.
+        const pointer = await ctx.db
+          .query("activeReleases")
+          .withIndex("by_stage_and_locale_and_distro", (q) =>
+            q.eq("stage", stage).eq("locale", "en").eq("distro", distro),
+          )
+          .unique();
+        if (!pointer) continue;
+        const release = await ctx.db.get(pointer.releaseId);
+        const currentVersion = release ? release.relatedMetadataVersion ?? 0 : null;
+        const completedVersion = release?.relatedMetadataCompletedVersion ?? null;
+        releases.push({
+          datasetReleaseId: pointer.datasetReleaseId,
+          stage,
+          distro,
+          currentVersion,
+          completedVersion,
+          complete: currentVersion !== null && completedVersion === currentVersion,
+        });
+      }
+    }
+    return { complete: releases.length > 0 && releases.every((release) => release.complete), releases };
+  },
+});
 
 export async function scheduleRelatedMetadataBackfill(
   ctx: MutationCtx,

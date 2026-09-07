@@ -213,3 +213,77 @@ describe("related metadata backfill", () => {
     expect(await t.run((ctx) => ctx.db.get(releaseId))).toEqual(release);
   });
 });
+
+describe("active metadata readiness", () => {
+  it("reports pending and completed stages without scheduling work, then invalidates after an upload", async () => {
+    const t = convexTest(schema, modules);
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("readiness"));
+    await t.run(async (ctx) => {
+      for (const stage of ["staging", "prod"] as const) {
+        await ctx.db.insert("activeReleases", {
+          stage, locale: "en", distro: "debian", releaseId,
+          datasetReleaseId: "readiness", activatedAt: "2026-09-07T00:00:00Z",
+        });
+      }
+    });
+    const pending = {
+      complete: false,
+      releases: ["staging", "prod"].map((stage) => ({
+        datasetReleaseId: "readiness", stage, distro: "debian",
+        currentVersion: 0, completedVersion: null, complete: false,
+      })),
+    };
+    expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual(pending);
+    expect(await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(1))).toEqual([]);
+    await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "readiness", cursor: null });
+    expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual({
+      complete: true,
+      releases: pending.releases.map((release) => ({ ...release, completedVersion: 0, complete: true })),
+    });
+    await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "readiness", pages: [pageInput("new")] });
+    expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual({
+      complete: false,
+      releases: pending.releases.map((release) => ({ ...release, currentVersion: 1, completedVersion: 0 })),
+    });
+    expect(await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(1))).toEqual([]);
+  });
+
+  it("reports a missing release as incomplete", async () => {
+    const t = convexTest(schema, modules);
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("missing"));
+    await t.run(async (ctx) => {
+      await ctx.db.insert("activeReleases", {
+        stage: "prod", locale: "en", distro: "debian", releaseId,
+        datasetReleaseId: "missing", activatedAt: "2026-09-07T00:00:00Z",
+      });
+      await ctx.db.delete(releaseId);
+    });
+    expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual({
+      complete: false,
+      releases: [{
+        datasetReleaseId: "missing", stage: "prod", distro: "debian",
+        currentVersion: null, completedVersion: null, complete: false,
+      }],
+    });
+  });
+
+  it("does not declare an empty dataset ready", async () => {
+    const t = convexTest(schema, modules);
+    expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual({ complete: false, releases: [] });
+  });
+
+  it("fails closed on duplicate active pointers", async () => {
+    const t = convexTest(schema, modules);
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("duplicate"));
+    await t.run(async (ctx) => {
+      await ctx.db.patch(releaseId, { relatedMetadataCompletedVersion: 0 });
+      for (let index = 0; index < 2; index += 1) {
+        await ctx.db.insert("activeReleases", {
+          stage: "prod", locale: "en", distro: "debian", releaseId,
+          datasetReleaseId: "duplicate", activatedAt: "2026-09-07T00:00:00Z",
+        });
+      }
+    });
+    await expect(t.query(internal.related.activeMetadataStatus, {})).rejects.toThrow();
+  });
+});

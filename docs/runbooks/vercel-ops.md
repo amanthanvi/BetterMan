@@ -17,7 +17,7 @@ Also set the public `CONVEX_URL` GitHub environment variable to the production `
 2. `.github/workflows/ci.yml` runs the complete test/build/security matrix.
 3. A non-cancelable `workflow_run` in `.github/workflows/deploy.yml` accepts only a successful `push` CI result for `main`, checks out its exact `head_sha`, and confirms that SHA is still current `main` before changing the backend.
 4. Under the repository's Node 26 tooling contract, the workflow deploys that exact SHA's Convex schema/functions, then checks production release data, search, page content, and metadata functions. Convex changes must remain backward-compatible with the currently promoted frontend during this handoff.
-5. The workflow switches to the Vercel project's Node 24 build/runtime contract, installs pinned Vercel CLI `59.10.0`, and runs `scripts/deploy-vercel.sh` from the repository root. Vercel applies the project's `nextjs` root directory exactly once. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
+5. The workflow switches to the Vercel project's Node 24 build/runtime contract, uses pinned Vercel CLI `58.4.4`, and runs `scripts/deploy-vercel.sh` from the repository root. Vercel applies the project's `nextjs` root directory exactly once. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
 6. It requires the staged deployment to pass all of the following:
    - deployment state is `READY`;
    - deployment metadata SHA equals the checked-out `main` SHA;
@@ -35,8 +35,35 @@ After an automatic Convex deployment, `related:backfillActiveReleases` schedules
 promotion also schedule hydration. Completed release versions are skipped on
 subsequent deployments; resumed uploads invalidate completion. Related queries
 retain the target lookup fallback until hydration finishes, so the frontend does
-not wait for this background migration. Historical frontend rollbacks do not
-restart it or roll the schema backward.
+not depend on this background migration for correctness. Before deploying the
+new frontend, `pnpm convex:related-check` polls the read-only internal
+`related:activeMetadataStatus` query for up to five minutes. Every existing active
+pointer must reference a release whose current metadata version is complete.
+Missing releases, duplicate pointers, empty status, query failures, or timeout
+fail the deployment; successful completion is recorded in the job summary.
+Historical frontend rollbacks do not restart or wait on migration, or roll the
+schema backward. New uploads can invalidate a completed snapshot and activation
+will schedule another pass.
+
+## CLI provenance
+
+`pnpm deps:provenance` runs `npm audit signatures` against the installed frozen
+dependency tree, then requires verified SLSA provenance for the exact Vercel CLI
+pin from `vercel/vercel`'s `.github/workflows/release.yml`. It runs in PR CI and
+again against trusted deployment tooling before any deployment credentials are
+passed to the CLI. Sigstore verification additionally requires the exact release
+workflow certificate identity on `main` and the GitHub Actions OIDC issuer.
+Missing attestations fail even if registry signatures pass.
+
+The CLI is pinned to 58.4.4, the newest attested stable release observed on
+September 7, 2026. Its verified source commit is
+`6331571e2fe14de31a01d00deead9e7a349e53a6`. Vercel moved later CLI publication to
+private source; see https://github.com/vercel/vercel/issues/17408. Version 59.10.0
+had registry signatures but no provenance, and its vendor integrity endpoint
+returned 404. That is not evidence of compromise, but does not meet this gate.
+Do not remove the provenance gate to accept an automated upgrade. Re-evaluate
+the pin when attested releases become available, or explicitly review an
+alternative verification policy if security or compatibility fixes require it.
 
 ## Manual deployment or rollback
 

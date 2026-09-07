@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Deployment: verify completion of every active related-metadata backfill before publishing the new frontend, with a bounded read-only poll and a recorded job summary.
+- Supply chain: return deployment tooling to attested Vercel CLI 58.4.4 and require cryptographically verified npm provenance from its public release workflow in CI and production deployment. Application dependency updates remain in place; OSV exception scope and expiry are unchanged.
 - Section browse: seek forward and backward by name cursor without rereading earlier pages; retain bounded legacy offset requests and add cursor metadata to the section API. Resolves #232.
 - Related pages: cache resolved target titles and descriptions on links, hydrate active releases in bounded resumable batches, and retain lookup fallback for older or unresolved links. Resolves #233.
 - Dependencies: consolidate Pydantic 2.13.5, Ruff 0.16.6, Vercel 59.10.0, Convex 1.45.0, Next.js 16.3.3, Tailwind 4.3.3, and React Virtual 3.14.10; align paired tooling and Vercel security/version guards. Includes #240, #241, #242, #243, #244, #245, and #247; thanks @dependabot.
