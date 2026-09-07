@@ -17,7 +17,7 @@ Also set the public `CONVEX_URL` GitHub environment variable to the production `
 2. `.github/workflows/ci.yml` runs the complete test/build/security matrix.
 3. A non-cancelable `workflow_run` in `.github/workflows/deploy.yml` accepts only a successful `push` CI result for `main`, checks out its exact `head_sha`, and confirms that SHA is still current `main` before changing the backend.
 4. Under the repository's Node 26 tooling contract, the workflow deploys that exact SHA's Convex schema/functions, then checks production release data, search, page content, and metadata functions. Convex changes must remain backward-compatible with the currently promoted frontend during this handoff.
-5. The workflow switches to the Vercel project's Node 24 build/runtime contract, installs pinned Vercel CLI `58.4.4`, and runs `scripts/deploy-vercel.sh` from the repository root. Vercel applies the project's `nextjs` root directory exactly once. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
+5. The workflow switches to the Vercel project's Node 24 build/runtime contract, installs pinned Vercel CLI `59.10.0`, and runs `scripts/deploy-vercel.sh` from the repository root. Vercel applies the project's `nextjs` root directory exactly once. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
 6. It requires the staged deployment to pass all of the following:
    - deployment state is `READY`;
    - deployment metadata SHA equals the checked-out `main` SHA;
@@ -29,6 +29,14 @@ Also set the public `CONVEX_URL` GitHub environment variable to the production `
 8. Only then does the script promote the deployment and require both `betterman.sh` and `www.betterman.sh` to point to its exact deployment ID and serve initialized API data. A post-promotion failure automatically rolls back to the deployment captured before the run.
 
 The job is not `continue-on-error`. A failed deployment or verification leaves the workflow red.
+
+After an automatic Convex deployment, `related:backfillActiveReleases` schedules
+100-link metadata batches for unfinished active English releases. Activation and
+promotion also schedule hydration. Completed release versions are skipped on
+subsequent deployments; resumed uploads invalidate completion. Related queries
+retain the target lookup fallback until hydration finishes, so the frontend does
+not wait for this background migration. Historical frontend rollbacks do not
+restart it or roll the schema backward.
 
 ## Manual deployment or rollback
 

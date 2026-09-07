@@ -5,6 +5,8 @@
 	"scripts": {
 		"convex:dev": "convex dev",
 		"convex:check": "CONVEX_AGENT_MODE=anonymous convex dev --once",
+		"convex:test": "vitest run --config vitest.config.ts",
+		"convex:typecheck": "tsc --noEmit -p convex/tsconfig.json",
 		"convex:prod-check": "node scripts/check-convex-production.mjs",
 		"next:dev": "convex dev --start \"pnpm -C nextjs dev\"",
 		"next:build": "pnpm -C nextjs build",
@@ -18,11 +20,15 @@
 		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest"
 	},
 	"dependencies": {
-		"convex": "^1.44.0"
+		"convex": "^1.45.0"
 	},
 	"devDependencies": {
+		"@edge-runtime/vm": "5.0.0",
 		"@types/node": "^26.2.0",
+		"convex-test": "0.0.56",
 		"typescript": "6.0.3",
-		"vercel": "58.4.4"
+		"vercel": "59.10.0",
+		"vite": "8.2.2",
+		"vitest": "4.1.2"
 	}
 }

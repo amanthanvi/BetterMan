@@ -38,6 +38,9 @@ export default defineSchema({
     ingestedAt: v.string(),
     packageManifestJson: v.optional(v.string()),
     pageCount: v.number(),
+    // Successful page batches invalidate completion, including resumed uploads.
+    relatedMetadataVersion: v.optional(v.number()),
+    relatedMetadataCompletedVersion: v.optional(v.number()),
   })
     .index("by_datasetReleaseId", ["datasetReleaseId"])
     .index("by_locale_and_distro_and_datasetReleaseId", [
@@ -180,6 +183,9 @@ export default defineSchema({
     toExternalId: v.optional(v.string()),
     toName: v.string(),
     toSection: v.string(),
+    // Older releases and unresolved targets retain the lookup fallback.
+    toTitle: v.optional(v.string()),
+    toDescription: v.optional(v.string()),
     linkType: v.union(v.literal("see_also"), v.literal("xref")),
   })
     .index("by_releaseId", ["releaseId"])

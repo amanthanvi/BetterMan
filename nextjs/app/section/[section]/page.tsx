@@ -40,9 +40,11 @@ function groupByLeadingChar<T extends { name: string }>(items: readonly T[]): Ar
   return groups
 }
 
-function buildSectionHref(opts: { section: string; distro: Distro; offset: number }) {
+function buildSectionHref(opts: { section: string; distro: Distro; offset: number; cursor?: string | null; before?: string | null }) {
   const params = new URLSearchParams()
   if (opts.offset > 0) params.set('offset', String(opts.offset))
+  if (opts.cursor != null) params.set('cursor', opts.cursor)
+  if (opts.before != null) params.set('before', opts.before)
   if (!isDefaultDistro(opts.distro)) params.set('distro', opts.distro)
   const qs = params.toString()
   return qs ? `/section/${encodeURIComponent(opts.section)}?${qs}` : `/section/${encodeURIComponent(opts.section)}`
@@ -106,15 +108,18 @@ export default async function SectionPage({
   const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
   const offset = Number.parseInt(getFirst(sp.offset) ?? '0', 10)
   const safeOffset = Number.isFinite(offset) && offset >= 0 ? offset : 0
+  const cursor = getFirst(sp.cursor)
+  const before = cursor === undefined ? getFirst(sp.before) : undefined
 
   const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
-    listSection({ distro: activeDistro, section, limit: 200, offset: safeOffset }),
+    listSection({ distro: activeDistro, section, limit: 200, offset: safeOffset, cursor, before }),
   )
   const groups = groupByLeadingChar(data.results)
   const prevOffset = Math.max(0, data.offset - data.limit)
   const nextOffset = data.offset + data.results.length
-  const hasPrevPage = data.offset > 0
-  const hasNextPage = nextOffset < data.total
+  const hasPrevPage = data.prevCursor !== null
+  const hasNextPage = data.nextCursor !== null
+  const canRestart = data.results.length === 0 && (data.offset > 0 || cursor !== undefined || before !== undefined)
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -197,14 +202,19 @@ export default async function SectionPage({
             : `Showing ${data.offset + 1}-${data.offset + data.results.length} of ${data.total.toLocaleString()} results.`}
         </div>
         <div className="flex items-center gap-2">
+          {canRestart ? (
+            <PaginationControl href={buildSectionHref({ section: data.section, distro, offset: 0 })} disabled={false}>
+              First page
+            </PaginationControl>
+          ) : null}
           <PaginationControl
-            href={buildSectionHref({ section: data.section, distro, offset: prevOffset })}
+            href={buildSectionHref({ section: data.section, distro, offset: prevOffset, before: data.prevCursor })}
             disabled={!hasPrevPage}
           >
             Previous
           </PaginationControl>
           <PaginationControl
-            href={buildSectionHref({ section: data.section, distro, offset: nextOffset })}
+            href={buildSectionHref({ section: data.section, distro, offset: nextOffset, cursor: data.nextCursor })}
             disabled={!hasNextPage}
           >
             Next

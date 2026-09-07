@@ -16,6 +16,7 @@ const apiMocks = vi.hoisted(() => ({
   },
   fetchManMetaByNameAndSection: vi.fn(),
   search: vi.fn(),
+  listSection: vi.fn(),
 }))
 
 const convexMocks = vi.hoisted(() => ({
@@ -34,7 +35,7 @@ vi.mock('@/lib/api', () => ({
   fetchRelated: vi.fn(),
   fetchSeoReleases: vi.fn(),
   fetchSeoSitemapPage: vi.fn(),
-  listSection: vi.fn(),
+  listSection: apiMocks.listSection,
   listSections: vi.fn(),
   search: apiMocks.search,
   suggest: vi.fn(),
@@ -146,6 +147,35 @@ describe('public API aliases', () => {
 
     expect(res.status).toBe(308)
     expect(res.headers.get('location')).toBe('/api/v1/man/gzip/1?distro=ubuntu')
+  })
+})
+
+describe('section pagination API', () => {
+  it.each(['section', 'sections'])('preserves offset callers at /api/v1/%s/1', async (path) => {
+    const result = { section: '1', label: 'User Commands', total: 3, limit: 1, offset: 1,
+      results: [{ name: 'bash', section: '1', title: 'bash', description: 'shell' }],
+      hasMore: true, nextCursor: 'bash', prevCursor: 'bash' }
+    apiMocks.listSection.mockResolvedValue(result)
+    const res = await GET(request(`/api/v1/${path}/1?limit=1&offset=1`), context(['v1', path, '1']))
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual(result)
+    expect(apiMocks.listSection).toHaveBeenCalledWith({ distro: 'debian', section: '1', limit: 1, offset: 1 })
+  })
+
+  it.each(['cursor', 'before'])('passes literal %s values and deep display offsets', async (name) => {
+    apiMocks.listSection.mockResolvedValue({ results: [], hasMore: false, nextCursor: null, prevCursor: null })
+    const params = new URLSearchParams({ [name]: 'name+with&symbols', offset: '5500', distro: 'ubuntu' })
+    const res = await GET(request(`/api/v1/sections/1?${params}`), context(['v1', 'sections', '1']))
+    expect(res.status).toBe(200)
+    expect(apiMocks.listSection).toHaveBeenCalledWith({
+      distro: 'ubuntu', section: '1', limit: 200, offset: 5500, [name]: 'name+with&symbols',
+    })
+  })
+
+  it.each(['cursor=awk&before=bash', 'offset=5001', 'cursor=awk&offset=9007199254740992'])('rejects invalid pagination: %s', async (params) => {
+    const res = await GET(request(`/api/v1/sections/1?${params}`), context(['v1', 'sections', '1']))
+    expect(res.status).toBe(422)
+    expect(apiMocks.listSection).not.toHaveBeenCalled()
   })
 })
 

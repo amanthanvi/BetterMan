@@ -9,6 +9,7 @@
  */
 
 import type * as _legacyContent from "../_legacyContent.js";
+import type * as _relatedLinks from "../_relatedLinks.js";
 import type * as _releaseLookups from "../_releaseLookups.js";
 import type * as content from "../content.js";
 import type * as http from "../http.js";
@@ -17,6 +18,7 @@ import type * as lib from "../lib.js";
 import type * as maintenance from "../maintenance.js";
 import type * as queries from "../queries.js";
 import type * as rateLimit from "../rateLimit.js";
+import type * as related from "../related.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +28,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   _legacyContent: typeof _legacyContent;
+  _relatedLinks: typeof _relatedLinks;
   _releaseLookups: typeof _releaseLookups;
   content: typeof content;
   http: typeof http;
@@ -34,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   maintenance: typeof maintenance;
   queries: typeof queries;
   rateLimit: typeof rateLimit;
+  related: typeof related;
 }>;
 
 /**

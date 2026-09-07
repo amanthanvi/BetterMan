@@ -42,6 +42,9 @@ export type SectionResponse = {
   total: number
   limit: number
   offset: number
+  hasMore: boolean
+  nextCursor: string | null
+  prevCursor: string | null
   results: SectionPage[]
 }
 
@@ -159,14 +162,18 @@ const cachedSection = unstable_cache(
     section: string,
     limit: number,
     offset: number,
+    cursor: string | null,
+    before: string | null,
   ) =>
     await convex().query(api.queries.listSection, {
       distro,
       section,
       limit,
       offset,
+      ...(cursor === null ? {} : { cursor }),
+      ...(before === null ? {} : { before }),
     }),
-  ['betterman', 'convex', 'section'],
+  ['betterman', 'convex', 'section', 'v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -255,6 +262,8 @@ export async function listSection(opts: {
   section: string
   limit?: number
   offset?: number
+  cursor?: string
+  before?: string
 }): Promise<SectionResponse> {
   const result = await mapConvexError(() =>
     cachedSection(
@@ -262,6 +271,8 @@ export async function listSection(opts: {
       opts.section,
       opts.limit ?? 200,
       opts.offset ?? 0,
+      opts.cursor ?? null,
+      opts.before ?? null,
     ),
   )
   if (!result) throw apiError(404, 'SECTION_NOT_FOUND', 'Section not found')

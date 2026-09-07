@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { resolveRelatedItems } from "./_relatedLinks";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { distroValidator, publicStageCompatibilityValidator } from "./schema";
@@ -177,12 +178,31 @@ export const listSection = query({
     distro: distroValidator,
     section: v.string(),
     limit: v.number(),
-    offset: v.number(),
+    offset: v.optional(v.number()),
+    cursor: v.optional(v.string()),
+    before: v.optional(v.string()),
   },
+  returns: v.union(v.null(), v.object({
+    section: v.string(),
+    label: v.string(),
+    limit: v.number(),
+    offset: v.number(),
+    total: v.number(),
+    hasMore: v.boolean(),
+    nextCursor: v.union(v.string(), v.null()),
+    prevCursor: v.union(v.string(), v.null()),
+    results: v.array(v.object({
+      name: v.string(), section: v.string(), title: v.string(), description: v.string(),
+    })),
+  })),
   handler: async (ctx, args) => {
     const section = normalizeSection(args.section);
     const limit = boundedInt(args.limit, 1, MAX_SECTION_LIMIT);
-    const offset = boundedInt(args.offset, 0, MAX_SECTION_OFFSET);
+    if (args.cursor !== undefined && args.before !== undefined) {
+      throw new Error("Use either cursor or before, not both");
+    }
+    const hasCursor = args.cursor !== undefined || args.before !== undefined;
+    const offset = boundedInt(args.offset ?? 0, 0, hasCursor ? Number.MAX_SAFE_INTEGER : MAX_SECTION_OFFSET);
     const release = await requireActiveRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
@@ -199,10 +219,41 @@ export const listSection = query({
     // payloads that are larger than the list fields this endpoint returns.
     const pages = await ctx.db
       .query("manPages")
-      .withIndex("by_releaseId_and_section_and_name", (q) =>
-        q.eq("releaseId", release._id).eq("section", section),
-      )
-      .take(offset + limit);
+      .withIndex("by_releaseId_and_section_and_name", (q) => {
+        const range = q.eq("releaseId", release._id).eq("section", section);
+        if (args.cursor !== undefined) return range.gt("name", args.cursor);
+        if (args.before !== undefined) return range.lt("name", args.before);
+        return range;
+      })
+      .order(args.before !== undefined ? "desc" : "asc")
+      .take((hasCursor ? 0 : offset) + limit + 1);
+    const visible = pages.slice(hasCursor ? 0 : offset, (hasCursor ? 0 : offset) + limit);
+    if (args.before !== undefined) visible.reverse();
+
+    let hasPrevious = offset > 0;
+    let hasNext = pages.length > (hasCursor ? 0 : offset) + limit;
+    // Probe only the opposite edge; name cursors read at most limit + 2 rows,
+    // regardless of the display offset or position within the section.
+    if (hasCursor && visible.length > 0) {
+      const backward = args.before !== undefined;
+      const edgeName = backward ? visible[visible.length - 1].name : visible[0].name;
+      const opposite = await ctx.db
+        .query("manPages")
+        .withIndex("by_releaseId_and_section_and_name", (q) => {
+          const range = q.eq("releaseId", release._id).eq("section", section);
+          return backward ? range.gt("name", edgeName) : range.lt("name", edgeName);
+        })
+        .order(backward ? "asc" : "desc")
+        .take(1);
+      if (backward) {
+        hasPrevious = hasNext;
+        hasNext = opposite.length > 0;
+      } else {
+        hasPrevious = opposite.length > 0;
+      }
+    }
+    const nextCursor = hasNext && visible.length > 0 ? visible[visible.length - 1].name : null;
+    const prevCursor = hasPrevious && visible.length > 0 ? visible[0].name : null;
 
     return {
       section,
@@ -210,7 +261,10 @@ export const listSection = query({
       limit,
       offset,
       total: stat.total,
-      results: pages.slice(offset).map((page) => ({
+      hasMore: nextCursor !== null,
+      nextCursor,
+      prevCursor,
+      results: visible.map((page) => ({
         name: page.name,
         section: page.section,
         title: page.title,
@@ -256,38 +310,16 @@ export const getRelated = query({
         .take(MAX_RELATED),
     ]);
 
-    // Deduplicate across see_also + xref (up to 2 * MAX_RELATED candidates), then
-    // resolve in parallel and keep filling until MAX_RELATED valid pages exist.
-    const uniqueLinks = [];
-    const seen = new Set<string>();
-    for (const link of [...seeAlso, ...xrefs]) {
-      const key = `${link.toName}:${link.toSection}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      uniqueLinks.push(link);
-    }
-
-    const linkedPages = await Promise.all(
-      uniqueLinks.map((link) =>
+    const items = await resolveRelatedItems(
+      [...seeAlso, ...xrefs],
+      (targetName, targetSection) =>
         pageByNameAndSection(ctx, {
           releaseId: release._id,
-          name: link.toName,
-          section: link.toSection,
+          name: targetName,
+          section: targetSection,
         }),
-      ),
+      MAX_RELATED,
     );
-
-    const items = [];
-    for (const linkedPage of linkedPages) {
-      if (!linkedPage) continue;
-      items.push({
-        name: linkedPage.name,
-        section: linkedPage.section,
-        title: linkedPage.title,
-        description: linkedPage.description,
-      });
-      if (items.length >= MAX_RELATED) break;
-    }
 
     return { items };
   },

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { datasetStageValidator, distroValidator } from "./schema";
+import { scheduleRelatedMetadataBackfill } from "./related";
 import {
   compactManPageSearchText,
   MAX_SNIPPET_TEXT_CHARS,
@@ -372,6 +373,9 @@ export const insertPages = internalMutation({
       inserted += 1;
     }
 
+    if (inserted > 0) {
+      await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
+    }
     return { inserted, skipped };
   },
 });
@@ -459,6 +463,9 @@ export const insertStoredPages = internalMutation({
       inserted += 1;
     }
 
+    if (inserted > 0) {
+      await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
+    }
     return { inserted, skipped };
   },
 });
@@ -582,6 +589,9 @@ export const activateRelease = internalMutation({
       await ctx.db.insert("activeReleases", payload);
     }
 
+    // Targets can arrive in later page batches. Hydrate only after upload ends.
+    await scheduleRelatedMetadataBackfill(ctx, release);
+
     return {
       stage: args.stage,
       distro: release.distro,
@@ -629,6 +639,10 @@ export const promoteActiveReleases = internalMutation({
       } else {
         await ctx.db.insert("activeReleases", payload);
       }
+
+      // Promotion also upgrades releases uploaded before link metadata existed.
+      const release = await ctx.db.get(source.releaseId);
+      if (release) await scheduleRelatedMetadataBackfill(ctx, release);
 
       promoted.push({ distro, datasetReleaseId: source.datasetReleaseId });
     }
