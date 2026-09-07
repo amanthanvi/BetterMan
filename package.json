@@ -8,6 +8,9 @@
 		"convex:test": "vitest run --config vitest.config.ts",
 		"convex:typecheck": "tsc --noEmit -p convex/tsconfig.json",
 		"convex:prod-check": "node scripts/check-convex-production.mjs",
+		"convex:related-check": "node scripts/check-related-metadata.mjs",
+		"ops:test": "node --test scripts/check-related-metadata.test.mjs scripts/check-vercel-provenance.test.mjs",
+		"deps:provenance": "node scripts/check-vercel-provenance.mjs",
 		"next:dev": "convex dev --start \"pnpm -C nextjs dev\"",
 		"next:build": "pnpm -C nextjs build",
 		"next:lint": "pnpm -C nextjs lint",
@@ -26,8 +29,9 @@
 		"@edge-runtime/vm": "5.0.0",
 		"@types/node": "^26.2.0",
 		"convex-test": "0.0.56",
+		"sigstore": "4.1.1",
 		"typescript": "6.0.3",
-		"vercel": "59.10.0",
+		"vercel": "58.4.4",
 		"vite": "8.2.2",
 		"vitest": "4.1.2"
 	}

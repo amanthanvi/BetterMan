@@ -1,9 +1,9 @@
 [[IgnoredVulns]]
 id = "GHSA-fm4j-4xhm-xpwx"
 ignoreUntil = 2027-08-03
-reason = "Rechecked 2026-09-07 for Vercel CLI 59.10.0: OSV has no fixed event for the legacy sandbox package, but GitHub bounds the affected range below 1.0.0; this lockfile contains Vercel's unrelated sandbox@4.1.0 package from vercel/sandbox. See https://github.com/advisories/GHSA-fm4j-4xhm-xpwx."
+reason = "Rechecked 2026-09-07 for attested Vercel CLI 58.4.4: OSV has no fixed event for the legacy sandbox package, but GitHub bounds the affected range below 1.0.0; this lockfile contains Vercel's unrelated sandbox@3.4.0 package from vercel/sandbox. See https://github.com/advisories/GHSA-fm4j-4xhm-xpwx."
 
 [[IgnoredVulns]]
 id = "GHSA-gc25-3vc5-2jf9"
 ignoreUntil = 2027-08-03
-reason = "Rechecked 2026-09-07 for Vercel CLI 59.10.0: OSV has no fixed event for the legacy sandbox package, but GitHub bounds the affected range below 1.0.0; this lockfile contains Vercel's unrelated sandbox@4.1.0 package from vercel/sandbox. See https://github.com/advisories/GHSA-gc25-3vc5-2jf9."
+reason = "Rechecked 2026-09-07 for attested Vercel CLI 58.4.4: OSV has no fixed event for the legacy sandbox package, but GitHub bounds the affected range below 1.0.0; this lockfile contains Vercel's unrelated sandbox@3.4.0 package from vercel/sandbox. See https://github.com/advisories/GHSA-gc25-3vc5-2jf9."

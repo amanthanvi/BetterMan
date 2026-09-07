@@ -47,6 +47,9 @@ jobs:
       - name: Check public Convex release isolation
         run: node scripts/check-convex-public-api.mjs
 
+      - name: Test production completion checks
+        run: pnpm ops:test
+
       - name: Check monthly dataset workflow is active
         env:
           GH_TOKEN: ${{ github.token }}
@@ -110,6 +113,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm deps:provenance
       - run: pnpm convex:test
       - run: pnpm convex:typecheck
       - run: pnpm next:grammar

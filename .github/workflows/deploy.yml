@@ -130,6 +130,9 @@ jobs:
       - name: Install trusted deployment-tool dependencies
         run: pnpm --dir "$GITHUB_WORKSPACE/tooling" install --frozen-lockfile
 
+      - name: Verify trusted Vercel CLI provenance
+        run: pnpm --dir "$GITHUB_WORKSPACE/tooling" deps:provenance
+
       - name: Require current main before Convex deployment
         if: needs.resolve_revision.outputs.require_current_main == 'true'
         shell: bash
@@ -163,6 +166,12 @@ jobs:
             --codegen disable \
             --message "GitHub Actions ${BETTERMAN_DEPLOY_SHA}"
           pnpm exec convex run --prod related:backfillActiveReleases '{}'
+
+      - name: Verify active related metadata backfills completed
+        if: needs.resolve_revision.outputs.require_current_main == 'true'
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: pnpm convex:related-check
 
       - name: Verify production Convex contract
         shell: bash
@@ -200,7 +209,7 @@ jobs:
           set -euo pipefail
 
           export PATH="$GITHUB_WORKSPACE/tooling/node_modules/.bin:$PATH"
-          if [[ "$(vercel --version)" != "59.10.0" ]]; then
+          if [[ "$(vercel --version)" != "58.4.4" ]]; then
             echo "Trusted Vercel CLI version mismatch." >&2
             exit 1
           fi
