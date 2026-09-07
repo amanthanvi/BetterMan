@@ -64,12 +64,12 @@ for (const entry of entries) {
   }
 
   const advisoryUrl = `https://github.com/advisories/${entry.id}`
-  if (!entry.reason.includes('sandbox@3.4.0') || !entry.reason.includes(advisoryUrl)) {
+  if (!entry.reason.includes('sandbox@4.1.0') || !entry.reason.includes(advisoryUrl)) {
     throw new Error(`${entry.id} must retain the package identity and advisory evidence in its reason`)
   }
 }
 
-if (packageJson.devDependencies?.vercel !== '58.4.4') {
+if (packageJson.devDependencies?.vercel !== '59.10.0') {
   throw new Error('Re-evaluate OSV exceptions when the pinned Vercel CLI version changes')
 }
 
@@ -104,12 +104,12 @@ collectSandboxOccurrences(projects)
 
 if (sandboxOccurrences.length !== 1 || sandboxOccurrences[0].node !== sandboxNode) {
   const found = sandboxOccurrences.map(({ node, path }) => `${path}@${node.version ?? 'unknown'}`).join(', ')
-  throw new Error(`Expected only the Vercel CLI sandbox@3.4.0 edge; found: ${found || 'none'}`)
+  throw new Error(`Expected only the Vercel CLI sandbox@4.1.0 edge; found: ${found || 'none'}`)
 }
 
 const sandboxVersion = sandboxNode.version
-if (sandboxVersion !== '3.4.0') {
-  throw new Error('Expected Vercel CLI 58.4.4 to retain its sandbox@3.4.0 dependency edge')
+if (sandboxVersion !== '4.1.0') {
+  throw new Error('Expected Vercel CLI 59.10.0 to retain its sandbox@4.1.0 dependency edge')
 }
 
 console.log('OSV exception contract passed (2 package-scoped assumptions, >30-day review window).')

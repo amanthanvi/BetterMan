@@ -4,6 +4,10 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Section browse: seek forward and backward by name cursor without rereading earlier pages; retain bounded legacy offset requests and add cursor metadata to the section API. Resolves #232.
+- Related pages: cache resolved target titles and descriptions on links, hydrate active releases in bounded resumable batches, and retain lookup fallback for older or unresolved links. Resolves #233.
+- Dependencies: consolidate Pydantic 2.13.5, Ruff 0.16.6, Vercel 59.10.0, Convex 1.45.0, Next.js 16.3.3, Tailwind 4.3.3, and React Virtual 3.14.10; align paired tooling and Vercel security/version guards. Includes #240, #241, #242, #243, #244, #245, and #247; thanks @dependabot.
+- Tests: run Convex integration and type checks in CI, including deep cursor read budgets and related-metadata rollout/resumed-ingestion coverage.
 - CI: the production Convex verifier reads the page-or-alias result from `getManByNameAndSection` and reports a golden page that resolves to an alias as a failure.
 - Security: pin transitive `fast-uri` 3.x to 3.1.6 and `@humanfs/node` to 0.16.8 to close URL normalization and symlink-copy vulnerabilities. ([#231](https://github.com/amanthanvi/BetterMan/pull/231)) — thanks @amanthanvi
 - Dependencies: consolidate the September 2026 runtime, tooling, container, and GitHub Actions updates; keep paired CodeQL and React Query packages version-aligned.

@@ -31,7 +31,7 @@ The local deployment starts empty. Seed it with the E2E fixture while `pnpm next
 ```bash
 npx convex env set CONVEX_INGEST_SECRET dev
 set -a; . ./.env.local; set +a
-BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="$CONVEX_SITE_URL" node scripts/seed-convex-e2e.mjs
+BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL:-$VITE_CONVEX_SITE_URL}" node scripts/seed-convex-e2e.mjs
 ```
 
 ## Commands
@@ -44,6 +44,7 @@ BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="$CONVEX_SITE_URL"
 | `pnpm next:e2e` | Playwright, expects the app on port 3000 |
 | `pnpm next:build` | Production build |
 | `pnpm convex:check` | Validates Convex schema and functions |
+| `pnpm convex:test` / `pnpm convex:typecheck` | Convex integration tests and TypeScript checks |
 | `pnpm ingest:test` / `pnpm ingest:lint` | Ingestion tests and Ruff |
 | `pnpm ingest:sample` | Ingests five pages into the configured Convex stage |
 

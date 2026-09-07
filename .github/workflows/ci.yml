@@ -110,6 +110,8 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm convex:test
+      - run: pnpm convex:typecheck
       - run: pnpm next:grammar
       - run: pnpm next:test
       - run: pnpm -C nextjs lint
@@ -215,7 +217,7 @@ jobs:
           . ./.env.local
           set +a
 
-          CONVEX_HTTP_URL="$CONVEX_SITE_URL" node scripts/seed-convex-e2e.mjs
+          CONVEX_HTTP_URL="${CONVEX_SITE_URL:-$VITE_CONVEX_SITE_URL}" node scripts/seed-convex-e2e.mjs
 
       - name: Start Next.js
         run: |
@@ -226,8 +228,8 @@ jobs:
           . ./.env.local
           set +a
 
+          export CONVEX_URL="${CONVEX_URL:-$VITE_CONVEX_URL}"
           export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
-          export CONVEX_URL="$CONVEX_URL"
           export CONVEX_INGEST_SECRET="e2e-secret"
           export PUBLIC_BASE_URL="http://127.0.0.1:3000"
 

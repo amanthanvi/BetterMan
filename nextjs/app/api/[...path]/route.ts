@@ -162,16 +162,32 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       return cachedJson(result, SEARCH_CACHE_SECONDS)
     }
 
-    if (parts.length === 2 && parts[0] === 'section') {
+    if (parts.length === 2 && (parts[0] === 'section' || parts[0] === 'sections')) {
       const limited = await enforceRateLimit(req, 'page')
       if (limited) return limited
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const limit = intParam(req, 'limit', { defaultValue: 200, min: 1, max: 500 })
       if (limit instanceof Response) return limit
-      const offset = intParam(req, 'offset', { defaultValue: 0, min: 0, max: 5000 })
+      const cursor = req.nextUrl.searchParams.get('cursor') ?? undefined
+      const before = req.nextUrl.searchParams.get('before') ?? undefined
+      if (cursor !== undefined && before !== undefined) {
+        return apiError(422, 'INVALID_QUERY_PARAM', 'Use either cursor or before, not both')
+      }
+      const offset = intParam(req, 'offset', {
+        defaultValue: 0,
+        min: 0,
+        max: cursor !== undefined || before !== undefined ? Number.MAX_SAFE_INTEGER : 5000,
+      })
       if (offset instanceof Response) return offset
-      return cachedJson(await listSection({ distro, section: parts[1], limit, offset }))
+      return cachedJson(await listSection({
+        distro,
+        section: parts[1],
+        limit,
+        offset,
+        ...(cursor === undefined ? {} : { cursor }),
+        ...(before === undefined ? {} : { before }),
+      }))
     }
 
     if (parts.length === 2 && parts[0] === 'man') {
