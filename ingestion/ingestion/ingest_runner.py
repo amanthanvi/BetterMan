@@ -337,8 +337,7 @@ def ingest(
 
     published = False
     if publish_allowed and activate:
-        client.post(
-            "/ingest/activate",
+        client.activate_release(
             {
                 "stage": dataset_stage,
                 "datasetReleaseId": dataset_release_id,

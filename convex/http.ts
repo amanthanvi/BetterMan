@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
 
@@ -70,9 +71,9 @@ type PageIngestPayload = {
 };
 
 async function contentStorageIdForPage(
-  ctx: { storage: { store: (blob: Blob) => Promise<string> } },
+  ctx: { storage: { store: (blob: Blob) => Promise<Id<"_storage">> } },
   page: PageIngestPayload,
-): Promise<string> {
+): Promise<Id<"_storage">> {
   const content = {
     docJson: JSON.stringify(page.doc),
     synopsisJson: jsonField(page.synopsis),
@@ -131,12 +132,13 @@ http.route({
     const existing = await ctx.runQuery(internal.ingest.listContentBlobStorageBySha, {
       contentSha256s,
     });
-    const storageBySha = new Map<string, string>();
+    const storageBySha = new Map<string, Id<"_storage">>();
     for (const item of existing) {
       if (item.storageId) storageBySha.set(item.contentSha256, item.storageId);
     }
 
     const pages = [];
+    const createdStorageIds: Id<"_storage">[] = [];
     let storedContentFiles = 0;
     let reusedContentFiles = 0;
     for (const page of payload.pages) {
@@ -158,6 +160,7 @@ http.route({
           options: page.options,
           seeAlso: page.seeAlso,
         });
+        createdStorageIds.push(contentStorageId);
         storageBySha.set(contentSha256, contentStorageId);
         storedContentFiles += 1;
       } else {
@@ -172,11 +175,18 @@ http.route({
       pages.push({ ...metadata, contentStorageId });
     }
 
-    const result = await ctx.runMutation(internal.ingest.insertStoredPages, {
-      datasetReleaseId: payload.datasetReleaseId,
-      pages,
-    } as never);
-    return jsonResponse({ ...result, storedContentFiles, reusedContentFiles });
+    try {
+      const result = await ctx.runMutation(internal.ingest.insertStoredPages, {
+        datasetReleaseId: payload.datasetReleaseId,
+        pages,
+      } as never);
+      return jsonResponse({ ...result, storedContentFiles, reusedContentFiles });
+    } catch (error) {
+      // A seal may commit while this action uploads blobs. The mutation rejects
+      // that late batch atomically; remove only files created by this request.
+      await Promise.all(createdStorageIds.map((id) => ctx.storage.delete(id)));
+      throw error;
+    }
   }),
 });
 
@@ -212,7 +222,7 @@ http.route({
     if (auth) return auth;
     const body = await readJson(req);
     const result = await ctx.runMutation(internal.ingest.activateRelease, body as never);
-    return jsonResponse(result);
+    return jsonResponse(result, result.pending ? 409 : 200);
   }),
 });
 

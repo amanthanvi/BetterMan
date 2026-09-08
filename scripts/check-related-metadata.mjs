@@ -19,7 +19,9 @@ export async function waitForRelatedMetadata(readStatus, {
     if (typeof status?.complete !== 'boolean' || !Array.isArray(status.releases) || status.releases.length > 14) {
       throw new Error('Invalid related metadata status response')
     }
-    const pending = status.releases.filter((release) => release.complete !== true)
+    const pending = status.releases.filter((release) => release?.complete !== true || release.sealed !== true
+      || !Number.isSafeInteger(release.currentVersion) || release.currentVersion < 0
+      || release.completedVersion !== release.currentVersion)
     log(JSON.stringify(status))
     if (status.complete && status.releases.length > 0 && pending.length === 0 && now() <= deadline) return status
     await pause(Math.min(intervalMs, Math.max(0, deadline - now())))
@@ -35,7 +37,7 @@ async function main() {
     })
     return JSON.parse(stdout)
   })
-  const message = `Verified related metadata completion for ${status.releases.length} active stage/distribution pointers.`
+  const message = `Verified sealed related metadata completion for ${status.releases.length} active stage/distribution pointers.`
   console.log(message)
   if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}\n`)
 }

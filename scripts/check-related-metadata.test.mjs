@@ -6,7 +6,7 @@ function clock() {
   let time = 0
   return { timeoutMs: 20, intervalMs: 5, now: () => time, pause: async (ms) => { time += ms }, log: () => {} }
 }
-const completed = { complete: true, releases: [{ complete: true }] }
+const completed = { complete: true, releases: [{ complete: true, sealed: true, currentVersion: 0, completedVersion: 0 }] }
 const pending = { complete: false, releases: [{ complete: false }] }
 
 test('accepts completed active releases without waiting', async () => {
@@ -40,4 +40,11 @@ test('rejects malformed or unbounded provider output', async () => {
 
 test('propagates query failures instead of treating them as completion', async () => {
   await assert.rejects(waitForRelatedMetadata(async () => { throw new Error('unavailable') }, clock()), /unavailable/)
+})
+
+test('rejects unsealed or inconsistent versions even when complete is claimed', async () => {
+  for (const change of [{ sealed: false }, { sealed: undefined }, { currentVersion: 1 }, { currentVersion: -1 }, { currentVersion: null }]) {
+    const status = { complete: true, releases: [{ ...completed.releases[0], ...change }] }
+    await assert.rejects(waitForRelatedMetadata(async () => status, clock()), /deadline/)
+  }
 })

@@ -43,6 +43,7 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 
 - The workflow ingests into Convex staging (`BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`) then promotes active staging release pointers to prod.
 - Every selected distro is required. A failed, timed-out, or cancelled ingest blocks promotion.
+- Activation seals the uploaded release and waits for related-metadata hydration before changing its staging pointer. HTTP 409 with `pending: true` is not publication; the client polls until `pending: false`, with a five-minute deadline. Older clients fail closed on this response. Retry activation to resume a failed or canceled hydration job. Sealed releases cannot accept new rows: use a new release ID for further data. Promotion rejects missing, unsealed, incomplete, or pruning source releases atomically.
 - Ingest+promote dispatches promote only the selected distro pointers. Scheduled and explicit promote-only dispatches promote all active staging pointers.
 - Sample dispatches use `--sample --no-activate` and cannot promote. They validate the real acquisition/parser/upload path without moving staging or production active pointers.
 - Promote-only dispatches intentionally allow skipped ingest jobs and copy an already-validated staging release.

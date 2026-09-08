@@ -30,20 +30,34 @@ Also set the public `CONVEX_URL` GitHub environment variable to the production `
 
 The job is not `continue-on-error`. A failed deployment or verification leaves the workflow red.
 
-After an automatic Convex deployment, `related:backfillActiveReleases` schedules
-100-link metadata batches for unfinished active English releases. Activation and
-promotion also schedule hydration. Completed release versions are skipped on
-subsequent deployments; resumed uploads invalidate completion. Related queries
-retain the target lookup fallback until hydration finishes, so the frontend does
-not depend on this background migration for correctness. Before deploying the
-new frontend, `pnpm convex:related-check` polls the read-only internal
-`related:activeMetadataStatus` query for up to five minutes. Every existing active
-pointer must reference a release whose current metadata version is complete.
-Missing releases, duplicate pointers, empty status, query failures, or timeout
-fail the deployment; successful completion is recorded in the job summary.
-Historical frontend rollbacks do not restart or wait on migration, or roll the
-schema backward. New uploads can invalidate a completed snapshot and activation
-will schedule another pass.
+After an automatic Convex deployment, `related:backfillActiveReleases` seals
+legacy active releases and schedules bounded hydration batches where needed.
+Before deploying the frontend, `pnpm convex:related-check` requires every active
+pointer to reference a sealed release with a matching completed metadata version.
+Missing releases, duplicate pointers, empty status, query failures, or a
+five-minute timeout fail the deployment; success is recorded in the job summary.
+
+Activation seals a release before starting hydration. Until hydration is
+complete, it returns HTTP 409 with `pending: true` and leaves the previous active
+pointer untouched. The ingestion client polls the same idempotent activation
+request until HTTP 200 with `pending: false`. The final pointer swap and readiness
+check occur in one mutation. Older clients fail on 409 rather than incorrectly
+reporting publication. Promotion likewise requires all requested source
+releases to be sealed and complete in the pointer-copy transaction.
+
+All ingestion paths reject new rows on sealed releases, including retired ones;
+existing-row replays remain no-ops. Legacy active releases are protected even
+before their seal is persisted. New data requires a new release ID. Pruning
+permanently marks a release before deleting its first child, so partially pruned
+releases cannot be reactivated or hydrated. Content-storage migrations remain
+administrative operations, separate from this release-membership and related-
+metadata contract. Lookup fallback remains for unresolved references, not as a
+substitute for completing hydration before activation.
+
+Historical frontend rollbacks neither restart migration nor roll the backend
+schema backward. Concurrent ingestion may build a new inactive release during a
+frontend build, but cannot invalidate an active release's completed metadata or
+replace its pointer with an incomplete release.
 
 ## CLI provenance
 
@@ -54,6 +68,10 @@ again against trusted deployment tooling before any deployment credentials are
 passed to the CLI. Sigstore verification additionally requires the exact release
 workflow certificate identity on `main` and the GitHub Actions OIDC issuer.
 Missing attestations fail even if registry signatures pass.
+Operational contract tests also require the gate to run unconditionally after
+installation and before deployment-secret exposure, using the exact trusted CLI
+pin. Dependabot vulnerability alerts and weekly update PRs remain enabled; an
+upgrade cannot silently bypass the same provenance and dependency-review gates.
 
 The CLI is pinned to 58.4.4, the newest attested stable release observed on
 September 7, 2026. Its verified source commit is
