@@ -39,8 +39,6 @@ class ConvexIngestClient:
             if result.get("pending") is False:
                 if result.get("datasetReleaseId") != payload.get("datasetReleaseId"):
                     raise RuntimeError("Activation returned a different release")
-                if time.monotonic() >= deadline:
-                    break
                 return result
             if result.get("pending") is not True:
                 raise RuntimeError("Activation response is missing readiness status")
