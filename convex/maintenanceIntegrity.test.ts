@@ -78,6 +78,31 @@ describe("maintenance release integrity", () => {
       .toMatchObject({ scanned: 1, migrated: 1, blobCreates: 1 });
   });
 
+  it.each(["equal legacy", "different legacy", "equal indexed"] as const)("dry-run estimates use verified payload identity: %s", async (variant) => {
+    const { t, pages } = await seed("draft");
+    const docJson = variant === "different legacy" ? '{"text":"different"}' : '{"text":"original"}';
+    const contentDigest = await storedPayloadDigest(serializeStoredPayload("same-hash", { docJson }));
+    const blobId = await t.run((ctx) => ctx.db.insert("manPageContentBlobs", {
+      contentSha256: "same-hash", docJson,
+      ...(variant === "equal indexed" ? { contentDigest } : {}),
+    }));
+    const before = await t.run(async (ctx) => ({
+      blob: await ctx.db.get(blobId),
+      contents: await Promise.all(pages.map((page) => ctx.db.get(page.contentId))),
+    }));
+    const args = { datasetReleaseId: "maintenance", cursor: null, limit: 2 };
+    const preview = await t.mutation(internal.maintenance.dedupePageContentBatch, { ...args, dryRun: true });
+    expect(preview).toMatchObject({ migrated: 2, blobCreates: 0 });
+    expect(preview.chars.blobCreated).toBe(variant === "different legacy" ? '{"text":"original"}'.length : 0);
+    expect(await t.run(async (ctx) => ({
+      blob: await ctx.db.get(blobId),
+      contents: await Promise.all(pages.map((page) => ctx.db.get(page.contentId))),
+    }))).toEqual(before);
+    expect(await t.run((ctx) => ctx.db.query("manPageContentBlobs").take(2))).toHaveLength(1);
+    const applied = await t.mutation(internal.maintenance.dedupePageContentBatch, args);
+    expect(applied.chars).toEqual(preview.chars);
+  });
+
   it("creates a distinct payload identity for different same-source-hash content", async () => {
     const { t, pages } = await seed("draft");
     const otherId = await t.run((ctx) => ctx.db.insert("manPageContentBlobs", {

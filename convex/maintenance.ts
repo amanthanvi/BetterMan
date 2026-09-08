@@ -167,13 +167,13 @@ async function insertContentBlobChunks(
   }
 }
 
-async function findOrCreateContentBlob(
+async function findReusableContentBlob(
   ctx: MutationCtx,
   args: {
     contentSha256: string;
     contentFields: ContentField[];
   },
-): Promise<{ blobId: Id<"manPageContentBlobs">; created: boolean }> {
+): Promise<{ blobId: Id<"manPageContentBlobs"> | null; contentDigest: string }> {
   const fields = Object.fromEntries(args.contentFields.map(({ kind, value }) => [kind, value]));
   const contentDigest = await storedPayloadDigest(serializeStoredPayload(args.contentSha256, fields));
   const existing = await ctx.db
@@ -190,7 +190,7 @@ async function findOrCreateContentBlob(
         throw new Error("CONTENT_PAYLOAD_MISMATCH");
       }
     }
-    return { blobId: existing._id, created: false };
+    return { blobId: existing._id, contentDigest };
   }
 
   // Legacy candidates have no payload identity. Reuse only proven equal bytes;
@@ -208,9 +208,17 @@ async function findOrCreateContentBlob(
         break;
       }
     }
-    if (matches) return { blobId: candidate._id, created: false };
+    if (matches) return { blobId: candidate._id, contentDigest };
   }
+  return { blobId: null, contentDigest };
+}
 
+async function findOrCreateContentBlob(
+  ctx: MutationCtx,
+  args: { contentSha256: string; contentFields: ContentField[] },
+): Promise<{ blobId: Id<"manPageContentBlobs">; created: boolean }> {
+  const { blobId: existingId, contentDigest } = await findReusableContentBlob(ctx, args);
+  if (existingId) return { blobId: existingId, created: false };
   const { inlinePayload, chunkedFields } = splitContentFields(args.contentFields);
   const blobId = await ctx.db.insert("manPageContentBlobs", {
     contentSha256: args.contentSha256,
@@ -707,6 +715,7 @@ export const dedupePageContentBatch = internalMutation({
     let legacyCharsRemoved = 0;
     let blobCharsCreated = 0;
     let legacyChunksDeleted = 0;
+    const previewDigests = new Set<string>();
 
     for (const page of result.page) {
       const duplicateSample = await ctx.db
@@ -740,14 +749,16 @@ export const dedupePageContentBatch = internalMutation({
         continue;
       }
 
-      const existingBlob = await ctx.db
-        .query("manPageContentBlobs")
-        .withIndex("by_contentSha256", (q) => q.eq("contentSha256", page.contentSha256))
-        .first();
       legacyCharsRemoved += legacyChars;
 
       if (dryRun) {
-        if (!existingBlob) blobCharsCreated += legacyChars;
+        const existing = await findReusableContentBlob(ctx, {
+          contentSha256: page.contentSha256, contentFields: fields,
+        });
+        if (!existing.blobId && !previewDigests.has(existing.contentDigest)) {
+          blobCharsCreated += legacyChars;
+          previewDigests.add(existing.contentDigest);
+        }
         migrated += 1;
         continue;
       }
