@@ -230,9 +230,9 @@ for (const distro of ['debian', 'ubuntu', 'fedora']) {
   const deadline = Date.now() + 300_000
   while (true) {
     const result = await post('/ingest/activate', { stage, datasetReleaseId, activatedAt: now })
-    if (Date.now() >= deadline) throw new Error('Seed activation timed out waiting for hydration')
     if (result.pending === false && result.datasetReleaseId === datasetReleaseId) break
     if (result.pending !== true) throw new Error('Invalid seed activation response')
+    if (Date.now() >= deadline) throw new Error('Seed activation timed out waiting for hydration')
     await sleep(200)
   }
 }

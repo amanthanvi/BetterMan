@@ -87,6 +87,21 @@ def test_activation_timeout_does_not_report_publication(monkeypatch):
         )
 
 
+def test_confirmed_activation_is_accepted_at_deadline(monkeypatch):
+    clock = Mock(return_value=0)
+
+    def activate(*args, **kwargs):
+        clock.return_value = 3
+        return {"pending": False, "datasetReleaseId": "new"}
+
+    monkeypatch.setattr(ConvexIngestClient, "post", activate)
+    monkeypatch.setattr("ingestion.convex_client.time.monotonic", clock)
+    result = ConvexIngestClient("https://test.convex.site", "test-secret").activate_release(
+        {"datasetReleaseId": "new"}, timeout_seconds=2
+    )
+    assert result["pending"] is False
+
+
 def test_activation_propagates_failure(monkeypatch):
     monkeypatch.setattr(ConvexIngestClient, "post", Mock(side_effect=RuntimeError("unavailable")))
     with pytest.raises(RuntimeError, match="unavailable"):
