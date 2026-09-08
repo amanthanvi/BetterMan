@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { distroValidator } from "./schema";
+import { requireMutableRelease } from "./_releaseIntegrity";
+import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import {
@@ -10,9 +12,11 @@ import {
   truncateText,
 } from "./lib";
 import {
+  CONTENT_KINDS,
   type ContentField,
   type ContentJsonKind,
   contentFieldsChars,
+  readContentBlobField,
   readManPageContentFieldList,
 } from "./_legacyContent";
 
@@ -26,6 +30,7 @@ const DEFAULT_COMPACT_LIMIT = 10;
 const MAX_COMPACT_LIMIT = 25;
 const DEFAULT_CONTENT_DEDUPE_LIMIT = 5;
 const MAX_CONTENT_DEDUPE_LIMIT = 25;
+const MAX_LEGACY_BLOB_CANDIDATES = 25;
 const DEFAULT_ORPHAN_BLOB_LIMIT = 25;
 const MAX_ORPHAN_BLOB_LIMIT = 100;
 const DEFAULT_STORAGE_STATS_LIMIT = 25;
@@ -169,15 +174,47 @@ async function findOrCreateContentBlob(
     contentFields: ContentField[];
   },
 ): Promise<{ blobId: Id<"manPageContentBlobs">; created: boolean }> {
+  const fields = Object.fromEntries(args.contentFields.map(({ kind, value }) => [kind, value]));
+  const contentDigest = await storedPayloadDigest(serializeStoredPayload(args.contentSha256, fields));
   const existing = await ctx.db
     .query("manPageContentBlobs")
-    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.contentSha256))
+    .withIndex("by_contentDigest", (q) => q.eq("contentDigest", contentDigest))
     .first();
-  if (existing) return { blobId: existing._id, created: false };
+  if (existing) {
+    // Stored payloads require action-side byte validation before migration.
+    if (existing.storageId) throw new Error("CONTENT_STORAGE_VALIDATION_REQUIRED");
+    if (existing.contentSha256 !== args.contentSha256) throw new Error("CONTENT_PAYLOAD_MISMATCH");
+    for (const kind of CONTENT_KINDS) {
+      const actual = await readContentBlobField(ctx, existing, kind, true);
+      if ((actual ?? undefined) !== fields[kind]) {
+        throw new Error("CONTENT_PAYLOAD_MISMATCH");
+      }
+    }
+    return { blobId: existing._id, created: false };
+  }
+
+  // Legacy candidates have no payload identity. Reuse only proven equal bytes;
+  // a bounded miss creates a new blob without modifying any historical blob.
+  const legacyCandidates = await ctx.db.query("manPageContentBlobs")
+    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.contentSha256))
+    .take(MAX_LEGACY_BLOB_CANDIDATES);
+  for (const candidate of legacyCandidates) {
+    if (candidate.contentDigest !== undefined || candidate.storageId) continue;
+    let matches = true;
+    for (const kind of CONTENT_KINDS) {
+      const actual = await readContentBlobField(ctx, candidate, kind, true);
+      if ((actual ?? undefined) !== fields[kind]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return { blobId: candidate._id, created: false };
+  }
 
   const { inlinePayload, chunkedFields } = splitContentFields(args.contentFields);
   const blobId = await ctx.db.insert("manPageContentBlobs", {
     contentSha256: args.contentSha256,
+    contentDigest,
     ...inlinePayload,
   });
 
@@ -197,7 +234,8 @@ async function deleteLegacyContentChunks(ctx: MutationCtx, pageId: Id<"manPages"
   const chunks = await ctx.db
     .query("manPageContentChunks")
     .withIndex("by_pageId_and_kind_and_chunkIndex", (q) => q.eq("pageId", pageId))
-    .take(100);
+    .take(101);
+  if (chunks.length > 100) throw new Error("CONTENT_CHUNK_LIMIT");
   for (const chunk of chunks) await ctx.db.delete(chunk._id);
   return chunks.length;
 }
@@ -519,6 +557,7 @@ export const compactSearchDocumentsBatch = internalMutation({
   handler: async (ctx, args) => {
     const release = await releaseByDatasetReleaseId(ctx, args.datasetReleaseId);
     if (!release) throw new Error("RELEASE_NOT_FOUND");
+    if (!args.dryRun) await requireMutableRelease(ctx, release);
 
     const limit = bounded(args.limit, DEFAULT_COMPACT_LIMIT, MAX_COMPACT_LIMIT);
     const result = await ctx.db
@@ -652,6 +691,7 @@ export const dedupePageContentBatch = internalMutation({
     if (!release) throw new Error("RELEASE_NOT_FOUND");
 
     const dryRun = args.dryRun ?? false;
+    if (!dryRun) await requireMutableRelease(ctx, release);
     const limit = bounded(args.limit, DEFAULT_CONTENT_DEDUPE_LIMIT, MAX_CONTENT_DEDUPE_LIMIT);
     const result = await ctx.db
       .query("manPages")
@@ -691,6 +731,7 @@ export const dedupePageContentBatch = internalMutation({
         alreadyDeduped += 1;
         continue;
       }
+      if (content.storageId && !dryRun) throw new Error("CONTENT_STORAGE_VALIDATION_REQUIRED");
 
       const fields = await readManPageContentFieldList(ctx, content);
       const legacyChars = contentFieldsChars(fields);
@@ -770,6 +811,7 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
     let orphans = 0;
     let blobDeletes = 0;
     let chunkDeletes = 0;
+    let oversizedSkipped = 0;
 
     for (const blob of result.page) {
       const ref = await ctx.db
@@ -783,12 +825,17 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
       const chunks = await ctx.db
         .query("manPageContentBlobChunks")
         .withIndex("by_blobId_and_kind_and_chunkIndex", (q) => q.eq("blobId", blob._id))
-        .take(100);
+        .take(101);
+      // Never leave a partially deleted blob available for a later reference.
+      // The reference check and full deletion share this transaction.
+      if (chunks.length > 100) {
+        oversizedSkipped += 1;
+        continue;
+      }
       for (const chunk of chunks) {
         await ctx.db.delete(chunk._id);
         chunkDeletes += 1;
       }
-      if (chunks.length === 100) continue;
       await ctx.db.delete(blob._id);
       blobDeletes += 1;
     }
@@ -800,6 +847,7 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
       orphans,
       blobDeletes,
       chunkDeletes,
+      oversizedSkipped,
       isDone: result.isDone,
       continueCursor: result.continueCursor,
     };

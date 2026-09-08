@@ -10,12 +10,16 @@
 
 import type * as _legacyContent from "../_legacyContent.js";
 import type * as _relatedLinks from "../_relatedLinks.js";
+import type * as _releaseIntegrity from "../_releaseIntegrity.js";
 import type * as _releaseLookups from "../_releaseLookups.js";
+import type * as _releaseManifest from "../_releaseManifest.js";
+import type * as _storedPayload from "../_storedPayload.js";
 import type * as content from "../content.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as lib from "../lib.js";
 import type * as maintenance from "../maintenance.js";
+import type * as manifest from "../manifest.js";
 import type * as queries from "../queries.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as related from "../related.js";
@@ -29,12 +33,16 @@ import type {
 declare const fullApi: ApiFromModules<{
   _legacyContent: typeof _legacyContent;
   _relatedLinks: typeof _relatedLinks;
+  _releaseIntegrity: typeof _releaseIntegrity;
   _releaseLookups: typeof _releaseLookups;
+  _releaseManifest: typeof _releaseManifest;
+  _storedPayload: typeof _storedPayload;
   content: typeof content;
   http: typeof http;
   ingest: typeof ingest;
   lib: typeof lib;
   maintenance: typeof maintenance;
+  manifest: typeof manifest;
   queries: typeof queries;
   rateLimit: typeof rateLimit;
   related: typeof related;

@@ -7,7 +7,7 @@ import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
-const releaseInput = (datasetReleaseId: string) => ({
+const releaseInput = (datasetReleaseId: string, pageCount = 0) => ({
   datasetReleaseId,
   locale: "en",
   distro: "debian" as const,
@@ -15,8 +15,8 @@ const releaseInput = (datasetReleaseId: string) => ({
   imageDigest: "test",
   ingestedAt: "2026-09-07T00:00:00Z",
   packageManifest: null,
-  pageCount: 3,
-  sectionTotals: [],
+  pageCount, aliasCount: 0, licenseCount: 0,
+  sectionTotals: pageCount ? [{ section: "1", total: pageCount }] : [],
   licensePackages: [],
 });
 const pageInput = (name: string) => ({
@@ -55,7 +55,7 @@ describe("related metadata backfill", () => {
   it.each(["inline", "storage"])("hydrates forward references from %s ingestion after activation", async (storageMode) => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("new"));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("new", 2));
     const source = {
       ...pageInput("source"),
       links: [
@@ -87,7 +87,7 @@ describe("related metadata backfill", () => {
     expect(await t.query(api.queries.getRelated, { distro: "debian", name: "source", section: "1" })).toEqual({
       items: [{ name: "target", section: "1", title: "target(1)", description: "target description" }],
     });
-    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "new", cursor: null })).toMatchObject({ updated: 0, isDone: true });
+    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "new" })).toMatchObject({ updated: 0, isDone: true });
     const completed = await t.run((ctx) => ctx.db.get(releaseId));
     expect(completed?.relatedMetadataCompletedVersion).toBe(completed?.relatedMetadataVersion);
     // Once sealed, a missing reference cannot become a stale cached result.
@@ -119,19 +119,46 @@ describe("related metadata backfill", () => {
         });
       }
     });
-    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "large", cursor: null })).toMatchObject({ processed: 100, updated: 100, isDone: false });
+    expect(await t.mutation(internal.related.backfillRelease, {
+      datasetReleaseId: "large", cursor: "forged", version: Number.MAX_SAFE_INTEGER,
+    })).toMatchObject({ processed: 100, updated: 100, isDone: false });
+    expect((await t.run((ctx) => ctx.db.get(releaseId)))?.relatedMetadataBackfillCursor).toEqual(expect.any(String));
+    expect((await t.run((ctx) => ctx.db.get(releaseId)))?.relatedMetadataCompletedVersion).toBeUndefined();
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(300));
     expect(links).toHaveLength(205);
     expect(links.every((link) => link.toTitle === "target(1)" && link.toDescription === "target description")).toBe(true);
   });
 
-  it("migrates and seals legacy releases before promotion without resolving into another release", async () => {
+  it("runs queued pre-upgrade jobs while ignoring their old cursor and version", async () => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("legacy"));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("upgrade"));
+    await t.run(async (ctx) => {
+      const sourceId = await seedPage(ctx, releaseId, "source");
+      await seedPage(ctx, releaseId, "target");
+      await ctx.db.insert("manPageLinks", {
+        releaseId, fromPageId: sourceId, fromExternalId: "source",
+        toName: "target", toSection: "1", linkType: "xref",
+      });
+      const jobId = await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
+        datasetReleaseId: "upgrade", cursor: "obsolete-cursor", version: 0,
+      });
+      await ctx.db.patch(releaseId, { sealed: true, relatedMetadataBackfillJobId: jobId });
+    });
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    expect(await t.run((ctx) => ctx.db.get(releaseId))).toMatchObject({ relatedMetadataCompletedVersion: 0 });
+    const links = await t.run((ctx) => ctx.db.query("manPageLinks").take(2));
+    expect(links).toMatchObject([{ toTitle: "target(1)", toDescription: "target description" }]);
+  });
+
+  it("hydrates legacy releases without authorizing promotion or resolving into another release", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("legacy", 2));
     const other = await t.mutation(internal.ingest.createRelease, releaseInput("other"));
     await t.run(async (ctx) => {
+      await ctx.db.patch(releaseId, { manifestBasis: undefined, aliasCount: undefined, licenseCount: undefined });
       const sourceId = await seedPage(ctx, releaseId, "source");
       await seedPage(ctx, releaseId, "target");
       await seedPage(ctx, other.releaseId, "elsewhere");
@@ -150,9 +177,9 @@ describe("related metadata backfill", () => {
     })).rejects.toThrow("RELEASE_NOT_SEALED");
     await t.mutation(internal.related.backfillActiveReleases, {});
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
-    await t.mutation(internal.ingest.promoteActiveReleases, {
+    await expect(t.mutation(internal.ingest.promoteActiveReleases, {
       fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "2026-09-07T00:00:00Z",
-    });
+    })).rejects.toThrow("RELEASE_MANIFEST_UNVERIFIED");
     const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(10));
     expect(links[0]).toMatchObject({ toTitle: "target(1)" });
     expect(links[1]).not.toHaveProperty("toTitle");
@@ -160,7 +187,7 @@ describe("related metadata backfill", () => {
 
   it("stops when a release was removed before its batch ran", async () => {
     const t = convexTest(schema, modules);
-    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "removed", cursor: null })).toEqual({
+    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "removed" })).toEqual({
       processed: 0, updated: 0, isDone: true, continueCursor: null,
     });
   });
@@ -168,7 +195,8 @@ describe("related metadata backfill", () => {
   it("deduplicates active stages and skips completed releases on later deployments and activations", async () => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("active"));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("active", 1));
+    await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "active", pages: [pageInput("source")] });
     await t.run(async (ctx) => {
       for (const stage of ["staging", "prod"] as const) {
         await ctx.db.insert("activeReleases", {
@@ -205,7 +233,7 @@ describe("related metadata backfill", () => {
         });
       }
     });
-    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "resumed", cursor: null })).toMatchObject({ processed: 100, updated: 0, isDone: false });
+    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "resumed" })).toMatchObject({ processed: 100, updated: 0, isDone: false });
     await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "resumed", pages: [pageInput("later")] })).rejects.toThrow("RELEASE_SEALED");
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(200));
@@ -223,7 +251,8 @@ describe("active metadata readiness", () => {
   it("reports pending and sealed completion without scheduling work itself", async () => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("readiness"));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("readiness", 1));
+    await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "readiness", pages: [pageInput("source")] });
     await t.run(async (ctx) => {
       for (const stage of ["staging", "prod"] as const) {
         await ctx.db.insert("activeReleases", {
@@ -236,23 +265,23 @@ describe("active metadata readiness", () => {
       complete: false,
       releases: ["staging", "prod"].map((stage) => ({
         datasetReleaseId: "readiness", stage, distro: "debian",
-        currentVersion: 0, completedVersion: null, sealed: false, complete: false,
+        currentVersion: 1, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null,
       })),
     };
     expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual(pending);
     expect(await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(1))).toEqual([]);
-    await expect(t.mutation(internal.related.backfillRelease, { datasetReleaseId: "readiness", cursor: null })).rejects.toThrow("RELEASE_NOT_SEALED");
+    await expect(t.mutation(internal.related.backfillRelease, { datasetReleaseId: "readiness" })).rejects.toThrow("RELEASE_NOT_SEALED");
     await t.mutation(internal.related.backfillActiveReleases, {});
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual({
       complete: true,
-      releases: pending.releases.map((release) => ({ ...release, completedVersion: 0, sealed: true, complete: true })),
+      releases: pending.releases.map((release) => ({ ...release, completedVersion: 1, sealed: true, complete: true, manifestVerified: true })),
     });
     await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "readiness", pages: [pageInput("new")] })).rejects.toThrow("RELEASE_SEALED");
     const before = await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(100));
     expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual({
       complete: true,
-      releases: pending.releases.map((release) => ({ ...release, completedVersion: 0, sealed: true, complete: true })),
+      releases: pending.releases.map((release) => ({ ...release, completedVersion: 1, sealed: true, complete: true, manifestVerified: true })),
     });
     expect(await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(100))).toEqual(before);
   });
@@ -271,7 +300,7 @@ describe("active metadata readiness", () => {
       complete: false,
       releases: [{
         datasetReleaseId: "missing", stage: "prod", distro: "debian",
-        currentVersion: null, completedVersion: null, sealed: false, complete: false,
+        currentVersion: null, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null,
       }],
     });
   });

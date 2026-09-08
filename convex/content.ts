@@ -8,6 +8,8 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireMutableBlob, requireMutablePage } from "./_releaseIntegrity";
+import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   datasetStageValidator,
@@ -81,7 +83,21 @@ function storagePayload(args: {
   contentSha256: string | null;
   content: ManPageContentPayload;
 }): Blob {
-  return new Blob([JSON.stringify(args)], { type: "application/json" });
+  return new Blob([serializeStoredPayload(args.contentSha256, args.content)], { type: "application/json" });
+}
+
+async function requireMatchingStorage(
+  ctx: MutationCtx,
+  storageId: Id<"_storage">,
+  contentSha256: string | null,
+  fields: StoredContentFields,
+) {
+  const payload = serializeStoredPayload(contentSha256, storedFieldsToPayload(fields));
+  const metadata = await ctx.db.system.get(storageId);
+  if (!metadata || metadata.size !== new TextEncoder().encode(payload).length ||
+      metadata.sha256 !== await storedPayloadDigest(payload)) {
+    throw new Error("CONTENT_STORAGE_PAYLOAD_MISMATCH");
+  }
 }
 
 function nullToUndefined(value: string | null | undefined): string | undefined {
@@ -135,7 +151,8 @@ async function deleteContentBlobChunks(ctx: MutationCtx, blobId: Id<"manPageCont
       .withIndex("by_blobId_and_kind_and_chunkIndex", (q) =>
         q.eq("blobId", blobId).eq("kind", kind),
       )
-      .take(200);
+      .take(201);
+    if (chunks.length > 200) throw new Error("CONTENT_CHUNK_LIMIT");
     for (const chunk of chunks) {
       await ctx.db.delete(chunk._id);
       deleted += 1;
@@ -152,7 +169,8 @@ async function deleteContentChunks(ctx: MutationCtx, contentId: Id<"manPageConte
       .withIndex("by_contentId_and_kind_and_chunkIndex", (q) =>
         q.eq("contentId", contentId).eq("kind", kind),
       )
-      .take(200);
+      .take(201);
+    if (chunks.length > 200) throw new Error("CONTENT_CHUNK_LIMIT");
     for (const chunk of chunks) {
       await ctx.db.delete(chunk._id);
       deleted += 1;
@@ -204,7 +222,7 @@ export const readContentBlobStorageMigrationBatch = internalQuery({
         alreadyStored += 1;
         continue;
       }
-      const fields = await readAllContentBlobFields(ctx, blob);
+      const fields = await readAllContentBlobFields(ctx, blob, true);
       const legacyChars = contentFieldsChars(fields);
       if (!legacyChars) {
         emptyLegacy += 1;
@@ -256,7 +274,7 @@ export const readPageContentStorageMigrationBatch = internalQuery({
         alreadyStored += 1;
         continue;
       }
-      const fields = await readAllManPageContentFields(ctx, content);
+      const fields = await readAllManPageContentFields(ctx, content, true);
       const legacyChars = contentFieldsChars(fields);
       if (!legacyChars) {
         emptyLegacy += 1;
@@ -294,9 +312,14 @@ export const markContentBlobStored = internalMutation({
   handler: async (ctx, args) => {
     const blob = await ctx.db.get(args.blobId);
     if (!blob) throw new Error("CONTENT_BLOB_NOT_FOUND");
+    await requireMutableBlob(ctx, args.blobId);
+    if (blob.storageId) throw new Error("CONTENT_ALREADY_STORED");
     if (blob.contentSha256 !== args.contentSha256) {
       throw new Error("CONTENT_SHA_MISMATCH");
     }
+
+    await requireMatchingStorage(ctx, args.storageId, blob.contentSha256,
+      await readAllContentBlobFields(ctx, blob, true));
 
     const deletedChunks = await deleteContentBlobChunks(ctx, args.blobId);
     await ctx.db.patch(args.blobId, {
@@ -319,7 +342,12 @@ export const markPageContentStored = internalMutation({
   handler: async (ctx, args) => {
     const content = await ctx.db.get(args.contentId);
     if (!content) throw new Error("PAGE_CONTENT_NOT_FOUND");
+    await requireMutablePage(ctx, content.pageId);
     if (content.blobId) throw new Error("REFUSING_DIRECT_STORAGE_FOR_BLOB_CONTENT");
+    if (content.storageId) throw new Error("CONTENT_ALREADY_STORED");
+
+    await requireMatchingStorage(ctx, args.storageId, content.contentSha256 ?? null,
+      await readAllManPageContentFields(ctx, content, true));
 
     const deletedChunks = await deleteContentChunks(ctx, args.contentId);
     await ctx.db.patch(args.contentId, {
@@ -366,23 +394,28 @@ export const migrateContentToStorageBatch = internalAction({
 
       if (dryRun) continue;
       const storageId = await ctx.storage.store(payload);
-      if (target === "blobs") {
-        const blobItem = item as BlobStorageMigrationItem;
-        const result = await ctx.runMutation(internal.content.markContentBlobStored, {
-          blobId: blobItem.blobId,
-          contentSha256: blobItem.contentSha256,
-          storageId,
-        });
-        deletedChunks += result.deletedChunks;
-      } else {
-        const contentItem = item as PageContentStorageMigrationItem;
-        const result = await ctx.runMutation(internal.content.markPageContentStored, {
-          contentId: contentItem.contentId,
-          storageId,
-        });
-        deletedChunks += result.deletedChunks;
+      try {
+        if (target === "blobs") {
+          const blobItem = item as BlobStorageMigrationItem;
+          const result = await ctx.runMutation(internal.content.markContentBlobStored, {
+            blobId: blobItem.blobId,
+            contentSha256: blobItem.contentSha256,
+            storageId,
+          });
+          deletedChunks += result.deletedChunks;
+        } else {
+          const contentItem = item as PageContentStorageMigrationItem;
+          const result = await ctx.runMutation(internal.content.markPageContentStored, {
+            contentId: contentItem.contentId,
+            storageId,
+          });
+          deletedChunks += result.deletedChunks;
+        }
+        stored += 1;
+      } catch (error) {
+        await ctx.storage.delete(storageId);
+        throw error;
       }
-      stored += 1;
     }
 
     return {

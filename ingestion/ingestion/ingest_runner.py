@@ -255,6 +255,8 @@ def ingest(
             "ingestedAt": datetime.now(tz=UTC).isoformat(),
             "packageManifest": package_manifest,
             "pageCount": succeeded,
+            "aliasCount": len(aliases),
+            "licenseCount": len(licenses),
             "sectionTotals": [
                 {"section": section, "total": total}
                 for section, total in sorted(Counter(p.section for p in parsed_pages).items())

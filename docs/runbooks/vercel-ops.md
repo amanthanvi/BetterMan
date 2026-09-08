@@ -30,29 +30,39 @@ Also set the public `CONVEX_URL` GitHub environment variable to the production `
 
 The job is not `continue-on-error`. A failed deployment or verification leaves the workflow red.
 
-After an automatic Convex deployment, `related:backfillActiveReleases` seals
-legacy active releases and schedules bounded hydration batches where needed.
+After an automatic Convex deployment, `related:backfillActiveReleases` validates
+active release manifests and schedules bounded hydration batches where needed.
 Before deploying the frontend, `pnpm convex:related-check` requires every active
-pointer to reference a sealed release with a matching completed metadata version.
-Missing releases, duplicate pointers, empty status, query failures, or a
+pointer to reference a manifest-verified, sealed release with a matching completed
+metadata version. Missing or unverified manifests, duplicate pointers, empty status, query failures, or a
 five-minute timeout fail the deployment; success is recorded in the job summary.
 
-Activation seals a release before starting hydration. Until hydration is
+Activation first verifies declared page, per-section, alias, and license counts
+against successful uploads. License package declarations identify exactly which
+packages require nonblank text. It seals only a complete upload before starting hydration. Until hydration is
 complete, it returns HTTP 409 with `pending: true` and leaves the previous active
 pointer untouched. The ingestion client polls the same idempotent activation
 request until HTTP 200 with `pending: false`. The final pointer swap and readiness
 check occur in one mutation. Older clients fail on 409 rather than incorrectly
 reporting publication. Promotion likewise requires all requested source
-releases to be sealed and complete in the pointer-copy transaction.
+releases to be manifest-verified, sealed, and complete in the pointer-copy transaction.
 
 All ingestion paths reject new rows on sealed releases, including retired ones;
 existing-row replays remain no-ops. Legacy active releases are protected even
 before their seal is persisted. New data requires a new release ID. Pruning
 permanently marks a release before deleting its first child, so partially pruned
-releases cannot be reactivated or hydrated. Content-storage migrations remain
-administrative operations, separate from this release-membership and related-
-metadata contract. Lookup fallback remains for unresolved references, not as a
+releases cannot be reactivated or hydrated. Administrative search/content
+maintenance must obey the same immutability boundary, including shared blobs
+referenced by protected releases; it is not an override. Lookup fallback remains for unresolved references, not as a
 substitute for completing hydration before activation.
+
+Legacy releases with no original alias declaration remain unverified. Counting
+the aliases currently stored cannot distinguish a complete upload from an
+interrupted one. Recover original ingestion evidence and validate the declaration
+through an explicitly reviewed recovery path, or re-ingest under a new release
+ID and activate the verified replacement. Do not manufacture zero alias counts
+or patch verification flags to unblock deployment. Existing data can remain
+available while the deployment completion gate fails closed.
 
 Historical frontend rollbacks neither restart migration nor roll the backend
 schema backward. Concurrent ingestion may build a new inactive release during a

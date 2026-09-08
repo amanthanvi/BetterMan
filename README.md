@@ -45,7 +45,7 @@ BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL
 | `pnpm next:build` | Production build |
 | `pnpm convex:check` | Validates Convex schema and functions |
 | `pnpm convex:test` / `pnpm convex:typecheck` | Convex integration tests and TypeScript checks |
-| `pnpm convex:related-check` | Verify active releases are sealed with complete metadata (requires deploy key) |
+| `pnpm convex:related-check` | Verify active releases have verified upload manifests, seals, and complete metadata (requires deploy key) |
 | `pnpm deps:provenance` / `pnpm ops:test` | Verify Vercel provenance and test operational gates |
 | `pnpm ingest:test` / `pnpm ingest:lint` | Ingestion tests and Ruff |
 | `pnpm ingest:sample` | Ingests five pages into the configured Convex stage |

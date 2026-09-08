@@ -74,7 +74,7 @@ Scheduled production imports should continue to use `.github/workflows/update-do
 
 ## Verify staging import
 
-Staging is intentionally absent from the anonymous Convex API. Before promotion, require successful ingest output for every selected distro, including its release ID, page count, parse-quality gates, and activation result. Then run the read-only stats query with deployment-admin credentials:
+Staging is intentionally absent from the anonymous Convex API. Before promotion, require successful ingest output for every selected distro, including its release ID, declared page/section/alias/license totals, parse-quality gates, and activation result. Activation verifies the manifest and hydration before publication. Then run the read-only stats query with deployment-admin credentials:
 
 ```bash
 npx convex run maintenance:releaseStats '{"stage":"staging"}' --prod
@@ -84,7 +84,7 @@ It reports, per active staging release, the sampled page count, alias count, and
 
 ## Promote staging to prod
 
-Promotion copies active release pointers from `staging` to `prod`; it does not re-import pages.
+Promotion copies manifest-verified, sealed, hydrated active release pointers from `staging` to `prod`; it does not re-import pages. A legacy pointer with no original alias declaration cannot pass by adopting the observed alias count. Recover original ingestion evidence and validate it explicitly, or complete a fresh staging import under a new release ID first.
 
 ```bash
 python - <<'PY' > promote.json
@@ -133,4 +133,4 @@ curl -fsS https://betterman.sh/api/v1/man/tar/1
 
 ## Rollback
 
-If prod verification fails after promotion, re-promote the previous known-good staging or prod release pointer using `/ingest/promote` only after confirming the target release still exists in Convex. Do not delete releases during incident response; leave old documents available for rollback until a separate cleanup plan exists.
+If prod verification fails after promotion, restore a previous known-good release through `/ingest/activate` and, when restoring staging first, `/ingest/promote`. The selected release must still exist, have a verified manifest, be sealed, and have complete related metadata. Do not bypass these checks with direct pointer edits. Do not delete releases during incident response; leave old documents available for rollback until a separate cleanup plan exists.

@@ -43,7 +43,7 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 
 - The workflow ingests into Convex staging (`BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`) then promotes active staging release pointers to prod.
 - Every selected distro is required. A failed, timed-out, or cancelled ingest blocks promotion.
-- Activation seals the uploaded release and waits for related-metadata hydration before changing its staging pointer. HTTP 409 with `pending: true` is not publication; the client polls until `pending: false`, with a five-minute deadline. Older clients fail closed on this response. Retry activation to resume a failed or canceled hydration job. Sealed releases cannot accept new rows: use a new release ID for further data. Promotion rejects missing, unsealed, incomplete, or pruning source releases atomically.
+- Release creation declares page count, section totals, alias count (including zero), and license count. License declarations identify packages whose text must be uploaded; packages without available license text do not create a text requirement. Activation verifies the declarations before sealing and waits for related-metadata hydration before changing its staging pointer. HTTP 409 with `pending: true` is not publication; the client polls until `pending: false`, with a five-minute deadline. Retry activation to resume a failed or canceled hydration job. Sealed releases cannot accept new rows: use a new release ID for further data. Promotion rejects missing, unverified, unsealed, incomplete, or pruning source releases atomically.
 - Ingest+promote dispatches promote only the selected distro pointers. Scheduled and explicit promote-only dispatches promote all active staging pointers.
 - Sample dispatches use `--sample --no-activate` and cannot promote. They validate the real acquisition/parser/upload path without moving staging or production active pointers.
 - Promote-only dispatches intentionally allow skipped ingest jobs and copy an already-validated staging release.
@@ -61,6 +61,12 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
   - `curl -fsS 'https://betterman.sh/api/v1/man/curl/1?distro=macos' | head`
 
 ## Troubleshooting
+
+### Release manifest incomplete or undeclared
+
+For a new, unsealed release, compare the original declaration with acknowledged page, alias, and license batches. Retry missing batches with their original identifiers and unchanged payloads; do not reduce declared counts to the partial upload. Retry activation only once the declared uploads are present.
+
+Legacy releases may have page and section totals but no declared alias count. An observed alias count is not evidence that the original upload finished. Recover the original ingestion summary or retained source artifacts and validate the complete declaration through an explicitly reviewed recovery path, or re-ingest the distro under a new release ID. Do not set `manifestVerified`, seals, or active pointers by hand. The deployment completion check intentionally remains red until every active pointer is verified.
 
 ### Workflow stuck on “Ingest to Convex staging”
 

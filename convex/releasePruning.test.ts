@@ -13,10 +13,11 @@ async function seededRelease(completed = true) {
     const releaseId = await ctx.db.insert("datasetReleases", {
       datasetReleaseId: "pruning-test", locale: "en", distro: "debian",
       imageRef: "test", imageDigest: "test", ingestedAt: activatedAt, pageCount: 2,
+      aliasCount: 0, licenseCount: 0, uploadedPageCount: 2, uploadedAliasCount: 0, uploadedLicenseCount: 0, manifestBasis: "declared",
       ...(completed ? { sealed: true, relatedMetadataCompletedVersion: 0 } : {}),
     });
     await ctx.db.insert("releaseSectionStats", {
-      releaseId, datasetReleaseId: "pruning-test", section: "1", label: "User Commands", total: 2,
+      releaseId, datasetReleaseId: "pruning-test", section: "1", label: "User Commands", total: 2, uploaded: 2,
     });
     for (const name of ["source", "target"]) {
       const pageId = await ctx.db.insert("manPages", {

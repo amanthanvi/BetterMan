@@ -12,10 +12,15 @@ const kinds = ["inline", "storage", "aliases", "licenses"] as const;
 const activation = (datasetReleaseId: string) => ({
   datasetReleaseId, stage: "prod" as const, activatedAt: "2026-09-07T00:00:00Z",
 });
-const releaseInput = (datasetReleaseId: string, distro: Distro = "debian") => ({
+const releaseInput = (datasetReleaseId: string, distro: Distro = "debian", pageCount = 0) => ({
   datasetReleaseId, distro, locale: "en", imageRef: "test", imageDigest: "test",
   ingestedAt: "2026-09-07T00:00:00Z", packageManifest: null,
-  pageCount: 1, sectionTotals: [], licensePackages: [],
+  pageCount, aliasCount: 0, licenseCount: 0,
+  sectionTotals: pageCount ? [{ section: "1", total: pageCount }] : [], licensePackages: [],
+});
+const fourPathRelease = (datasetReleaseId: string) => ({
+  ...releaseInput(datasetReleaseId, "debian", 2), aliasCount: 1, licenseCount: 1,
+  licensePackages: [{ name: "original-licenses", version: "1", hasLicenseText: true }],
 });
 
 async function pointRelease(t: Harness, releaseId: Id<"datasetReleases">, stage: DatasetStage) {
@@ -31,7 +36,7 @@ async function pointRelease(t: Harness, releaseId: Id<"datasetReleases">, stage:
 async function write(t: Harness, kind: typeof kinds[number], datasetReleaseId: string, name: string) {
   if (kind === "aliases") {
     return t.mutation(internal.ingest.insertAliases, {
-      datasetReleaseId, aliases: [{ name, section: "1", targetName: "target", targetSection: "1" }],
+      datasetReleaseId, aliases: [{ name, section: "1", targetName: "original-inline", targetSection: "1" }],
     });
   }
   if (kind === "licenses") {
@@ -69,7 +74,7 @@ describe("release sealing", () => {
     const t = convexTest(schema, modules);
     const previous = await t.mutation(internal.ingest.createRelease, releaseInput("previous"));
     const pointerId = await pointRelease(t, previous.releaseId, "prod");
-    const next = await t.mutation(internal.ingest.createRelease, releaseInput("next"));
+    const next = await t.mutation(internal.ingest.createRelease, releaseInput("next", "debian", 1));
     await write(t, "inline", "next", "uploaded-before-seal");
     const oldPointer = await t.run((ctx) => ctx.db.get(pointerId));
     for (let poll = 0; poll < 5; poll += 1) {
@@ -95,7 +100,7 @@ describe("release sealing", () => {
   it.each(["sealed", "legacy-active", "retired-sealed"])("permits only duplicate no-op replays for all four ingestion paths on %s releases", async (state) => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("locked"));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, fourPathRelease("locked"));
     for (const kind of kinds) await write(t, kind, "locked", `original-${kind}`);
     if (state === "legacy-active") {
       await pointRelease(t, releaseId, "prod");
@@ -104,7 +109,8 @@ describe("release sealing", () => {
       await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     } else {
       await pointRelease(t, releaseId, "prod");
-      await t.mutation(internal.ingest.createRelease, releaseInput("replacement"));
+      await t.mutation(internal.ingest.createRelease, releaseInput("replacement", "debian", 1));
+      await write(t, "inline", "replacement", "replacement-page");
       await t.mutation(internal.ingest.activateRelease, activation("replacement"));
       await t.finishAllScheduledFunctions(() => vi.runAllTimers());
       await t.mutation(internal.ingest.activateRelease, activation("replacement"));
@@ -112,17 +118,18 @@ describe("release sealing", () => {
     }
     const before = await releaseRows(t, releaseId);
     for (const kind of kinds) {
-      expect(await write(t, kind, "locked", `original-${kind}`)).toEqual({ inserted: 0, skipped: 1 });
+      expect(await write(t, kind, "locked", `original-${kind}`)).toMatchObject({ inserted: 0, skipped: 1 });
       await expect(write(t, kind, "locked", `new-${kind}`)).rejects.toThrow("RELEASE_SEALED");
     }
-    expect(await t.mutation(internal.ingest.createRelease, releaseInput("locked"))).toEqual({ releaseId, existed: true });
+    expect(await t.mutation(internal.ingest.createRelease, fourPathRelease("locked"))).toEqual({ releaseId, existed: true });
     expect(await releaseRows(t, releaseId)).toEqual(before);
   });
 
   it("recovers a canceled hydration chain on a later activation poll", async () => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("retry"));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("retry", "debian", 1));
+    await write(t, "inline", "retry", "retry-page");
     await t.mutation(internal.ingest.activateRelease, activation("retry"));
     await t.run(async (ctx) => {
       const release = await ctx.db.get(releaseId);
@@ -139,12 +146,13 @@ describe("release sealing", () => {
     const previous = await t.mutation(internal.ingest.createRelease, releaseInput("previous"));
     const targetId = await pointRelease(t, previous.releaseId, "prod");
     const ready = await t.mutation(internal.ingest.createRelease, releaseInput("ready"));
-    await t.run((ctx) => ctx.db.patch(ready.releaseId, { sealed: true, relatedMetadataCompletedVersion: 0 }));
+    await t.run((ctx) => ctx.db.patch(ready.releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
     await pointRelease(t, ready.releaseId, "staging");
     if (invalid !== "missing") {
       const bad = await t.mutation(internal.ingest.createRelease, releaseInput("bad", "ubuntu"));
       await t.run((ctx) => ctx.db.patch(bad.releaseId, {
         sealed: invalid !== "unsealed",
+        manifestVerified: true,
         pruning: invalid === "pruning",
         relatedMetadataCompletedVersion: invalid === "incomplete" ? undefined : 0,
       }));
@@ -163,7 +171,8 @@ describe("release sealing", () => {
     const t = convexTest(schema, modules);
     for (const stage of DATASET_STAGES) {
       for (const distro of DISTROS) {
-        const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput(`${stage}-${distro}`, distro));
+        const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput(`${stage}-${distro}`, distro, 1));
+        await write(t, "inline", `${stage}-${distro}`, "page");
         await pointRelease(t, releaseId, stage);
       }
     }
@@ -179,18 +188,21 @@ describe("release sealing", () => {
   });
 
   it("does not declare a completed but unsealed legacy release ready", async () => {
+    vi.useFakeTimers();
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("legacy"));
-    await t.run((ctx) => ctx.db.patch(releaseId, { relatedMetadataCompletedVersion: 0 }));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("legacy", "debian", 1));
+    await write(t, "inline", "legacy", "page");
+    await t.run((ctx) => ctx.db.patch(releaseId, { relatedMetadataCompletedVersion: 1, manifestBasis: undefined, aliasCount: undefined }));
     await pointRelease(t, releaseId, "prod");
     expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(false);
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1 });
-    expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(true);
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 1, skipped: 0 });
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(false);
   });
 
   it("rejects pruning release inputs and activation while stopping hydration and readiness", async () => {
     const t = convexTest(schema, modules);
-    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("pruning"));
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, fourPathRelease("pruning"));
     for (const kind of kinds) await write(t, kind, "pruning", `original-${kind}`);
     await pointRelease(t, releaseId, "prod");
     await t.run((ctx) => ctx.db.patch(releaseId, { sealed: true, pruning: true, relatedMetadataCompletedVersion: 2 }));
@@ -198,10 +210,10 @@ describe("release sealing", () => {
     for (const kind of kinds) {
       await expect(write(t, kind, "pruning", `original-${kind}`)).rejects.toThrow("RELEASE_PRUNING");
     }
-    await expect(t.mutation(internal.ingest.createRelease, releaseInput("pruning"))).rejects.toThrow("RELEASE_PRUNING");
+    await expect(t.mutation(internal.ingest.createRelease, fourPathRelease("pruning"))).rejects.toThrow("RELEASE_PRUNING");
     await expect(t.mutation(internal.ingest.activateRelease, activation("pruning"))).rejects.toThrow("RELEASE_PRUNING");
     await expect(t.mutation(internal.related.backfillActiveReleases, {})).rejects.toThrow("RELEASE_PRUNING");
-    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "pruning", cursor: null })).toEqual({
+    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "pruning" })).toEqual({
       processed: 0, updated: 0, isDone: true, continueCursor: null,
     });
     expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(false);

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
+
+from ingestion import ingest_runner
 from ingestion.ingest_runner import (
     _AliasRow,
     _build_page_links,
@@ -238,3 +241,66 @@ def test_resolve_aliases_follows_long_chains_and_drops_cycles() -> None:
 
     assert [a.name for a in resolved] == [f"s{i}" for i in range(13)]
     assert {a.target_name for a in resolved} == {"real"}
+
+
+@pytest.mark.parametrize("with_alias_and_license", [False, True])
+def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_and_license):
+    pages = [_page("real", "1")]
+    sources = [ManSource(path=pages[0].source_path, name="real", section="1")]
+    if with_alias_and_license:
+        sources.append(ManSource(path="/usr/share/man/man1/stub.1", name="stub", section="1"))
+    monkeypatch.setattr(ingest_runner, "apt_install", lambda _packages: None)
+    monkeypatch.setattr(ingest_runner, "scan_man_sources", lambda *_args, **_kwargs: sources)
+    monkeypatch.setattr(ingest_runner, "dpkg_packages", lambda: {"example": "1.0"})
+    monkeypatch.setattr(ingest_runner, "dpkg_arch", lambda: "amd64")
+    monkeypatch.setattr(ingest_runner, "mandoc_pkg_version_dpkg", lambda _packages: "1.0")
+    monkeypatch.setattr(ingest_runner, "build_manpath_to_package_dpkg", lambda: {})
+    monkeypatch.setattr(ingest_runner, "_parse_source", lambda *_args, **_kwargs: pages[0])
+    monkeypatch.setattr(
+        ingest_runner,
+        "_alias_for_source",
+        lambda source: _alias("stub", "real") if source.name == "stub" else None,
+    )
+    monkeypatch.setattr(
+        ingest_runner,
+        "_collect_licenses",
+        lambda **_kwargs: {"example": "Copyright example"} if with_alias_and_license else {},
+    )
+    calls = []
+    monkeypatch.setattr(
+        ingest_runner.ConvexIngestClient,
+        "post",
+        lambda _self, path, payload: calls.append((path, payload)),
+    )
+    monkeypatch.setattr(
+        ingest_runner.ConvexIngestClient,
+        "activate_release",
+        lambda _self, payload: calls.append(("/ingest/activate", payload)),
+    )
+
+    result = ingest_runner.ingest(
+        sample=True,
+        activate=True,
+        convex_url="https://example.convex.site",
+        ingest_secret="test-secret",
+        dataset_stage="staging",
+        image_ref="test",
+        image_digest="test",
+        git_sha="test",
+    )
+
+    declaration = calls[0][1]
+    assert calls[0][0] == "/ingest/release"
+    assert declaration["pageCount"] == 1
+    assert declaration["sectionTotals"] == [{"section": "1", "total": 1}]
+    assert declaration["aliasCount"] == int(with_alias_and_license)
+    assert declaration["licenseCount"] == int(with_alias_and_license)
+    assert declaration["licensePackages"] == [
+        {"name": "example", "version": "1.0", "hasLicenseText": with_alias_and_license}
+    ]
+    for path, key in [("/ingest/aliases", "aliases"), ("/ingest/licenses", "licenses")]:
+        assert sum(len(payload[key]) for route, payload in calls if route == path) == int(
+            with_alias_and_license
+        )
+    assert calls[-1][0] == "/ingest/activate"
+    assert result.published

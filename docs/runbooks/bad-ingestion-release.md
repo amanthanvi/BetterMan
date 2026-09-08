@@ -12,8 +12,9 @@
 
 **Mitigations**
 
-- Roll back: set previous release `is_active = true` and disable the bad release.
+- Roll back by activating a previous known-good release through `/ingest/activate` for the intended stage, then promoting its validated staging pointer through `/ingest/promote` when appropriate. Require manifest verification, sealing, and completed related metadata; wait for `pending: false`. Do not edit active pointers or completeness fields directly.
 - Re-run ingestion with fixes; validate on staging first.
+- If the previous release lacks its original alias declaration, do not infer completeness from the aliases currently stored. Recover original ingestion evidence and validate it explicitly, or re-ingest under a new release ID. Keep the current data available until a verified replacement is ready.
 
 **Follow-ups**
 
