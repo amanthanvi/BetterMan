@@ -121,6 +121,23 @@ describe("maintenance release integrity", () => {
     expect(await t.run((ctx) => ctx.db.get(otherId))).toMatchObject({ docJson: '{"text":"different"}' });
   });
 
+  it("counts distinct novel payloads separately in a dry-run batch", async () => {
+    const { t, pages } = await seed("draft");
+    await t.run((ctx) => ctx.db.patch(pages[0].contentId, { docJson: '{"text":"different"}' }));
+    const before = await t.run((ctx) => Promise.all(pages.map((page) => ctx.db.get(page.contentId))));
+    const args = { datasetReleaseId: "maintenance", cursor: null, limit: 2 };
+    const preview = await t.mutation(internal.maintenance.dedupePageContentBatch, { ...args, dryRun: true });
+    expect(preview.chars).toEqual({
+      legacyRemoved: '{"text":"original"}'.length + '{"text":"different"}'.length,
+      blobCreated: '{"text":"original"}'.length + '{"text":"different"}'.length,
+      estimatedNetSaved: 0,
+    });
+    expect(await t.run((ctx) => Promise.all(pages.map((page) => ctx.db.get(page.contentId))))).toEqual(before);
+    expect(await t.run((ctx) => ctx.db.query("manPageContentBlobs").take(1))).toEqual([]);
+    const applied = await t.mutation(internal.maintenance.dedupePageContentBatch, args);
+    expect(applied).toMatchObject({ migrated: 2, blobCreates: 2, chars: preview.chars });
+  });
+
   it.each([false, true])("reuses a later matching variant (digest indexed: %s)", async (indexed) => {
     const { t, pages } = await seed("draft");
     const contentDigest = await storedPayloadDigest(serializeStoredPayload("same-hash", { docJson: '{"text":"original"}' }));
