@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { distroValidator } from "./schema";
 import { requireMutableRelease } from "./_releaseIntegrity";
+import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import {
@@ -15,6 +16,7 @@ import {
   type ContentField,
   type ContentJsonKind,
   contentFieldsChars,
+  readContentBlobField,
   readManPageContentFieldList,
 } from "./_legacyContent";
 
@@ -28,6 +30,7 @@ const DEFAULT_COMPACT_LIMIT = 10;
 const MAX_COMPACT_LIMIT = 25;
 const DEFAULT_CONTENT_DEDUPE_LIMIT = 5;
 const MAX_CONTENT_DEDUPE_LIMIT = 25;
+const MAX_LEGACY_BLOB_CANDIDATES = 25;
 const DEFAULT_ORPHAN_BLOB_LIMIT = 25;
 const MAX_ORPHAN_BLOB_LIMIT = 100;
 const DEFAULT_STORAGE_STATS_LIMIT = 25;
@@ -171,33 +174,47 @@ async function findOrCreateContentBlob(
     contentFields: ContentField[];
   },
 ): Promise<{ blobId: Id<"manPageContentBlobs">; created: boolean }> {
+  const fields = Object.fromEntries(args.contentFields.map(({ kind, value }) => [kind, value]));
+  const contentDigest = await storedPayloadDigest(serializeStoredPayload(args.contentSha256, fields));
   const existing = await ctx.db
     .query("manPageContentBlobs")
-    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.contentSha256))
+    .withIndex("by_contentDigest", (q) => q.eq("contentDigest", contentDigest))
     .first();
   if (existing) {
-    // Source hashes do not prove equality of the parsed, rendered document.
     // Stored payloads require action-side byte validation before migration.
     if (existing.storageId) throw new Error("CONTENT_STORAGE_VALIDATION_REQUIRED");
+    if (existing.contentSha256 !== args.contentSha256) throw new Error("CONTENT_PAYLOAD_MISMATCH");
     for (const kind of CONTENT_KINDS) {
-      let actual = existing[kind];
-      if (actual === undefined) {
-        const chunks = await ctx.db.query("manPageContentBlobChunks")
-          .withIndex("by_blobId_and_kind_and_chunkIndex", (q) => q.eq("blobId", existing._id).eq("kind", kind))
-          .take(101);
-        if (chunks.length > 100) throw new Error("CONTENT_CHUNK_LIMIT");
-        actual = chunks.length ? chunks.map((chunk) => chunk.chunk).join("") : undefined;
-      }
-      if (actual !== args.contentFields.find((field) => field.kind === kind)?.value) {
+      const actual = await readContentBlobField(ctx, existing, kind, true);
+      if ((actual ?? undefined) !== fields[kind]) {
         throw new Error("CONTENT_PAYLOAD_MISMATCH");
       }
     }
     return { blobId: existing._id, created: false };
   }
 
+  // Legacy candidates have no payload identity. Reuse only proven equal bytes;
+  // a bounded miss creates a new blob without modifying any historical blob.
+  const legacyCandidates = await ctx.db.query("manPageContentBlobs")
+    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.contentSha256))
+    .take(MAX_LEGACY_BLOB_CANDIDATES);
+  for (const candidate of legacyCandidates) {
+    if (candidate.contentDigest !== undefined || candidate.storageId) continue;
+    let matches = true;
+    for (const kind of CONTENT_KINDS) {
+      const actual = await readContentBlobField(ctx, candidate, kind, true);
+      if ((actual ?? undefined) !== fields[kind]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return { blobId: candidate._id, created: false };
+  }
+
   const { inlinePayload, chunkedFields } = splitContentFields(args.contentFields);
   const blobId = await ctx.db.insert("manPageContentBlobs", {
     contentSha256: args.contentSha256,
+    contentDigest,
     ...inlinePayload,
   });
 

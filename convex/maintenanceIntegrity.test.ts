@@ -3,6 +3,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 
 const modules = import.meta.glob("./**/*.ts");
 type State = "draft" | "sealed" | "staging" | "prod" | "pruning";
@@ -77,17 +78,124 @@ describe("maintenance release integrity", () => {
       .toMatchObject({ scanned: 1, migrated: 1, blobCreates: 1 });
   });
 
-  it("rejects same-source-hash blobs with different rendered fields", async () => {
+  it("creates a distinct payload identity for different same-source-hash content", async () => {
     const { t, pages } = await seed("draft");
-    await t.run((ctx) => ctx.db.insert("manPageContentBlobs", {
+    const otherId = await t.run((ctx) => ctx.db.insert("manPageContentBlobs", {
       contentSha256: "same-hash", docJson: '{"text":"different"}',
+    }));
+    expect(await t.mutation(internal.maintenance.dedupePageContentBatch, {
+      datasetReleaseId: "maintenance", cursor: null, limit: 2,
+    })).toMatchObject({ migrated: 2, blobCreates: 1 });
+    const contentDigest = await storedPayloadDigest(serializeStoredPayload("same-hash", { docJson: '{"text":"original"}' }));
+    const blob = await t.run((ctx) => ctx.db.query("manPageContentBlobs")
+      .withIndex("by_contentDigest", (q) => q.eq("contentDigest", contentDigest)).unique());
+    expect(blob).toMatchObject({ docJson: '{"text":"original"}', contentDigest });
+    for (const page of pages) {
+      expect(await t.run((ctx) => ctx.db.get(page.contentId))).toMatchObject({ blobId: blob!._id });
+    }
+    expect(await t.run((ctx) => ctx.db.get(otherId))).toMatchObject({ docJson: '{"text":"different"}' });
+  });
+
+  it.each([false, true])("reuses a later matching variant (digest indexed: %s)", async (indexed) => {
+    const { t, pages } = await seed("draft");
+    const contentDigest = await storedPayloadDigest(serializeStoredPayload("same-hash", { docJson: '{"text":"original"}' }));
+    const blobId = await t.run(async (ctx) => {
+      await ctx.db.insert("manPageContentBlobs", {
+        contentSha256: "same-hash", docJson: '{"text":"different"}',
+      });
+      return await ctx.db.insert("manPageContentBlobs", {
+        contentSha256: "same-hash", docJson: '{"text":"original"}',
+        ...(indexed ? { contentDigest } : {}),
+      });
+    });
+    expect(await t.mutation(internal.maintenance.dedupePageContentBatch, {
+      datasetReleaseId: "maintenance", cursor: null, limit: 2,
+    })).toMatchObject({ migrated: 2, blobCreates: 0 });
+    for (const page of pages) {
+      expect(await t.run((ctx) => ctx.db.get(page.contentId))).toMatchObject({ blobId });
+    }
+  });
+
+  it("rejects a digest-indexed blob whose rendered bytes disagree", async () => {
+    const { t, pages } = await seed("draft");
+    const contentDigest = await storedPayloadDigest(serializeStoredPayload("same-hash", { docJson: '{"text":"original"}' }));
+    await t.run((ctx) => ctx.db.insert("manPageContentBlobs", {
+      contentSha256: "same-hash", contentDigest, docJson: '{"text":"different"}',
     }));
     await expect(t.mutation(internal.maintenance.dedupePageContentBatch, {
       datasetReleaseId: "maintenance", cursor: null, limit: 1,
     })).rejects.toThrow("CONTENT_PAYLOAD_MISMATCH");
     for (const page of pages) {
-      expect(await t.run((ctx) => ctx.db.get(page.contentId)))
-        .toMatchObject({ docJson: '{"text":"original"}' });
+      expect(await t.run((ctx) => ctx.db.get(page.contentId))).not.toHaveProperty("blobId");
+    }
+  });
+
+  it.each([false, true])("bounds legacy scans but finds indexed variants beyond the bound (indexed: %s)", async (indexed) => {
+    const { t, pages } = await seed("draft");
+    const contentDigest = await storedPayloadDigest(serializeStoredPayload("same-hash", { docJson: '{"text":"original"}' }));
+    const lastId = await t.run(async (ctx) => {
+      for (let index = 0; index < 25; index += 1) {
+        await ctx.db.insert("manPageContentBlobs", {
+          contentSha256: "same-hash", docJson: JSON.stringify({ text: `different-${index}` }),
+        });
+      }
+      return await ctx.db.insert("manPageContentBlobs", {
+        contentSha256: "same-hash", docJson: '{"text":"original"}',
+        ...(indexed ? { contentDigest } : {}),
+      });
+    });
+    const before = await t.run((ctx) => ctx.db.query("manPageContentBlobs").take(26));
+    expect(await t.mutation(internal.maintenance.dedupePageContentBatch, {
+      datasetReleaseId: "maintenance", cursor: null, limit: 2,
+    })).toMatchObject({ migrated: 2, blobCreates: indexed ? 0 : 1 });
+    expect(await t.run((ctx) => ctx.db.query("manPageContentBlobs").take(26))).toEqual(before);
+    const selected = await t.run((ctx) => ctx.db.query("manPageContentBlobs")
+      .withIndex("by_contentDigest", (q) => q.eq("contentDigest", contentDigest)).unique());
+    expect(selected).toMatchObject({ docJson: '{"text":"original"}' });
+    expect(selected!._id === lastId).toBe(indexed);
+    for (const page of pages) {
+      expect(await t.run((ctx) => ctx.db.get(page.contentId))).toMatchObject({ blobId: selected!._id });
+    }
+  });
+
+  it("preserves and skips unverified storage-backed legacy variants", async () => {
+    const { t, pages } = await seed("draft");
+    const { blobId, storageId } = await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(new Blob(["unverified"]));
+      const blobId = await ctx.db.insert("manPageContentBlobs", {
+        contentSha256: "same-hash", storageId, docJson: '{"text":"original"}',
+      });
+      return { blobId, storageId };
+    });
+    const before = await t.run((ctx) => ctx.db.get(blobId));
+    expect(await t.mutation(internal.maintenance.dedupePageContentBatch, {
+      datasetReleaseId: "maintenance", cursor: null, limit: 2,
+    })).toMatchObject({ migrated: 2, blobCreates: 1 });
+    expect(await t.run((ctx) => ctx.db.get(blobId))).toEqual(before);
+    expect(await t.run(async (ctx) => (await ctx.storage.get(storageId))?.text())).toBe("unverified");
+    for (const page of pages) {
+      const content = await t.run((ctx) => ctx.db.get(page.contentId));
+      expect(content?.blobId).toBeDefined();
+      expect(content?.blobId).not.toBe(blobId);
+      expect(await t.run((ctx) => ctx.db.get(content!.blobId!))).toMatchObject({ docJson: '{"text":"original"}' });
+    }
+  });
+
+  it.each([false, true])("rejects non-contiguous destination chunks (digest indexed: %s)", async (indexed) => {
+    const { t, pages } = await seed("draft");
+    const contentDigest = await storedPayloadDigest(serializeStoredPayload("same-hash", { docJson: '{"text":"original"}' }));
+    await t.run(async (ctx) => {
+      const blobId = await ctx.db.insert("manPageContentBlobs", {
+        contentSha256: "same-hash", ...(indexed ? { contentDigest } : {}),
+      });
+      await ctx.db.insert("manPageContentBlobChunks", {
+        blobId, contentSha256: "same-hash", kind: "docJson", chunkIndex: 1, chunk: '{"text":"original"}',
+      });
+    });
+    await expect(t.mutation(internal.maintenance.dedupePageContentBatch, {
+      datasetReleaseId: "maintenance", cursor: null, limit: 1,
+    })).rejects.toThrow("CONTENT_CHUNKS_INVALID_OR_OVERSIZED");
+    for (const page of pages) {
       expect(await t.run((ctx) => ctx.db.get(page.contentId))).not.toHaveProperty("blobId");
     }
   });
@@ -115,7 +223,8 @@ describe("maintenance release integrity", () => {
       if (side === "source") {
         for (const page of pages) await ctx.db.patch(page.contentId, { storageId });
       } else {
-        await ctx.db.insert("manPageContentBlobs", { contentSha256: "same-hash", storageId });
+        const contentDigest = await storedPayloadDigest(serializeStoredPayload("same-hash", { docJson: '{"text":"original"}' }));
+        await ctx.db.insert("manPageContentBlobs", { contentSha256: "same-hash", contentDigest, storageId });
       }
     });
     await expect(t.mutation(internal.maintenance.dedupePageContentBatch, {
