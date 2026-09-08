@@ -6,6 +6,8 @@ import { pageByNameAndSection } from "./_releaseLookups";
 import { cachedRelatedItem } from "./_relatedLinks";
 import { DATASET_STAGES, DISTROS } from "./lib";
 import { datasetStageValidator, distroValidator } from "./schema";
+import { verifyDeclaredManifest } from "./_releaseManifest";
+import { startLegacyManifestVerification } from "./manifest";
 
 const BACKFILL_BATCH_SIZE = 100;
 
@@ -20,6 +22,8 @@ export const activeMetadataStatus = internalQuery({
       currentVersion: v.union(v.number(), v.null()),
       completedVersion: v.union(v.number(), v.null()),
       sealed: v.boolean(),
+      manifestVerified: v.boolean(),
+      manifestError: v.union(v.string(), v.null()),
       complete: v.boolean(),
     })),
   }),
@@ -47,7 +51,9 @@ export const activeMetadataStatus = internalQuery({
           currentVersion,
           completedVersion,
           sealed,
-          complete: sealed && !release?.pruning && currentVersion !== null && completedVersion === currentVersion,
+          manifestVerified: release?.manifestVerified === true,
+          manifestError: release?.manifestError ?? null,
+          complete: sealed && release?.manifestVerified === true && !release?.pruning && currentVersion !== null && completedVersion === currentVersion,
         });
       }
     }
@@ -70,10 +76,10 @@ export async function scheduleRelatedMetadataBackfill(
   // bounded batch. Completed entries are skipped, so restarts are idempotent.
   const jobId = await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
     datasetReleaseId: release.datasetReleaseId,
-    cursor: null,
-    version,
   });
-  await ctx.db.patch(release._id, { relatedMetadataBackfillJobId: jobId });
+  await ctx.db.patch(release._id, {
+    relatedMetadataBackfillJobId: jobId, relatedMetadataBackfillCursor: null, relatedMetadataBackfillVersion: version,
+  });
   return true;
 }
 
@@ -99,8 +105,12 @@ export const backfillActiveReleases = internalMutation({
         const release = await ctx.db.get(pointer.releaseId);
         if (!release) throw new Error("RELEASE_NOT_FOUND");
         if (release.pruning) throw new Error("RELEASE_PRUNING");
+        let manifestPending = false;
+        if (release.manifestBasis === "declared") await verifyDeclaredManifest(ctx, release);
+        else manifestPending = await startLegacyManifestVerification(ctx, release);
         if (!release.sealed) await ctx.db.patch(release._id, { sealed: true });
-        if (await scheduleRelatedMetadataBackfill(ctx, release)) scheduled += 1;
+        const metadataPending = await scheduleRelatedMetadataBackfill(ctx, release);
+        if (manifestPending || metadataPending) scheduled += 1;
         else skipped += 1;
       }
     }
@@ -112,7 +122,9 @@ export const backfillActiveReleases = internalMutation({
 export const backfillRelease = internalMutation({
   args: {
     datasetReleaseId: v.string(),
-    cursor: v.union(v.string(), v.null()),
+    // Already-queued jobs retain the previous argument shape across deploys.
+    // Accept those fields for compatibility, but never use them as progress.
+    cursor: v.optional(v.union(v.string(), v.null())),
     version: v.optional(v.number()),
   },
   returns: v.object({
@@ -136,9 +148,9 @@ export const backfillRelease = internalMutation({
     }
 
     const version = release.relatedMetadataVersion ?? 0;
-    // New pages may resolve links scanned in an earlier batch. Restart that
-    // pass rather than marking their newly invalidated metadata complete.
-    const cursor = args.version !== undefined && args.version !== version ? null : args.cursor;
+    // The release owns progress. No internal caller can jump to an arbitrary
+    // page and mark an unchecked prefix complete by supplying a cursor.
+    const cursor = release.relatedMetadataBackfillVersion === version ? release.relatedMetadataBackfillCursor ?? null : null;
 
     const batch = await ctx.db
       .query("manPageLinks")
@@ -161,14 +173,18 @@ export const backfillRelease = internalMutation({
     if (!batch.isDone) {
       const jobId = await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
         datasetReleaseId: args.datasetReleaseId,
-        cursor: batch.continueCursor,
-        version,
       });
-      await ctx.db.patch(release._id, { relatedMetadataBackfillJobId: jobId });
+      await ctx.db.patch(release._id, {
+        relatedMetadataBackfillJobId: jobId,
+        relatedMetadataBackfillCursor: batch.continueCursor,
+        relatedMetadataBackfillVersion: version,
+      });
     } else {
       await ctx.db.patch(release._id, {
         relatedMetadataCompletedVersion: version,
         relatedMetadataBackfillJobId: undefined,
+        relatedMetadataBackfillCursor: undefined,
+        relatedMetadataBackfillVersion: undefined,
       });
     }
     return {

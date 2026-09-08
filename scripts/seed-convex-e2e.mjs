@@ -173,7 +173,7 @@ function makePages(distro) {
   })
 
   const evp = page({
-    name: 'EVP_DigestInit',
+    name: 'evp_digestinit',
     section: '3ssl',
     title: 'EVP_DigestInit(3ssl)',
     description: 'initialize a digest context',
@@ -218,6 +218,8 @@ for (const distro of ['debian', 'ubuntu', 'fedora']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
+    aliasCount: 1,
+    licenseCount: 0,
     sectionTotals,
     licensePackages: [],
   })

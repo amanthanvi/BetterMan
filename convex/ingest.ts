@@ -3,6 +3,8 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
+import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, verifyDeclaredManifest } from "./_releaseManifest";
+import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import {
   compactManPageSearchText,
   DATASET_STAGES,
@@ -116,6 +118,23 @@ function jsonField(value: unknown): string | undefined {
   return JSON.stringify(value);
 }
 
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key, nested) => {
+    if (!nested || typeof nested !== "object" || Array.isArray(nested)) return nested;
+    return Object.fromEntries(Object.entries(nested).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0));
+  });
+}
+
+async function validateNewPageRoute(ctx: MutationCtx, releaseId: Id<"datasetReleases">, page: { name: string; section: string; externalId: string }) {
+  if (!page.externalId.trim() || !page.name || page.name !== page.name.trim().toLowerCase() ||
+      !page.section || page.section !== page.section.trim().toLowerCase()) throw new Error("INVALID_MAN_PAGE_ROUTE");
+  const existing = await ctx.db.query("manPages")
+    .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).eq("name", page.name).eq("section", page.section)).unique();
+  const alias = await ctx.db.query("manPageAliases")
+    .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).eq("name", page.name).eq("section", page.section)).unique();
+  if (existing || alias) throw new Error("DUPLICATE_MAN_PAGE_ROUTE");
+}
+
 function shouldChunkContent(value: string): boolean {
   return value.length > MAX_INLINE_CONTENT_CHARS;
 }
@@ -175,15 +194,18 @@ async function findOrCreateContentBlob(
     contentFields: ContentField[];
   },
 ): Promise<Id<"manPageContentBlobs">> {
+  const fields = Object.fromEntries(args.contentFields.map(({ kind, value }) => [kind, value]));
+  const contentDigest = await storedPayloadDigest(serializeStoredPayload(args.contentSha256, fields));
   const existing = await ctx.db
     .query("manPageContentBlobs")
-    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.contentSha256))
+    .withIndex("by_contentDigest", (q) => q.eq("contentDigest", contentDigest))
     .unique();
   if (existing) return existing._id;
 
   const { inlinePayload, chunkedFields } = splitContentFields(args.contentFields);
   const blobId = await ctx.db.insert("manPageContentBlobs", {
     contentSha256: args.contentSha256,
+    contentDigest,
     ...inlinePayload,
   });
 
@@ -206,39 +228,40 @@ async function findOrCreateStoredContentBlob(
     storageId: Id<"_storage">;
   },
 ): Promise<Id<"manPageContentBlobs">> {
+  const metadata = await ctx.db.system.get(args.storageId);
+  if (!metadata || metadata.size <= 0) throw new Error("CONTENT_STORAGE_MISSING");
+  const contentDigest = metadata.sha256;
   const existing = await ctx.db
     .query("manPageContentBlobs")
-    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.contentSha256))
+    .withIndex("by_contentDigest", (q) => q.eq("contentDigest", contentDigest))
     .unique();
   if (existing) {
-    if (!existing.storageId) {
-      await ctx.db.patch(existing._id, { storageId: args.storageId });
-    }
     return existing._id;
   }
 
   return await ctx.db.insert("manPageContentBlobs", {
     contentSha256: args.contentSha256,
+    contentDigest,
     storageId: args.storageId,
   });
 }
 
-export const listContentBlobStorageBySha = internalQuery({
+export const listContentBlobStorageByDigest = internalQuery({
   args: {
-    contentSha256s: v.array(v.string()),
+    contentDigests: v.array(v.string()),
   },
   handler: async (ctx, args) => {
     const results = [];
     const seen = new Set<string>();
-    for (const contentSha256 of args.contentSha256s) {
-      if (seen.has(contentSha256)) continue;
-      seen.add(contentSha256);
+    for (const contentDigest of args.contentDigests) {
+      if (seen.has(contentDigest)) continue;
+      seen.add(contentDigest);
       const blob = await ctx.db
         .query("manPageContentBlobs")
-        .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
+        .withIndex("by_contentDigest", (q) => q.eq("contentDigest", contentDigest))
         .unique();
       results.push({
-        contentSha256,
+        contentDigest,
         blobId: blob?._id ?? null,
         storageId: blob?.storageId ?? null,
       });
@@ -257,16 +280,26 @@ export const createRelease = internalMutation({
     ingestedAt: v.string(),
     packageManifest: v.any(),
     pageCount: v.number(),
+    aliasCount: v.number(),
+    licenseCount: v.number(),
     sectionTotals: v.array(sectionStatInput),
     licensePackages: v.array(licensePackageInput),
   },
   handler: async (ctx, args) => {
+    validateReleaseDeclaration(args);
+    const manifestDeclarationDigest = await storedPayloadDigest(canonicalJson({
+      ...args,
+      sectionTotals: [...args.sectionTotals].sort((a, b) => a.section.localeCompare(b.section)),
+      licensePackages: args.licensePackages.map((pkg) => ({ ...pkg, name: pkg.name.trim().toLowerCase() }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    }));
     const existing = await ctx.db
       .query("datasetReleases")
       .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
       .unique();
     if (existing) {
       if (existing.pruning) throw new Error("RELEASE_PRUNING");
+      if (existing.manifestDeclarationDigest !== manifestDeclarationDigest) throw new Error("RELEASE_MANIFEST_CONFLICT");
       return { releaseId: existing._id, existed: true };
     }
 
@@ -279,6 +312,13 @@ export const createRelease = internalMutation({
       ingestedAt: args.ingestedAt,
       packageManifestJson: jsonField(args.packageManifest),
       pageCount: args.pageCount,
+      aliasCount: args.aliasCount,
+      licenseCount: args.licenseCount,
+      uploadedPageCount: 0,
+      uploadedAliasCount: 0,
+      uploadedLicenseCount: 0,
+      manifestBasis: "declared",
+      manifestDeclarationDigest,
     });
 
     for (const stat of args.sectionTotals) {
@@ -288,6 +328,7 @@ export const createRelease = internalMutation({
         section: stat.section,
         label: sectionLabel(stat.section),
         total: stat.total,
+        uploaded: 0,
       });
     }
 
@@ -295,7 +336,7 @@ export const createRelease = internalMutation({
       await ctx.db.insert("licensePackages", {
         releaseId,
         datasetReleaseId: args.datasetReleaseId,
-        packageName: pkg.name,
+        packageName: pkg.name.trim().toLowerCase(),
         version: pkg.version,
         hasLicenseText: pkg.hasLicenseText,
       });
@@ -320,6 +361,7 @@ export const insertPages = internalMutation({
 
     let inserted = 0;
     let skipped = 0;
+    const bySection = new Map<string, number>();
     for (const page of args.pages) {
       const existing = await ctx.db
         .query("manPages")
@@ -332,6 +374,8 @@ export const insertPages = internalMutation({
         continue;
       }
       if (immutable) throw new Error("RELEASE_SEALED");
+
+      await validateNewPageRoute(ctx, release._id, page);
 
       const pageId = await ctx.db.insert("manPages", {
         releaseId: release._id,
@@ -394,9 +438,11 @@ export const insertPages = internalMutation({
       }
 
       inserted += 1;
+      bySection.set(page.section, (bySection.get(page.section) ?? 0) + 1);
     }
 
     if (inserted > 0) {
+      await recordPageUploads(ctx, release, bySection);
       await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
     }
     return { inserted, skipped };
@@ -418,6 +464,7 @@ export const insertStoredPages = internalMutation({
 
     let inserted = 0;
     let skipped = 0;
+    const bySection = new Map<string, number>();
     for (const page of args.pages) {
       const existing = await ctx.db
         .query("manPages")
@@ -430,6 +477,8 @@ export const insertStoredPages = internalMutation({
         continue;
       }
       if (immutable) throw new Error("RELEASE_SEALED");
+
+      await validateNewPageRoute(ctx, release._id, page);
 
       const pageId = await ctx.db.insert("manPages", {
         releaseId: release._id,
@@ -486,12 +535,20 @@ export const insertStoredPages = internalMutation({
       }
 
       inserted += 1;
+      bySection.set(page.section, (bySection.get(page.section) ?? 0) + 1);
     }
 
     if (inserted > 0) {
+      await recordPageUploads(ctx, release, bySection);
       await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
     }
-    return { inserted, skipped };
+    const unusedStorageIds: Id<"_storage">[] = [];
+    for (const storageId of new Set(args.pages.map((page) => page.contentStorageId))) {
+      const used = await ctx.db.query("manPageContentBlobs")
+        .withIndex("by_storageId", (q) => q.eq("storageId", storageId)).first();
+      if (!used) unusedStorageIds.push(storageId);
+    }
+    return { inserted, skipped, unusedStorageIds };
   },
 });
 
@@ -524,16 +581,26 @@ export const insertAliases = internalMutation({
         continue;
       }
       if (immutable) throw new Error("RELEASE_SEALED");
+      const targetName = alias.targetName.trim().toLowerCase();
+      const targetSection = alias.targetSection.trim().toLowerCase();
+      if (!name || !section || !targetName || !targetSection) throw new Error("INVALID_ALIAS_ROUTE");
+      const canonical = await ctx.db.query("manPages")
+        .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", release._id).eq("name", name).eq("section", section)).unique();
+      if (canonical) throw new Error("DUPLICATE_MAN_PAGE_ROUTE");
+      const target = await ctx.db.query("manPages")
+        .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", release._id).eq("name", targetName).eq("section", targetSection)).unique();
+      if (!target) throw new Error("ALIAS_TARGET_NOT_FOUND");
       await ctx.db.insert("manPageAliases", {
         releaseId: release._id,
         datasetReleaseId: release.datasetReleaseId,
         name,
         section,
-        targetName: alias.targetName.trim().toLowerCase(),
-        targetSection: alias.targetSection.trim().toLowerCase(),
+        targetName,
+        targetSection,
       });
       inserted += 1;
     }
+    if (inserted > 0) await recordOtherUploads(ctx, release, "aliases", inserted);
     return { inserted, skipped };
   },
 });
@@ -566,6 +633,10 @@ export const insertLicenses = internalMutation({
         continue;
       }
       if (immutable) throw new Error("RELEASE_SEALED");
+      if (!license.licenseText.trim()) throw new Error("EMPTY_LICENSE_TEXT");
+      const declaration = await ctx.db.query("licensePackages")
+        .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", release._id).eq("packageName", pkg)).unique();
+      if (!declaration?.hasLicenseText) throw new Error("UNDECLARED_LICENSE_PACKAGE");
 
       await ctx.db.insert("licenses", {
         releaseId: release._id,
@@ -579,6 +650,7 @@ export const insertLicenses = internalMutation({
       inserted += 1;
     }
 
+    if (inserted > 0) await recordOtherUploads(ctx, release, "licenses", inserted);
     return { inserted, skipped };
   },
 });
@@ -603,6 +675,7 @@ export const activateRelease = internalMutation({
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (release.pruning) throw new Error("RELEASE_PRUNING");
 
+    await verifyDeclaredManifest(ctx, release);
     if (!release.sealed) await ctx.db.patch(release._id, { sealed: true });
     const pending = await scheduleRelatedMetadataBackfill(ctx, release);
     const result = {
@@ -668,6 +741,7 @@ export const promoteActiveReleases = internalMutation({
       if (!release) throw new Error("RELEASE_NOT_FOUND");
       if (release.pruning) throw new Error("RELEASE_PRUNING");
       if (!release.sealed) throw new Error("RELEASE_NOT_SEALED");
+      if (!release.manifestVerified) throw new Error("RELEASE_MANIFEST_UNVERIFIED");
       if (release.relatedMetadataCompletedVersion !== (release.relatedMetadataVersion ?? 0)) {
         throw new Error("RELATED_METADATA_INCOMPLETE");
       }

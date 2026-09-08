@@ -2,6 +2,7 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 
 const http = httpRouter();
 
@@ -62,31 +63,6 @@ function jsonField(value: unknown): string | undefined {
   return JSON.stringify(value);
 }
 
-type PageIngestPayload = {
-  contentSha256: string;
-  doc: unknown;
-  synopsis: unknown;
-  options: unknown;
-  seeAlso: unknown;
-};
-
-async function contentStorageIdForPage(
-  ctx: { storage: { store: (blob: Blob) => Promise<Id<"_storage">> } },
-  page: PageIngestPayload,
-): Promise<Id<"_storage">> {
-  const content = {
-    docJson: JSON.stringify(page.doc),
-    synopsisJson: jsonField(page.synopsis),
-    optionsJson: jsonField(page.options),
-    seeAlsoJson: jsonField(page.seeAlso),
-  };
-  return await ctx.storage.store(
-    new Blob([JSON.stringify({ contentSha256: page.contentSha256, content })], {
-      type: "application/json",
-    }),
-  );
-}
-
 http.route({
   path: "/ingest/release",
   method: "POST",
@@ -126,67 +102,67 @@ http.route({
       );
     }
 
-    const contentSha256s = payload.pages
-      .map((page) => (typeof page.contentSha256 === "string" ? page.contentSha256 : ""))
-      .filter(Boolean);
-    const existing = await ctx.runQuery(internal.ingest.listContentBlobStorageBySha, {
-      contentSha256s,
+    // Validate the entire batch before allocating files, including late entries.
+    if (payload.pages.some((page) => !page || typeof page !== "object" ||
+      typeof page.contentSha256 !== "string" || !page.contentSha256 || page.doc == null)) {
+      return jsonResponse(
+        { error: { code: "INVALID_INGEST_PAYLOAD", message: "page.contentSha256 and page.doc are required" } }, 400,
+      );
+    }
+    const prepared = await Promise.all(payload.pages.map(async (page) => {
+      const text = serializeStoredPayload(page.contentSha256 as string, {
+        docJson: JSON.stringify(page.doc), synopsisJson: jsonField(page.synopsis),
+        optionsJson: jsonField(page.options), seeAlsoJson: jsonField(page.seeAlso),
+      });
+      return { page, text, digest: await storedPayloadDigest(text) };
+    }));
+    const existing = await ctx.runQuery(internal.ingest.listContentBlobStorageByDigest, {
+      contentDigests: prepared.map((item) => item.digest),
     });
-    const storageBySha = new Map<string, Id<"_storage">>();
+    const storageByDigest = new Map<string, Id<"_storage">>();
     for (const item of existing) {
-      if (item.storageId) storageBySha.set(item.contentSha256, item.storageId);
+      if (item.storageId) storageByDigest.set(item.contentDigest, item.storageId);
     }
 
     const pages = [];
     const createdStorageIds: Id<"_storage">[] = [];
     let storedContentFiles = 0;
     let reusedContentFiles = 0;
-    for (const page of payload.pages) {
-      const contentSha256 =
-        typeof page.contentSha256 === "string" ? page.contentSha256 : "";
-      if (!contentSha256) {
-        return jsonResponse(
-          { error: { code: "INVALID_INGEST_PAYLOAD", message: "page.contentSha256 is required" } },
-          400,
-        );
-      }
-
-      let contentStorageId = storageBySha.get(contentSha256);
-      if (!contentStorageId) {
-        contentStorageId = await contentStorageIdForPage(ctx, {
-          contentSha256,
-          doc: page.doc,
-          synopsis: page.synopsis,
-          options: page.options,
-          seeAlso: page.seeAlso,
-        });
-        createdStorageIds.push(contentStorageId);
-        storageBySha.set(contentSha256, contentStorageId);
-        storedContentFiles += 1;
-      } else {
-        reusedContentFiles += 1;
-      }
-
-      const { doc, synopsis, options, seeAlso, ...metadata } = page;
-      void doc;
-      void synopsis;
-      void options;
-      void seeAlso;
-      pages.push({ ...metadata, contentStorageId });
-    }
-
+    let result;
     try {
-      const result = await ctx.runMutation(internal.ingest.insertStoredPages, {
+      for (const { page, text, digest } of prepared) {
+        let contentStorageId = storageByDigest.get(digest);
+        if (!contentStorageId) {
+          contentStorageId = await ctx.storage.store(new Blob([text], { type: "application/json" }));
+          createdStorageIds.push(contentStorageId);
+          storageByDigest.set(digest, contentStorageId);
+          storedContentFiles += 1;
+        } else {
+          reusedContentFiles += 1;
+        }
+
+        const { doc, synopsis, options, seeAlso, ...metadata } = page;
+        void doc;
+        void synopsis;
+        void options;
+        void seeAlso;
+        pages.push({ ...metadata, contentStorageId });
+      }
+
+      result = await ctx.runMutation(internal.ingest.insertStoredPages, {
         datasetReleaseId: payload.datasetReleaseId,
         pages,
       } as never);
-      return jsonResponse({ ...result, storedContentFiles, reusedContentFiles });
     } catch (error) {
       // A seal may commit while this action uploads blobs. The mutation rejects
       // that late batch atomically; remove only files created by this request.
       await Promise.all(createdStorageIds.map((id) => ctx.storage.delete(id)));
       throw error;
     }
+    // Never delete a reused file, or run failure cleanup after a committed write.
+    const unused = new Set(result.unusedStorageIds);
+    await Promise.all(createdStorageIds.filter((id) => unused.has(id)).map((id) => ctx.storage.delete(id)));
+    return jsonResponse({ ...result, storedContentFiles, reusedContentFiles });
   }),
 });
 

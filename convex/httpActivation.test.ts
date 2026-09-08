@@ -14,8 +14,13 @@ it("returns pending until hydration completes, then publishes through the authen
   await t.mutation(internal.ingest.createRelease, {
     datasetReleaseId: "http-test", locale: "en", distro: "debian", imageRef: "test",
     imageDigest: "test", ingestedAt: "2026-09-07T00:00:00Z", packageManifest: null,
-    pageCount: 0, sectionTotals: [], licensePackages: [],
+    pageCount: 1, aliasCount: 0, licenseCount: 0, sectionTotals: [{ section: "1", total: 1 }], licensePackages: [],
   });
+  await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "http-test", pages: [{
+    externalId: "page", name: "page", section: "1", sitemapPage: 0, title: "page", description: "page",
+    sourcePath: "page.1", sourcePackage: null, sourcePackageVersion: null, contentSha256: "page", hasParseWarnings: false,
+    doc: {}, synopsis: null, options: null, seeAlso: null, searchText: "page", snippetText: "page", links: [],
+  }] });
   const request = { method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
     body: JSON.stringify({ datasetReleaseId: "http-test", stage: "prod", activatedAt: "2026-09-07T00:00:00Z" }) };
   const pending = await t.fetch("/ingest/activate", request);

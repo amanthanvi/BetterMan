@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Release completeness: declare and verify page, section, alias, and license uploads before publication; fail deployment checks for unverified legacy manifests and document evidence-based recovery without admin or shared-content bypasses.
 - Release integrity: seal uploads and finish related-metadata hydration before atomic activation or promotion; reject late writes and reactivation of partially pruned releases, preserve no-op upload retries, and enforce provenance workflow ordering with regression tests.
 - Deployment: verify completion of every active related-metadata backfill before publishing the new frontend, with a bounded read-only poll and a recorded job summary.
 - Supply chain: return deployment tooling to attested Vercel CLI 58.4.4 and require cryptographically verified npm provenance from its public release workflow in CI and production deployment. Application dependency updates remain in place; OSV exception scope and expiry are unchanged.

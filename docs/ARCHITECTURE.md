@@ -30,7 +30,9 @@ Personalization (theme, distro, bookmarks, history, reading preferences) lives i
 
 A `.so` include stub is recorded as an alias rather than a page; its URL permanently redirects to the target. Pages where mandoc reported warnings carry a `hasParseWarnings` flag that the page renders as a one-line note.
 
-A release is one distro at one point in time. Ingestion writes an inactive release, seals it, and hydrates related metadata before atomically activating it for `staging`. Promotion copies only sealed, complete release pointers to `prod`. New rows cannot be appended after sealing, and pruning marks a release ineligible for activation before deleting any children. Content is stored by hash so identical pages across distros share one blob.
+A release is one distro at one point in time. Before uploading, ingestion declares its page count, per-section totals, alias count, and license count with the package identities that require license text. Activation verifies these declarations against completed uploads before sealing, hydrating related metadata, and atomically changing the `staging` pointer. Promotion copies only manifest-verified, sealed, complete release pointers to `prod`. New rows cannot be appended after sealing, and pruning marks a release ineligible for activation before deleting any children.
+
+Legacy releases without original alias declarations are not assumed complete by counting their current rows. They require original ingestion evidence and explicit validation, or fresh ingestion under a new release ID. Search/content maintenance is not an exception to release immutability; shared content must not be changed indirectly through another mutable release.
 
 ## Deploy
 

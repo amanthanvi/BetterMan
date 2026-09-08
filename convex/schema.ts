@@ -38,12 +38,33 @@ export default defineSchema({
     ingestedAt: v.string(),
     packageManifestJson: v.optional(v.string()),
     pageCount: v.number(),
+    aliasCount: v.optional(v.number()),
+    licenseCount: v.optional(v.number()),
+    uploadedPageCount: v.optional(v.number()),
+    uploadedAliasCount: v.optional(v.number()),
+    uploadedLicenseCount: v.optional(v.number()),
+    manifestVerified: v.optional(v.boolean()),
+    manifestDeclarationDigest: v.optional(v.string()),
+    manifestBasis: v.optional(v.union(v.literal("declared"), v.literal("legacy_unverified_aliases"))),
+    manifestError: v.optional(v.string()),
+    manifestVerification: v.optional(v.object({
+      phase: v.union(v.literal("pages"), v.literal("aliases"), v.literal("packages"), v.literal("licenses"), v.literal("complete")),
+      cursor: v.union(v.string(), v.null()),
+      pageCount: v.number(),
+      aliasCount: v.number(),
+      licenseCount: v.number(),
+      expectedLicenseCount: v.number(),
+      sections: v.array(v.object({ section: v.string(), total: v.number(), uploaded: v.number() })),
+      jobId: v.optional(v.id("_scheduled_functions")),
+    })),
     sealed: v.optional(v.boolean()),
     pruning: v.optional(v.boolean()),
     // Successful page batches invalidate completion, including resumed uploads.
     relatedMetadataVersion: v.optional(v.number()),
     relatedMetadataCompletedVersion: v.optional(v.number()),
     relatedMetadataBackfillJobId: v.optional(v.id("_scheduled_functions")),
+    relatedMetadataBackfillCursor: v.optional(v.union(v.string(), v.null())),
+    relatedMetadataBackfillVersion: v.optional(v.number()),
   })
     .index("by_datasetReleaseId", ["datasetReleaseId"])
     .index("by_locale_and_distro_and_datasetReleaseId", [
@@ -67,6 +88,7 @@ export default defineSchema({
     section: v.string(),
     label: v.string(),
     total: v.number(),
+    uploaded: v.optional(v.number()),
   }).index("by_releaseId_and_section", ["releaseId", "section"]),
 
   manPages: defineTable({
@@ -108,12 +130,16 @@ export default defineSchema({
 
   manPageContentBlobs: defineTable({
     contentSha256: v.string(),
+    contentDigest: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
     docJson: v.optional(v.string()),
     synopsisJson: v.optional(v.string()),
     optionsJson: v.optional(v.string()),
     seeAlsoJson: v.optional(v.string()),
-  }).index("by_contentSha256", ["contentSha256"]),
+  })
+    .index("by_contentSha256", ["contentSha256"])
+    .index("by_contentDigest", ["contentDigest"])
+    .index("by_storageId", ["storageId"]),
 
   manPageContentBlobChunks: defineTable({
     blobId: v.id("manPageContentBlobs"),
