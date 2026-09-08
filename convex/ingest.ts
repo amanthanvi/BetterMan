@@ -1,10 +1,11 @@
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import {
   compactManPageSearchText,
+  DATASET_STAGES,
   MAX_SNIPPET_TEXT_CHARS,
   sectionLabel,
   truncateText,
@@ -87,6 +88,23 @@ const licenseInput = v.object({
   licenseText: v.string(),
   sourceUrl: v.union(v.string(), v.null()),
 });
+
+async function releaseIsImmutable(ctx: MutationCtx, release: Doc<"datasetReleases">): Promise<boolean> {
+  if (release.pruning) throw new Error("RELEASE_PRUNING");
+  if (release.sealed) return true;
+  // Legacy active releases are protected immediately, before the deployment
+  // migration persists their seal. These reads also serialize with promotion.
+  for (const stage of DATASET_STAGES) {
+    const pointer = await ctx.db
+      .query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", (q) =>
+        q.eq("stage", stage).eq("locale", release.locale).eq("distro", release.distro),
+      )
+      .unique();
+    if (pointer?.releaseId === release._id) return true;
+  }
+  return false;
+}
 
 function optionalString(value: string | null): string | undefined {
   const trimmed = value?.trim();
@@ -247,7 +265,10 @@ export const createRelease = internalMutation({
       .query("datasetReleases")
       .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
       .unique();
-    if (existing) return { releaseId: existing._id, existed: true };
+    if (existing) {
+      if (existing.pruning) throw new Error("RELEASE_PRUNING");
+      return { releaseId: existing._id, existed: true };
+    }
 
     const releaseId = await ctx.db.insert("datasetReleases", {
       datasetReleaseId: args.datasetReleaseId,
@@ -295,6 +316,7 @@ export const insertPages = internalMutation({
       .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
       .unique();
     if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const immutable = await releaseIsImmutable(ctx, release);
 
     let inserted = 0;
     let skipped = 0;
@@ -309,6 +331,7 @@ export const insertPages = internalMutation({
         skipped += 1;
         continue;
       }
+      if (immutable) throw new Error("RELEASE_SEALED");
 
       const pageId = await ctx.db.insert("manPages", {
         releaseId: release._id,
@@ -391,6 +414,7 @@ export const insertStoredPages = internalMutation({
       .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
       .unique();
     if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const immutable = await releaseIsImmutable(ctx, release);
 
     let inserted = 0;
     let skipped = 0;
@@ -405,6 +429,7 @@ export const insertStoredPages = internalMutation({
         skipped += 1;
         continue;
       }
+      if (immutable) throw new Error("RELEASE_SEALED");
 
       const pageId = await ctx.db.insert("manPages", {
         releaseId: release._id,
@@ -481,6 +506,7 @@ export const insertAliases = internalMutation({
       .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
       .unique();
     if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const immutable = await releaseIsImmutable(ctx, release);
 
     let inserted = 0;
     let skipped = 0;
@@ -497,6 +523,7 @@ export const insertAliases = internalMutation({
         skipped += 1;
         continue;
       }
+      if (immutable) throw new Error("RELEASE_SEALED");
       await ctx.db.insert("manPageAliases", {
         releaseId: release._id,
         datasetReleaseId: release.datasetReleaseId,
@@ -522,6 +549,7 @@ export const insertLicenses = internalMutation({
       .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
       .unique();
     if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const immutable = await releaseIsImmutable(ctx, release);
 
     let inserted = 0;
     let skipped = 0;
@@ -537,6 +565,7 @@ export const insertLicenses = internalMutation({
         skipped += 1;
         continue;
       }
+      if (immutable) throw new Error("RELEASE_SEALED");
 
       await ctx.db.insert("licenses", {
         releaseId: release._id,
@@ -560,12 +589,29 @@ export const activateRelease = internalMutation({
     datasetReleaseId: v.string(),
     activatedAt: v.string(),
   },
+  returns: v.object({
+    stage: datasetStageValidator,
+    distro: distroValidator,
+    datasetReleaseId: v.string(),
+    pending: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const release = await ctx.db
       .query("datasetReleases")
       .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
       .unique();
     if (!release) throw new Error("RELEASE_NOT_FOUND");
+    if (release.pruning) throw new Error("RELEASE_PRUNING");
+
+    if (!release.sealed) await ctx.db.patch(release._id, { sealed: true });
+    const pending = await scheduleRelatedMetadataBackfill(ctx, release);
+    const result = {
+      stage: args.stage,
+      distro: release.distro,
+      datasetReleaseId: release.datasetReleaseId,
+      pending,
+    };
+    if (pending) return result;
 
     const existing = await ctx.db
       .query("activeReleases")
@@ -584,19 +630,17 @@ export const activateRelease = internalMutation({
     };
 
     if (existing) {
+      // Retiring a legacy active release must preserve its immutability too.
+      const previousRelease = await ctx.db.get(existing.releaseId);
+      if (previousRelease && !previousRelease.sealed) {
+        await ctx.db.patch(previousRelease._id, { sealed: true });
+      }
       await ctx.db.replace(existing._id, payload);
     } else {
       await ctx.db.insert("activeReleases", payload);
     }
 
-    // Targets can arrive in later page batches. Hydrate only after upload ends.
-    await scheduleRelatedMetadataBackfill(ctx, release);
-
-    return {
-      stage: args.stage,
-      distro: release.distro,
-      datasetReleaseId: release.datasetReleaseId,
-    };
+    return result;
   },
 });
 
@@ -607,16 +651,26 @@ export const promoteActiveReleases = internalMutation({
     distros: v.array(distroValidator),
     activatedAt: v.string(),
   },
+  returns: v.object({
+    promoted: v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string() })),
+  }),
   handler: async (ctx, args) => {
     const promoted = [];
-    for (const distro of args.distros) {
+    for (const distro of new Set(args.distros)) {
       const source = await ctx.db
         .query("activeReleases")
         .withIndex("by_stage_and_locale_and_distro", (q) =>
           q.eq("stage", args.fromStage).eq("locale", "en").eq("distro", distro),
         )
         .unique();
-      if (!source) continue;
+      if (!source) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+      const release = await ctx.db.get(source.releaseId);
+      if (!release) throw new Error("RELEASE_NOT_FOUND");
+      if (release.pruning) throw new Error("RELEASE_PRUNING");
+      if (!release.sealed) throw new Error("RELEASE_NOT_SEALED");
+      if (release.relatedMetadataCompletedVersion !== (release.relatedMetadataVersion ?? 0)) {
+        throw new Error("RELATED_METADATA_INCOMPLETE");
+      }
 
       const target = await ctx.db
         .query("activeReleases")
@@ -635,14 +689,14 @@ export const promoteActiveReleases = internalMutation({
       };
 
       if (target) {
+        const previousRelease = await ctx.db.get(target.releaseId);
+        if (previousRelease && !previousRelease.sealed) {
+          await ctx.db.patch(previousRelease._id, { sealed: true });
+        }
         await ctx.db.replace(target._id, payload);
       } else {
         await ctx.db.insert("activeReleases", payload);
       }
-
-      // Promotion also upgrades releases uploaded before link metadata existed.
-      const release = await ctx.db.get(source.releaseId);
-      if (release) await scheduleRelatedMetadataBackfill(ctx, release);
 
       promoted.push({ distro, datasetReleaseId: source.datasetReleaseId });
     }

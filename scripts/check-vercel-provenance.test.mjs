@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { requireVercelProvenance } from './check-vercel-provenance.mjs'
 
@@ -31,12 +32,34 @@ test('rejects registry signatures alone and the wrong installed version', async 
 })
 test('rejects failed signature audits and unexpected package or workflow identity', async () => {
   await assert.rejects(() => requireVercelProvenance({ ...fixture(), invalid: [{}] }, '58.4.4', verify), /did not pass/)
+  await assert.rejects(() => requireVercelProvenance({ ...fixture(), missing: [{}] }, '58.4.4', verify), /did not pass/)
   for (const change of [
+    (s) => { s.predicateType = 'https://slsa.dev/provenance/v0.2' },
     (s) => { s.subject[0].name = 'pkg:npm/other@58.4.4' },
     (s) => { s.subject[0].digest.sha512 = '' },
     (s) => { s.predicate.buildDefinition.externalParameters.workflow.repository = 'https://github.com/other/repo' },
     (s) => { s.predicate.buildDefinition.externalParameters.workflow.path = '.github/workflows/other.yml' },
+    (s) => { s.predicate.buildDefinition.externalParameters.workflow.ref = 'refs/heads/other' },
+    (s) => { s.predicate.buildDefinition.resolvedDependencies[0].uri = 'git+https://github.com/vercel/private@refs/heads/main' },
+    (s) => { s.predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit = '' },
   ]) await assert.rejects(() => requireVercelProvenance(fixture(change), '58.4.4', verify), /does not match/)
+})
+test('rejects incomplete audits, alternate package locations, and publish-only attestations', async () => {
+  for (const field of ['invalid', 'missing', 'verified']) {
+    const report = fixture()
+    delete report[field]
+    await assert.rejects(() => requireVercelProvenance(report, '58.4.4', verify), /did not pass/)
+  }
+  for (const change of [
+    (entry) => { entry.location = 'node_modules/other/node_modules/vercel' },
+    (entry) => { entry.registry = 'https://registry.example.com/' },
+    (entry) => { delete entry.attestations.provenance },
+    (entry) => { entry.attestationBundles[0].predicateType = 'https://github.com/npm/attestation/tree/main/specs/publish/v0.1' },
+  ]) {
+    const report = fixture()
+    change(report.verified[0])
+    await assert.rejects(() => requireVercelProvenance(report, '58.4.4', verify), /no verified/)
+  }
 })
 test('requires the expected certificate signer and issuer even with matching payload claims', async () => {
   const report = fixture()
@@ -49,4 +72,48 @@ test('requires the expected certificate signer and issuer even with matching pay
     })
     throw new Error('certificate identity mismatch')
   }), /certificate identity mismatch/)
+})
+
+const readRepositoryFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
+
+// Intentionally strict contracts for the existing workflow format, not a YAML parser.
+function stepBlocks(workflow) {
+  return workflow.match(/^      - [\s\S]*?(?=^      - |^  [a-z_]+:|(?![\s\S]))/gm) ?? []
+}
+
+test('CI retains a mandatory provenance gate and runs its regression tests', () => {
+  const pkg = JSON.parse(readRepositoryFile('package.json'))
+  assert.equal(pkg.scripts['deps:provenance'], 'node scripts/check-vercel-provenance.mjs')
+  assert.ok(pkg.scripts['ops:test'].split(/\s+/).includes('scripts/check-vercel-provenance.test.mjs'))
+  const ci = readRepositoryFile('.github/workflows/ci.yml')
+  const nextjs = ci.split('\n  nextjs:\n')[1]?.split('\n  ingestion:\n')[0]
+  assert.ok(nextjs, 'nextjs job must exist')
+  const steps = stepBlocks(nextjs)
+  const gate = steps.findIndex((step) => step.includes('deps:provenance'))
+  assert.ok(gate > 0, 'provenance gate must follow dependency installation')
+  assert.equal(steps[gate].trim(), '- run: pnpm deps:provenance')
+  assert.equal(steps[gate - 1].trim(), '- run: pnpm install --frozen-lockfile')
+  assert.doesNotMatch(nextjs, /continue-on-error:/)
+  assert.ok(stepBlocks(ci).some((step) => step.trim() === '- name: Test production completion checks\n        run: pnpm ops:test'))
+})
+
+test('all production paths verify trusted tooling before deployment secrets are available', () => {
+  const workflow = readRepositoryFile('.github/workflows/deploy.yml')
+  const job = workflow.split('\n  deploy_production:\n')[1]
+  assert.ok(job, 'production job must exist')
+  const steps = stepBlocks(job)
+  const gate = steps.findIndex((step) => step.includes('deps:provenance'))
+  assert.ok(gate > 0, 'provenance gate must follow trusted tooling installation')
+  assert.equal(steps[gate].trim(), '- name: Verify trusted Vercel CLI provenance\n        run: pnpm --dir "$GITHUB_WORKSPACE/tooling" deps:provenance')
+  assert.equal(steps[gate - 1].trim(), '- name: Install trusted deployment-tool dependencies\n        run: pnpm --dir "$GITHUB_WORKSPACE/tooling" install --frozen-lockfile')
+  assert.doesNotMatch(job, /continue-on-error:|always\s*\(/)
+  for (const secret of ['CONVEX_DEPLOY_KEY', 'VERCEL_TOKEN']) {
+    const use = steps.findIndex((step) => step.includes(`secrets.${secret}`))
+    assert.ok(use > gate, `${secret} must only be exposed after provenance verification`)
+  }
+  const deployment = steps.find((step) => step.includes('scripts/deploy-vercel.sh'))
+  assert.ok(deployment?.includes('export PATH="$GITHUB_WORKSPACE/tooling/node_modules/.bin:$PATH"'))
+  const version = JSON.parse(readRepositoryFile('package.json')).devDependencies.vercel
+  assert.match(version, /^\d+\.\d+\.\d+$/)
+  assert.ok(deployment.includes(`if [[ "$(vercel --version)" != "${version}" ]]; then`))
 })

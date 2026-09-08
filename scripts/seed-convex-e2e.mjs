@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { setTimeout as sleep } from 'node:timers/promises'
 
 const stage = process.env.BETTERMAN_DATASET_STAGE || 'prod'
 const secret = process.env.CONVEX_INGEST_SECRET
@@ -28,6 +29,11 @@ async function post(path, payload) {
     },
     body: JSON.stringify(payload),
   })
+  if (res.status === 409 && path === '/ingest/activate') {
+    const result = await res.json()
+    if (result.pending === true) return result
+    throw new Error('Seed activation conflict without pending status')
+  }
   if (!res.ok) throw new Error(`Convex seed ${path} failed: ${res.status} ${await res.text()}`)
   return await res.json()
 }
@@ -221,5 +227,12 @@ for (const distro of ['debian', 'ubuntu', 'fedora']) {
     datasetReleaseId,
     aliases: [{ name: 'gunzip', section: '1', targetName: 'gzip', targetSection: '1' }],
   })
-  await post('/ingest/activate', { stage, datasetReleaseId, activatedAt: now })
+  const deadline = Date.now() + 300_000
+  while (true) {
+    const result = await post('/ingest/activate', { stage, datasetReleaseId, activatedAt: now })
+    if (Date.now() >= deadline) throw new Error('Seed activation timed out waiting for hydration')
+    if (result.pending === false && result.datasetReleaseId === datasetReleaseId) break
+    if (result.pending !== true) throw new Error('Invalid seed activation response')
+    await sleep(200)
+  }
 }

@@ -19,6 +19,7 @@ export const activeMetadataStatus = internalQuery({
       distro: distroValidator,
       currentVersion: v.union(v.number(), v.null()),
       completedVersion: v.union(v.number(), v.null()),
+      sealed: v.boolean(),
       complete: v.boolean(),
     })),
   }),
@@ -38,13 +39,15 @@ export const activeMetadataStatus = internalQuery({
         const release = await ctx.db.get(pointer.releaseId);
         const currentVersion = release ? release.relatedMetadataVersion ?? 0 : null;
         const completedVersion = release?.relatedMetadataCompletedVersion ?? null;
+        const sealed = release?.sealed === true;
         releases.push({
           datasetReleaseId: pointer.datasetReleaseId,
           stage,
           distro,
           currentVersion,
           completedVersion,
-          complete: currentVersion !== null && completedVersion === currentVersion,
+          sealed,
+          complete: sealed && !release?.pruning && currentVersion !== null && completedVersion === currentVersion,
         });
       }
     }
@@ -56,13 +59,21 @@ export async function scheduleRelatedMetadataBackfill(
   ctx: MutationCtx,
   release: Doc<"datasetReleases">,
 ): Promise<boolean> {
+  if (release.pruning) throw new Error("RELEASE_PRUNING");
   const version = release.relatedMetadataVersion ?? 0;
   if (release.relatedMetadataCompletedVersion === version) return false;
-  await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
+  if (release.relatedMetadataBackfillJobId) {
+    const job = await ctx.db.system.get(release.relatedMetadataBackfillJobId);
+    if (job && (job.state.kind === "pending" || job.state.kind === "inProgress")) return true;
+  }
+  // Polls join the live chain; failed/canceled jobs may restart from the first
+  // bounded batch. Completed entries are skipped, so restarts are idempotent.
+  const jobId = await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
     datasetReleaseId: release.datasetReleaseId,
     cursor: null,
     version,
   });
+  await ctx.db.patch(release._id, { relatedMetadataBackfillJobId: jobId });
   return true;
 }
 
@@ -75,15 +86,21 @@ export const backfillActiveReleases = internalMutation({
     let scheduled = 0;
     let skipped = 0;
     for (const stage of DATASET_STAGES) {
-      const pointers = await ctx.db
-        .query("activeReleases")
-        .withIndex("by_stage_and_locale_and_distro", (q) => q.eq("stage", stage).eq("locale", "en"))
-        .take(DISTROS.length);
-      for (const pointer of pointers) {
+      for (const distro of DISTROS) {
+        const pointer = await ctx.db
+          .query("activeReleases")
+          .withIndex("by_stage_and_locale_and_distro", (q) =>
+            q.eq("stage", stage).eq("locale", "en").eq("distro", distro),
+          )
+          .unique();
+        if (!pointer) continue;
         if (seen.has(pointer.releaseId)) continue;
         seen.add(pointer.releaseId);
         const release = await ctx.db.get(pointer.releaseId);
-        if (release && await scheduleRelatedMetadataBackfill(ctx, release)) scheduled += 1;
+        if (!release) throw new Error("RELEASE_NOT_FOUND");
+        if (release.pruning) throw new Error("RELEASE_PRUNING");
+        if (!release.sealed) await ctx.db.patch(release._id, { sealed: true });
+        if (await scheduleRelatedMetadataBackfill(ctx, release)) scheduled += 1;
         else skipped += 1;
       }
     }
@@ -91,8 +108,7 @@ export const backfillActiveReleases = internalMutation({
   },
 });
 
-// Page metadata is immutable within a release: both ingest paths skip existing
-// pages. Cache only positive matches so interrupted/older uploads can resume.
+// Sealed releases permit only these derived link/completion metadata writes.
 export const backfillRelease = internalMutation({
   args: {
     datasetReleaseId: v.string(),
@@ -111,7 +127,11 @@ export const backfillRelease = internalMutation({
       .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId))
       .unique();
     // A superseded release may be pruned while a scheduled batch is pending.
-    if (!release || release.relatedMetadataCompletedVersion === (release.relatedMetadataVersion ?? 0)) {
+    if (!release || release.pruning) {
+      return { processed: 0, updated: 0, isDone: true, continueCursor: null };
+    }
+    if (!release.sealed) throw new Error("RELEASE_NOT_SEALED");
+    if (release.relatedMetadataCompletedVersion === (release.relatedMetadataVersion ?? 0)) {
       return { processed: 0, updated: 0, isDone: true, continueCursor: null };
     }
 
@@ -139,13 +159,17 @@ export const backfillRelease = internalMutation({
     }
 
     if (!batch.isDone) {
-      await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
+      const jobId = await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
         datasetReleaseId: args.datasetReleaseId,
         cursor: batch.continueCursor,
         version,
       });
+      await ctx.db.patch(release._id, { relatedMetadataBackfillJobId: jobId });
     } else {
-      await ctx.db.patch(release._id, { relatedMetadataCompletedVersion: version });
+      await ctx.db.patch(release._id, {
+        relatedMetadataCompletedVersion: version,
+        relatedMetadataBackfillJobId: undefined,
+      });
     }
     return {
       processed: batch.page.length,

@@ -38,9 +38,12 @@ export default defineSchema({
     ingestedAt: v.string(),
     packageManifestJson: v.optional(v.string()),
     pageCount: v.number(),
+    sealed: v.optional(v.boolean()),
+    pruning: v.optional(v.boolean()),
     // Successful page batches invalidate completion, including resumed uploads.
     relatedMetadataVersion: v.optional(v.number()),
     relatedMetadataCompletedVersion: v.optional(v.number()),
+    relatedMetadataBackfillJobId: v.optional(v.id("_scheduled_functions")),
   })
     .index("by_datasetReleaseId", ["datasetReleaseId"])
     .index("by_locale_and_distro_and_datasetReleaseId", [

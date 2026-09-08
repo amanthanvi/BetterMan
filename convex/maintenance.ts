@@ -459,6 +459,8 @@ export const deleteInactiveReleaseBatch = internalMutation({
     const release = await releaseByDatasetReleaseId(ctx, args.datasetReleaseId);
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (await isActiveRelease(ctx, release)) throw new Error("REFUSING_TO_DELETE_ACTIVE_RELEASE");
+    // Activation must never publish a release between its deletion batches.
+    if (!release.pruning) await ctx.db.patch(release._id, { pruning: true });
 
     let deleted = 0;
     const deletedByTable: Partial<Record<TableNames, number>> = {};
