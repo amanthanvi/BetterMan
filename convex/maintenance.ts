@@ -173,9 +173,11 @@ async function findReusableContentBlob(
     contentSha256: string;
     contentFields: ContentField[];
   },
+  knownMissingDigests?: ReadonlySet<string>,
 ): Promise<{ blobId: Id<"manPageContentBlobs"> | null; contentDigest: string }> {
   const fields = Object.fromEntries(args.contentFields.map(({ kind, value }) => [kind, value]));
   const contentDigest = await storedPayloadDigest(serializeStoredPayload(args.contentSha256, fields));
+  if (knownMissingDigests?.has(contentDigest)) return { blobId: null, contentDigest };
   const existing = await ctx.db
     .query("manPageContentBlobs")
     .withIndex("by_contentDigest", (q) => q.eq("contentDigest", contentDigest))
@@ -754,7 +756,7 @@ export const dedupePageContentBatch = internalMutation({
       if (dryRun) {
         const existing = await findReusableContentBlob(ctx, {
           contentSha256: page.contentSha256, contentFields: fields,
-        });
+        }, previewDigests);
         if (!existing.blobId && !previewDigests.has(existing.contentDigest)) {
           blobCharsCreated += legacyChars;
           previewDigests.add(existing.contentDigest);

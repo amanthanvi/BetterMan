@@ -1,9 +1,10 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
+import * as legacyContent from "./_legacyContent";
 
 const modules = import.meta.glob("./**/*.ts");
 type State = "draft" | "sealed" | "staging" | "prod" | "pruning";
@@ -136,6 +137,22 @@ describe("maintenance release integrity", () => {
     expect(await t.run((ctx) => ctx.db.query("manPageContentBlobs").take(1))).toEqual([]);
     const applied = await t.mutation(internal.maintenance.dedupePageContentBatch, args);
     expect(applied).toMatchObject({ migrated: 2, blobCreates: 2, chars: preview.chars });
+  });
+
+  it("does not reread rejected legacy candidates for repeated preview payloads", async () => {
+    const { t } = await seed("draft");
+    await t.run((ctx) => ctx.db.insert("manPageContentBlobs", {
+      contentSha256: "same-hash", docJson: '{"text":"different"}',
+    }));
+    const read = vi.spyOn(legacyContent, "readContentBlobField");
+    try {
+      expect(await t.mutation(internal.maintenance.dedupePageContentBatch, {
+        datasetReleaseId: "maintenance", cursor: null, limit: 2, dryRun: true,
+      })).toMatchObject({ migrated: 2, chars: { blobCreated: '{"text":"original"}'.length } });
+      expect(read).toHaveBeenCalledTimes(1);
+    } finally {
+      read.mockRestore();
+    }
   });
 
   it.each([false, true])("reuses a later matching variant (digest indexed: %s)", async (indexed) => {
