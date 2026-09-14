@@ -447,6 +447,7 @@ async function deletePagePayload(
 
 export const previewInactiveReleases = internalQuery({
   args: {
+    cursor: v.optional(v.union(v.string(), v.null())),
     limit: v.optional(v.number()),
     childSampleLimit: v.optional(v.number()),
   },
@@ -457,10 +458,14 @@ export const previewInactiveReleases = internalQuery({
       DEFAULT_CHILD_SAMPLE_LIMIT,
       MAX_CHILD_SAMPLE_LIMIT,
     );
-    const releases = await ctx.db.query("datasetReleases").order("asc").take(limit);
+    // Page through every release so callers can see past the first batch.
+    const page = await ctx.db
+      .query("datasetReleases")
+      .order("asc")
+      .paginate({ cursor: args.cursor ?? null, numItems: limit });
     const inactive = [];
 
-    for (const release of releases) {
+    for (const release of page.page) {
       const active = await isActiveRelease(ctx, release);
       if (active) continue;
 
@@ -476,6 +481,13 @@ export const previewInactiveReleases = internalQuery({
         distro: release.distro,
         ingestedAt: release.ingestedAt,
         pageCount: release.pageCount,
+        // Rollback eligibility: only sealed, verified, declared releases can be
+        // activated again. Legacy or failed manifests never can.
+        sealed: release.sealed === true,
+        pruning: release.pruning === true,
+        manifestBasis: release.manifestBasis ?? null,
+        manifestVerified: release.manifestVerified === true,
+        manifestError: release.manifestError ?? null,
         children,
         contentTablesNote:
           "manPageContents and manPageContentChunks are deleted through sampled manPages.",
@@ -483,10 +495,12 @@ export const previewInactiveReleases = internalQuery({
     }
 
     return {
-      scanned: releases.length,
+      scanned: page.page.length,
       limit,
       childSampleLimit,
       inactive,
+      isDone: page.isDone,
+      continueCursor: page.isDone ? null : page.continueCursor,
       note: "Bounded dry run only. Counts are capped at childSampleLimit and may undercount large releases.",
     };
   },

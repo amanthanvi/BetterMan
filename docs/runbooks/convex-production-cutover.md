@@ -133,4 +133,4 @@ curl -fsS https://betterman.sh/api/v1/man/tar/1
 
 ## Rollback
 
-If prod verification fails after promotion, restore a previous known-good release through `/ingest/activate` and, when restoring staging first, `/ingest/promote`. The selected release must still exist, have a verified manifest, be sealed, and have complete related metadata. Do not bypass these checks with direct pointer edits. Do not delete releases during incident response; leave old documents available for rollback until a separate cleanup plan exists.
+If prod verification fails after promotion, restore a previous known-good release through `/ingest/activate` and, when restoring staging first, `/ingest/promote`. The selected release must still exist, have a verified manifest, be sealed, and have complete related metadata. Do not bypass these checks with direct pointer edits. Do not delete releases during incident response; leave old documents available for rollback. Once the incident is closed, remove superseded releases with the `prune-releases` workflow (see `docs/runbooks/multi-distro-ops.md`), which retains the newest verified inactive release per distro.

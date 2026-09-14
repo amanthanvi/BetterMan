@@ -48,6 +48,27 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 - Sample dispatches use `--sample --no-activate` and cannot promote. They validate the real acquisition/parser/upload path without moving staging or production active pointers.
 - Promote-only dispatches intentionally allow skipped ingest jobs and copy an already-validated staging release.
 
+## Prune superseded releases (GitHub Actions)
+
+Workflow: `.github/workflows/prune-releases.yml` (`prune-releases`)
+
+Every ingest creates a new release; activation and promotion only move pointers, so superseded releases stay in Convex until pruned. Pruning is manual and previews by default:
+
+- Preview: `gh workflow run prune-releases`
+- Delete: `gh workflow run prune-releases -f apply=true`
+- Keep two verified rollback candidates per distro: `gh workflow run prune-releases -f apply=true -f keep_per_distro=2`
+
+The workflow shares the `update-dataset` concurrency group, so it waits for any running ingest or promotion and blocks new ones until it finishes. The job summary records the plan and results.
+
+Selection rules, applied on top of `maintenance:deleteInactiveReleaseBatch` (which itself refuses any release an active `staging` or `prod` pointer references):
+
+- Unsealed releases are uploads in progress and are never touched.
+- Releases ingested less than `min_age_hours` ago (default 24) are skipped in case activation is still hydrating.
+- Releases already marked `pruning` are always finished, since partially pruned releases can never be activated.
+- The newest `keep_per_distro` (default 1) sealed, manifest-verified, declared releases per distro are retained as rollback candidates. Legacy releases without an alias declaration and releases whose manifest failed verification cannot be activated again, so they are pruned regardless of age.
+
+Deletion runs in bounded batches per release, then sweeps `manPageContentBlobs` that no page references. Blobs still shared with an active release are never orphans and are left in place. Run the preview again after applying; it should list only the retained rollback candidates and any fresh unsealed drafts.
+
 ## Verify distro API behavior
 
 - Omit distro → Debian (canonical):

@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Maintenance: add a manual `prune-releases` workflow that previews by default and deletes superseded inactive releases in bounded batches, retaining the newest verified release per distro as a rollback target and sweeping orphaned content blobs; the inactive-release preview now paginates and reports rollback eligibility.
 - Content maintenance: use the same verified payload selection for dry-run storage estimates and actual deduplication. (#252; thanks @amanthanvi)
 - Content maintenance: select duplicate blobs by rendered-payload digest, compare bounded legacy candidates, and reject invalid chunk sequences before reuse. (#251)
 - Release completeness: declare and verify page, section, alias, and license uploads before publication; fail deployment checks for unverified legacy manifests and document evidence-based recovery without admin or shared-content bypasses. (#251; thanks @amanthanvi)
