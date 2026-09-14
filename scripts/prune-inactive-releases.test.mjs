@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import {
-  cleanupOrphanBlobs, describeError, limitForAttempt, listInactiveReleases, mapWithConcurrency, parseOptions, prune, pruneRelease,
-  selectPrunable, withRetry,
+  adaptiveLimit, cleanupOrphanBlobs, describeError, limitForAttempt, listInactiveReleases, mapWithConcurrency, parseOptions, prune,
+  pruneRelease, selectPrunable, withRetry,
 } from './prune-inactive-releases.mjs'
 
 const now = Date.parse('2026-09-14T18:00:00Z')
@@ -28,6 +28,10 @@ test('parses environment options with safe defaults and rejects unsafe values', 
   assert.equal(applied.sweepOrphans, true, 'apply sweeps orphans by default')
   assert.equal(parseOptions({ BETTERMAN_PRUNE_APPLY: 'true', BETTERMAN_PRUNE_SWEEP_ORPHANS: 'false' }, now).sweepOrphans, false)
   assert.equal(parseOptions({ BETTERMAN_PRUNE_SWEEP_ORPHANS: 'true' }, now).sweepOrphans, true)
+  // The workflow exports an empty string for "auto"; that must mean unset.
+  assert.equal(parseOptions({ BETTERMAN_PRUNE_APPLY: 'true', BETTERMAN_PRUNE_SWEEP_ORPHANS: '' }, now).sweepOrphans, true)
+  assert.equal(parseOptions({ BETTERMAN_PRUNE_SWEEP_ORPHANS: '' }, now).sweepOrphans, false)
+  assert.throws(() => parseOptions({ BETTERMAN_PRUNE_SWEEP_ORPHANS: 'auto' }, now), /true or false/)
   assert.equal(parseOptions({ BETTERMAN_PRUNE_APPLY: 'yes' }, now).apply, false)
   // A rollback target must always remain and the age floor must be real.
   assert.throws(() => parseOptions({ BETTERMAN_PRUNE_KEEP_PER_DISTRO: '0' }, now), /integer >= 1/)
@@ -46,14 +50,19 @@ test('never selects unsealed drafts by default and always finishes started prune
   assert.deepEqual(skipped.map((r) => [r.datasetReleaseId, r.reason]), [['abandoned', 'unsealed upload in progress']])
 })
 
-test('prunes abandoned unsealed drafts only when the operator sets an unsealed age floor', () => {
+test('prunes abandoned incomplete uploads only when the operator sets an unsealed age floor', () => {
   const inactive = [
-    release({ ingestedAt: at(30), sealed: false, manifestVerified: false, datasetReleaseId: 'abandoned' }),
-    release({ ingestedAt: at(1), sealed: false, manifestVerified: false, datasetReleaseId: 'uploading' }),
+    release({ ingestedAt: at(30), sealed: false, manifestVerified: false, uploadComplete: false, datasetReleaseId: 'abandoned' }),
+    release({ ingestedAt: at(1), sealed: false, manifestVerified: false, uploadComplete: false, datasetReleaseId: 'uploading' }),
+    // Fully uploaded but never activated: activation would accept it as-is.
+    release({ ingestedAt: at(30), sealed: false, manifestVerified: false, uploadComplete: true, datasetReleaseId: 'ready' }),
   ]
   const result = selectPrunable(inactive, { ...policy, unsealedMinAgeMs: 7 * day })
   assert.deepEqual(result.prune.map((r) => r.datasetReleaseId), ['abandoned'])
-  assert.deepEqual(result.skipped.map((r) => r.datasetReleaseId), ['uploading'])
+  assert.deepEqual(result.skipped.map((r) => [r.datasetReleaseId, r.reason]).sort(), [
+    ['ready', 'unsealed but complete; activatable'],
+    ['uploading', 'unsealed upload in progress'],
+  ])
 })
 
 test('applies the age floor only to declared releases that could still activate', () => {
@@ -97,7 +106,7 @@ test('prefers server creation time over client ingestedAt for the age floor', ()
 test('rejects malformed preview entries instead of guessing', () => {
   assert.throws(() => selectPrunable([{ sealed: true }], policy), /Invalid inactive release/)
   assert.throws(() => selectPrunable([release({ ingestedAt: at(3), datasetReleaseId: '  ' })], policy), /Invalid inactive release/)
-  assert.deepEqual(selectPrunable([release({ ingestedAt: 'not a date', datasetReleaseId: 'x' })], policy).skipped.map((r) => r.reason), ['younger than the minimum age'])
+  assert.throws(() => selectPrunable([release({ ingestedAt: 'not a date', datasetReleaseId: 'x' })], policy), /Invalid release time/)
 })
 
 test('retries transient failures with shrinking batch limits, then surfaces the last error', async () => {
@@ -138,16 +147,27 @@ test('deletes one release in bounded confirmed batches until the release row is 
   assert.deepEqual(calls[0], ['maintenance:deleteInactiveReleaseBatch', { datasetReleaseId: 'r', confirmDatasetReleaseId: 'r', maxDocs: 100 }])
 })
 
-test('shrinks the deletion batch after a failed attempt', async () => {
+test('shrinks the deletion batch after a failed attempt and keeps the smaller size', async () => {
   const sizes = []
-  let failed = false
+  let batches = 0
   const run = async (name, args) => {
     sizes.push(args.maxDocs)
-    if (!failed) { failed = true; throw new Error('Transaction too large') }
-    return { datasetReleaseId: 'r', deleted: 1, deletedByTable: { datasetReleases: 1 }, deletedRelease: true, hasMore: false }
+    if (args.maxDocs > 25) throw new Error('Transaction too large')
+    batches += 1
+    return { datasetReleaseId: 'r', deleted: 25, deletedByTable: { manPages: 25 }, deletedRelease: batches === 3, hasMore: batches !== 3 }
   }
   await pruneRelease(run, 'r', { ...quiet, retry: noPause })
-  assert.deepEqual(sizes, [100, 50])
+  // First batch degrades 100 -> 50 -> 25; later batches start at 25 directly.
+  assert.deepEqual(sizes, [100, 50, 25, 25, 25])
+
+  const limit = adaptiveLimit({ start: 100, min: 5 })
+  assert.equal(limit.forAttempt(1), 100)
+  assert.equal(limit.forAttempt(3), 25)
+  limit.succeeded()
+  assert.equal(limit.current, 25)
+  assert.equal(limit.forAttempt(1), 25)
+  assert.equal(limit.forAttempt(2), 12)
+  assert.equal(limit.forAttempt(9), 5)
 })
 
 test('stops on stalled, mismatched, or failing deletions', async () => {
@@ -191,6 +211,8 @@ test('bounded concurrency preserves order and stops handing out work after a fai
   }), /boom/)
   // Items 1 and 2 were in flight; nothing else may start once 1 fails.
   assert.deepEqual(started, [1, 2])
+  // A thrown null still aborts the run.
+  await assert.rejects(mapWithConcurrency([1, 2], 1, async () => { throw null }), (error) => error === null)
 })
 
 test('dry run never deletes or sweeps, apply deletes only the selected releases then sweeps', async () => {
@@ -221,11 +243,15 @@ test('dry run never deletes or sweeps, apply deletes only the selected releases 
   assert.ok(!preview.calls.some(([name]) => name === 'maintenance:deleteInactiveReleaseBatch'))
 
   const wet = runner()
-  const wetResult = await prune(wet.run, { ...parseOptions({ BETTERMAN_PRUNE_APPLY: 'true' }, now), concurrency: 2 }, { ...quiet, retry: noPause })
+  const logged = []
+  const wetResult = await prune(wet.run, { ...parseOptions({ BETTERMAN_PRUNE_APPLY: 'true', BETTERMAN_PRUNE_SWEEP_ORPHANS: '' }, now), concurrency: 2 }, { log: (line) => logged.push(JSON.parse(line)), retry: noPause })
   const deletions = wet.calls.filter(([name]) => name === 'maintenance:deleteInactiveReleaseBatch')
   assert.deepEqual(deletions.map(([, args]) => args.datasetReleaseId), ['legacy'])
   assert.equal(wetResult.pruned.length, 1)
-  assert.ok(wet.calls.some(([name, args]) => name === 'maintenance:cleanupOrphanContentBlobsBatch' && args.dryRun === false))
+  assert.ok(wet.calls.some(([name, args]) => name === 'maintenance:cleanupOrphanContentBlobsBatch' && args.dryRun === false), 'apply with the workflow default sweeps')
+  const plan = logged.find((entry) => entry.event === 'prune_plan')
+  assert.ok(plan.prune.every((entry) => typeof entry.createdAt === 'string' && !('ingestedAt' in entry)))
+  assert.equal(logged.filter((entry) => entry.event === 'prune_release').length, 1)
 })
 
 test('surfaces provider stderr in failures and redacts deploy keys', () => {
@@ -239,6 +265,8 @@ test('surfaces provider stderr in failures and redacts deploy keys', () => {
   assert.equal(describeError(new Error('plain')), 'plain')
   assert.equal(describeError(Object.assign(new Error('x'), { code: 1, stderr: 'set CONVEX_DEPLOY_KEY prod:happy-animal-123|eyJ2MiI6ImFiYyJ9 now' })),
     'exit 1: set CONVEX_DEPLOY_KEY prod:<redacted> now')
+  assert.equal(describeError(Object.assign(new Error('x'), { code: 1, stderr: 'key project:team:name|tok.en~with*odd chars' })),
+    'exit 1: key project:<redacted> chars')
 })
 
 const readRepositoryFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')

@@ -23,9 +23,11 @@ describe("inactive release preview", () => {
       });
       await ctx.db.insert("datasetReleases", {
         ...base, datasetReleaseId: "draft", ingestedAt: "2026-09-13T00:00:00Z", manifestBasis: "declared",
+        aliasCount: 0, licenseCount: 0, uploadedPageCount: 0, uploadedAliasCount: 0, uploadedLicenseCount: 0,
       });
       await ctx.db.insert("datasetReleases", {
         ...base, datasetReleaseId: "verified", ingestedAt: "2026-09-07T00:00:00Z", sealed: true, manifestBasis: "declared", manifestVerified: true,
+        aliasCount: 0, licenseCount: 0, uploadedPageCount: 1, uploadedAliasCount: 0, uploadedLicenseCount: 0,
       });
     });
 
@@ -41,9 +43,9 @@ describe("inactive release preview", () => {
     expect(inactive.map((release) => release.datasetReleaseId)).toEqual(["legacy", "draft", "verified"]);
     for (const release of inactive) expect(Number.isFinite(Date.parse(release.createdAt))).toBe(true);
     expect(inactive).toMatchObject([
-      { sealed: true, pruning: false, manifestBasis: "legacy_unverified_aliases", manifestVerified: false, manifestError: "LEGACY_ALIAS_EXPECTATION_UNKNOWN" },
-      { sealed: false, pruning: false, manifestBasis: "declared", manifestVerified: false, manifestError: null },
-      { sealed: true, pruning: false, manifestBasis: "declared", manifestVerified: true, manifestError: null },
+      { sealed: true, pruning: false, manifestBasis: "legacy_unverified_aliases", manifestVerified: false, manifestError: "LEGACY_ALIAS_EXPECTATION_UNKNOWN", uploadComplete: false },
+      { sealed: false, pruning: false, manifestBasis: "declared", manifestVerified: false, manifestError: null, uploadComplete: false },
+      { sealed: true, pruning: false, manifestBasis: "declared", manifestVerified: true, manifestError: null, uploadComplete: true },
     ]);
   });
 });

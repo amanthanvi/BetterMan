@@ -57,18 +57,18 @@ Every ingest creates a new release; activation and promotion only move pointers,
 - Preview: `gh workflow run prune-releases`
 - Delete: `gh workflow run prune-releases -f apply=true`
 - Keep two verified rollback candidates per distro: `gh workflow run prune-releases -f apply=true -f keep_per_distro=2`
-- Also remove abandoned drafts that never activated and are older than a week: `gh workflow run prune-releases -f apply=true -f unsealed_min_age_hours=168`
+- Also remove incomplete uploads that never activated and are older than a week: `gh workflow run prune-releases -f apply=true -f unsealed_min_age_hours=168`
 
-The workflow shares the `update-dataset` concurrency group, so it waits for any running ingest or promotion and blocks new ones until it finishes. Do not dispatch it while a manual `/ingest/activate` rollback is in progress: pruning marks a release `pruning` before its first delete, that mark is permanent, and the manual HTTP path is not covered by the concurrency group. The job summary records the plan and results, and any Convex error text is surfaced in the log.
+The workflow shares the `update-dataset` concurrency group, so it waits for any running ingest or promotion and blocks new ones until it finishes. Do not dispatch it while a manual `/ingest/activate` rollback or a manual host ingest is in progress: pruning marks a release `pruning` before its first delete, that mark is permanent, the orphan sweep can remove a blob a concurrent upload intended to reuse, and manual HTTP paths are not covered by the concurrency group. The job summary records the plan and results, and any Convex error text is surfaced in the log.
 
 Selection rules, applied on top of `maintenance:deleteInactiveReleaseBatch` (which itself refuses any release an active `staging` or `prod` pointer references):
 
 - Releases already marked `pruning` are always finished, since partially pruned releases can never be activated.
-- Unsealed releases are uploads that never activated. They are kept unless `unsealed_min_age_hours` is set, in which case drafts older than that are removed; sample ingests (`--sample --no-activate`) land here.
+- Unsealed releases are uploads that never activated. A complete declared upload is still activatable as it stands and is always kept. Incomplete uploads are kept unless `unsealed_min_age_hours` is set, in which case those older than that are removed; interrupted ingests land here, and so do sample ingests (`--sample --no-activate`) whose upload did not finish.
 - Sealed legacy releases without an alias declaration, and sealed releases whose manifest verification failed, cannot be activated again and are pruned regardless of age.
 - Sealed declared releases created less than `min_age_hours` ago (default 24, minimum 1) are skipped in case activation is still hydrating. Beyond that floor, the newest `keep_per_distro` (default 1, minimum 1) verified releases per distro are retained as rollback targets and the rest are pruned.
 
-Deletion runs in bounded batches per release with retries; batch sizes halve after a failed attempt so an oversized transaction shrinks instead of stalling. A failure stops new work and fails the run; re-running resumes because marked releases are always finished first. When applying, the run then sweeps `manPageContentBlobs` that no page references, deleting their chunks and stored files. Blobs still shared with an active release are never orphans and are left in place. The sweep walks the whole blob table, so previews skip it unless `sweep_orphans=true`; its count on a preview is pre-existing orphans, not what pruning would produce.
+Deletion runs in bounded batches per release with retries; batch sizes halve after a failed attempt and stay at the size that succeeded, so an oversized transaction shrinks instead of stalling. A failure stops new work and fails the run; re-running resumes because marked releases are always finished first. When applying, the run then sweeps `manPageContentBlobs` that no page references, deleting their chunks and stored files. Blobs still shared with an active release are never orphans and are left in place. The sweep walks the whole blob table, so previews skip it unless `sweep_orphans=true`; its count on a preview is pre-existing orphans, not what pruning would produce.
 
 Run the preview again after applying; it should list only the retained rollback candidates and any unsealed drafts.
 

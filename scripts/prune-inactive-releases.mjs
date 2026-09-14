@@ -26,13 +26,21 @@ export function parseOptions(env = process.env, now = Date.now()) {
   const minAgeHours = parseCount(env.BETTERMAN_PRUNE_MIN_AGE_HOURS, 24, 'BETTERMAN_PRUNE_MIN_AGE_HOURS', 1)
   // 0 disables pruning of unsealed drafts (uploads that never activated).
   const unsealedMinAgeHours = parseCount(env.BETTERMAN_PRUNE_UNSEALED_MIN_AGE_HOURS, 0, 'BETTERMAN_PRUNE_UNSEALED_MIN_AGE_HOURS', 0)
-  const sweepOrphans = env.BETTERMAN_PRUNE_SWEEP_ORPHANS === undefined ? apply : env.BETTERMAN_PRUNE_SWEEP_ORPHANS === 'true'
+  const sweepOrphans = parseFlag(env.BETTERMAN_PRUNE_SWEEP_ORPHANS, apply, 'BETTERMAN_PRUNE_SWEEP_ORPHANS')
   const concurrency = parseCount(env.BETTERMAN_PRUNE_CONCURRENCY, 4, 'BETTERMAN_PRUNE_CONCURRENCY', 1)
   return {
     apply, keepPerDistro, minAgeMs: minAgeHours * 3_600_000,
     unsealedMinAgeMs: unsealedMinAgeHours > 0 ? unsealedMinAgeHours * 3_600_000 : null,
     sweepOrphans, concurrency, now,
   }
+}
+
+// Workflow inputs arrive as strings; an empty string means "not set".
+function parseFlag(raw, fallback, name) {
+  if (raw === undefined || raw.trim() === '') return fallback
+  if (raw.trim() === 'true') return true
+  if (raw.trim() === 'false') return false
+  throw new Error(`${name} must be true or false`)
 }
 
 function parseCount(raw, fallback, name, minimum) {
@@ -50,8 +58,9 @@ function parseCount(raw, fallback, name, minimum) {
 // activated afterwards.
 //
 // - Releases already marked pruning are finished regardless of policy.
-// - Unsealed releases are uploads that never activated. They are kept unless
-//   the operator opts in with an age floor for abandoned drafts.
+// - Unsealed releases are uploads that never activated. Complete declared
+//   uploads are still activatable and are always kept; incomplete drafts are
+//   kept unless the operator opts in with an age floor for abandoned uploads.
 // - Sealed releases that are legacy or recorded a verification failure can
 //   never be activated (activation rejects them), so their age is irrelevant.
 // - Sealed declared releases may be mid-activation (hydrating, not yet pointed
@@ -75,9 +84,14 @@ export function selectPrunable(inactive, { keepPerDistro, minAgeMs, unsealedMinA
       continue
     }
     const age = now - releaseTime(release)
+    if (!Number.isFinite(age)) throw new Error(`Invalid release time for ${release.datasetReleaseId}`)
     if (release.sealed !== true) {
-      if (unsealedMinAgeMs !== null && Number.isFinite(age) && age >= unsealedMinAgeMs) {
-        prune.push({ ...release, reason: 'abandoned unsealed draft beyond the unsealed age floor' })
+      // A complete declared upload is activatable exactly as it stands; only
+      // incomplete drafts can be abandoned.
+      if (release.uploadComplete === true) {
+        skipped.push({ ...release, reason: 'unsealed but complete; activatable' })
+      } else if (unsealedMinAgeMs !== null && age >= unsealedMinAgeMs) {
+        prune.push({ ...release, reason: 'abandoned incomplete upload beyond the unsealed age floor' })
       } else {
         skipped.push({ ...release, reason: 'unsealed upload in progress' })
       }
@@ -90,7 +104,7 @@ export function selectPrunable(inactive, { keepPerDistro, minAgeMs, unsealedMinA
       continue
     }
     // Declared releases may still be mid-activation; the age floor covers that.
-    if (!Number.isFinite(age) || age < minAgeMs) {
+    if (age < minAgeMs) {
       skipped.push({ ...release, reason: 'younger than the minimum age' })
       continue
     }
@@ -143,6 +157,25 @@ export function limitForAttempt({ start, min }, attempt) {
   return Math.max(min, Math.floor(start / 2 ** (attempt - 1)))
 }
 
+// Once a smaller batch succeeds, later batches keep that size rather than
+// re-escalating and paying the failed attempts again on every batch.
+export function adaptiveLimit(bounds) {
+  let start = bounds.start
+  let lastAttempted = start
+  return {
+    forAttempt(attempt) {
+      lastAttempted = limitForAttempt({ start, min: bounds.min }, attempt)
+      return lastAttempted
+    },
+    succeeded() {
+      start = lastAttempted
+    },
+    get current() {
+      return start
+    },
+  }
+}
+
 export async function listInactiveReleases(run, retry = {}) {
   const inactive = []
   const seen = new Set()
@@ -168,10 +201,12 @@ export async function pruneRelease(run, datasetReleaseId, { log = console.log, r
   let deleted = 0
   let storageDeletes = 0
   const deletedByTable = {}
+  const limit = adaptiveLimit(DELETE_LIMIT)
   for (let batch = 0; batch < MAX_BATCHES_PER_RELEASE; batch += 1) {
     const result = await withRetry((attempt) => run('maintenance:deleteInactiveReleaseBatch', {
-      datasetReleaseId, confirmDatasetReleaseId: datasetReleaseId, maxDocs: limitForAttempt(DELETE_LIMIT, attempt),
+      datasetReleaseId, confirmDatasetReleaseId: datasetReleaseId, maxDocs: limit.forAttempt(attempt),
     }), { ...retry, log, label: `delete ${datasetReleaseId}` })
+    limit.succeeded()
     if (result?.datasetReleaseId !== datasetReleaseId || !Number.isSafeInteger(result.deleted)
       || typeof result.deletedRelease !== 'boolean' || typeof result.hasMore !== 'boolean') {
       throw new Error(`Invalid deletion response for ${datasetReleaseId}`)
@@ -193,10 +228,12 @@ export async function pruneRelease(run, datasetReleaseId, { log = console.log, r
 export async function cleanupOrphanBlobs(run, { dryRun, log = console.log, retry = {} } = {}) {
   const totals = { scanned: 0, orphans: 0, blobDeletes: 0, chunkDeletes: 0, storageDeletes: 0, oversizedSkipped: 0, pages: 0 }
   let cursor = null
+  const limit = adaptiveLimit(ORPHAN_LIMIT)
   for (let page = 0; page < 1_000_000; page += 1) {
     const result = await withRetry((attempt) => run('maintenance:cleanupOrphanContentBlobsBatch', {
-      cursor, limit: limitForAttempt(ORPHAN_LIMIT, attempt), dryRun,
+      cursor, limit: limit.forAttempt(attempt), dryRun,
     }), { ...retry, log, label: 'orphan sweep' })
+    limit.succeeded()
     if (typeof result?.isDone !== 'boolean' || !Number.isSafeInteger(result.scanned)) {
       throw new Error('Invalid orphan blob cleanup response')
     }
@@ -223,19 +260,19 @@ export async function mapWithConcurrency(items, concurrency, worker) {
       try {
         results[index] = await worker(items[index], index)
       } catch (error) {
-        failure ??= error
+        failure ??= { error }
       }
     }
   })
   await Promise.all(runners)
-  if (failure !== null) throw failure
+  if (failure !== null) throw failure.error
   return results
 }
 
 export async function prune(run, options, { log = console.log, retry = {} } = {}) {
   const inactive = await listInactiveReleases(run, retry)
   const selection = selectPrunable(inactive, options)
-  const summary = (entries) => entries.map(({ datasetReleaseId, distro, ingestedAt, reason }) => ({ datasetReleaseId, distro, ingestedAt, reason }))
+  const summary = (entries) => entries.map(({ datasetReleaseId, distro, createdAt, ingestedAt, reason }) => ({ datasetReleaseId, distro, createdAt: createdAt ?? ingestedAt, reason }))
   log(JSON.stringify({
     event: 'prune_plan', apply: options.apply, keepPerDistro: options.keepPerDistro, minAgeHours: options.minAgeMs / 3_600_000,
     unsealedMinAgeHours: options.unsealedMinAgeMs === null ? null : options.unsealedMinAgeMs / 3_600_000, sweepOrphans: options.sweepOrphans,
@@ -244,8 +281,11 @@ export async function prune(run, options, { log = console.log, retry = {} } = {}
 
   let pruned = []
   if (options.apply) {
-    pruned = await mapWithConcurrency(selection.prune, options.concurrency, (release) => pruneRelease(run, release.datasetReleaseId, { log, retry }))
-    for (const result of pruned) log(JSON.stringify({ event: 'prune_release', ...result }))
+    pruned = await mapWithConcurrency(selection.prune, options.concurrency, async (release) => {
+      const result = await pruneRelease(run, release.datasetReleaseId, { log, retry })
+      log(JSON.stringify({ event: 'prune_release', ...result }))
+      return result
+    })
   }
   // The sweep walks the whole blob table, so it is opt-in for previews.
   const orphans = options.sweepOrphans ? await cleanupOrphanBlobs(run, { dryRun: !options.apply, log, retry }) : null
@@ -258,7 +298,7 @@ export function describeError(error) {
   const stderr = typeof error?.stderr === 'string' ? error.stderr : ''
   const lines = stderr.replace(/\[[0-9;]*m/g, '').split('\n').map((line) => line.trim()).filter(Boolean)
   const detail = lines.length ? lines.slice(-3).join(' | ') : (error?.message ?? String(error))
-  const redacted = detail.replace(/\b(prod|dev|preview|project):[A-Za-z0-9_-]+\|[A-Za-z0-9+/=_-]+/g, '$1:<redacted>')
+  const redacted = detail.replace(/\b(prod|dev|preview|project):[A-Za-z0-9_:-]+\|\S+/g, '$1:<redacted>')
   return error?.code !== undefined ? `exit ${error.code}: ${redacted}` : redacted
 }
 

@@ -497,6 +497,12 @@ export const previewInactiveReleases = internalQuery({
         manifestBasis: release.manifestBasis ?? null,
         manifestVerified: release.manifestVerified === true,
         manifestError: release.manifestError ?? null,
+        // Declared uploads are complete when every counter matches its
+        // declaration; such a release is still activatable even if unsealed.
+        uploadComplete: release.manifestBasis === "declared"
+          && release.uploadedPageCount === release.pageCount
+          && release.aliasCount !== undefined && release.uploadedAliasCount === release.aliasCount
+          && release.licenseCount !== undefined && release.uploadedLicenseCount === release.licenseCount,
         children,
         contentTablesNote:
           "manPageContents and manPageContentChunks are deleted through sampled manPages.",
