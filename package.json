@@ -28,7 +28,7 @@
 	"devDependencies": {
 		"@edge-runtime/vm": "5.0.0",
 		"@types/node": "^26.2.0",
-		"convex-test": "0.0.56",
+		"convex-test": "0.0.57",
 		"sigstore": "4.1.1",
 		"typescript": "6.0.3",
 		"vercel": "58.4.4",
