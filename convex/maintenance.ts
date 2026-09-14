@@ -413,8 +413,9 @@ async function deletePagePayload(
   ctx: MutationCtx,
   page: Doc<"manPages">,
   remaining: number,
-): Promise<{ deleted: number; deletedByTable: Partial<Record<TableNames, number>> }> {
+): Promise<{ deleted: number; storageDeletes: number; deletedByTable: Partial<Record<TableNames, number>> }> {
   let deleted = 0;
+  let storageDeletes = 0;
   const deletedByTable: Partial<Record<TableNames, number>> = {};
   const content = await ctx.db
     .query("manPageContents")
@@ -431,10 +432,16 @@ async function deletePagePayload(
       deleted += 1;
       deletedByTable.manPageContentChunks = (deletedByTable.manPageContentChunks ?? 0) + 1;
     }
-    if (deleted >= remaining) return { deleted, deletedByTable };
+    if (deleted >= remaining) return { deleted, storageDeletes, deletedByTable };
     await ctx.db.delete(content._id);
     deleted += 1;
     deletedByTable.manPageContents = 1;
+    // Page-content files are written one per content row by the storage
+    // migration; shared payloads live behind blobs, not here.
+    if (content.storageId) {
+      await ctx.storage.delete(content.storageId);
+      storageDeletes += 1;
+    }
   }
 
   if (deleted < remaining) {
@@ -442,11 +449,12 @@ async function deletePagePayload(
     deleted += 1;
     deletedByTable.manPages = 1;
   }
-  return { deleted, deletedByTable };
+  return { deleted, storageDeletes, deletedByTable };
 }
 
 export const previewInactiveReleases = internalQuery({
   args: {
+    cursor: v.optional(v.union(v.string(), v.null())),
     limit: v.optional(v.number()),
     childSampleLimit: v.optional(v.number()),
   },
@@ -457,10 +465,14 @@ export const previewInactiveReleases = internalQuery({
       DEFAULT_CHILD_SAMPLE_LIMIT,
       MAX_CHILD_SAMPLE_LIMIT,
     );
-    const releases = await ctx.db.query("datasetReleases").order("asc").take(limit);
+    // Page through every release so callers can see past the first batch.
+    const page = await ctx.db
+      .query("datasetReleases")
+      .order("asc")
+      .paginate({ cursor: args.cursor ?? null, numItems: limit });
     const inactive = [];
 
-    for (const release of releases) {
+    for (const release of page.page) {
       const active = await isActiveRelease(ctx, release);
       if (active) continue;
 
@@ -475,7 +487,22 @@ export const previewInactiveReleases = internalQuery({
         locale: release.locale,
         distro: release.distro,
         ingestedAt: release.ingestedAt,
+        // Server-assigned creation time; ingestedAt is client-supplied.
+        createdAt: new Date(release._creationTime).toISOString(),
         pageCount: release.pageCount,
+        // Rollback eligibility: only sealed, verified, declared releases can be
+        // activated again. Legacy or failed manifests never can.
+        sealed: release.sealed === true,
+        pruning: release.pruning === true,
+        manifestBasis: release.manifestBasis ?? null,
+        manifestVerified: release.manifestVerified === true,
+        manifestError: release.manifestError ?? null,
+        // Declared uploads are complete when every counter matches its
+        // declaration; such a release is still activatable even if unsealed.
+        uploadComplete: release.manifestBasis === "declared"
+          && release.uploadedPageCount === release.pageCount
+          && release.aliasCount !== undefined && release.uploadedAliasCount === release.aliasCount
+          && release.licenseCount !== undefined && release.uploadedLicenseCount === release.licenseCount,
         children,
         contentTablesNote:
           "manPageContents and manPageContentChunks are deleted through sampled manPages.",
@@ -483,10 +510,12 @@ export const previewInactiveReleases = internalQuery({
     }
 
     return {
-      scanned: releases.length,
+      scanned: page.page.length,
       limit,
       childSampleLimit,
       inactive,
+      isDone: page.isDone,
+      continueCursor: page.isDone ? null : page.continueCursor,
       note: "Bounded dry run only. Counts are capped at childSampleLimit and may undercount large releases.",
     };
   },
@@ -511,6 +540,7 @@ export const deleteInactiveReleaseBatch = internalMutation({
     if (!release.pruning) await ctx.db.patch(release._id, { pruning: true });
 
     let deleted = 0;
+    let storageDeletes = 0;
     const deletedByTable: Partial<Record<TableNames, number>> = {};
 
     for (const table of RELEASE_CHILD_TABLES) {
@@ -524,6 +554,7 @@ export const deleteInactiveReleaseBatch = internalMutation({
           if (deleted >= maxDocs) break;
           const result = await deletePagePayload(ctx, page, maxDocs - deleted);
           deleted += result.deleted;
+          storageDeletes += result.storageDeletes;
           for (const [key, value] of Object.entries(result.deletedByTable)) {
             const table = key as TableNames;
             deletedByTable[table] = (deletedByTable[table] ?? 0) + (value ?? 0);
@@ -550,6 +581,7 @@ export const deleteInactiveReleaseBatch = internalMutation({
       releaseId: release._id,
       maxDocs,
       deleted,
+      storageDeletes,
       deletedByTable,
       deletedRelease,
       hasMore: !deletedRelease,
@@ -824,6 +856,7 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
     let orphans = 0;
     let blobDeletes = 0;
     let chunkDeletes = 0;
+    let storageDeletes = 0;
     let oversizedSkipped = 0;
 
     for (const blob of result.page) {
@@ -851,6 +884,18 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
       }
       await ctx.db.delete(blob._id);
       blobDeletes += 1;
+      // Stored payload files are keyed one per blob, but only remove the file
+      // once no remaining blob row points at it.
+      if (blob.storageId) {
+        const sharing = await ctx.db
+          .query("manPageContentBlobs")
+          .withIndex("by_storageId", (q) => q.eq("storageId", blob.storageId))
+          .take(2);
+        if (!sharing.some((other) => other._id !== blob._id)) {
+          await ctx.storage.delete(blob.storageId);
+          storageDeletes += 1;
+        }
+      }
     }
 
     return {
@@ -860,6 +905,7 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
       orphans,
       blobDeletes,
       chunkDeletes,
+      storageDeletes,
       oversizedSkipped,
       isDone: result.isDone,
       continueCursor: result.continueCursor,

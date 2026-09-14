@@ -59,6 +59,23 @@ describe("release pruning safety", () => {
     expect(await t.run((ctx) => ctx.db.get(releaseId))).toBeNull();
   });
 
+  it("deletes stored page-content files with their content rows", async () => {
+    const { t, releaseId } = await seededRelease();
+    const storageId = await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(new Blob(["stored payload"]));
+      const page = await ctx.db.query("manPages").withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", releaseId)).first();
+      await ctx.db.insert("manPageContents", { pageId: page!._id, contentSha256: "source", storageId });
+      return storageId;
+    });
+    expect(await t.run(async (ctx) => (await ctx.storage.get(storageId)) !== null)).toBe(true);
+    const result = await t.mutation(internal.maintenance.deleteInactiveReleaseBatch, {
+      datasetReleaseId: "pruning-test", confirmDatasetReleaseId: "pruning-test", maxDocs: 50,
+    });
+    expect(result).toMatchObject({ deletedRelease: true, storageDeletes: 1 });
+    expect(await t.run(async (ctx) => (await ctx.storage.get(storageId)) !== null)).toBe(false);
+    expect(await t.run((ctx) => ctx.db.query("manPageContents").take(5))).toEqual([]);
+  });
+
   it.each(["staging", "prod"] as const)("does not mark or delete a %s active release", async (stage) => {
     const { t, releaseId } = await seededRelease();
     await t.run((ctx) => ctx.db.insert("activeReleases", {
