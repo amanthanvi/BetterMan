@@ -39,6 +39,7 @@ describe("inactive release preview", () => {
 
     const inactive = [...first.inactive, ...second.inactive];
     expect(inactive.map((release) => release.datasetReleaseId)).toEqual(["legacy", "draft", "verified"]);
+    for (const release of inactive) expect(Number.isFinite(Date.parse(release.createdAt))).toBe(true);
     expect(inactive).toMatchObject([
       { sealed: true, pruning: false, manifestBasis: "legacy_unverified_aliases", manifestVerified: false, manifestError: "LEGACY_ALIAS_EXPECTATION_UNKNOWN" },
       { sealed: false, pruning: false, manifestBasis: "declared", manifestVerified: false, manifestError: null },

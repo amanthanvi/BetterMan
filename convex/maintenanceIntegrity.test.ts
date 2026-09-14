@@ -320,6 +320,27 @@ describe("maintenance release integrity", () => {
       .toMatchObject([{ chunk: "payload" }]);
   });
 
+  it("deletes an orphan blob's stored file only when no other blob shares it", async () => {
+    const { t, pages } = await seed("prod");
+    const { sharedFile, soleFile, keptBlob } = await t.run(async (ctx) => {
+      const sharedFile = await ctx.storage.store(new Blob(["shared"]));
+      const soleFile = await ctx.storage.store(new Blob(["sole"]));
+      const keptBlob = await ctx.db.insert("manPageContentBlobs", { contentSha256: "a", contentDigest: "digest-a", storageId: sharedFile });
+      await ctx.db.patch(pages[0].contentId, { blobId: keptBlob });
+      await ctx.db.insert("manPageContentBlobs", { contentSha256: "a", storageId: sharedFile });
+      await ctx.db.insert("manPageContentBlobs", { contentSha256: "b", contentDigest: "digest-b", storageId: soleFile });
+      return { sharedFile, soleFile, keptBlob };
+    });
+    expect(await t.mutation(internal.maintenance.cleanupOrphanContentBlobsBatch, { cursor: null, dryRun: true }))
+      .toMatchObject({ orphans: 2, blobDeletes: 0, storageDeletes: 0 });
+    expect(await t.run(async (ctx) => (await ctx.storage.get(soleFile)) !== null)).toBe(true);
+    expect(await t.mutation(internal.maintenance.cleanupOrphanContentBlobsBatch, { cursor: null }))
+      .toMatchObject({ orphans: 2, blobDeletes: 2, storageDeletes: 1 });
+    expect(await t.run(async (ctx) => (await ctx.storage.get(soleFile)) !== null)).toBe(false);
+    expect(await t.run(async (ctx) => (await ctx.storage.get(sharedFile))?.text())).toBe("shared");
+    expect(await t.run((ctx) => ctx.db.get(keptBlob))).toMatchObject({ storageId: sharedFile });
+  });
+
   it("leaves oversized orphan blobs intact so later references cannot see partial content", async () => {
     const { t, pages } = await seed("draft");
     const blobId = await t.run(async (ctx) => {

@@ -2,8 +2,10 @@ name: prune-releases
 
 # Removes sealed, inactive dataset releases that can no longer serve as
 # rollback targets, in bounded Convex batches, then deletes orphaned content
-# blobs. Dry run by default; set apply=true to delete. Shares the
-# update-dataset concurrency group so it never overlaps ingestion/promotion.
+# blobs and their stored files. Dry run by default; set apply=true to delete.
+# Shares the update-dataset concurrency group so it never overlaps ingestion or
+# promotion. Do not dispatch while a manual /ingest/activate rollback is in
+# progress: pruning marks a release before deleting it and that mark is final.
 
 on:
   workflow_dispatch:
@@ -19,10 +21,24 @@ on:
         required: false
         default: "1"
       min_age_hours:
-        description: Only prune releases ingested at least this many hours ago
+        description: Only prune declared releases created at least this many hours ago (minimum 1)
         type: string
         required: false
         default: "24"
+      unsealed_min_age_hours:
+        description: Also prune unsealed drafts older than this many hours (0 keeps all unsealed drafts)
+        type: string
+        required: false
+        default: "0"
+      sweep_orphans:
+        description: Sweep orphaned content blobs (walks the whole blob table; defaults to apply)
+        type: choice
+        required: false
+        default: auto
+        options:
+          - auto
+          - "true"
+          - "false"
 
 concurrency:
   group: update-dataset
@@ -62,4 +78,6 @@ jobs:
           BETTERMAN_PRUNE_APPLY: ${{ inputs.apply && 'true' || 'false' }}
           BETTERMAN_PRUNE_KEEP_PER_DISTRO: ${{ inputs.keep_per_distro }}
           BETTERMAN_PRUNE_MIN_AGE_HOURS: ${{ inputs.min_age_hours }}
+          BETTERMAN_PRUNE_UNSEALED_MIN_AGE_HOURS: ${{ inputs.unsealed_min_age_hours }}
+          BETTERMAN_PRUNE_SWEEP_ORPHANS: ${{ inputs.sweep_orphans != 'auto' && inputs.sweep_orphans || '' }}
         run: pnpm convex:prune-releases

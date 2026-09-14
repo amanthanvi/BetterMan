@@ -57,17 +57,20 @@ Every ingest creates a new release; activation and promotion only move pointers,
 - Preview: `gh workflow run prune-releases`
 - Delete: `gh workflow run prune-releases -f apply=true`
 - Keep two verified rollback candidates per distro: `gh workflow run prune-releases -f apply=true -f keep_per_distro=2`
+- Also remove abandoned drafts that never activated and are older than a week: `gh workflow run prune-releases -f apply=true -f unsealed_min_age_hours=168`
 
-The workflow shares the `update-dataset` concurrency group, so it waits for any running ingest or promotion and blocks new ones until it finishes. The job summary records the plan and results.
+The workflow shares the `update-dataset` concurrency group, so it waits for any running ingest or promotion and blocks new ones until it finishes. Do not dispatch it while a manual `/ingest/activate` rollback is in progress: pruning marks a release `pruning` before its first delete, that mark is permanent, and the manual HTTP path is not covered by the concurrency group. The job summary records the plan and results, and any Convex error text is surfaced in the log.
 
 Selection rules, applied on top of `maintenance:deleteInactiveReleaseBatch` (which itself refuses any release an active `staging` or `prod` pointer references):
 
-- Unsealed releases are uploads in progress and are never touched.
-- Releases ingested less than `min_age_hours` ago (default 24) are skipped in case activation is still hydrating.
 - Releases already marked `pruning` are always finished, since partially pruned releases can never be activated.
-- The newest `keep_per_distro` (default 1) sealed, manifest-verified, declared releases per distro are retained as rollback candidates. Legacy releases without an alias declaration and releases whose manifest failed verification cannot be activated again, so they are pruned regardless of age.
+- Unsealed releases are uploads that never activated. They are kept unless `unsealed_min_age_hours` is set, in which case drafts older than that are removed; sample ingests (`--sample --no-activate`) land here.
+- Sealed legacy releases without an alias declaration, and sealed releases whose manifest verification failed, cannot be activated again and are pruned regardless of age.
+- Sealed declared releases created less than `min_age_hours` ago (default 24, minimum 1) are skipped in case activation is still hydrating. Beyond that floor, the newest `keep_per_distro` (default 1, minimum 1) verified releases per distro are retained as rollback targets and the rest are pruned.
 
-Deletion runs in bounded batches per release, then sweeps `manPageContentBlobs` that no page references. Blobs still shared with an active release are never orphans and are left in place. Run the preview again after applying; it should list only the retained rollback candidates and any fresh unsealed drafts.
+Deletion runs in bounded batches per release with retries; batch sizes halve after a failed attempt so an oversized transaction shrinks instead of stalling. A failure stops new work and fails the run; re-running resumes because marked releases are always finished first. When applying, the run then sweeps `manPageContentBlobs` that no page references, deleting their chunks and stored files. Blobs still shared with an active release are never orphans and are left in place. The sweep walks the whole blob table, so previews skip it unless `sweep_orphans=true`; its count on a preview is pre-existing orphans, not what pruning would produce.
+
+Run the preview again after applying; it should list only the retained rollback candidates and any unsealed drafts.
 
 ## Verify distro API behavior
 
