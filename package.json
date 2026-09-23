@@ -33,7 +33,7 @@
 		"sigstore": "4.1.1",
 		"typescript": "6.0.3",
 		"vercel": "58.4.4",
-		"vite": "8.2.2",
+		"vite": "8.3.0",
 		"vitest": "5.0.0"
 	}
 }
