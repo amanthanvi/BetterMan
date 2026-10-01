@@ -37,7 +37,16 @@ set -a; . ./.env.local; set +a
 BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL:-$VITE_CONVEX_SITE_URL}" node scripts/seed-convex-e2e.mjs
 ```
 
-- Dev server: `CONVEX_AGENT_MODE=anonymous pnpm next:dev` → http://localhost:3000. Representative checks: `pnpm next:lint`, `pnpm next:grammar`, `pnpm next:test`, `pnpm convex:typecheck`, `pnpm convex:test`, `pnpm ingest:lint`, `pnpm ingest:test`. E2E expects the app on port 3000 (`pnpm next:e2e`).
+- Dev server: after `pnpm convex:check` (or `next:dev`), source `.env.local` and export Convex URLs the same way CI does before relying on Next API routes:
+
+```bash
+set -a; . ./.env.local; set +a
+export CONVEX_URL="${CONVEX_URL:-$VITE_CONVEX_URL}"
+export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
+CONVEX_AGENT_MODE=anonymous pnpm next:dev
+```
+
+  App: http://localhost:3000. Representative checks: `pnpm next:lint`, `pnpm next:grammar`, `pnpm next:test`, `pnpm convex:typecheck`, `pnpm convex:test`, `pnpm ingest:lint`, `pnpm ingest:test`. E2E expects the app on port 3000 (`pnpm next:e2e`).
 - Docker is not required for app/unit/e2e work. Full Linux distro ingestion still needs Docker (not provisioned by default on Cloud Agents).
 
 <!-- convex-ai-start -->
