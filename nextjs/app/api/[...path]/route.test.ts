@@ -137,6 +137,61 @@ describe('public API timing and metadata', () => {
     expect(response.headers.get('Server-Timing')).toMatch(/rate_limit;dur=\d+\.\d, total;dur=\d+\.\d/)
     expect(response.headers.get('Server-Timing')).not.toContain('convex_search')
   })
+
+  it('does not split search or page buckets on spoofable forwarding headers', async () => {
+    const spoofed = [
+      { 'cf-connecting-ip': '1.1.1.1', 'x-forwarded-for': '8.8.8.8' },
+      { 'cf-connecting-ip': '2.2.2.2', 'x-real-ip': '9.9.9.9' },
+      { 'x-forwarded-for': '3.3.3.3' },
+    ]
+
+    for (const headers of spoofed) {
+      convexMocks.mutation.mockClear()
+      const searchResponse = await GET(
+        new NextRequest('https://betterman.test/api/v1/search?q=tar', { headers }),
+        context(['v1', 'search']),
+      )
+      expect(searchResponse.status).toBe(200)
+      expect(convexMocks.mutation).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ kind: 'search', identifier: 'anonymous' }),
+      )
+    }
+
+    apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({
+      page: { name: 'bash', section: '1', title: 'bash', description: 'shell' },
+    })
+    for (const headers of spoofed) {
+      convexMocks.mutation.mockClear()
+      const pageResponse = await GET(
+        new NextRequest('https://betterman.test/api/v1/man/bash/1/meta', { headers }),
+        context(['v1', 'man', 'bash', '1', 'meta']),
+      )
+      expect(pageResponse.status).toBe(200)
+      expect(convexMocks.mutation).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ kind: 'page', identifier: 'anonymous' }),
+      )
+    }
+  })
+
+  it('keys page limits on the Vercel-overwritten client address', async () => {
+    apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({
+      page: { name: 'bash', section: '1', title: 'bash', description: 'shell' },
+    })
+    const response = await GET(
+      new NextRequest('https://betterman.test/api/v1/man/bash/1/meta', {
+        headers: { 'x-vercel-forwarded-for': '203.0.113.10, 10.0.0.1', 'cf-connecting-ip': '1.1.1.1' },
+      }),
+      context(['v1', 'man', 'bash', '1', 'meta']),
+    )
+
+    expect(response.status).toBe(200)
+    expect(convexMocks.mutation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ kind: 'page', identifier: '203.0.113.10' }),
+    )
+  })
 })
 
 describe('public API aliases', () => {

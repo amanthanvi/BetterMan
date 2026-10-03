@@ -1,4 +1,3 @@
-import { api as convexApi } from '../../../../convex/_generated/api'
 import type { NextRequest } from 'next/server'
 
 import {
@@ -17,8 +16,8 @@ import {
   search,
   suggest,
 } from '@/lib/api'
-import { getConvexClient } from '@/lib/convexClient'
 import { normalizeDistro, type Distro } from '@/lib/distro'
+import { isRateLimited } from '@/lib/rateLimit'
 
 export const runtime = 'nodejs'
 const PUBLIC_CACHE_SECONDS = 60 * 60
@@ -107,23 +106,8 @@ function intParam(
   return value
 }
 
-function requestIp(req: NextRequest): string {
-  const cf = first(req.headers.get('cf-connecting-ip'))
-  if (cf) return cf
-  const real = first(req.headers.get('x-real-ip'))
-  if (real) return real
-  const forwarded = first(req.headers.get('x-forwarded-for'))
-  if (forwarded) return forwarded.split(',')[0]?.trim() || 'unknown'
-  return 'unknown'
-}
-
 async function enforceRateLimit(req: NextRequest, kind: 'search' | 'page'): Promise<Response | null> {
-  const result = await getConvexClient().mutation(convexApi.rateLimit.enforce, {
-    kind,
-    identifier: requestIp(req),
-  })
-
-  if (result.allowed) return null
+  if (!(await isRateLimited(req.headers, kind))) return null
   return apiError(429, 'RATE_LIMITED', 'Too many requests')
 }
 
