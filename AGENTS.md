@@ -27,9 +27,9 @@ BetterMan is a Next.js app on Vercel that reads man page data from Convex. A Pyt
 
 ## Cursor Cloud specific instructions
 
-- Toolchain on Cloud Agent VMs: put Node **26.5.1** (nvm) and `uv`/`python3.14` on `PATH` ahead of `/exec-daemon/node` (`export PATH="$NVM_DIR/versions/node/v26.5.1/bin:$HOME/.local/bin:$PATH"`).
-- Bootstrap: `pnpm install --frozen-lockfile`, then `cd ingestion && uv sync --frozen`. Playwright Chromium: `bash scripts/install-playwright-ci.sh` (or `pnpm -C nextjs exec playwright install chromium` once system deps exist).
-- Local Convex needs no deploy key: use `CONVEX_AGENT_MODE=anonymous` with `pnpm convex:check` or `pnpm next:dev`. Seed fixture data while the app is up:
+- Toolchain on Cloud Agent VMs: put Node **26.5.1** (nvm) and `uv`/`python3.14` on `PATH` ahead of `/exec-daemon/node` (`export PATH="$NVM_DIR/versions/node/v26.5.1/bin:$HOME/.local/bin:$PATH"`). Install `mandoc` (`sudo apt-get install -y --no-install-recommends mandoc`) so `pnpm ingest:test` runs the golden parser fixtures instead of skipping them outside CI.
+- Bootstrap: `pnpm install --frozen-lockfile`, then `(cd ingestion && uv sync --frozen)`. Playwright Chromium: `bash scripts/install-playwright-ci.sh` (or `pnpm -C nextjs exec playwright install chromium` once system deps exist).
+- Local Convex needs no deploy key: use `CONVEX_AGENT_MODE=anonymous` with `pnpm convex:check`. Seed fixture data while the app is up:
 
 ```bash
 npx convex env set CONVEX_INGEST_SECRET dev
@@ -37,7 +37,7 @@ set -a; . ./.env.local; set +a
 BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL:-$VITE_CONVEX_SITE_URL}" node scripts/seed-convex-e2e.mjs
 ```
 
-- Dev server: after `pnpm convex:check` (or `next:dev`), source `.env.local` and export Convex URLs the same way CI does before relying on Next API routes:
+- Dev server: run `pnpm convex:check`, then source `.env.local` and export Convex URLs the same way CI does before relying on Next API routes:
 
 ```bash
 set -a; . ./.env.local; set +a
