@@ -3,6 +3,8 @@ import { join } from 'node:path'
 
 import { ImageResponse } from 'next/og'
 
+import { truncateOgText } from './input'
+
 export const OG_SIZE = { width: 1200, height: 630 }
 
 /* Paper and ink from globals.css. Light scheme only: share cards render once. */
@@ -42,7 +44,10 @@ function loadFonts() {
  */
 export async function ogCard(opts: { head: string; label: string; name: string; description: string }) {
   const fonts = await loadFonts()
-  const description = opts.description.length > 120 ? `${opts.description.slice(0, 117)}…` : opts.description
+  const head = truncateOgText(opts.head, 160)
+  const label = truncateOgText(opts.label, 80)
+  const name = truncateOgText(opts.name, 160)
+  const description = truncateOgText(opts.description, 120)
 
   return new ImageResponse(
     (
@@ -70,16 +75,16 @@ export async function ogCard(opts: { head: string; label: string; name: string; 
             borderBottom: `2px solid ${EDGE}`,
           }}
         >
-          <span>{opts.head}</span>
-          <span>{opts.label}</span>
-          <span>{opts.head}</span>
+          <span>{head}</span>
+          <span>{label}</span>
+          <span>{head}</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', marginTop: 96, gap: 28 }}>
           <div style={{ fontFamily: 'JetBrains Mono', fontSize: 26, letterSpacing: '0.08em', color: MUTED }}>NAME</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 24, paddingLeft: 48 }}>
             <span style={{ fontFamily: 'JetBrains Mono', fontSize: 72, fontWeight: 600, letterSpacing: '-0.02em' }}>
-              {opts.name}
+              {name}
             </span>
             <span style={{ fontSize: 40, color: MUTED }}>—</span>
             <span style={{ fontSize: 40, color: INK, lineHeight: 1.3, maxWidth: 760 }}>{description}</span>
