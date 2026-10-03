@@ -139,7 +139,7 @@ describe('public API timing and metadata', () => {
   })
 
   it('does not split search or page buckets on spoofable forwarding headers', async () => {
-    const spoofed = [
+    const spoofed: Record<string, string>[] = [
       { 'cf-connecting-ip': '1.1.1.1', 'x-forwarded-for': '8.8.8.8' },
       { 'cf-connecting-ip': '2.2.2.2', 'x-real-ip': '9.9.9.9' },
       { 'x-forwarded-for': '3.3.3.3' },
