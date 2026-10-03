@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Security: key public API rate limits on the Vercel-overwritten client address instead of spoofable `CF-Connecting-IP` / `X-Forwarded-For` headers, and share an anonymous bucket when no trusted identity is present.
 - Maintenance: add a manual `prune-releases` workflow that previews by default and deletes superseded inactive releases in bounded, retried batches, retaining the newest verified release per distro as a rollback target and sweeping orphaned content blobs; release pruning and the orphan sweep now also delete their stored payload files, and the inactive-release preview paginates and reports rollback eligibility.
 - Content maintenance: use the same verified payload selection for dry-run storage estimates and actual deduplication. (#252; thanks @amanthanvi)
 - Content maintenance: select duplicate blobs by rendered-payload digest, compare bounded legacy candidates, and reject invalid chunk sequences before reuse. (#251)
