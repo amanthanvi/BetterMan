@@ -49,8 +49,8 @@ importers:
         specifier: ^26.6.4
         version: 26.6.4
       convex-test:
-        specifier: 0.0.59
-        version: 0.0.59(convex@1.45.0(react@19.3.0))
+        specifier: 0.0.60
+        version: 0.0.60(convex@1.45.0(react@19.3.0))
       sigstore:
         specifier: 5.0.0
         version: 5.0.0
@@ -2508,8 +2508,8 @@ packages:
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
 
-  convex-test@0.0.59:
-    resolution: {integrity: sha512-2bxjk245RmF3RxrsDR86vbPCzGRnEmpqHbjVbs6bSupt18JadtvOR7Lao2+GcdYJIzny499aloDysYnoFPWP4A==}
+  convex-test@0.0.60:
+    resolution: {integrity: sha512-qCAFx+CO6bmpXNc9s1jZvw8NJPS4yM074ib87PUY675FsiaRRW4ALotEB+RbVCYDRMYxh623KMnYZBlrMJIv1Q==}
     peerDependencies:
       convex: ^1.43.0
 
@@ -6989,7 +6989,7 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-test@0.0.59(convex@1.45.0(react@19.3.0)):
+  convex-test@0.0.60(convex@1.45.0(react@19.3.0)):
     dependencies:
       convex: 1.45.0(react@19.3.0)
 
