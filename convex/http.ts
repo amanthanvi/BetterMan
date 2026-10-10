@@ -35,19 +35,34 @@ async function secretsMatch(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
-async function requireIngestSecret(req: Request): Promise<Response | null> {
-  const configured = process.env.CONVEX_INGEST_SECRET?.trim();
-  if (!configured) {
-    return jsonResponse(
-      { error: { code: "INGEST_SECRET_NOT_CONFIGURED", message: "Ingest secret not configured" } },
-      503,
-    );
-  }
+async function requireBearerSecret(
+  req: Request,
+  configured: string | undefined,
+  notConfigured: { code: string; message: string },
+): Promise<Response | null> {
+  const secret = configured?.trim();
+  if (!secret) return jsonResponse({ error: notConfigured }, 503);
 
   const header = req.headers.get("authorization") || "";
   const token = header.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : "";
-  if (!token || !(await secretsMatch(token, configured))) return unauthorized();
+  if (!token || !(await secretsMatch(token, secret))) return unauthorized();
   return null;
+}
+
+function requireIngestSecret(req: Request): Promise<Response | null> {
+  return requireBearerSecret(req, process.env.CONVEX_INGEST_SECRET, {
+    code: "INGEST_SECRET_NOT_CONFIGURED",
+    message: "Ingest secret not configured",
+  });
+}
+
+// Separate from the ingest secret so the app runtime, which needs this one,
+// cannot write or promote dataset releases.
+function requireRateLimitSecret(req: Request): Promise<Response | null> {
+  return requireBearerSecret(req, process.env.CONVEX_RATE_LIMIT_SECRET, {
+    code: "RATE_LIMIT_SECRET_NOT_CONFIGURED",
+    message: "Rate limit secret not configured",
+  });
 }
 
 async function readJson(req: Request): Promise<unknown> {
@@ -210,6 +225,27 @@ http.route({
     if (auth) return auth;
     const body = await readJson(req);
     const result = await ctx.runMutation(internal.ingest.promoteActiveReleases, body as never);
+    return jsonResponse(result);
+  }),
+});
+
+http.route({
+  path: "/rate-limit/enforce",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const auth = await requireRateLimitSecret(req);
+    if (auth) return auth;
+    const body = (await req.json().catch(() => null)) as { kind?: unknown; identifier?: unknown } | null;
+    const kind = body?.kind;
+    const identifier = body?.identifier;
+    if ((kind !== "search" && kind !== "page") || typeof identifier !== "string" ||
+      !identifier || identifier.length > 256) {
+      return jsonResponse(
+        { error: { code: "INVALID_RATE_LIMIT_PAYLOAD", message: "kind and identifier are required" } },
+        400,
+      );
+    }
+    const result = await ctx.runMutation(internal.rateLimit.consume, { kind, identifier });
     return jsonResponse(result);
   }),
 });

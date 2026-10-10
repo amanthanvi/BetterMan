@@ -1,6 +1,4 @@
-import { api as convexApi } from '../../convex/_generated/api'
-
-import { getConvexClient } from '@/lib/convexClient'
+import { getConvexSiteUrl } from '@/lib/convexClient'
 
 function first(value: string | null): string | undefined {
   const trimmed = value?.trim()
@@ -22,11 +20,25 @@ export function requestIdentifier(headers: Headers): string {
   return 'anonymous'
 }
 
-export async function isRateLimited(headers: Headers, kind: 'search' | 'page'): Promise<boolean> {
-  const result = await getConvexClient().mutation(convexApi.rateLimit.enforce, {
-    kind,
-    identifier: requestIdentifier(headers),
-  })
+function rateLimitSecret(): string {
+  const value = process.env.CONVEX_RATE_LIMIT_SECRET?.trim()
+  if (!value) throw new Error('CONVEX_RATE_LIMIT_SECRET is required')
+  return value
+}
 
+export async function isRateLimited(headers: Headers, kind: 'search' | 'page'): Promise<boolean> {
+  const response = await fetch(`${getConvexSiteUrl().replace(/\/+$/, '')}/rate-limit/enforce`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${rateLimitSecret()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ kind, identifier: requestIdentifier(headers) }),
+    cache: 'no-store',
+  })
+  if (!response.ok) throw new Error(`Convex rate limit check failed: HTTP ${response.status}`)
+
+  const result = (await response.json()) as { allowed?: unknown } | null
+  if (typeof result?.allowed !== 'boolean') throw new Error('Convex rate limit check returned no decision')
   return !result.allowed
 }

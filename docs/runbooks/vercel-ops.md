@@ -24,7 +24,8 @@ Also set the public `CONVEX_URL` GitHub environment variable to the production `
    - `/api/v1/info` returns an initialized Convex dataset release;
    - `/robots.txt` is valid;
    - `/sitemap.xml` is valid;
-   - `/man/tar/1` renders server-side content.
+   - `/man/tar/1` renders server-side content;
+   - `/api/v1/man/tar/1` passes the Convex rate-limit check and returns page JSON.
 7. Immediately before promotion, the automatic path confirms the SHA is still current `main` again.
 8. Only then does the script promote the deployment and require both `betterman.sh` and `www.betterman.sh` to point to its exact deployment ID and serve initialized API data. A post-promotion failure automatically rolls back to the deployment captured before the run.
 
@@ -129,7 +130,7 @@ Also verify in a real browser:
 
 - Build failure: inspect the `deploy_production` job in the `deploy-vercel` workflow and Vercel build logs; reproduce with `pnpm next:build`.
 - Convex deploy/check failure: verify `CONVEX_DEPLOY_KEY` and the `CONVEX_URL` GitHub environment variable, then run `CONVEX_URL=<production-url> pnpm convex:prod-check` locally. Do not continue to Vercel until the data, search, page, and metadata checks pass.
-- Missing environment: verify the protected GitHub `production` environment secrets and `CONVEX_URL` variable, plus the Vercel production Convex URL (`NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`). The deploy script enforces `PUBLIC_BASE_URL=https://betterman.sh` on each production deployment.
+- Missing environment: verify the protected GitHub `production` environment secrets and `CONVEX_URL` variable, plus the Vercel production Convex URL (`NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`) and `CONVEX_RATE_LIMIT_SECRET`, which must match the Convex deployment env value. A rate-limit smoke failure with HTTP 500 usually means one side is missing or different. The deploy script enforces `PUBLIC_BASE_URL=https://betterman.sh` on each production deployment.
 - Smoke failure: use `vercel curl` against the immutable deployment URL before changing the production alias.
 - Alias mismatch: inspect both the immutable deployment and both custom domains; the script attempts automatic rollback and must not declare success until their deployment IDs match.
 - Runtime errors: inspect Vercel runtime logs/errors and correlate the deployment ID before rolling back.

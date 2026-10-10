@@ -23,12 +23,13 @@ Needs Node 26, pnpm 10.34, Python 3.14, and `uv`.
 ```bash
 pnpm install
 pnpm convex:check   # provisions a local Convex deployment and writes .env.local
-pnpm next:dev       # Convex watcher plus Next.js on http://localhost:3000
+CONVEX_RATE_LIMIT_SECRET=dev pnpm next:dev   # Convex watcher plus Next.js on http://localhost:3000
 ```
 
-The local deployment starts empty. Seed it with the E2E fixture while `pnpm next:dev` is running:
+API routes check rate limits through a secret-gated Convex HTTP action, so Convex needs the same `CONVEX_RATE_LIMIT_SECRET`. The local deployment also starts empty. While `pnpm next:dev` is running, set both secrets and seed the E2E fixture:
 
 ```bash
+npx convex env set CONVEX_RATE_LIMIT_SECRET dev
 npx convex env set CONVEX_INGEST_SECRET dev
 set -a; . ./.env.local; set +a
 BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL:-$VITE_CONVEX_SITE_URL}" node scripts/seed-convex-e2e.mjs

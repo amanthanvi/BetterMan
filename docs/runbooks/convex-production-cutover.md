@@ -12,6 +12,8 @@ App runtime:
 
 - `NEXT_PUBLIC_CONVEX_URL` — Convex client URL, usually `https://<deployment>.convex.cloud`.
 - `CONVEX_URL` — same value for server-side Next.js code.
+- `CONVEX_RATE_LIMIT_SECRET` — bearer token the app sends to the Convex `/rate-limit/enforce` HTTP action. Set the same value in the Vercel production environment and the Convex deployment env. Use a value distinct from `CONVEX_INGEST_SECRET` so the app runtime cannot ingest or promote releases.
+- `CONVEX_SITE_URL` — optional Convex HTTP actions URL; derived from a `*.convex.cloud` `CONVEX_URL` when unset.
 
 Public Convex queries/actions resolve the `prod` pointer internally. The app runtime cannot select `staging`.
 
@@ -37,6 +39,7 @@ export CONVEX_DEPLOY_KEY="$BETTERMAN_CONVEX_DEPLOY_KEY"
 
 npx convex deploy --typecheck enable
 npx convex env set --deployment prod CONVEX_INGEST_SECRET "$CONVEX_INGEST_SECRET"
+npx convex env set --deployment prod CONVEX_RATE_LIMIT_SECRET "$CONVEX_RATE_LIMIT_SECRET"
 ```
 
 If the hosting pipeline builds the app through Convex deploy, pass the URL into the build:

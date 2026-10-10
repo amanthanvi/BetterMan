@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { getConvexUrl } from './convexClient'
+import { getConvexSiteUrl, getConvexUrl } from './convexClient'
 
 afterEach(() => vi.unstubAllEnvs())
 
@@ -19,4 +19,23 @@ it('accepts the local URL generated when Convex detects Vite test tooling', () =
   expect(getConvexUrl()).toBe('http://127.0.0.1:3210')
   vi.stubEnv('VITE_CONVEX_URL', '')
   expect(() => getConvexUrl()).toThrow('is required')
+})
+
+it('resolves the HTTP actions URL from an explicit value or the cloud deployment', () => {
+  vi.stubEnv('NEXT_PUBLIC_CONVEX_URL', 'https://happy-otter-123.convex.cloud/')
+  vi.stubEnv('CONVEX_SITE_URL', ' https://custom.example/convex ')
+  expect(getConvexSiteUrl()).toBe('https://custom.example/convex')
+  vi.stubEnv('CONVEX_SITE_URL', '')
+  expect(getConvexSiteUrl()).toBe('https://happy-otter-123.convex.site')
+})
+
+it('uses the generated local site URL for a local deployment', () => {
+  vi.stubEnv('NEXT_PUBLIC_CONVEX_URL', '')
+  vi.stubEnv('CONVEX_URL', '')
+  vi.stubEnv('CONVEX_SITE_URL', '')
+  vi.stubEnv('VITE_CONVEX_URL', 'http://127.0.0.1:3210')
+  vi.stubEnv('VITE_CONVEX_SITE_URL', 'http://127.0.0.1:3211')
+  expect(getConvexSiteUrl()).toBe('http://127.0.0.1:3211')
+  vi.stubEnv('VITE_CONVEX_SITE_URL', '')
+  expect(() => getConvexSiteUrl()).toThrow('CONVEX_SITE_URL is required')
 })
