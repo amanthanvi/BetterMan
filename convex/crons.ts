@@ -4,9 +4,9 @@ import { CLEANUP_BATCH_LIMIT, CLEANUP_FOLLOWUP_LIMIT } from "./rateLimit";
 
 const crons = cronJobs();
 
-// Bucket keys embed the client identifier and expire with the 60-second window.
-// Run every minute so those identifiers are not retained after the window, and
-// let the mutation schedule further bounded batches while expired rows remain.
+// Bucket keys embed the client identifier. Expired rows are removed on this
+// one-minute schedule, in bounded batches. A backlog larger than one wave
+// continues on the next tick rather than inside a single transaction.
 crons.interval(
   "delete expired rate limit buckets",
   { minutes: 1 },
