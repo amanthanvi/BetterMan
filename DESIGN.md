@@ -109,5 +109,7 @@ combinator (no merge — primitives own their recipes).
   name matching is case-insensitive.
 - **Keyboard map:** ⌘K palette · `/` search · `?` shortcuts · `d` theme ·
   `b` sidebar/TOC · `t` top · `h` home · `p` prefs · `m` bookmark ·
-  Enter/Shift+Enter find navigation.
+  Enter/Shift+Enter find navigation. Single-key shortcuts are suppressed while
+  typing in a field, while focus is inside a dialog, and while any modal is open
+  (`singleKeyShortcutsBlocked` in `nextjs/lib/dom.ts`).
 - Print stylesheet forces light monochrome via `--color-*` overrides.
