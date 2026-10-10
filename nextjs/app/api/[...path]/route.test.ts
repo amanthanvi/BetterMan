@@ -1,5 +1,5 @@
 import fc from 'fast-check'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const apiMocks = vi.hoisted(() => ({
@@ -19,9 +19,7 @@ const apiMocks = vi.hoisted(() => ({
   listSection: vi.fn(),
 }))
 
-const convexMocks = vi.hoisted(() => ({
-  mutation: vi.fn(),
-}))
+const rateLimitFetch = vi.hoisted(() => vi.fn<typeof fetch>())
 
 vi.mock('@/lib/api', () => ({
   FastApiError: apiMocks.FastApiError,
@@ -41,10 +39,6 @@ vi.mock('@/lib/api', () => ({
   suggest: vi.fn(),
 }))
 
-vi.mock('@/lib/convexClient', () => ({
-  getConvexClient: () => convexMocks,
-}))
-
 import { GET } from './route'
 
 function request(path: string): NextRequest {
@@ -57,9 +51,26 @@ function context(path: string[]) {
   return { params: Promise.resolve({ path }) }
 }
 
+function rateLimitDecision(allowed: boolean): Response {
+  return Response.json({ allowed, count: 1, retryAfterSeconds: 60 })
+}
+
+function lastRateLimitBody(): unknown {
+  const init = rateLimitFetch.mock.lastCall?.[1]
+  return init ? JSON.parse(String(init.body)) : undefined
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
-  convexMocks.mutation.mockResolvedValue({ allowed: true })
+  vi.stubEnv('CONVEX_SITE_URL', 'https://convex.test')
+  vi.stubEnv('CONVEX_RATE_LIMIT_SECRET', 'rl-secret')
+  vi.stubGlobal('fetch', rateLimitFetch)
+  rateLimitFetch.mockImplementation(async () => rateLimitDecision(true))
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
 })
 
 describe('public API timing and metadata', () => {
@@ -128,7 +139,7 @@ describe('public API timing and metadata', () => {
   })
 
   it('reports rate-limit timing without calling search when blocked', async () => {
-    convexMocks.mutation.mockResolvedValueOnce({ allowed: false })
+    rateLimitFetch.mockResolvedValueOnce(rateLimitDecision(false))
 
     const response = await GET(request('/api/v1/search?q=tar'), context(['v1', 'search']))
 
@@ -146,32 +157,26 @@ describe('public API timing and metadata', () => {
     ]
 
     for (const headers of spoofed) {
-      convexMocks.mutation.mockClear()
+      rateLimitFetch.mockClear()
       const searchResponse = await GET(
         new NextRequest('https://betterman.test/api/v1/search?q=tar', { headers }),
         context(['v1', 'search']),
       )
       expect(searchResponse.status).toBe(200)
-      expect(convexMocks.mutation).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ kind: 'search', identifier: 'anonymous' }),
-      )
+      expect(lastRateLimitBody()).toEqual({ kind: 'search', identifier: 'anonymous' })
     }
 
     apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({
       page: { name: 'bash', section: '1', title: 'bash', description: 'shell' },
     })
     for (const headers of spoofed) {
-      convexMocks.mutation.mockClear()
+      rateLimitFetch.mockClear()
       const pageResponse = await GET(
         new NextRequest('https://betterman.test/api/v1/man/bash/1/meta', { headers }),
         context(['v1', 'man', 'bash', '1', 'meta']),
       )
       expect(pageResponse.status).toBe(200)
-      expect(convexMocks.mutation).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ kind: 'page', identifier: 'anonymous' }),
-      )
+      expect(lastRateLimitBody()).toEqual({ kind: 'page', identifier: 'anonymous' })
     }
   })
 
@@ -187,10 +192,7 @@ describe('public API timing and metadata', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(convexMocks.mutation).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ kind: 'page', identifier: '203.0.113.10' }),
-    )
+    expect(lastRateLimitBody()).toEqual({ kind: 'page', identifier: '203.0.113.10' })
   })
 })
 
