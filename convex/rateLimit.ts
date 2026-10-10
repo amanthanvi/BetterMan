@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { internalMutation, mutation } from "./_generated/server";
 
 // Server-owned limits. These used to arrive as arguments, which let any caller
@@ -48,20 +49,45 @@ export const enforce = mutation({
   },
 });
 
+// One mutation stays under Convex's per-transaction document limits.
+// The cron asks for the cap; a caller that omits maxBuckets deletes a smaller page.
+export const CLEANUP_BATCH_DEFAULT = 100;
+export const CLEANUP_BATCH_LIMIT = 500;
+// Further batches one wave may schedule after the current mutation. The next
+// cron tick continues any remainder, so a stuck hasMore cannot loop forever.
+export const CLEANUP_FOLLOWUP_LIMIT = 40;
+
+function cleanupBatchSize(maxBuckets: number | undefined): number {
+  if (typeof maxBuckets !== "number" || !Number.isFinite(maxBuckets)) return CLEANUP_BATCH_DEFAULT;
+  return Math.max(1, Math.min(Math.floor(maxBuckets), CLEANUP_BATCH_LIMIT));
+}
+
+function cleanupFollowupsRemaining(followupsRemaining: number | undefined): number {
+  if (typeof followupsRemaining !== "number" || !Number.isFinite(followupsRemaining)) {
+    return CLEANUP_FOLLOWUP_LIMIT;
+  }
+  return Math.max(0, Math.min(Math.floor(followupsRemaining), CLEANUP_FOLLOWUP_LIMIT));
+}
+
 // Internal: this deletes rows on a time predicate. As a public mutation taking
 // a caller-supplied `now`, one call with a far-future timestamp emptied the
-// whole table and turned rate limiting off.
+// whole table and turned rate limiting off. The clock is read here, and
+// convex/crons.ts is what schedules the run.
 export const cleanupExpired = internalMutation({
   args: {
     maxBuckets: v.optional(v.number()),
+    followupsRemaining: v.optional(v.number()),
   },
+  returns: v.object({
+    deleted: v.number(),
+    hasMore: v.boolean(),
+    scheduledFollowup: v.boolean(),
+  }),
   handler: async (ctx, args) => {
-    const maxBuckets =
-      typeof args.maxBuckets === "number" && Number.isFinite(args.maxBuckets)
-        ? Math.max(1, Math.min(Math.floor(args.maxBuckets), 500))
-        : 100;
+    const maxBuckets = cleanupBatchSize(args.maxBuckets);
+    const followupsRemaining = cleanupFollowupsRemaining(args.followupsRemaining);
     // Read one past the page so a full final page is not mistaken for
-    // "more remain", which would loop a caller forever on the last batch.
+    // "more remain", which would schedule follow-ups forever on the last batch.
     const expired = await ctx.db
       .query("rateLimitBuckets")
       .withIndex("by_expiresAt", (q) => q.lt("expiresAt", Date.now()))
@@ -71,6 +97,15 @@ export const cleanupExpired = internalMutation({
       await ctx.db.delete(row._id);
     }
 
-    return { deleted: deletable.length, hasMore: expired.length > maxBuckets };
+    const hasMore = expired.length > maxBuckets;
+    const scheduledFollowup = hasMore && followupsRemaining > 0;
+    if (scheduledFollowup) {
+      await ctx.scheduler.runAfter(0, internal.rateLimit.cleanupExpired, {
+        maxBuckets,
+        followupsRemaining: followupsRemaining - 1,
+      });
+    }
+
+    return { deleted: deletable.length, hasMore, scheduledFollowup };
   },
 });
