@@ -15,6 +15,7 @@ import type * as _releaseLookups from "../_releaseLookups.js";
 import type * as _releaseManifest from "../_releaseManifest.js";
 import type * as _storedPayload from "../_storedPayload.js";
 import type * as content from "../content.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as lib from "../lib.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   _releaseManifest: typeof _releaseManifest;
   _storedPayload: typeof _storedPayload;
   content: typeof content;
+  crons: typeof crons;
   http: typeof http;
   ingest: typeof ingest;
   lib: typeof lib;
