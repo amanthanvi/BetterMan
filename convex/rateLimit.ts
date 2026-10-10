@@ -8,9 +8,14 @@ const LIMITS = {
   page: { limit: 300, windowSeconds: 60 },
 } as const;
 
-export const enforce = mutation({
+const rateLimitKindValidator = v.union(v.literal("search"), v.literal("page"));
+
+// Internal: reachable only through the secret-gated `/rate-limit/enforce` HTTP
+// action. As a public mutation, any client could spend another caller's bucket
+// by passing that caller's identifier.
+export const consume = internalMutation({
   args: {
-    kind: v.union(v.literal("search"), v.literal("page")),
+    kind: rateLimitKindValidator,
     identifier: v.string(),
   },
   handler: async (ctx, args) => {
@@ -46,6 +51,18 @@ export const enforce = mutation({
       retryAfterSeconds: Math.max(1, Math.ceil((expiresAt - now) / 1000)),
     };
   },
+});
+
+// Compatibility only: Convex deploys before the frontend, so the promoted
+// frontend keeps calling this name until the release that uses
+// `/rate-limit/enforce` is live. It never touches buckets. Delete it once no
+// promoted or rollback-target frontend calls `api.rateLimit.enforce`.
+export const enforce = mutation({
+  args: {
+    kind: rateLimitKindValidator,
+    identifier: v.string(),
+  },
+  handler: async () => ({ allowed: true, count: 0, retryAfterSeconds: 1 }),
 });
 
 // Internal: this deletes rows on a time predicate. As a public mutation taking
