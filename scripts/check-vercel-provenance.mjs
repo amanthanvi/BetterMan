@@ -13,7 +13,7 @@ export async function requireVercelProvenance(report, version, verifyBundle) {
     && item.location === 'node_modules/vercel' && item.registry === 'https://registry.npmjs.org/')
   const bundle = entry?.attestationBundles?.find((item) => item.predicateType === provenanceType)?.bundle
   if (entry?.attestations?.provenance?.predicateType !== provenanceType || !bundle?.dsseEnvelope?.payload) {
-    throw new Error(`vercel@${version} has no verified SLSA provenance`)
+    throw new Error(`vercel@${version} has no verified SLSA provenance; see docs/runbooks/vercel-ops.md#cli-provenance`)
   }
   // npm verifies the bundle but does not constrain its certificate identity.
   await verifyBundle(bundle, {
