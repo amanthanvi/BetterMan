@@ -17,7 +17,7 @@ Also set the public `CONVEX_URL` GitHub environment variable to the production `
 2. `.github/workflows/ci.yml` runs the complete test/build/security matrix.
 3. A non-cancelable `workflow_run` in `.github/workflows/deploy.yml` accepts only a successful `push` CI result for `main`, checks out its exact `head_sha`, and confirms that SHA is still current `main` before changing the backend.
 4. Under the repository's Node 26 tooling contract, the workflow deploys that exact SHA's Convex schema/functions, then checks production release data, search, page content, and metadata functions. Convex changes must remain backward-compatible with the currently promoted frontend during this handoff.
-5. The workflow switches to the Vercel project's Node 24 build/runtime contract, uses pinned Vercel CLI `58.4.4`, and runs `scripts/deploy-vercel.sh` from the repository root. Vercel applies the project's `nextjs` root directory exactly once. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
+5. The workflow switches to the Vercel project's Node 24 build/runtime contract, uses the exact Vercel CLI version pinned in the trusted tooling checkout's `package.json` (the version `pnpm deps:provenance` just verified), and runs `scripts/deploy-vercel.sh` from the repository root. Vercel applies the project's `nextjs` root directory exactly once. The script pulls production settings, builds the artifact, and creates a production-targeted deployment with `--skip-domain`, leaving the current site live.
 6. It requires the staged deployment to pass all of the following:
    - deployment state is `READY`;
    - deployment metadata SHA equals the checked-out `main` SHA;
@@ -79,19 +79,35 @@ passed to the CLI. Sigstore verification additionally requires the exact release
 workflow certificate identity on `main` and the GitHub Actions OIDC issuer.
 Missing attestations fail even if registry signatures pass.
 Operational contract tests also require the gate to run unconditionally after
-installation and before deployment-secret exposure, using the exact trusted CLI
-pin. Dependabot vulnerability alerts and weekly update PRs remain enabled; an
-upgrade cannot silently bypass the same provenance and dependency-review gates.
+installation and before deployment-secret exposure, and require the deploy step
+to refuse any `vercel --version` other than the exact pin in the trusted tooling
+`package.json` that the gate verified. Dependabot vulnerability alerts and weekly
+update PRs remain enabled; an upgrade cannot silently bypass the same provenance
+and dependency-review gates.
 
-The CLI is pinned to 58.4.4, the newest attested stable release observed on
-September 7, 2026. Its verified source commit is
+58.4.4 is the newest attested stable release. Its verified source commit is
 `6331571e2fe14de31a01d00deead9e7a349e53a6`. Vercel moved later CLI publication to
-private source; see https://github.com/vercel/vercel/issues/17408. Version 59.10.0
-had registry signatures but no provenance, and its vendor integrity endpoint
-returned 404. That is not evidence of compromise, but does not meet this gate.
+private source; see https://github.com/vercel/vercel/issues/17408. npm does not
+generate provenance for publishes from a private repository, so every release
+from 58.5.1 onward has registry signatures but no attestation (rechecked through
+63.1.2 on October 10, 2026). Vercel's suggested substitute, comparing
+`https://vercel.com/docs/cli/release-notes/npm/<version>/integrity` with npm's
+`dist.integrity`, is an unsigned vendor assertion with no source binding, and it
+lags releases (59.10.0 returned 404 on September 7; 63.1.1 and 63.1.2 returned
+404 on October 10). That is not evidence of compromise, but does not meet this
+gate.
 Do not remove the provenance gate to accept an automated upgrade. Re-evaluate
 the pin when attested releases become available, or explicitly review an
 alternative verification policy if security or compatibility fixes require it.
+
+The Vercel CLI depends on Vercel's `sandbox` package, which osv-scanner matches
+against two advisories for the unrelated legacy `sandbox` package below 1.0.0.
+The exceptions in `osv-scanner.toml` are checked against that range, not the CLI
+version: `scripts/check-osv-exceptions.mjs` fails if the lockfile gains a
+`sandbox` release below 1.0.0 (or a prerelease), reaches `sandbox` through
+anything other than the root Vercel CLI dependency, or no longer contains
+`sandbox` at all. Each exception must expire between 30 days and one year out.
+A CLI upgrade that keeps these conditions needs no exception edit.
 
 ## Manual deployment or rollback
 
