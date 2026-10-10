@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Security: raise transitive pins to patched undici 6.28.1, fast-uri 3.1.8, brace-expansion 1.1.21 / 2.1.7 / 5.0.12, http-cache-semantics 4.3.0, and source-map-js 1.2.2 in the Vercel CLI, Sigstore, and Tailwind trees. `braces` 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no fixed release yet and stays reachable only through the Vercel CLI's `ts-morph` tooling.
 - Security: validate, rate-limit, and bound dynamic man-page share image inputs, and return 404 without rendering for missing pages.
 - Security: key public API rate limits on the Vercel-overwritten client address instead of spoofable `CF-Connecting-IP` / `X-Forwarded-For` headers, and share an anonymous bucket when no trusted identity is present.
 - Maintenance: add a manual `prune-releases` workflow that previews by default and deletes superseded inactive releases in bounded, retried batches, retaining the newest verified release per distro as a rollback target and sweeping orphaned content blobs; release pruning and the orphan sweep now also delete their stored payload files, and the inactive-release preview paginates and reports rollback eligibility.
