@@ -49,5 +49,24 @@ def test_dnf_install_reinstalls_preinstalled(monkeypatch) -> None:
 
     fedora.dnf_install(["bash", "curl"])
 
-    assert any(cmd[:4] == ["dnf", "-y", "-q", "install"] for cmd in calls)
-    assert any(cmd[:4] == ["dnf", "-y", "-q", "reinstall"] and "bash" in cmd for cmd in calls)
+    install = [cmd for cmd in calls if cmd[:4] == ["dnf", "-y", "-q", "install"]]
+    upgrade = [cmd for cmd in calls if cmd[:4] == ["dnf", "-y", "-q", "upgrade"]]
+    reinstall = [cmd for cmd in calls if cmd[:4] == ["dnf", "-y", "-q", "reinstall"]]
+    assert install and install[0][-2:] == ["bash", "curl"]
+    assert upgrade and upgrade[0][-1:] == ["bash"]
+    assert reinstall and reinstall[0][-1:] == ["bash"]
+    assert calls.index(upgrade[0]) < calls.index(reinstall[0])
+
+
+def test_dnf_install_skips_doc_backfill_when_nothing_is_installed(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **_kwargs: object):
+        calls.append(cmd)
+        return SimpleNamespace(returncode=1 if cmd[:2] == ["rpm", "-q"] else 0)
+
+    monkeypatch.setattr(fedora.subprocess, "run", fake_run)
+
+    fedora.dnf_install(["bash"])
+
+    assert [cmd[:4] for cmd in calls if cmd[0] == "dnf"] == [["dnf", "-y", "-q", "install"]]

@@ -110,16 +110,20 @@ jobs:
       - run: pipx install uv
       - run: cd ingestion && uv sync --frozen
 
+      - name: Load distro ingest images
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ingestion
+          uv run python -c 'from ingestion.docker_runner import distro_image_env
+          for key, value in distro_image_env().items():
+              print(f"{key}={value}")' >> "$GITHUB_ENV"
+
       - name: Ingest to Convex staging
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
-          BETTERMAN_DEBIAN_IMAGE_REF: debian:trixie
-          BETTERMAN_UBUNTU_IMAGE_REF: ubuntu:24.04
-          BETTERMAN_FEDORA_IMAGE_REF: fedora:41
-          BETTERMAN_ARCH_IMAGE_REF: archlinux:latest
-          BETTERMAN_ALPINE_IMAGE_REF: alpine:3.20
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
           BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
         shell: bash

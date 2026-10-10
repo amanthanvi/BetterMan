@@ -42,6 +42,7 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 **Notes**
 
 - The workflow ingests into Convex staging (`BETTERMAN_CONVEX_HTTP_URL`, `BETTERMAN_CONVEX_INGEST_SECRET`) then promotes active staging release pointers to prod.
+- Linux container image tags live in `ingestion/distro-images.env`. The workflow loads that file into `BETTERMAN_*_IMAGE_REF` before ingesting. Change a tag there.
 - Every selected distro is required. A failed, timed-out, or cancelled ingest blocks promotion.
 - Release creation declares page count, section totals, alias count (including zero), and license count. License declarations identify packages whose text must be uploaded; packages without available license text do not create a text requirement. Activation verifies the declarations before sealing and waits for related-metadata hydration before changing its staging pointer. HTTP 409 with `pending: true` is not publication; the client polls until `pending: false`, with a five-minute deadline. Retry activation to resume a failed or canceled hydration job. Sealed releases cannot accept new rows: use a new release ID for further data. Promotion rejects missing, unverified, unsealed, incomplete, or pruning source releases atomically.
 - Ingest+promote dispatches promote only the selected distro pointers. Scheduled and explicit promote-only dispatches promote all active staging pointers.
@@ -115,8 +116,8 @@ Legacy releases may have page and section totals but no declared alias count. An
 Ubuntu base images can exclude man pages during package install via dpkg config (commonly:
 `/etc/dpkg/dpkg.cfg.d/excludes` containing `path-exclude=/usr/share/man/*`). When present, packages will install successfully but ship no `/usr/share/man` content.
 
-- Confirm:
-  - `docker run --rm ubuntu:24.04 sh -lc 'test -f /etc/dpkg/dpkg.cfg.d/excludes && cat /etc/dpkg/dpkg.cfg.d/excludes | sed -n \"1,80p\"'`
+- Confirm, using the Ubuntu image from `ingestion/distro-images.env`:
+  - `image=$(awk -F= '$1=="ubuntu"{print $2}' ingestion/distro-images.env); docker run --rm "$image" sh -lc 'test -f /etc/dpkg/dpkg.cfg.d/excludes && cat /etc/dpkg/dpkg.cfg.d/excludes | sed -n \"1,80p\"'`
 - Fix (if you’re debugging manually):
   - Remove the `path-exclude=/usr/share/man/*` line(s), then reinstall the packages that were already present in the image so their man pages get installed.
 
@@ -135,8 +136,8 @@ In BetterMan, the Fedora ingest path handles this automatically (see `ingestion/
 
 Arch base images can exclude man pages via `pacman` config (`NoExtract` patterns like `usr/share/man/*`). When present, packages will install successfully but ship no `/usr/share/man` content, causing ingestion to return `total=0`.
 
-- Confirm:
-  - `docker run --rm archlinux:latest sh -lc 'grep -n \"^NoExtract\" /etc/pacman.conf || true'`
+- Confirm, using the Arch image from `ingestion/distro-images.env`:
+  - `image=$(awk -F= '$1=="arch"{print $2}' ingestion/distro-images.env); docker run --rm "$image" sh -lc 'grep -n \"^NoExtract\" /etc/pacman.conf || true'`
 - Fix (if you’re debugging manually):
   - Remove/adjust any `NoExtract` patterns that match `usr/share/man/*`, then reinstall the packages you care about so their man pages are extracted.
 

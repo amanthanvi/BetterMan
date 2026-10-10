@@ -10,6 +10,8 @@ Required environment:
 
 The ingest command parses man pages locally/in-container, creates a Convex release, stores full page content in Convex file storage, batch-inserts page metadata/search documents, and activates the release pointer for the configured stage when `--activate` is set.
 
+Linux ingests run in the container images listed in `distro-images.env`. `ingestion/docker_runner.py` and the `update-dataset` workflow both load that file. Change a tag there.
+
 ## Parser fixtures
 
 `tests/fixtures/roff/` holds roff sources captured from Debian trixie plus one mdoc page from macOS. `tests/test_golden.py` renders each with the host `mandoc` and compares the parsed result to `tests/fixtures/golden/`. After a deliberate parser change:
