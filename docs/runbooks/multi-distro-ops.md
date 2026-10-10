@@ -117,7 +117,7 @@ Ubuntu base images can exclude man pages during package install via dpkg config 
 `/etc/dpkg/dpkg.cfg.d/excludes` containing `path-exclude=/usr/share/man/*`). When present, packages will install successfully but ship no `/usr/share/man` content.
 
 - Confirm, using the Ubuntu image from `ingestion/distro-images.env`:
-  - `image=$(awk -F= '$1=="ubuntu"{print $2}' ingestion/distro-images.env); docker run --rm "$image" sh -lc 'test -f /etc/dpkg/dpkg.cfg.d/excludes && cat /etc/dpkg/dpkg.cfg.d/excludes | sed -n \"1,80p\"'`
+  - `image=$(awk -F= '$1=="ubuntu"{print $2}' ingestion/distro-images.env); docker run --rm "$image" sh -lc 'test -f /etc/dpkg/dpkg.cfg.d/excludes && sed -n "1,80p" /etc/dpkg/dpkg.cfg.d/excludes'`
 - Fix (if you’re debugging manually):
   - Remove the `path-exclude=/usr/share/man/*` line(s), then reinstall the packages that were already present in the image so their man pages get installed.
 
@@ -137,7 +137,7 @@ In BetterMan, the Fedora ingest path handles this automatically (see `ingestion/
 Arch base images can exclude man pages via `pacman` config (`NoExtract` patterns like `usr/share/man/*`). When present, packages will install successfully but ship no `/usr/share/man` content, causing ingestion to return `total=0`.
 
 - Confirm, using the Arch image from `ingestion/distro-images.env`:
-  - `image=$(awk -F= '$1=="arch"{print $2}' ingestion/distro-images.env); docker run --rm "$image" sh -lc 'grep -n \"^NoExtract\" /etc/pacman.conf || true'`
+  - `image=$(awk -F= '$1=="arch"{print $2}' ingestion/distro-images.env); docker run --rm "$image" sh -lc 'grep -n "^NoExtract" /etc/pacman.conf || true'`
 - Fix (if you’re debugging manually):
   - Remove/adjust any `NoExtract` patterns that match `usr/share/man/*`, then reinstall the packages you care about so their man pages are extracted.
 
