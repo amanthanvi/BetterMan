@@ -5,30 +5,61 @@ import shlex
 import subprocess
 from pathlib import Path
 
+_DISTRO_IMAGES_PATH = Path(__file__).resolve().parents[1] / "distro-images.env"
+
+
+def load_distro_images(path: Path | None = None) -> dict[str, str]:
+    """Return distro to image ref from the shared ingest image file."""
+    source = _DISTRO_IMAGES_PATH if path is None else path
+    images: dict[str, str] = {}
+    try:
+        lines = source.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise RuntimeError(f"cannot read distro images from {source}") from exc
+
+    for lineno, raw in enumerate(lines, start=1):
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        distro, sep, image = line.partition("=")
+        distro = distro.strip()
+        image = image.strip()
+        if (
+            not sep
+            or not distro
+            or not image
+            or any(char.isspace() for char in distro)
+            or any(char.isspace() for char in image)
+        ):
+            raise RuntimeError(f"invalid distro image entry at {source}:{lineno}")
+        if distro in images:
+            raise RuntimeError(f"duplicate distro image entry for {distro} at {source}:{lineno}")
+        images[distro] = image
+
+    if not images:
+        raise RuntimeError(f"no distro images in {source}")
+    return images
+
+
+def distro_image_env(path: Path | None = None) -> dict[str, str]:
+    """Environment assignments the ingest workflow exports from the shared file."""
+    return {
+        f"BETTERMAN_{distro.upper()}_IMAGE_REF": image
+        for distro, image in load_distro_images(path).items()
+    }
+
+
+def _image_ref(distro: str) -> str:
+    images = load_distro_images()
+    if distro not in images:
+        raise RuntimeError(f"unsupported distro: {distro}")
+    return os.environ.get(f"BETTERMAN_{distro.upper()}_IMAGE_REF", images[distro])
+
 
 def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
     repo_root = Path(__file__).resolve().parents[2]
     ingestion_dir = repo_root / "ingestion"
-
-    default_images = {
-        "debian": "debian:trixie",
-        "ubuntu": "ubuntu:24.04",
-        "fedora": "fedora:41",
-        "arch": "archlinux:latest",
-        "alpine": "alpine:3.20",
-    }
-    image_env = {
-        "debian": "BETTERMAN_DEBIAN_IMAGE_REF",
-        "ubuntu": "BETTERMAN_UBUNTU_IMAGE_REF",
-        "fedora": "BETTERMAN_FEDORA_IMAGE_REF",
-        "arch": "BETTERMAN_ARCH_IMAGE_REF",
-        "alpine": "BETTERMAN_ALPINE_IMAGE_REF",
-    }
-
-    if distro not in default_images or distro not in image_env:
-        raise RuntimeError(f"unsupported distro: {distro}")
-
-    image_ref = os.environ.get(image_env[distro], default_images[distro])
+    image_ref = _image_ref(distro)
     platform = os.environ.get(f"BETTERMAN_{distro.upper()}_DOCKER_PLATFORM") or os.environ.get(
         "BETTERMAN_DOCKER_PLATFORM",
     )
