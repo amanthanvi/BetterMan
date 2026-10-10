@@ -194,11 +194,13 @@ jobs:
           BETTERMAN_E2E_SEED: "1"
           BETTERMAN_DATASET_STAGE: prod
           CONVEX_INGEST_SECRET: e2e-secret
+          CONVEX_RATE_LIMIT_SECRET: e2e-rate-limit-secret
         run: |
           set -euo pipefail
 
           npx convex dev --once
           npx convex env set CONVEX_INGEST_SECRET "$CONVEX_INGEST_SECRET"
+          npx convex env set CONVEX_RATE_LIMIT_SECRET "$CONVEX_RATE_LIMIT_SECRET"
 
           nohup npx convex dev --tail-logs disable > /tmp/betterman-convex.log 2>&1 &
           echo $! > /tmp/betterman-convex.pid
@@ -235,6 +237,7 @@ jobs:
           export CONVEX_URL="${CONVEX_URL:-$VITE_CONVEX_URL}"
           export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
           export CONVEX_INGEST_SECRET="e2e-secret"
+          export CONVEX_RATE_LIMIT_SECRET="e2e-rate-limit-secret"
           export PUBLIC_BASE_URL="http://127.0.0.1:3000"
 
           pnpm -C nextjs build

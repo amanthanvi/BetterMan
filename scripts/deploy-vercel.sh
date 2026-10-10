@@ -137,6 +137,14 @@ if grep -Fqi 'Not found — BetterMan' "${smoke_dir}/man.html"; then
   exit 1
 fi
 
+# The checks above never reach the rate limiter. This route fails unless the
+# deployment can authenticate to Convex's /rate-limit/enforce action.
+vercel curl /api/v1/man/tar/1 \
+  --deployment "$deployment_url" \
+  --yes \
+  -- --fail --silent --show-error >"${smoke_dir}/man.json"
+jq -e '.page.name == "tar"' "${smoke_dir}/man.json" >/dev/null
+
 if [[ "${BETTERMAN_REQUIRE_CURRENT_MAIN:-false}" == "true" ]]; then
   current_main_sha="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
   if [[ "$current_main_sha" != "$BETTERMAN_DEPLOY_SHA" ]]; then
