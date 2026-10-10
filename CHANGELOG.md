@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Security: rate-limit buckets can no longer be spent by calling Convex directly. Enforcement is an internal mutation behind the `/rate-limit/enforce` HTTP action, which requires a dedicated `CONVEX_RATE_LIMIT_SECRET` in both Vercel and Convex. The public `rateLimit:enforce` mutation remains only as a no-op for the frontend promoted before this release, and production deploys now smoke-test a rate-limited route before promotion.
 - Security: validate, rate-limit, and bound dynamic man-page share image inputs, and return 404 without rendering for missing pages.
 - Security: key public API rate limits on the Vercel-overwritten client address instead of spoofable `CF-Connecting-IP` / `X-Forwarded-For` headers, and share an anonymous bucket when no trusted identity is present.
 - Maintenance: add a manual `prune-releases` workflow that previews by default and deletes superseded inactive releases in bounded, retried batches, retaining the newest verified release per distro as a rollback target and sweeping orphaned content blobs; release pruning and the orphan sweep now also delete their stored payload files, and the inactive-release preview paginates and reports rollback eligibility.
