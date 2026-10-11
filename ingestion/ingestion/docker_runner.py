@@ -49,14 +49,16 @@ def distro_image_env(path: Path | None = None) -> dict[str, str]:
     }
 
 
+_CONTAINER_DISTROS = ("debian", "ubuntu", "fedora", "arch", "alpine")
+
+
 def _image_ref(distro: str) -> str:
+    if distro not in _CONTAINER_DISTROS:
+        raise RuntimeError(f"unsupported distro: {distro}")
     override = os.environ.get(f"BETTERMAN_{distro.upper()}_IMAGE_REF")
     if override:
         return override
-    images = load_distro_images()
-    if distro not in images:
-        raise RuntimeError(f"unsupported distro: {distro}")
-    return images[distro]
+    return load_distro_images()[distro]
 
 
 def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:

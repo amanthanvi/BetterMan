@@ -24,6 +24,22 @@ def test_image_ref_override_skips_distro_images_file(monkeypatch) -> None:
     assert docker_runner._image_ref("debian") == "debian:override"
 
 
+def test_unsupported_distro_is_rejected_even_with_an_override(monkeypatch) -> None:
+    monkeypatch.setenv("BETTERMAN_FREEBSD_IMAGE_REF", "freebsd:override")
+
+    def fail_load(*_args: object, **_kwargs: object) -> dict[str, str]:
+        raise AssertionError("distro validation must not read distro-images.env")
+
+    monkeypatch.setattr(docker_runner, "load_distro_images", fail_load)
+
+    with pytest.raises(RuntimeError, match="unsupported distro: freebsd"):
+        docker_runner._image_ref("freebsd")
+
+
+def test_container_distros_match_the_shared_file() -> None:
+    assert docker_runner._CONTAINER_DISTROS == tuple(docker_runner.load_distro_images())
+
+
 def test_run_ingest_container_builds_debian_command(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_DEBIAN_IMAGE_REF", "debian:custom")
     monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
