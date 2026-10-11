@@ -50,10 +50,13 @@ def distro_image_env(path: Path | None = None) -> dict[str, str]:
 
 
 def _image_ref(distro: str) -> str:
+    override = os.environ.get(f"BETTERMAN_{distro.upper()}_IMAGE_REF")
+    if override:
+        return override
     images = load_distro_images()
     if distro not in images:
         raise RuntimeError(f"unsupported distro: {distro}")
-    return os.environ.get(f"BETTERMAN_{distro.upper()}_IMAGE_REF", images[distro])
+    return images[distro]
 
 
 def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:

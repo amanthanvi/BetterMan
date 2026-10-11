@@ -13,6 +13,17 @@ def test_run_ingest_container_rejects_unknown_distro() -> None:
         docker_runner.run_ingest_container(sample=False, activate=True, distro="freebsd")
 
 
+def test_image_ref_override_skips_distro_images_file(monkeypatch) -> None:
+    monkeypatch.setenv("BETTERMAN_DEBIAN_IMAGE_REF", "debian:override")
+
+    def fail_load(*_args: object, **_kwargs: object) -> dict[str, str]:
+        raise AssertionError("distro-images.env must not be read when an override is set")
+
+    monkeypatch.setattr(docker_runner, "load_distro_images", fail_load)
+
+    assert docker_runner._image_ref("debian") == "debian:override"
+
+
 def test_run_ingest_container_builds_debian_command(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_DEBIAN_IMAGE_REF", "debian:custom")
     monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
@@ -229,15 +240,23 @@ def test_run_ingest_container_builds_alpine_command(monkeypatch) -> None:
     assert "--distro alpine" in inner
 
 
+def _numeric_tag(image: str) -> tuple[int, ...]:
+    tag = image.partition(":")[2]
+    parts = tag.split(".")
+    if not all(part.isdigit() for part in parts):
+        raise AssertionError(
+            f"version floor check needs a numeric tag, got {image!r}; update the floor test",
+        )
+    return tuple(int(part) for part in parts)
+
+
 def test_distro_images_are_loaded_from_the_shared_file() -> None:
     images = docker_runner.load_distro_images()
     assert list(images) == ["debian", "ubuntu", "fedora", "arch", "alpine"]
 
-    fedora_release = int(images["fedora"].split(":", 1)[1])
-    alpine_minor = int(images["alpine"].split(":", 1)[1].split(".", 1)[1])
-    assert fedora_release >= 44
-    assert images["alpine"].startswith("alpine:3.")
-    assert alpine_minor >= 22
+    assert _numeric_tag(images["fedora"]) >= (44,), images["fedora"]
+    assert images["alpine"].startswith("alpine:3."), images["alpine"]
+    assert _numeric_tag(images["alpine"]) >= (3, 22), images["alpine"]
 
     env = docker_runner.distro_image_env()
     expected_env = {
