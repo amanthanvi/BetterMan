@@ -115,9 +115,16 @@ jobs:
         run: |
           set -euo pipefail
           cd ingestion
+          images_env="$(mktemp "${RUNNER_TEMP}/distro-images.XXXXXX")"
           uv run python -c 'from ingestion.docker_runner import distro_image_env
           for key, value in distro_image_env().items():
-              print(f"{key}={value}")' >> "$GITHUB_ENV"
+              print(f"{key}={value}")' > "${images_env}"
+          if [[ ! -s "${images_env}" ]] || grep -Evq '^BETTERMAN_[A-Z0-9_]+_IMAGE_REF=[^[:space:]]+$' "${images_env}"; then
+            echo "Refusing to export malformed distro image entries:" >&2
+            cat "${images_env}" >&2
+            exit 1
+          fi
+          cat "${images_env}" >> "$GITHUB_ENV"
 
       - name: Ingest to Convex staging
         env:
