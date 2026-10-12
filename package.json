@@ -10,7 +10,7 @@
 		"convex:prod-check": "node scripts/check-convex-production.mjs",
 		"convex:related-check": "node scripts/check-related-metadata.mjs",
 		"convex:prune-releases": "node scripts/prune-inactive-releases.mjs",
-		"ops:test": "node --test scripts/check-related-metadata.test.mjs scripts/check-vercel-provenance.test.mjs scripts/prune-inactive-releases.test.mjs",
+		"ops:test": "node --test scripts/check-osv-exceptions.test.mjs scripts/check-related-metadata.test.mjs scripts/check-vercel-provenance.test.mjs scripts/prune-inactive-releases.test.mjs",
 		"deps:provenance": "node scripts/check-vercel-provenance.mjs",
 		"next:dev": "convex dev --start \"pnpm -C nextjs dev\"",
 		"next:build": "pnpm -C nextjs build",
@@ -32,7 +32,7 @@
 		"convex-test": "0.0.60",
 		"sigstore": "5.0.0",
 		"typescript": "6.0.3",
-		"vercel": "58.4.4",
+		"vercel": "62.2.0",
 		"vite": "8.3.2",
 		"vitest": "5.0.2"
 	}

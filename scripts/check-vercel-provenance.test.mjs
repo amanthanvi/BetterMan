@@ -113,7 +113,9 @@ test('all production paths verify trusted tooling before deployment secrets are 
   }
   const deployment = steps.find((step) => step.includes('scripts/deploy-vercel.sh'))
   assert.ok(deployment?.includes('export PATH="$GITHUB_WORKSPACE/tooling/node_modules/.bin:$PATH"'))
-  const version = JSON.parse(readRepositoryFile('package.json')).devDependencies.vercel
-  assert.match(version, /^\d+\.\d+\.\d+$/)
-  assert.ok(deployment.includes(`if [[ "$(vercel --version)" != "${version}" ]]; then`))
+  assert.match(JSON.parse(readRepositoryFile('package.json')).devDependencies.vercel, /^\d+\.\d+\.\d+$/)
+  // The guard must compare against the same manifest the provenance gate verified.
+  assert.ok(deployment.includes(`trusted_vercel="$(node -p 'require(process.argv[1]).devDependencies.vercel' "$GITHUB_WORKSPACE/tooling/package.json")"`))
+  assert.ok(deployment.includes('if [[ "$(vercel --version)" != "$trusted_vercel" ]]; then'))
+  assert.ok(deployment.indexOf('trusted_vercel=') < deployment.indexOf('scripts/deploy-vercel.sh'))
 })
