@@ -19,6 +19,10 @@ BetterMan is a Next.js app on Vercel that reads man page data from Convex. A Pyt
 - Keep diffs scoped. Use Conventional Commits.
 - Add a line under Unreleased in `CHANGELOG.md` when behavior changes.
 
+## Verify
+
+Drive the local app with `.agents/skills/verify-betterman/SKILL.md` (the same skill is linked from `.cursor/skills/verify-betterman`). `pnpm verify:doctor` is the read-only health check. `pnpm verify:smoke` runs doctor plus one Playwright pass over home, search, and `tar(1)`. Feature work needs a Proof section on the PR: commands run, screenshot or trace paths, results, and `INCONCLUSIVE` when a step could not run. The feature map under that skill lists the sweep order.
+
 ## Environment
 
 - Node 26, pnpm 10.34.4, Python 3.14, `uv`.
