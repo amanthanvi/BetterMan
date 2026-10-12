@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync } from 'node:fs'
 import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -93,72 +93,104 @@ async function fetchText(url, timeoutMs) {
   }
 }
 
+function listenInodes(port) {
+  const inodes = new Set()
+  for (const file of ['/proc/net/tcp', '/proc/net/tcp6']) {
+    if (!existsSync(file)) continue
+    const lines = readFileSync(file, 'utf8').split('\n').slice(1)
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/)
+      if (parts.length < 10) continue
+      const local = parts[1]
+      const state = parts[3]
+      const inode = parts[9]
+      const portHex = local.split(':')[1]
+      if (!portHex || state !== '0A') continue
+      if (Number.parseInt(portHex, 16) === port) inodes.add(inode)
+    }
+  }
+  return inodes
+}
+
 function portDetails(port) {
   try {
-    return execFileSync('ss', ['-ltnp', `sport = :${port}`], { encoding: 'utf8' }).trim()
+    const fromSs = execFileSync('ss', ['-ltnp', `sport = :${port}`], { encoding: 'utf8' }).trim()
+    if (fromSs) return fromSs
   } catch {
-    return ''
+    // ss is optional. /proc is the fallback.
   }
+
+  const inodes = listenInodes(port)
+  if (!inodes.size) return ''
+  const rows = []
+  for (const dirent of readdirSync('/proc')) {
+    if (!/^\d+$/.test(dirent)) continue
+    let fds = []
+    try {
+      fds = readdirSync(`/proc/${dirent}/fd`)
+    } catch {
+      continue
+    }
+    for (const fd of fds) {
+      let target = ''
+      try {
+        target = readlinkSync(`/proc/${dirent}/fd/${fd}`)
+      } catch {
+        continue
+      }
+      if (!target.startsWith('socket:[') || !inodes.has(target.slice(8, -1))) continue
+      let cmd = ''
+      try {
+        cmd = readFileSync(`/proc/${dirent}/cmdline`, 'utf8').replaceAll('\0', ' ').trim()
+      } catch {
+        cmd = ''
+      }
+      rows.push(`pid ${dirent} ${cmd}`)
+    }
+  }
+  return rows.join('\n')
+}
+
+function parseJson(text) {
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
+function hasTar(search) {
+  return Array.isArray(search?.results) && search.results.some((row) => row && row.name === 'tar' && row.section === '1')
 }
 
 export async function checkHealth(baseUrl = defaultBaseUrl) {
   const lines = []
   const home = await fetchText(new URL('/', baseUrl).href, 8_000)
-  if (home.status === 0) {
+  const infoRes = await fetchText(new URL('/api/v1/info', baseUrl).href, 8_000)
+  const searchRes = await fetchText(new URL('/api/v1/search?q=tar&limit=5', baseUrl).href, 8_000)
+  const info = parseJson(infoRes.text)
+  const search = parseJson(searchRes.text)
+  const hasSearch = home.status === 200 && home.text.includes('Search man pages')
+  const shell = home.text.includes('data-bm-app-header') || home.text.includes('>BetterMan<') || home.text.includes('BetterMan')
+  const tar = searchRes.status === 200 && hasTar(search)
+  const pageCount = typeof info?.pageCount === 'number' ? info.pageCount : null
+  const infoEmpty = infoRes.status === 404 || pageCount === 0
+  const releaseMissing = home.text.includes('Dataset release not found')
+
+  if (home.status === 0 && infoRes.status === 0 && searchRes.status === 0) {
     lines.push(`doctor: home unreachable (${home.error || 'no response'})`)
     lines.push('doctor: NOT_READY unreachable')
     return { ok: false, code: 'unreachable', lines }
   }
 
-  const hasSearch = home.text.includes('Search man pages')
-  lines.push(`doctor: home ${home.status}${hasSearch ? ' search-box-present' : ' search-box-missing'}`)
-  if (home.status !== 200 || !hasSearch) {
-    lines.push('doctor: NOT_READY home-unhealthy')
-    return { ok: false, code: 'home-unhealthy', lines, homeStatus: home.status }
+  lines.push(`doctor: home ${home.status || 'down'}${hasSearch ? ' search-box-present' : ' search-box-missing'}`)
+  if (infoRes.status === 200 && info) {
+    lines.push(`doctor: info pageCount=${pageCount} release=${info.datasetReleaseId || 'unknown'} distro=${info.distro || 'unknown'}`)
+  } else {
+    lines.push(`doctor: info ${infoRes.status || 'down'}`)
   }
-
-  const infoUrl = new URL('/api/v1/info', baseUrl).href
-  const infoRes = await fetchText(infoUrl, 8_000)
-  let info = null
-  try {
-    info = infoRes.text ? JSON.parse(infoRes.text) : null
-  } catch {
-    info = null
-  }
-
-  if (infoRes.status === 404) {
-    const code = info && info.error && info.error.code ? info.error.code : 'not-found'
-    lines.push(`doctor: info 404 ${code}`)
-    lines.push('doctor: NOT_READY empty-dataset')
-    return { ok: false, code: 'empty-dataset', lines, homeStatus: home.status }
-  }
-
-  if (infoRes.status !== 200 || !info || typeof info.pageCount !== 'number') {
-    lines.push(`doctor: info ${infoRes.status || 'unreadable'}`)
-    lines.push('doctor: NOT_READY info-unreadable')
-    return { ok: false, code: 'info-unreadable', lines, homeStatus: home.status }
-  }
-
-  lines.push(`doctor: info pageCount=${info.pageCount} release=${info.datasetReleaseId || 'unknown'} distro=${info.distro || 'unknown'}`)
-  if (info.pageCount <= 0) {
-    lines.push('doctor: NOT_READY empty-dataset')
-    return { ok: false, code: 'empty-dataset', lines, info, homeStatus: home.status }
-  }
-
-  const searchUrl = new URL('/api/v1/search?q=tar&limit=5', baseUrl).href
-  const searchRes = await fetchText(searchUrl, 8_000)
-  let search = null
-  try {
-    search = searchRes.text ? JSON.parse(searchRes.text) : null
-  } catch {
-    search = null
-  }
-  const tar = Array.isArray(search?.results) && search.results.some((row) => row && row.name === 'tar' && row.section === '1')
-  lines.push(`doctor: search ${searchRes.status}${tar ? ' tar(1)' : ' tar(1)-missing'}`)
-  if (searchRes.status !== 200 || !tar) {
-    lines.push('doctor: NOT_READY search-missing-tar')
-    return { ok: false, code: 'search-missing-tar', lines, info, homeStatus: home.status }
-  }
+  lines.push(`doctor: search ${searchRes.status || 'down'}${tar ? ' tar(1)' : ' tar(1)-missing'}`)
 
   const { port, loopback } = baseUrlParts(baseUrl)
   if (loopback) {
@@ -166,8 +198,29 @@ export async function checkHealth(baseUrl = defaultBaseUrl) {
     lines.push(owners ? `doctor: port ${port}\n${owners}` : `doctor: port ${port} owner-unknown`)
   }
 
-  lines.push('doctor: READY')
-  return { ok: true, code: 'ready', lines, info, homeStatus: home.status }
+  if (hasSearch && tar) {
+    if (infoEmpty) lines.push('doctor: info cache is empty while search returns tar(1)')
+    lines.push('doctor: READY')
+    return { ok: true, code: 'ready', lines, info, homeStatus: home.status }
+  }
+
+  if (!tar && (infoEmpty || releaseMissing) && (shell || infoRes.status === 200 || infoRes.status === 404)) {
+    lines.push('doctor: NOT_READY empty-dataset')
+    return { ok: false, code: 'empty-dataset', lines, info, homeStatus: home.status }
+  }
+
+  if (!hasSearch) {
+    lines.push('doctor: NOT_READY home-unhealthy')
+    return { ok: false, code: 'home-unhealthy', lines, info, homeStatus: home.status }
+  }
+
+  if (infoRes.status !== 200 || pageCount === null) {
+    lines.push('doctor: NOT_READY info-unreadable')
+    return { ok: false, code: 'info-unreadable', lines, info, homeStatus: home.status }
+  }
+
+  lines.push('doctor: NOT_READY search-missing-tar')
+  return { ok: false, code: 'search-missing-tar', lines, info, homeStatus: home.status }
 }
 
 export function tmuxCommand() {
@@ -222,7 +275,7 @@ export function shellQuote(value) {
 export function nodePathExport() {
   const nvmNode = path.join(process.env.NVM_DIR || path.join(process.env.HOME || '', '.nvm'), 'versions/node/v26.5.1/bin')
   const localBin = path.join(process.env.HOME || '', '.local/bin')
-  return `export PATH=${shellQuote(`${nvmNode}:${localBin}:$PATH`)}`
+  return `export PATH="${nvmNode}:${localBin}:$PATH"`
 }
 
 export function runCommand(command, args, { timeoutMs = 120_000, env = process.env, input } = {}) {

@@ -22,9 +22,9 @@ await expect(page.locator('body')).toContainText('Sitemap:')
 await expect(page.locator('body')).toContainText('Disallow: /api/')
 
 await page.goto('/man/tar/1')
-const jsonLd = page.locator('script[type="application/ld+json"]')
+const jsonLd = page.locator('head script[type="application/ld+json"][nonce]')
 await expect(jsonLd).toHaveCount(1)
-expect(await jsonLd.textContent()).toContain('"@type":"TechArticle"')
+expect((await jsonLd.textContent()) ?? '').toContain('"@type":"TechArticle"')
 ```
 
 Sitemap spot check: `/sitemap.xml` contains `sitemapindex`. On the seed, `/sitemap-debian.xml` and `/sitemap-debian-1.xml` exist and the urlset mentions `/man/tar/1`.
@@ -35,5 +35,6 @@ Sitemap spot check: `/sitemap.xml` contains `sitemapindex`. On the seed, `/sitem
 - Empty dataset: sitemaps 404 or render empty when no release is active. Doctor `READY` is the precondition.
 - Error: JSON-LD is omitted when the page is the not-found article. `/man/zzznnotapage` should not advertise a `TechArticle` for a missing name.
 - Hostile: share image parameters that fail validation return 404 and do not render. The page HTML for a normal `/man/tar/1` is the user-visible proof. Skip image-binary diffs unless the change is the image route.
+- Scope JSON-LD to `head script[type="application/ld+json"][nonce]`. Dev HTML repeats the same tag inside the flight payload, so an unscoped locator counts many scripts. Playwright `hasText` does not read `<script>` bodies. Use `textContent()` for `@type`.
 - The e2e file `nextjs/e2e/seo.spec.ts` also requires a CSP nonce on the JSON-LD script. Dev and `next start` both go through middleware. If nonce is absent, report that separately from a missing `TechArticle`.
 - `metadataBase` is `https://betterman.sh`. Local Open Graph URLs can still point at that host. Judge the path and the title, not the production origin, when the server is local.

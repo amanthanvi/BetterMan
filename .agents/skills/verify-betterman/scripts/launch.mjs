@@ -60,10 +60,11 @@ function readLog(file) {
 async function waitFor(predicate, timeoutMs) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
-    if (await predicate()) return true
+    const value = await predicate()
+    if (value) return value
     await delay(1_000)
   }
-  return false
+  return ''
 }
 
 const baseUrl = argValue('--base-url') || defaultBaseUrl
@@ -98,7 +99,7 @@ if (initial.ok) {
 const listening = await tcpOpen(port)
 const previous = readState()
 const ownsNext = Array.isArray(previous?.sessions) && previous.sessions.includes(sessions.next)
-if (listening && !ownsNext) {
+if (listening && !ownsNext && initial.code !== 'empty-dataset') {
   process.stdout.write(`${initial.lines.join('\n')}\n`)
   process.stderr.write(
     'launch: port 3000 is already taken by a process this skill did not start. Refusing to start a second server.\n',
@@ -162,6 +163,25 @@ if (!convexUrl.startsWith('http://127.0.0.1:') && !convexUrl.startsWith('http://
 
 const started = []
 
+if (initial.code === 'empty-dataset' && listening && !ownsNext) {
+  if (!(await tcpOpen(convexPort)) || !(await tcpOpen(sitePort))) {
+    process.stderr.write('launch: dataset is empty and Convex is not accepting connections on loopback. Start Convex before seeding a server this skill does not own.\n')
+    process.exit(2)
+  }
+  seedDataset()
+  const seeded = await checkHealth(baseUrl)
+  process.stdout.write(`${seeded.lines.join('\n')}\n`)
+  if (seeded.ok) {
+    process.stdout.write('launch: SEEDED existing instance and left its process running\n')
+    remember([])
+    process.exit(0)
+  }
+  process.stderr.write(
+    'launch: seeded the dataset, but the existing Next process is still not READY. This skill will not restart a server it did not start.\n',
+  )
+  process.exit(2)
+}
+
 if (!(await tcpOpen(convexPort)) || !(await tcpOpen(sitePort))) {
   if (sessionExists(sessions.convex)) killTmuxSession(sessions.convex)
   process.stdout.write('launch: starting Convex dev session\n')
@@ -175,9 +195,12 @@ exec npx convex dev --tail-logs disable
   startTmuxSession(sessions.convex, convexScript)
   started.push(sessions.convex)
   const logPath = path.join(stateDir, `${sessions.convex}.log`)
-  const ready = await waitFor(() => readLog(logPath).includes('Convex functions ready'), 180_000)
-  if (!ready) {
-    process.stderr.write(`launch: timed out waiting for Convex. Log: ${logPath}\n`)
+  const ready = await waitFor(() => {
+    if (!sessionExists(sessions.convex)) return 'dead'
+    return readLog(logPath).includes('Convex functions ready') ? 'ready' : ''
+  }, 180_000)
+  if (ready !== 'ready') {
+    process.stderr.write(`launch: Convex session ${ready === 'dead' ? 'exited' : 'timed out'}. Log: ${logPath}\n`)
     process.stderr.write(readLog(logPath).slice(-4000))
     process.exit(1)
   }
@@ -203,10 +226,13 @@ exec pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000
 `
   startTmuxSession(sessions.next, nextScript)
   if (!started.includes(sessions.next)) started.push(sessions.next)
-  const up = await waitFor(() => tcpOpen(port), 180_000)
-  if (!up) {
+  const up = await waitFor(() => {
+    if (!sessionExists(sessions.next)) return 'dead'
+    return tcpOpen(port).then((open) => (open ? 'ready' : ''))
+  }, 180_000)
+  if (up !== 'ready') {
     const logPath = path.join(stateDir, `${sessions.next}.log`)
-    process.stderr.write(`launch: timed out waiting for port 3000. Log: ${logPath}\n`)
+    process.stderr.write(`launch: Next session ${up === 'dead' ? 'exited' : 'timed out'}. Log: ${logPath}\n`)
     process.stderr.write(readLog(logPath).slice(-4000))
     process.exit(1)
   }

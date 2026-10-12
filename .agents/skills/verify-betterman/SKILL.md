@@ -34,13 +34,14 @@ pnpm verify:launch
 `pnpm verify:launch` is `node .agents/skills/verify-betterman/scripts/launch.mjs`. It does the following:
 
 1. If doctor is `READY`, print `REUSED` and exit 0.
-2. If port 3000 is open and this skill did not start it, exit 2 and leave that process alone.
-3. Run `pnpm install --frozen-lockfile` when `node_modules` is missing.
-4. Run `CONVEX_AGENT_MODE=anonymous pnpm convex:check` when `.env.local` is missing.
-5. Install Playwright Chromium (`pnpm -C nextjs exec playwright install chromium`). Set `VERIFY_SKIP_BROWSER_INSTALL=1` to skip. If Chromium's system libraries are missing, the command above `bash scripts/install-playwright-ci.sh` installs them.
-6. Start tmux session `betterman-verify-convex` with `CONVEX_AGENT_MODE=anonymous npx convex dev --tail-logs disable` when ports from `.env.local` (`VITE_CONVEX_URL`, usually 3210, and `VITE_CONVEX_SITE_URL`, usually 3211) are closed. Ready means the log line `Convex functions ready`.
-7. Start tmux session `betterman-verify-next` with the env from `.env.local` and `pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000`. Ready means port 3000 accepts TCP and doctor can read the home page.
-8. If doctor reports `empty-dataset`, run `npx convex env set CONVEX_INGEST_SECRET dev` and `BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL=... node scripts/seed-convex-e2e.mjs`, then restart only the Next session and run doctor again.
+2. If port 3000 is open, doctor reports `empty-dataset`, and Convex is already listening on the loopback URL in `.env.local`, seed that dataset and check doctor again. On `READY`, print `SEEDED` and leave the existing Next process running. If it is still not `READY`, exit 2 without restarting it.
+3. If port 3000 is open for any other reason and this skill did not start it, exit 2 and leave that process alone.
+4. Run `pnpm install --frozen-lockfile` when `node_modules` is missing.
+5. Run `CONVEX_AGENT_MODE=anonymous pnpm convex:check` when `.env.local` is missing.
+6. Install Playwright Chromium (`pnpm -C nextjs exec playwright install chromium`). Set `VERIFY_SKIP_BROWSER_INSTALL=1` to skip. If Chromium's system libraries are missing, the command above `bash scripts/install-playwright-ci.sh` installs them.
+7. Start tmux session `betterman-verify-convex` with `CONVEX_AGENT_MODE=anonymous npx convex dev --tail-logs disable` when ports from `.env.local` (`VITE_CONVEX_URL`, usually 3210, and `VITE_CONVEX_SITE_URL`, usually 3211) are closed. Ready means the log line `Convex functions ready`.
+8. Start tmux session `betterman-verify-next` with the env from `.env.local` and `pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000`. Ready means port 3000 accepts TCP and doctor can read the home page. The hostname is required. A `next dev` bound only to IPv6 can still answer `http://127.0.0.1:3000` for documents, while Playwright's HMR websocket fails with `ERR_INVALID_HTTP_RESPONSE` and clicks never reach React. Doctor can still say `READY` on that server. If the find bar never opens, read the port owner from doctor and run launch only after that process is stopped.
+9. If doctor reports `empty-dataset` for a Next process this skill started, run `npx convex env set CONVEX_INGEST_SECRET dev` and `BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL=... node scripts/seed-convex-e2e.mjs`, then restart only that Next session and run doctor again.
 
 The seeded fixture publishes `tar(1)`, `gzip(1)`, alias `gunzip(1)`, `printf(1)`, `printf(3)`, `openssl(1ssl)`, `bash(1)`, and an EVP page for Debian, Ubuntu, and Fedora. Ubuntu `tar(1)` contains the sentence `Ubuntu variant: this page is intentionally different for E2E testing.` The license package list is empty.
 
@@ -61,21 +62,22 @@ Run this first whenever a drive looks wrong. It only sends GET requests.
 pnpm verify:doctor
 ```
 
-`READY` (exit 0) means all of the following:
+`READY` (exit 0) means both of the following:
 
 - `GET /` is 200 and the HTML contains `Search man pages`
-- `GET /api/v1/info` is 200 and `pageCount` is greater than 0
 - `GET /api/v1/search?q=tar&limit=5` is 200 and includes `tar` in section `1`
+
+`GET /api/v1/info` is printed every time. A cached `pageCount` of 0 while search already returns `tar(1)` is a stale Next.js cache. Doctor still reports `READY` and prints `info cache is empty while search returns tar(1)`.
 
 Anything else prints `NOT_READY` and exits 2. Codes:
 
 | Code | Meaning |
 | --- | --- |
 | `unreachable` | Nothing answered on the base URL |
-| `home-unhealthy` | The home page is up without the search box, or the status is not 200 |
-| `empty-dataset` | Info is 404 or `pageCount` is 0. Launch may seed. A stranger's server is left alone |
-| `info-unreadable` | Info did not return the expected JSON |
-| `search-missing-tar` | The dataset does not contain `tar(1)`. Launch does not overwrite it |
+| `home-unhealthy` | The home page is up without the search box, or the status is not 200, and this is not an empty dataset |
+| `empty-dataset` | Search has no `tar(1)` and info is 404 or `pageCount` is 0, or the home error says the dataset release is missing. Launch may seed. It does not restart a Next process it did not start |
+| `info-unreadable` | Home rendered, but info did not return the expected JSON and search did not prove `tar(1)` |
+| `search-missing-tar` | Info reports pages, and `tar(1)` is absent. Launch does not overwrite that dataset |
 
 ```bash
 node .agents/skills/verify-betterman/scripts/doctor.mjs --help
@@ -83,7 +85,7 @@ node .agents/skills/verify-betterman/scripts/doctor.mjs --json
 node .agents/skills/verify-betterman/scripts/doctor.mjs --base-url http://127.0.0.1:3000
 ```
 
-Doctor also prints `ss -ltnp` for port 3000 when `ss` is available. A video or screenshot taken while doctor is `NOT_READY` is not evidence.
+Doctor prints who is listening on port 3000. It uses `ss -ltnp` when `ss` exists, and otherwise reads `/proc/net/tcp`. A screenshot taken while doctor is `NOT_READY` is not evidence.
 
 ## Drive
 

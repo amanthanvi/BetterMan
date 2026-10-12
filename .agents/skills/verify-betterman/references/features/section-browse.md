@@ -23,14 +23,14 @@ await page.getByRole('link', { name: 'T', exact: true }).click()
 await expect(page).toHaveURL(/#letter-t$/)
 await page.getByRole('textbox', { name: 'Search within section' }).fill('gzip')
 await page.locator('form').getByRole('button', { name: 'Search' }).click()
-await expect(page).toHaveURL(/\/search\?q=gzip&section=1/)
+await expect(page).toHaveURL(/\/search\?section=1&q=gzip/)
 ```
 
 Far offset: `/section/1?offset=99999` shows `Showing 0 of` and a `First page` link.
 
 ## Gotchas
 
-- The header button `Search` is the palette. Scope the submit button to `form` or the click hits the header.
+- The header button `Search` is the palette. Scope the submit button to `form` or the click hits the header. The section form puts the hidden `section` field before `q`, so the URL is `/search?section=1&q=gzip`.
 - Letter nav renders only when there are more than three groups. The seed's section 1 (bash, gzip, printf, tar) qualifies. A section with one page hides the nav. Assert the rows instead.
 - Empty: `/section/9` on the seed has no pages. Expect `Showing 0 of 0 results.` and disabled `Previous` / `Next` text, not a thrown error.
 - Error: an unknown section string still renders from the API. If the API 404s, the route hits the error boundary. Record the heading `Something went wrong` if you forced that, and do not call it an empty index.

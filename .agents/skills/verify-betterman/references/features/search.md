@@ -29,7 +29,7 @@ Also drive:
 
 - `/search?q=tarr` still lists `tar(1)` on the seed (typo text is in the page body)
 - `/search?q=archiving` lists `tar(1)` via the description
-- `/search?q=zzzz-not-a-command` shows `No results for`
+- `/search?q=xyzzyplugh` shows `No results for` on the seed. `zzzz-not-a-command` can still fuzzy-match pages in that small corpus, so it is a weak empty probe
 - `/search?q=` plus a `<script>` payload shows that string as text and opens no dialog
 - Section pill `Section 3: Library Functions` sets `section=3` and drops `tar(1)`
 - `GET /api/v1/search` with no `q` returns 400
@@ -41,6 +41,6 @@ The load-more button is visible on a result page. On the small seed it is disabl
 - Result accessible names are `tar(1)`, from `aria-label`, not the visible description.
 - Empty query shows try links, not an error. The API rejects a missing `q` with 400. Those are different surfaces.
 - Error: a failed load-more sets the button back and shows the error string under the list. The seed rarely needs a second page.
-- Hostile: queries longer than 120 characters are sliced by the page. Markup in `q` must render as text. Assert `No results for` and the raw string, and fail the test if a dialog opens.
+- Hostile: queries longer than 120 characters are sliced by the page. Markup in `q` must render as text. `<script>alert(1)</script>` has no hits on the seed. Assert `No results for` and the raw string, and fail the test if a dialog opens. A letter soup such as `zzzz-not-a-command` is not an empty result on this corpus.
 - `ssh` and `copy files` try links are real controls. On the E2E seed, `ssh` has no page. Expect `No results for`, not a crash.
 - Rate limiting returns 429 from `/api/v1/search` after a burst. One interactive search does not hit it. A tight loop of API calls can.

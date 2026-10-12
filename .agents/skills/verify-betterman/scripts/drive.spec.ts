@@ -2,8 +2,6 @@ import { expect, test } from '@playwright/test'
 
 import { shellReady, shot } from './evidence'
 
-test.describe.configure({ mode: 'serial' })
-
 test('home: empty recent and bookmarks, browse link', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('searchbox', { name: 'Search man pages' })).toBeVisible()
@@ -37,9 +35,9 @@ test('search: results, typo, empty, hostile, and section filter', async ({ page 
   await page.goto('/search?q=archiving')
   await expect(page.getByRole('link', { name: /tar\(1\)/i })).toBeVisible()
 
-  await page.goto('/search?q=zzzz-not-a-command')
+  await page.goto('/search?q=xyzzyplugh')
   await expect(page.getByText('No results for')).toBeVisible()
-  await expect(page.getByText('zzzz-not-a-command')).toBeVisible()
+  await expect(page.getByText('xyzzyplugh')).toBeVisible()
   await shot(page, 'search-empty')
 
   const hostile = '<script>alert(1)</script>'
@@ -66,7 +64,7 @@ test('section: letter jump, in-section search, and a far offset', async ({ page 
 
   await page.getByRole('textbox', { name: 'Search within section' }).fill('gzip')
   await page.locator('form').getByRole('button', { name: 'Search' }).click()
-  await expect(page).toHaveURL(/\/search\?q=gzip&section=1/)
+  await expect(page).toHaveURL(/\/search\?section=1&q=gzip/)
   await expect(page.getByRole('link', { name: /gzip\(1\)/i })).toBeVisible()
 
   await page.goto('/section/1?offset=99999')
@@ -337,9 +335,9 @@ test('discovery: robots, sitemap, and man page JSON-LD', async ({ page }) => {
   await expect(page.locator('body')).toContainText('sitemapindex')
 
   await page.goto('/man/tar/1')
-  const jsonLd = page.locator('script[type="application/ld+json"]')
+  const jsonLd = page.locator('head script[type="application/ld+json"][nonce]')
   await expect(jsonLd).toHaveCount(1)
-  expect(await jsonLd.textContent()).toContain('"@type":"TechArticle"')
+  expect((await jsonLd.textContent()) ?? '').toContain('"@type":"TechArticle"')
   await shot(page, 'discovery-tar')
 })
 
