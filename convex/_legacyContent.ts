@@ -15,6 +15,9 @@ export const CONTENT_KINDS: ContentJsonKind[] = [
 
 export const CONTENT_CHUNK_CHARS = 400_000;
 export const MAX_CONTENT_FIELD_CHARS = 20 * CONTENT_CHUNK_CHARS;
+// Chunks persist as documents: stay well under Convex's 1 MiB document limit
+// even with envelope overhead.
+export const CONTENT_CHUNK_UTF8_BYTES = 256_000;
 
 export function validateContentFieldSize(value: string, kind: string): void {
   if (value.length > MAX_CONTENT_FIELD_CHARS) {
@@ -22,11 +25,32 @@ export function validateContentFieldSize(value: string, kind: string): void {
   }
 }
 
+function utf8Length(char: string): number {
+  const code = char.codePointAt(0)!;
+  if (code <= 0x7f) return 1;
+  if (code <= 0x7ff) return 2;
+  if (code <= 0xffff) return 3;
+  return 4;
+}
+
 export function contentChunks(value: string): string[] {
-  const chunks = [];
-  for (let index = 0; index < value.length; index += CONTENT_CHUNK_CHARS) {
-    chunks.push(value.slice(index, index + CONTENT_CHUNK_CHARS));
+  // Split at code-point boundaries with a UTF-8 byte budget. Slicing by code
+  // units can orphan surrogate halves (invalid Unicode a Convex insert would
+  // reject) and 400k three-byte characters overflow the 1 MiB document limit.
+  const chunks: string[] = [];
+  let current = "";
+  let currentBytes = 0;
+  for (const char of value) {
+    const charBytes = utf8Length(char);
+    if (currentBytes > 0 && currentBytes + charBytes > CONTENT_CHUNK_UTF8_BYTES) {
+      chunks.push(current);
+      current = "";
+      currentBytes = 0;
+    }
+    current += char;
+    currentBytes += charBytes;
   }
+  if (current) chunks.push(current);
   return chunks;
 }
 
