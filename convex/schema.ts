@@ -28,7 +28,17 @@ const contentJsonKindValidator = v.union(
   v.literal("seeAlsoJson"),
 );
 
+const pageVariantValidator = v.object({
+  distro: distroValidator, datasetReleaseId: v.string(),
+  name: v.string(), section: v.string(), contentSha256: v.string(),
+});
+
 export default defineSchema({
+  variantSnapshots: defineTable({
+    stage: datasetStageValidator, locale: v.string(), version: v.number(),
+    jobId: v.id("_scheduled_functions"),
+  }).index("by_stage_and_locale", ["stage", "locale"]),
+
   datasetReleases: defineTable({
     datasetReleaseId: v.string(),
     locale: v.string(),
@@ -102,6 +112,11 @@ export default defineSchema({
     sourcePackageVersion: v.optional(v.string()),
     contentSha256: v.string(),
     hasParseWarnings: v.boolean(),
+    // Separate caches because a release can be active in both stages.
+    variants: v.optional(v.array(pageVariantValidator)),
+    variantsVersion: v.optional(v.number()),
+    stagingVariants: v.optional(v.array(pageVariantValidator)),
+    stagingVariantsVersion: v.optional(v.number()),
   })
     .index("by_contentSha256", ["contentSha256"])
     .index("by_releaseId_and_externalId", ["releaseId", "externalId"])
@@ -172,6 +187,7 @@ export default defineSchema({
     searchText: v.string(),
     snippetText: v.string(),
   })
+    .index("by_releaseId_and_section_and_name", ["releaseId", "section", "name"])
     .index("by_releaseId_and_nameNorm", ["releaseId", "nameNorm"])
     .index("by_releaseId_and_section_and_nameNorm", [
       "releaseId",

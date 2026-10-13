@@ -452,6 +452,7 @@ async function pageReadModel(
       locale: args.release.locale,
       name: args.page.name,
       section: args.page.section,
+      page: args.page,
     }),
   ]);
   if (!content) return null;

@@ -24,6 +24,7 @@ import type * as manifest from "../manifest.js";
 import type * as queries from "../queries.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as related from "../related.js";
+import type * as variants from "../variants.js";
 
 import type {
   ApiFromModules,
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   queries: typeof queries;
   rateLimit: typeof rateLimit;
   related: typeof related;
+  variants: typeof variants;
 }>;
 
 /**

@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Performance/Convex: materialize per-page distribution variants in bounded activation and promotion batches, with versioned stage caches and a legacy fallback during refresh.
 - Security/Convex: authenticate rate-limit bucket updates with a shared HMAC key; missing keys and enforcement errors fail closed, with an explicit development-only Next bypass.
 - Security: set the `Secure` attribute on client-set theme and distro cookies, serve baseline security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, HSTS) on `/api/*` JSON responses, and re-check external content links for http(s) schemes at render time as stored-XSS defense in depth. The dead `TRUSTED_PROXY_CIDRS` setting is removed from `.env.example`.
 - Security/Convex: cap rate-limit identifiers at 128 characters, return 400 (not 500) for malformed ingest payloads, and bound serialized ingest fields at 8 MB per field with strictly capped legacy chunk reads.

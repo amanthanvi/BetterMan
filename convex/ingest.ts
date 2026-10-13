@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
+import { scheduleVariantsRefresh } from "./variants";
 import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, verifyDeclaredManifest } from "./_releaseManifest";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import {
@@ -682,6 +683,9 @@ export const activateRelease = internalMutation({
       await ctx.db.insert("activeReleases", payload);
     }
 
+    if (existing?.releaseId !== release._id) {
+      await scheduleVariantsRefresh(ctx, args.stage, release.locale);
+    }
     return result;
   },
 });
@@ -698,6 +702,7 @@ export const promoteActiveReleases = internalMutation({
   }),
   handler: async (ctx, args) => {
     const promoted = [];
+    const changedLocales = new Set<string>();
     for (const distro of new Set(args.distros)) {
       const source = await ctx.db
         .query("activeReleases")
@@ -741,9 +746,11 @@ export const promoteActiveReleases = internalMutation({
         await ctx.db.insert("activeReleases", payload);
       }
 
+      if (target?.releaseId !== source.releaseId) changedLocales.add(source.locale);
       promoted.push({ distro, datasetReleaseId: source.datasetReleaseId });
     }
 
+    for (const locale of changedLocales) await scheduleVariantsRefresh(ctx, args.toStage, locale);
     return { promoted };
   },
 });

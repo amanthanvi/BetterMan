@@ -77,8 +77,19 @@ export async function variantsForPage(
     locale: string;
     name: string;
     section: string;
+    page?: Doc<"manPages">;
   },
 ): Promise<Array<{ distro: Distro; datasetReleaseId: string; contentSha256: string }>> {
+  const cached = args.stage === "prod" ? args.page?.variants : args.page?.stagingVariants;
+  const version = args.stage === "prod" ? args.page?.variantsVersion : args.page?.stagingVariantsVersion;
+  if (cached !== undefined) {
+    const state = await ctx.db.query("variantSnapshots")
+      .withIndex("by_stage_and_locale", (q) => q.eq("stage", args.stage).eq("locale", args.locale)).unique();
+    if (state && version === state.version) {
+      return cached.map(({ distro, datasetReleaseId, contentSha256 }) => ({ distro, datasetReleaseId, contentSha256 }));
+    }
+  }
+  // Legacy or invalidated rows retain live lookup behavior while refreshing.
   const active = await ctx.db
     .query("activeReleases")
     .withIndex("by_stage_and_locale_and_distro", (q) =>
@@ -86,6 +97,14 @@ export async function variantsForPage(
     )
     .take(DISTROS.length);
 
+  return variantsFromPointers(ctx, active, args);
+}
+
+export async function variantsFromPointers(
+  ctx: QueryCtx,
+  active: Array<Doc<"activeReleases">>,
+  args: { name: string; section: string },
+): Promise<Array<{ distro: Distro; datasetReleaseId: string; contentSha256: string }>> {
   const variants = (
     await Promise.all(
       active.map(async (item) => {
