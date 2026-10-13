@@ -261,24 +261,32 @@ export const listSection = query({
 
     // Deep compatibility offsets must not reread thousands of variant caches.
     // Search rows preserve the same name order; hydrate only the visible pages.
-    // Legacy fixtures without search rows keep their original lookup behavior.
+    // Probe the title index, not the first name: a partially migrated section
+    // can contain legacy rows anywhere. Read at most one inline payload before
+    // falling back to the original bounded metadata lookup.
     if (!hasCursor && offset > 0) {
-      const candidates = await ctx.db.query("manPageSearchDocuments")
-        .withIndex("by_releaseId_and_section_and_name", (q) => q.eq("releaseId", release._id).eq("section", section))
-        .take(offset + limit + 1);
-      if (candidates.length === Math.min(stat.total, offset + limit + 1)) {
-        const selected = candidates.slice(offset, offset + limit);
-        const results = await Promise.all(selected.map(async (candidate) => {
-          const page = await ctx.db.get(candidate.pageId);
-          if (!page) throw new Error("SEARCH_PAGE_NOT_FOUND");
-          return { name: page.name, section: page.section, title: page.title, description: page.description };
-        }));
-        const hasNext = candidates.length > offset + limit;
-        const nextCursor = hasNext && results.length ? results[results.length - 1].name : null;
-        return {
-          section, label: stat.label || sectionLabel(section), limit, offset, total: stat.total,
-          hasMore: nextCursor !== null, nextCursor, prevCursor: results.length ? results[0].name : null, results,
-        };
+      const legacy = await ctx.db.query("manPageSearchDocuments")
+        .withIndex("by_releaseId_and_section_and_title", (q) => q
+          .eq("releaseId", release._id).eq("section", section).gt("title", undefined))
+        .first();
+      if (!legacy) {
+        const candidates = await ctx.db.query("manPageSearchDocuments")
+          .withIndex("by_releaseId_and_section_and_name", (q) => q.eq("releaseId", release._id).eq("section", section))
+          .take(offset + limit + 1);
+        if (candidates.length === Math.min(stat.total, offset + limit + 1)) {
+          const selected = candidates.slice(offset, offset + limit);
+          const results = await Promise.all(selected.map(async (candidate) => {
+            const page = await ctx.db.get(candidate.pageId);
+            if (!page) throw new Error("SEARCH_PAGE_NOT_FOUND");
+            return { name: page.name, section: page.section, title: page.title, description: page.description };
+          }));
+          const hasNext = candidates.length > offset + limit;
+          const nextCursor = hasNext && results.length ? results[results.length - 1].name : null;
+          return {
+            section, label: stat.label || sectionLabel(section), limit, offset, total: stat.total,
+            hasMore: nextCursor !== null, nextCursor, prevCursor: results.length ? results[0].name : null, results,
+          };
+        }
       }
     }
     // Cursor navigation reads at most limit + 2 complete page rows.

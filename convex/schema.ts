@@ -189,6 +189,9 @@ export default defineSchema({
     snippetText: v.optional(v.string()),
   })
     .index("by_releaseId_and_section_and_name", ["releaseId", "section", "name"])
+    // Undefined titles are slim rows. Probe for any inline legacy title without
+    // scanning payloads in name order while a release is partially migrated.
+    .index("by_releaseId_and_section_and_title", ["releaseId", "section", "title"])
     .index("by_releaseId_and_nameNorm", ["releaseId", "nameNorm"])
     .index("by_releaseId_and_section_and_nameNorm", [
       "releaseId",

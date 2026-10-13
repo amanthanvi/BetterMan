@@ -31,9 +31,11 @@ it("preserves deep section offsets without scanning thousands of distribution ca
         sitemapPage: 1, title: `${name}(1)`, description: name, sourcePath: name, contentSha256: "a".repeat(64),
         hasParseWarnings: false, variants, variantsVersion: 1, stagingVariants: variants, stagingVariantsVersion: 1,
       });
-      await ctx.db.insert("manPageSearchDocuments", {
-        pageId, releaseId, datasetReleaseId, name, nameNorm: name, section: "1", title: `${name}(1)`,
-        description: name, descNorm: name, searchText: name, snippetText: name,
+      const searchDocumentId = await ctx.db.insert("manPageSearchDocuments", {
+        pageId, releaseId, name, nameNorm: name, section: "1", descNorm: name,
+      });
+      await ctx.db.insert("manPageSearchDetails", {
+        searchDocumentId, releaseId, title: `${name}(1)`, description: name, snippetText: name,
       });
     }
   });

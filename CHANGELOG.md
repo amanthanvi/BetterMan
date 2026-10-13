@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Fix/Convex: keep section offsets within the legacy read budget during mixed search-row migrations. (#324)
 - Performance/Convex: rank slim search rows and enrich only visible results, preserving search ordering and highlights while migrating existing rows without changing their index identities.
 - Performance/Convex: materialize per-page distribution variants in bounded activation and promotion batches, with versioned stage caches and a legacy fallback during refresh.
 - Security/Convex: authenticate rate-limit bucket updates with a shared HMAC key; missing keys and enforcement errors fail closed, with an explicit development-only Next bypass.
