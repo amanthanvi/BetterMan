@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- PWA: serve preference-matched cached navigation HTML immediately while refreshing it in the background, provide a self-contained branded offline page for uncached visits, and persist the trim cadence across worker restarts (activation and every 20 successful writes instead of every write).
 - Security: set the `Secure` attribute on client-set theme and distro cookies, serve baseline security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, HSTS) on `/api/*` JSON responses, and re-check external content links for http(s) schemes at render time as stored-XSS defense in depth. The dead `TRUSTED_PROXY_CIDRS` setting is removed from `.env.example`.
 - Security/Convex: cap rate-limit identifiers at 128 characters, return 400 (not 500) for malformed ingest payloads, and bound serialized ingest fields at 8 MB per field with strictly capped legacy chunk reads.
 - Performance: resolve `/man/<name>` redirects from metadata only instead of downloading full page content; fetch man-page content and related links in parallel; cache share-card images at the CDN; serve fonts with immutable year-long cache headers; render the footer dataset info on the server instead of a per-page `/api/v1/info` fetch; load the palette, drawers, dialogs, and TOC drawer on first open; memoize the document renderer against scroll-driven re-renders; the palette does no item or localStorage work while closed.

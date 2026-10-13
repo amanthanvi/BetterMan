@@ -33,9 +33,15 @@ function buildCsp(nonce: string): string {
 
 export function proxy(request: NextRequest) {
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
+  // SW HTML cache keys must distinguish the preferences used for this response.
+  const navigationContext = encodeURIComponent(JSON.stringify([
+    request.cookies.get('bm-distro')?.value ?? '',
+    request.cookies.get('bm-theme-resolved')?.value ?? '',
+  ]))
 
   if (!cspEnabled) {
     const response = NextResponse.next()
+    response.headers.set('X-BM-Navigation-Context', navigationContext)
     response.headers.set('x-content-type-options', 'nosniff')
     response.headers.set('referrer-policy', 'strict-origin-when-cross-origin')
     response.headers.set('x-frame-options', 'DENY')
@@ -61,6 +67,7 @@ export function proxy(request: NextRequest) {
     },
   })
 
+  response.headers.set('X-BM-Navigation-Context', navigationContext)
   response.headers.set('Content-Security-Policy', csp)
   response.headers.set('x-content-type-options', 'nosniff')
   response.headers.set('referrer-policy', 'strict-origin-when-cross-origin')
