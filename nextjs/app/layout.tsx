@@ -1,9 +1,31 @@
 import type { Metadata, Viewport } from 'next'
+import localFont from 'next/font/local'
 import { cookies, headers } from 'next/headers'
 import './globals.css'
 import { fetchInfo } from '../lib/api'
 import { DISTRO_COOKIE, normalizeDistro } from '../lib/distro'
 import { Providers } from './providers'
+
+const geistSans = localFont({
+  src: '../public/fonts/geist/GeistSans-Variable.woff2',
+  weight: '100 900',
+  style: 'normal',
+  display: 'swap',
+  variable: '--font-sans',
+  adjustFontFallback: 'Arial',
+  fallback: ['ui-sans-serif', 'system-ui', 'sans-serif'],
+})
+
+const jetBrainsMono = localFont({
+  src: [
+    { path: '../public/fonts/jetbrains-mono/jetbrainsmono-roman.woff2', weight: '100 800', style: 'normal' },
+    { path: '../public/fonts/jetbrains-mono/jetbrainsmono-italic.woff2', weight: '100 800', style: 'italic' },
+  ],
+  display: 'swap',
+  variable: '--font-mono',
+  adjustFontFallback: 'Arial',
+  fallback: ['ui-monospace', 'monospace'],
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://betterman.sh'),
@@ -54,22 +76,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim()
 
   return (
-    <html lang="en" data-theme={theme} suppressHydrationWarning>
+    <html lang="en" className={`${geistSans.variable} ${jetBrainsMono.variable}`} data-theme={theme} suppressHydrationWarning>
       <head>
-        <link
-          rel="preload"
-          href="/fonts/geist/GeistSans-Variable.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href="/fonts/jetbrains-mono/jetbrainsmono-roman.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
         <link rel="search" type="application/opensearchdescription+xml" title="BetterMan" href="/opensearch.xml" />
       </head>
       <body suppressHydrationWarning>
