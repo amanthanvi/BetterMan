@@ -111,19 +111,22 @@ export default async function ManByNameAndSectionPage({
     // (lowercased) URL name/section, not the resolved content payload.
     const { data: bundle } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
       activeDistro = candidateDistro
-      const [data, relatedItems] = await Promise.all([
-        fetchManByNameAndSectionOrAlias({
-          distro: candidateDistro,
-          name: name.toLowerCase(),
-          section,
-        }),
-        hasDiff ? Promise.resolve({ items: [] }) : fetchRelated({
-          distro: candidateDistro,
-          name: name.toLowerCase(),
-          section,
-        }).catch(() => ({ items: [] })),
-      ])
-      return { data, related: relatedItems }
+      // Related starts in parallel, but an alias redirect — or a diff view,
+      // which renders no RELATED section — must not wait for it.
+      const relatedPromise = hasDiff
+        ? Promise.resolve({ items: [] })
+        : fetchRelated({
+            distro: candidateDistro,
+            name: name.toLowerCase(),
+            section,
+          }).catch(() => ({ items: [] }))
+      const data = await fetchManByNameAndSectionOrAlias({
+        distro: candidateDistro,
+        name: name.toLowerCase(),
+        section,
+      })
+      if (data.kind === 'alias') return { data, related: { items: [] } }
+      return { data, related: await relatedPromise }
     })
     const resolved = bundle.data
     const related = bundle.related

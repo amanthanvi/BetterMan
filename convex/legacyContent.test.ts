@@ -2,7 +2,7 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 import { internal } from "./_generated/api";
-import { CONTENT_CHUNK_CHARS, MAX_CONTENT_FIELD_CHARS, contentChunks, readContentBlobField, splitContentFields, validateContentFieldSize } from "./_legacyContent";
+import { CONTENT_CHUNK_UTF8_BYTES, MAX_CONTENT_FIELD_CHARS, contentChunks, readContentBlobField, splitContentFields, validateContentFieldSize } from "./_legacyContent";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -16,8 +16,29 @@ it("preserves the distinct ingest and maintenance inline thresholds", () => {
       expect(result.chunkedFields.length).toBe(length > threshold ? 1 : 0);
     }
     expect(contentChunks(value).join("")).toBe(value);
-    expect(contentChunks(value).every((chunk) => chunk.length <= CONTENT_CHUNK_CHARS)).toBe(true);
   }
+});
+
+it("never splits a surrogate pair and bounds chunks by UTF-8 size", () => {
+  // 4-byte emoji straddling every possible boundary.
+  const astral = "a".repeat(CONTENT_CHUNK_UTF8_BYTES - 1) + "🧪".repeat(1000);
+  for (const chunk of contentChunks(astral)) {
+    const first = chunk.charCodeAt(0);
+    const last = chunk.charCodeAt(chunk.length - 1);
+    expect(first >= 0xdc00 && first <= 0xdfff).toBe(false); // no leading low surrogate
+    expect(last >= 0xd800 && last <= 0xdbff).toBe(false); // no trailing high surrogate
+    expect(Buffer.byteLength(chunk, "utf8")).toBeLessThanOrEqual(CONTENT_CHUNK_UTF8_BYTES);
+  }
+  expect(contentChunks(astral).join("")).toBe(astral);
+
+  // 400k three-byte chars would exceed the 1 MiB document limit in one chunk.
+  const cjk = "漢".repeat(400_000);
+  const chunks = contentChunks(cjk);
+  expect(chunks.length).toBeGreaterThan(1);
+  for (const chunk of chunks) {
+    expect(Buffer.byteLength(chunk, "utf8")).toBeLessThanOrEqual(CONTENT_CHUNK_UTF8_BYTES);
+  }
+  expect(chunks.join("")).toBe(cjk);
 });
 
 it("caps serialized ingest fields at exactly twenty chunks", async () => {
