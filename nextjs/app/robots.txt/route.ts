@@ -1,9 +1,11 @@
 import { getPublicOrigin } from '../../lib/public-origin'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-static'
+export const revalidate = 3600
 
-export async function GET(request: Request) {
-  const origin = getPublicOrigin(request)
+export async function GET() {
+  // Static metadata must use the configured canonical origin, never request headers.
+  const origin = getPublicOrigin()
   const body = [
     'User-agent: GPTBot',
     'Disallow: /',
@@ -39,7 +41,7 @@ export async function GET(request: Request) {
   return new Response(body, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
     },
   })
 }

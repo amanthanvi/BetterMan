@@ -8,7 +8,9 @@ import { withDistro } from '../../../lib/distro'
 import { getPublicOrigin } from '../../../lib/public-origin'
 import { resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
-export const revalidate = 3600
+// HTML needs a fresh CSP nonce and cookie-selected theme/distro on every request.
+// Shared Convex reads still use the explicit Data Cache in lib/api.ts.
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({
   params,

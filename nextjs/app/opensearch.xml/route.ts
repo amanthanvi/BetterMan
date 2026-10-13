@@ -1,5 +1,8 @@
 // OpenSearch descriptor: lets browsers offer BetterMan as an address-bar
 // search engine ("betterman<Tab>tcpdump").
+export const dynamic = 'force-static'
+export const revalidate = 86400
+
 export function GET(): Response {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
@@ -12,7 +15,7 @@ export function GET(): Response {
   return new Response(xml, {
     headers: {
       'Content-Type': 'application/opensearchdescription+xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+      'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800',
     },
   })
 }

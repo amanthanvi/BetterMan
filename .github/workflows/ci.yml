@@ -120,6 +120,9 @@ jobs:
       - run: pnpm next:test
       - run: pnpm -C nextjs lint
       - run: pnpm -C nextjs build
+        env:
+          # robots.txt is prerendered with the trusted canonical origin.
+          PUBLIC_BASE_URL: https://betterman.sh
 
 
   ingestion:

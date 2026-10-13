@@ -19,6 +19,7 @@ RUN pnpm install --frozen-lockfile
 COPY convex ./convex
 COPY nextjs ./nextjs
 
+ARG PUBLIC_BASE_URL=https://betterman.sh
 RUN pnpm -C nextjs build
 # Reuse the integrity-checked store populated above, but link only production dependencies.
 RUN rm -rf /app/node_modules /app/nextjs/node_modules \

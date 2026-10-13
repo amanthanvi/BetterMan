@@ -8,7 +8,9 @@ import { getFirst, resolveRequestDistro, type SearchParams } from '../../lib/req
 import { SearchPageInput } from './SearchPageInput'
 import { SearchResultsClient } from './SearchResultsClient'
 
-export const revalidate = 300
+// HTML needs a fresh CSP nonce and cookie-selected theme/distro on every request.
+// Shared Convex reads still use the explicit Data Cache in lib/api.ts.
+export const dynamic = 'force-dynamic'
 
 function buildSearchHref(opts: { q: string; section: string; distro: Distro }) {
   const params = new URLSearchParams()

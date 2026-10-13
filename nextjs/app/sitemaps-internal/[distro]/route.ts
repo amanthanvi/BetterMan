@@ -1,47 +1,32 @@
-import { createHash } from 'node:crypto'
-
 import { fetchSeoReleases } from '../../../lib/api'
 import { getPublicOrigin } from '../../../lib/public-origin'
+import { sitemapIndex, sitemapLastModified, sitemapResponse } from '../../../lib/sitemaps'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-static'
+export const revalidate = 3600
+
+// The corpus lives in Convex at runtime; builds must not require a deployment.
+// Unknown paths (including the reserved release index) enter ISR on first access.
+export function generateStaticParams() {
+  return []
+}
 
 type SeoRelease = Awaited<ReturnType<typeof fetchSeoReleases>>['items'][number]
 
-function toIsoZ(iso: string): string | null {
-  const dt = new Date(iso)
-  if (!Number.isFinite(dt.getTime())) return null
-  return dt.toISOString().replace(/\.\d{3}Z$/, 'Z')
-}
-
-function weakEtag(parts: string[]): string {
-  const digest = createHash('sha256').update(parts.join('|')).digest('base64url')
-  return `W/"${digest}"`
-}
-
-export async function GET(request: Request, ctx: { params: Promise<{ distro?: string }> }) {
+export async function GET(_request: Request, ctx: { params: Promise<{ distro?: string }> }) {
   const { distro } = await ctx.params
   if (!distro) return new Response(null, { status: 404 })
-  const origin = getPublicOrigin(request)
+  const origin = getPublicOrigin()
   const releases = await fetchSeoReleases()
+  // /sitemap.xml rewrites here so its index can be generated lazily too.
+  if (distro === 'index') return sitemapIndex(releases, origin)
 
   const release = releases.items.find((r: SeoRelease) => r.distro === distro)
   if (!release) return new Response(null, { status: 404 })
 
   const urlsPerFile = releases.urlsPerFile || 10000
   const pageCount = Math.max(1, Math.ceil(release.pageCount / urlsPerFile))
-  const lastmod = toIsoZ(release.ingestedAt)
-
-  const etag = weakEtag(['sitemap-distro-index', distro, release.datasetReleaseId, String(pageCount)])
-  const ifNoneMatch = request.headers.get('if-none-match')
-  if (ifNoneMatch && ifNoneMatch === etag) {
-    return new Response(null, {
-      status: 304,
-      headers: {
-        ETag: etag,
-        'Cache-Control': 'public, max-age=3600',
-      },
-    })
-  }
+  const lastmod = sitemapLastModified(release.ingestedAt)
 
   const rows = Array.from({ length: pageCount }, (_, idx) => idx + 1)
     .map((page) => {
@@ -55,11 +40,5 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
     `${rows}\n` +
     `</sitemapindex>\n`
 
-  return new Response(xml, {
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
-      ETag: etag,
-    },
-  })
+  return sitemapResponse(xml)
 }

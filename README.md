@@ -52,6 +52,12 @@ BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL
 
 ## Deploy and data
 
+Production builds require a trusted `PUBLIC_BASE_URL` (for example,
+`PUBLIC_BASE_URL=https://betterman.sh pnpm next:build`) to prerender robots.txt.
+Sitemaps are generated on first access and revalidated hourly, so builds need no
+Convex connection. HTML remains dynamic for per-request CSP nonces and theme/distro
+cookies; shared dataset reads use Next's Data Cache.
+
 Pushes to `main` that pass CI deploy to Vercel through `.github/workflows/deploy.yml`. The dataset is rebuilt monthly by `.github/workflows/update-docs.yml`, which ingests to a staging pointer in Convex and promotes it to production. Details live in `docs/ARCHITECTURE.md` and `docs/runbooks/`.
 
 ## Contributing

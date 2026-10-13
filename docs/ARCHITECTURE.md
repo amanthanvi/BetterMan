@@ -24,6 +24,26 @@ A man page request hits `nextjs/app/man/[name]/[section]/page.tsx`, which calls 
 
 Personalization (theme, distro, bookmarks, history, reading preferences) lives in the browser. Theme and distro are mirrored into cookies so the server can render the right first paint.
 
+HTML intentionally stays dynamic, including anonymous Debian reads: Next's inline
+bootstrap and Flight scripts need the fresh nonce from the CSP proxy. Page-level
+`revalidate` is not an HTML cache in this mode; Convex reads are independently cached
+in `lib/api.ts`. Theme cookie SSR is unchanged and no inline theme setter is needed.
+`DistroProvider` can reconcile a localStorage preference for its client consumers,
+but that effect does not replace the server-rendered corpus or navigate to a new
+variant. Serving static Debian HTML to a non-Debian cookie would show the wrong
+document first and is not supported by the present reconciliation logic.
+
+Robots, OpenSearch, and the root Open Graph image are prerendered. All sitemap
+levels use hourly on-demand ISR; `/sitemap.xml` rewrites to the reserved internal
+`index` parameter, so even the release index needs no Convex access at build time.
+These metadata routes bypass the nonce proxy and use stable security headers.
+Robots requires the trusted public origin at build time; sitemap URLs use the
+configured origin when generating the cached response, never the requesting host.
+Sitemap ETags describe the cached XML bytes. Request-specific application 304
+handling is removed for ISR; conditional responses at the Vercel CDN are a
+deployment behavior, not a guarantee of the custom route handler. Backend errors
+are propagated rather than cached as an empty successful sitemap.
+
 ## Data
 
 `ingestion/` runs `mandoc -Thtml` on each page and converts the HTML into the document model in `ingestion/ingestion/doc_model.py`. The TypeScript mirror is `nextjs/lib/docModel.ts`. Golden fixtures in both packages keep them aligned.

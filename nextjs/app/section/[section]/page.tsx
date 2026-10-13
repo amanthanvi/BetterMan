@@ -5,7 +5,9 @@ import { listSection, withDistroFallback } from '../../../lib/api'
 import { isDefaultDistro, withDistro, type Distro } from '../../../lib/distro'
 import { getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
-export const revalidate = 3600
+// HTML needs a fresh CSP nonce and cookie-selected theme/distro on every request.
+// Shared Convex reads still use the explicit Data Cache in lib/api.ts.
+export const dynamic = 'force-dynamic'
 
 function getGroupKey(name: string): string {
   const first = name.trim().charAt(0).toUpperCase()

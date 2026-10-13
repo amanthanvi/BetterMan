@@ -1,22 +1,21 @@
-import { createHash } from 'node:crypto'
-
 import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../../../lib/api'
 import { withDistro } from '../../../../lib/distro'
 import { getPublicOrigin } from '../../../../lib/public-origin'
+import { sitemapResponse } from '../../../../lib/sitemaps'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-static'
+export const revalidate = 3600
 
-function weakEtag(parts: string[]): string {
-  const digest = createHash('sha256').update(parts.join('|')).digest('base64url')
-  return `W/"${digest}"`
+export function generateStaticParams() {
+  return []
 }
 
 type SeoRelease = Awaited<ReturnType<typeof fetchSeoReleases>>['items'][number]
 type SeoSitemapItem = Awaited<ReturnType<typeof fetchSeoSitemapPage>>['items'][number]
 
-export async function GET(request: Request, ctx: { params: Promise<{ distro?: string; page?: string }> }) {
+export async function GET(_request: Request, ctx: { params: Promise<{ distro?: string; page?: string }> }) {
   const { distro, page: pageRaw } = await ctx.params
-  const origin = getPublicOrigin(request)
+  const origin = getPublicOrigin()
   if (!distro || !pageRaw) return new Response(null, { status: 404 })
   const page = Number(pageRaw)
 
@@ -29,18 +28,6 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
   const urlsPerFile = releases.urlsPerFile || 10000
   const pageCount = Math.max(1, Math.ceil(release.pageCount / urlsPerFile))
   if (page > pageCount) return new Response(null, { status: 404 })
-
-  const etag = weakEtag(['sitemap-page', distro, release.datasetReleaseId, String(page)])
-  const ifNoneMatch = request.headers.get('if-none-match')
-  if (ifNoneMatch && ifNoneMatch === etag) {
-    return new Response(null, {
-      status: 304,
-      headers: {
-        ETag: etag,
-        'Cache-Control': 'public, max-age=3600',
-      },
-    })
-  }
 
   try {
     const data = await fetchSeoSitemapPage({ distro, page })
@@ -57,13 +44,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
       `${rows}\n` +
       `</urlset>\n`
 
-    return new Response(xml, {
-      headers: {
-        'Content-Type': 'application/xml; charset=utf-8',
-        'Cache-Control': 'public, max-age=3600',
-        ETag: etag,
-      },
-    })
+    return sitemapResponse(xml)
   } catch (err) {
     if (err instanceof FastApiError && err.status === 404) return new Response(null, { status: 404 })
     throw err

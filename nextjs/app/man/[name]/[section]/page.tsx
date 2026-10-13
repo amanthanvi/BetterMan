@@ -20,7 +20,9 @@ import { getPublicOrigin } from '../../../../lib/public-origin'
 import { resolveRequestDistro, type SearchParams } from '../../../../lib/requestContext'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
-export const revalidate = 3600
+// HTML needs a fresh CSP nonce and cookie-selected theme/distro on every request.
+// Shared Convex reads still use the explicit Data Cache in lib/api.ts.
+export const dynamic = 'force-dynamic'
 
 class AliasRedirect extends Error {}
 

@@ -4,7 +4,9 @@ import { LicensesClient } from './LicensesClient'
 import { fetchLicenses, withDistroFallback } from '../../lib/api'
 import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 
-export const revalidate = 3600
+// HTML needs a fresh CSP nonce and cookie-selected theme/distro on every request.
+// Shared Convex reads still use the explicit Data Cache in lib/api.ts.
+export const dynamic = 'force-dynamic'
 
 export function generateMetadata(): Metadata {
   return {

@@ -77,7 +77,9 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
+      // Metadata has stable security headers in next.config.ts and its own ISR
+      // boundary. Exempt both public sitemap URLs and their rewrite targets.
+      source: '/((?!api(?:/|$)|_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|robots\\.txt$|opensearch\\.xml$|sitemap(?:-[^/]+)?\\.xml$|sitemaps-internal/[^/]+(?:/[^/]+)?$|opengraph-image$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },
