@@ -43,31 +43,42 @@ function loadSentry(): Promise<typeof import('@sentry/nextjs')> {
   return sentryReady
 }
 
+// Buffer pre-init browser errors (event-handler exceptions, unhandled
+// rejections) that React boundaries never see; replay after Sentry loads.
+const earlyErrors: unknown[] = []
+const onError = (event: ErrorEvent) => {
+  earlyErrors.push(event.error ?? event.message)
+}
+const onRejection = (event: PromiseRejectionEvent) => {
+  earlyErrors.push(event.reason)
+}
+let earlyListening = false
+let earlyFlushed = false
+
+function drainEarlyErrors(Sentry: typeof import('@sentry/nextjs')) {
+  if (earlyFlushed || typeof window === 'undefined') return
+  earlyFlushed = true
+  if (earlyListening) {
+    window.removeEventListener('error', onError)
+    window.removeEventListener('unhandledrejection', onRejection)
+    earlyListening = false
+  }
+  for (const err of earlyErrors.splice(0)) Sentry.captureException(err)
+}
+
 if (typeof window !== 'undefined') {
-  // Buffer pre-init browser errors (event-handler exceptions, unhandled
-  // rejections) that React boundaries never see; replay after Sentry loads.
-  const earlyErrors: unknown[] = []
-  const onError = (event: ErrorEvent) => {
-    earlyErrors.push(event.error ?? event.message)
-  }
-  const onRejection = (event: PromiseRejectionEvent) => {
-    earlyErrors.push(event.reason)
-  }
   window.addEventListener('error', onError)
   window.addEventListener('unhandledrejection', onRejection)
+  earlyListening = true
 
   const w = window as Window & {
     requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void
   }
   const flush = () =>
     void loadSentry()
-      .then((Sentry) => {
-        window.removeEventListener('error', onError)
-        window.removeEventListener('unhandledrejection', onRejection)
-        for (const err of earlyErrors.splice(0)) Sentry.captureException(err)
-      })
+      .then(drainEarlyErrors)
       .catch(() => {
-        // Chunk load failed; keep the listeners for a later capture attempt.
+        // Chunk load failed; the listeners stay until a later capture drains.
       })
 
   if (w.requestIdleCallback) w.requestIdleCallback(flush, { timeout: 3000 })
@@ -77,7 +88,12 @@ if (typeof window !== 'undefined') {
 /** Capture an exception from an error boundary, initializing Sentry first if needed. */
 export function captureClientException(error: unknown): void {
   void loadSentry()
-    .then((Sentry) => Sentry.captureException(error))
+    .then((Sentry) => {
+      // Any successful load drains the early-error buffer, not just the
+      // scheduled idle flush — a failed scheduled flush must not strand it.
+      drainEarlyErrors(Sentry)
+      Sentry.captureException(error)
+    })
     .catch(() => {
       // Telemetry must never throw into the error path that produced it.
     })
