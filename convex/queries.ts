@@ -67,6 +67,18 @@ async function searchDocsByNamePrefix(
     .take(args.takeCount);
 }
 
+// Legacy rows carry their display payload inline. A migrated row is slim only
+// after its details row is present in the same transaction.
+async function searchDetails(ctx: QueryCtx, doc: Doc<"manPageSearchDocuments">) {
+  if (doc.title !== undefined && doc.description !== undefined && doc.snippetText !== undefined) {
+    return { title: doc.title, description: doc.description, snippetText: doc.snippetText };
+  }
+  const details = await ctx.db.query("manPageSearchDetails")
+    .withIndex("by_searchDocumentId", (q) => q.eq("searchDocumentId", doc._id)).unique();
+  if (!details) throw new Error("SEARCH_DETAILS_MISSING");
+  return details;
+}
+
 export const getInfo = query({
   args: {
     stage: publicStageCompatibilityValidator,
@@ -508,12 +520,15 @@ export const search = query({
 
     return {
       query: queryText,
-      results: visible.map((doc) => ({
-        name: doc.name,
-        section: doc.section,
-        title: doc.title,
-        description: doc.description,
-        highlights: [deterministicSnippet(doc.snippetText, queryText)].filter(Boolean),
+      results: await Promise.all(visible.map(async (doc) => {
+        const details = await searchDetails(ctx, doc);
+        return {
+          name: doc.name,
+          section: doc.section,
+          title: details.title,
+          description: details.description,
+          highlights: [deterministicSnippet(details.snippetText, queryText)].filter(Boolean),
+        };
       })),
       suggestions,
       hasMore: nextOffset !== null,
@@ -543,11 +558,11 @@ export const suggest = query({
 
     return {
       query: name,
-      suggestions: docs.map((doc) => ({
+      suggestions: await Promise.all(docs.map(async (doc) => ({
         name: doc.name,
         section: doc.section,
-        description: doc.description,
-      })),
+        description: (await searchDetails(ctx, doc)).description,
+      }))),
     };
   },
 });

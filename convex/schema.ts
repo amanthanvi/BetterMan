@@ -173,19 +173,20 @@ export default defineSchema({
   // Name prefix indexes plus a search index over the one-line NAME description.
   // Body full-text search was retired: it read the whole corpus per query.
   // Descriptions are short, so this index stays cheap and lets "copy files"
-  // find cp(1). searchText remains a compact metadata string for ops only.
+  // find cp(1). Keep the existing rows and index identity so migration cannot
+  // change search-index tie order. Display payloads live in a separate table.
   manPageSearchDocuments: defineTable({
     pageId: v.id("manPages"),
     releaseId: v.id("datasetReleases"),
-    datasetReleaseId: v.string(),
+    datasetReleaseId: v.optional(v.string()),
     name: v.string(),
     nameNorm: v.string(),
     section: v.string(),
-    title: v.string(),
-    description: v.string(),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
     descNorm: v.string(),
-    searchText: v.string(),
-    snippetText: v.string(),
+    searchText: v.optional(v.string()),
+    snippetText: v.optional(v.string()),
   })
     .index("by_releaseId_and_section_and_name", ["releaseId", "section", "name"])
     .index("by_releaseId_and_nameNorm", ["releaseId", "nameNorm"])
@@ -198,6 +199,16 @@ export default defineSchema({
       searchField: "descNorm",
       filterFields: ["releaseId", "section"],
     }),
+
+  manPageSearchDetails: defineTable({
+    searchDocumentId: v.id("manPageSearchDocuments"),
+    releaseId: v.id("datasetReleases"),
+    title: v.string(),
+    description: v.string(),
+    snippetText: v.string(),
+  })
+    .index("by_searchDocumentId", ["searchDocumentId"])
+    .index("by_releaseId", ["releaseId"]),
 
   // `.so` include stubs: /man/<name>/<section> redirects to the target page.
   manPageAliases: defineTable({

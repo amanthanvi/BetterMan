@@ -8,7 +8,6 @@ import { scheduleVariantsRefresh } from "./variants";
 import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, verifyDeclaredManifest } from "./_releaseManifest";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import {
-  compactManPageSearchText,
   DATASET_STAGES,
   MAX_SNIPPET_TEXT_CHARS,
   sectionLabel,
@@ -381,17 +380,19 @@ export const insertPages = internalMutation({
         blobId,
       });
 
-      await ctx.db.insert("manPageSearchDocuments", {
+      const searchDocumentId = await ctx.db.insert("manPageSearchDocuments", {
         pageId,
         releaseId: release._id,
-        datasetReleaseId: release.datasetReleaseId,
         name: page.name,
         nameNorm: page.name.toLowerCase(),
         section: page.section,
+        descNorm: page.description.toLowerCase(),
+      });
+      await ctx.db.insert("manPageSearchDetails", {
+        searchDocumentId,
+        releaseId: release._id,
         title: page.title,
         description: page.description,
-        descNorm: page.description.toLowerCase(),
-        searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
       });
 
@@ -478,17 +479,19 @@ export const insertStoredPages = internalMutation({
         blobId,
       });
 
-      await ctx.db.insert("manPageSearchDocuments", {
+      const searchDocumentId = await ctx.db.insert("manPageSearchDocuments", {
         pageId,
         releaseId: release._id,
-        datasetReleaseId: release.datasetReleaseId,
         name: page.name,
         nameNorm: page.name.toLowerCase(),
         section: page.section,
+        descNorm: page.description.toLowerCase(),
+      });
+      await ctx.db.insert("manPageSearchDetails", {
+        searchDocumentId,
+        releaseId: release._id,
         title: page.title,
         description: page.description,
-        descNorm: page.description.toLowerCase(),
-        searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
       });
 

@@ -167,6 +167,7 @@ jobs:
             --message "GitHub Actions ${BETTERMAN_DEPLOY_SHA}"
           pnpm exec convex run --prod related:backfillActiveReleases '{}'
           pnpm exec convex run --prod variants:backfillActiveReleases '{}'
+          pnpm exec convex run --prod searchMigration:backfillActiveReleases '{}'
 
       - name: Verify active related metadata backfills completed
         if: needs.resolve_revision.outputs.require_current_main == 'true'

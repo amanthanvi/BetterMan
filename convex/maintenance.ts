@@ -42,6 +42,7 @@ const MAX_STORAGE_STATS_LIMIT = 100;
 type ReleaseChildTable =
   | "releaseSectionStats"
   | "manPages"
+  | "manPageSearchDetails"
   | "manPageSearchDocuments"
   | "manPageLinks"
   | "manPageAliases"
@@ -50,6 +51,7 @@ type ReleaseChildTable =
 
 const RELEASE_CHILD_TABLES: ReleaseChildTable[] = [
   "releaseSectionStats",
+  "manPageSearchDetails",
   "manPageSearchDocuments",
   "manPageLinks",
   "manPageAliases",
@@ -68,6 +70,7 @@ const storageStatsTableValidator = v.union(
   v.literal("manPageContentChunks"),
   v.literal("manPageContents"),
   v.literal("manPageLinks"),
+  v.literal("manPageSearchDetails"),
   v.literal("manPageSearchDocuments"),
   v.literal("manPages"),
   v.literal("rateLimitBuckets"),
@@ -84,6 +87,7 @@ type StorageStatsTable =
   | "manPageContentChunks"
   | "manPageContents"
   | "manPageLinks"
+  | "manPageSearchDetails"
   | "manPageSearchDocuments"
   | "manPages"
   | "rateLimitBuckets"
@@ -99,7 +103,8 @@ const STORAGE_STATS_FIELDS: Record<StorageStatsTable, string[]> = {
   manPageContentChunks: ["chunk"],
   manPageContents: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageLinks: ["fromName", "fromSection", "toName", "toSection", "linkType"],
-  manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
+  manPageSearchDetails: ["title", "description", "snippetText"],
+  manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name", "nameNorm", "descNorm", "section"],
   manPages: [
     "name",
     "section",
@@ -283,6 +288,9 @@ async function sampleReleaseChildren(
             .query("manPages")
             .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", releaseId))
             .take(takeLimit)
+        : table === "manPageSearchDetails"
+          ? await ctx.db.query("manPageSearchDetails")
+              .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(takeLimit)
         : table === "manPageSearchDocuments"
           ? await ctx.db
               .query("manPageSearchDocuments")
@@ -332,6 +340,12 @@ async function deleteReleaseChildrenByTable(
       .query("releaseSectionStats")
       .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", releaseId))
       .take(limit);
+    for (const row of rows) await ctx.db.delete(row._id);
+    return rows.length;
+  }
+  if (table === "manPageSearchDetails") {
+    const rows = await ctx.db.query("manPageSearchDetails")
+      .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(limit);
     for (const row of rows) await ctx.db.delete(row._id);
     return rows.length;
   }
@@ -589,7 +603,9 @@ export const compactSearchDocumentsBatch = internalMutation({
     let snippetCharsAfter = 0;
 
     for (const doc of result.page) {
-      const nextSearchText = compactManPageSearchText(doc);
+      // Slim rows have no legacy payload to compact. Never reintroduce it.
+      if (doc.title === undefined || doc.description === undefined || doc.snippetText === undefined || doc.searchText === undefined) continue;
+      const nextSearchText = compactManPageSearchText({ ...doc, title: doc.title, description: doc.description, snippetText: doc.snippetText });
       const nextSnippetText = truncateText(doc.snippetText, MAX_SNIPPET_TEXT_CHARS);
       searchCharsBefore += doc.searchText.length;
       searchCharsAfter += nextSearchText.length;
@@ -657,6 +673,8 @@ export const estimateStorageStatsBatch = internalQuery({
                       ? await ctx.db.query("manPageContents").paginate(paginationOpts)
                       : args.table === "manPageLinks"
                         ? await ctx.db.query("manPageLinks").paginate(paginationOpts)
+                        : args.table === "manPageSearchDetails"
+                          ? await ctx.db.query("manPageSearchDetails").paginate(paginationOpts)
                         : args.table === "manPageSearchDocuments"
                           ? await ctx.db.query("manPageSearchDocuments").paginate(paginationOpts)
                           : args.table === "manPages"

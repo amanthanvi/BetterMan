@@ -50,3 +50,17 @@ configuration. If reverting this cutover, coordinate compatible Next and Convex
 revisions together, account for later backend/schema changes before restoring
 functions, and repeat the uncached protected-route checks after recovery. Do not
 make `tag` optional or allow unauthenticated mutations as a rollback workaround.
+
+## Convex read-model backfills
+
+After deploying these schema/functions, the deployment workflow schedules
+`variants:backfillActiveReleases {}` and `searchMigration:backfillActiveReleases {}`
+using `pnpm exec convex run --prod`. Both operate only through internal mutations
+and bounded scheduler chains. Re-run either entrypoint to recover a canceled or
+failed chain. Variants refresh every active release in each stage, invalidating
+old versions atomically; missing or stale page caches use the live pointer lookup
+until their batch finishes. Search migrates each row atomically, preserving its
+ID, creation time, and indexed ranking fields, so mixed releases remain readable.
+New ingestion writes slim search rows immediately. Existing releases receive the
+search byte savings as their migration progresses; no frontend deployment needs
+to wait for the complete corpus to migrate.
