@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Ingestion: abort after three consecutive transport-failed page batches, reset the shared budget on success, and retain bisection for page-specific rejections. (#326)
+
 - Ingestion: bound page batches by serialized UTF-8 bytes, bisect rejected uploads to isolate failed pages, continue good uploads, and prevent incomplete declared releases from activating.
 
 - Ingestion: add stable distro/route page IDs and `--release-id` checkpoints that freeze release declarations and resume only unacknowledged uploads; monthly workflow reruns restore their prepared releases without repeating parsing.

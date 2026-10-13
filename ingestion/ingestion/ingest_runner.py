@@ -34,7 +34,7 @@ from ingestion.arch import (
     pacman_install,
     pacman_packages,
 )
-from ingestion.convex_client import ConvexIngestClient
+from ingestion.convex_client import ConvexIngestClient, TransientIngestError
 from ingestion.db import iso_utc_now, json_dumps
 from ingestion.debian import (
     apt_install,
@@ -82,6 +82,12 @@ _MAN_HREF_RE = re.compile(
 logger = logging.getLogger("betterman.ingestion")
 _PAGE_BATCH_BYTES = 8 * 1024 * 1024
 _PAGE_BATCH_ITEMS = 512  # Bound tiny-page transactions as well as request bytes.
+_PAGE_TRANSPORT_FAILURE_LIMIT = 3
+
+
+@dataclass
+class _PageUploadBudget:
+    consecutive_transport_failures: int = 0
 
 
 def _log(event: str, **fields: object) -> None:
@@ -399,7 +405,10 @@ def _upload_page_batch(
     release_id: str,
     client: ConvexIngestClient,
     checkpoint: ReleaseCheckpoint | None,
+    budget: _PageUploadBudget | None = None,
 ) -> list[dict]:
+    if budget is None:
+        budget = _PageUploadBudget()
     payload = {"datasetReleaseId": release_id, "pages": [page for _, page in batch]}
     try:
         if len(encoded_json(payload)) > _PAGE_BATCH_BYTES:
@@ -408,6 +417,24 @@ def _upload_page_batch(
         if checkpoint:
             _confirm_upload_response(response, len(batch))
     except Exception as exc:  # noqa: BLE001 (isolate failed page uploads)
+        if isinstance(exc, TransientIngestError):
+            # Smaller payloads cannot cure an outage. Leave the whole batch
+            # pending and let a later batch probe recovery without multiplying
+            # the client's retry window through the bisection tree.
+            budget.consecutive_transport_failures += 1
+            _log(
+                "page_batch_transport_failed",
+                pages=len(batch),
+                consecutiveFailures=budget.consecutive_transport_failures,
+                error=str(exc)[:500],
+            )
+            if budget.consecutive_transport_failures >= _PAGE_TRANSPORT_FAILURE_LIMIT:
+                raise RuntimeError(
+                    f"Page upload aborted after {budget.consecutive_transport_failures} "
+                    "consecutive batch transport failures; publish blocked "
+                    "(unacknowledged pages remain pending)"
+                ) from exc
+            return [page for _, page in batch]
         if len(batch) > 1:
             midpoint = len(batch) // 2
             _log("page_batch_split", pages=len(batch), error=str(exc)[:500])
@@ -416,11 +443,13 @@ def _upload_page_batch(
                 release_id=release_id,
                 client=client,
                 checkpoint=checkpoint,
+                budget=budget,
             ) + _upload_page_batch(
                 batch[midpoint:],
                 release_id=release_id,
                 client=client,
                 checkpoint=checkpoint,
+                budget=budget,
             )
         page = batch[0][1]
         _log(
@@ -434,6 +463,7 @@ def _upload_page_batch(
         # Leave this payload pending. Lowering the immutable declared counts
         # would make exact resume conflict and could permit partial publication.
         return [page]
+    budget.consecutive_transport_failures = 0
     if checkpoint:
         # A local disk failure must abort, rather than misclassify accepted pages
         # as poison. Without this receipt the same frozen batch replays safely.
@@ -463,6 +493,7 @@ def _upload_release(
         client.post("/ingest/release", declaration)
 
     failed_pages: list[dict] = []
+    page_upload_budget = _PageUploadBudget()
     deferred_aliases = 0
     for kind, path, size in [
         ("pages", "/ingest/pages/storage", 0),
@@ -501,6 +532,7 @@ def _upload_release(
                         release_id=dataset_release_id,
                         client=client,
                         checkpoint=checkpoint,
+                        budget=page_upload_budget,
                     )
                 )
             else:

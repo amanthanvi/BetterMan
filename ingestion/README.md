@@ -106,14 +106,22 @@ bounds batches of tiny pages. A page whose complete payload exceeds the byte
 budget is logged as a failed singleton without sending an oversized request.
 Alias and license batches retain their existing limits.
 
-After the client's bounded transient retries, a failed page batch is bisected
-in order until good sub-batches succeed or the rejected singleton is identified.
+Page-specific rejections (including HTTP 4xx responses) are bisected in order
+until good sub-batches succeed or the rejected singleton is identified.
 `page_batch_split` and `page_upload_failed` logs identify the failure; later pages,
 licenses and unaffected aliases continue uploading. Successful sub-batches gain
 checkpoint acknowledgements; failed pages and aliases targeting them stay pending.
 The summary excludes rejected pages from `succeeded` and adds them to hard
 failures alongside parse failures, with separate `parseFailed` and `uploadFailed`
 fields. They count against the existing 2% hard-failure and 80% success gates.
+
+Connection, timeout, truncated-response and HTTP 5xx failures retain the client's
+three-attempt retry window and never trigger bisection. Failed batches stay
+pending while later batches probe recovery. Three consecutive transport-failed
+page batches across the upload run abort with a clear error and block publication;
+each successful page batch (including a successful split) resets that counter.
+Thus a sustained outage costs at most nine HTTP attempts instead of expanding
+into a retry tree. Retry the same release ID to resume unacknowledged uploads.
 
 The release declaration was frozen **before** upload, and Convex requires exact
 page/section/alias/license counts to activate it. Changing those declared counts

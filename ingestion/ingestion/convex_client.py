@@ -19,6 +19,10 @@ class ActivationPending(RuntimeError):
     pass
 
 
+class TransientIngestError(RuntimeError):
+    """A connection/server failure after the client's bounded retries."""
+
+
 def convex_http_url(raw: str) -> str:
     value = raw.strip().rstrip("/")
     if not value:
@@ -107,19 +111,21 @@ class ConvexIngestClient:
                     pending = None
                 if isinstance(pending, dict) and pending.get("pending") is True:
                     raise ActivationPending("Related metadata hydration is pending") from exc
-            error: RuntimeError = RuntimeError(f"Convex ingest HTTP {exc.code}: {detail}")
+            error: RuntimeError
             if exc.code >= 500:
+                error = TransientIngestError(f"Convex ingest HTTP {exc.code}: {detail}")
                 raise _TransientPostError(error) from exc
+            error = RuntimeError(f"Convex ingest HTTP {exc.code}: {detail}")
             raise error from exc
         except URLError as exc:
-            error = RuntimeError(f"Convex ingest request failed: {exc.reason}")
+            error = TransientIngestError(f"Convex ingest request failed: {exc.reason}")
             raise _TransientPostError(error) from exc
         except (TimeoutError, ConnectionError, http.client.IncompleteRead) as exc:
             # Response-level transport failures (socket timeouts surface as
             # plain TimeoutError, disconnects as ConnectionError subclasses,
             # truncated bodies as IncompleteRead) — transient and retryable on
             # idempotent paths.
-            error = RuntimeError(f"Convex ingest transport failed: {exc}")
+            error = TransientIngestError(f"Convex ingest transport failed: {exc}")
             raise _TransientPostError(error) from exc
 
         if not raw:

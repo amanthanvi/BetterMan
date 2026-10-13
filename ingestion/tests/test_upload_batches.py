@@ -1,18 +1,158 @@
 from __future__ import annotations
 
+import http.client
+import json
 import sqlite3
 from contextlib import closing
+from io import BytesIO
 from unittest.mock import Mock
+from urllib.error import HTTPError, URLError
 
 import pytest
 from test_resume import _resume_harness, _run_resume_ingest
 
 from ingestion import ingest_runner
+from ingestion.convex_client import ConvexIngestClient
 from ingestion.resume import ReleaseCheckpoint, encoded_json
 
 
 def _page(name, text=""):
     return {"externalId": name, "name": name, "section": "1", "doc": {"text": text}}
+
+
+def _upload_pages(pages, client):
+    return ingest_runner._upload_release(
+        metadata={
+            "total": len(pages),
+            "parseFailed": 0,
+            "declaration": {"datasetReleaseId": "r", "pageCount": len(pages), "aliasCount": 0},
+        },
+        items={"pages": pages, "licenses": [], "aliases": []},
+        checkpoint=None,
+        resuming=False,
+        client=client,
+        activate=True,
+        dataset_stage="staging",
+    )
+
+
+@pytest.mark.parametrize("status", [400, 413, 422])
+def test_http_payload_rejections_bisect_and_continue(monkeypatch, status):
+    pages = [_page(name) for name in ["a", "bad", "c", "d"]]
+    successful = []
+    attempts = []
+
+    def request(req, **_kwargs):
+        names = [page["name"] for page in json.loads(req.data)["pages"]]
+        attempts.append(names)
+        if "bad" in names:
+            raise HTTPError(req.full_url, status, "Invalid page", {}, BytesIO(b"INVALID_PAGE"))
+        successful.extend(names)
+        return BytesIO(b"{}")
+
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    failed = ingest_runner._upload_page_batch(
+        list(enumerate(pages)),
+        release_id="r",
+        client=ConvexIngestClient("https://test.convex.site", "s"),
+        checkpoint=None,
+    )
+    assert failed == [pages[1]]
+    assert successful == ["a", "c", "d"]
+    assert attempts == [["a", "bad", "c", "d"], ["a", "bad"], ["a"], ["bad"], ["c", "d"]]
+
+
+@pytest.mark.parametrize("failure", ["timeout", "url", "server", "connection", "truncated"])
+def test_persistent_transport_failures_share_budget_without_bisecting(monkeypatch, failure):
+    pages = [_page(str(i)) for i in range(4 * 512)]
+    attempts = []
+
+    def request(req, **_kwargs):
+        if not req.full_url.endswith("/pages/storage"):
+            return BytesIO(b"{}")
+        attempts.append([page["name"] for page in json.loads(req.data)["pages"]])
+        if failure == "server":
+            raise HTTPError(req.full_url, 503, "Unavailable", {}, BytesIO(b"outage"))
+        if failure == "url":
+            raise URLError("unavailable")
+        if failure == "connection":
+            raise ConnectionResetError("disconnected")
+        if failure == "truncated":
+            raise http.client.IncompleteRead(b"partial")
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    activate = Mock()
+    monkeypatch.setattr(ConvexIngestClient, "activate_release", activate)
+    with pytest.raises(RuntimeError, match="3 consecutive.*transport.*publish blocked"):
+        _upload_pages(pages, ConvexIngestClient("https://test.convex.site", "s"))
+    assert len(attempts) == 9, "three batches, each with the client's three attempts"
+    assert attempts == [
+        [page["name"] for page in pages[start : start + 512]]
+        for start in [0, 512, 1024]
+        for _ in range(3)
+    ]
+    activate.assert_not_called()
+
+
+def test_successful_batch_resets_consecutive_transport_failure_budget(monkeypatch):
+    monkeypatch.setattr(ingest_runner, "_PAGE_BATCH_ITEMS", 2)
+    pages = [_page(str(i)) for i in range(12)]
+    attempted = []
+    accepted = []
+
+    def request(req, **_kwargs):
+        if not req.full_url.endswith("/pages/storage"):
+            return BytesIO(b"{}")
+        names = [page["name"] for page in json.loads(req.data)["pages"]]
+        attempted.append(names)
+        if names[0] not in {"4", "10"}:
+            raise URLError("temporary outage")
+        accepted.extend(names)
+        return BytesIO(b"{}")
+
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    activate = Mock()
+    monkeypatch.setattr(ConvexIngestClient, "activate_release", activate)
+    with pytest.raises(RuntimeError, match="publish blocked:.*upload_failed=8"):
+        _upload_pages(pages, ConvexIngestClient("https://test.convex.site", "s"))
+    assert accepted == ["4", "5", "10", "11"], "later successes reset each two-batch outage"
+    assert len(attempted) == 14
+    assert all(len(batch) == 2 for batch in attempted), "transport failures must not split"
+    activate.assert_not_called()
+
+
+def test_split_branches_share_transport_budget_and_leave_checkpoint_pending(monkeypatch, tmp_path):
+    pages = [_page(name) for name in ["a", "b", "c", "d"]]
+    attempts = []
+
+    def request(req, **_kwargs):
+        names = [page["name"] for page in json.loads(req.data)["pages"]]
+        attempts.append(names)
+        if names in [["a", "b", "c", "d"], ["c", "d"]]:
+            raise HTTPError(req.full_url, 400, "Invalid page", {}, BytesIO(b"INVALID_PAGE"))
+        raise URLError("outage during bisection")
+
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    with ReleaseCheckpoint(
+        directory=tmp_path, http_url="https://test.convex.site", release_id="r"
+    ) as checkpoint:
+        checkpoint.prepare(signature={}, metadata={}, items={"pages": pages})
+        with pytest.raises(RuntimeError, match="3 consecutive.*transport.*publish blocked"):
+            ingest_runner._upload_page_batch(
+                list(checkpoint.pending("pages")),
+                release_id="r",
+                client=ConvexIngestClient("https://test.convex.site", "s"),
+                checkpoint=checkpoint,
+            )
+        assert checkpoint.uploaded_count("pages") == 0
+        assert list(checkpoint.pending("pages")) == list(enumerate(pages))
+    assert attempts == (
+        [["a", "b", "c", "d"]] + [["a", "b"]] * 3 + [["c", "d"]] + [["c"]] * 3 + [["d"]] * 3
+    )
 
 
 def test_byte_batches_measure_exact_utf8_request_and_preserve_order(monkeypatch):
