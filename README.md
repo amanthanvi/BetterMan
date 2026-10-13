@@ -23,8 +23,24 @@ Needs Node 26, pnpm 10.34, Python 3.14, and `uv`.
 ```bash
 pnpm install
 pnpm convex:check   # provisions a local Convex deployment and writes .env.local
+```
+
+Set the same private `RATE_LIMIT_TAG_KEY` in the root `.env.local` and the local
+Convex deployment before starting the app:
+
+```bash
+npx convex env set RATE_LIMIT_TAG_KEY '<same-key-as-in-.env.local>'
+set -a; . ./.env.local; set +a
+export CONVEX_URL="${CONVEX_URL:-$VITE_CONVEX_URL}"
+export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
 pnpm next:dev       # Convex watcher plus Next.js on http://localhost:3000
 ```
+
+Next signs rate-limit identifiers with this key; Convex rejects unauthenticated
+bucket updates. Missing keys or enforcement errors make Next return 429. For
+local work without rate limiting, explicitly set `BETTERMAN_RATE_LIMIT_DEV_BYPASS=1`
+with `RATE_LIMIT_TAG_KEY` unset. This bypass is ignored in production and when a
+key is configured; direct Convex mutation calls always require a valid tag.
 
 The local deployment starts empty. Seed it with the E2E fixture while `pnpm next:dev` is running:
 

@@ -1,5 +1,5 @@
 import fc from 'fast-check'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const apiMocks = vi.hoisted(() => ({
@@ -58,7 +58,14 @@ function context(path: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.stubEnv('RATE_LIMIT_TAG_KEY', 'route-test-key')
+  vi.stubEnv('BETTERMAN_RATE_LIMIT_DEV_BYPASS', undefined)
   convexMocks.mutation.mockResolvedValue({ allowed: true })
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.restoreAllMocks()
 })
 
 describe('public API timing and metadata', () => {
@@ -135,6 +142,19 @@ describe('public API timing and metadata', () => {
     expect(apiMocks.search).not.toHaveBeenCalled()
     expect(response.headers.get('Server-Timing')).toMatch(/rate_limit;dur=\d+\.\d, total;dur=\d+\.\d/)
     expect(response.headers.get('Server-Timing')).not.toContain('convex_search')
+  })
+
+  it.each(['missing key', 'rejected tag', 'Convex unavailable'])('returns 429 before search for %s', async (failure) => {
+    if (failure === 'missing key') vi.stubEnv('RATE_LIMIT_TAG_KEY', undefined)
+    else convexMocks.mutation.mockRejectedValueOnce(new Error(failure))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const response = await GET(request('/api/v1/search?q=tar'), context(['v1', 'search']))
+
+    expect(response.status).toBe(429)
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'RATE_LIMITED' } })
+    expect(apiMocks.search).not.toHaveBeenCalled()
+    if (failure === 'missing key') expect(convexMocks.mutation).not.toHaveBeenCalled()
   })
 
   it('does not split search or page buckets on spoofable forwarding headers', async () => {

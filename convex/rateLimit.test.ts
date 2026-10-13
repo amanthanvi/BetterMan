@@ -7,12 +7,26 @@ import schema from "./schema";
 const modules = import.meta.glob("./**/*.ts");
 const now = 1_800_000_015_000;
 const windowStart = Math.floor(now / 60_000) * 60_000;
+const tagKey = "rate-limit-test-key";
+
+async function tagFor(identifier: string, secret = tagKey): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(identifier));
+  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(now);
+  vi.stubEnv("RATE_LIMIT_TAG_KEY", tagKey);
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
 
 describe("server-owned rate limits", () => {
   it.each([
@@ -26,14 +40,14 @@ describe("server-owned rate limits", () => {
       expiresAt: windowStart + 60_000,
     }));
 
-    expect(await t.mutation(api.rateLimit.enforce, { kind, identifier: "client" })).toEqual({
+    expect(await t.mutation(api.rateLimit.enforce, { kind, identifier: "client", tag: await tagFor("client") })).toEqual({
       allowed: true, count: limit, retryAfterSeconds: 45,
     });
-    expect(await t.mutation(api.rateLimit.enforce, { kind, identifier: "client" })).toEqual({
+    expect(await t.mutation(api.rateLimit.enforce, { kind, identifier: "client", tag: await tagFor("client") })).toEqual({
       allowed: false, count: limit + 1, retryAfterSeconds: 45,
     });
     const otherKind = kind === "search" ? "page" : "search";
-    expect(await t.mutation(api.rateLimit.enforce, { kind: otherKind, identifier: "client" })).toMatchObject({
+    expect(await t.mutation(api.rateLimit.enforce, { kind: otherKind, identifier: "client", tag: await tagFor("client") })).toMatchObject({
       allowed: true, count: 1,
     });
   });
@@ -46,11 +60,11 @@ describe("server-owned rate limits", () => {
       expiresAt: windowStart + 60_000,
     }));
     vi.setSystemTime(windowStart + 59_999);
-    expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier: "client" })).toEqual({
+    expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier: "client", tag: await tagFor("client") })).toEqual({
       allowed: false, count: 61, retryAfterSeconds: 1,
     });
     vi.setSystemTime(windowStart + 60_000);
-    expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier: "client" })).toEqual({
+    expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier: "client", tag: await tagFor("client") })).toEqual({
       allowed: true, count: 1, retryAfterSeconds: 60,
     });
   });
@@ -62,7 +76,7 @@ describe("server-owned rate limits", () => {
       count: 60,
       expiresAt: now,
     }));
-    expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier: "client" })).toEqual({
+    expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier: "client", tag: await tagFor("client") })).toEqual({
       allowed: true, count: 1, retryAfterSeconds: 45,
     });
     expect(await t.run((ctx) => ctx.db.get(bucketId))).toMatchObject({
@@ -74,15 +88,68 @@ describe("server-owned rate limits", () => {
   it("preserves bounded identifiers and rejects longer identifiers before writing a bucket", async () => {
     const t = convexTest(schema, modules);
     const identifier = "x".repeat(128);
-    expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier })).toMatchObject({
+    expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier, tag: await tagFor(identifier) })).toMatchObject({
       allowed: true, count: 1,
     });
     await expect(t.mutation(api.rateLimit.enforce, {
-      kind: "search", identifier: `${identifier}x`,
+      kind: "search", identifier: `${identifier}x`, tag: await tagFor(`${identifier}x`),
     })).rejects.toThrow("RATE_LIMIT_IDENTIFIER_TOO_LONG");
     const buckets = await t.run((ctx) => ctx.db.query("rateLimitBuckets").take(2));
     expect(buckets).toHaveLength(1);
     expect(buckets[0].key).toBe(`rl:search:${identifier}:${Math.floor(now / 60_000)}`);
+  });
+});
+
+describe("authenticated rate-limit mutations", () => {
+  it("accepts the standard HMAC-SHA256 test vector", async () => {
+    vi.stubEnv("RATE_LIMIT_TAG_KEY", "Jefe");
+    const t = convexTest(schema, modules);
+    expect(await t.mutation(api.rateLimit.enforce, {
+      kind: "search", identifier: "what do ya want for nothing?",
+      tag: "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843",
+    })).toMatchObject({ allowed: true, count: 1 });
+  });
+
+  it.each([
+    ["empty tag", ""],
+    ["malformed tag", "invalid"],
+    ["wrong tag", "0".repeat(64)],
+    ["oversized tag", "0".repeat(65)],
+  ])("rejects an %s before creating a bucket", async (_label, tag) => {
+    const t = convexTest(schema, modules);
+    await expect(t.mutation(api.rateLimit.enforce, {
+      kind: "search", identifier: "client", tag,
+    })).rejects.toThrow("RATE_LIMIT_TAG_INVALID");
+    expect(await t.run((ctx) => ctx.db.query("rateLimitBuckets").take(1))).toEqual([]);
+  });
+
+  it("rejects a tag for another identifier or key without incrementing an existing bucket", async () => {
+    const t = convexTest(schema, modules);
+    const bucketId = await t.run((ctx) => ctx.db.insert("rateLimitBuckets", {
+      key: `rl:search:client:${Math.floor(now / 60_000)}`, count: 10, expiresAt: windowStart + 60_000,
+    }));
+    for (const tag of [await tagFor("other-client"), await tagFor("client", "wrong-key")]) {
+      await expect(t.mutation(api.rateLimit.enforce, {
+        kind: "search", identifier: "client", tag,
+      })).rejects.toThrow("RATE_LIMIT_TAG_INVALID");
+    }
+    expect(await t.run((ctx) => ctx.db.get(bucketId))).toMatchObject({ count: 10 });
+  });
+
+  it("requires the tag argument before creating a bucket", async () => {
+    const t = convexTest(schema, modules);
+    // @ts-expect-error Exercise runtime argument validation for an untrusted caller.
+    await expect(t.mutation(api.rateLimit.enforce, { kind: "search", identifier: "client" })).rejects.toThrow();
+    expect(await t.run((ctx) => ctx.db.query("rateLimitBuckets").take(1))).toEqual([]);
+  });
+
+  it.each([undefined, "", "   "])("rejects an unset or blank configured key before writes", async (key) => {
+    vi.stubEnv("RATE_LIMIT_TAG_KEY", key);
+    const t = convexTest(schema, modules);
+    await expect(t.mutation(api.rateLimit.enforce, {
+      kind: "search", identifier: "client", tag: await tagFor("client"),
+    })).rejects.toThrow("RATE_LIMIT_TAG_KEY_NOT_CONFIGURED");
+    expect(await t.run((ctx) => ctx.db.query("rateLimitBuckets").take(1))).toEqual([]);
   });
 });
 

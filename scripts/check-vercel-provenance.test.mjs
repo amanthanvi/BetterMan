@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 import { requireVercelProvenance } from './check-vercel-provenance.mjs'
 
@@ -120,4 +124,99 @@ test('all production paths verify trusted tooling before deployment secrets are 
   const version = JSON.parse(readRepositoryFile('package.json')).devDependencies.vercel
   assert.match(version, /^\d+\.\d+\.\d+$/)
   assert.ok(deployment.includes(`if [[ "$(vercel --version)" != "${version}" ]]; then`))
+})
+
+function deploymentSmokeFixture(failure = '') {
+  const dir = mkdtempSync(join(tmpdir(), 'betterman-deploy-test-'))
+  const log = join(dir, 'commands.jsonl')
+  writeFileSync(join(dir, 'git'), '#!/usr/bin/env bash\necho fixture-sha\n')
+  writeFileSync(join(dir, 'vercel'), `#!${process.execPath}
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
+const args = process.argv.slice(2)
+const target = args[args.indexOf('--deployment') + 1]
+const promoted = process.env.SMOKE_PROMOTED
+const command = args[0]
+const record = { command }
+if (command === 'curl') {
+  record.path = args[1]
+  record.target = target
+  record.bypassesCache = args.includes('Cache-Control: no-cache, no-store') && args.includes('Pragma: no-cache')
+}
+appendFileSync(process.env.SMOKE_LOG, JSON.stringify(record) + '\\n')
+if (command === 'inspect') console.log(JSON.stringify({ id: existsSync(promoted) ? 'new-deployment' : 'previous-deployment', readyState: 'READY' }))
+if (command === 'deploy') console.log(JSON.stringify({ id: 'new-deployment', url: 'staged.betterman.test' }))
+if (command === 'api') console.log(JSON.stringify({ meta: { githubCommitSha: 'fixture-sha' } }))
+if (command === 'promote') writeFileSync(promoted, 'yes')
+if (command === 'curl') {
+  const path = args[1]
+  if (path.startsWith('/api/v1/search?')) {
+    const phase = target.includes('staged.') ? 'before' : 'after'
+    if (process.env.SMOKE_FAILURE === phase) process.exit(22)
+    const headerFile = args[args.indexOf('--dump-header') + 1]
+    writeFileSync(headerFile, process.env.SMOKE_FAILURE === 'missing-marker' ? 'HTTP/2 200\\r\\n' : 'HTTP/2 200\\r\\nServer-Timing: rate_limit;dur=1.0, total;dur=2.0\\r\\n')
+    console.log(JSON.stringify({ query: 'tar', results: [{ name: 'tar', section: '1' }] }))
+  } else if (path === '/api/v1/info') console.log(JSON.stringify({ datasetReleaseId: 'fixture-release' }))
+  else if (path === '/robots.txt') console.log('User-agent: *\\nSitemap: https://betterman.test/sitemap.xml')
+  else if (path === '/sitemap.xml') console.log('<sitemapindex><loc>https://betterman.test/sitemap-1.xml</loc></sitemapindex>')
+  else if (path === '/man/tar/1') console.log('<title>tar(1)</title><script id="bm-jsonld:fixture"></script>')
+}
+`)
+  chmodSync(join(dir, 'git'), 0o755)
+  chmodSync(join(dir, 'vercel'), 0o755)
+  const result = spawnSync('bash', ['scripts/deploy-vercel.sh'], {
+    cwd: fileURLToPath(new URL('../', import.meta.url)),
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${dir}:${process.env.PATH}`,
+      RUNNER_TEMP: dir,
+      GITHUB_OUTPUT: '',
+      BETTERMAN_DEPLOY_REF: 'main', BETTERMAN_DEPLOY_SHA: 'fixture-sha',
+      BETTERMAN_PRODUCTION_DOMAIN: 'betterman.test', BETTERMAN_REQUIRE_CURRENT_MAIN: 'false',
+      VERCEL_ORG_ID: 'fixture-org', VERCEL_PROJECT_ID: 'fixture-project', VERCEL_TOKEN: 'fixture-token',
+      SMOKE_LOG: log, SMOKE_PROMOTED: join(dir, 'promoted'), SMOKE_FAILURE: failure,
+    },
+  })
+  const commands = readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
+  rmSync(dir, { recursive: true, force: true })
+  return { ...result, commands }
+}
+
+test('deployment checks fresh authenticated search before promotion and on both production aliases', () => {
+  const { status, stderr, commands } = deploymentSmokeFixture()
+  assert.equal(status, 0, stderr)
+  const searches = commands.filter((row) => row.path?.startsWith('/api/v1/search?'))
+  assert.equal(searches.length, 3)
+  assert.deepEqual(searches.map((row) => row.target), ['https://staged.betterman.test', 'https://betterman.test', 'https://www.betterman.test'])
+  assert.equal(new Set(searches.map((row) => row.path)).size, 3)
+  for (const search of searches) {
+    assert.ok(search.bypassesCache)
+    const params = new URLSearchParams(search.path.split('?')[1])
+    assert.equal(params.get('q'), 'tar')
+    assert.equal(params.get('limit'), '1')
+    assert.ok(params.get('bm_deploy_smoke'))
+  }
+  const promotion = commands.findIndex((row) => row.command === 'promote')
+  assert.ok(commands.indexOf(searches[0]) < promotion)
+  assert.ok(commands.indexOf(searches[1]) > promotion)
+  assert.ok(commands.indexOf(searches[2]) > promotion)
+  assert.equal(commands.some((row) => row.command === 'rollback'), false)
+})
+
+test('failed authenticated staged search or absent timing proof blocks promotion', () => {
+  for (const failure of ['before', 'missing-marker']) {
+    const { status, commands } = deploymentSmokeFixture(failure)
+    assert.notEqual(status, 0)
+    assert.equal(commands.some((row) => row.command === 'promote'), false)
+    assert.equal(commands.some((row) => row.command === 'rollback'), false)
+  }
+})
+
+test('failed authenticated production search rolls back Vercel and reports the Convex recovery limit', () => {
+  const { status, stderr, commands } = deploymentSmokeFixture('after')
+  assert.notEqual(status, 0)
+  assert.ok(commands.some((row) => row.command === 'promote'))
+  assert.ok(commands.some((row) => row.command === 'rollback'))
+  assert.match(stderr, /restores Vercel only/)
+  assert.match(stderr, /docs\/RELEASING\.md/)
 })

@@ -8,15 +8,44 @@ const LIMITS = {
   page: { limit: 300, windowSeconds: 60 },
 } as const;
 
+async function requireIdentifierTag(identifier: string, tag: string): Promise<void> {
+  const configured = process.env.RATE_LIMIT_TAG_KEY;
+  if (!configured?.trim()) throw new Error("RATE_LIMIT_TAG_KEY_NOT_CONFIGURED");
+  if (!/^[0-9a-f]{64}$/.test(tag)) throw new Error("RATE_LIMIT_TAG_INVALID");
+
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", encoder.encode(configured), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(identifier));
+  const expected = Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
+
+  // Match http.ts: hash both strings before comparing every byte, so a
+  // tag's shared prefix cannot short-circuit comparison.
+  const [actualDigest, expectedDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(tag)),
+    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+  ]);
+  const actualBytes = new Uint8Array(actualDigest);
+  const expectedBytes = new Uint8Array(expectedDigest);
+  let diff = 0;
+  for (let index = 0; index < actualBytes.length; index += 1) {
+    diff |= actualBytes[index] ^ expectedBytes[index];
+  }
+  if (diff !== 0) throw new Error("RATE_LIMIT_TAG_INVALID");
+}
+
 export const enforce = mutation({
   args: {
     kind: v.union(v.literal("search"), v.literal("page")),
     identifier: v.string(),
+    tag: v.string(),
   },
   handler: async (ctx, args) => {
     if (args.identifier.length > 128) {
       throw new Error("RATE_LIMIT_IDENTIFIER_TOO_LONG");
     }
+    await requireIdentifierTag(args.identifier, args.tag);
     const { limit, windowSeconds } = LIMITS[args.kind];
 
     // Derived here rather than accepted from the caller: a caller-supplied

@@ -105,6 +105,28 @@ fi
 
 smoke_dir="$(mktemp -d "${RUNNER_TEMP:-/tmp}/betterman-vercel-smoke.XXXXXX")"
 
+# A fresh URL and cache directives force a protected route through Next's
+# signing gate and the deployed Convex mutation, rather than a cached page.
+rate_limit_smoke() {
+  local target="$1" phase="$2"
+  local path="/api/v1/search?q=tar&limit=1&bm_deploy_smoke=${deployment_id}-${phase}-${RANDOM}"
+  vercel curl "$path" \
+    --deployment "$target" \
+    --yes \
+    -- --fail --location --silent --show-error \
+    --header 'Cache-Control: no-cache, no-store' \
+    --header 'Pragma: no-cache' \
+    --dump-header "${smoke_dir}/${phase}-search.headers" >"${smoke_dir}/${phase}-search.json"
+  if ! jq -e '.query == "tar" and (.results | type == "array" and length > 0)' \
+    "${smoke_dir}/${phase}-search.json" >/dev/null ||
+    ! grep -Eqi '^Server-Timing:.*rate_limit;dur=' "${smoke_dir}/${phase}-search.headers"; then
+    echo "Authenticated search smoke failed (${phase})." >&2
+    return 1
+  fi
+}
+
+rate_limit_smoke "$deployment_url" "before-promotion"
+
 vercel curl /api/v1/info \
   --deployment "$deployment_url" \
   --yes \
@@ -151,6 +173,7 @@ rollback_on_failure() {
   trap - EXIT INT TERM
   if [[ "$status" -ne 0 && "$promotion_verified" != "true" && "$previous_production_id" != "$deployment_id" ]]; then
     echo "Production promotion or verification failed; rolling back to ${previous_production_id}." >&2
+    echo "This restores Vercel only. Convex contract changes may require coordinated recovery; see docs/RELEASING.md." >&2
     vercel rollback "$previous_production_id" --yes --token="$VERCEL_TOKEN" >&2 || \
       echo "Automatic rollback failed; restore ${previous_production_id} manually." >&2
   fi
@@ -181,6 +204,8 @@ for domain in "$BETTERMAN_PRODUCTION_DOMAIN" "www.${BETTERMAN_PRODUCTION_DOMAIN}
     echo "Production alias ${domain} points to ${production_id:-unknown}, expected ${deployment_id}." >&2
     exit 1
   fi
+
+  rate_limit_smoke "https://${domain}" "after-promotion-${domain}"
 
   vercel curl /api/v1/info \
     --deployment "https://${domain}" \
