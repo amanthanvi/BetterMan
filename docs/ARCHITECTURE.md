@@ -20,7 +20,11 @@ GitHub Actions (ingestion/)
 
 ## Requests
 
-A man page request hits `nextjs/app/man/[name]/[section]/page.tsx`, which calls `fetchManPage` in `nextjs/lib/api.ts`. That resolves the `prod` pointer inside Convex, loads metadata and content, and renders through `components/doc/DocRenderer.tsx`. Search works the same way through `convex/queries.ts`. Public Convex functions cannot be pointed at `staging`; CI checks this.
+A man page request hits `nextjs/app/man/[name]/[section]/page.tsx`, which calls `fetchManByNameAndSectionOrAlias` in `nextjs/lib/api.ts`. That resolves the `prod` pointer inside Convex, loads metadata and content, and renders the complete body through `components/doc/ServerDoc.tsx` and its pure `BlockView` helpers. Search works the same way through `convex/queries.ts`. Public Convex functions cannot be pointed at `staging`; CI checks this.
+
+The server filters sections already shown in the header and passes the rendered body as `ManPageView` children. Client orchestration receives TOC, synopsis, options, and cross-reference metadata, never document blocks. `CodeBlock` remains a client island for copy and lazy syntax highlighting. The rendered children still appear in the RSC payload; this removes the serialized AST and its client rendering work, not all repeated document text on the wire.
+
+Every body block stays mounted. `data-bm-block` opts into `content-visibility: auto` with `contain-intrinsic-size: auto 6rem`: the browser remembers measured sizes, using a fixed CSS fallback before first layout. There is no AST-based height estimator or unmount virtualization. Browsers without support lay out the full document normally; print forces all blocks visible. Full-DOM anchors support native links, and client TOC tracking reads heading rectangles in document order. Find and option highlights operate on body text nodes, preserving inline formatting and ignoring hidden annotations and controls.
 
 Personalization (theme, distro, bookmarks, history, reading preferences) lives in the browser. Theme and distro are mirrored into cookies so the server can render the right first paint.
 
