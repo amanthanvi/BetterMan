@@ -83,10 +83,18 @@ export function Toc({
                 onClick={(e) => {
                   if (onNavigateToId) {
                     e.preventDefault()
+                    let currentId: string | null = null
                     try {
-                      window.location.hash = item.id
+                      currentId = decodeURIComponent(window.location.hash.slice(1))
                     } catch {
                       // ignore
+                    }
+                    if (currentId !== item.id) {
+                      try {
+                        window.history.pushState(null, '', `#${encodeURIComponent(item.id)}`)
+                      } catch {
+                        // ignore
+                      }
                     }
                     onNavigateToId(item.id)
                   }

@@ -4,8 +4,8 @@ export function getScrollBehavior(): 'auto' | 'smooth' {
 }
 
 /**
- * Retry scrollIntoView until the target exists in the DOM — virtualized
- * content mounts asynchronously after a virtualizer scroll.
+ * Scroll on the next frame so hash-driven option expansion has committed.
+ * Retries also cover anchors arriving through a streamed server document.
  */
 export function scrollToIdWhenRendered(
   id: string,
