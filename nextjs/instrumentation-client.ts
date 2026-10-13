@@ -43,18 +43,57 @@ function loadSentry(): Promise<typeof import('@sentry/nextjs')> {
   return sentryReady
 }
 
+// Buffer pre-init browser errors (event-handler exceptions, unhandled
+// rejections) that React boundaries never see; replay after Sentry loads.
+const earlyErrors: unknown[] = []
+const onError = (event: ErrorEvent) => {
+  earlyErrors.push(event.error ?? event.message)
+}
+const onRejection = (event: PromiseRejectionEvent) => {
+  earlyErrors.push(event.reason)
+}
+let earlyListening = false
+let earlyFlushed = false
+
+function drainEarlyErrors(Sentry: typeof import('@sentry/nextjs')) {
+  if (earlyFlushed || typeof window === 'undefined') return
+  earlyFlushed = true
+  if (earlyListening) {
+    window.removeEventListener('error', onError)
+    window.removeEventListener('unhandledrejection', onRejection)
+    earlyListening = false
+  }
+  for (const err of earlyErrors.splice(0)) Sentry.captureException(err)
+}
+
 if (typeof window !== 'undefined') {
+  window.addEventListener('error', onError)
+  window.addEventListener('unhandledrejection', onRejection)
+  earlyListening = true
+
   const w = window as Window & {
     requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void
   }
-  if (w.requestIdleCallback) w.requestIdleCallback(() => void loadSentry(), { timeout: 3000 })
-  else window.setTimeout(() => void loadSentry(), 0)
+  const flush = () =>
+    void loadSentry()
+      .then(drainEarlyErrors)
+      .catch(() => {
+        // Chunk load failed; the listeners stay until a later capture drains.
+      })
+
+  if (w.requestIdleCallback) w.requestIdleCallback(flush, { timeout: 3000 })
+  else window.setTimeout(flush, 0)
 }
 
 /** Capture an exception from an error boundary, initializing Sentry first if needed. */
 export function captureClientException(error: unknown): void {
   void loadSentry()
-    .then((Sentry) => Sentry.captureException(error))
+    .then((Sentry) => {
+      // Any successful load drains the early-error buffer, not just the
+      // scheduled idle flush — a failed scheduled flush must not strand it.
+      drainEarlyErrors(Sentry)
+      Sentry.captureException(error)
+    })
     .catch(() => {
       // Telemetry must never throw into the error path that produced it.
     })
