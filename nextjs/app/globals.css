@@ -482,3 +482,27 @@
     }
   }
 }
+
+/* Keep the complete document mounted; the browser may skip off-screen layout
+   and paint. `auto` remembers measured sizes; 6rem is a CSS fallback, not an
+   AST height estimator. Unsupported browsers render the ordinary full flow. */
+[data-bm-block] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 6rem;
+}
+
+/* Let focus outlines paint outside containment while a reader interacts. */
+[data-bm-block]:focus-within {
+  content-visibility: visible;
+}
+
+[data-bm-block-type="heading"]:not(:first-child) > [data-level] {
+  padding-top: 2rem;
+}
+
+@media print {
+  [data-bm-block] {
+    content-visibility: visible;
+    contain-intrinsic-size: none;
+  }
+}

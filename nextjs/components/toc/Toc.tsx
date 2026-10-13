@@ -84,7 +84,7 @@ export function Toc({
                   if (onNavigateToId) {
                     e.preventDefault()
                     try {
-                      window.location.hash = item.id
+                      window.history.pushState(null, '', `#${encodeURIComponent(item.id)}`)
                     } catch {
                       // ignore
                     }

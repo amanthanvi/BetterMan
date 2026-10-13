@@ -1,12 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { SectionPage } from '../../lib/api'
 import type { ManPage, ManPageContent, ManPageVariant, OptionItem } from '../../lib/docModel'
 import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
-import { DocRenderer, shouldVirtualizeBlocks } from '../doc/DocRenderer'
 import { RecentPageRecorder } from '../recent/RecentPageRecorder'
 import { useDistro } from '../state/distro'
 import { useToc } from '../state/toc'
@@ -18,7 +17,6 @@ import { ManPageFooterSections } from './ManPageFooterSections'
 import { ManPageHeaderCard } from './ManPageHeaderCard'
 import { ManPageOptionsSection, OPTIONS_COLLAPSE_THRESHOLD } from './ManPageOptionsSection'
 import { ManSectionLabel } from './RunningHead'
-import { stripHeaderSections } from './stripHeaderSections'
 import { useManPageFind } from './useManPageFind'
 
 export function ManPageView({
@@ -26,26 +24,25 @@ export function ManPageView({
   content,
   variants,
   relatedItems,
+  children,
 }: {
   page: ManPage
-  content: ManPageContent
+  content: Omit<ManPageContent, 'blocks'>
   variants: ManPageVariant[]
   relatedItems: SectionPage[]
+  children: ReactNode
 }) {
   const toc = useToc()
   const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
   const distro = useDistro()
 
-  const body = useMemo(
-    () => stripHeaderSections(content.blocks, content.toc ?? [], { hasSynopsis: Boolean(content.synopsis?.length) }),
-    [content.blocks, content.synopsis, content.toc],
-  )
-  const manFind = useManPageFind({ blocks: body.blocks })
+  const bodyToc = content.toc
+  const articleRef = useRef<HTMLDivElement | null>(null)
 
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
   const [flashAnchorId, setFlashAnchorId] = useState<string | null>(null)
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
-  const activeTocId = activeHeadingId ?? body.toc[0]?.id ?? null
+  const activeTocId = activeHeadingId ?? bodyToc[0]?.id ?? null
 
   const [copiedLink, setCopiedLink] = useState(false)
   const copyTimeoutRef = useRef<number | null>(null)
@@ -55,15 +52,15 @@ export function ManPageView({
   const flashTimeoutRef = useRef<number | null>(null)
 
   const optionTerms = useMemo(() => (selectedOption ? parseOptionTerms(selectedOption.flags) : []), [selectedOption])
-  const shouldVirtualize = useMemo(() => shouldVirtualizeBlocks(body.blocks), [body.blocks])
+  const manFind = useManPageFind({ articleRef, optionTerms, documentKey: page.id })
 
-  const hasToc = body.toc.length > 0
+  const hasToc = bodyToc.length > 0
   const desktopSidebarExpanded = hasToc && sidebarOpen
 
   useEffect(() => {
-    setItems(body.toc)
+    setItems(bodyToc)
     return () => setItems([])
-  }, [body.toc, setItems])
+  }, [bodyToc, setItems])
 
   useEffect(() => {
     setActiveId(activeTocId)
@@ -87,13 +84,12 @@ export function ManPageView({
   useEffect(() => {
     setScrollToId((id) => {
       setActiveHeadingId(id)
-      manFind.docRef.current?.scrollToAnchor(id)
+      scrollToIdWhenRendered(id, { behavior: getScrollBehavior(), block: 'start' })
     })
     return () => setScrollToId(null)
-  }, [manFind.docRef, setScrollToId])
+  }, [setScrollToId])
 
-  // Ctrl/⌘+F from the app shell opens the find bar (native find misses
-  // virtualized content, so the custom find bar must take over on man pages).
+  // Ctrl/⌘+F from the app shell opens the custom find bar on man pages.
   const openFindRef = useRef(manFind.openFind)
   useEffect(() => {
     openFindRef.current = manFind.openFind
@@ -105,51 +101,80 @@ export function ManPageView({
   }, [])
 
   useEffect(() => {
-    if (shouldVirtualize) return
+    const root = articleRef.current
+    if (!root) return
+    // Query in document order, including nested headings. Index/offset estimates
+    // are unnecessary now that every anchor remains mounted.
+    const ids = new Set(bodyToc.map((item) => item.id))
+    const headings = Array.from(root.querySelectorAll<HTMLElement>('h2[id], h3[id], h4[id], h5[id], h6[id]'))
+      .filter((heading) => ids.has(heading.id))
+    if (!headings.length) return
 
-    const ids = body.toc.map((t) => t.id).filter(Boolean)
-    const els = ids
-      .map((id) => document.getElementById(id))
-      .filter((el): el is HTMLElement => Boolean(el))
-
-    if (!els.length) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting)
-        if (!visible.length) return
-        visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        const target = visible[0]?.target
-        const next = target instanceof HTMLElement ? target.id : ''
-        if (next) setActiveHeadingId(next)
-      },
-      { root: null, threshold: [0, 1], rootMargin: '-20% 0px -70% 0px' },
-    )
-
-    for (const el of els) observer.observe(el)
-    return () => observer.disconnect()
-  }, [body.toc, shouldVirtualize, page.id])
-
-  useEffect(() => {
-    const options = content.options ?? []
-    if (!options.length) return
-
-    const byAnchor = new Map(options.map((o) => [o.anchorId, o]))
-
-    const applyHash = () => {
-      const raw = window.location.hash
-      const anchorId = raw.startsWith('#') ? raw.slice(1) : raw
-      if (!anchorId) return
-      const opt = byAnchor.get(anchorId)
-      if (!opt) return
-
-      setOptionsExpanded(true)
-      setSelectedOption(opt)
-      flashOption(opt.anchorId)
-
-      scrollToIdWhenRendered(opt.anchorId, { behavior: getScrollBehavior(), block: 'center' })
+    const groups = new Map<HTMLElement, HTMLElement[]>()
+    for (const heading of headings) {
+      const block = heading.closest<HTMLElement>('[data-bm-block]') ?? heading
+      const group = groups.get(block) ?? []
+      group.push(heading)
+      groups.set(block, group)
     }
 
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const readingLine = Math.max(140, window.innerHeight * 0.2)
+      let active = headings[0]!
+      for (const [block, group] of groups) {
+        const rect = block.getBoundingClientRect()
+        if (rect.top > readingLine) break
+        if (rect.bottom <= readingLine) {
+          // A passed block's last heading wins without laying out its skipped
+          // descendants. Read nested geometry only at the current reading line.
+          active = group[group.length - 1]!
+          continue
+        }
+        for (const heading of group) {
+          if (heading.getBoundingClientRect().top > readingLine) break
+          active = heading
+        }
+      }
+      setActiveHeadingId(active.id)
+    }
+    const scheduleUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(update)
+    }
+    const observer = new IntersectionObserver(scheduleUpdate, {
+      root: null, threshold: [0, 1], rootMargin: '-20% 0px -70% 0px',
+    })
+    for (const heading of headings) observer.observe(heading)
+    update()
+    window.addEventListener('scroll', scheduleUpdate, { passive: true })
+    window.addEventListener('resize', scheduleUpdate)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', scheduleUpdate)
+      window.removeEventListener('resize', scheduleUpdate)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
+  }, [bodyToc, page.id])
+
+  useEffect(() => {
+    const byAnchor = new Map((content.options ?? []).map((option) => [option.anchorId, option]))
+    const applyHash = () => {
+      let anchorId: string
+      try {
+        anchorId = decodeURIComponent(window.location.hash.slice(1))
+      } catch {
+        return
+      }
+      if (!anchorId) return
+      const option = byAnchor.get(anchorId)
+      if (option) {
+        setOptionsExpanded(true)
+        setSelectedOption(option)
+        flashOption(option.anchorId)
+      }
+      scrollToIdWhenRendered(anchorId, { behavior: 'auto', block: option ? 'center' : 'start' })
+    }
     applyHash()
     window.addEventListener('hashchange', applyHash)
     return () => window.removeEventListener('hashchange', applyHash)
@@ -195,7 +220,7 @@ export function ManPageView({
     }
 
     flashOption(opt.anchorId)
-    document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
+    scrollToIdWhenRendered(opt.anchorId, { behavior: scrollBehavior, block: 'center' })
   }
 
   const onFindKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -262,7 +287,7 @@ export function ManPageView({
 
                     <div className="mt-3">
                       <Toc
-                        items={body.toc}
+                        items={bodyToc}
                         activeId={activeTocId}
                         showTitle={false}
                         onNavigateToId={scrollToId ?? undefined}
@@ -300,14 +325,7 @@ export function ManPageView({
             onSelectOption={onSelectOption}
           />
 
-          <DocRenderer
-            ref={manFind.docRef}
-            blocks={body.blocks}
-            distro={distro.distro}
-            findQuery={manFind.findEnabled ? manFind.findQuery : undefined}
-            optionTerms={optionTerms}
-            onActiveHeadingChange={shouldVirtualize ? setActiveHeadingId : undefined}
-          />
+          <div ref={articleRef}>{children}</div>
 
           <ManPageFooterSections
             distro={distro.distro}

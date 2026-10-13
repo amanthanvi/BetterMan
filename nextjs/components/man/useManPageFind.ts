@@ -1,27 +1,36 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 
-import type { BlockNode } from '../../lib/docModel'
+import { applyDocHighlights, clearDocHighlights, type DocFindMatch } from '../../lib/docHighlights'
 import { getScrollBehavior } from '../../lib/scroll'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
-import type { DocRendererHandle } from '../doc/DocRenderer'
-import { buildFindIndex, locateFindMatch } from './findIndex'
 
 const FIND_DEBOUNCE_MS = 150
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
-export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
+const NO_OPTION_TERMS: readonly string[] = []
+
+export function useManPageFind({
+  articleRef,
+  optionTerms = NO_OPTION_TERMS,
+  documentKey,
+}: {
+  articleRef: RefObject<HTMLElement | null>
+  optionTerms?: readonly string[]
+  documentKey?: string
+}) {
   const [find, setFind] = useState('')
   const [findOpen, setFindOpen] = useState(false)
   const [activeFindIndex, setActiveFindIndex] = useState(0)
-
-  const activeMarkRef = useRef<HTMLElement | null>(null)
+  const [matchCount, setMatchCount] = useState(0)
+  const matchesRef = useRef<DocFindMatch[]>([])
+  const activeFindIndexRef = useRef(0)
+  const activeMarkRef = useRef<DocFindMatch>([])
   const focusRestoreFrameRef = useRef<number | null>(null)
   const pendingFocusRestoreTargetRef = useRef<HTMLElement | null>(null)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const findInputRef = useRef<HTMLInputElement | null>(null)
-  const docRef = useRef<DocRendererHandle | null>(null)
 
   const rawFindQuery = find.trim()
   const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
@@ -32,14 +41,8 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
 
   const effectiveFindQuery = debouncedFindQuery
   const isStale = effectiveFindQuery !== findQuery
-  const findEnabled = !isStale && effectiveFindQuery.length >= 2
+  const findEnabled = findOpen && !isStale && effectiveFindQuery.length >= 2
 
-  const findIndex = useMemo(
-    () => (findEnabled ? buildFindIndex(blocks, effectiveFindQuery) : null),
-    [blocks, effectiveFindQuery, findEnabled],
-  )
-
-  const matchCount = findIndex?.total ?? 0
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
 
   const findCountLabel =
@@ -88,80 +91,96 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     focusFindInput()
   }
 
-  const scrollToFind = (idx: number) => {
-    if (!matchCount) return
-    const clamped = ((idx % matchCount) + matchCount) % matchCount
-    const scrollBehavior = getScrollBehavior()
+  const activateMatch = useCallback((index: number, scroll = false) => {
+    for (const mark of activeMarkRef.current) mark.classList.remove('bm-find-active')
+    const matches = matchesRef.current
+    const next = matches.length ? ((index % matches.length) + matches.length) % matches.length : 0
+    const marks = matches[next] ?? []
+    for (const mark of marks) mark.classList.add('bm-find-active')
+    activeMarkRef.current = marks
+    activeFindIndexRef.current = next
+    setActiveFindIndex(next)
+    if (scroll) marks[0]?.scrollIntoView({ behavior: getScrollBehavior(), block: 'center' })
+  }, [])
 
-    if (docRef.current?.isVirtualized && findIndex) {
-      const loc = locateFindMatch(findIndex.prefixByBlock, clamped)
-      if (!loc) return
+  useEffect(() => {
+    activeFindIndexRef.current = 0
+    setActiveFindIndex(0)
+  }, [documentKey])
 
-      docRef.current.scrollToBlockIndex(loc.blockIndex, { align: 'center', behavior: scrollBehavior })
-
-      let attempts = 0
-      const tick = () => {
-        attempts += 1
-        const block = document.querySelector<HTMLElement>(`[data-bm-block-index="${loc.blockIndex}"]`)
-        const marks = block ? Array.from(block.querySelectorAll<HTMLElement>('mark[data-bm-find]')) : []
-        if (marks.length) {
-          const el = marks[Math.min(loc.withinBlockIndex, marks.length - 1)]
-          if (!el) return
-          el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
-          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-          el.classList.add('bm-find-active')
-          activeMarkRef.current = el
-          return
-        }
-        if (attempts < 20) window.requestAnimationFrame(tick)
-      }
-
-      window.requestAnimationFrame(tick)
-      return
+  useEffect(() => {
+    const article = articleRef.current
+    if (!article) return
+    let frame: number | null = null
+    const observer = new MutationObserver(() => {
+      if (frame !== null) return
+      frame = window.requestAnimationFrame(() => {
+        frame = null
+        update()
+      })
+    })
+    const update = () => {
+      // Ignore our own mark insertion/removal; observe only renderer changes,
+      // including lazy syntax highlighting replacing a code block's HTML.
+      observer.disconnect()
+      matchesRef.current = applyDocHighlights(article, {
+        findQuery: findEnabled ? effectiveFindQuery : undefined,
+        optionTerms,
+      })
+      setMatchCount(matchesRef.current.length)
+      activateMatch(Math.min(activeFindIndexRef.current, Math.max(0, matchesRef.current.length - 1)))
+      observer.observe(article, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'hidden', 'inert'],
+      })
     }
+    update()
+    return () => {
+      observer.disconnect()
+      if (frame !== null) window.cancelAnimationFrame(frame)
+      clearDocHighlights(article)
+      matchesRef.current = []
+      activeMarkRef.current = []
+    }
+  }, [activateMatch, articleRef, documentKey, effectiveFindQuery, findEnabled, optionTerms])
 
-    const marks = Array.from(document.querySelectorAll<HTMLElement>('mark[data-bm-find]'))
-    if (!marks.length) return
-    const el = marks[Math.min(clamped, marks.length - 1)]
-    if (!el) return
-    el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
-    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-    el.classList.add('bm-find-active')
-    activeMarkRef.current = el
-  }
+  const scrollToFind = (idx: number) => activateMatch(idx, true)
 
   const goPrev = () => {
     if (!matchCount) return
-    const idx = (activeFindIndex - 1 + matchCount) % matchCount
-    setActiveFindIndex(idx)
+    const idx = (activeFindIndexRef.current - 1 + matchCount) % matchCount
     scrollToFind(idx)
   }
 
   const goNext = () => {
     if (!matchCount) return
-    const idx = (activeFindIndex + 1) % matchCount
-    setActiveFindIndex(idx)
+    const idx = (activeFindIndexRef.current + 1) % matchCount
     scrollToFind(idx)
   }
 
   const onFindChange = (next: string) => {
     setFind(next)
+    activeFindIndexRef.current = 0
     setActiveFindIndex(0)
-    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-    activeMarkRef.current = null
+    for (const mark of activeMarkRef.current) mark.classList.remove('bm-find-active')
+    activeMarkRef.current = []
   }
 
   const onClearFind = () => {
     setFind('')
+    activeFindIndexRef.current = 0
     setActiveFindIndex(0)
-    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-    activeMarkRef.current = null
+    for (const mark of activeMarkRef.current) mark.classList.remove('bm-find-active')
+    activeMarkRef.current = []
   }
 
   const closeFind = () => {
     if (focusRestoreFrameRef.current !== null) return
-    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-    activeMarkRef.current = null
+    for (const mark of activeMarkRef.current) mark.classList.remove('bm-find-active')
+    activeMarkRef.current = []
     const previouslyFocused = previouslyFocusedRef.current
     previouslyFocusedRef.current = null
     pendingFocusRestoreTargetRef.current = previouslyFocused
@@ -175,7 +194,6 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   }
 
   return {
-    docRef,
     find,
     findOpen,
     findInputRef,

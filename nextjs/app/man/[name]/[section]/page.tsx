@@ -3,6 +3,8 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, permanentRedirect } from 'next/navigation'
 
+import { ServerDoc } from '../../../../components/doc/ServerDoc'
+import { stripHeaderSections } from '../../../../components/man/stripHeaderSections'
 import { ManPageView } from '../../../../components/man/ManPageView'
 import { JsonLdHead } from '../../../../components/seo/JsonLdHead'
 import {
@@ -119,6 +121,16 @@ export default async function ManByNameAndSectionPage({
     }
     const pageData = resolved.data
 
+    const body = stripHeaderSections(pageData.content.blocks, pageData.content.toc ?? [], {
+      hasSynopsis: Boolean(pageData.content.synopsis?.length),
+    })
+    const controls = {
+      toc: body.toc,
+      synopsis: pageData.content.synopsis,
+      options: pageData.content.options,
+      seeAlso: pageData.content.seeAlso,
+    }
+
     const nonce = (await headers()).get('x-nonce') ?? undefined
     const jsonLd = safeJsonLdStringify({
       '@context': 'https://schema.org',
@@ -146,10 +158,12 @@ export default async function ManByNameAndSectionPage({
         <ManPageView
           key={pageData.page.id}
           page={pageData.page}
-          content={pageData.content}
+          content={controls}
           variants={pageData.variants}
           relatedItems={related.items}
-        />
+        >
+          <ServerDoc blocks={body.blocks} distro={activeDistro} />
+        </ManPageView>
       </>
     )
   } catch (err) {
