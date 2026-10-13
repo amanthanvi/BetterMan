@@ -96,7 +96,10 @@ class ConvexIngestClient:
             with urlopen(req, timeout=timeout_seconds) as res:
                 raw = res.read().decode("utf-8")
         except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
+            try:
+                detail = exc.read().decode("utf-8", errors="replace")
+            except Exception:  # noqa: BLE001 - error body is best-effort
+                detail = f"<unreadable error body: {exc}>"
             if exc.code == 409 and path == "/ingest/activate":
                 try:
                     pending = json.loads(detail)
