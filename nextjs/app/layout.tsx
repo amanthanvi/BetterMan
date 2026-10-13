@@ -3,6 +3,7 @@ import { cookies, headers } from 'next/headers'
 import './globals.css'
 import { fetchInfo } from '../lib/api'
 import { DISTRO_COOKIE, normalizeDistro } from '../lib/distro'
+import { READING_PREFS_COOKIE, prefsFromCookieString } from '../lib/readingPrefs'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const resolved = cookieStore.get('bm-theme-resolved')?.value
   const theme = resolved === 'dark' || resolved === 'light' ? resolved : undefined
+  const initialReadingPrefs = prefsFromCookieString(cookieStore.get(READING_PREFS_COOKIE)?.value)
 
   const cookieDistro = cookieStore.get(DISTRO_COOKIE)?.value
   const initialCookieDistro = normalizeDistro(cookieDistro) ?? undefined
@@ -72,8 +74,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <link rel="search" type="application/opensearchdescription+xml" title="BetterMan" href="/opensearch.xml" />
       </head>
-      <body suppressHydrationWarning>
-        <Providers initialCookieDistro={initialCookieDistro} initialInfo={initialInfo}>{children}</Providers>
+      <body
+        data-bm-font-size={initialReadingPrefs.fontSize}
+        data-bm-font-family={initialReadingPrefs.fontFamily}
+        data-bm-line-height={initialReadingPrefs.lineHeight}
+        data-bm-column-width={initialReadingPrefs.columnWidth}
+        data-bm-code-theme={initialReadingPrefs.codeTheme}
+        suppressHydrationWarning
+      >
+        <Providers
+          initialCookieDistro={initialCookieDistro}
+          initialInfo={initialInfo}
+          initialReadingPrefs={initialReadingPrefs}
+        >
+          {children}
+        </Providers>
         {plausibleDomain ? (
           <script defer src="https://plausible.io/js/script.js" data-domain={plausibleDomain} nonce={nonce} />
         ) : null}

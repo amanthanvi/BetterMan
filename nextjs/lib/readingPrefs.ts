@@ -8,23 +8,50 @@ export type ReadingPreferences = {
 }
 
 export const READING_PREFS_STORAGE_KEY = 'bm-reading-prefs'
+export const READING_PREFS_COOKIE = 'bm-reading-prefs'
 export const READING_PREFS_EVENT = 'bm:reading-prefs-changed'
 
+// Defaults mirror the SSR fallback in globals.css and DESIGN.md.
 const DEFAULT_PREFS: ReadingPreferences = {
   version: 1,
   fontSize: 'medium',
-  fontFamily: 'serif',
-  lineHeight: 'relaxed',
+  fontFamily: 'sans',
+  lineHeight: 'normal',
   columnWidth: 'normal',
   codeTheme: 'auto',
 }
 
-function readRaw(): unknown {
+function readRaw(): string | null {
   try {
-    const raw = localStorage.getItem(READING_PREFS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    return localStorage.getItem(READING_PREFS_STORAGE_KEY)
   } catch {
     return null
+  }
+}
+
+export function prefsFromCookieString(raw: string | null | undefined): ReadingPreferences {
+  try {
+    return raw ? parsePrefs(JSON.parse(decodeURIComponent(raw))) : DEFAULT_PREFS
+  } catch {
+    return DEFAULT_PREFS
+  }
+}
+
+function prefsFromBrowserCookie(): ReadingPreferences {
+  try {
+    const prefix = `${READING_PREFS_COOKIE}=`
+    const cookie = document.cookie.split(';').map((entry) => entry.trim()).find((entry) => entry.startsWith(prefix))
+    return prefsFromCookieString(cookie?.slice(prefix.length))
+  } catch {
+    return DEFAULT_PREFS
+  }
+}
+
+export function syncReadingPrefsCookie(prefs: ReadingPreferences) {
+  try {
+    document.cookie = `${READING_PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(prefs))}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`
+  } catch {
+    // Cookie persistence is best-effort, independently of localStorage.
   }
 }
 
@@ -55,9 +82,9 @@ function parsePrefs(raw: unknown): ReadingPreferences {
   }
 }
 
-function emitChanged() {
+function emitChanged(prefs: ReadingPreferences) {
   try {
-    window.dispatchEvent(new CustomEvent(READING_PREFS_EVENT))
+    window.dispatchEvent(new CustomEvent(READING_PREFS_EVENT, { detail: prefs }))
   } catch {
     // ignore
   }
@@ -69,11 +96,20 @@ function writePrefs(prefs: ReadingPreferences) {
   } catch {
     // ignore
   }
-  emitChanged()
+  syncReadingPrefsCookie(prefs)
+  emitChanged(prefs)
 }
 
 export function getReadingPrefs(): ReadingPreferences {
-  return parsePrefs(readRaw())
+  // localStorage wins after hydration; the cookie seeds SSR and is a fallback
+  // when localStorage is absent or unavailable.
+  const raw = readRaw()
+  if (raw === null) return prefsFromBrowserCookie()
+  try {
+    return parsePrefs(JSON.parse(raw))
+  } catch {
+    return DEFAULT_PREFS
+  }
 }
 
 export function setReadingPrefs(prefs: ReadingPreferences) {

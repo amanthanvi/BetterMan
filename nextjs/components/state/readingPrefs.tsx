@@ -10,6 +10,7 @@ import {
   getReadingPrefs,
   resetReadingPrefs,
   setReadingPrefs,
+  syncReadingPrefsCookie,
 } from '../../lib/readingPrefs'
 
 type ReadingPrefsContextValue = {
@@ -33,8 +34,15 @@ function applyToBody(prefs: ReadingPreferences) {
   }
 }
 
-export function ReadingPrefsProvider({ children }: { children: React.ReactNode }) {
-  const [prefs, setPrefsState] = useState<ReadingPreferences>(() => getReadingPrefs())
+export function ReadingPrefsProvider({
+  children,
+  initialPrefs,
+}: {
+  children: React.ReactNode
+  initialPrefs: ReadingPreferences
+}) {
+  // Use the same server-selected value on both sides of hydration.
+  const [prefs, setPrefsState] = useState<ReadingPreferences>(initialPrefs)
 
   const setPrefs = useCallback((next: ReadingPreferences) => {
     setPrefsState(next)
@@ -59,9 +67,22 @@ export function ReadingPrefsProvider({ children }: { children: React.ReactNode }
   }, [prefs])
 
   useEffect(() => {
-    const sync = () => setPrefsState(getReadingPrefs())
+    const sync = () => {
+      const next = getReadingPrefs()
+      setPrefsState(next)
+      syncReadingPrefsCookie(next)
+    }
 
-    const onPrefs = () => sync()
+    // Migrate legacy localStorage-only preferences for subsequent SSR loads.
+    sync()
+
+    const onPrefs = (event: Event) => {
+      // Keep the new value even when localStorage writes fail but reads still
+      // return an older value. Persistence already mirrored it to the cookie.
+      const next = (event as CustomEvent<ReadingPreferences>).detail
+      if (next) setPrefsState(next)
+      else sync()
+    }
     const onStorage = (e: StorageEvent) => {
       if (e.key !== READING_PREFS_STORAGE_KEY) return
       sync()
