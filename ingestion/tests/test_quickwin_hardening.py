@@ -163,7 +163,8 @@ def test_scan_discovers_uppercase_gz_files(tmp_path: Path) -> None:
     (man1 / "ls.1.gz").write_bytes(gzip.compress(b".TH ls 1\n"))
     (man1 / "notes.txt").write_bytes(b"not a man page")
 
-    assert [(s.name, s.section) for s in scan_man_sources(tmp_path, sample=False)] == [
+    # Full-scan iteration order is filesystem-dependent; compare content, not order.
+    assert sorted((s.name, s.section) for s in scan_man_sources(tmp_path, sample=False)) == [
         ("ls", "1"),
         ("tar", "1"),
     ]

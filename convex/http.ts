@@ -100,7 +100,18 @@ function ingestAction(
     if (!isRecord(body) || !matchesShape(body, shape)) {
       return invalidPayload("Request body has an invalid ingest payload shape");
     }
-    return handler(ctx, body);
+    try {
+      return await handler(ctx, body);
+    } catch (error) {
+      // Nested argument validation failures from the mutation validators are
+      // client errors: a 500 would make the ingest client retry a request that
+      // can never succeed. Domain errors (RELEASE_NOT_FOUND, DUPLICATE_…)
+      // keep their existing status mapping.
+      if (error instanceof Error && /validat/i.test(error.message)) {
+        return invalidPayload(error.message);
+      }
+      throw error;
+    }
   });
 }
 

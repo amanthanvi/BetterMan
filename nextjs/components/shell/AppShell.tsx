@@ -69,6 +69,10 @@ export function AppShell({
   const isManPage = routeParts[0] === 'man' && routeParts.length >= 3
 
   const [info, setInfo] = useState<InfoResponse | null>(initialInfo?.info ?? null)
+  // The distro the current `info` belongs to — the footer only shows data
+  // for the active distro (never another distro's counts while a refetch
+  // is in flight after a switch).
+  const [infoFor, setInfoFor] = useState<Distro | null>(initialInfo?.distro ?? null)
   // Footer info text renders only after hydration: relative-time and number
   // formatting use the runtime locale/clock, so SSR text could mismatch.
   const [hydrated, setHydrated] = useState(false)
@@ -79,6 +83,7 @@ export function AppShell({
     // and restore the SSR info when switching back to it.
     if (initialInfo && distro.distro === initialInfo.distro) {
       setInfo(initialInfo.info)
+      setInfoFor(initialInfo.distro)
       return
     }
 
@@ -97,10 +102,12 @@ export function AppShell({
       .then((payload) => {
         if (controller.signal.aborted) return
         setInfo(payload)
+        setInfoFor(distro.distro)
       })
       .catch(() => {
         if (controller.signal.aborted) return
         setInfo(null)
+        setInfoFor(null)
       })
 
     return () => controller.abort()
@@ -218,6 +225,9 @@ export function AppShell({
         // Suppressed while an overlay owns focus — never focus behind a modal.
         if (!isManPage) return
         if (paletteOpen || prefsOpen || shortcutsOpen || toc.open) return
+        // Only hijack when the custom find bar actually exists on this page
+        // (a 404 man route mounts no ManPageView — native find must survive).
+        if (!document.querySelector('button[aria-label="Find in page"]')) return
         e.preventDefault()
         try {
           window.dispatchEvent(new CustomEvent('bm:find-request'))
@@ -433,7 +443,7 @@ export function AppShell({
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 font-mono">
             <span aria-hidden="true" className="text-accent">&gt;_</span>
-            {info && hydrated ? (
+            {info && hydrated && infoFor === distro.distro ? (
               <span title={`Dataset ${info.datasetReleaseId}`}>
                 {info.pageCount.toLocaleString()} pages · updated {formatRelativeTime(info.lastUpdated)}
                 {parseReleaseId(info.datasetReleaseId).mandocVersion
