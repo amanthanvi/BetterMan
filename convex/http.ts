@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { validateContentFieldSize } from "./_legacyContent";
+import { deriveOptionsSearchText } from "./_optionsSearch";
 
 const http = httpRouter();
 
@@ -165,7 +166,9 @@ http.route({
           if (value !== undefined) validateContentFieldSize(value, kind);
         }
         const text = serializeStoredPayload(page.contentSha256 as string, fields);
-        return { page, text, digest: await storedPayloadDigest(text) };
+        // Override incoming metadata while trusted parsed options are available.
+        const derivedPage: Record<string, unknown> = { ...page, optionsText: deriveOptionsSearchText(page.options) };
+        return { page: derivedPage, text, digest: await storedPayloadDigest(text) };
       }));
     } catch (error) {
       if (!(error instanceof Error) || !error.message.startsWith("CONTENT_FIELD_TOO_LARGE")) throw error;

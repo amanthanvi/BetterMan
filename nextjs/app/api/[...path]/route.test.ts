@@ -108,6 +108,18 @@ describe('public API timing and metadata', () => {
     expect(response.headers.get('Server-Timing')).toMatch(/rate_limit;dur=\d+\.\d, convex_search;dur=\d+\.\d, total;dur=\d+\.\d/)
   })
 
+  it('passes through option match and anchor metadata with the selected distro', async () => {
+    const result = {
+      query: '--create', suggestions: [], hasMore: false, nextOffset: null,
+      results: [{ name: 'tar', section: '1', title: 'tar', description: 'Archive tool', highlights: [], match: 'option', anchorId: 'opt-create' }],
+    }
+    apiMocks.search.mockResolvedValueOnce(result)
+    const response = await GET(request('/api/v1/search?q=--create&distro=ubuntu'), context(['v1', 'search']))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual(result)
+    expect(apiMocks.search).toHaveBeenCalledWith(expect.objectContaining({ q: '--create', distro: 'ubuntu' }))
+  })
+
   it('preserves metadata not-found responses with timing', async () => {
     apiMocks.fetchManMetaByNameAndSection.mockRejectedValueOnce(
       new apiMocks.FastApiError(

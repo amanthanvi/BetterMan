@@ -37,6 +37,7 @@ type PaletteItem =
       description: string
       highlights?: string[]
       distro?: Distro
+      anchorId?: string
       run: () => void
     }
   | {
@@ -118,7 +119,25 @@ function bookmarksToItems(
   }))
 }
 
-function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro; runMan: (name: string, section: string, distroOverride?: Distro) => void }): PaletteItem {
+export function buildPaletteManHref(name: string, section: string, distro: Distro, anchorId?: string): string {
+  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)
+  return anchorId ? `${href}#${encodeURIComponent(anchorId)}` : href
+}
+
+export function navigatePaletteMan(href: string, push: (href: string) => void): void {
+  const target = new URL(href, window.location.href)
+  if (target.hash && target.pathname === window.location.pathname && target.search === window.location.search) {
+    // Next's hash-only router navigation does not emit hashchange. Native hash
+    // navigation lets the current man page expand and select the option row.
+    if (target.hash === window.location.hash) window.dispatchEvent(new Event('hashchange'))
+    else window.location.hash = target.hash
+    return
+  }
+  push(href)
+}
+
+export function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro; runMan: (name: string, section: string, distroOverride?: Distro, anchorId?: string) => void }): Extract<PaletteItem, { kind: 'page' }> {
+  const anchorId = result.match === 'option' ? result.anchorId : undefined
   return {
     kind: 'page',
     id: `page:${result.name}:${result.section}`,
@@ -128,9 +147,10 @@ function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro
     description: result.description,
     highlights: result.highlights,
     distro: ctx.distro,
+    anchorId,
     run: () => {
       recordRecentSearch(ctx.query)
-      ctx.runMan(result.name, result.section, ctx.distro)
+      ctx.runMan(result.name, result.section, ctx.distro, anchorId)
     },
   }
 }
@@ -208,9 +228,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     close()
   }
 
-  const runMan = (name: string, section: string, distroOverride?: Distro) => {
+  const runMan = (name: string, section: string, distroOverride?: Distro, anchorId?: string) => {
     const targetDistro = distroOverride ?? effectiveDistro
-    router.push(withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, targetDistro))
+    navigatePaletteMan(buildPaletteManHref(name, section, targetDistro, anchorId), (href) => router.push(href))
     close()
   }
 
@@ -497,6 +517,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                         itemLabel(item)
                       )}
                     </div>
+                    {item.kind === 'page' && item.anchorId ? (
+                      <span aria-hidden="true" className="shrink-0 font-mono text-xs text-muted">options</span>
+                    ) : null}
                     {item.kind === 'page' ? (
                       <div className="min-w-0 flex-1 truncate text-sm text-muted">{item.description}</div>
                     ) : item.kind === 'action' && item.detail ? (

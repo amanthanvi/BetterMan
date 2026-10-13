@@ -24,6 +24,8 @@ export type SearchResult = {
   title: string
   description: string
   highlights: string[]
+  match?: 'option'
+  anchorId?: string
 }
 
 export type SearchResponse = {

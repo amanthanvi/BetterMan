@@ -65,6 +65,7 @@ from ingestion.macos import is_permissive_manpage, macos_arch, macos_version
 from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import decompress_roff, render_html
 from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
+from ingestion.options_search import options_search_text
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import normalize_ws, sha256_hex
 
@@ -808,7 +809,7 @@ def _page_payload(
     # searchText entirely, and truncates snippetText to 240 chars — send only
     # what is read (mirrors MAX_SNIPPET_TEXT_CHARS in convex/lib.ts).
     snippet_text = normalize_ws(f"{row.description} {row.plain_text}")[:240]
-    return {
+    payload = {
         "externalId": str(row.page_id),
         "name": row.name,
         "section": row.section,
@@ -828,6 +829,10 @@ def _page_payload(
         "snippetText": snippet_text,
         "links": links,
     }
+    options_text = options_search_text(row.options)
+    if options_text is not None:
+        payload["optionsText"] = options_text
+    return payload
 
 
 def _read_debian_copyright(pkg: str) -> str | None:
