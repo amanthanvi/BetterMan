@@ -1,5 +1,5 @@
 import { fetchSeoReleases } from '../../../lib/api'
-import { getPublicOrigin } from '../../../lib/public-origin'
+import { getStaticPublicOrigin } from '../../../lib/public-origin'
 import { sitemapIndex, sitemapLastModified, sitemapResponse } from '../../../lib/sitemaps'
 
 export const dynamic = 'force-static'
@@ -16,7 +16,7 @@ type SeoRelease = Awaited<ReturnType<typeof fetchSeoReleases>>['items'][number]
 export async function GET(_request: Request, ctx: { params: Promise<{ distro?: string }> }) {
   const { distro } = await ctx.params
   if (!distro) return new Response(null, { status: 404 })
-  const origin = getPublicOrigin()
+  const origin = getStaticPublicOrigin()
   const releases = await fetchSeoReleases()
   // /sitemap.xml rewrites here so its index can be generated lazily too.
   if (distro === 'index') return sitemapIndex(releases, origin)

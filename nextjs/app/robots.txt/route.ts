@@ -1,11 +1,11 @@
-import { getPublicOrigin } from '../../lib/public-origin'
+import { getStaticPublicOrigin } from '../../lib/public-origin'
 
 export const dynamic = 'force-static'
 export const revalidate = 3600
 
 export async function GET() {
   // Static metadata must use the configured canonical origin, never request headers.
-  const origin = getPublicOrigin()
+  const origin = getStaticPublicOrigin()
   const body = [
     'User-agent: GPTBot',
     'Disallow: /',

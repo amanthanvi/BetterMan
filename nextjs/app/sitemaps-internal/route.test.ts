@@ -116,10 +116,14 @@ describe('cacheable sitemap responses', () => {
     await expect(sitemapPage(request(), params)).rejects.toThrow('backend unavailable')
   })
 
-  it('requires a trusted origin instead of caching host-dependent sitemap URLs', async () => {
+  it('falls back to the canonical origin when unconfigured, never request headers', async () => {
     vi.stubEnv('PUBLIC_BASE_URL', '')
     vi.stubEnv('NEXT_PUBLIC_BASE_URL', '')
-    await expect(index(request(), { params: Promise.resolve({ distro: 'index' }) })).rejects.toThrow('PUBLIC_BASE_URL')
+    // The request points at a hostile host; static routes must not trust it.
+    const response = await index(request(), { params: Promise.resolve({ distro: 'index' }) })
+    const text = await response.text()
+    expect(text).toContain('https://betterman.sh/sitemap-debian.xml')
+    expect(text).not.toContain('attacker.example')
   })
 })
 

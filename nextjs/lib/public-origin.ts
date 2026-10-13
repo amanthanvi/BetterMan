@@ -66,3 +66,17 @@ export function getPublicOrigin(source: PublicOriginSource = {}): string {
 
   return getDevelopmentOrigin(source)
 }
+
+/**
+ * The product's canonical domain — also the metadataBase in app/layout.tsx.
+ * Prerendered metadata routes (robots.txt, sitemaps) evaluate at build time,
+ * where deploy env vars are not exposed; their only honest origin is the
+ * canonical one. Runtime request paths must still use `getPublicOrigin`,
+ * which stays fail-closed when unconfigured.
+ */
+export const CANONICAL_PUBLIC_ORIGIN = 'https://betterman.sh'
+
+/** Origin for prerendered (force-static) metadata routes only. */
+export function getStaticPublicOrigin(): string {
+  return getConfiguredPublicOrigin() ?? CANONICAL_PUBLIC_ORIGIN
+}

@@ -3,10 +3,11 @@ import { cookies, headers } from 'next/headers'
 import './globals.css'
 import { fetchInfo } from '../lib/api'
 import { DISTRO_COOKIE, normalizeDistro } from '../lib/distro'
+import { CANONICAL_PUBLIC_ORIGIN } from '../lib/public-origin'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://betterman.sh'),
+  metadataBase: new URL(CANONICAL_PUBLIC_ORIGIN),
   title: 'BetterMan',
   description: 'Unix manual pages, typeset for the screen.',
   manifest: '/site.webmanifest',

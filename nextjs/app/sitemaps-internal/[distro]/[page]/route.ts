@@ -1,6 +1,6 @@
 import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../../../lib/api'
 import { withDistro } from '../../../../lib/distro'
-import { getPublicOrigin } from '../../../../lib/public-origin'
+import { getStaticPublicOrigin } from '../../../../lib/public-origin'
 import { sitemapResponse } from '../../../../lib/sitemaps'
 
 export const dynamic = 'force-static'
@@ -15,7 +15,7 @@ type SeoSitemapItem = Awaited<ReturnType<typeof fetchSeoSitemapPage>>['items'][n
 
 export async function GET(_request: Request, ctx: { params: Promise<{ distro?: string; page?: string }> }) {
   const { distro, page: pageRaw } = await ctx.params
-  const origin = getPublicOrigin()
+  const origin = getStaticPublicOrigin()
   if (!distro || !pageRaw) return new Response(null, { status: 404 })
   const page = Number(pageRaw)
 
