@@ -171,6 +171,8 @@ export default defineSchema({
     descNorm: v.string(),
     searchText: v.string(),
     snippetText: v.string(),
+    // JSON anchor/token tuples, <= 2 KiB total; absent on older releases.
+    optionsText: v.optional(v.string()),
   })
     .index("by_releaseId_and_nameNorm", ["releaseId", "nameNorm"])
     .index("by_releaseId_and_section_and_nameNorm", [
@@ -180,6 +182,10 @@ export default defineSchema({
     ])
     .searchIndex("search_desc", {
       searchField: "descNorm",
+      filterFields: ["releaseId", "section"],
+    })
+    .searchIndex("search_options", {
+      searchField: "optionsText",
       filterFields: ["releaseId", "section"],
     }),
 

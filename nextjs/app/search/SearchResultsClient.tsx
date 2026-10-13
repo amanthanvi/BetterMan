@@ -42,8 +42,9 @@ function highlight(text: string, query: string): ReactNode[] {
   return out.length ? out : [cleanedText]
 }
 
-function buildManHref(opts: { distro: Distro; name: string; section: string }) {
-  return withDistro(`/man/${encodeURIComponent(opts.name)}/${encodeURIComponent(opts.section)}`, opts.distro)
+export function buildManHref(opts: { distro: Distro; name: string; section: string; anchorId?: string }) {
+  const href = withDistro(`/man/${encodeURIComponent(opts.name)}/${encodeURIComponent(opts.section)}`, opts.distro)
+  return opts.anchorId ? `${href}#${encodeURIComponent(opts.anchorId)}` : href
 }
 
 async function fetchMore(opts: {
@@ -84,7 +85,7 @@ function buildSynopsisSnippet(r: SearchResult): string {
 }
 
 function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResult }) {
-  const href = useMemo(() => buildManHref({ distro, name: r.name, section: r.section }), [distro, r.name, r.section])
+  const href = useMemo(() => buildManHref({ distro, name: r.name, section: r.section, anchorId: r.match === 'option' ? r.anchorId : undefined }), [distro, r.name, r.section, r.match, r.anchorId])
   const synopsis = useMemo(() => buildSynopsisSnippet(r), [r])
 
   return (
@@ -98,6 +99,8 @@ function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResu
         >
           {r.name}({r.section})
         </Link>
+
+        {r.match === 'option' ? <span className="font-mono text-xs text-muted">options</span> : null}
 
         <div className="text-sm text-muted">{highlight(r.description, q)}</div>
 

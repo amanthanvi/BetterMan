@@ -22,6 +22,11 @@ import { ManPageOptionsSection, OPTIONS_COLLAPSE_THRESHOLD } from './ManPageOpti
 import { ManSectionLabel } from './RunningHead'
 import { useManPageFind } from './useManPageFind'
 
+export function optionAnchorFromHash(hash: string): string {
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash
+  try { return decodeURIComponent(raw) } catch { return raw }
+}
+
 /**
  * The header shows NAME and the extracted synopsis lines. Drop NAME from the
  * body always. Drop SYNOPSIS only when it holds nothing the header lacks: a
@@ -202,7 +207,7 @@ export function ManPageView({
 
     const applyHash = () => {
       const raw = window.location.hash
-      const anchorId = raw.startsWith('#') ? raw.slice(1) : raw
+      const anchorId = optionAnchorFromHash(raw)
       if (!anchorId) return
       const opt = byAnchor.get(anchorId)
       if (!opt) return

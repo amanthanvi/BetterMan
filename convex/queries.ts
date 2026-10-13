@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { matchingOptionAnchor, optionsIndexQuery, optionsQueryTokens } from "./_optionsSearch";
 import { paginationOptsValidator } from "convex/server";
 import { resolveRelatedItems } from "./_relatedLinks";
 import { query, type QueryCtx } from "./_generated/server";
@@ -30,6 +31,7 @@ const MAX_SECTION_OFFSET = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
 const MAX_RELATED = 50;
 const MAX_DESCRIPTION_HITS = 24;
+const MAX_OPTION_HITS = 24;
 
 function boundedInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -357,7 +359,7 @@ export const getRelated = query({
   },
 });
 
-type RankedSearchDocument = Doc<"manPageSearchDocuments"> & { rank: number };
+type RankedSearchDocument = Doc<"manPageSearchDocuments"> & { rank: number; anchorId?: string };
 
 function rankSearchDocument(
   doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
@@ -453,6 +455,15 @@ export const search = query({
       queryNorm,
     });
 
+    const optionTokens = optionsQueryTokens(queryText);
+    const optionDocs = optionTokens.length ? await ctx.db
+      .query("manPageSearchDocuments")
+      .withSearchIndex("search_options", (q) => {
+        const base = q.search("optionsText", optionsIndexQuery(optionTokens)).eq("releaseId", release._id);
+        return section === null ? base : base.eq("section", section);
+      })
+      .take(MAX_OPTION_HITS) : [];
+
     const ranked = new Map<string, RankedSearchDocument>();
     prefixDocs.forEach((doc, index) => {
       const current = ranked.get(doc._id);
@@ -461,7 +472,17 @@ export const search = query({
     });
     descriptionDocs.forEach((doc, index) => {
       if (ranked.has(doc._id)) return;
+      // The description analyzer removes punctuation; a flag query must
+      // actually occur as written before it can count as a description hit.
+      if (queryText.split(" ").some((token) => token.startsWith("-") || token.startsWith("+")) && !doc.description.includes(queryText)) return;
       ranked.set(doc._id, { ...doc, rank: rankDescriptionDocument(doc, queryNorm, index) });
+    });
+    optionDocs.forEach((doc, index) => {
+      if (ranked.has(doc._id)) return;
+      const anchorId = matchingOptionAnchor(doc.optionsText, optionTokens);
+      // Exact token verification avoids the search index's final-token prefix
+      // expansion and ensures multi-token queries share one option anchor.
+      if (anchorId) ranked.set(doc._id, { ...doc, rank: -index, anchorId });
     });
 
     const ordered = [...ranked.values()].sort((a, b) => {
@@ -493,6 +514,7 @@ export const search = query({
         title: doc.title,
         description: doc.description,
         highlights: [deterministicSnippet(doc.snippetText, queryText)].filter(Boolean),
+        ...(doc.anchorId ? { match: "option" as const, anchorId: doc.anchorId } : {}),
       })),
       suggestions,
       hasMore: nextOffset !== null,

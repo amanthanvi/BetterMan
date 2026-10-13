@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Search: match parsed option flags and bare flag tokens through a bounded 2 KiB metadata index, rank option hits below name and description hits, and link them directly to their option anchors; older releases keep existing search until the next ingest.
 - Reading: compare distribution variants inline with `?diff=<distro>`, showing added, removed, and changed document blocks and options; identical variants show one quiet line, with a link back to the plain page.
 - Reading: show up to five corpus-extracted EXAMPLES commands directly below the synopsis, with source paragraph labels and copy controls; pages without EXAMPLES keep their existing reading flow.
 - Security: set the `Secure` attribute on client-set theme and distro cookies, serve baseline security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, HSTS) on `/api/*` JSON responses, and re-check external content links for http(s) schemes at render time as stored-XSS defense in depth. The dead `TRUSTED_PROXY_CIDRS` setting is removed from `.env.example`.

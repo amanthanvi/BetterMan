@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import type { BlockNode, TocItem } from '../../lib/docModel'
-import { stripHeaderSections } from './ManPageView'
+import { optionAnchorFromHash, stripHeaderSections } from './ManPageView'
+
+it('resolves percent-encoded option hashes to actual document anchors', () => {
+  expect(optionAnchorFromHash('#sort%3D')).toBe('sort=')
+  expect(optionAnchorFromHash('#no~2')).toBe('no~2')
+  expect(optionAnchorFromHash('#opt-create')).toBe('opt-create')
+  expect(optionAnchorFromHash('#bad%escape')).toBe('bad%escape')
+})
 
 const h = (id: string, text: string, level = 2): BlockNode => ({ type: 'heading', id, text, level })
 const p = (text: string): BlockNode => ({ type: 'paragraph', inlines: [{ type: 'text', text }] })

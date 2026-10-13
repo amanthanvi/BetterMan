@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { deriveOptionsSearchText, validateOptionsSearchText } from "./_optionsSearch";
 import { contentChunks, splitContentFields, validateContentFieldSize, type ContentField, type ContentJsonKind } from "./_legacyContent";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
@@ -49,6 +50,7 @@ const pageInput = v.object({
   doc: v.any(),
   synopsis: v.any(),
   options: v.any(),
+  optionsText: v.optional(v.string()),
   seeAlso: v.any(),
   searchText: v.string(),
   snippetText: v.string(),
@@ -68,6 +70,7 @@ const storedPageInput = v.object({
   contentSha256: v.string(),
   hasParseWarnings: v.boolean(),
   contentStorageId: v.id("_storage"),
+  optionsText: v.optional(v.string()),
   searchText: v.string(),
   snippetText: v.string(),
   links: v.array(pageLinkInput),
@@ -390,6 +393,7 @@ export const insertPages = internalMutation({
         title: page.title,
         description: page.description,
         descNorm: page.description.toLowerCase(),
+        optionsText: deriveOptionsSearchText(page.options),
         searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
       });
@@ -487,6 +491,7 @@ export const insertStoredPages = internalMutation({
         title: page.title,
         description: page.description,
         descNorm: page.description.toLowerCase(),
+        optionsText: validateOptionsSearchText(page.optionsText),
         searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
       });
