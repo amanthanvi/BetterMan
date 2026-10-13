@@ -69,7 +69,7 @@ from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import decompress_roff, render_html
 from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
-from ingestion.resume import ReleaseCheckpoint, state_directory
+from ingestion.resume import ReleaseCheckpoint, encoded_json, state_directory
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]*$")
@@ -80,6 +80,8 @@ _MAN_HREF_RE = re.compile(
 )
 
 logger = logging.getLogger("betterman.ingestion")
+_PAGE_BATCH_BYTES = 8 * 1024 * 1024
+_PAGE_BATCH_ITEMS = 512  # Bound tiny-page transactions as well as request bytes.
 
 
 def _log(event: str, **fields: object) -> None:
@@ -361,6 +363,84 @@ def _count_batches(
         yield batch
 
 
+def _page_batches(
+    items: Iterable[tuple[int, dict]], *, release_id: str
+) -> Iterator[list[tuple[int, dict]]]:
+    overhead = len(encoded_json({"datasetReleaseId": release_id, "pages": []}))
+    size = overhead
+    batch = []
+    for item in items:
+        item_size = len(encoded_json(item[1]))
+        added = item_size + bool(batch)  # comma between array entries
+        if batch and (size + added > _PAGE_BATCH_BYTES or len(batch) >= _PAGE_BATCH_ITEMS):
+            yield batch
+            batch, size = [], overhead
+            added = item_size
+        batch.append(item)
+        size += added
+    if batch:
+        yield batch
+
+
+def _confirm_upload_response(response: dict, count: int) -> None:
+    if (
+        type(response.get("inserted")) is not int
+        or type(response.get("skipped")) is not int
+        or response["inserted"] < 0
+        or response["skipped"] < 0
+        or response["inserted"] + response["skipped"] != count
+    ):
+        raise RuntimeError("Upload response did not confirm every batch item")
+
+
+def _upload_page_batch(
+    batch: list[tuple[int, dict]],
+    *,
+    release_id: str,
+    client: ConvexIngestClient,
+    checkpoint: ReleaseCheckpoint | None,
+) -> list[dict]:
+    payload = {"datasetReleaseId": release_id, "pages": [page for _, page in batch]}
+    try:
+        if len(encoded_json(payload)) > _PAGE_BATCH_BYTES:
+            raise RuntimeError("Page payload exceeds the 8 MiB upload byte budget")
+        response = client.post("/ingest/pages/storage", payload)
+        if checkpoint:
+            _confirm_upload_response(response, len(batch))
+    except Exception as exc:  # noqa: BLE001 (isolate failed page uploads)
+        if len(batch) > 1:
+            midpoint = len(batch) // 2
+            _log("page_batch_split", pages=len(batch), error=str(exc)[:500])
+            return _upload_page_batch(
+                batch[:midpoint],
+                release_id=release_id,
+                client=client,
+                checkpoint=checkpoint,
+            ) + _upload_page_batch(
+                batch[midpoint:],
+                release_id=release_id,
+                client=client,
+                checkpoint=checkpoint,
+            )
+        page = batch[0][1]
+        _log(
+            "page_upload_failed",
+            externalId=page["externalId"],
+            name=page["name"],
+            section=page["section"],
+            path=page.get("sourcePath"),
+            error=str(exc)[:500],
+        )
+        # Leave this payload pending. Lowering the immutable declared counts
+        # would make exact resume conflict and could permit partial publication.
+        return [page]
+    if checkpoint:
+        # A local disk failure must abort, rather than misclassify accepted pages
+        # as poison. Without this receipt the same frozen batch replays safely.
+        checkpoint.acknowledge("pages", [ordinal for ordinal, _ in batch])
+    return []
+
+
 def _upload_release(
     *,
     metadata: dict,
@@ -376,18 +456,16 @@ def _upload_release(
     total = metadata["total"]
     succeeded = declaration["pageCount"]
     hard_failed = metadata["parseFailed"]
-    handled = succeeded + declaration["aliasCount"]
-    hard_fail_rate = (hard_failed / total) if total else 0.0
-    success_rate = (handled / total) if total else 0.0
-    publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
     if checkpoint:
         result = client.create_release(declaration)
         checkpoint.confirm_release(result, resuming=resuming)
     else:
         client.post("/ingest/release", declaration)
 
+    failed_pages: list[dict] = []
+    deferred_aliases = 0
     for kind, path, size in [
-        ("pages", "/ingest/pages/storage", 20),
+        ("pages", "/ingest/pages/storage", 0),
         ("licenses", "/ingest/licenses", 10),
         ("aliases", "/ingest/aliases", 200),
     ]:
@@ -395,21 +473,47 @@ def _upload_release(
         processed = checkpoint.uploaded_count(kind) if checkpoint else 0
         started = monotonic()
         session_processed = 0
-        for batch in _count_batches(pending, size):
-            response = client.post(
-                path,
-                {"datasetReleaseId": dataset_release_id, kind: [payload for _, payload in batch]},
-            )
-            if checkpoint:
-                if (
-                    type(response.get("inserted")) is not int
-                    or type(response.get("skipped")) is not int
-                    or response["inserted"] < 0
-                    or response["skipped"] < 0
-                    or response["inserted"] + response["skipped"] != len(batch)
-                ):
-                    raise RuntimeError("Upload response did not confirm every batch item")
-                checkpoint.acknowledge(kind, [ordinal for ordinal, _ in batch])
+        if kind == "aliases" and failed_pages:
+            failed_routes = {(page["name"], page["section"]) for page in failed_pages}
+            eligible_aliases = []
+            for ordinal, alias in pending:
+                if (alias["targetName"], alias["targetSection"]) in failed_routes:
+                    deferred_aliases += 1
+                    _log(
+                        "alias_upload_deferred",
+                        name=alias["name"],
+                        section=alias["section"],
+                        reason="target page upload failed",
+                    )
+                else:
+                    eligible_aliases.append((ordinal, alias))
+            pending = eligible_aliases
+        batches = (
+            _page_batches(pending, release_id=dataset_release_id)
+            if kind == "pages"
+            else _count_batches(pending, size)
+        )
+        for batch in batches:
+            if kind == "pages":
+                failed_pages.extend(
+                    _upload_page_batch(
+                        batch,
+                        release_id=dataset_release_id,
+                        client=client,
+                        checkpoint=checkpoint,
+                    )
+                )
+            else:
+                response = client.post(
+                    path,
+                    {
+                        "datasetReleaseId": dataset_release_id,
+                        kind: [payload for _, payload in batch],
+                    },
+                )
+                if checkpoint:
+                    _confirm_upload_response(response, len(batch))
+                    checkpoint.acknowledge(kind, [ordinal for ordinal, _ in batch])
             processed += len(batch)
             session_processed += len(batch)
             if kind == "pages":
@@ -423,8 +527,18 @@ def _upload_release(
                     pct=round(processed / succeeded * 100, 2) if succeeded else 0.0,
                     pagesPerSecond=round(rate, 2),
                     etaSeconds=eta_s,
+                    failed=len(failed_pages),
                 )
 
+    succeeded -= len(failed_pages)
+    # Upload singletons are hard failures just like parse failures. Their
+    # declaration stays frozen, so even <=2% failures cannot activate a draft
+    # until every missing upload succeeds on retry.
+    hard_failed += len(failed_pages)
+    handled = succeeded + declaration["aliasCount"] - deferred_aliases
+    hard_fail_rate = (hard_failed / total) if total else 0.0
+    success_rate = (handled / total) if total else 0.0
+    publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02 and not failed_pages
     published = False
     if publish_allowed and activate:
         client.activate_release(
@@ -443,13 +557,18 @@ def _upload_release(
         succeeded=succeeded,
         aliases=declaration["aliasCount"],
         failed=hard_failed,
+        parseFailed=metadata["parseFailed"],
+        uploadFailed=len(failed_pages),
+        deferredAliases=deferred_aliases,
         published=published,
         publishAllowed=publish_allowed,
     )
 
     if not publish_allowed:
         raise RuntimeError(
-            f"publish blocked: success_rate={success_rate:.3f}, hard_fail_rate={hard_fail_rate:.3f}"
+            f"publish blocked: success_rate={success_rate:.3f}, "
+            f"hard_fail_rate={hard_fail_rate:.3f}, "
+            f"upload_failed={len(failed_pages)} (declared manifest must remain complete)"
         )
 
     return IngestResult(

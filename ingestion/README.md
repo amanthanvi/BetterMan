@@ -98,6 +98,34 @@ Server protocol, confirmed in `convex/ingest.ts`, `convex/http.ts` and
   checkpoints until recovery is finished; they contain public page/license data,
   not the ingest secret.
 
+## Page batches and upload failures
+
+Page batches accumulate in source order up to **8 MiB of UTF-8 JSON**, including
+the release envelope, commas and JSON escaping. A 512-page transaction cap also
+bounds batches of tiny pages. A page whose complete payload exceeds the byte
+budget is logged as a failed singleton without sending an oversized request.
+Alias and license batches retain their existing limits.
+
+After the client's bounded transient retries, a failed page batch is bisected
+in order until good sub-batches succeed or the rejected singleton is identified.
+`page_batch_split` and `page_upload_failed` logs identify the failure; later pages,
+licenses and unaffected aliases continue uploading. Successful sub-batches gain
+checkpoint acknowledgements; failed pages and aliases targeting them stay pending.
+The summary excludes rejected pages from `succeeded` and adds them to hard
+failures alongside parse failures, with separate `parseFailed` and `uploadFailed`
+fields. They count against the existing 2% hard-failure and 80% success gates.
+
+The release declaration was frozen **before** upload, and Convex requires exact
+page/section/alias/license counts to activate it. Changing those declared counts
+after a poison page would conflict with exact resume and undermine manifest
+verification. The conservative fallback keeps the declared totals, records the
+upload failure as a hard page failure, and **blocks activation whenever any
+declared page is missing**, even below 2%. The incomplete draft can be retried
+under the same ID after a transient/server fault is resolved. If the frozen page
+payload itself needs correction, fix the producer and start a new release ID;
+do not edit the checkpoint or lower declaration counts. Existing active pointers
+are never changed by a failed run.
+
 ## Parser fixtures
 
 `tests/fixtures/roff/` holds roff sources captured from Debian trixie plus one mdoc page from macOS. `tests/test_golden.py` renders each with the host `mandoc` and compares the parsed result to `tests/fixtures/golden/`. After a deliberate parser change:

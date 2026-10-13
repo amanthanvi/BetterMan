@@ -116,6 +116,7 @@ def _resume_harness(monkeypatch, tmp_path, total=45):
 
 
 def test_resume_skips_parse_and_acked_pages_and_replays_uncertain_batch(monkeypatch, tmp_path):
+    monkeypatch.setattr(ingest_runner, "_PAGE_BATCH_ITEMS", 20)
     calls, post = _resume_harness(monkeypatch, tmp_path)
     page_posts = 0
 
@@ -321,7 +322,7 @@ def test_bad_upload_response_does_not_create_checkpoint_receipt(monkeypatch, tmp
         return {"inserted": True, "skipped": 0} if route.endswith("storage") else result
 
     monkeypatch.setattr(ConvexIngestClient, "post", invalid)
-    with pytest.raises(RuntimeError, match="confirm every batch item"):
+    with pytest.raises(RuntimeError, match="publish blocked"):
         _run_resume_ingest()
     database = next(tmp_path.glob("*.sqlite3"))
     with closing(sqlite3.connect(database)) as connection:
