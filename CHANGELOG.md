@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- TOC navigation skips redundant browser-history entries when the current hash already targets the selected section.
 - Performance: render man-page bodies on the server without passing their AST to client controls; keep every block mounted with browser-native render skipping, and find/highlight/navigate against the complete document DOM.
 
 - Security: set the `Secure` attribute on client-set theme and distro cookies, serve baseline security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, HSTS) on `/api/*` JSON responses, and re-check external content links for http(s) schemes at render time as stored-XSS defense in depth. The dead `TRUSTED_PROXY_CIDRS` setting is removed from `.env.example`.
