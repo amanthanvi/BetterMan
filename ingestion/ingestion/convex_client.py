@@ -53,6 +53,18 @@ class ConvexIngestClient:
             time.sleep(min(2, max(0, deadline - time.monotonic())))
         raise RuntimeError("Release activation did not finish within the hydration deadline")
 
+    def create_release(self, payload: dict) -> dict:
+        # Exact declarations already no-op server-side; conflicting declarations
+        # must propagate, never be mistaken for a successful duplicate retry.
+        result = self.post("/ingest/release", payload)
+        if (
+            not isinstance(result.get("releaseId"), str)
+            or not result["releaseId"]
+            or not isinstance(result.get("existed"), bool)
+        ):
+            raise RuntimeError("Release creation response is missing its identity/status")
+        return result
+
     def post(self, path: str, payload: object, *, timeout_seconds: float = 120) -> dict:
         attempts = _MAX_ATTEMPTS if path.startswith(_IDEMPOTENT_PREFIXES) else 1
         for attempt in range(1, attempts + 1):

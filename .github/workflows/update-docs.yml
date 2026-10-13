@@ -98,10 +98,28 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 300
+    env:
+      BETTERMAN_INGEST_RUN_ID: ${{ github.run_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # Checkpoints contain public payloads/provenance and upload receipts only.
+      # The restore prefix is bounded to this workflow run, never another release.
+      - name: Set Linux checkpoint directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/betterman-ingestion/linux"
+          echo "BETTERMAN_INGEST_STATE_DIR=${RUNNER_TEMP}/betterman-ingestion/linux" >> "$GITHUB_ENV"
+
+      - name: Restore Linux ingestion checkpoints
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.BETTERMAN_INGEST_STATE_DIR }}
+          key: ingestion-v1-linux-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ingestion-v1-linux-${{ github.run_id }}-
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
@@ -113,6 +131,7 @@ jobs:
       - run: cd ingestion && uv sync --frozen
 
       - name: Ingest to Convex staging
+        id: ingest
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
@@ -148,8 +167,17 @@ jobs:
 
           for distro in "${selected_distros[@]}"; do
             echo "Ingesting ${distro}…"
-            uv run python -m ingestion.cli ingest --distro "${distro}" "${ingest_args[@]}"
+            uv run python -m ingestion.cli ingest --distro "${distro}" \
+              --release-id "gha-${BETTERMAN_INGEST_RUN_ID}-${distro}" "${ingest_args[@]}"
           done
+
+      # A failed upload must save its partial receipts before the runner is lost.
+      - name: Save Linux ingestion checkpoints
+        if: ${{ always() && steps.ingest.outcome != '' && steps.ingest.outcome != 'skipped' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.BETTERMAN_INGEST_STATE_DIR }}
+          key: ingestion-v1-linux-${{ github.run_id }}-${{ github.run_attempt }}
 
   ingest_macos:
     name: Ingest macOS
@@ -158,10 +186,26 @@ jobs:
     runs-on: macos-latest
     environment: production
     timeout-minutes: 60
+    env:
+      BETTERMAN_INGEST_RUN_ID: ${{ github.run_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Set macOS checkpoint directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/betterman-ingestion/macos"
+          echo "BETTERMAN_INGEST_STATE_DIR=${RUNNER_TEMP}/betterman-ingestion/macos" >> "$GITHUB_ENV"
+
+      - name: Restore macOS ingestion checkpoints
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.BETTERMAN_INGEST_STATE_DIR }}
+          key: ingestion-v1-macos-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ingestion-v1-macos-${{ github.run_id }}-
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
@@ -173,6 +217,7 @@ jobs:
       - run: cd ingestion && uv sync --frozen
 
       - name: Ingest macOS (BSD) to Convex staging
+        id: ingest
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
@@ -190,7 +235,15 @@ jobs:
           fi
 
           echo "Ingesting macOS (BSD)…"
-          uv run python -m ingestion.cli ingest --distro macos "${ingest_args[@]}"
+          uv run python -m ingestion.cli ingest --distro macos \
+            --release-id "gha-${BETTERMAN_INGEST_RUN_ID}-macos" "${ingest_args[@]}"
+
+      - name: Save macOS ingestion checkpoints
+        if: ${{ always() && steps.ingest.outcome != '' && steps.ingest.outcome != 'skipped' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.BETTERMAN_INGEST_STATE_DIR }}
+          key: ingestion-v1-macos-${{ github.run_id }}-${{ github.run_attempt }}
 
   ingest_freebsd:
     name: Ingest FreeBSD
@@ -199,21 +252,50 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 90
+    env:
+      BETTERMAN_INGEST_RUN_ID: ${{ github.run_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Set FreeBSD checkpoint directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/betterman-ingestion/freebsd"
+          echo "BETTERMAN_INGEST_STATE_DIR=${RUNNER_TEMP}/betterman-ingestion/freebsd" >> "$GITHUB_ENV"
+
+      - name: Restore FreeBSD ingestion checkpoints
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.BETTERMAN_INGEST_STATE_DIR }}
+          key: ingestion-v1-freebsd-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ingestion-v1-freebsd-${{ github.run_id }}-
+
+      # The VM action synchronizes the workspace, not runner.temp. Copy only
+      # public checkpoints into that bridge; secrets remain environment-only.
+      - name: Prepare FreeBSD checkpoint handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${BETTERMAN_INGEST_STATE_DIR}" "${GITHUB_WORKSPACE}/.betterman-ingestion/freebsd"
+          cp -R "${BETTERMAN_INGEST_STATE_DIR}/." "${GITHUB_WORKSPACE}/.betterman-ingestion/freebsd/"
+
       - name: Ingest FreeBSD to Convex staging
+        id: ingest
         uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1
         with:
           release: "15.0"
-          envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA BETTERMAN_INGEST_SAMPLE"
+          envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA BETTERMAN_INGEST_SAMPLE BETTERMAN_INGEST_RUN_ID"
+          sync: rsync
+          copyback: true
           usesh: true
           run: |
             set -euo pipefail
 
             cd "$GITHUB_WORKSPACE"
+            export BETTERMAN_INGEST_STATE_DIR="${GITHUB_WORKSPACE}/.betterman-ingestion/freebsd"
 
             pkg update -f
             pkg install -y python3
@@ -240,13 +322,43 @@ jobs:
             fi
 
             echo "Ingesting FreeBSD…"
-            $py -m ingestion.cli ingest --distro freebsd "$@"
+            # Let the VM action copy back partial receipts even if ingestion
+            # fails. The host step below restores the exact failure exit code.
+            ingest_status=0
+            $py -m ingestion.cli ingest --distro freebsd \
+              --release-id "gha-${BETTERMAN_INGEST_RUN_ID}-freebsd" "$@" || ingest_status=$?
+            printf '%s\n' "${ingest_status}" > "${GITHUB_WORKSPACE}/.betterman-ingestion/freebsd-status"
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
+
+      - name: Collect FreeBSD checkpoints and enforce ingestion result
+        if: ${{ always() && steps.ingest.outcome != '' && steps.ingest.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -R "${GITHUB_WORKSPACE}/.betterman-ingestion/freebsd/." "${BETTERMAN_INGEST_STATE_DIR}/"
+          status_file="${GITHUB_WORKSPACE}/.betterman-ingestion/freebsd-status"
+          if [[ ! -f "${status_file}" ]]; then
+            echo "FreeBSD ingestion did not return a result; refusing to report success." >&2
+            exit 1
+          fi
+          ingest_status="$(cat "${status_file}")"
+          if [[ ! "${ingest_status}" =~ ^(0|[1-9][0-9]{0,2})$ ]] || (( ingest_status > 255 )); then
+            echo "Invalid FreeBSD ingestion exit status." >&2
+            exit 1
+          fi
+          exit "${ingest_status}"
+
+      - name: Save FreeBSD ingestion checkpoints
+        if: ${{ always() && steps.ingest.outcome != '' && steps.ingest.outcome != 'skipped' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.BETTERMAN_INGEST_STATE_DIR }}
+          key: ingestion-v1-freebsd-${{ github.run_id }}-${{ github.run_attempt }}
 
   promote:
     name: Promote dataset

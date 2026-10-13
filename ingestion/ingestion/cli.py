@@ -30,6 +30,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     ingest.add_argument("--sample", action="store_true", help="Ingest a small sample set")
     ingest.add_argument(
+        "--release-id", help="Freeze and checkpoint this release ID; repeat it to resume uploads"
+    )
+    ingest.add_argument(
         "--activate",
         default=None,
         action=argparse.BooleanOptionalAction,
@@ -48,26 +51,23 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "ingest":
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
+        options = {"sample": args.sample, "activate": activate, "distro": args.distro}
+        if args.release_id is not None:
+            options["release_id"] = args.release_id
         if args.in_container:
-            return _run_ingest_in_container(
-                sample=args.sample,
-                activate=activate,
-                distro=args.distro,
-            )
+            return _run_ingest_in_container(**options)
 
         if args.distro in {"freebsd", "macos"}:
-            return _run_ingest_on_host(
-                sample=args.sample,
-                activate=activate,
-                distro=args.distro,
-            )
+            return _run_ingest_on_host(**options)
 
-        return run_ingest_container(sample=args.sample, activate=activate, distro=args.distro)
+        return run_ingest_container(**options)
 
     raise AssertionError("unreachable")
 
 
-def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> int:
+def _run_ingest_in_container(
+    *, sample: bool, activate: bool, distro: str, release_id: str | None = None
+) -> int:
     image_ref = os.environ.get("BETTERMAN_IMAGE_REF")
     image_digest = os.environ.get("BETTERMAN_IMAGE_DIGEST")
     if not image_ref or not image_digest:
@@ -79,16 +79,20 @@ def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> in
         distro=distro,
         image_ref=image_ref,
         image_digest=image_digest,
+        release_id=release_id,
     )
 
 
-def _run_ingest_on_host(*, sample: bool, activate: bool, distro: str) -> int:
+def _run_ingest_on_host(
+    *, sample: bool, activate: bool, distro: str, release_id: str | None = None
+) -> int:
     return _run_ingest(
         sample=sample,
         activate=activate,
         distro=distro,
         image_ref=os.environ.get("BETTERMAN_IMAGE_REF", f"host:{distro}"),
         image_digest=os.environ.get("BETTERMAN_IMAGE_DIGEST", "unknown"),
+        release_id=release_id,
     )
 
 
@@ -99,6 +103,7 @@ def _run_ingest(
     distro: str,
     image_ref: str,
     image_digest: str,
+    release_id: str | None = None,
 ) -> int:
     convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
     ingest_secret = os.environ.get("CONVEX_INGEST_SECRET")
@@ -121,6 +126,7 @@ def _run_ingest(
             image_digest=image_digest,
             git_sha=git_sha,
             distro=distro,
+            **({"release_id": release_id} if release_id is not None else {}),
         )
     except RuntimeError as exc:
         _log("ingest_error", error=str(exc))

@@ -3,11 +3,10 @@ from __future__ import annotations
 import logging
 import os
 import re
-import uuid
 from collections import Counter
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic
@@ -36,7 +35,7 @@ from ingestion.arch import (
     pacman_packages,
 )
 from ingestion.convex_client import ConvexIngestClient
-from ingestion.db import iso_utc_now, json_dumps, uuid4
+from ingestion.db import iso_utc_now, json_dumps
 from ingestion.debian import (
     apt_install,
     dpkg_arch,
@@ -70,6 +69,7 @@ from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import decompress_roff, render_html
 from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
+from ingestion.resume import ReleaseCheckpoint, state_directory
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]*$")
@@ -107,6 +107,73 @@ def ingest(
     git_sha: str,
     locale: str = "en",
     distro: str = "debian",
+    release_id: str | None = None,
+) -> IngestResult:
+    _ingest_worker_count()
+    arguments = dict(
+        sample=sample,
+        activate=activate,
+        convex_url=convex_url,
+        ingest_secret=ingest_secret,
+        dataset_stage=dataset_stage,
+        image_ref=image_ref,
+        image_digest=image_digest,
+        git_sha=git_sha,
+        locale=locale,
+        distro=distro,
+    )
+    if release_id is None:
+        return _prepare_release(**arguments)
+    if not release_id.strip() or release_id != release_id.strip():
+        raise ValueError("--release-id must be nonempty without surrounding whitespace")
+    signature = {
+        "sample": sample,
+        "distro": distro,
+        "locale": locale,
+        "stage": dataset_stage,
+        "imageRef": image_ref,
+        "imageDigest": image_digest,
+        "gitSha": git_sha,
+    }
+    with ReleaseCheckpoint(
+        directory=state_directory(), http_url=convex_url, release_id=release_id
+    ) as checkpoint:
+        metadata = checkpoint.load(signature)
+        if metadata is not None:
+            _log(
+                "release_resume",
+                datasetReleaseId=release_id,
+                acknowledgedPages=checkpoint.uploaded_count("pages"),
+            )
+            return _upload_release(
+                metadata=metadata,
+                items={},
+                checkpoint=checkpoint,
+                resuming=True,
+                activate=activate,
+                dataset_stage=dataset_stage,
+                client=ConvexIngestClient(http_url=convex_url, ingest_secret=ingest_secret),
+            )
+        return _prepare_release(
+            **arguments, release_id=release_id, checkpoint=checkpoint, signature=signature
+        )
+
+
+def _prepare_release(
+    *,
+    sample: bool,
+    activate: bool,
+    convex_url: str,
+    ingest_secret: str,
+    dataset_stage: str,
+    image_ref: str,
+    image_digest: str,
+    git_sha: str,
+    locale: str = "en",
+    distro: str = "debian",
+    release_id: str | None = None,
+    checkpoint: ReleaseCheckpoint | None = None,
+    signature: dict | None = None,
 ) -> IngestResult:
     workers = _ingest_worker_count()
     requested = _content_packages(sample=sample, distro=distro)
@@ -170,7 +237,7 @@ def ingest(
         mandoc_version = None
         manpath_to_pkg = {}
 
-    dataset_release_id = _build_dataset_release_id(
+    dataset_release_id = release_id or _build_dataset_release_id(
         git_sha=git_sha, mandoc_version=mandoc_version, distro=distro
     )
     package_manifest = {
@@ -195,6 +262,7 @@ def ingest(
         manpath_to_pkg=manpath_to_pkg,
         arch=arch,
         workers=workers,
+        distro=distro,
     )
 
     total = len(sources)
@@ -202,16 +270,7 @@ def ingest(
     _resolve_doc_links_and_see_also(pages=parsed_pages)
     aliases = _resolve_aliases(aliases=aliases, pages=parsed_pages)
 
-    # Aliases count as handled sources for the success gate, but the release
-    # page count, section totals, and sitemaps only cover parsed pages.
     succeeded = len(parsed_pages)
-    handled = succeeded + len(aliases)
-    hard_failed = parse_failed
-    hard_fail_rate = (hard_failed / total) if total else 0.0
-    success_rate = (handled / total) if total else 0.0
-    publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
-
-    client = ConvexIngestClient(http_url=convex_url, ingest_secret=ingest_secret)
     page_links = _build_page_links(pages=parsed_pages)
     sitemap_pages = _build_sitemap_page_map(pages=parsed_pages)
     licenses = _collect_licenses(pages=parsed_pages)
@@ -220,62 +279,33 @@ def ingest(
         packages_with_text=set(licenses),
     )
 
-    client.post(
-        "/ingest/release",
-        {
-            "datasetReleaseId": dataset_release_id,
-            "locale": locale,
-            "distro": distro,
-            "imageRef": image_ref,
-            "imageDigest": image_digest,
-            "ingestedAt": datetime.now(tz=UTC).isoformat(),
-            "packageManifest": package_manifest,
-            "pageCount": succeeded,
-            "aliasCount": len(aliases),
-            "licenseCount": len(licenses),
-            "sectionTotals": [
-                {"section": section, "total": total}
-                for section, total in sorted(Counter(p.section for p in parsed_pages).items())
-            ],
-            "licensePackages": license_packages,
-        },
-    )
-
-    insert_started = monotonic()
-    batch_size = 20
-    for start in range(0, len(parsed_pages), batch_size):
-        batch = parsed_pages[start : start + batch_size]
-        client.post(
-            "/ingest/pages/storage",
-            {
-                "datasetReleaseId": dataset_release_id,
-                "pages": [
-                    _page_payload(
-                        row,
-                        sitemap_page=sitemap_pages[str(row.page_id)],
-                        links=page_links.get(str(row.page_id), []),
-                    )
-                    for row in batch
-                ],
-            },
-        )
-
-        processed = min(start + len(batch), len(parsed_pages))
-        if processed % 100 == 0 or processed == len(parsed_pages):
-            elapsed = monotonic() - insert_started
-            rate = processed / elapsed if elapsed > 0 else 0.0
-            remaining = max(0, len(parsed_pages) - processed)
-            eta_s = int(remaining / rate) if rate > 0 else None
-            _log(
-                "insert_progress",
-                processed=processed,
-                total=len(parsed_pages),
-                pct=round((processed / len(parsed_pages)) * 100.0, 2) if parsed_pages else 0.0,
-                etaSeconds=eta_s,
+    declaration = {
+        "datasetReleaseId": dataset_release_id,
+        "locale": locale,
+        "distro": distro,
+        "imageRef": image_ref,
+        "imageDigest": image_digest,
+        "ingestedAt": datetime.now(tz=UTC).isoformat(),
+        "packageManifest": package_manifest,
+        "pageCount": succeeded,
+        "aliasCount": len(aliases),
+        "licenseCount": len(licenses),
+        "sectionTotals": [
+            {"section": section, "total": total}
+            for section, total in sorted(Counter(p.section for p in parsed_pages).items())
+        ],
+        "licensePackages": license_packages,
+    }
+    items = {
+        "pages": [
+            _page_payload(
+                row,
+                sitemap_page=sitemap_pages[str(row.page_id)],
+                links=page_links.get(str(row.page_id), []),
             )
-
-    if licenses:
-        license_items = [
+            for row in parsed_pages
+        ],
+        "licenses": [
             {
                 "packageName": package_name,
                 "licenseId": f"pkg:{package_name}",
@@ -284,18 +314,8 @@ def ingest(
                 "sourceUrl": None,
             }
             for package_name, text in sorted(licenses.items())
-        ]
-        for start in range(0, len(license_items), 10):
-            client.post(
-                "/ingest/licenses",
-                {
-                    "datasetReleaseId": dataset_release_id,
-                    "licenses": license_items[start : start + 10],
-                },
-            )
-
-    if aliases:
-        alias_items = [
+        ],
+        "aliases": [
             {
                 "name": alias.name,
                 "section": alias.section,
@@ -303,15 +323,107 @@ def ingest(
                 "targetSection": alias.target_section,
             }
             for alias in aliases
-        ]
-        for start in range(0, len(alias_items), 200):
-            client.post(
-                "/ingest/aliases",
-                {
-                    "datasetReleaseId": dataset_release_id,
-                    "aliases": alias_items[start : start + 200],
-                },
+        ],
+    }
+    metadata = {"declaration": declaration, "total": total, "parseFailed": parse_failed}
+    if checkpoint is not None:
+        checkpoint.prepare(signature=signature, metadata=metadata, items=items)
+        # The durable plan is now authoritative. Release uploads can be resumed
+        # without reinstalling content packages or rebuilding timestamps/links.
+        items = {}
+    _log(
+        "release_prepared",
+        datasetReleaseId=dataset_release_id,
+        pages=succeeded,
+        checkpoint=str(checkpoint.path) if checkpoint else None,
+    )
+    return _upload_release(
+        metadata=metadata,
+        items=items,
+        checkpoint=checkpoint,
+        resuming=False,
+        client=ConvexIngestClient(http_url=convex_url, ingest_secret=ingest_secret),
+        activate=activate,
+        dataset_stage=dataset_stage,
+    )
+
+
+def _count_batches(
+    items: Iterable[tuple[int, dict]], size: int
+) -> Iterator[list[tuple[int, dict]]]:
+    batch = []
+    for item in items:
+        batch.append(item)
+        if len(batch) == size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+
+def _upload_release(
+    *,
+    metadata: dict,
+    items: dict[str, list[dict]],
+    checkpoint: ReleaseCheckpoint | None,
+    resuming: bool,
+    client: ConvexIngestClient,
+    activate: bool,
+    dataset_stage: str,
+) -> IngestResult:
+    declaration = metadata["declaration"]
+    dataset_release_id = declaration["datasetReleaseId"]
+    total = metadata["total"]
+    succeeded = declaration["pageCount"]
+    hard_failed = metadata["parseFailed"]
+    handled = succeeded + declaration["aliasCount"]
+    hard_fail_rate = (hard_failed / total) if total else 0.0
+    success_rate = (handled / total) if total else 0.0
+    publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
+    if checkpoint:
+        result = client.create_release(declaration)
+        checkpoint.confirm_release(result, resuming=resuming)
+    else:
+        client.post("/ingest/release", declaration)
+
+    for kind, path, size in [
+        ("pages", "/ingest/pages/storage", 20),
+        ("licenses", "/ingest/licenses", 10),
+        ("aliases", "/ingest/aliases", 200),
+    ]:
+        pending = checkpoint.pending(kind) if checkpoint else enumerate(items[kind])
+        processed = checkpoint.uploaded_count(kind) if checkpoint else 0
+        started = monotonic()
+        session_processed = 0
+        for batch in _count_batches(pending, size):
+            response = client.post(
+                path,
+                {"datasetReleaseId": dataset_release_id, kind: [payload for _, payload in batch]},
             )
+            if checkpoint:
+                if (
+                    type(response.get("inserted")) is not int
+                    or type(response.get("skipped")) is not int
+                    or response["inserted"] < 0
+                    or response["skipped"] < 0
+                    or response["inserted"] + response["skipped"] != len(batch)
+                ):
+                    raise RuntimeError("Upload response did not confirm every batch item")
+                checkpoint.acknowledge(kind, [ordinal for ordinal, _ in batch])
+            processed += len(batch)
+            session_processed += len(batch)
+            if kind == "pages":
+                elapsed = monotonic() - started
+                rate = session_processed / elapsed if elapsed > 0 else 0.0
+                eta_s = int(max(0, succeeded - processed) / rate) if rate > 0 else None
+                _log(
+                    "insert_progress",
+                    processed=processed,
+                    total=succeeded,
+                    pct=round(processed / succeeded * 100, 2) if succeeded else 0.0,
+                    pagesPerSecond=round(rate, 2),
+                    etaSeconds=eta_s,
+                )
 
     published = False
     if publish_allowed and activate:
@@ -329,7 +441,7 @@ def ingest(
         datasetReleaseId=dataset_release_id,
         total=total,
         succeeded=succeeded,
-        aliases=len(aliases),
+        aliases=declaration["aliasCount"],
         failed=hard_failed,
         published=published,
         publishAllowed=publish_allowed,
@@ -351,7 +463,7 @@ def ingest(
 
 @dataclass(frozen=True)
 class _PageRow:
-    page_id: uuid.UUID
+    page_id: str
     name: str
     section: str
     title: str
@@ -474,6 +586,7 @@ def _parse_sources(
     manpath_to_pkg: dict[str, str],
     arch: str,
     workers: int,
+    distro: str = "debian",
 ) -> tuple[list[_PageRow], list[_AliasRow], int]:
     pages: list[_PageRow] = []
     aliases: list[_AliasRow] = []
@@ -489,7 +602,14 @@ def _parse_sources(
         elif result.alias is not None:
             aliases.append(result.alias)
         elif result.page is not None:
-            pages.append(result.page)
+            pages.append(
+                replace(
+                    result.page,
+                    page_id=_page_external_id(
+                        distro=distro, name=result.page.name, section=result.page.section
+                    ),
+                )
+            )
         if processed % 100 == 0 or processed == len(sources):
             elapsed = monotonic() - started
             rate = processed / elapsed if elapsed > 0 else 0.0
@@ -506,6 +626,10 @@ def _parse_sources(
                 etaSeconds=eta_s,
             )
     return pages, aliases, failed
+
+
+def _page_external_id(*, distro: str, name: str, section: str) -> str:
+    return sha256_hex(f"{distro}/{name}/{section}".encode())[:32]
 
 
 def _alias_for_source(src: ManSource, raw: bytes) -> _AliasRow | None:
@@ -602,7 +726,8 @@ def _parse_source(
     html_result = render_html(raw)
     parsed = parse_mandoc_html(html_result.html)
 
-    page_id = uuid4()
+    # The ordered collector assigns the distro-scoped route identity.
+    page_id = ""
     source_path = str(src.path)
     source_package = manpath_to_pkg.get(source_path) or manpath_to_pkg.get(str(src.path.resolve()))
     source_package_version = None

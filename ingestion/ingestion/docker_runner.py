@@ -5,8 +5,12 @@ import shlex
 import subprocess
 from pathlib import Path
 
+from ingestion.resume import ReleaseCheckpoint, state_directory
 
-def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
+
+def run_ingest_container(
+    *, sample: bool, activate: bool, distro: str, release_id: str | None = None
+) -> int:
     repo_root = Path(__file__).resolve().parents[2]
     ingestion_dir = repo_root / "ingestion"
 
@@ -29,24 +33,41 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         raise RuntimeError(f"unsupported distro: {distro}")
 
     image_ref = os.environ.get(image_env[distro], default_images[distro])
+    git_sha = subprocess.check_output(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=repo_root,
+        text=True,
+    ).strip()
+    convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL", "")
+    dataset_stage = os.environ.get("BETTERMAN_DATASET_STAGE", "staging")
+    pull_ref = image_ref
+    if release_id is not None:
+        with ReleaseCheckpoint(
+            directory=state_directory(), http_url=convex_url, release_id=release_id
+        ) as checkpoint:
+            saved_digest = checkpoint.image_digest_for(
+                {
+                    "sample": sample,
+                    "distro": distro,
+                    "locale": "en",
+                    "stage": dataset_stage,
+                    "imageRef": image_ref,
+                    "gitSha": git_sha,
+                }
+            )
+        if saved_digest is not None:
+            # Resolve a mutable tag to the exact image used by the prepared
+            # checkpoint, even on a fresh runner after the tag has advanced.
+            pull_ref = f"{image_ref.split('@', 1)[0]}@{saved_digest}"
     platform = os.environ.get(f"BETTERMAN_{distro.upper()}_DOCKER_PLATFORM") or os.environ.get(
         "BETTERMAN_DOCKER_PLATFORM",
     )
     pull_cmd = ["docker", "pull"]
     if platform:
         pull_cmd.extend(["--platform", platform])
-    pull_cmd.append(image_ref)
+    pull_cmd.append(pull_ref)
     subprocess.run(pull_cmd, check=True)
-    image_digest = _image_digest(image_ref)
-
-    git_sha = subprocess.check_output(
-        ["git", "rev-parse", "--short", "HEAD"],
-        cwd=repo_root,
-        text=True,
-    ).strip()
-
-    convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL", "")
-    dataset_stage = os.environ.get("BETTERMAN_DATASET_STAGE", "staging")
+    image_digest = _image_digest(pull_ref)
 
     network = os.environ.get("INGEST_DOCKER_NETWORK")
     if not network and _docker_network_exists("betterman_default"):
@@ -81,8 +102,25 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         cmd.extend(["--platform", platform])
     if network:
         cmd.extend(["--network", network])
+    if release_id is not None:
+        directory = state_directory()
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        cmd.extend(
+            [
+                "-v",
+                f"{directory}:/ingest-state",
+                "-e",
+                "BETTERMAN_INGEST_STATE_DIR=/ingest-state",
+                "-e",
+                f"BETTERMAN_INGEST_STATE_UID={os.getuid()}",
+                "-e",
+                f"BETTERMAN_INGEST_STATE_GID={os.getgid()}",
+            ]
+        )
 
     args = ["ingest", "--in-container", "--distro", distro]
+    if release_id is not None:
+        args.extend(["--release-id", release_id])
     if sample:
         args.append("--sample")
     args.append("--activate" if activate else "--no-activate")
@@ -133,7 +171,7 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
             f"{runner_cmd}"
         )
 
-    cmd.extend([image_ref, "sh", "-lc", inner])
+    cmd.extend([pull_ref, "sh", "-lc", inner])
     proc = subprocess.run(cmd, check=False)
     return proc.returncode
 

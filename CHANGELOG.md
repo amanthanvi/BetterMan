@@ -4,6 +4,8 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Ingestion: add stable distro/route page IDs and `--release-id` checkpoints that freeze release declarations and resume only unacknowledged uploads; monthly workflow reruns restore their prepared releases without repeating parsing.
+
 - Ingestion: parse pages in an ordered process pool with configurable `BETTERMAN_INGEST_WORKERS` (default up to eight CPUs), isolated page failures, and throughput/ETA progress that includes aliases.
 
 - Security: set the `Secure` attribute on client-set theme and distro cookies, serve baseline security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, HSTS) on `/api/*` JSON responses, and re-check external content links for http(s) schemes at render time as stored-XSS defense in depth. The dead `TRUSTED_PROXY_CIDRS` setting is removed from `.env.example`.

@@ -4,11 +4,10 @@ import gzip
 import json
 import multiprocessing
 import shutil
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
-from uuid import NAMESPACE_URL, uuid5
 
 import pytest
 
@@ -69,9 +68,7 @@ def test_explicit_workers_and_sequential_mode(monkeypatch, tmp_path):
     assert failed == 0
 
 
-def _normalize_and_resolve(pages, aliases, failed):
-    # IDs are random today; normalize only after real process-pool output.
-    pages = [replace(p, page_id=uuid5(NAMESPACE_URL, f"{p.name}/{p.section}")) for p in pages]
+def _resolve_output(pages, aliases, failed):
     ingest_runner._resolve_doc_links_and_see_also(pages=pages)
     aliases = ingest_runner._resolve_aliases(aliases=aliases, pages=pages)
     return {
@@ -134,7 +131,7 @@ def test_spawn_pool_matches_sequential_fixtures_aliases_errors_and_links(monkeyp
             "options": page.options or [],
             "doc": page.doc,
         } == expected
-    assert _normalize_and_resolve(*parallel) == _normalize_and_resolve(*sequential)
+    assert _resolve_output(*parallel) == _resolve_output(*sequential)
 
 
 def test_progress_counts_alias_milestones_and_emits_rate_eta(monkeypatch, tmp_path):
