@@ -1,5 +1,8 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { ReadingPrefsProvider, useReadingPrefs } from '../components/state/readingPrefs'
 import {
   DEFAULT_PREFS,
   READING_PREFS_COOKIE,
@@ -9,6 +12,7 @@ import {
   prefsFromCookieString,
   resetReadingPrefs,
   setReadingPrefs,
+  syncReadingPrefsCookie,
 } from './readingPrefs'
 import type { ReadingPreferences } from './readingPrefs'
 
@@ -85,16 +89,19 @@ describe('reading preference persistence', () => {
   })
 
   it('writes URL-encoded preferences and resets both persistence stores', () => {
-    const setItem = vi.fn()
+    let stored: string | null = null
+    const setItem = vi.fn((_key: string, value: string) => { stored = value })
     const document = { cookie: '' }
-    vi.stubGlobal('localStorage', { setItem })
+    vi.stubGlobal('localStorage', { getItem: () => stored, setItem })
     vi.stubGlobal('document', document)
     setReadingPrefs(savedPrefs)
     expect(setItem).toHaveBeenLastCalledWith(READING_PREFS_STORAGE_KEY, JSON.stringify(savedPrefs))
     expect(document.cookie).toBe(`${READING_PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(savedPrefs))}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`)
+    expect(getReadingPrefs()).toEqual(savedPrefs)
     resetReadingPrefs()
     expect(setItem).toHaveBeenLastCalledWith(READING_PREFS_STORAGE_KEY, JSON.stringify(DEFAULT_PREFS))
     expect(document.cookie).toBe(`${READING_PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(DEFAULT_PREFS))}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`)
+    expect(getReadingPrefs()).toEqual(DEFAULT_PREFS)
   })
 
   it('still writes the cookie when localStorage writes fail', () => {
@@ -105,20 +112,78 @@ describe('reading preference persistence', () => {
     expect(prefsFromCookieString(document.cookie.split(';')[0].slice(`${READING_PREFS_COOKIE}=`.length))).toEqual(savedPrefs)
   })
 
-  it('notifies the provider with the new value when storage remains readable but writes fail', () => {
+  it.each(['throw', 'stale'])('keeps the reset event value and cookie when readable storage stays stale (%s write)', (writeFailure) => {
     const window = new EventTarget()
-    const onChange = vi.fn((event: Event) => (event as CustomEvent<ReadingPreferences>).detail)
+    let consumerPrefs = savedPrefs
+    // Exercise the emitted-value contract without claiming a mounted provider.
+    const onChange = vi.fn((event: Event) => {
+      consumerPrefs = (event as CustomEvent<ReadingPreferences>).detail
+    })
     window.addEventListener(READING_PREFS_EVENT, onChange)
     vi.stubGlobal('window', window)
-    vi.stubGlobal('localStorage', {
-      getItem: () => JSON.stringify(savedPrefs),
-      setItem: () => { throw new Error('quota exceeded') },
+    const getItem = vi.fn(() => JSON.stringify(savedPrefs))
+    const setItem = vi.fn(() => {
+      if (writeFailure === 'throw') throw new Error('quota exceeded')
     })
+    vi.stubGlobal('localStorage', {
+      getItem,
+      setItem,
+    })
+    let cookie = `${READING_PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(savedPrefs))}`
+    const writeCookie = vi.fn((value: string) => { cookie = value })
+    const document = { get cookie() { return cookie }, set cookie(value: string) { writeCookie(value) } }
+    vi.stubGlobal('document', document)
+    expect(getReadingPrefs()).toEqual(savedPrefs)
+    getItem.mockClear()
+
+    resetReadingPrefs()
+    expect(setItem).toHaveBeenCalledExactlyOnceWith(READING_PREFS_STORAGE_KEY, JSON.stringify(DEFAULT_PREFS))
+    expect(getItem).not.toHaveBeenCalled()
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(consumerPrefs).toEqual(DEFAULT_PREFS)
+    expect(writeCookie).toHaveBeenCalledExactlyOnceWith(`${READING_PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(DEFAULT_PREFS))}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`)
+    expect(prefsFromCookieString(document.cookie.split(';')[0].slice(`${READING_PREFS_COOKIE}=`.length))).toEqual(DEFAULT_PREFS)
+
+    // This stale read is the reason a same-tab consumer must use event.detail.
+    expect(getReadingPrefs()).toEqual(savedPrefs)
+    expect(consumerPrefs).toEqual(DEFAULT_PREFS)
+    expect(writeCookie).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads reset defaults from the cookie when storage writes and subsequent reads fail', () => {
+    let blocked = false
+    const setItem = vi.fn(() => { blocked = true; throw new Error('blocked') })
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        if (blocked) throw new Error('blocked')
+        return JSON.stringify(savedPrefs)
+      },
+      setItem,
+    })
+    const document = { cookie: `${READING_PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(savedPrefs))}` }
+    vi.stubGlobal('document', document)
+    expect(getReadingPrefs()).toEqual(savedPrefs)
+
+    expect(() => resetReadingPrefs()).not.toThrow()
+    expect(setItem).toHaveBeenCalledExactlyOnceWith(READING_PREFS_STORAGE_KEY, JSON.stringify(DEFAULT_PREFS))
+    expect(prefsFromCookieString(document.cookie.split(';')[0].slice(`${READING_PREFS_COOKIE}=`.length))).toEqual(DEFAULT_PREFS)
+    expect(getReadingPrefs()).toEqual(DEFAULT_PREFS)
+  })
+
+  it('mirrors legacy storage preferences to the cookie without writing storage or emitting a change', () => {
+    const window = new EventTarget()
+    const onChange = vi.fn()
+    window.addEventListener(READING_PREFS_EVENT, onChange)
+    vi.stubGlobal('window', window)
+    const setItem = vi.fn()
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify(savedPrefs), setItem })
     const document = { cookie: '' }
     vi.stubGlobal('document', document)
-    resetReadingPrefs()
-    expect(onChange).toHaveReturnedWith(DEFAULT_PREFS)
-    expect(prefsFromCookieString(document.cookie.split(';')[0].slice(`${READING_PREFS_COOKIE}=`.length))).toEqual(DEFAULT_PREFS)
+
+    syncReadingPrefsCookie(getReadingPrefs())
+    expect(prefsFromCookieString(document.cookie.split(';')[0].slice(`${READING_PREFS_COOKIE}=`.length))).toEqual(savedPrefs)
+    expect(setItem).not.toHaveBeenCalled()
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('still writes localStorage when cookies are blocked', () => {
@@ -127,5 +192,29 @@ describe('reading preference persistence', () => {
     vi.stubGlobal('document', { set cookie(_value: string) { throw new Error('blocked') } })
     expect(() => setReadingPrefs(savedPrefs)).not.toThrow()
     expect(setItem).toHaveBeenCalledWith(READING_PREFS_STORAGE_KEY, JSON.stringify(savedPrefs))
+  })
+})
+
+describe('ReadingPrefsProvider server render', () => {
+  it.each([DEFAULT_PREFS, savedPrefs])('uses initialPrefs without reading or changing browser persistence: %j', (initialPrefs) => {
+    const getItem = vi.fn(() => JSON.stringify(initialPrefs === DEFAULT_PREFS ? savedPrefs : DEFAULT_PREFS))
+    const setItem = vi.fn()
+    vi.stubGlobal('localStorage', { getItem, setItem })
+    const cookie = `${READING_PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(DEFAULT_PREFS))}`
+    const document = { cookie }
+    vi.stubGlobal('document', document)
+    let renderedPrefs: ReadingPreferences | undefined
+    function Consumer() {
+      renderedPrefs = useReadingPrefs().prefs
+      return createElement('span', null, renderedPrefs.fontSize)
+    }
+
+    const providerProps = { initialPrefs, children: createElement(Consumer) }
+    const html = renderToStaticMarkup(createElement(ReadingPrefsProvider, providerProps))
+    expect(renderedPrefs).toEqual(initialPrefs)
+    expect(html).toBe(`<span>${initialPrefs.fontSize}</span>`)
+    expect(getItem).not.toHaveBeenCalled()
+    expect(setItem).not.toHaveBeenCalled()
+    expect(document.cookie).toBe(cookie)
   })
 })
