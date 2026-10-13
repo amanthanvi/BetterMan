@@ -10,7 +10,7 @@
   "theme_color": "#faf8f5",
   "shortcuts": [
     { "name": "Search", "url": "/search" },
-    { "name": "New bookmark", "url": "/#bookmarks" },
+    { "name": "Bookmarks", "url": "/#bookmarks" },
     { "name": "History", "url": "/#recent" }
   ],
   "icons": [

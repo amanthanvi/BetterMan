@@ -137,6 +137,42 @@ describe('service worker navigation freshness', () => {
     expect(await (await w.getCache(htmlName).match(htmlKey('/search?q=ls')))!.text()).toBe('fresh')
   })
 
+  it('returns an uncached network response while another navigation cache write is blocked', async () => {
+    const w = worker()
+    const cache = w.getCache(htmlName)
+    await cache.put(htmlKey('/first'), new Response('cached first'))
+    const blockedWrite = deferred<void>()
+    const writeStarted = deferred<void>()
+    const put = cache.put.getMockImplementation()!
+    cache.put.mockImplementationOnce(async (key, response) => {
+      writeStarted.resolve()
+      await blockedWrite.promise
+      await put(key, response)
+    })
+    w.fetch.mockImplementation(async (request) => new Response(`fresh ${new URL(request.url).pathname}`))
+    const first = w.request('/first')
+    expect(await (await first.response!).text()).toBe('cached first')
+    await writeStarted.promise
+
+    const second = w.request('/second')
+    let backgroundDone = false
+    const background = Promise.all([...first.pending, ...second.pending]).then(() => { backgroundDone = true })
+    try {
+      const result = await Promise.race([
+        second.response!.then(response => response.text()),
+        new Promise<string>(resolve => setTimeout(() => resolve('blocked by cache queue'), 100)),
+      ])
+      expect(result).toBe('fresh /second')
+      expect(backgroundDone).toBe(false)
+      expect(cache.entries.has(htmlKey('/second'))).toBe(false)
+    } finally {
+      blockedWrite.resolve()
+      await background
+    }
+    expect(await (await cache.match(htmlKey('/first')))!.text()).toBe('fresh /first')
+    expect(await (await cache.match(htmlKey('/second')))!.text()).toBe('fresh /second')
+  })
+
   it('returns an HTTP error on a cache miss without caching it as success', async () => {
     const w = worker()
     w.fetch.mockResolvedValue(new Response('missing', { status: 404 }))
@@ -226,7 +262,9 @@ describe('service worker navigation freshness', () => {
     const w = worker()
     w.preferences.set('bm-distro', 'ubuntu')
     w.fetch.mockResolvedValue(new Response('Debian', { headers: { 'X-BM-Navigation-Context': context('debian') } }))
-    await w.request('/man/ls/1').response
+    const event = w.request('/man/ls/1')
+    await event.response
+    await Promise.all(event.pending)
     const cache = w.getCache(htmlName)
     expect(await cache.match(htmlKey('/man/ls/1', context('ubuntu')))).toBeUndefined()
     expect(await (await cache.match(htmlKey('/man/ls/1', context('debian'))))!.text()).toBe('Debian')
@@ -236,7 +274,9 @@ describe('service worker navigation freshness', () => {
     const w = worker(undefined, false)
     await w.getCache(htmlName).put('/man/ls/1', new Response('old'))
     w.fetch.mockResolvedValue(new Response('fresh'))
-    expect(await (await w.request('/man/ls/1').response!).text()).toBe('fresh')
+    const online = w.request('/man/ls/1')
+    expect(await (await online.response!).text()).toBe('fresh')
+    await Promise.all(online.pending)
     w.fetch.mockRejectedValue(new Error('offline'))
     expect(await (await w.request('/man/ls/1').response!).text()).toBe('fresh')
   })

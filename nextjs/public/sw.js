@@ -165,24 +165,30 @@ function navigationResponse(event) {
     .catch(() => undefined)
   const refresh = (async () => {
     try {
-      const response = await fetch(request)
-      const cache = await cachePromise
-      const context = await contextPromise
-      // Server context describes the cookies that actually produced this HTML;
-      // cookie preferences may have changed while the request was in flight.
-      const servedContext = response.headers.get('X-BM-Navigation-Context')
-      if (response.ok && cache && (context === null || servedContext !== null)) {
-        const key = context === null ? request : navigationKey(request, servedContext)
-        await writeCache(cache, HTML_CACHE, key, response, MAX_HTML_ENTRIES)
-      }
-      return response
+      return await fetch(request)
     } catch {
       return null
     }
   })()
 
-  // Register synchronously so the worker stays alive after returning cached HTML.
-  event.waitUntil(refresh.then(() => undefined))
+  // Register synchronously, but keep cache work separate from response delivery.
+  event.waitUntil(refresh.then(async (response) => {
+    try {
+      if (!response?.ok) return
+      // Clone before awaiting storage: the browser may consume the original now.
+      const cacheResponse = response.clone()
+      const [cache, context] = await Promise.all([cachePromise, contextPromise])
+      // Server context describes the cookies that actually produced this HTML;
+      // cookie preferences may have changed while the request was in flight.
+      const servedContext = response.headers.get('X-BM-Navigation-Context')
+      if (cache && (context === null || servedContext !== null)) {
+        const key = context === null ? request : navigationKey(request, servedContext)
+        await writeCache(cache, HTML_CACHE, key, cacheResponse, MAX_HTML_ENTRIES)
+      }
+    } catch {
+      // Storage failures must not affect successful network navigation.
+    }
+  }))
   return (async () => {
     const cached = await cachedPromise
     if (cached && await contextPromise !== null) return cached

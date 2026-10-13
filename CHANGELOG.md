@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- PWA: return fresh navigation responses without waiting for queued cache writes, and label the bookmarks-list install shortcut "Bookmarks". (#322)
 - PWA: add Search, New bookmark, and History install shortcuts, use light paper for install-time theme/background colors, and replace the unpadded maskable declaration with a dedicated padded PNG.
 - Typography: load self-hosted variable Geist Sans and roman/italic JetBrains Mono through `next/font/local`, with automatic hashed font preloads and metric-adjusted fallback faces to reduce font-swap layout shifts.
 - PWA: serve preference-matched cached navigation HTML immediately while refreshing it in the background, provide a self-contained branded offline page for uncached visits, and persist the trim cadence across worker restarts (activation and every 20 successful writes instead of every write).
