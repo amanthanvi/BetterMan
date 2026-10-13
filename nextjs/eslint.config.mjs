@@ -12,11 +12,19 @@ export default defineConfig([
       },
     },
     rules: {
+      'no-console': 'warn',
       'react-hooks/error-boundaries': 'off',
       'react-hooks/immutability': 'off',
       'react-hooks/refs': 'off',
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/static-components': 'off',
+    },
+  },
+  {
+    // CLI scripts print to the console as their interface.
+    files: ['scripts/**'],
+    rules: {
+      'no-console': 'off',
     },
   },
   globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']),

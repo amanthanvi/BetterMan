@@ -255,11 +255,12 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
     monkeypatch.setattr(ingest_runner, "dpkg_arch", lambda: "amd64")
     monkeypatch.setattr(ingest_runner, "mandoc_pkg_version_dpkg", lambda _packages: "1.0")
     monkeypatch.setattr(ingest_runner, "build_manpath_to_package_dpkg", lambda: {})
+    monkeypatch.setattr(ingest_runner, "_read_bytes", lambda _path: b".TH real 1\n")
     monkeypatch.setattr(ingest_runner, "_parse_source", lambda *_args, **_kwargs: pages[0])
     monkeypatch.setattr(
         ingest_runner,
         "_alias_for_source",
-        lambda source: _alias("stub", "real") if source.name == "stub" else None,
+        lambda source, _raw: _alias("stub", "real") if source.name == "stub" else None,
     )
     monkeypatch.setattr(
         ingest_runner,

@@ -61,28 +61,20 @@ def find_man_source(root: Path, *, name: str, section: str) -> ManSource | None:
         if candidate.exists():
             return ManSource(path=candidate, name=name, section=section)
 
-    # Fallback: scan directory for any matching prefix.
+    # Fallback: scan directory for any matching prefix (gzip suffix is
+    # case-insensitive: `tar.1.gz` and `tar.1.GZ` are both man pages).
     prefix = f"{name}.{section}"
     for entry in dir_path.iterdir():
-        if entry.name == prefix or entry.name == f"{prefix}.gz":
+        if entry.name == prefix or entry.name.lower() == f"{prefix}.gz":
             return ManSource(path=entry, name=name, section=section)
 
     return None
 
 
-def _strip_suffixes(filename: str, section: str) -> str:
-    name = filename
-    if name.endswith(".gz"):
-        name = name.removesuffix(".gz")
-    if name.endswith(f".{section}"):
-        name = name.removesuffix(f".{section}")
-    return name
-
-
 def _parse_man_filename(filename: str) -> tuple[str, str] | None:
     name = filename
-    if name.endswith(".gz"):
-        name = name.removesuffix(".gz")
+    if name.lower().endswith(".gz"):
+        name = name[: -len(".gz")]
     dot = name.rfind(".")
     if dot <= 0 or dot == len(name) - 1:
         return None

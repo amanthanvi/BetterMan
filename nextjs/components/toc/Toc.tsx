@@ -72,12 +72,14 @@ export function Toc({
         {items.map((item) => {
           const active = activeId === item.id
           const indent = TOC_INDENT_CLASSES[Math.min(5, Math.max(0, item.level - 2))]
+          const truncated = item.title.length > 52
 
           return (
             <li key={item.id} className="text-sm">
               <a
                 href={`#${item.id}`}
                 aria-current={active ? 'location' : undefined}
+                title={truncated ? item.title : undefined}
                 onClick={(e) => {
                   if (onNavigateToId) {
                     e.preventDefault()

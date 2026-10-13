@@ -1,21 +1,14 @@
 import Link from 'next/link'
-import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
 import type { Distro } from '../../lib/distro'
 import { listSections, search, withDistroFallback } from '../../lib/api'
-import { isDefaultDistro, normalizeDistro } from '../../lib/distro'
+import { isDefaultDistro } from '../../lib/distro'
+import { getFirst, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { SearchPageInput } from './SearchPageInput'
 import { SearchResultsClient } from './SearchResultsClient'
 
 export const revalidate = 300
-
-type SearchParams = Record<string, string | string[] | undefined>
-
-function getFirst(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0]
-  return value
-}
 
 function buildSearchHref(opts: { q: string; section: string; distro: Distro }) {
   const params = new URLSearchParams()
@@ -41,9 +34,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
-  const cookieStore = await cookies()
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const requestedDistro = (normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian') satisfies Distro
+  const requestedDistro = await resolveRequestDistro(sp)
 
   const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
   const section = getFirst(sp.section)?.trim() || ''
@@ -84,6 +75,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <nav aria-label="Section filter" className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
           <Link
             href={buildSearchHref({ q, section: '', distro })}
+            aria-current={!section ? 'page' : undefined}
             className={`px-0.5 py-1 font-mono text-xs transition-colors ${
               !section
                 ? 'font-semibold text-fg underline decoration-accent decoration-2 underline-offset-4 hover:no-underline'
@@ -96,6 +88,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             <Link
               key={s.section}
               href={buildSearchHref({ q, section: s.section, distro })}
+              aria-current={section === s.section ? 'page' : undefined}
               className={`px-0.5 py-1 font-mono text-xs transition-colors ${
                 section === s.section
                   ? 'font-semibold text-fg underline decoration-accent decoration-2 underline-offset-4 hover:no-underline'

@@ -1,5 +1,9 @@
 export type Distro = 'debian' | 'ubuntu' | 'fedora' | 'arch' | 'alpine'
 
+/** localStorage key and cookie name holding the user's chosen distro. */
+export const DISTRO_STORAGE_KEY = 'bm-distro'
+export const DISTRO_COOKIE = 'bm-distro'
+
 export const DISTRO_GROUPS: ReadonlyArray<{ label: string; items: readonly Distro[] }> = [
   { label: 'Linux', items: ['debian', 'ubuntu', 'fedora', 'arch', 'alpine'] as const },
 ] as const

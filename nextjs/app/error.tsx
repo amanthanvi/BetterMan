@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect } from 'react'
 
-import * as Sentry from '@sentry/nextjs'
+import { captureClientException } from '../instrumentation-client'
 
 import { Button } from '../components/ui/Button'
 
@@ -15,7 +15,7 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    Sentry.captureException(error)
+    captureClientException(error)
   }, [error])
 
   return (

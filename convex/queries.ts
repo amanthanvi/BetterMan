@@ -19,6 +19,7 @@ import {
   activeRelease,
   pageByNameAndSection,
   requireActiveRelease,
+  resolvePageByName,
 } from "./_releaseLookups";
 
 const SITEMAP_URLS_PER_FILE = 10_000;
@@ -169,6 +170,37 @@ export const getManMetaByNameAndSection = query({
         datasetReleaseId: release.datasetReleaseId,
       },
     };
+  },
+});
+
+// Resolve name-only routes from metadata without loading document content or
+// storage. Keep page/alias precedence and ambiguity ordering aligned with the
+// content.getManByName read model.
+export const resolveManByName = query({
+  args: {
+    distro: distroValidator,
+    name: v.string(),
+  },
+  returns: v.union(
+    v.object({ kind: v.literal("page"), name: v.string(), section: v.string() }),
+    v.object({
+      kind: v.literal("ambiguous"),
+      options: v.array(v.object({
+        section: v.string(), title: v.string(), description: v.string(),
+      })),
+    }),
+    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string() }),
+    v.object({ kind: v.literal("not_found") }),
+  ),
+  handler: async (ctx, args) => {
+    const name = normalizeName(args.name);
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
+    const result = await resolvePageByName(ctx, { releaseId: release._id, name });
+    if (result.kind !== "page") return result;
+    return { kind: "page" as const, name: result.page.name, section: result.page.section };
   },
 });
 
@@ -578,32 +610,6 @@ export const listSeoReleases = query({
     return {
       urlsPerFile: SITEMAP_URLS_PER_FILE,
       items: releases.filter((item): item is NonNullable<typeof item> => item !== null),
-    };
-  },
-});
-
-export const listSitemapPage = query({
-  args: {
-    stage: publicStageCompatibilityValidator,
-    distro: distroValidator,
-    page: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const release = await activeRelease(ctx, {
-      stage: PUBLIC_DATASET_STAGE,
-      distro: args.distro,
-    });
-    if (!release) return null;
-    const pages = await ctx.db
-      .query("manPages")
-      .withIndex("by_releaseId_and_sitemapPage_and_name", (q) =>
-        q.eq("releaseId", release._id).eq("sitemapPage", args.page),
-      )
-      .take(SITEMAP_URLS_PER_FILE);
-    if (!pages.length) return null;
-    return {
-      items: pages.map((page) => ({ name: page.name, section: page.section })),
-      page: args.page,
     };
   },
 });

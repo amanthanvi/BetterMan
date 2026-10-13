@@ -4,19 +4,19 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import type { Distro } from '../../lib/distro'
-import { normalizeDistro } from '../../lib/distro'
+import { DISTRO_COOKIE, DISTRO_STORAGE_KEY, normalizeDistro } from '../../lib/distro'
 
 type DistroContextValue = {
   distro: Distro
   setDistro: (distro: Distro) => void
 }
 
-const DISTRO_KEY = 'bm-distro'
-const COOKIE_DISTRO = 'bm-distro'
+const DISTRO_KEY = DISTRO_STORAGE_KEY
+const COOKIE_DISTRO = DISTRO_COOKIE
 
 function writeCookie(distro: Distro) {
   try {
-    document.cookie = `${COOKIE_DISTRO}=${encodeURIComponent(distro)}; Path=/; Max-Age=31536000; SameSite=Lax`
+    document.cookie = `${COOKIE_DISTRO}=${encodeURIComponent(distro)}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`
   } catch {
     // ignore
   }
@@ -44,7 +44,10 @@ function buildUrlWithDistro(opts: { pathname: string; searchParams: URLSearchPar
   if (opts.distro === 'debian') params.delete('distro')
   else params.set('distro', opts.distro)
   const qs = params.toString()
-  return qs ? `${opts.pathname}?${qs}` : opts.pathname
+  const base = qs ? `${opts.pathname}?${qs}` : opts.pathname
+  // Preserve the in-page anchor (e.g. an option deep-link) across distro switches.
+  const hash = typeof window === 'undefined' ? '' : window.location.hash
+  return `${base}${hash}`
 }
 
 const DistroContext = createContext<DistroContextValue | null>(null)

@@ -14,6 +14,9 @@ export const enforce = mutation({
     identifier: v.string(),
   },
   handler: async (ctx, args) => {
+    if (args.identifier.length > 128) {
+      throw new Error("RATE_LIMIT_IDENTIFIER_TOO_LONG");
+    }
     const { limit, windowSeconds } = LIMITS[args.kind];
 
     // Derived here rather than accepted from the caller: a caller-supplied
@@ -64,7 +67,7 @@ export const cleanupExpired = internalMutation({
     // "more remain", which would loop a caller forever on the last batch.
     const expired = await ctx.db
       .query("rateLimitBuckets")
-      .withIndex("by_expiresAt", (q) => q.lt("expiresAt", Date.now()))
+      .withIndex("by_expiresAt", (q) => q.lte("expiresAt", Date.now()))
       .take(maxBuckets + 1);
     const deletable = expired.slice(0, maxBuckets);
     for (const row of deletable) {

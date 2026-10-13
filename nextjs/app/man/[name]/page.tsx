@@ -1,20 +1,14 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { cookies, headers } from 'next/headers'
+import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 
-import { FastApiError, fetchManByName, isReleaseNotFoundError, suggest, withDistroFallback } from '../../../lib/api'
-import { normalizeDistro, withDistro } from '../../../lib/distro'
+import { FastApiError, fetchManResolve, isReleaseNotFoundError, suggest, withDistroFallback } from '../../../lib/api'
+import { withDistro } from '../../../lib/distro'
 import { getPublicOrigin } from '../../../lib/public-origin'
+import { resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
 export const revalidate = 3600
-
-type SearchParams = Record<string, string | string[] | undefined>
-
-function getFirst(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0]
-  return value
-}
 
 export async function generateMetadata({
   params,
@@ -25,15 +19,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { name } = await params
   const sp = await searchParams
-  const cookieStore = await cookies()
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = await resolveRequestDistro(sp)
 
   const origin = getPublicOrigin({ headers: await headers() })
 
   try {
     const { distro, data: result } = await withDistroFallback(requestedDistro, (activeDistro) =>
-      fetchManByName({ distro: activeDistro, name: name.toLowerCase() }),
+      fetchManResolve({ distro: activeDistro, name: name.toLowerCase() }),
     )
     const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}`, distro)
     const canonical = `${origin}${canonicalPath}`
@@ -42,11 +34,8 @@ export async function generateMetadata({
       return { title: `${result.name}(${result.section}) - BetterMan`, alternates: { canonical } }
     }
     if (result.kind === 'page') {
-      const title = `${result.data.page.name}(${result.data.page.section}) - BetterMan`
-      const description =
-        result.data.page.description ||
-        result.data.page.title ||
-        `${result.data.page.name}(${result.data.page.section}) man page.`
+      const title = `${result.name}(${result.section}) - BetterMan`
+      const description = `${result.name}(${result.section}) man page.`
       return {
         title,
         description,
@@ -90,20 +79,19 @@ export default async function ManByNamePage({
 }) {
   const { name } = await params
   const sp = await searchParams
-  const cookieStore = await cookies()
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = await resolveRequestDistro(sp)
   let activeDistro = requestedDistro
 
   try {
+    // Light metadata-only resolution: a redirect must never download content.
     const { distro, data: result } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
       activeDistro = candidateDistro
-      return fetchManByName({ distro: candidateDistro, name: name.toLowerCase() })
+      return fetchManResolve({ distro: candidateDistro, name: name.toLowerCase() })
     })
     if (result.kind === 'page') {
       redirect(
         withDistro(
-          `/man/${encodeURIComponent(result.data.page.name)}/${encodeURIComponent(result.data.page.section)}`,
+          `/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`,
           distro,
         ),
       )

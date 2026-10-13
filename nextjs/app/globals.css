@@ -56,7 +56,7 @@
   --color-accent-hover: light-dark(#a91d21, #f2555a);
   --color-accent-subtle: color-mix(in oklab, var(--color-accent) 12%, transparent);
   --color-accent-edge: color-mix(in oklab, var(--color-accent) 35%, transparent);
-  --color-accent-contrast: #ffffff;
+  --color-accent-contrast: light-dark(#ffffff, #0b0b0d);
   --color-code-bg: light-dark(#f4f1ea, #111113);
   --color-scrim: rgb(0 0 0 / 0.55);
 
@@ -329,18 +329,23 @@
     }
 
     .bm-expand {
-      display: grid;
-      grid-template-rows: 1fr;
       transition: grid-template-rows 200ms var(--ease-out);
     }
+  }
 
-    .bm-expand[data-collapsed="true"] {
-      grid-template-rows: 0fr;
-    }
+  /* Collapse must work without motion: the structural rules stay outside the
+     reduced-motion media query; only the transition is motion-gated. */
+  .bm-expand {
+    display: grid;
+    grid-template-rows: 1fr;
+  }
 
-    .bm-expand > * {
-      overflow: hidden;
-    }
+  .bm-expand[data-collapsed="true"] {
+    grid-template-rows: 0fr;
+  }
+
+  .bm-expand > * {
+    overflow: hidden;
   }
 
   .hljs {
@@ -469,6 +474,11 @@
     .bm-opt,
     .bm-find {
       background: transparent !important;
+    }
+
+    /* Print always shows every option row, even when the table is collapsed. */
+    .bm-expand[data-collapsed="true"] {
+      grid-template-rows: 1fr !important;
     }
   }
 }

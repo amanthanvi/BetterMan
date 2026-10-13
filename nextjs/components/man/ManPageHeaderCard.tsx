@@ -1,12 +1,11 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-
 import type { Distro } from '../../lib/distro'
 import { DISTRO_LABEL, DISTRO_ORDER, normalizeDistro } from '../../lib/distro'
 import type { ManPage, ManPageVariant } from '../../lib/docModel'
 import { BookmarkButton } from '../bookmarks/BookmarkButton'
 import { CheckIcon, CopyIcon, ListIcon, SearchIcon, SlidersIcon } from '../icons'
+import { useDistro } from '../state/distro'
 import { IconButton } from '../ui/IconButton'
 import { ManSectionLabel, RunningHead, sectionLabel } from './RunningHead'
 
@@ -44,10 +43,7 @@ export function ManPageHeaderCard({
   copiedLink: boolean
 }) {
   const variantPicker = buildVariantPicker(variants)
-
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const { setDistro } = useDistro()
 
   return (
     <header>
@@ -98,26 +94,7 @@ export function ManPageHeaderCard({
               onChange={(e) => {
                 const next = normalizeDistro(e.target.value)
                 if (!next) return
-
-                try {
-                  localStorage.setItem('bm-distro', next)
-                } catch {
-                  // ignore
-                }
-
-                try {
-                  document.cookie = `bm-distro=${encodeURIComponent(next)}; Path=/; Max-Age=31536000; SameSite=Lax`
-                } catch {
-                  // ignore
-                }
-
-                const params = new URLSearchParams(searchParams.toString())
-                if (next === 'debian') params.delete('distro')
-                else params.set('distro', next)
-
-                const qs = params.toString()
-                const base = qs ? `${pathname}?${qs}` : pathname
-                router.replace(`${base}${window.location.hash || ''}`)
+                setDistro(next)
               }}
               className="border-0 border-b border-edge bg-transparent px-0.5 py-0.5 text-xs text-fg"
               aria-label="Select distribution variant"

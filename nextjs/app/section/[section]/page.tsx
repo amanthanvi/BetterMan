@@ -1,18 +1,11 @@
 import Link from 'next/link'
-import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
 import { listSection, withDistroFallback } from '../../../lib/api'
-import { isDefaultDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
+import { isDefaultDistro, withDistro, type Distro } from '../../../lib/distro'
+import { getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
 export const revalidate = 3600
-
-type SearchParams = Record<string, string | string[] | undefined>
-
-function getFirst(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0]
-  return value
-}
 
 function getGroupKey(name: string): string {
   const first = name.trim().charAt(0).toUpperCase()
@@ -103,9 +96,7 @@ export default async function SectionPage({
 }) {
   const { section } = await params
   const sp = await searchParams
-  const cookieStore = await cookies()
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = await resolveRequestDistro(sp)
   const offset = Number.parseInt(getFirst(sp.offset) ?? '0', 10)
   const safeOffset = Number.isFinite(offset) && offset >= 0 ? offset : 0
   const cursor = getFirst(sp.cursor)

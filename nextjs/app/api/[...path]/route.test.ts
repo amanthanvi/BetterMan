@@ -29,7 +29,6 @@ vi.mock('@/lib/api', () => ({
   fetchLicenseText: vi.fn(),
   fetchLicenses: vi.fn(),
   fetchManByName: vi.fn(),
-  fetchManByNameAndSection: vi.fn(),
   fetchManByNameAndSectionOrAlias: apiMocks.fetchManByNameAndSectionOrAlias,
   fetchManMetaByNameAndSection: apiMocks.fetchManMetaByNameAndSection,
   fetchRelated: vi.fn(),

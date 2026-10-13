@@ -68,54 +68,38 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _run_ingest_in_container(*, sample: bool, activate: bool, distro: str) -> int:
-    convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
-    ingest_secret = os.environ.get("CONVEX_INGEST_SECRET")
-    dataset_stage = os.environ.get("BETTERMAN_DATASET_STAGE", "staging")
-    if not convex_url or not ingest_secret:
-        _log("ingest_error", error="Missing CONVEX_HTTP_URL/CONVEX_URL or CONVEX_INGEST_SECRET")
-        return 2
-
-    repo_root = Path(__file__).resolve().parents[2]
-
     image_ref = os.environ.get("BETTERMAN_IMAGE_REF")
     image_digest = os.environ.get("BETTERMAN_IMAGE_DIGEST")
-    git_sha = os.environ.get("BETTERMAN_INGEST_GIT_SHA") or _git_sha(repo_root)
-
     if not image_ref or not image_digest:
         _log("ingest_error", error="Missing BETTERMAN_IMAGE_REF / BETTERMAN_IMAGE_DIGEST")
         return 2
-
-    try:
-        result = ingest_dataset(
-            sample=sample,
-            activate=activate,
-            convex_url=convex_url,
-            ingest_secret=ingest_secret,
-            dataset_stage=dataset_stage,
-            image_ref=image_ref,
-            image_digest=image_digest,
-            git_sha=git_sha,
-            distro=distro,
-        )
-    except RuntimeError as exc:
-        _log("ingest_error", error=str(exc))
-        return 2
-    except Exception as exc:  # noqa: BLE001
-        _log("ingest_error", error=str(exc))
-        return 1
-
-    _log(
-        "ingest_done",
-        total=result.total,
-        succeeded=result.succeeded,
-        hardFailed=result.hard_failed,
-        datasetReleaseId=result.dataset_release_id,
-        published=result.published,
+    return _run_ingest(
+        sample=sample,
+        activate=activate,
+        distro=distro,
+        image_ref=image_ref,
+        image_digest=image_digest,
     )
-    return 0
 
 
 def _run_ingest_on_host(*, sample: bool, activate: bool, distro: str) -> int:
+    return _run_ingest(
+        sample=sample,
+        activate=activate,
+        distro=distro,
+        image_ref=os.environ.get("BETTERMAN_IMAGE_REF", f"host:{distro}"),
+        image_digest=os.environ.get("BETTERMAN_IMAGE_DIGEST", "unknown"),
+    )
+
+
+def _run_ingest(
+    *,
+    sample: bool,
+    activate: bool,
+    distro: str,
+    image_ref: str,
+    image_digest: str,
+) -> int:
     convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
     ingest_secret = os.environ.get("CONVEX_INGEST_SECRET")
     dataset_stage = os.environ.get("BETTERMAN_DATASET_STAGE", "staging")
@@ -124,9 +108,6 @@ def _run_ingest_on_host(*, sample: bool, activate: bool, distro: str) -> int:
         return 2
 
     repo_root = Path(__file__).resolve().parents[2]
-
-    image_ref = os.environ.get("BETTERMAN_IMAGE_REF", f"host:{distro}")
-    image_digest = os.environ.get("BETTERMAN_IMAGE_DIGEST", "unknown")
     git_sha = os.environ.get("BETTERMAN_INGEST_GIT_SHA") or _git_sha(repo_root)
 
     try:

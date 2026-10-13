@@ -45,6 +45,18 @@ function attachServerTiming(response: Response, metrics: ServerTimingMetric[]): 
   return response
 }
 
+// The proxy matcher intentionally skips /api, so API routes set their own
+// baseline security headers (aligned with proxy.ts).
+function applyApiSecurityHeaders(response: Response): Response {
+  response.headers.set('x-content-type-options', 'nosniff')
+  response.headers.set('referrer-policy', 'strict-origin-when-cross-origin')
+  response.headers.set('x-frame-options', 'DENY')
+  if (process.env.NODE_ENV !== 'development') {
+    response.headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains')
+  }
+  return response
+}
+
 function json(value: unknown, init?: ResponseInit): Response {
   const headers = new Headers(init?.headers)
   headers.set('Content-Type', 'application/json; charset=utf-8')
@@ -286,7 +298,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
   const started = performance.now()
   const response = await handleGet(req, path, metrics)
   metrics.push({ name: 'total', durationMs: performance.now() - started })
-  return attachServerTiming(response, metrics)
+  return applyApiSecurityHeaders(attachServerTiming(response, metrics))
 }
 
 export async function HEAD(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }): Promise<Response> {

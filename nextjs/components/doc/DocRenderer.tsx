@@ -4,6 +4,7 @@ import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import Link from 'next/link'
 import {
   forwardRef,
+  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -16,7 +17,7 @@ import {
 
 import type { Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
-import { getScrollBehavior } from '../../lib/scroll'
+import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
 import { CodeBlock } from './CodeBlock'
 
@@ -38,7 +39,7 @@ const VIRTUALIZE_BLOCK_COUNT = 100
 const VIRTUALIZE_ESTIMATED_HEIGHT = 9_000
 const VIRTUALIZE_HEAVY_BLOCK_COUNT = 60
 
-export const DocRenderer = forwardRef<
+export const DocRenderer = memo(forwardRef<
   DocRendererHandle,
   {
     blocks: BlockNode[]
@@ -91,19 +92,7 @@ export const DocRenderer = forwardRef<
   })
 
   const fineTuneScrollToId = useCallback((id: string, opts: { behavior: BmScrollBehavior; block: ScrollLogicalPosition }) => {
-    let attempts = 0
-
-    const tick = () => {
-      attempts += 1
-      const el = document.getElementById(id)
-      if (el) {
-        el.scrollIntoView({ behavior: opts.behavior, block: opts.block })
-        return
-      }
-      if (attempts < 20) window.requestAnimationFrame(tick)
-    }
-
-    window.requestAnimationFrame(tick)
+    scrollToIdWhenRendered(id, { behavior: opts.behavior, block: opts.block })
   }, [])
 
   const scrollToBlockIndex = useCallback(
@@ -227,7 +216,7 @@ export const DocRenderer = forwardRef<
       </div>
     </div>
   )
-})
+}))
 
 function blockKey(block: BlockNode, fallbackIdx: number) {
   if (block.type === 'heading') return `h:${block.id}`
@@ -235,7 +224,7 @@ function blockKey(block: BlockNode, fallbackIdx: number) {
   return `${block.type}:${fallbackIdx}`
 }
 
-function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx; distro: Distro }) {
+const BlockView = memo(function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx; distro: Distro }) {
   switch (block.type) {
     case 'heading': {
       const level = clamp(block.level, 2, 6)
@@ -351,7 +340,7 @@ function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx
     case 'horizontal_rule':
       return <hr className="my-6 border-edge" />
   }
-}
+})
 
 function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro): ReactNode[] {
   return inlines.map((inline, idx) => {
@@ -379,6 +368,15 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
         )
       case 'link':
         if (inline.linkType === 'external') {
+          // Defense in depth: never emit non-http(s) hrefs (javascript: et al.)
+          // even if an upstream doc ever smuggles one through the pipeline.
+          if (!/^https?:\/\//i.test(inline.href)) {
+            return (
+              <span key={idx} className="underline decoration-edge-strong underline-offset-4">
+                {renderInlines(inline.inlines, ctx, distro)}
+              </span>
+            )
+          }
           return (
             <a key={idx} href={inline.href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-accent-edge">
               <span className="inline-flex items-center gap-1">
@@ -399,6 +397,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
               title="Not available in this dataset"
             >
               {renderInlines(inline.inlines, ctx, distro)}
+              <span className="sr-only"> (not available)</span>
             </span>
           )
         }

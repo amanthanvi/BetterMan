@@ -84,7 +84,11 @@ function stepBlocks(workflow) {
 test('CI retains a mandatory provenance gate and runs its regression tests', () => {
   const pkg = JSON.parse(readRepositoryFile('package.json'))
   assert.equal(pkg.scripts['deps:provenance'], 'node scripts/check-vercel-provenance.mjs')
-  assert.ok(pkg.scripts['ops:test'].split(/\s+/).includes('scripts/check-vercel-provenance.test.mjs'))
+  assert.ok(
+    pkg.scripts['ops:test'].split(/\s+/).includes('scripts/check-vercel-provenance.test.mjs') ||
+      pkg.scripts['ops:test'].includes('scripts/*.test.mjs'),
+    'ops:test must run this test file (explicitly or via the scripts/*.test.mjs glob)',
+  )
   const ci = readRepositoryFile('.github/workflows/ci.yml')
   const nextjs = ci.split('\n  nextjs:\n')[1]?.split('\n  ingestion:\n')[0]
   assert.ok(nextjs, 'nextjs job must exist')

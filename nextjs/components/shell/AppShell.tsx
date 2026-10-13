@@ -1,24 +1,28 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { isTypingTarget } from '../../lib/dom'
+import type { Distro } from '../../lib/distro'
 import { withDistro } from '../../lib/distro'
 import { getScrollBehavior } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
 import { parseReleaseId } from '../../lib/release'
-import { CommandPalette } from '../palette/CommandPalette'
-import { ReadingPrefsDrawer } from '../reading/ReadingPrefsDrawer'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
-import { TocDrawer } from '../toc/TocDrawer'
-import { ShortcutsDialog } from './ShortcutsDialog'
 import { MoonIcon, SearchIcon, SunIcon } from '../icons'
 import { Kbd } from '../ui/Kbd'
+
+// Rarely-used overlays load on first open instead of in the initial bundle.
+const CommandPalette = dynamic(() => import('../palette/CommandPalette').then((m) => m.CommandPalette))
+const ReadingPrefsDrawer = dynamic(() => import('../reading/ReadingPrefsDrawer').then((m) => m.ReadingPrefsDrawer))
+const ShortcutsDialog = dynamic(() => import('./ShortcutsDialog').then((m) => m.ShortcutsDialog))
+const TocDrawer = dynamic(() => import('../toc/TocDrawer').then((m) => m.TocDrawer))
 
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
@@ -28,7 +32,14 @@ function dashboardHref(section: 'recent' | 'bookmarks', distro: string) {
   return `${withDistro('/', distro)}#${section}`
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  initialInfo,
+}: {
+  children: React.ReactNode
+  /** Server-fetched footer info for the cookie distro; avoids a client round trip on first load. */
+  initialInfo?: { distro: Distro; info: InfoResponse } | null
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -43,6 +54,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [themeAnnouncement, setThemeAnnouncement] = useState('')
   const themeAnnouncementMountedRef = useRef(false)
 
+  // Mount each lazy overlay only after it is first needed; they stay mounted
+  // afterwards so their open/close transitions keep working.
+  const [paletteMounted, setPaletteMounted] = useState(false)
+  const [shortcutsMounted, setShortcutsMounted] = useState(false)
+  const [prefsMounted, setPrefsMounted] = useState(false)
+
   const lastRouteKeyRef = useRef<string | null>(null)
   const scrollPositionsRef = useRef<Map<string, number>>(new Map())
   const isPopRef = useRef(false)
@@ -51,9 +68,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const routeParts = pathname.split('/').filter(Boolean)
   const isManPage = routeParts[0] === 'man' && routeParts.length >= 3
 
-  const [info, setInfo] = useState<InfoResponse | null>(null)
+  const [info, setInfo] = useState<InfoResponse | null>(initialInfo?.info ?? null)
+  // Footer info text renders only after hydration: relative-time and number
+  // formatting use the runtime locale/clock, so SSR text could mismatch.
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => setHydrated(true), [])
 
   useEffect(() => {
+    // The layout already fetched info for this distro; only refetch on switch,
+    // and restore the SSR info when switching back to it.
+    if (initialInfo && distro.distro === initialInfo.distro) {
+      setInfo(initialInfo.info)
+      return
+    }
+
     const controller = new AbortController()
     const params = new URLSearchParams()
     if (distro.distro !== 'debian') params.set('distro', distro.distro)
@@ -66,11 +94,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return (await res.json()) as InfoResponse
       })
-      .then((payload) => setInfo(payload))
-      .catch(() => setInfo(null))
+      .then((payload) => {
+        if (controller.signal.aborted) return
+        setInfo(payload)
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return
+        setInfo(null)
+      })
 
     return () => controller.abort()
-  }, [distro.distro])
+  }, [distro.distro, initialInfo])
 
   useEffect(() => {
     const update = () => setOffline(!navigator.onLine)
@@ -121,7 +155,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     lastRouteKeyRef.current = routeKey
 
     setTocOpen(false)
-    window.scrollTo({ top: nextY, left: 0, behavior: 'auto' })
+
+    // Honor hash targets on push navigations (e.g. `h` → /#recent) instead of
+    // always resetting to the top.
+    let hashTarget: HTMLElement | null = null
+    if (!nextY && window.location.hash.length > 1) {
+      try {
+        hashTarget = document.getElementById(decodeURIComponent(window.location.hash.slice(1)))
+      } catch {
+        hashTarget = null
+      }
+    }
+    if (hashTarget) {
+      hashTarget.scrollIntoView({ behavior: 'auto', block: 'start' })
+    } else {
+      window.scrollTo({ top: nextY, left: 0, behavior: 'auto' })
+    }
   }, [routeKey, setTocOpen])
 
   useEffect(() => {
@@ -130,26 +179,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     main.focus({ preventScroll: true })
   }, [routeKey])
 
+  const openPalette = () => {
+    setPaletteMounted(true)
+    setPaletteOpen(true)
+  }
+  const openShortcuts = () => {
+    setShortcutsMounted(true)
+    setShortcutsOpen(true)
+  }
+  const openPrefs = () => {
+    setPrefsMounted(true)
+    setPrefsOpen(true)
+  }
+
+  // Mount the TOC drawer on first use; it stays mounted afterwards.
+  const [tocDrawerMounted, setTocDrawerMounted] = useState(false)
   useEffect(() => {
-    const FLAG = '__bmPaletteRequested'
-    const EVENT = 'bm:palette-request'
-
-    const openIfRequested = () => {
-      if (!(window as unknown as Record<string, unknown>)[FLAG]) return
-      ;(window as unknown as Record<string, unknown>)[FLAG] = false
-      setPaletteOpen(true)
-    }
-
-    openIfRequested()
-
-    const onEvent = () => openIfRequested()
-    window.addEventListener(EVENT, onEvent)
-    return () => window.removeEventListener(EVENT, onEvent)
-  }, [])
+    if (toc.open) setTocDrawerMounted(true)
+  }, [toc.open])
 
   useEffect(() => {
     const EVENT = 'bm:prefs-request'
-    const onEvent = () => setPrefsOpen(true)
+    const onEvent = () => openPrefs()
     window.addEventListener(EVENT, onEvent)
     return () => window.removeEventListener(EVENT, onEvent)
   }, [])
@@ -158,7 +209,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        setPaletteOpen(true)
+        openPalette()
+        return
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        // Native find misses virtualized content; route to the custom find bar.
+        // Suppressed while an overlay owns focus — never focus behind a modal.
+        if (!isManPage) return
+        if (paletteOpen || prefsOpen || shortcutsOpen || toc.open) return
+        e.preventDefault()
+        try {
+          window.dispatchEvent(new CustomEvent('bm:find-request'))
+        } catch {
+          // ignore
+        }
         return
       }
 
@@ -166,7 +231,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '?') {
         e.preventDefault()
-        setShortcutsOpen(true)
+        openShortcuts()
         return
       }
 
@@ -187,7 +252,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           return
         }
 
-        setPaletteOpen(true)
+        openPalette()
         return
       }
 
@@ -224,7 +289,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (isManPage && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'p') {
         e.preventDefault()
-        setPrefsOpen(true)
+        openPrefs()
         return
       }
 
@@ -241,7 +306,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [distro.distro, isManPage, router, theme, toc])
+  }, [distro.distro, isManPage, paletteOpen, prefsOpen, router, shortcutsOpen, theme, toc])
 
   useEffect(() => {
     if (!themeAnnouncementMountedRef.current) {
@@ -322,7 +387,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               className="group inline-flex h-9 items-center justify-center gap-2 px-1 text-muted transition-colors hover:text-fg"
-              onClick={() => setPaletteOpen(true)}
+              onClick={() => openPalette()}
               aria-label="Search"
               title="Command palette (Ctrl/⌘ K)"
             >
@@ -355,10 +420,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ) : null}
       </header>
 
-      <TocDrawer />
-      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} isManPage={isManPage} />
-      <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} />
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      {tocDrawerMounted ? <TocDrawer /> : null}
+      {shortcutsMounted ? <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} isManPage={isManPage} /> : null}
+      {prefsMounted ? <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} /> : null}
+      {paletteMounted ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
 
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-10 outline-none">
         {children}
@@ -368,7 +433,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 font-mono">
             <span aria-hidden="true" className="text-accent">&gt;_</span>
-            {info ? (
+            {info && hydrated ? (
               <span title={`Dataset ${info.datasetReleaseId}`}>
                 {info.pageCount.toLocaleString()} pages · updated {formatRelativeTime(info.lastUpdated)}
                 {parseReleaseId(info.datasetReleaseId).mandocVersion

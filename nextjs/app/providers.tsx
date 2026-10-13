@@ -1,5 +1,6 @@
 'use client'
 
+import type { InfoResponse } from '../lib/api'
 import type { Distro } from '../lib/distro'
 import { AppShell } from '../components/shell/AppShell'
 import { DistroProvider } from '../components/state/distro'
@@ -10,16 +11,18 @@ import { TocProvider } from '../components/state/toc'
 export function Providers({
   children,
   initialCookieDistro,
+  initialInfo,
 }: {
   children: React.ReactNode
   initialCookieDistro?: Distro
+  initialInfo?: { distro: Distro; info: InfoResponse } | null
 }) {
   return (
     <ThemeProvider>
       <ReadingPrefsProvider>
         <DistroProvider initialCookieDistro={initialCookieDistro}>
           <TocProvider>
-            <AppShell>{children}</AppShell>
+            <AppShell initialInfo={initialInfo}>{children}</AppShell>
           </TocProvider>
         </DistroProvider>
       </ReadingPrefsProvider>

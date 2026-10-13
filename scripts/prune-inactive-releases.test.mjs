@@ -274,7 +274,11 @@ const readRepositoryFile = (path) => readFileSync(new URL(`../${path}`, import.m
 test('pruning is wired as a manual, dry-run-default workflow that cannot overlap ingestion', () => {
   const pkg = JSON.parse(readRepositoryFile('package.json'))
   assert.equal(pkg.scripts['convex:prune-releases'], 'node scripts/prune-inactive-releases.mjs')
-  assert.ok(pkg.scripts['ops:test'].split(/\s+/).includes('scripts/prune-inactive-releases.test.mjs'))
+  assert.ok(
+    pkg.scripts['ops:test'].split(/\s+/).includes('scripts/prune-inactive-releases.test.mjs') ||
+      pkg.scripts['ops:test'].includes('scripts/*.test.mjs'),
+    'ops:test must run this test file (explicitly or via the scripts/*.test.mjs glob)',
+  )
   const workflow = readRepositoryFile('.github/workflows/prune-releases.yml')
   assert.match(workflow, /^on:\n  workflow_dispatch:\n/m)
   assert.doesNotMatch(workflow, /^\s+schedule:|^\s+push:|^\s+pull_request:/m)
