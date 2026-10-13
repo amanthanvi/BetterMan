@@ -203,6 +203,8 @@ export function ManPageView({
   }
 
   const onSelectOption = (opt: OptionItem, event?: React.MouseEvent<HTMLAnchorElement>) => {
+    // Modified clicks keep native link behavior (open in new tab/window).
+    if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)) return
     // Keep pushState + smooth scroll as the single navigation path; native
     // anchor navigation would double-fire (jitter, extra history entry).
     event?.preventDefault()
