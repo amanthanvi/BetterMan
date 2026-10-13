@@ -192,6 +192,7 @@ def test_name_regex_rejects_backslash() -> None:
 
 
 def _install_gate_harness(monkeypatch, sources, outcomes, calls):
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
     monkeypatch.setattr(ingest_runner, "apt_install", lambda _packages: None)
     monkeypatch.setattr(ingest_runner, "scan_man_sources", lambda *_a, **_k: sources)
     monkeypatch.setattr(ingest_runner, "dpkg_packages", lambda: {"example": "1.0"})

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import uuid
 from collections import Counter
+from collections.abc import Iterator, Mapping
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic
+from types import MappingProxyType
 
 from ingestion.alpine import (
     apk_arch,
@@ -104,6 +108,7 @@ def ingest(
     locale: str = "en",
     distro: str = "debian",
 ) -> IngestResult:
+    workers = _ingest_worker_count()
     requested = _content_packages(sample=sample, distro=distro)
     if distro in {"debian", "ubuntu"}:
         apt_install(requested)
@@ -184,44 +189,13 @@ def ingest(
     if distro == "macos":
         package_manifest["osVersion"] = macos_version()
 
-    parsed_pages: list[_PageRow] = []
-    aliases: list[_AliasRow] = []
-    parse_failed = 0
-    parse_started = monotonic()
-    for src in sources:
-        try:
-            # One read per page: probe, hash, and mandoc all share these bytes.
-            raw = _read_bytes(src.path)
-            alias = _alias_for_source(src, raw)
-            if alias is not None:
-                aliases.append(alias)
-                continue
-            parsed_pages.append(
-                _parse_source(
-                    src,
-                    raw,
-                    packages=packages,
-                    manpath_to_pkg=manpath_to_pkg,
-                    arch=arch,
-                )
-            )
-        except Exception as exc:  # noqa: BLE001 (batch ingestion)
-            parse_failed += 1
-            _log("page_parse_failed", path=str(src.path), error=str(exc))
-
-        processed = len(parsed_pages) + len(aliases) + parse_failed
-        if processed and processed % 100 == 0:
-            elapsed = monotonic() - parse_started
-            rate = processed / elapsed if elapsed > 0 else 0.0
-            remaining = max(0, len(sources) - processed)
-            eta_s = int(remaining / rate) if rate > 0 else None
-            _log(
-                "parse_progress",
-                processed=processed,
-                total=len(sources),
-                pct=round((processed / len(sources)) * 100.0, 2) if sources else 0.0,
-                etaSeconds=eta_s,
-            )
+    parsed_pages, aliases, parse_failed = _parse_sources(
+        sources,
+        packages=packages,
+        manpath_to_pkg=manpath_to_pkg,
+        arch=arch,
+        workers=workers,
+    )
 
     total = len(sources)
 
@@ -405,6 +379,135 @@ class _AliasRow:
     source_path: str
 
 
+@dataclass(frozen=True)
+class _ParseResult:
+    page: _PageRow | None = None
+    alias: _AliasRow | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class _ParseContext:
+    packages: Mapping[str, str]
+    manpath_to_pkg: Mapping[str, str]
+    arch: str
+
+
+_parse_context: _ParseContext | None = None
+
+
+def _ingest_worker_count() -> int:
+    value = os.environ.get("BETTERMAN_INGEST_WORKERS")
+    if value is None:
+        return min(8, os.cpu_count() or 1)
+    if not re.fullmatch(r"[0-9]+", value) or int(value) < 1:
+        raise ValueError("BETTERMAN_INGEST_WORKERS must be a positive integer")
+    return int(value)
+
+
+def _init_parse_worker(packages: dict[str, str], manpath_to_pkg: dict[str, str], arch: str) -> None:
+    # Shared attribution inputs are sent once per worker, never once per page.
+    global _parse_context
+    _parse_context = _ParseContext(
+        MappingProxyType(packages), MappingProxyType(manpath_to_pkg), arch
+    )
+
+
+def _parse_source_result(src: ManSource, context: _ParseContext) -> _ParseResult:
+    try:
+        # One read per page: probe, hash, and mandoc all share these bytes.
+        raw = _read_bytes(src.path)
+        alias = _alias_for_source(src, raw)
+        if alias is not None:
+            return _ParseResult(alias=alias)
+        return _ParseResult(
+            page=_parse_source(
+                src,
+                raw,
+                packages=context.packages,
+                manpath_to_pkg=context.manpath_to_pkg,
+                arch=context.arch,
+            )
+        )
+    except Exception as exc:  # noqa: BLE001 (batch ingestion)
+        # Exception objects need not be picklable, and one bad page must not
+        # terminate executor.map before subsequent results can be handled.
+        return _ParseResult(error=str(exc))
+
+
+def _parse_worker(src: ManSource) -> _ParseResult:
+    if _parse_context is None:
+        raise RuntimeError("parse worker has no attribution context")
+    return _parse_source_result(src, _parse_context)
+
+
+def _iter_parse_results(
+    sources: list[ManSource],
+    *,
+    packages: dict[str, str],
+    manpath_to_pkg: dict[str, str],
+    arch: str,
+    workers: int,
+) -> Iterator[_ParseResult]:
+    if workers < 1:
+        raise ValueError("workers must be a positive integer")
+    if workers == 1:
+        context = _ParseContext(packages, manpath_to_pkg, arch)
+        for src in sources:
+            yield _parse_source_result(src, context)
+        return
+    if not sources:
+        return
+    with ProcessPoolExecutor(
+        max_workers=min(workers, len(sources)),
+        initializer=_init_parse_worker,
+        initargs=(packages, manpath_to_pkg, arch),
+    ) as executor:
+        # map yields source order, preserving link, alias and sitemap order.
+        yield from executor.map(_parse_worker, sources, chunksize=1)
+
+
+def _parse_sources(
+    sources: list[ManSource],
+    *,
+    packages: dict[str, str],
+    manpath_to_pkg: dict[str, str],
+    arch: str,
+    workers: int,
+) -> tuple[list[_PageRow], list[_AliasRow], int]:
+    pages: list[_PageRow] = []
+    aliases: list[_AliasRow] = []
+    failed = 0
+    started = monotonic()
+    results = _iter_parse_results(
+        sources, packages=packages, manpath_to_pkg=manpath_to_pkg, arch=arch, workers=workers
+    )
+    for processed, (src, result) in enumerate(zip(sources, results, strict=True), start=1):
+        if result.error is not None:
+            failed += 1
+            _log("page_parse_failed", path=str(src.path), error=result.error)
+        elif result.alias is not None:
+            aliases.append(result.alias)
+        elif result.page is not None:
+            pages.append(result.page)
+        if processed % 100 == 0 or processed == len(sources):
+            elapsed = monotonic() - started
+            rate = processed / elapsed if elapsed > 0 else 0.0
+            eta_s = int((len(sources) - processed) / rate) if rate > 0 else None
+            _log(
+                "parse_progress",
+                processed=processed,
+                total=len(sources),
+                pct=round((processed / len(sources)) * 100.0, 2),
+                pages=len(pages),
+                aliases=len(aliases),
+                failed=failed,
+                sourcesPerSecond=round(rate, 2),
+                etaSeconds=eta_s,
+            )
+    return pages, aliases, failed
+
+
 def _alias_for_source(src: ManSource, raw: bytes) -> _AliasRow | None:
     """Return an alias row when the source is a bare `.so` include stub."""
     target = is_so_stub(raw)
@@ -491,8 +594,8 @@ def _parse_source(
     src: ManSource,
     raw: bytes,
     *,
-    packages: dict[str, str],
-    manpath_to_pkg: dict[str, str],
+    packages: Mapping[str, str],
+    manpath_to_pkg: Mapping[str, str],
     arch: str,
 ) -> _PageRow:
     raw_bytes = raw

@@ -245,6 +245,7 @@ def test_resolve_aliases_follows_long_chains_and_drops_cycles() -> None:
 
 @pytest.mark.parametrize("with_alias_and_license", [False, True])
 def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_and_license):
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
     pages = [_page("real", "1")]
     sources = [ManSource(path=pages[0].source_path, name="real", section="1")]
     if with_alias_and_license:

@@ -63,6 +63,8 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "-e",
         "CONVEX_INGEST_SECRET",
         "-e",
+        "BETTERMAN_INGEST_WORKERS",
+        "-e",
         f"BETTERMAN_DATASET_STAGE={dataset_stage}",
         "-e",
         f"BETTERMAN_IMAGE_REF={image_ref}",
