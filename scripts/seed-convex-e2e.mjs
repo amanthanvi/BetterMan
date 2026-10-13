@@ -95,10 +95,11 @@ function makePages(distro) {
     },
   ]
 
-  if (distro === 'ubuntu') {
+  const variantLabel = { ubuntu: 'Ubuntu', freebsd: 'FreeBSD', macos: 'macOS' }[distro]
+  if (variantLabel) {
     tarBlocks.push({
       type: 'paragraph',
-      inlines: [{ type: 'text', text: 'Ubuntu variant: this page is intentionally different for E2E testing.' }],
+      inlines: [{ type: 'text', text: `${variantLabel} variant: this page is intentionally different for E2E testing.` }],
     })
   }
 
@@ -130,7 +131,9 @@ function makePages(distro) {
     name: 'tar',
     section: '1',
     title: 'tar(1)',
-    description: 'an archiving utility',
+    description: distro === 'freebsd' || distro === 'macos'
+      ? `an archiving utility (${variantLabel} variant)`
+      : 'an archiving utility',
     toc: [
       { id: 'synopsis', title: 'SYNOPSIS', level: 2 },
       { id: 'description', title: 'DESCRIPTION', level: 2 },
@@ -199,7 +202,7 @@ function makePages(distro) {
 }
 
 const now = new Date().toISOString()
-for (const distro of ['debian', 'ubuntu', 'fedora']) {
+for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
   const pages = makePages(distro)
   const datasetReleaseId = `e2e-${distro}-${Date.now()}`
   const sectionTotals = Object.entries(

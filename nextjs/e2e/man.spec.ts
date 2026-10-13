@@ -316,6 +316,8 @@ test('man: distro variant selector keeps full supported ordering', async ({ page
     'Debian',
     'Ubuntu',
     'Fedora',
+    'FreeBSD',
+    'macOS',
   ])
 })
 
