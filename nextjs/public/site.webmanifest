@@ -6,8 +6,13 @@
   "scope": "/",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b0b0d",
-  "theme_color": "#0b0b0d",
+  "background_color": "#faf8f5",
+  "theme_color": "#faf8f5",
+  "shortcuts": [
+    { "name": "Search", "url": "/search" },
+    { "name": "New bookmark", "url": "/#bookmarks" },
+    { "name": "History", "url": "/#recent" }
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -20,7 +25,7 @@
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

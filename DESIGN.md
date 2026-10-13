@@ -70,6 +70,7 @@ SSR'd from the `bm-theme-resolved` cookie).
   for names, labels, code, kbd, metadata. Section labels: `font-mono text-xs
   font-semibold tracking-[0.08em] text-muted`, uppercase.
 - **Radius:** all `--radius-*` tokens are `0px`. Square is the identity.
+- **PWA install colors:** the manifest has one install-time theme/background color, light paper `#faf8f5`; the app's runtime `theme-color` follows its resolved light or dark theme. Maskable artwork uses a separate padded icon within the central 80% safe circle.
 - **Motion:** `--ease-out`, 150/200ms, state changes only. Entries `bm-pop-in`,
   `bm-rise-in`; exits `bm-pop-out`, `bm-rise-out`; `bm-option-flash` for the
   option and find-match jump; `bm-toc-marker` slides between headings;

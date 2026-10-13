@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- PWA: add Search, New bookmark, and History install shortcuts, use light paper for install-time theme/background colors, and replace the unpadded maskable declaration with a dedicated padded PNG.
 - Typography: load self-hosted variable Geist Sans and roman/italic JetBrains Mono through `next/font/local`, with automatic hashed font preloads and metric-adjusted fallback faces to reduce font-swap layout shifts.
 - PWA: serve preference-matched cached navigation HTML immediately while refreshing it in the background, provide a self-contained branded offline page for uncached visits, and persist the trim cadence across worker restarts (activation and every 20 successful writes instead of every write).
 - Security: set the `Secure` attribute on client-set theme and distro cookies, serve baseline security headers (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, HSTS) on `/api/*` JSON responses, and re-check external content links for http(s) schemes at render time as stored-XSS defense in depth. The dead `TRUSTED_PROXY_CIDRS` setting is removed from `.env.example`.
