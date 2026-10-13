@@ -145,13 +145,16 @@ const cachedSearch = unstable_cache(
     limit: number,
     offset: number,
   ) =>
-    await convex().query(api.queries.search, {
-      distro,
-      q,
-      section,
-      limit,
-      offset,
-    }),
+    // Keep the requested distro in the cache key, even when Debian supplies data.
+    (await withDistroFallback(distro, (resolvedDistro) =>
+      mapConvexError(() => convex().query(api.queries.search, {
+        distro: resolvedDistro,
+        q,
+        section,
+        limit,
+        offset,
+      })),
+    )).data,
   ['betterman', 'convex', 'search'],
   { revalidate: SEARCH_REVALIDATE_SECONDS },
 )
@@ -214,7 +217,9 @@ const cachedRelated = unstable_cache(
 
 const cachedSuggest = unstable_cache(
   async (distro: Distro, name: string) =>
-    await convex().query(api.queries.suggest, { distro, name }),
+    (await withDistroFallback(distro, (resolvedDistro) =>
+      mapConvexError(() => convex().query(api.queries.suggest, { distro: resolvedDistro, name })),
+    )).data,
   ['betterman', 'convex', 'suggest'],
   { revalidate: SEARCH_REVALIDATE_SECONDS },
 )
