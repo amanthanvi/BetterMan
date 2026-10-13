@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Fix mixed flag-and-word search filtering, preserve list markers and nested item boundaries in distribution comparisons, and keep option jumps in command palette results. (#325)
 - Search: match parsed option flags and bare flag tokens through a bounded 2 KiB metadata index, rank option hits below name and description hits, and link them directly to their option anchors; older releases keep existing search until the next ingest.
 - Reading: compare distribution variants inline with `?diff=<distro>`, showing added, removed, and changed document blocks and options; identical variants show one quiet line, with a link back to the plain page.
 - Reading: show up to five corpus-extracted EXAMPLES commands directly below the synopsis, with source paragraph labels and copy controls; pages without EXAMPLES keep their existing reading flow.

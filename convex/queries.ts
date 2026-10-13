@@ -422,6 +422,7 @@ export const search = query({
       return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
     }
     const queryNorm = queryText.toLowerCase();
+    const signedTokens = queryText.split(" ").filter((token) => token.startsWith("-") || token.startsWith("+"));
     const fallbackNorm = typoFallbackQuery(queryNorm);
     const section = args.section ? normalizeSection(args.section) : null;
     const limit = boundedInt(args.limit, 1, MAX_SEARCH_LIMIT);
@@ -456,10 +457,22 @@ export const search = query({
     });
 
     const optionTokens = optionsQueryTokens(queryText);
-    const optionDocs = optionTokens.length ? await ctx.db
+    const signedOptionTokens = optionTokens.filter((token) => token.startsWith("-") || token.startsWith("+"));
+    const wordOptionTokens = optionTokens.filter((token) => !signedOptionTokens.includes(token));
+    const mixedOptionQuery = signedOptionTokens.length > 0 && wordOptionTokens.length > 0;
+    // In a mixed query, words can describe the page instead of spelling another
+    // flag. Keep their existing FTS behavior and bounded description read.
+    const wordDescriptionDocs = mixedOptionQuery ? await searchDocsByDescription(ctx, {
+      releaseId: release._id,
+      section,
+      queryNorm: wordOptionTokens.join(" "),
+    }) : [];
+    const wordDescriptionIds = new Set(wordDescriptionDocs.map((doc) => doc._id));
+    const indexOptionTokens = mixedOptionQuery ? signedOptionTokens : optionTokens;
+    const optionDocs = indexOptionTokens.length ? await ctx.db
       .query("manPageSearchDocuments")
       .withSearchIndex("search_options", (q) => {
-        const base = q.search("optionsText", optionsIndexQuery(optionTokens)).eq("releaseId", release._id);
+        const base = q.search("optionsText", optionsIndexQuery(indexOptionTokens)).eq("releaseId", release._id);
         return section === null ? base : base.eq("section", section);
       })
       .take(MAX_OPTION_HITS) : [];
@@ -472,14 +485,15 @@ export const search = query({
     });
     descriptionDocs.forEach((doc, index) => {
       if (ranked.has(doc._id)) return;
-      // The description analyzer removes punctuation; a flag query must
+      // The description analyzer removes punctuation; each signed token must
       // actually occur as written before it can count as a description hit.
-      if (queryText.split(" ").some((token) => token.startsWith("-") || token.startsWith("+")) && !doc.description.includes(queryText)) return;
+      if (!signedTokens.every((token) => doc.description.includes(token))) return;
       ranked.set(doc._id, { ...doc, rank: rankDescriptionDocument(doc, queryNorm, index) });
     });
     optionDocs.forEach((doc, index) => {
       if (ranked.has(doc._id)) return;
-      const anchorId = matchingOptionAnchor(doc.optionsText, optionTokens);
+      const anchorId = matchingOptionAnchor(doc.optionsText, optionTokens) ??
+        (mixedOptionQuery && wordDescriptionIds.has(doc._id) ? matchingOptionAnchor(doc.optionsText, signedOptionTokens) : undefined);
       // Exact token verification avoids the search index's final-token prefix
       // expansion and ensures multi-token queries share one option anchor.
       if (anchorId) ranked.set(doc._id, { ...doc, rank: -index, anchorId });

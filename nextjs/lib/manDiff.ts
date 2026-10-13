@@ -22,7 +22,15 @@ export function blockText(block: BlockNode): string {
     case 'paragraph':
       return inlineText(block.inlines)
     case 'list':
-      return block.items.map((item) => item.map(blockText).join('\n')).join('\n')
+      return block.items.map((item, index) => {
+        const marker = block.ordered ? `${index + 1}.` : '•'
+        const indent = ' '.repeat(marker.length + 1)
+        const lines = item.map(blockText).join('\n').split('\n')
+        // A leading nested list starts below its parent's marker, so its
+        // first item retains its depth rather than becoming parent text.
+        if (item[0]?.type === 'list') lines.unshift('')
+        return lines.map((line, lineIndex) => lineIndex === 0 ? `${marker}${line ? ` ${line}` : ''}` : `${indent}${line}`).join('\n')
+      }).join('\n')
     case 'definition_list':
       return block.items.map((item) => `${inlineText(item.termInlines)}\n${item.definitionBlocks.map(blockText).join('\n')}`).join('\n')
     case 'table':

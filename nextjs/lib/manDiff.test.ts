@@ -150,10 +150,55 @@ describe('diffManContent', () => {
 
   it('includes nested lists, definitions, tables and code in readable comparison text', () => {
     const nested: BlockNode = { type: 'definition_list', items: [{ termInlines: [{ type: 'code', text: '-a' }], definitionBlocks: [{ type: 'list', ordered: false, items: [[paragraph('Nested.')]] }] }] }
-    expect(blockText(nested)).toBe('-a\nNested.')
+    expect(blockText(nested)).toBe('-a\n• Nested.')
     expect(blockText({ type: 'table', headers: ['Flag', 'Meaning'], rows: [['-a', 'All']] })).toBe('Flag\tMeaning\n-a\tAll')
     expect(blockText({ type: 'code_block', text: 'tar -cf archive.tar .\n' })).toBe('tar -cf archive.tar .\n')
     expect(blockText({ type: 'horizontal_rule' })).toBe('—')
+  })
+
+  it('reports numbered versus bullet lists with regenerated rendered numbering', () => {
+    const items = [[paragraph('First.')], [paragraph('Second.')], [paragraph('Third.')]]
+    const bullets: BlockNode = { type: 'list', ordered: false, items }
+    const numbered: BlockNode = { type: 'list', ordered: true, items }
+    expect(diffManContent(content([bullets]), content([numbered]))).toEqual({
+      added: [], removed: [], changed: [{
+        area: 'Document', type: 'list',
+        before: '• First.\n• Second.\n• Third.', after: '1. First.\n2. Second.\n3. Third.',
+      }],
+    })
+  })
+
+  it.each([false, true])('distinguishes regrouped list items (ordered: %s)', (ordered) => {
+    const grouped: BlockNode = { type: 'list', ordered, items: [[paragraph('First.'), paragraph('Second.')]] }
+    const split: BlockNode = { type: 'list', ordered, items: [[paragraph('First.')], [paragraph('Second.')]] }
+    expect(diffManContent(content([grouped]), content([split])).changed).toHaveLength(1)
+    expect(blockText(grouped)).toBe(ordered ? '1. First.\n   Second.' : '• First.\n  Second.')
+    expect(blockText(split)).toBe(ordered ? '1. First.\n2. Second.' : '• First.\n• Second.')
+  })
+
+  it('retains nested list depth, kinds and item boundaries', () => {
+    const nested: BlockNode = {
+      type: 'list', ordered: false, items: [[paragraph('Parent.'), {
+        type: 'list', ordered: true, items: [[paragraph('First.'), paragraph('Second.')], [paragraph('Third.')]],
+      }]],
+    }
+    expect(blockText(nested)).toBe('• Parent.\n  1. First.\n     Second.\n  2. Third.')
+    const regrouped: BlockNode = {
+      type: 'list', ordered: false, items: [[paragraph('Parent.'), {
+        type: 'list', ordered: true, items: [[paragraph('First.')], [paragraph('Second.'), paragraph('Third.')]],
+      }]],
+    }
+    const flat: BlockNode = { type: 'list', ordered: false, items: [[paragraph('Parent.')], [paragraph('First.'), paragraph('Second.')], [paragraph('Third.')]] }
+    expect(diffManContent(content([nested]), content([regrouped])).changed).toHaveLength(1)
+    expect(diffManContent(content([nested]), content([flat])).changed).toHaveLength(1)
+    expect(diffManContent(content([nested]), content([nested]))).toEqual({ added: [], removed: [], changed: [] })
+  })
+
+  it('keeps depth when an item starts with another list', () => {
+    const nested: BlockNode = { type: 'list', ordered: false, items: [[{ type: 'list', ordered: true, items: [[paragraph('Nested.')]] }]] }
+    const flat: BlockNode = { type: 'list', ordered: false, items: [[paragraph('1. Nested.')]] }
+    expect(blockText(nested)).toBe('•\n  1. Nested.')
+    expect(diffManContent(content([nested]), content([flat])).changed).toHaveLength(1)
   })
 
   it('handles a long document without quadratic alignment storage', () => {

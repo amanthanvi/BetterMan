@@ -119,6 +119,62 @@ async function seed(t: Harness, rows: Array<{ name: string; description?: string
 }
 const searchArgs = { distro: "debian" as const, q: "create", section: null, limit: 50, offset: 0 };
 
+it("matches signed tokens individually without requiring a whole description phrase", async () => {
+  const t = convexTest(schema, modules);
+  await seed(t, [
+    { name: "tar", description: "Create an archive with --create", options },
+    { name: "unsigned", description: "create an archive" },
+    { name: "multi", description: "--create an archive using --verbose", options },
+  ]);
+  const mixed = await t.query(api.queries.search, { ...searchArgs, q: "--create archive" });
+  expect(mixed.results.map((row) => row.name)).toEqual(["tar", "multi"]);
+  expect((await t.query(api.queries.search, { ...searchArgs, q: "--create --verbose archive" })).results.map((row) => row.name)).toEqual(["multi"]);
+  // A single flag retains its description rank and option-only fallback.
+  expect((await t.query(api.queries.search, { ...searchArgs, q: "--create" })).results.map((row) => row.name)).toEqual(["multi", "tar"]);
+});
+
+it("preserves ordinary description phrase ranking and final-word prefix search", async () => {
+  const t = convexTest(schema, modules);
+  await seed(t, [
+    { name: "scattered", description: "Create an archive" },
+    { name: "phrase", description: "Create archive files" },
+    { name: "partial", description: "Create other files" },
+  ]);
+  for (const q of ["create archive", "create arch"]) {
+    const result = await t.query(api.queries.search, { ...searchArgs, q });
+    // Word search still includes lower-ranked partial hits supplied by FTS.
+    expect(result.results.map((row) => row.name)).toEqual(["phrase", "scattered", "partial"]);
+    expect(result.results.every((row) => !("match" in row))).toBe(true);
+  }
+});
+
+it("requires multi-flag option queries to match the same row", async () => {
+  const t = convexTest(schema, modules);
+  await seed(t, [{ name: "tar", options }]);
+  expect((await t.query(api.queries.search, { ...searchArgs, q: "--create -c" })).results).toMatchObject([
+    { name: "tar", match: "option", anchorId: "opt-create" },
+  ]);
+  expect((await t.query(api.queries.search, { ...searchArgs, q: "--create -C" })).results).toEqual([]);
+});
+
+it("combines exact signed option tokens with description words in mixed queries", async () => {
+  const t = convexTest(schema, modules);
+  await seed(t, [
+    { name: "tar", description: "Create an archive", options },
+    { name: "other", description: "Create files", options },
+    { name: "legacy", description: "Create an archive" },
+  ]);
+  for (const q of ["--create archive", "--create arch", "--create -c archive"]) {
+    expect((await t.query(api.queries.search, { ...searchArgs, q })).results).toMatchObject([
+      { name: "tar", match: "option", anchorId: "opt-create" },
+    ]);
+    expect((await t.query(api.queries.search, { ...searchArgs, q })).results).toHaveLength(1);
+  }
+  for (const q of ["--creat archive", "--create -C archive", "--create absent"]) {
+    expect((await t.query(api.queries.search, { ...searchArgs, q })).results).toEqual([]);
+  }
+});
+
 it("ranks options below every name and description hit and preserves legacy rows", async () => {
   const t = convexTest(schema, modules);
   await seed(t, [
