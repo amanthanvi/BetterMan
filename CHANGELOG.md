@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Docs: verification treats `http://[::1]` as loopback for the Linux listener check, and resolves a listener path before the repo boundary check.
 - Docs: verification matches a listener only when its cwd or an argv equals the repo root or starts with that root plus a separator, and a launch that exits before it owns Next deletes the generated-file snapshot.
 - Docs: verification smoke prints a message and exits when its state directory belongs to another user, and `convex env set` does not inherit `BETTERMAN_DATASET_STAGE`.
 - Docs: verification state files are mode `0600` while state directories stay `0700`. `VERIFY_ID` stays 3 to 32 characters, so `ci` is rejected and the manual smoke id remains `cix`.

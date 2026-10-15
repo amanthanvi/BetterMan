@@ -181,6 +181,14 @@ server.listen(3000, '127.0.0.1')
   assert.equal(runtime.belongsToRepo({ cwd: '/tmp', argv: ['node', `${sibling}/nextjs/server.js`] }), false)
   assert.equal(runtime.belongsToRepo({ cwd: '/tmp', argv: ['node', `--config=${repoRoot}/nextjs/server.js`] }), false)
   assert.equal(runtime.belongsToRepo({ cwd: '/tmp', cmdline: `node ${sibling}/nextjs/server.js` }), false)
+  assert.equal(runtime.belongsToRepo({ cwd: `${repoRoot}/nextjs/..`, cmdline: '' }), true)
+  assert.equal(runtime.belongsToRepo({ cwd: `${repoRoot}/nextjs/../../${path.basename(repoRoot)}-other`, cmdline: '' }), false)
+  assert.equal(runtime.belongsToRepo({ cwd: '/tmp', argv: ['node'] }), false)
+  assert.equal(runtime.baseUrlParts('http://[::1]:3000').loopback, true)
+  assert.equal(runtime.baseUrlParts('http://[::1]:3000').port, 3000)
+  assert.equal(runtime.baseUrlParts('http://127.0.0.1:3000').loopback, true)
+  assert.equal(runtime.baseUrlParts('http://localhost:3000').loopback, true)
+  assert.equal(runtime.baseUrlParts('http://172.30.0.2:9').loopback, false)
   const childEnv = runtime.buildLocalConvexEnv(
     {
       PATH: '/usr/bin',

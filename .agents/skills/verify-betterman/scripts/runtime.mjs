@@ -303,7 +303,7 @@ export function baseUrlParts(baseUrl) {
   return {
     url,
     port: Number(url.port || (url.protocol === 'https:' ? 443 : 80)),
-    loopback: url.hostname === '127.0.0.1' || url.hostname === 'localhost',
+    loopback: isLoopbackUrl(baseUrl),
   }
 }
 
@@ -407,7 +407,10 @@ export function processIdentity(pid) {
 }
 
 function isRepoPath(value, root = repoRoot) {
-  return value === root || value.startsWith(`${root}${path.sep}`)
+  if (!value) return false
+  const resolvedRoot = path.resolve(root)
+  const resolved = path.isAbsolute(value) ? path.resolve(value) : path.resolve(path.sep, value)
+  return resolved === resolvedRoot || resolved.startsWith(`${resolvedRoot}${path.sep}`)
 }
 
 function identityArgv(identity) {
