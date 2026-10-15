@@ -1,17 +1,21 @@
 #!/usr/bin/env node
-import { checkHealth, defaultBaseUrl } from './runtime.mjs'
+import { checkHealth, confirmHydration, defaultBaseUrl } from './runtime.mjs'
 
 const help = `verify-betterman doctor
 
-Read-only check that a BetterMan instance is worth driving.
+Check that a BetterMan instance is worth driving.
 
 Usage:
   node .agents/skills/verify-betterman/scripts/doctor.mjs [--base-url URL] [--json]
   pnpm verify:doctor
 
-Exit 0 when the home page renders the search box, /api/v1/info reports pageCount > 0,
-and /api/v1/search?q=tar returns tar(1). Exit 2 when the instance is not worth driving.
-The check does not start processes, seed data, or write the dataset.
+Exit 0 when all of the following are true:
+- GET / renders the search box and GET /api/v1/search?q=tar returns tar(1)
+- port 3000 has an IPv4 listen socket, and TCP to 127.0.0.1 succeeds
+- Chromium can see React props on Cycle theme and a click writes bm-theme
+
+Exit 2 when the instance is not worth driving. The check does not start processes,
+seed data, or write the dataset. The hydration click runs in a throwaway browser.
 `
 
 function argValue(name) {
@@ -27,7 +31,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 const baseUrl = argValue('--base-url') || defaultBaseUrl
 const asJson = process.argv.includes('--json')
-const report = await checkHealth(baseUrl)
+const report = await confirmHydration(baseUrl, await checkHealth(baseUrl))
 
 if (asJson) {
   process.stdout.write(`${JSON.stringify({ baseUrl, ok: report.ok, code: report.code, lines: report.lines }, null, 2)}\n`)

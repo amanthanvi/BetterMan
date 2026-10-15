@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -18,9 +19,111 @@ export const sessions = {
   next: 'betterman-verify-next',
 }
 
+const generatedRelPaths = ['nextjs/next-env.d.ts', 'nextjs/AGENTS.md', 'nextjs/CLAUDE.md']
+
+function snapshotPath() {
+  return path.join(stateDir, 'generated-snapshot.json')
+}
+
+function pathExists(file) {
+  try {
+    lstatSync(file)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function ensurePrivateDir(dir) {
+  if (pathExists(dir)) {
+    const existing = lstatSync(dir)
+    if (existing.isSymbolicLink() || !existing.isDirectory()) {
+      throw new Error(`refusing ${dir}: expected a real directory owned by the current user`)
+    }
+  } else {
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
+  }
+
+  const uid = typeof process.getuid === 'function' ? process.getuid() : null
+  const current = lstatSync(dir)
+  if (current.isSymbolicLink() || !current.isDirectory()) {
+    throw new Error(`refusing ${dir}: expected a real directory owned by the current user`)
+  }
+  if (uid !== null && current.uid !== uid) {
+    throw new Error(`refusing ${dir}: owned by uid ${current.uid}, expected ${uid}`)
+  }
+  chmodSync(dir, 0o700)
+  const secured = lstatSync(dir)
+  if (uid !== null && secured.uid !== uid) {
+    throw new Error(`refusing ${dir}: owned by uid ${secured.uid}, expected ${uid}`)
+  }
+  if ((secured.mode & 0o077) !== 0) {
+    throw new Error(`refusing ${dir}: mode is not 0700`)
+  }
+}
+
 export function ensureDirs() {
-  mkdirSync(stateDir, { recursive: true })
-  mkdirSync(evidenceDir, { recursive: true })
+  ensurePrivateDir(stateDir)
+  if (path.resolve(evidenceDir) !== path.resolve(stateDir)) ensurePrivateDir(evidenceDir)
+}
+
+function writePrivateFile(filePath, body) {
+  const tmp = `${filePath}.${process.pid}.tmp`
+  writeFileSync(tmp, body, { mode: 0o700 })
+  renameSync(tmp, filePath)
+  chmodSync(filePath, 0o700)
+}
+
+export function snapshotGeneratedFiles() {
+  ensureDirs()
+  const file = snapshotPath()
+  if (pathExists(file)) return
+  const entries = {}
+  for (const rel of generatedRelPaths) {
+    const abs = path.join(repoRoot, rel)
+    if (!pathExists(abs)) {
+      entries[rel] = null
+      continue
+    }
+    const stat = lstatSync(abs)
+    if (stat.isSymbolicLink()) {
+      entries[rel] = { kind: 'link', target: readlinkSync(abs) }
+      continue
+    }
+    entries[rel] = {
+      kind: 'file',
+      mode: stat.mode & 0o777,
+      data: readFileSync(abs).toString('base64'),
+    }
+  }
+  writePrivateFile(file, `${JSON.stringify(entries)}\n`)
+}
+
+export function restoreGeneratedFiles({ removeSnapshot = false } = {}) {
+  const file = snapshotPath()
+  if (!pathExists(file)) return false
+  const entries = JSON.parse(readFileSync(file, 'utf8'))
+  for (const [rel, saved] of Object.entries(entries)) {
+    const abs = path.join(repoRoot, rel)
+    if (saved === null) {
+      if (pathExists(abs)) unlinkSync(abs)
+      continue
+    }
+    if (saved.kind === 'link') {
+      if (pathExists(abs)) unlinkSync(abs)
+      symlinkSync(saved.target, abs)
+      continue
+    }
+    const data = Buffer.from(saved.data, 'base64')
+    const current = pathExists(abs) && lstatSync(abs).isFile() ? readFileSync(abs) : null
+    if (!current || !current.equals(data)) {
+      const tmp = `${abs}.${process.pid}.verify-restore`
+      writeFileSync(tmp, data, { mode: saved.mode || 0o644 })
+      renameSync(tmp, abs)
+    }
+  }
+  if (removeSnapshot) unlinkSync(file)
+  return true
 }
 
 export function readState() {
@@ -91,6 +194,27 @@ async function fetchText(url, timeoutMs) {
   } finally {
     clearTimeout(timer)
   }
+}
+
+function listenFamilies(port) {
+  const result = { known: false, v4: false, v6: false }
+  const files = [
+    ['/proc/net/tcp', 'v4'],
+    ['/proc/net/tcp6', 'v6'],
+  ]
+  for (const [file, family] of files) {
+    if (!existsSync(file)) continue
+    result.known = true
+    const lines = readFileSync(file, 'utf8').split('\n').slice(1)
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/)
+      if (parts.length < 4) continue
+      const portHex = parts[1].split(':')[1]
+      if (!portHex || parts[3] !== '0A') continue
+      if (Number.parseInt(portHex, 16) === port) result[family] = true
+    }
+  }
+  return result
 }
 
 function listenInodes(port) {
@@ -196,6 +320,20 @@ export async function checkHealth(baseUrl = defaultBaseUrl) {
   if (loopback) {
     const owners = portDetails(port)
     lines.push(owners ? `doctor: port ${port}\n${owners}` : `doctor: port ${port} owner-unknown`)
+    const families = listenFamilies(port)
+    if (families.known) {
+      lines.push(`doctor: bind v4=${families.v4 ? 'yes' : 'no'} v6=${families.v6 ? 'yes' : 'no'}`)
+    }
+    const v4Open = await tcpOpen(port, '127.0.0.1')
+    lines.push(`doctor: probe 127.0.0.1:${port} ${v4Open ? 'open' : 'closed'}`)
+    if (families.known && families.v6 && !families.v4) {
+      lines.push('doctor: NOT_READY ipv6-only')
+      return { ok: false, code: 'ipv6-only', lines, info, homeStatus: home.status }
+    }
+    if (!v4Open && (hasSearch || tar)) {
+      lines.push('doctor: NOT_READY ipv4-unreachable')
+      return { ok: false, code: 'ipv4-unreachable', lines, info, homeStatus: home.status }
+    }
   }
 
   if (hasSearch && tar) {
@@ -223,6 +361,53 @@ export async function checkHealth(baseUrl = defaultBaseUrl) {
   return { ok: false, code: 'search-missing-tar', lines, info, homeStatus: home.status }
 }
 
+export async function confirmHydration(baseUrl, report) {
+  if (!report?.ok) return report
+  const lines = report.lines.filter((line) => line !== 'doctor: READY')
+  let browser
+  try {
+    const require = createRequire(path.join(repoRoot, 'nextjs/package.json'))
+    const { chromium } = require('@playwright/test')
+    browser = await chromium.launch({ headless: true, timeout: 30_000 })
+    const page = await browser.newPage()
+    const pageErrors = []
+    page.on('pageerror', (error) => {
+      pageErrors.push(error instanceof Error ? error.message : String(error))
+    })
+    await page.goto(new URL('/', baseUrl).href, { waitUntil: 'domcontentloaded', timeout: 20_000 })
+    await page.waitForFunction(() => {
+      const button = document.querySelector('button[aria-label="Cycle theme"]')
+      if (!button) return false
+      return Object.keys(button).some((key) => key.startsWith('__reactProps'))
+    }, null, { timeout: 15_000 })
+    await page.getByRole('button', { name: 'Cycle theme' }).click({ timeout: 5_000 })
+    const theme = await page.evaluate(() => localStorage.getItem('bm-theme'))
+    if (pageErrors.length) {
+      lines.push(`doctor: hydration pageerror ${pageErrors[0]}`)
+      lines.push('doctor: NOT_READY not-hydrated')
+      return { ...report, ok: false, code: 'not-hydrated', lines }
+    }
+    if (theme !== 'light' && theme !== 'dark' && theme !== 'system') {
+      lines.push('doctor: hydration bm-theme missing after Cycle theme click')
+      lines.push('doctor: NOT_READY not-hydrated')
+      return { ...report, ok: false, code: 'not-hydrated', lines }
+    }
+    lines.push(`doctor: hydration react-props bm-theme=${theme}`)
+    lines.push('doctor: READY')
+    return { ...report, ok: true, code: 'ready', lines }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    const first = message.split('\n')[0]
+    lines.push(`doctor: hydration failed (${first})`)
+    const missing = first.includes('Cannot find module') || first.includes("Executable doesn't exist")
+    const code = missing ? 'hydration-unproven' : 'not-hydrated'
+    lines.push(`doctor: NOT_READY ${code}`)
+    return { ...report, ok: false, code, lines }
+  } finally {
+    if (browser) await browser.close()
+  }
+}
+
 export function tmuxCommand() {
   const conf = '/exec-daemon/tmux.portal.conf'
   return { bin: 'tmux', prefix: existsSync(conf) ? ['-f', conf] : [] }
@@ -236,7 +421,7 @@ export function tmuxAvailable() {
 export function startTmuxSession(name, scriptBody) {
   const { bin, prefix } = tmuxCommand()
   const scriptPath = path.join(stateDir, `${name}.sh`)
-  writeFileSync(scriptPath, scriptBody, { mode: 0o755 })
+  writePrivateFile(scriptPath, scriptBody)
   const logPath = path.join(stateDir, `${name}.log`)
   const wrapped = `#!/usr/bin/env bash
 set -euo pipefail
@@ -244,7 +429,7 @@ cd ${shellQuote(repoRoot)}
 exec bash ${shellQuote(scriptPath)} > ${shellQuote(logPath)} 2>&1
 `
   const wrappedPath = path.join(stateDir, `${name}.wrap.sh`)
-  writeFileSync(wrappedPath, wrapped, { mode: 0o755 })
+  writePrivateFile(wrappedPath, wrapped)
   const created = spawnSync(
     bin,
     [...prefix, 'new-session', '-d', '-s', name, '-c', repoRoot, '--', 'bash', wrappedPath],

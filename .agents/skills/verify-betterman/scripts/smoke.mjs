@@ -17,6 +17,8 @@ Usage:
 
 --drive walks the feature sweep in scripts/drive.spec.ts.
 Without --drive, scripts/smoke.spec.ts opens home, searches tar, and opens tar(1).
+Extra arguments are forwarded to Playwright, for example:
+  pnpm verify:drive -- -g "find in page"
 
 Evidence directory: ${evidenceDir}
 `
@@ -30,6 +32,21 @@ function argValue(name) {
   const index = process.argv.indexOf(name)
   if (index === -1) return undefined
   return process.argv[index + 1]
+}
+
+function playwrightArgs() {
+  const extras = []
+  const args = process.argv.slice(2)
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+    if (arg === '--drive' || arg === '--help' || arg === '-h') continue
+    if (arg === '--base-url') {
+      index += 1
+      continue
+    }
+    extras.push(arg)
+  }
+  return extras
 }
 
 const baseUrl = argValue('--base-url') || defaultBaseUrl
@@ -55,7 +72,7 @@ const env = {
 
 const playwright = spawnSync(
   'pnpm',
-  ['-C', 'nextjs', 'exec', 'playwright', 'test', '--config', config, path.join(skillDir, 'scripts', spec)],
+  ['-C', 'nextjs', 'exec', 'playwright', 'test', '--config', config, path.join(skillDir, 'scripts', spec), ...playwrightArgs()],
   { cwd: repoRoot, stdio: 'inherit', env },
 )
 

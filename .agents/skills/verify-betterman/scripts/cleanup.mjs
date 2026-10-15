@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 
-import { evidenceDir, killTmuxSession, readState, sessionExists, sessions, stateFile, tmuxAvailable, writeState } from './runtime.mjs'
+import { evidenceDir, killTmuxSession, readState, restoreGeneratedFiles, sessionExists, sessions, stateFile, tmuxAvailable, writeState } from './runtime.mjs'
 
 const help = `verify-betterman cleanup
 
@@ -46,6 +47,15 @@ if (state) {
     sessions: [],
     cleanedAt: new Date().toISOString(),
   })
+}
+
+if (started.length) spawnSync('sleep', ['1'])
+try {
+  const restored = restoreGeneratedFiles({ removeSnapshot: true })
+  if (restored) process.stdout.write('cleanup: restored next dev generated files\n')
+} catch (error) {
+  process.stderr.write(`cleanup: restore generated files failed: ${error instanceof Error ? error.message : String(error)}\n`)
+  process.exit(1)
 }
 
 const evidence = state?.evidenceDir || evidenceDir

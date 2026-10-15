@@ -1,6 +1,4 @@
-import { expect, test } from '@playwright/test'
-
-import { shellReady, shot } from './evidence'
+import { expect, shellReady, shot, test } from './evidence'
 
 test('home: empty recent and bookmarks, browse link', async ({ page }) => {
   await page.goto('/')

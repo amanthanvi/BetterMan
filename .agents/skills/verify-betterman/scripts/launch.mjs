@@ -6,6 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import {
   baseUrlParts,
   checkHealth,
+  confirmHydration,
   defaultBaseUrl,
   ensureDirs,
   evidenceDir,
@@ -14,10 +15,12 @@ import {
   nodePathExport,
   readState,
   repoRoot,
+  restoreGeneratedFiles,
   runCommand,
   sessionExists,
   sessions,
   shellQuote,
+  snapshotGeneratedFiles,
   startTmuxSession,
   stateDir,
   tcpOpen,
@@ -74,7 +77,20 @@ if (!loopback || port !== 3000) {
   process.exit(2)
 }
 
-ensureDirs()
+try {
+  ensureDirs()
+} catch (error) {
+  process.stderr.write(`launch: ${error instanceof Error ? error.message : String(error)}\n`)
+  process.exit(1)
+}
+snapshotGeneratedFiles()
+process.on('exit', () => {
+  try {
+    restoreGeneratedFiles()
+  } catch (error) {
+    process.stderr.write(`launch: restore generated files failed: ${error instanceof Error ? error.message : String(error)}\n`)
+  }
+})
 
 function remember(started) {
   const previous = readState()
@@ -88,7 +104,13 @@ function remember(started) {
   })
 }
 
-const initial = await checkHealth(baseUrl)
+async function assess(includeHydration) {
+  const health = await checkHealth(baseUrl)
+  if (!includeHydration || !health.ok) return health
+  return confirmHydration(baseUrl, health)
+}
+
+const initial = await assess(true)
 if (initial.ok) {
   process.stdout.write(`${initial.lines.join('\n')}\n`)
   process.stdout.write('launch: REUSED existing READY instance\n')
@@ -169,7 +191,7 @@ if (initial.code === 'empty-dataset' && listening && !ownsNext) {
     process.exit(2)
   }
   seedDataset()
-  const seeded = await checkHealth(baseUrl)
+  const seeded = await assess(true)
   process.stdout.write(`${seeded.lines.join('\n')}\n`)
   if (seeded.ok) {
     process.stdout.write('launch: SEEDED existing instance and left its process running\n')
@@ -194,6 +216,7 @@ exec npx convex dev --tail-logs disable
 `
   startTmuxSession(sessions.convex, convexScript)
   started.push(sessions.convex)
+  remember(started)
   const logPath = path.join(stateDir, `${sessions.convex}.log`)
   const ready = await waitFor(() => {
     if (!sessionExists(sessions.convex)) return 'dead'
@@ -226,6 +249,7 @@ exec pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000
 `
   startTmuxSession(sessions.next, nextScript)
   if (!started.includes(sessions.next)) started.push(sessions.next)
+  remember(started)
   const up = await waitFor(() => {
     if (!sessionExists(sessions.next)) return 'dead'
     return tcpOpen(port).then((open) => (open ? 'ready' : ''))
@@ -282,10 +306,17 @@ if (!report.ok && report.code === 'empty-dataset') {
 async function waitForReady() {
   const deadline = Date.now() + 180_000
   let report = await checkHealth(baseUrl)
-  while (!report.ok && report.code !== 'empty-dataset' && Date.now() < deadline) {
+  while (Date.now() < deadline) {
+    if (report.code === 'empty-dataset' || report.code === 'ipv6-only') return report
+    if (report.ok) {
+      const confirmed = await confirmHydration(baseUrl, report)
+      if (confirmed.ok || confirmed.code === 'hydration-unproven') return confirmed
+      report = confirmed
+    }
     await delay(2_000)
     report = await checkHealth(baseUrl)
   }
+  if (report.ok) return confirmHydration(baseUrl, report)
   return report
 }
 

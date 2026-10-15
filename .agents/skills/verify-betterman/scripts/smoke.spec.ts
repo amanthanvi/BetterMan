@@ -1,6 +1,4 @@
-import { expect, test } from '@playwright/test'
-
-import { shot } from './evidence'
+import { expect, shot, test } from './evidence'
 
 test('smoke: home search opens tar(1)', async ({ page }) => {
   await page.goto('/')
