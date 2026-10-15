@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import net from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+
+const require = createRequire(import.meta.url)
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(scriptDir, '../../../..')
@@ -151,4 +154,14 @@ server.listen(3000, '127.0.0.1')
   assert.equal(readFileSync(nextEnv).equals(original), true)
   assert.equal(gitStatus(generatedPaths), '')
   if (statusBefore === '') assert.equal(gitStatus(), '')
+
+  runtime.writeState({ sessions: [], listeners: {} })
+  assert.equal(statSync(path.join(stateDir, 'run.json')).mode & 0o777, 0o600)
+  assert.equal(statSync(stateDir).mode & 0o777, 0o700)
+  const { verifyIdFor } = require('./verify-paths.cjs')
+  process.env.VERIFY_ID = 'ci'
+  assert.equal(verifyIdFor(repoRoot), 'ci')
+  process.env.VERIFY_ID = 'c'
+  assert.throws(() => verifyIdFor(repoRoot), /2-32/)
+  delete process.env.VERIFY_ID
 })

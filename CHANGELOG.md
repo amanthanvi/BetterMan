@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Docs: verification state files are mode `0600` while state directories stay `0700`, and `VERIFY_ID` accepts a 2-character id such as `ci`.
 - Docs: a refused verification launch does not snapshot generated files, and cleanup will not restore a snapshot over a file that changed since that snapshot was recorded.
 - Docs: verification seeds an empty dataset only when the listener belongs to this checkout, smoke refuses a server it does not own, and the Linux listener check applies only to loopback.
 - Docs: the manual smoke workflow uses `VERIFY_ID=cix`, and its evidence artifact path matches that id.

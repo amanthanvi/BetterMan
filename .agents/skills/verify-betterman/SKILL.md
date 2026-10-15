@@ -52,9 +52,9 @@ The seeded fixture publishes `tar(1)`, `gzip(1)`, alias `gunzip(1)`, `printf(1)`
 Logs and state:
 
 - `/tmp/betterman-verify-<id>/` is mode `0700` and must be owned by the current user. Launch refuses a pre-created directory owned by someone else. Set `VERIFY_ID` to choose the id, or `VERIFY_STATE_DIR` to choose the directory.
-- `run.json` is written mode `0700`. It lists sessions this launch started, including a Convex session that failed before Next opened port 3000, plus the Next listener pid and start time
+- `run.json` is written mode `0600`. It lists sessions this launch started, including a Convex session that failed before Next opened port 3000, plus the Next listener pid and start time
 - `bmv-<id>-convex.log` and `bmv-<id>-next.log`
-- `evidence/` is created at launch and kept by cleanup. Override the directory with `VERIFY_EVIDENCE_DIR`. When that is unset, Playwright hashes the repo root, the same id as launch, not the shell's current directory. Specs do not import the ESM runtime, because the test runner loads them as CommonJS. `VERIFY_ID` is 3 to 32 characters. The manual smoke workflow sets `VERIFY_ID=cix`, so its evidence directory is `/tmp/betterman-verify-cix/evidence`.
+- `evidence/` is created at launch and kept by cleanup. Override the directory with `VERIFY_EVIDENCE_DIR`. When that is unset, Playwright hashes the repo root, the same id as launch, not the shell's current directory. Specs do not import the ESM runtime, because the test runner loads them as CommonJS. `VERIFY_ID` is 2 to 32 characters. The manual smoke workflow sets `VERIFY_ID=cix`, so its evidence directory is `/tmp/betterman-verify-cix/evidence`. A proof run may set `VERIFY_ID=ci`, which uses `/tmp/betterman-verify-ci/evidence`.
 
 `pnpm next:dev` (`convex dev --start "pnpm -C nextjs dev"`) is the README command. The helper splits Convex and Next so the dataset can be seeded before Next caches an empty render. Use the helper.
 

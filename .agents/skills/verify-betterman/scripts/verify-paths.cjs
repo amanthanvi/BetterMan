@@ -6,8 +6,8 @@ const repoRoot = path.resolve(__dirname, '../../../..')
 function verifyIdFor(root = repoRoot) {
   const override = process.env.VERIFY_ID
   if (override) {
-    if (!/^[a-z0-9][a-z0-9-]{2,31}$/.test(override)) {
-      throw new Error('VERIFY_ID must be 3-32 characters of lowercase letters, digits, or hyphens')
+    if (!/^[a-z0-9][a-z0-9-]{1,31}$/.test(override)) {
+      throw new Error('VERIFY_ID must be 2-32 characters of lowercase letters, digits, or hyphens')
     }
     return override
   }

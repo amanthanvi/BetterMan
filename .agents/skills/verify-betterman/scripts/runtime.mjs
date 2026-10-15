@@ -145,9 +145,9 @@ export function ensureDirs() {
 
 function writePrivateFile(filePath, body) {
   const tmp = `${filePath}.${process.pid}.tmp`
-  writeFileSync(tmp, body, { mode: 0o700 })
+  writeFileSync(tmp, body, { mode: 0o600 })
   renameSync(tmp, filePath)
-  chmodSync(filePath, 0o700)
+  chmodSync(filePath, 0o600)
 }
 
 function readSnapshot() {
