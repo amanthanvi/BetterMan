@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import net from 'node:net'
 import path from 'node:path'
@@ -51,6 +51,21 @@ export function scrubConvexEnv(base = process.env) {
     if (convexRemoteKeys.includes(key) || key.startsWith('CONVEX_DEPLOY')) delete env[key]
   }
   return env
+}
+
+export function clearNextFetchCache() {
+  const dir = path.join(repoRoot, 'nextjs', '.next', 'dev', 'cache', 'fetch-cache')
+  const resolved = path.resolve(dir)
+  const nextRoot = path.resolve(repoRoot, 'nextjs')
+  if (!resolved.startsWith(`${nextRoot}${path.sep}`)) return
+  let current
+  try {
+    current = lstatSync(resolved)
+  } catch {
+    return
+  }
+  if (current.isSymbolicLink() || !current.isDirectory()) return
+  rmSync(resolved, { recursive: true, force: true })
 }
 
 export function bashUnsetConvexRemote() {
@@ -443,10 +458,20 @@ export async function checkHealth(baseUrl = defaultBaseUrl) {
     }
   }
 
-  if (hasSearch && tar) {
-    if (infoEmpty) lines.push('doctor: info cache is empty while search returns tar(1)')
+  const infoReady = infoRes.status === 200 && pageCount !== null && pageCount > 0
+  if (hasSearch && tar && infoReady) {
     lines.push('doctor: READY')
     return { ok: true, code: 'ready', lines, info, homeStatus: home.status }
+  }
+
+  if (hasSearch && tar && infoEmpty) {
+    lines.push('doctor: NOT_READY info-stale')
+    return { ok: false, code: 'info-stale', lines, info, homeStatus: home.status }
+  }
+
+  if (hasSearch && tar) {
+    lines.push('doctor: NOT_READY info-unreadable')
+    return { ok: false, code: 'info-unreadable', lines, info, homeStatus: home.status }
   }
 
   if (!tar && (infoEmpty || releaseMissing) && (shell || infoRes.status === 200 || infoRes.status === 404)) {

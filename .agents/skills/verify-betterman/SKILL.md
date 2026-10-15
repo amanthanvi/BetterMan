@@ -43,7 +43,7 @@ pnpm verify:launch
 6. Install Playwright Chromium (`pnpm -C nextjs exec playwright install chromium`). Set `VERIFY_SKIP_BROWSER_INSTALL=1` to skip. If Chromium's system libraries are missing, the command above `bash scripts/install-playwright-ci.sh` installs them.
 7. Start tmux session `bmv-<id>-convex` with `npx convex dev --tail-logs disable` when ports from `.env.local` (`VITE_CONVEX_URL`, usually 3210, and `VITE_CONVEX_SITE_URL`, usually 3211) are closed. The session name is written to `run.json` immediately, before the ready wait. The shell unsets `CONVEX_DEPLOY_KEY`, `CONVEX_DEPLOYMENT`, `CONVEX_URL`, every `CONVEX_DEPLOY*` variable, and the other remote Convex variables, then exports only `CONVEX_AGENT_MODE=anonymous`, an `anonymous:` deployment name when `.env.local` has one, and the loopback URLs from that file. Ready means the log line `Convex functions ready`.
 8. Start tmux session `bmv-<id>-next` with `pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000`. That session is recorded in `run.json` as soon as it starts. After `.env.local` is sourced, the shell unsets inherited Convex variables again and exports only the anonymous deployment name and loopback URLs. `--hostname 127.0.0.1` is required. A `next dev` bound only to IPv6 `::` can still answer `http://127.0.0.1:3000` for documents, while Playwright's HMR websocket fails with `ERR_INVALID_HTTP_RESPONSE` and clicks never reach React. Doctor treats that listener as `NOT_READY` `ipv6-only`. It also opens Chromium, waits until `Cycle theme` has React props, and clicks it. `READY` requires `localStorage['bm-theme']` to change. Launch will not reuse an IPv6-only server. Stop that process yourself, then run launch again.
-9. If doctor reports `empty-dataset` for a Next process this skill started, seed only when `.env.local` names an `anonymous:` deployment or has no deployment name, both Convex URLs are loopback, and no deploy key is configured. The seed process inherits a scrubbed environment. It receives the anonymous deployment name and loopback URLs, and it does not receive `CONVEX_DEPLOY_KEY` or a cloud `CONVEX_URL`. Launch then stops Next, waits until `127.0.0.1:3000` is closed, starts Next again, waits until that address is bound by a process whose cwd or command line is this repo, records that pid and start time, and waits until doctor reports hydration. A fixed sleep is not the ready check. Reuse also requires the live listener pid and start time to match `run.json`.
+9. If doctor reports `empty-dataset` for a Next process this skill started, seed only when `.env.local` names an `anonymous:` deployment or has no deployment name, both Convex URLs are loopback, and no deploy key is configured. The seed process inherits a scrubbed environment. It receives the anonymous deployment name and loopback URLs, and it does not receive `CONVEX_DEPLOY_KEY` or a cloud `CONVEX_URL`. Launch then stops Next, waits until `127.0.0.1:3000` is closed, deletes `nextjs/.next/dev/cache/fetch-cache`, starts Next again, and waits until that address is bound by a process whose cwd or command line is this repo. It records that pid and start time, then waits until `/api/v1/info` reports `pageCount` greater than 0 and doctor reports hydration. A cached `pageCount` of 0 is `NOT_READY` `info-stale` even when search already returns `tar(1)`. Launch clears that cache and restarts up to three times. A fixed sleep is not the ready check. Reuse also requires the live listener pid and start time to match `run.json`.
 
 The seeded fixture publishes `tar(1)`, `gzip(1)`, alias `gunzip(1)`, `printf(1)`, `printf(3)`, `openssl(1ssl)`, `bash(1)`, and an EVP page for Debian, Ubuntu, and Fedora. Ubuntu `tar(1)` contains the sentence `Ubuntu variant: this page is intentionally different for E2E testing.` The license package list is empty.
 
@@ -68,10 +68,11 @@ pnpm verify:doctor
 
 - `GET /` is 200 and the HTML contains `Search man pages`
 - `GET /api/v1/search?q=tar&limit=5` is 200 and includes `tar` in section `1`
+- `GET /api/v1/info` is 200 and `pageCount` is greater than 0
 - `/proc/net/tcp` shows an IPv4 listen socket for port 3000, and a TCP connect to `127.0.0.1` succeeds. IPv6 `::` alone is `ipv6-only`
 - Chromium sees React props on `Cycle theme`, and clicking it writes `bm-theme`
 
-`GET /api/v1/info` is printed every time. A cached `pageCount` of 0 while search already returns `tar(1)` is a stale Next.js cache. Doctor can still report `READY` and prints `info cache is empty while search returns tar(1)`.
+`GET /api/v1/info` is printed every time. `pageCount` of 0 is not ready. Search can return `tar(1)` from a fresher cache while info still says `uninitialized` for up to an hour, because info is cached under `nextjs/.next/dev/cache/fetch-cache`. That result is `NOT_READY` `info-stale`.
 
 Anything else prints `NOT_READY` and exits 2. Codes:
 
@@ -80,6 +81,7 @@ Anything else prints `NOT_READY` and exits 2. Codes:
 | `unreachable` | Nothing answered on the base URL |
 | `home-unhealthy` | The home page is up without the search box, or the status is not 200, and this is not an empty dataset |
 | `empty-dataset` | Search has no `tar(1)` and info is 404 or `pageCount` is 0, or the home error says the dataset release is missing. Launch may seed. It does not restart a Next process it did not start |
+| `info-stale` | Search returns `tar(1)`, but info is 404 or `pageCount` is 0. Launch clears the Next fetch cache and restarts a Next process it started. It does not call that server `READY` |
 | `info-unreadable` | Home rendered, but info did not return the expected JSON and search did not prove `tar(1)` |
 | `search-missing-tar` | Info reports pages, and `tar(1)` is absent. Launch does not overwrite that dataset |
 | `ipv6-only` | Port 3000 is listening on IPv6 `::` and not on IPv4. Launch does not reuse it |

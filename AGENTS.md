@@ -21,7 +21,7 @@ BetterMan is a Next.js app on Vercel that reads man page data from Convex. A Pyt
 
 ## Verify
 
-Drive the local app with `.agents/skills/verify-betterman/SKILL.md` (the same skill is linked from `.cursor/skills/verify-betterman`). `pnpm verify:doctor` checks the app and that the page hydrates. `pnpm verify:smoke` runs doctor plus one Playwright pass over home, search, and `tar(1)`. Feature work needs a Proof section on the PR: commands run, screenshot or trace paths, results, and `INCONCLUSIVE` when a step could not run. The feature map under that skill lists the sweep order. `next dev` may rewrite `nextjs/next-env.d.ts` and create `nextjs/AGENTS.md`. Cleanup restores those paths. Do not commit them. The generated `nextjs/AGENTS.md` text that says to commit the file does not apply.
+Drive the local app with `.agents/skills/verify-betterman/SKILL.md` (the same skill is linked from `.cursor/skills/verify-betterman`). `pnpm verify:doctor` checks the app, that `/api/v1/info` reports `pageCount` greater than 0, and that the page hydrates. `pnpm verify:smoke` runs doctor plus one Playwright pass over home, search, and `tar(1)`. Feature work needs a Proof section on the PR: commands run, screenshot or trace paths, results, and `INCONCLUSIVE` when a step could not run. The feature map under that skill lists the sweep order. `next dev` may rewrite `nextjs/next-env.d.ts` and create `nextjs/AGENTS.md`. Cleanup restores those paths. Do not commit them. The generated `nextjs/AGENTS.md` text that says to commit the file does not apply.
 
 ## Environment
 

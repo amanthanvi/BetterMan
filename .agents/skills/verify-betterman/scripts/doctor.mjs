@@ -11,6 +11,7 @@ Usage:
 
 Exit 0 when all of the following are true:
 - GET / renders the search box and GET /api/v1/search?q=tar returns tar(1)
+- GET /api/v1/info reports pageCount greater than 0
 - port 3000 has an IPv4 listen socket, and TCP to 127.0.0.1 succeeds
 - Chromium can see React props on Cycle theme and a click writes bm-theme
 

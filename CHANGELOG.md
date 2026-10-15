@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Docs: the verification doctor stays not ready until `/api/v1/info` reports a positive `pageCount`, and launch drops the Next fetch cache after seeding.
 - Docs: verification seeds only a local anonymous Convex deployment, and each checkout gets its own state directory and tmux sessions.
 - Docs: the verification doctor refuses an IPv6-only dev server until the page hydrates on 127.0.0.1, and cleanup restores files `next dev` rewrites.
 - Docs: add a project-local verification skill and feature map so agents can launch the app, run a read-only doctor check, and drive it with Playwright.

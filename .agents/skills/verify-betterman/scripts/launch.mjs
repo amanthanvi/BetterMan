@@ -9,6 +9,7 @@ import {
   bashUnsetConvexRemote,
   belongsToRepo,
   checkHealth,
+  clearNextFetchCache,
   confirmHydration,
   defaultBaseUrl,
   ensureDirs,
@@ -305,6 +306,7 @@ async function ensureNext(forceRestart = false) {
     process.stderr.write('launch: 127.0.0.1:3000 stayed bound after Next stopped\n')
     process.exit(1)
   }
+  clearNextFetchCache()
   process.stdout.write('launch: starting Next.js dev session\n')
   const nextScript = `#!/usr/bin/env bash
 set -euo pipefail
@@ -383,18 +385,21 @@ await ensureNext()
 remember(started)
 
 let report = await waitForReady()
-if (!report.ok && report.code === 'empty-dataset') {
-  seedDataset()
-  process.stdout.write('launch: restarting Next.js so the first render sees the seeded dataset\n')
-  await ensureNext(true)
-  report = await waitForReady()
+if (!report.ok && (report.code === 'empty-dataset' || report.code === 'info-stale')) {
+  if (report.code === 'empty-dataset') {
+    seedDataset()
+    process.stdout.write('launch: restarting Next.js so /api/v1/info sees the seeded dataset\n')
+  } else {
+    process.stdout.write('launch: /api/v1/info is cached with pageCount 0; restarting Next.js after clearing that cache\n')
+  }
+  report = await waitUntilInfoReady()
 }
 
 async function waitForReady() {
   const deadline = Date.now() + 180_000
   let report = await checkHealth(baseUrl)
   while (Date.now() < deadline) {
-    if (report.code === 'empty-dataset' || report.code === 'ipv6-only') return report
+    if (report.code === 'empty-dataset' || report.code === 'info-stale' || report.code === 'ipv6-only') return report
     if (report.ok) {
       const confirmed = await confirmHydration(baseUrl, report)
       if (confirmed.ok || confirmed.code === 'hydration-unproven') return confirmed
@@ -405,6 +410,32 @@ async function waitForReady() {
   }
   if (report.ok) return confirmHydration(baseUrl, report)
   return report
+}
+
+async function waitUntilInfoReady() {
+  const deadline = Date.now() + 180_000
+  let latest = await checkHealth(baseUrl)
+  for (let attempt = 1; attempt <= 3 && Date.now() < deadline; attempt += 1) {
+    process.stdout.write('launch: clearing the Next fetch cache and waiting until /api/v1/info pageCount is positive\n')
+    await ensureNext(true)
+    while (Date.now() < deadline) {
+      latest = await checkHealth(baseUrl)
+      if (latest.code === 'ipv6-only') return latest
+      if (latest.ok) {
+        const confirmed = await confirmHydration(baseUrl, latest)
+        if (confirmed.ok || confirmed.code === 'hydration-unproven') return confirmed
+        if (confirmed.code === 'not-hydrated') {
+          latest = confirmed
+          await delay(2_000)
+          continue
+        }
+        return confirmed
+      }
+      if (latest.code === 'info-stale' || latest.code === 'empty-dataset') break
+      await delay(2_000)
+    }
+  }
+  return latest
 }
 
 process.stdout.write(`${report.lines.join('\n')}\n`)
