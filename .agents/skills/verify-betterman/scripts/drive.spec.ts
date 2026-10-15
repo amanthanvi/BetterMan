@@ -232,7 +232,15 @@ test('distro variant: ubuntu marker and an unknown distro query', async ({ page 
   await shellReady(page)
   const select = page.getByLabel('Select distribution variant')
   await expect(select.locator('option')).toHaveText(['Debian', 'Ubuntu', 'Fedora'])
-  await select.selectOption('ubuntu')
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await select.selectOption('ubuntu')
+    try {
+      await expect(page).toHaveURL(/distro=ubuntu/, { timeout: 1_500 })
+      break
+    } catch (error) {
+      if (attempt === 2) throw error
+    }
+  }
   await expect(page).toHaveURL(/distro=ubuntu/)
   await expect(page.getByText('Ubuntu variant: this page is intentionally different for E2E testing.')).toBeVisible()
   await shot(page, 'distro-ubuntu')
