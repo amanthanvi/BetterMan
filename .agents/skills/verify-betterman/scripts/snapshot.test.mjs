@@ -42,7 +42,7 @@ test('refused launch then cleanup leaves git status clean', { timeout: 60_000 },
   assert.equal(await tcpOpen(3000), false, 'port 3000 is already in use')
   const stateDir = mkdtempSync(path.join(tmpdir(), 'bm-snapshot-'))
   const original = readFileSync(nextEnv)
-  const statusBefore = gitStatus()
+  const generatedBefore = gitStatus(generatedPaths)
   const serverFile = path.join(stateDir, 'foreign.mjs')
   writeFileSync(
     serverFile,
@@ -114,7 +114,7 @@ server.listen(3000, '127.0.0.1')
   assert.equal(launch.status, 2, `${launch.stdout}\n${launch.stderr}`)
   assert.match(launch.stderr, /Refusing to seed/)
   assert.equal(readFileSync(nextEnv).equals(original), true)
-  assert.equal(existsSync(snapshotFile), false)
+  assert.equal(existsSync(snapshotFile), true)
 
   const cleanup = spawnSync(process.execPath, [path.join(scriptDir, 'cleanup.mjs')], {
     cwd: repoRoot,
@@ -123,23 +123,13 @@ server.listen(3000, '127.0.0.1')
     timeout: 30_000,
   })
   assert.equal(cleanup.status, 0, `${cleanup.stdout}\n${cleanup.stderr}`)
-  assert.doesNotMatch(cleanup.stderr, /changed since the recorded snapshot/)
-  assert.equal(readFileSync(nextEnv).equals(original), true)
-  assert.equal(existsSync(snapshotFile), false)
-  assert.equal(gitStatus(generatedPaths), '')
-  if (statusBefore === '') assert.equal(gitStatus(), '')
-
-  writeFileSync(snapshotFile, `${JSON.stringify(stale)}\n`)
-  process.env.VERIFY_STATE_DIR = stateDir
-  delete process.env.VERIFY_EVIDENCE_DIR
-  const runtimeForRestore = await import('./runtime.mjs')
-  const warned = runtimeForRestore.restoreGeneratedFiles({ removeSnapshot: true })
-  assert.equal(warned.restored, false)
-  assert.deepEqual(warned.skipped, [nextEnvRel])
+  assert.match(cleanup.stderr, /changed since the recorded snapshot/)
+  assert.match(cleanup.stderr, /backing it up/)
   assert.equal(readFileSync(nextEnv).equals(original), true)
   assert.equal(existsSync(snapshotFile), false)
   const backups = readdirSync(path.join(stateDir, 'generated-backup'))
   assert.ok(backups.some((name) => name.includes('nextjs__next-env.d.ts') && name.endsWith('.snapshot')))
+  assert.equal(gitStatus(generatedPaths), generatedBefore)
 
   stopServer()
   const closed = Date.now() + 5_000
@@ -159,8 +149,7 @@ server.listen(3000, '127.0.0.1')
   assert.equal(restored.restored, true)
   assert.deepEqual(restored.skipped, [])
   assert.equal(readFileSync(nextEnv).equals(original), true)
-  assert.equal(gitStatus(generatedPaths), '')
-  if (statusBefore === '') assert.equal(gitStatus(), '')
+  assert.equal(gitStatus(generatedPaths), generatedBefore)
 
   runtime.writeState({ sessions: [], listeners: {} })
   assert.equal(statSync(path.join(stateDir, 'run.json')).mode & 0o777, 0o600)
@@ -235,9 +224,44 @@ test('launch refuses an ipv6 loopback base url before starting servers', () => {
   }
 })
 
-test('smoke reports a foreign state directory without a stack trace', () => {
+test('refused launch keeps a live session snapshot', () => {
+  const id = 'snalive'
+  const dir = mkdtempSync(path.join(tmpdir(), 'bm-live-snapshot-'))
+  const snapshotFile = path.join(dir, 'generated-snapshot.json')
+  const body = `${JSON.stringify({ owned: true, writtenAt: '2026-01-01T00:00:00.000Z', entries: {} })}\n`
+  writeFileSync(snapshotFile, body)
+  writeFileSync(path.join(dir, 'run.json'), `${JSON.stringify({ sessions: [`bmv-${id}-next`], listeners: {} })}\n`)
+  const tmuxArgs = existsSync('/exec-daemon/tmux.portal.conf') ? ['-f', '/exec-daemon/tmux.portal.conf'] : []
+  const name = `bmv-${id}-next`
+  const created = spawnSync('tmux', [...tmuxArgs, 'new-session', '-d', '-s', name, 'sleep', '30'], { encoding: 'utf8' })
+  assert.equal(created.status, 0, created.stderr)
+  try {
+    const launch = spawnSync(process.execPath, [path.join(scriptDir, 'launch.mjs'), '--base-url', 'http://[::1]:3000'], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        VERIFY_ID: id,
+        VERIFY_STATE_DIR: dir,
+        VERIFY_SKIP_BROWSER_INSTALL: '1',
+      },
+      encoding: 'utf8',
+      timeout: 15_000,
+    })
+    assert.equal(launch.status, 2, `${launch.stdout}\n${launch.stderr}`)
+    assert.equal(readFileSync(snapshotFile, 'utf8'), body)
+  } finally {
+    spawnSync('tmux', [...tmuxArgs, 'kill-session', '-t', name], { encoding: 'utf8' })
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('smoke reports a foreign state directory without a stack trace', (t) => {
   const foreign = '/usr'
-  assert.notEqual(statSync(foreign).uid, process.getuid())
+  const uid = typeof process.getuid === 'function' ? process.getuid() : null
+  if (uid === null || statSync(foreign).uid === uid) {
+    t.skip('skipping foreign state directory check: /usr is owned by the current user')
+    return
+  }
   const result = spawnSync(process.execPath, [path.join(scriptDir, 'smoke.mjs')], {
     cwd: repoRoot,
     env: { ...process.env, VERIFY_STATE_DIR: foreign, VERIFY_EVIDENCE_DIR: foreign },

@@ -87,6 +87,18 @@ async function waitFor(predicate, timeoutMs) {
 }
 
 let tookOwnership = false
+let wroteSnapshot = false
+
+function liveOwnedNextSession() {
+  try {
+    if (!sessionExists(sessions.next)) return false
+    const state = readState()
+    return Array.isArray(state?.sessions) && state.sessions.includes(sessions.next)
+  } catch {
+    return false
+  }
+}
+
 process.on('exit', (code) => {
   if (tookOwnership) {
     try {
@@ -96,7 +108,7 @@ process.on('exit', (code) => {
     }
     return
   }
-  if (code === 0) return
+  if (code === 0 || !wroteSnapshot || liveOwnedNextSession()) return
   try {
     unlinkGeneratedSnapshot()
   } catch (error) {
@@ -356,6 +368,7 @@ async function ensureNext(forceRestart = false) {
   }
   clearNextFetchCache()
   snapshotGeneratedFiles()
+  wroteSnapshot = true
   tookOwnership = true
   process.stdout.write('launch: starting Next.js dev session\n')
   const nextScript = `#!/usr/bin/env bash

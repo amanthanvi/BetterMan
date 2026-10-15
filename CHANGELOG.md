@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Docs: a refused verification launch leaves a generated-file snapshot it did not write, including one for a Next session that is still running. The snapshot test compares generated-file git status before and after, and skips the foreign state-directory check when `/usr` belongs to the current user.
 - Docs: verification launch refuses `http://[::1]:3000` before starting servers and tells you to use `http://127.0.0.1:3000`. Doctor still treats `[::1]` as loopback.
 - Docs: verification treats `http://[::1]` as loopback for the Linux listener check, and resolves a listener path before the repo boundary check.
 - Docs: verification matches a listener only when its cwd or an argv equals the repo root or starts with that root plus a separator, and a launch that exits before it owns Next deletes the generated-file snapshot.
