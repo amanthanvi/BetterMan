@@ -27,7 +27,8 @@
 		"verify:smoke": "node .agents/skills/verify-betterman/scripts/smoke.mjs",
 		"verify:drive": "node .agents/skills/verify-betterman/scripts/smoke.mjs --drive",
 		"verify:cleanup": "node .agents/skills/verify-betterman/scripts/cleanup.mjs",
-		"verify:test": "node --test .agents/skills/verify-betterman/scripts/snapshot.test.mjs"
+		"verify:test": "node --test .agents/skills/verify-betterman/scripts/snapshot.test.mjs",
+		"verify:typecheck": "tsc --noEmit -p .agents/skills/verify-betterman/tsconfig.json"
 	},
 	"dependencies": {
 		"convex": "^1.45.0"

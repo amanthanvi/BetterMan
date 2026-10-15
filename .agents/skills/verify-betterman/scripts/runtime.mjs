@@ -240,6 +240,16 @@ export function snapshotGeneratedFiles() {
   return { ...body, file: snapshotPath() }
 }
 
+export function unlinkGeneratedSnapshot() {
+  const file = snapshotPath()
+  try {
+    unlinkSync(file)
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return
+    throw error
+  }
+}
+
 export function restoreGeneratedFiles({ removeSnapshot = false } = {}) {
   const snapshot = readSnapshot()
   if (!snapshot) return { restored: false, skipped: [] }
@@ -380,8 +390,10 @@ export function processIdentity(pid) {
     identity.cwd = ''
   }
   try {
-    identity.cmdline = readFileSync(`/proc/${id}/cmdline`, 'utf8').replaceAll('\0', ' ').trim()
+    identity.argv = readFileSync(`/proc/${id}/cmdline`, 'utf8').split('\0').filter(Boolean)
+    identity.cmdline = identity.argv.join(' ')
   } catch {
+    identity.argv = []
     identity.cmdline = ''
   }
   try {
@@ -394,26 +406,18 @@ export function processIdentity(pid) {
   return identity
 }
 
-function mentionsRepoPath(value, root = repoRoot) {
-  if (!value || !root) return false
-  let from = 0
-  while (from < value.length) {
-    const index = value.indexOf(root, from)
-    if (index === -1) return false
-    const before = index === 0 ? '' : value.charAt(index - 1)
-    const after = value.charAt(index + root.length)
-    const beforeOk = before === '' || before === path.sep || /\s/.test(before) || before === '"' || before === "'" || before === '='
-    const afterOk = after === '' || after === path.sep
-    if (beforeOk && afterOk) return true
-    from = index + root.length
-  }
-  return false
+function isRepoPath(value, root = repoRoot) {
+  return value === root || value.startsWith(`${root}${path.sep}`)
+}
+
+function identityArgv(identity) {
+  if (Array.isArray(identity?.argv)) return identity.argv.filter((arg) => typeof arg === 'string')
+  return String(identity?.cmdline || '').split(/\s+/).filter(Boolean)
 }
 
 export function belongsToRepo(identity) {
-  const cwd = identity?.cwd || ''
-  const cmdline = identity?.cmdline || ''
-  return mentionsRepoPath(cwd) || mentionsRepoPath(cmdline)
+  if (isRepoPath(identity?.cwd || '')) return true
+  return identityArgv(identity).some((arg) => isRepoPath(arg))
 }
 
 export function sameProcess(recorded, live) {

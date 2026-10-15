@@ -65,7 +65,7 @@ const server = http.createServer((req, res) => {
 server.listen(3000, '127.0.0.1')
 `,
   )
-  const server = spawn(process.execPath, [serverFile], { cwd: '/tmp', stdio: 'ignore' })
+  const server = spawn(process.execPath, [serverFile, `--config=${repoRoot}/nextjs`], { cwd: '/tmp', stdio: 'ignore' })
   let stopped = false
   const stopServer = () => {
     if (stopped || !server.pid) return
@@ -114,9 +114,7 @@ server.listen(3000, '127.0.0.1')
   assert.equal(launch.status, 2, `${launch.stdout}\n${launch.stderr}`)
   assert.match(launch.stderr, /Refusing to seed/)
   assert.equal(readFileSync(nextEnv).equals(original), true)
-  const afterLaunch = JSON.parse(readFileSync(snapshotFile, 'utf8'))
-  assert.notEqual(afterLaunch.owned, true)
-  assert.equal(afterLaunch[nextEnvRel].data, stale[nextEnvRel].data)
+  assert.equal(existsSync(snapshotFile), false)
 
   const cleanup = spawnSync(process.execPath, [path.join(scriptDir, 'cleanup.mjs')], {
     cwd: repoRoot,
@@ -125,14 +123,23 @@ server.listen(3000, '127.0.0.1')
     timeout: 30_000,
   })
   assert.equal(cleanup.status, 0, `${cleanup.stdout}\n${cleanup.stderr}`)
-  assert.match(cleanup.stderr, /changed since the recorded snapshot/)
-  assert.match(cleanup.stderr, /backing it up/)
+  assert.doesNotMatch(cleanup.stderr, /changed since the recorded snapshot/)
+  assert.equal(readFileSync(nextEnv).equals(original), true)
+  assert.equal(existsSync(snapshotFile), false)
+  assert.equal(gitStatus(generatedPaths), '')
+  if (statusBefore === '') assert.equal(gitStatus(), '')
+
+  writeFileSync(snapshotFile, `${JSON.stringify(stale)}\n`)
+  process.env.VERIFY_STATE_DIR = stateDir
+  delete process.env.VERIFY_EVIDENCE_DIR
+  const runtimeForRestore = await import('./runtime.mjs')
+  const warned = runtimeForRestore.restoreGeneratedFiles({ removeSnapshot: true })
+  assert.equal(warned.restored, false)
+  assert.deepEqual(warned.skipped, [nextEnvRel])
   assert.equal(readFileSync(nextEnv).equals(original), true)
   assert.equal(existsSync(snapshotFile), false)
   const backups = readdirSync(path.join(stateDir, 'generated-backup'))
   assert.ok(backups.some((name) => name.includes('nextjs__next-env.d.ts') && name.endsWith('.snapshot')))
-  assert.equal(gitStatus(generatedPaths), '')
-  if (statusBefore === '') assert.equal(gitStatus(), '')
 
   stopServer()
   const closed = Date.now() + 5_000
@@ -168,7 +175,11 @@ server.listen(3000, '127.0.0.1')
   assert.equal(runtime.belongsToRepo({ cwd: repoRoot, cmdline: '' }), true)
   assert.equal(runtime.belongsToRepo({ cwd: `${repoRoot}/nextjs`, cmdline: '' }), true)
   assert.equal(runtime.belongsToRepo({ cwd: sibling, cmdline: '' }), false)
-  assert.equal(runtime.belongsToRepo({ cwd: '', cmdline: `node ${repoRoot}/nextjs/server.js` }), true)
+  assert.equal(runtime.belongsToRepo({ cwd: `${repoRoot}-extra`, cmdline: '' }), false)
+  assert.equal(runtime.belongsToRepo({ cwd: '', argv: ['node', `${repoRoot}/nextjs/server.js`] }), true)
+  assert.equal(runtime.belongsToRepo({ cwd: '', argv: ['node', repoRoot] }), true)
+  assert.equal(runtime.belongsToRepo({ cwd: '/tmp', argv: ['node', `${sibling}/nextjs/server.js`] }), false)
+  assert.equal(runtime.belongsToRepo({ cwd: '/tmp', argv: ['node', `--config=${repoRoot}/nextjs/server.js`] }), false)
   assert.equal(runtime.belongsToRepo({ cwd: '/tmp', cmdline: `node ${sibling}/nextjs/server.js` }), false)
   const childEnv = runtime.buildLocalConvexEnv(
     {

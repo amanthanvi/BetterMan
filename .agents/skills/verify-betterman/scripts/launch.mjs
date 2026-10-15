@@ -31,6 +31,7 @@ import {
   sessions,
   shellQuote,
   snapshotGeneratedFiles,
+  unlinkGeneratedSnapshot,
   startTmuxSession,
   stateDir,
   tcpOpen,
@@ -84,6 +85,24 @@ async function waitFor(predicate, timeoutMs) {
   return ''
 }
 
+let tookOwnership = false
+process.on('exit', (code) => {
+  if (tookOwnership) {
+    try {
+      restoreGeneratedFiles()
+    } catch (error) {
+      process.stderr.write(`launch: restore generated files failed: ${error instanceof Error ? error.message : String(error)}\n`)
+    }
+    return
+  }
+  if (code === 0) return
+  try {
+    unlinkGeneratedSnapshot()
+  } catch (error) {
+    process.stderr.write(`launch: unlink generated snapshot failed: ${error instanceof Error ? error.message : String(error)}\n`)
+  }
+})
+
 const baseUrl = argValue('--base-url') || defaultBaseUrl
 const { port, loopback } = baseUrlParts(baseUrl)
 if (!loopback || port !== 3000) {
@@ -97,15 +116,6 @@ try {
   process.stderr.write(`launch: ${error instanceof Error ? error.message : String(error)}\n`)
   process.exit(1)
 }
-let tookOwnership = false
-process.on('exit', () => {
-  if (!tookOwnership) return
-  try {
-    restoreGeneratedFiles()
-  } catch (error) {
-    process.stderr.write(`launch: restore generated files failed: ${error instanceof Error ? error.message : String(error)}\n`)
-  }
-})
 
 function remember(started, listeners) {
   const previous = readState()
