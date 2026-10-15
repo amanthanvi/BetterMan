@@ -4,19 +4,25 @@ import path from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 
 import {
+  assertLocalSeedTarget,
   baseUrlParts,
+  bashUnsetConvexRemote,
+  belongsToRepo,
   checkHealth,
   confirmHydration,
   defaultBaseUrl,
   ensureDirs,
   evidenceDir,
   killTmuxSession,
+  listenersOn,
   loadEnvFile,
   nodePathExport,
   readState,
   repoRoot,
   restoreGeneratedFiles,
   runCommand,
+  sameProcess,
+  scrubConvexEnv,
   sessionExists,
   sessions,
   shellQuote,
@@ -25,6 +31,7 @@ import {
   stateDir,
   tcpOpen,
   tmuxAvailable,
+  verifyId,
   writeState,
 } from './runtime.mjs'
 
@@ -38,7 +45,7 @@ Usage:
   pnpm verify:launch
 
 A READY instance is reused. Cleanup will not stop a server this skill did not start.
-Seed runs only when info is 404 or pageCount is 0, and only against a loopback Convex URL.
+Seed runs only when info is 404 or pageCount is 0, and only against a loopback anonymous Convex deployment.
 `
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -92,16 +99,60 @@ process.on('exit', () => {
   }
 })
 
-function remember(started) {
+function remember(started, listeners) {
   const previous = readState()
   const merged = new Set([...(previous?.sessions ?? []), ...started])
   writeState({
     baseUrl,
     evidenceDir,
+    verifyId,
     sessions: [...merged],
+    listeners: { ...(previous?.listeners ?? {}), ...(listeners ?? {}) },
     reused: started.length === 0,
     startedAt: previous?.startedAt || new Date().toISOString(),
   })
+}
+
+function ownedNextListener() {
+  const recorded = readState()?.listeners?.next
+  if (!recorded?.pid) return null
+  return listenersOn(port).find((live) => sameProcess(recorded, live)) ?? null
+}
+
+function captureNextListener() {
+  const match = listenersOn(port).find((live) => belongsToRepo(live) && live.pid && live.startTicks)
+  if (!match) return null
+  remember(started, {
+    next: { pid: match.pid, startTicks: match.startTicks, cwd: match.cwd },
+  })
+  return match
+}
+
+function anonymousDeployment() {
+  const deployment = fileEnv.CONVEX_DEPLOYMENT || ''
+  return deployment.startsWith('anonymous:') ? deployment : ''
+}
+
+function localConvexChildEnv() {
+  const env = { ...scrubConvexEnv(), CONVEX_AGENT_MODE: 'anonymous' }
+  const deployment = anonymousDeployment()
+  if (deployment) env.CONVEX_DEPLOYMENT = deployment
+  if (convexUrl) env.CONVEX_URL = convexUrl
+  if (convexSite) env.CONVEX_SITE_URL = convexSite
+  return env
+}
+
+function localConvexShellExports() {
+  const lines = ['export CONVEX_AGENT_MODE=anonymous']
+  const deployment = anonymousDeployment()
+  if (deployment) lines.push(`export CONVEX_DEPLOYMENT=${shellQuote(deployment)}`)
+  if (convexUrl) lines.push(`export CONVEX_URL=${shellQuote(convexUrl)}`)
+  if (convexSite) lines.push(`export CONVEX_SITE_URL=${shellQuote(convexSite)}`)
+  return lines.join('\n')
+}
+
+async function waitUntilClosed(timeoutMs) {
+  return waitFor(async () => ((await tcpOpen(port, '127.0.0.1')) ? '' : 'closed'), timeoutMs)
 }
 
 async function assess(includeHydration) {
@@ -120,7 +171,7 @@ if (initial.ok) {
 
 const listening = await tcpOpen(port)
 const previous = readState()
-const ownsNext = Array.isArray(previous?.sessions) && previous.sessions.includes(sessions.next)
+const ownsNext = Boolean(ownedNextListener()) && Array.isArray(previous?.sessions) && previous.sessions.includes(sessions.next)
 if (listening && !ownsNext && initial.code !== 'empty-dataset') {
   process.stdout.write(`${initial.lines.join('\n')}\n`)
   process.stderr.write(
@@ -147,7 +198,7 @@ if (!existsSync(envFile)) {
   process.stdout.write('launch: provisioning local Convex (.env.local)\n')
   const provision = runCommand('pnpm', ['convex:check'], {
     timeoutMs: 180_000,
-    env: { ...process.env, CONVEX_AGENT_MODE: 'anonymous' },
+    env: { ...scrubConvexEnv(), CONVEX_AGENT_MODE: 'anonymous' },
   })
   if (provision.stdout) process.stdout.write(provision.stdout)
   if (provision.stderr) process.stderr.write(provision.stderr)
@@ -178,8 +229,15 @@ try {
   process.stderr.write(`launch: Convex URL in .env.local is not usable (${convexUrl || 'missing'})\n`)
   process.exit(2)
 }
-if (!convexUrl.startsWith('http://127.0.0.1:') && !convexUrl.startsWith('http://localhost:')) {
-  process.stderr.write(`launch: refusing to manage Convex at ${convexUrl}. Expected a loopback URL in .env.local\n`)
+try {
+  assertLocalSeedTarget({
+    deployment: fileEnv.CONVEX_DEPLOYMENT || '',
+    backendUrl: convexUrl,
+    siteUrl: convexSite,
+    deployKey: fileEnv.CONVEX_DEPLOY_KEY || fileEnv.CONVEX_SELF_HOSTED_ADMIN_KEY || '',
+  })
+} catch (error) {
+  process.stderr.write(`launch: ${error instanceof Error ? error.message : String(error)}\n`)
   process.exit(2)
 }
 
@@ -211,7 +269,8 @@ if (!(await tcpOpen(convexPort)) || !(await tcpOpen(sitePort))) {
 set -euo pipefail
 ${nodePathExport()}
 cd ${shellQuote(repoRoot)}
-export CONVEX_AGENT_MODE=anonymous
+${bashUnsetConvexRemote()}
+${localConvexShellExports()}
 exec npx convex dev --tail-logs disable
 `
   startTmuxSession(sessions.convex, convexScript)
@@ -230,20 +289,34 @@ exec npx convex dev --tail-logs disable
   process.stdout.write('launch: Convex functions ready\n')
 }
 
-async function ensureNext() {
-  if ((await tcpOpen(port)) && ownsNext && sessionExists(sessions.next)) return
-  if (sessionExists(sessions.next)) killTmuxSession(sessions.next)
+async function ensureNext(forceRestart = false) {
+  const owned = ownedNextListener()
+  if (!forceRestart && owned && sessionExists(sessions.next) && (await tcpOpen(port, '127.0.0.1'))) return
+  if (sessionExists(sessions.next)) {
+    if (!forceRestart && !owned) {
+      process.stderr.write('launch: recorded Next session does not match the process listening on 127.0.0.1:3000\n')
+      process.exit(2)
+    }
+    remember(started, { next: null })
+    killTmuxSession(sessions.next)
+  }
+  const closed = await waitUntilClosed(30_000)
+  if (closed !== 'closed') {
+    process.stderr.write('launch: 127.0.0.1:3000 stayed bound after Next stopped\n')
+    process.exit(1)
+  }
   process.stdout.write('launch: starting Next.js dev session\n')
   const nextScript = `#!/usr/bin/env bash
 set -euo pipefail
 ${nodePathExport()}
 cd ${shellQuote(repoRoot)}
+${bashUnsetConvexRemote()}
 set -a
 . ./.env.local
 set +a
-export CONVEX_URL="\${CONVEX_URL:-\${VITE_CONVEX_URL:-}}"
+${bashUnsetConvexRemote()}
+${localConvexShellExports()}
 export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
-export CONVEX_AGENT_MODE=anonymous
 export PUBLIC_BASE_URL=${shellQuote(baseUrl)}
 exec pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000
 `
@@ -252,7 +325,7 @@ exec pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000
   remember(started)
   const up = await waitFor(() => {
     if (!sessionExists(sessions.next)) return 'dead'
-    return tcpOpen(port).then((open) => (open ? 'ready' : ''))
+    return tcpOpen(port, '127.0.0.1').then((open) => (open ? 'ready' : ''))
   }, 180_000)
   if (up !== 'ready') {
     const logPath = path.join(stateDir, `${sessions.next}.log`)
@@ -260,13 +333,30 @@ exec pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000
     process.stderr.write(readLog(logPath).slice(-4000))
     process.exit(1)
   }
+  if (!captureNextListener()) {
+    process.stderr.write('launch: 127.0.0.1:3000 is open but no listener belongs to this repo\n')
+    process.exit(1)
+  }
 }
 
 function seedDataset() {
+  const siteUrl = convexSite || fileEnv.VITE_CONVEX_SITE_URL || ''
+  try {
+    assertLocalSeedTarget({
+      deployment: fileEnv.CONVEX_DEPLOYMENT || '',
+      backendUrl: convexUrl,
+      siteUrl,
+      deployKey: fileEnv.CONVEX_DEPLOY_KEY || fileEnv.CONVEX_SELF_HOSTED_ADMIN_KEY || '',
+    })
+  } catch (error) {
+    process.stderr.write(`launch: ${error instanceof Error ? error.message : String(error)}\n`)
+    process.exit(2)
+  }
   process.stdout.write('launch: seeding empty local dataset\n')
+  const convexEnv = localConvexChildEnv()
   const secret = runCommand('npx', ['convex', 'env', 'set', 'CONVEX_INGEST_SECRET', 'dev'], {
     timeoutMs: 120_000,
-    env: { ...process.env, CONVEX_AGENT_MODE: 'anonymous' },
+    env: convexEnv,
   })
   if (secret.stdout) process.stdout.write(secret.stdout)
   if (secret.status !== 0) {
@@ -276,11 +366,10 @@ function seedDataset() {
   const seeded = runCommand('node', ['scripts/seed-convex-e2e.mjs'], {
     timeoutMs: 300_000,
     env: {
-      ...process.env,
-      ...fileEnv,
+      ...convexEnv,
       BETTERMAN_E2E_SEED: '1',
       CONVEX_INGEST_SECRET: 'dev',
-      CONVEX_HTTP_URL: convexSite || fileEnv.VITE_CONVEX_SITE_URL || '',
+      CONVEX_HTTP_URL: siteUrl,
     },
   })
   if (seeded.stdout) process.stdout.write(seeded.stdout)
@@ -297,9 +386,7 @@ let report = await waitForReady()
 if (!report.ok && report.code === 'empty-dataset') {
   seedDataset()
   process.stdout.write('launch: restarting Next.js so the first render sees the seeded dataset\n')
-  if (sessionExists(sessions.next)) killTmuxSession(sessions.next)
-  await ensureNext()
-  remember(started)
+  await ensureNext(true)
   report = await waitForReady()
 }
 

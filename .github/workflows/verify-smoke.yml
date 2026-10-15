@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: write
   contents: read
 
 jobs:
@@ -16,6 +15,8 @@ jobs:
     name: verify_smoke
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      VERIFY_ID: ci
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: verify-evidence
-          path: /tmp/betterman-verify/evidence
+          path: /tmp/betterman-verify-ci/evidence
           if-no-files-found: warn
           retention-days: 7
 

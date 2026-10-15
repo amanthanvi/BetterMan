@@ -2,11 +2,11 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { evidenceDir } from './scripts/runtime.mjs'
+
 const here = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(path.join(here, '../../../nextjs/package.json'))
 const { defineConfig, devices } = require('@playwright/test')
-
-const evidenceDir = process.env.VERIFY_EVIDENCE_DIR || '/tmp/betterman-verify/evidence'
 
 export default defineConfig({
   testDir: './scripts',

@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import net from 'node:net'
@@ -9,14 +10,79 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 
 export const repoRoot = path.resolve(scriptDir, '../../../..')
 export const skillDir = path.resolve(scriptDir, '..')
-export const stateDir = process.env.VERIFY_STATE_DIR || '/tmp/betterman-verify'
+
+function resolveVerifyId() {
+  const override = process.env.VERIFY_ID
+  if (override) {
+    if (!/^[a-z0-9][a-z0-9-]{2,31}$/.test(override)) {
+      throw new Error('VERIFY_ID must be 3-32 characters of lowercase letters, digits, or hyphens')
+    }
+    return override
+  }
+  return createHash('sha256').update(repoRoot).digest('hex').slice(0, 8)
+}
+
+export const verifyId = resolveVerifyId()
+export const stateDir = process.env.VERIFY_STATE_DIR || `/tmp/betterman-verify-${verifyId}`
 export const evidenceDir = process.env.VERIFY_EVIDENCE_DIR || path.join(stateDir, 'evidence')
 export const stateFile = path.join(stateDir, 'run.json')
 export const defaultBaseUrl = process.env.E2E_BASE_URL || 'http://127.0.0.1:3000'
 
 export const sessions = {
-  convex: 'betterman-verify-convex',
-  next: 'betterman-verify-next',
+  convex: `bmv-${verifyId}-convex`,
+  next: `bmv-${verifyId}-next`,
+}
+
+export const convexRemoteKeys = [
+  'CONVEX_DEPLOY_KEY',
+  'CONVEX_DEPLOYMENT',
+  'CONVEX_URL',
+  'CONVEX_SITE_URL',
+  'CONVEX_HTTP_URL',
+  'CONVEX_SELF_HOSTED_URL',
+  'CONVEX_SELF_HOSTED_ADMIN_KEY',
+  'CONVEX_OVERRIDE_URL',
+  'CONVEX_OVERRIDE_ACCESS_TOKEN',
+]
+
+export function scrubConvexEnv(base = process.env) {
+  const env = { ...base }
+  for (const key of Object.keys(env)) {
+    if (convexRemoteKeys.includes(key) || key.startsWith('CONVEX_DEPLOY')) delete env[key]
+  }
+  return env
+}
+
+export function bashUnsetConvexRemote() {
+  return `unset ${convexRemoteKeys.join(' ')}
+while IFS= read -r _bm_convex_key; do
+  case "\${_bm_convex_key}" in
+    CONVEX_DEPLOY*) unset "\${_bm_convex_key}" ;;
+  esac
+done < <(compgen -e || true)`
+}
+
+export function isLoopbackUrl(value) {
+  if (!value) return false
+  try {
+    const host = new URL(value).hostname
+    return host === '127.0.0.1' || host === 'localhost' || host === '::1'
+  } catch {
+    return false
+  }
+}
+
+export function assertLocalSeedTarget({ deployment, backendUrl, siteUrl, deployKey }) {
+  if (deployKey) {
+    throw new Error('refusing to seed while a Convex deploy key is configured')
+  }
+  const anonymous = !deployment || deployment.startsWith('anonymous:')
+  const backendLocal = isLoopbackUrl(backendUrl)
+  const siteLocal = !siteUrl || isLoopbackUrl(siteUrl)
+  if (anonymous && backendLocal && siteLocal) return
+  throw new Error(
+    `refusing to seed a non-local Convex target (deployment=${deployment || 'unset'} backend=${backendUrl || 'unset'} site=${siteUrl || 'unset'})`,
+  )
 }
 
 const generatedRelPaths = ['nextjs/next-env.d.ts', 'nextjs/AGENTS.md', 'nextjs/CLAUDE.md']
@@ -236,19 +302,52 @@ function listenInodes(port) {
   return inodes
 }
 
-function portDetails(port) {
+export function processIdentity(pid) {
+  const id = String(pid)
+  const identity = { pid: Number(id), cwd: '', cmdline: '', startTicks: '' }
   try {
-    const fromSs = execFileSync('ss', ['-ltnp', `sport = :${port}`], { encoding: 'utf8' }).trim()
-    if (fromSs) return fromSs
+    identity.cwd = readlinkSync(`/proc/${id}/cwd`)
   } catch {
-    // ss is optional. /proc is the fallback.
+    identity.cwd = ''
   }
+  try {
+    identity.cmdline = readFileSync(`/proc/${id}/cmdline`, 'utf8').replaceAll('\0', ' ').trim()
+  } catch {
+    identity.cmdline = ''
+  }
+  try {
+    const stat = readFileSync(`/proc/${id}/stat`, 'utf8')
+    const afterComm = stat.slice(stat.lastIndexOf(')') + 2).trim().split(/\s+/)
+    identity.startTicks = afterComm[19] || ''
+  } catch {
+    identity.startTicks = ''
+  }
+  return identity
+}
 
+export function belongsToRepo(identity) {
+  const cwd = identity?.cwd || ''
+  const cmdline = identity?.cmdline || ''
+  const inTree = cwd === repoRoot || cwd.startsWith(`${repoRoot}${path.sep}`)
+  return inTree || cmdline.includes(repoRoot)
+}
+
+export function sameProcess(recorded, live) {
+  if (!recorded?.pid || !recorded.startTicks || !live?.startTicks) return false
+  return (
+    String(recorded.pid) === String(live.pid) &&
+    String(recorded.startTicks) === String(live.startTicks) &&
+    belongsToRepo(live)
+  )
+}
+
+export function listenersOn(port) {
   const inodes = listenInodes(port)
-  if (!inodes.size) return ''
-  const rows = []
+  if (!inodes.size) return []
+  const found = []
+  const seen = new Set()
   for (const dirent of readdirSync('/proc')) {
-    if (!/^\d+$/.test(dirent)) continue
+    if (!/^\d+$/.test(dirent) || seen.has(dirent)) continue
     let fds = []
     try {
       fds = readdirSync(`/proc/${dirent}/fd`)
@@ -263,16 +362,24 @@ function portDetails(port) {
         continue
       }
       if (!target.startsWith('socket:[') || !inodes.has(target.slice(8, -1))) continue
-      let cmd = ''
-      try {
-        cmd = readFileSync(`/proc/${dirent}/cmdline`, 'utf8').replaceAll('\0', ' ').trim()
-      } catch {
-        cmd = ''
-      }
-      rows.push(`pid ${dirent} ${cmd}`)
+      seen.add(dirent)
+      found.push(processIdentity(dirent))
+      break
     }
   }
-  return rows.join('\n')
+  return found
+}
+
+function portDetails(port) {
+  const listeners = listenersOn(port)
+  if (listeners.length) {
+    return listeners.map((item) => `pid ${item.pid} ${item.cmdline} cwd=${item.cwd || 'unknown'} start=${item.startTicks || 'unknown'}`).join('\n')
+  }
+  try {
+    return execFileSync('ss', ['-ltnp', `sport = :${port}`], { encoding: 'utf8' }).trim()
+  } catch {
+    return ''
+  }
 }
 
 function parseJson(text) {

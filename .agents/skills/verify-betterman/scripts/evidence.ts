@@ -2,7 +2,9 @@ import path from 'node:path'
 
 import { expect, test as base, type Page } from '@playwright/test'
 
-export const evidenceDir = process.env.VERIFY_EVIDENCE_DIR || '/tmp/betterman-verify/evidence'
+import { evidenceDir } from './runtime.mjs'
+
+export { evidenceDir }
 
 export const test = base.extend({
   page: async ({ page }, use) => {

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { setTimeout as delay } from 'node:timers/promises'
 
-import { evidenceDir, killTmuxSession, readState, restoreGeneratedFiles, sessionExists, sessions, stateFile, tmuxAvailable, writeState } from './runtime.mjs'
+import { evidenceDir, killTmuxSession, processIdentity, readState, restoreGeneratedFiles, sessionExists, sessions, stateFile, tmuxAvailable, writeState } from './runtime.mjs'
 
 const help = `verify-betterman cleanup
 
@@ -19,6 +19,17 @@ Evidence:   ${evidenceDir}
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   process.stdout.write(help)
   process.exit(0)
+}
+
+async function waitForRecordedExit(recorded) {
+  if (!recorded?.pid || !recorded.startTicks) return
+  const deadline = Date.now() + 30_000
+  while (Date.now() < deadline) {
+    const live = processIdentity(recorded.pid)
+    if (!live.startTicks || String(live.startTicks) !== String(recorded.startTicks)) return
+    await delay(200)
+  }
+  process.stderr.write(`cleanup: pid ${recorded.pid} still matches the recorded Next process\n`)
 }
 
 const state = readState()
@@ -49,7 +60,7 @@ if (state) {
   })
 }
 
-if (started.length) spawnSync('sleep', ['1'])
+await waitForRecordedExit(state?.listeners?.next)
 try {
   const restored = restoreGeneratedFiles({ removeSnapshot: true })
   if (restored) process.stdout.write('cleanup: restored next dev generated files\n')

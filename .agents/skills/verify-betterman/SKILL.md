@@ -16,7 +16,9 @@ A maintain pass (`maintain-verification-skill`) edits only this directory: `SKIL
 
 This skill owns one app on `http://127.0.0.1:3000`. Playwright gives each test a fresh browser context, so bookmarks, theme, and recent history stay inside that context. The Convex dataset is shared by every context on this machine.
 
-When doctor already reports `READY`, launch reuses that server. Cleanup stops only the tmux sessions recorded in `/tmp/betterman-verify/run.json`. A server this skill did not start is left running.
+When doctor already reports `READY` and the process on port 3000 matches the pid and start time recorded for this checkout, launch reuses that server. Cleanup stops only the tmux sessions recorded in this checkout's `run.json`. A server this skill did not start is left running.
+
+State and session names are per checkout. The id is `VERIFY_ID` when that is set, otherwise the first 8 hex characters of the sha256 of the repo root. The state directory is `/tmp/betterman-verify-<id>/` and the tmux sessions are `bmv-<id>-convex` and `bmv-<id>-next`. Two checkouts do not share them.
 
 Launch refuses a base URL other than port 3000 on loopback. It also refuses to start a second Next server when port 3000 is already taken by someone else. Seed runs only when `/api/v1/info` is a 404 or `pageCount` is 0, and only when `.env.local` points Convex at loopback.
 
@@ -39,19 +41,18 @@ pnpm verify:launch
 4. Run `pnpm install --frozen-lockfile` when `node_modules` is missing.
 5. Run `CONVEX_AGENT_MODE=anonymous pnpm convex:check` when `.env.local` is missing.
 6. Install Playwright Chromium (`pnpm -C nextjs exec playwright install chromium`). Set `VERIFY_SKIP_BROWSER_INSTALL=1` to skip. If Chromium's system libraries are missing, the command above `bash scripts/install-playwright-ci.sh` installs them.
-7. Start tmux session `betterman-verify-convex` with `CONVEX_AGENT_MODE=anonymous npx convex dev --tail-logs disable` when ports from `.env.local` (`VITE_CONVEX_URL`, usually 3210, and `VITE_CONVEX_SITE_URL`, usually 3211) are closed. The session name is written to `run.json` immediately, before the ready wait. Ready means the log line `Convex functions ready`.
-8. Start tmux session `betterman-verify-next` with the env from `.env.local` and `pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000`. That session is recorded in `run.json` as soon as it starts. `--hostname 127.0.0.1` is required. A `next dev` bound only to IPv6 `::` can still answer `http://127.0.0.1:3000` for documents, while Playwright's HMR websocket fails with `ERR_INVALID_HTTP_RESPONSE` and clicks never reach React. Doctor treats that listener as `NOT_READY` `ipv6-only`. It also opens Chromium, waits until `Cycle theme` has React props, and clicks it. `READY` requires `localStorage['bm-theme']` to change. Launch will not reuse an IPv6-only server. Stop that process yourself, then run launch again.
-9. If doctor reports `empty-dataset` for a Next process this skill started, run `npx convex env set CONVEX_INGEST_SECRET dev` and `BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL=... node scripts/seed-convex-e2e.mjs`, then restart only that Next session and run doctor again.
+7. Start tmux session `bmv-<id>-convex` with `npx convex dev --tail-logs disable` when ports from `.env.local` (`VITE_CONVEX_URL`, usually 3210, and `VITE_CONVEX_SITE_URL`, usually 3211) are closed. The session name is written to `run.json` immediately, before the ready wait. The shell unsets `CONVEX_DEPLOY_KEY`, `CONVEX_DEPLOYMENT`, `CONVEX_URL`, every `CONVEX_DEPLOY*` variable, and the other remote Convex variables, then exports only `CONVEX_AGENT_MODE=anonymous`, an `anonymous:` deployment name when `.env.local` has one, and the loopback URLs from that file. Ready means the log line `Convex functions ready`.
+8. Start tmux session `bmv-<id>-next` with `pnpm -C nextjs dev --hostname 127.0.0.1 --port 3000`. That session is recorded in `run.json` as soon as it starts. After `.env.local` is sourced, the shell unsets inherited Convex variables again and exports only the anonymous deployment name and loopback URLs. `--hostname 127.0.0.1` is required. A `next dev` bound only to IPv6 `::` can still answer `http://127.0.0.1:3000` for documents, while Playwright's HMR websocket fails with `ERR_INVALID_HTTP_RESPONSE` and clicks never reach React. Doctor treats that listener as `NOT_READY` `ipv6-only`. It also opens Chromium, waits until `Cycle theme` has React props, and clicks it. `READY` requires `localStorage['bm-theme']` to change. Launch will not reuse an IPv6-only server. Stop that process yourself, then run launch again.
+9. If doctor reports `empty-dataset` for a Next process this skill started, seed only when `.env.local` names an `anonymous:` deployment or has no deployment name, both Convex URLs are loopback, and no deploy key is configured. The seed process inherits a scrubbed environment. It receives the anonymous deployment name and loopback URLs, and it does not receive `CONVEX_DEPLOY_KEY` or a cloud `CONVEX_URL`. Launch then stops Next, waits until `127.0.0.1:3000` is closed, starts Next again, waits until that address is bound by a process whose cwd or command line is this repo, records that pid and start time, and waits until doctor reports hydration. A fixed sleep is not the ready check. Reuse also requires the live listener pid and start time to match `run.json`.
 
 The seeded fixture publishes `tar(1)`, `gzip(1)`, alias `gunzip(1)`, `printf(1)`, `printf(3)`, `openssl(1ssl)`, `bash(1)`, and an EVP page for Debian, Ubuntu, and Fedora. Ubuntu `tar(1)` contains the sentence `Ubuntu variant: this page is intentionally different for E2E testing.` The license package list is empty.
 
 Logs and state:
 
-- `/tmp/betterman-verify/` is mode `0700` and must be owned by the current user. Launch refuses a pre-created directory owned by someone else.
-- `/tmp/betterman-verify/run.json` lists sessions this launch started, including a Convex session that failed before Next opened port 3000
-- `/tmp/betterman-verify/betterman-verify-convex.log`
-- `/tmp/betterman-verify/betterman-verify-next.log`
-- `/tmp/betterman-verify/evidence/` is created at launch and kept by cleanup
+- `/tmp/betterman-verify-<id>/` is mode `0700` and must be owned by the current user. Launch refuses a pre-created directory owned by someone else. Set `VERIFY_ID` to choose the id, or `VERIFY_STATE_DIR` to choose the directory.
+- `run.json` lists sessions this launch started, including a Convex session that failed before Next opened port 3000, plus the Next listener pid and start time
+- `bmv-<id>-convex.log` and `bmv-<id>-next.log`
+- `evidence/` is created at launch and kept by cleanup. Override the directory with `VERIFY_EVIDENCE_DIR`.
 
 `pnpm next:dev` (`convex dev --start "pnpm -C nextjs dev"`) is the README command. The helper splits Convex and Next so the dataset can be seeded before Next caches an empty render. Use the helper.
 
@@ -132,7 +133,7 @@ The full e2e contract remains `pnpm next:e2e`. Use it when the change touches a 
 
 ## Evidence
 
-Proof artifacts go to `/tmp/betterman-verify/evidence/` (override with `VERIFY_EVIDENCE_DIR`). Cleanup never deletes that directory.
+Proof artifacts go to `/tmp/betterman-verify-<id>/evidence/` (override with `VERIFY_EVIDENCE_DIR`). Cleanup never deletes that directory. Launch prints the path.
 
 - `*.png` screenshots taken by the specs at named paths (`smoke-home.png`, `smoke-search.png`, `smoke-tar.png`, and the drive shots such as `man-tar.png`)
 - `test-results/` Playwright traces (`trace.zip` per test, trace is `on`)
@@ -159,7 +160,7 @@ The E2E seed is the local dataset behind the same Convex reads production uses. 
 pnpm verify:cleanup
 ```
 
-That runs `node .agents/skills/verify-betterman/scripts/cleanup.mjs`. It `tmux kill-session`s only `betterman-verify-convex` and `betterman-verify-next` when `run.json` lists them, including a session recorded before its ready check failed. It does not kill processes by name. It leaves `/tmp/betterman-verify/evidence/` in place and prints that path. After every failed launch or drive, run cleanup before starting again so a half-started session does not keep the ports.
+That runs `node .agents/skills/verify-betterman/scripts/cleanup.mjs`. It `tmux kill-session`s only `bmv-<id>-convex` and `bmv-<id>-next` when `run.json` lists them, including a session recorded before its ready check failed. It does not kill processes by name. It waits until the recorded Next pid is gone, then restores generated files. It leaves the evidence directory in place and prints that path. After every failed launch or drive, run cleanup before starting again so a half-started session does not keep the ports.
 
 `next dev` rewrites `nextjs/next-env.d.ts` and creates `nextjs/AGENTS.md` and `nextjs/CLAUDE.md`. The generated `AGENTS.md` says to commit that file. Do not. Launch snapshots those paths, and cleanup restores them after the sessions stop. A verification run should leave `git status` clean.
 
