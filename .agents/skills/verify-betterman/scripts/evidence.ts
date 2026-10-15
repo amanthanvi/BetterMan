@@ -1,17 +1,10 @@
-import { createHash } from 'node:crypto'
 import path from 'node:path'
 
 import { expect, test as base, type Page } from '@playwright/test'
 
-function evidenceDirectory() {
-  if (process.env.VERIFY_EVIDENCE_DIR) return process.env.VERIFY_EVIDENCE_DIR
-  const override = process.env.VERIFY_ID
-  const id = override || createHash('sha256').update(path.resolve(process.cwd())).digest('hex').slice(0, 8)
-  const state = process.env.VERIFY_STATE_DIR || `/tmp/betterman-verify-${id}`
-  return path.join(state, 'evidence')
-}
+import { evidenceDirFor } from './verify-paths.cjs'
 
-export const evidenceDir = evidenceDirectory()
+export const evidenceDir = evidenceDirFor()
 
 export const test = base.extend({
   page: async ({ page }, use) => {

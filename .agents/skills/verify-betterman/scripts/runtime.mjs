@@ -1,25 +1,20 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
 import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+const require = createRequire(import.meta.url)
+const paths = require('./verify-paths.cjs')
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 
-export const repoRoot = path.resolve(scriptDir, '../../../..')
+export const repoRoot = paths.repoRoot
 export const skillDir = path.resolve(scriptDir, '..')
 
 function resolveVerifyId() {
-  const override = process.env.VERIFY_ID
-  if (override) {
-    if (!/^[a-z0-9][a-z0-9-]{2,31}$/.test(override)) {
-      throw new Error('VERIFY_ID must be 3-32 characters of lowercase letters, digits, or hyphens')
-    }
-    return override
-  }
-  return createHash('sha256').update(repoRoot).digest('hex').slice(0, 8)
+  return paths.verifyIdFor(repoRoot)
 }
 
 export const verifyId = resolveVerifyId()
@@ -80,7 +75,7 @@ done < <(compgen -e || true)`
 export function isLoopbackUrl(value) {
   if (!value) return false
   try {
-    const host = new URL(value).hostname
+    const host = new URL(value).hostname.replace(/^\[|\]$/g, '')
     return host === '127.0.0.1' || host === 'localhost' || host === '::1'
   } catch {
     return false
@@ -218,7 +213,7 @@ export function readState() {
 
 export function writeState(state) {
   ensureDirs()
-  writeFileSync(stateFile, `${JSON.stringify(state, null, 2)}\n`)
+  writePrivateFile(stateFile, `${JSON.stringify(state, null, 2)}\n`)
 }
 
 export function loadEnvFile(file) {

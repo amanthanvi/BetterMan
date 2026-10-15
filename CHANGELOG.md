@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Docs: verification evidence follows the repo root, `run.json` stays private, and the E2E seed is pinned to the prod dataset stage.
 - Docs: verification reuses a READY server only when the recorded pid and start time still match, and listener capture is Linux-only.
 - Docs: the verification doctor stays not ready until `/api/v1/info` reports a positive `pageCount`, and launch drops the Next fetch cache after seeding.
 - Docs: verification seeds only a local anonymous Convex deployment, and each checkout gets its own state directory and tmux sessions.

@@ -384,6 +384,7 @@ function seedDataset() {
     env: {
       ...convexEnv,
       BETTERMAN_E2E_SEED: '1',
+      BETTERMAN_DATASET_STAGE: 'prod',
       CONVEX_INGEST_SECRET: 'dev',
       CONVEX_HTTP_URL: siteUrl,
     },
