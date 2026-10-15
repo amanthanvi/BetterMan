@@ -4,6 +4,23 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Docs: a non-zero verification launch deletes `generated-snapshot.json` when `bmv-<id>-next` is not running, and leaves it when that session is still live. Cleanup does not overwrite `nextjs/next-env.d.ts` edited after the snapshot.
+- Docs: the snapshot test compares generated-file git status before and after, and skips the foreign state-directory check when `/usr` belongs to the current user.
+- Docs: verification launch refuses `http://[::1]:3000` before starting servers and tells you to use `http://127.0.0.1:3000`. Doctor still treats `[::1]` as loopback.
+- Docs: verification treats `http://[::1]` as loopback for the Linux listener check, and resolves a listener path before the repo boundary check.
+- Docs: verification matches a listener only when its cwd or an argv equals the repo root or starts with that root plus a separator, and a launch that exits before it owns Next deletes the generated-file snapshot.
+- Docs: verification smoke prints a message and exits when its state directory belongs to another user, and `convex env set` does not inherit `BETTERMAN_DATASET_STAGE`.
+- Docs: verification state files are mode `0600` while state directories stay `0700`. `VERIFY_ID` stays 3 to 32 characters, so `ci` is rejected and the manual smoke id remains `cix`.
+- Docs: verification matches a checkout path only at a path-separator boundary, so a sibling directory named with a suffix does not count as this repo.
+- Docs: a refused verification launch does not snapshot generated files, and cleanup will not restore a snapshot over a file that changed since that snapshot was recorded.
+- Docs: verification seeds an empty dataset only when the listener belongs to this checkout, smoke refuses a server it does not own, and the Linux listener check applies only to loopback.
+- Docs: the manual smoke workflow uses `VERIFY_ID=cix`, and its evidence artifact path matches that id.
+- Docs: verification evidence follows the repo root, `run.json` stays private, and the E2E seed is pinned to the prod dataset stage.
+- Docs: verification reuses a READY server only when the recorded pid and start time still match, and listener capture is Linux-only.
+- Docs: the verification doctor stays not ready until `/api/v1/info` reports a positive `pageCount`, and launch drops the Next fetch cache after seeding.
+- Docs: verification seeds only a local anonymous Convex deployment, and each checkout gets its own state directory and tmux sessions.
+- Docs: the verification doctor refuses an IPv6-only dev server until the page hydrates on 127.0.0.1, and cleanup restores files `next dev` rewrites.
+- Docs: add a project-local verification skill and feature map so agents can launch the app, run a read-only doctor check, and drive it with Playwright.
 - Security: validate, rate-limit, and bound dynamic man-page share image inputs, and return 404 without rendering for missing pages.
 - Security: key public API rate limits on the Vercel-overwritten client address instead of spoofable `CF-Connecting-IP` / `X-Forwarded-For` headers, and share an anonymous bucket when no trusted identity is present.
 - Maintenance: add a manual `prune-releases` workflow that previews by default and deletes superseded inactive releases in bounded, retried batches, retaining the newest verified release per distro as a rollback target and sweeping orphaned content blobs; release pruning and the orphan sweep now also delete their stored payload files, and the inactive-release preview paginates and reports rollback eligibility.
