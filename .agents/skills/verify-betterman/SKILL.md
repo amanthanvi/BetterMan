@@ -180,7 +180,7 @@ Confirm the evidence directory still exists after cleanup before citing it.
 | `pnpm verify:drive` | `scripts/smoke.mjs --drive` (doctor, then `drive.spec.ts`) |
 | `pnpm verify:cleanup` | `scripts/cleanup.mjs` |
 | `pnpm verify:test` | `scripts/snapshot.test.mjs` |
-| `pnpm verify:typecheck` | `tsc --noEmit -p .agents/skills/verify-betterman/tsconfig.json` |
+| `pnpm verify:typecheck` | `tsc --noEmit -p .agents/skills/verify-betterman/tsconfig.typecheck.json` |
 
 ```bash
 node .agents/skills/verify-betterman/scripts/launch.mjs --help
@@ -189,7 +189,7 @@ node .agents/skills/verify-betterman/scripts/smoke.mjs --help
 node .agents/skills/verify-betterman/scripts/cleanup.mjs --help
 ```
 
-`scripts/smoke.mjs --drive` is the long sweep. `scripts/evidence.ts` writes screenshots into `VERIFY_EVIDENCE_DIR`.
+`scripts/smoke.mjs --drive` is the long sweep. `scripts/evidence.ts` writes screenshots into `VERIFY_EVIDENCE_DIR`. `tsconfig.typecheck.json` is the project for `pnpm verify:typecheck`. It is not named `tsconfig.json`, because Node would apply its `paths` while loading the specs and then try to execute the `@playwright/test` declaration file.
 
 ## How to report
 
