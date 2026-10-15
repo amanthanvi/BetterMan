@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
-import { isTypingTarget } from '../../lib/dom'
+import { singleKeyShortcutsBlocked } from '../../lib/dom'
 import { withDistro } from '../../lib/distro'
 import { getScrollBehavior } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
@@ -162,15 +162,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return
       }
 
-      if (isTypingTarget(document.activeElement)) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (singleKeyShortcutsBlocked(document)) return
 
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '?') {
+      if (e.key === '?') {
         e.preventDefault()
         setShortcutsOpen(true)
         return
       }
 
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '/') {
+      if (e.key === '/') {
         e.preventDefault()
 
         const pageSearch = document.querySelector('[data-bm-page-search]') as HTMLInputElement | null
@@ -191,13 +192,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return
       }
 
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'd') {
+      if (e.key.toLowerCase() === 'd') {
         e.preventDefault()
         theme.cycle()
         return
       }
 
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'b' && toc.items.length) {
+      if (e.key.toLowerCase() === 'b' && toc.items.length) {
         e.preventDefault()
         if (window.matchMedia('(min-width: 1024px)').matches) {
           toc.setSidebarOpen(!toc.sidebarOpen)
@@ -207,28 +208,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return
       }
 
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 't') {
+      if (e.key.toLowerCase() === 't') {
         e.preventDefault()
         window.scrollTo({
           top: 0,
           left: 0,
           behavior: getScrollBehavior(),
         })
+        return
       }
 
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'h') {
+      if (e.key.toLowerCase() === 'h') {
         e.preventDefault()
         router.push(dashboardHref('recent', distro.distro))
         return
       }
 
-      if (isManPage && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'p') {
+      if (isManPage && e.key.toLowerCase() === 'p') {
         e.preventDefault()
         setPrefsOpen(true)
         return
       }
 
-      if (isManPage && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'm') {
+      if (isManPage && e.key.toLowerCase() === 'm') {
         e.preventDefault()
         try {
           window.dispatchEvent(new CustomEvent(BOOKMARK_TOGGLE_EVENT))
