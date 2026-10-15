@@ -52,6 +52,7 @@ Usage:
 A READY instance is reused only when its pid, start time, and repo match this checkout.
 An empty dataset is seeded only when that listener belongs to this repo or this checkout already owns it.
 Otherwise launch refuses. Stop that process yourself, then run pnpm verify:launch again.
+An http://[::1] base URL exits 2 before any server starts. Use http://127.0.0.1:3000.
 Cleanup will not stop a server this skill did not start.
 Seed runs only when info is 404 or pageCount is 0, and only against a loopback anonymous Convex deployment.
 `
@@ -104,7 +105,13 @@ process.on('exit', (code) => {
 })
 
 const baseUrl = argValue('--base-url') || defaultBaseUrl
-const { port, loopback } = baseUrlParts(baseUrl)
+const { port, loopback, url } = baseUrlParts(baseUrl)
+if (url.hostname.replace(/^\[|\]$/g, '') === '::1') {
+  process.stderr.write(
+    `launch: refusing ${baseUrl}. Next listens on 127.0.0.1, so this address never becomes ready. Use http://127.0.0.1:3000.\n`,
+  )
+  process.exit(2)
+}
 if (!loopback || port !== 3000) {
   process.stderr.write(`launch: refusing ${baseUrl}. This skill owns only http://127.0.0.1:3000\n`)
   process.exit(2)

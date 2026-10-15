@@ -22,7 +22,7 @@ Listener pid, start time, and cwd are read from Linux `/proc` when the base URL 
 
 State and session names are per checkout. The id is `VERIFY_ID` when that is set, otherwise the first 8 hex characters of the sha256 of the repo root. The state directory is `/tmp/betterman-verify-<id>/` and the tmux sessions are `bmv-<id>-convex` and `bmv-<id>-next`. Two checkouts do not share them.
 
-Launch refuses a base URL other than port 3000 on loopback. It also refuses to start a second Next server when port 3000 is already taken by someone else. Seed runs only when `/api/v1/info` is a 404 or `pageCount` is 0, and only when `.env.local` points Convex at loopback.
+Launch refuses a base URL other than port 3000 on `127.0.0.1` or `localhost`. `http://[::1]:3000` exits 2 before any server starts, and the message says to use `http://127.0.0.1:3000`. Doctor still treats `[::1]` as loopback. It also refuses to start a second Next server when port 3000 is already taken by someone else. Seed runs only when `/api/v1/info` is a 404 or `pageCount` is 0, and only when `.env.local` points Convex at loopback.
 
 ## Launch
 

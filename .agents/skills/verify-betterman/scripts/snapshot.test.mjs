@@ -206,6 +206,35 @@ server.listen(3000, '127.0.0.1')
   assert.equal(childEnv.PATH, '/usr/bin')
 })
 
+test('launch refuses an ipv6 loopback base url before starting servers', () => {
+  const id = 'v6ref'
+  const dir = mkdtempSync(path.join(tmpdir(), 'bm-ipv6-'))
+  const result = spawnSync(process.execPath, [path.join(scriptDir, 'launch.mjs'), '--base-url', 'http://[::1]:3000'], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      VERIFY_ID: id,
+      VERIFY_STATE_DIR: dir,
+      VERIFY_SKIP_BROWSER_INSTALL: '1',
+    },
+    encoding: 'utf8',
+    timeout: 15_000,
+  })
+  try {
+    assert.equal(result.status, 2, `${result.stdout}\n${result.stderr}`)
+    assert.match(result.stderr, /Use http:\/\/127\.0\.0\.1:3000/)
+    assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /starting Convex|starting Next/)
+    assert.deepEqual(readdirSync(dir), [])
+    const tmuxArgs = existsSync('/exec-daemon/tmux.portal.conf') ? ['-f', '/exec-daemon/tmux.portal.conf'] : []
+    for (const name of [`bmv-${id}-convex`, `bmv-${id}-next`]) {
+      const session = spawnSync('tmux', [...tmuxArgs, 'has-session', '-t', name], { encoding: 'utf8' })
+      assert.notEqual(session.status, 0, `${name} was started`)
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('smoke reports a foreign state directory without a stack trace', () => {
   const foreign = '/usr'
   assert.notEqual(statSync(foreign).uid, process.getuid())
