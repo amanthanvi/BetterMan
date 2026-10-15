@@ -193,6 +193,18 @@ function backupGenerated(rel, abs, saved) {
   return dest
 }
 
+function editedAfterSnapshot(rel, abs, saved) {
+  if (rel !== 'nextjs/next-env.d.ts') return false
+  if (!saved || saved.kind !== 'file' || typeof saved.mtimeMs !== 'number') return false
+  try {
+    const stat = lstatSync(abs)
+    if (!stat.isFile()) return false
+    return stat.mtimeMs > saved.mtimeMs
+  } catch {
+    return false
+  }
+}
+
 function applyRecorded(abs, saved) {
   if (saved === null) {
     if (pathExists(abs)) unlinkSync(abs)
@@ -250,7 +262,7 @@ export function unlinkGeneratedSnapshot() {
   }
 }
 
-export function restoreGeneratedFiles({ removeSnapshot = false } = {}) {
+export function restoreGeneratedFiles({ removeSnapshot = false, preserveEditsAfterSnapshot = false } = {}) {
   const snapshot = readSnapshot()
   if (!snapshot) return { restored: false, skipped: [] }
   let restored = false
@@ -258,7 +270,7 @@ export function restoreGeneratedFiles({ removeSnapshot = false } = {}) {
   for (const [rel, saved] of Object.entries(snapshot.entries)) {
     const abs = path.join(repoRoot, rel)
     if (sameAsRecorded(abs, saved)) continue
-    if (!snapshot.owned) {
+    if (!snapshot.owned || (preserveEditsAfterSnapshot && editedAfterSnapshot(rel, abs, saved))) {
       const backup = backupGenerated(rel, abs, saved)
       process.stderr.write(`restore: ${rel} changed since the recorded snapshot. Leaving it in place and backing it up at ${backup}.\n`)
       skipped.push(rel)

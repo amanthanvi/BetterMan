@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import net from 'node:net'
 import { tmpdir } from 'node:os'
@@ -9,6 +9,18 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
+
+let nextEnvTurn = Promise.resolve()
+
+function claimNextEnv() {
+  let release
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  const wait = nextEnvTurn
+  nextEnvTurn = gate
+  return wait.then(() => release)
+}
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(scriptDir, '../../../..')
@@ -39,6 +51,8 @@ function gitStatus(paths) {
 }
 
 test('refused launch then cleanup leaves git status clean', { timeout: 60_000 }, async (t) => {
+  const release = await claimNextEnv()
+  t.after(release)
   assert.equal(await tcpOpen(3000), false, 'port 3000 is already in use')
   const stateDir = mkdtempSync(path.join(tmpdir(), 'bm-snapshot-'))
   const original = readFileSync(nextEnv)
@@ -113,8 +127,9 @@ server.listen(3000, '127.0.0.1')
   })
   assert.equal(launch.status, 2, `${launch.stdout}\n${launch.stderr}`)
   assert.match(launch.stderr, /Refusing to seed/)
+  assert.match(launch.stderr, /removing generated-snapshot.json; Next session is not running/)
   assert.equal(readFileSync(nextEnv).equals(original), true)
-  assert.equal(existsSync(snapshotFile), true)
+  assert.equal(existsSync(snapshotFile), false)
 
   const cleanup = spawnSync(process.execPath, [path.join(scriptDir, 'cleanup.mjs')], {
     cwd: repoRoot,
@@ -123,12 +138,8 @@ server.listen(3000, '127.0.0.1')
     timeout: 30_000,
   })
   assert.equal(cleanup.status, 0, `${cleanup.stdout}\n${cleanup.stderr}`)
-  assert.match(cleanup.stderr, /changed since the recorded snapshot/)
-  assert.match(cleanup.stderr, /backing it up/)
   assert.equal(readFileSync(nextEnv).equals(original), true)
   assert.equal(existsSync(snapshotFile), false)
-  const backups = readdirSync(path.join(stateDir, 'generated-backup'))
-  assert.ok(backups.some((name) => name.includes('nextjs__next-env.d.ts') && name.endsWith('.snapshot')))
   assert.equal(gitStatus(generatedPaths), generatedBefore)
 
   stopServer()
@@ -224,7 +235,40 @@ test('launch refuses an ipv6 loopback base url before starting servers', () => {
   }
 })
 
-test('refused launch keeps a live session snapshot', () => {
+test('refused launch drops an owned snapshot when Next is not running', () => {
+  const id = 'snastale'
+  const dir = mkdtempSync(path.join(tmpdir(), 'bm-stale-snapshot-'))
+  const snapshotFile = path.join(dir, 'generated-snapshot.json')
+  const body = `${JSON.stringify({ owned: true, writtenAt: '2026-01-01T00:00:00.000Z', entries: {} })}\n`
+  writeFileSync(snapshotFile, body)
+  writeFileSync(path.join(dir, 'run.json'), `${JSON.stringify({ sessions: [`bmv-${id}-next`], listeners: {} })}\n`)
+  try {
+    const launch = spawnSync(process.execPath, [path.join(scriptDir, 'launch.mjs'), '--base-url', 'http://[::1]:3000'], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        VERIFY_ID: id,
+        VERIFY_STATE_DIR: dir,
+        VERIFY_SKIP_BROWSER_INSTALL: '1',
+      },
+      encoding: 'utf8',
+      timeout: 15_000,
+    })
+    assert.equal(launch.status, 2, `${launch.stdout}\n${launch.stderr}`)
+    assert.match(launch.stderr, /removing generated-snapshot.json; Next session is not running/)
+    assert.doesNotMatch(launch.stderr, /leaving generated-snapshot.json/)
+    assert.equal(existsSync(snapshotFile), false)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('refused launch keeps a live session snapshot', (t) => {
+  const tmuxProbe = spawnSync('tmux', ['-V'], { encoding: 'utf8' })
+  if (tmuxProbe.status !== 0) {
+    t.skip('tmux is missing')
+    return
+  }
   const id = 'snalive'
   const dir = mkdtempSync(path.join(tmpdir(), 'bm-live-snapshot-'))
   const snapshotFile = path.join(dir, 'generated-snapshot.json')
@@ -248,10 +292,84 @@ test('refused launch keeps a live session snapshot', () => {
       timeout: 15_000,
     })
     assert.equal(launch.status, 2, `${launch.stdout}\n${launch.stderr}`)
+    assert.match(launch.stderr, /leaving generated-snapshot.json; Next session is still running/)
+    assert.doesNotMatch(launch.stderr, /removing generated-snapshot.json/)
     assert.equal(readFileSync(snapshotFile, 'utf8'), body)
   } finally {
     spawnSync('tmux', [...tmuxArgs, 'kill-session', '-t', name], { encoding: 'utf8' })
     rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('cleanup leaves a next-env edit newer than the owned snapshot', async (t) => {
+  const release = await claimNextEnv()
+  t.after(release)
+  const stateDir = mkdtempSync(path.join(tmpdir(), 'bm-cleanup-edit-'))
+  const evidence = path.join(stateDir, 'evidence')
+  mkdirSync(evidence)
+  const original = readFileSync(nextEnv)
+  const generatedBefore = gitStatus(generatedPaths)
+  const edited = Buffer.concat([original, Buffer.from('\n/* verify-later-edit */\n')])
+  const snapshotFile = path.join(stateDir, 'generated-snapshot.json')
+  const snapshot = {
+    owned: true,
+    writtenAt: '2026-01-01T00:00:00.000Z',
+    entries: {
+      [nextEnvRel]: {
+        kind: 'file',
+        mode: 0o644,
+        mtimeMs: Date.now() - 120_000,
+        data: original.toString('base64'),
+      },
+    },
+  }
+  writeFileSync(snapshotFile, `${JSON.stringify(snapshot)}\n`)
+  writeFileSync(path.join(stateDir, 'run.json'), `${JSON.stringify({ sessions: [], listeners: {}, evidenceDir: evidence })}\n`)
+  writeFileSync(nextEnv, edited)
+  try {
+    const cleanup = spawnSync(process.execPath, [path.join(scriptDir, 'cleanup.mjs')], {
+      cwd: repoRoot,
+      env: { ...process.env, VERIFY_STATE_DIR: stateDir },
+      encoding: 'utf8',
+      timeout: 30_000,
+    })
+    assert.equal(cleanup.status, 0, `${cleanup.stdout}\n${cleanup.stderr}`)
+    assert.match(cleanup.stderr, /nextjs\/next-env\.d\.ts changed since the recorded snapshot/)
+    assert.match(cleanup.stderr, /backing it up/)
+    assert.equal(readFileSync(nextEnv).equals(edited), true)
+    assert.equal(existsSync(snapshotFile), false)
+    const backups = readdirSync(path.join(stateDir, 'generated-backup'))
+    assert.ok(backups.some((name) => name.includes('nextjs__next-env.d.ts') && !name.endsWith('.snapshot')))
+
+    const olderEdit = Buffer.concat([original, Buffer.from('\n/* verify-older-edit */\n')])
+    writeFileSync(snapshotFile, `${JSON.stringify({
+      owned: true,
+      writtenAt: '2026-01-01T00:00:00.000Z',
+      entries: {
+        [nextEnvRel]: {
+          kind: 'file',
+          mode: 0o644,
+          mtimeMs: Date.now() + 120_000,
+          data: original.toString('base64'),
+        },
+      },
+    })}\n`)
+    writeFileSync(nextEnv, olderEdit)
+    const past = new Date(Date.now() - 120_000)
+    utimesSync(nextEnv, past, past)
+    const overwritten = spawnSync(process.execPath, [path.join(scriptDir, 'cleanup.mjs')], {
+      cwd: repoRoot,
+      env: { ...process.env, VERIFY_STATE_DIR: stateDir },
+      encoding: 'utf8',
+      timeout: 30_000,
+    })
+    assert.equal(overwritten.status, 0, `${overwritten.stdout}\n${overwritten.stderr}`)
+    assert.doesNotMatch(overwritten.stderr, /changed since the recorded snapshot/)
+    assert.equal(readFileSync(nextEnv).equals(original), true)
+  } finally {
+    writeFileSync(nextEnv, original)
+    rmSync(stateDir, { recursive: true, force: true })
+    assert.equal(gitStatus(generatedPaths), generatedBefore)
   }
 })
 

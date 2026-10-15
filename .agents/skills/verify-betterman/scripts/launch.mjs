@@ -87,7 +87,6 @@ async function waitFor(predicate, timeoutMs) {
 }
 
 let tookOwnership = false
-let wroteSnapshot = false
 
 function liveOwnedNextSession() {
   try {
@@ -106,9 +105,15 @@ process.on('exit', (code) => {
     } catch (error) {
       process.stderr.write(`launch: restore generated files failed: ${error instanceof Error ? error.message : String(error)}\n`)
     }
+  }
+  if (code === 0) return
+  const snapshotFile = path.join(stateDir, 'generated-snapshot.json')
+  if (!existsSync(snapshotFile)) return
+  if (liveOwnedNextSession()) {
+    process.stderr.write('launch: leaving generated-snapshot.json; Next session is still running\n')
     return
   }
-  if (code === 0 || !wroteSnapshot || liveOwnedNextSession()) return
+  process.stderr.write('launch: removing generated-snapshot.json; Next session is not running\n')
   try {
     unlinkGeneratedSnapshot()
   } catch (error) {
@@ -368,7 +373,6 @@ async function ensureNext(forceRestart = false) {
   }
   clearNextFetchCache()
   snapshotGeneratedFiles()
-  wroteSnapshot = true
   tookOwnership = true
   process.stdout.write('launch: starting Next.js dev session\n')
   const nextScript = `#!/usr/bin/env bash
