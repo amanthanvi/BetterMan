@@ -18,6 +18,7 @@ import {
   killTmuxSession,
   listenersOn,
   loadEnvFile,
+  unownedListenerAction,
   nodePathExport,
   readState,
   repoRoot,
@@ -46,7 +47,10 @@ Usage:
   node .agents/skills/verify-betterman/scripts/launch.mjs [--base-url URL]
   pnpm verify:launch
 
-A READY instance is reused only when its pid and start time match this checkout. Cleanup will not stop a server this skill did not start.
+A READY instance is reused only when its pid, start time, and repo match this checkout.
+An empty dataset is seeded only when that listener belongs to this repo or this checkout already owns it.
+Otherwise launch refuses. Stop that process yourself, then run pnpm verify:launch again.
+Cleanup will not stop a server this skill did not start.
 Seed runs only when info is 404 or pageCount is 0, and only against a loopback anonymous Convex deployment.
 `
 
@@ -121,6 +125,11 @@ function ownedNextListener() {
   return listenersOn(port).find((live) => sameProcess(recorded, live)) ?? null
 }
 
+function refuseForeign(detail) {
+  process.stderr.write(`launch: ${detail} Stop that process yourself, then run pnpm verify:launch again.\n`)
+  process.exit(2)
+}
+
 function captureNextListener() {
   const match = listenersOn(port).find((live) => belongsToRepo(live) && live.pid && live.startTicks)
   if (!match) return null
@@ -176,10 +185,9 @@ const ownsNext = Boolean(ownedNextListener()) && Array.isArray(previous?.session
 if (initial.ok) {
   process.stdout.write(`${initial.lines.join('\n')}\n`)
   if (!ownsNext) {
-    process.stderr.write(
-      'launch: doctor is READY, but the listener pid, start time, and repo do not match this checkout. Refusing to reuse it.\n',
+    refuseForeign(
+      'doctor is READY, but the listener pid, start time, and repo do not match this checkout. Refusing to reuse it.',
     )
-    process.exit(2)
   }
   process.stdout.write('launch: REUSED existing READY instance\n')
   remember([])
@@ -187,12 +195,14 @@ if (initial.ok) {
 }
 
 const listening = await tcpOpen(port)
-if (listening && !ownsNext && initial.code !== 'empty-dataset') {
+const repoListener = listening && listenersOn(port).some((live) => belongsToRepo(live))
+const unownedAction = listening && !ownsNext ? unownedListenerAction({ code: initial.code, repoListener }) : ''
+if (unownedAction === 'refuse-seed' || unownedAction === 'refuse-foreign') {
   process.stdout.write(`${initial.lines.join('\n')}\n`)
-  process.stderr.write(
-    'launch: port 3000 is already taken by a process this skill did not start. Refusing to start a second server.\n',
-  )
-  process.exit(2)
+  if (unownedAction === 'refuse-seed') {
+    refuseForeign('the dataset is empty, but the listener does not belong to this checkout. Refusing to seed it.')
+  }
+  refuseForeign('port 3000 is already taken by a process this skill did not start. Refusing to start a second server.')
 }
 
 if (!tmuxAvailable()) {
@@ -258,9 +268,15 @@ try {
 
 const started = []
 
-if (initial.code === 'empty-dataset' && listening && !ownsNext) {
+if (unownedAction === 'seed') {
+  const stillOurs = listenersOn(port).some((live) => belongsToRepo(live))
+  if (unownedListenerAction({ code: initial.code, repoListener: stillOurs }) !== 'seed') {
+    refuseForeign('the dataset is empty, but the listener does not belong to this checkout. Refusing to seed it.')
+  }
   if (!(await tcpOpen(convexPort)) || !(await tcpOpen(sitePort))) {
-    process.stderr.write('launch: dataset is empty and Convex is not accepting connections on loopback. Start Convex before seeding a server this skill does not own.\n')
+    process.stderr.write(
+      'launch: the dataset is empty and Convex is not accepting connections on loopback. Start Convex, then run pnpm verify:launch again.\n',
+    )
     process.exit(2)
   }
   seedDataset()
@@ -272,7 +288,7 @@ if (initial.code === 'empty-dataset' && listening && !ownsNext) {
     process.exit(0)
   }
   process.stderr.write(
-    'launch: seeded the dataset, but the existing Next process is still not READY. This skill will not restart a server it did not start.\n',
+    'launch: seeded the dataset, but the existing Next process is still not READY. This skill will not restart a server it did not start. Stop that process yourself, then run pnpm verify:launch again.\n',
   )
   process.exit(2)
 }

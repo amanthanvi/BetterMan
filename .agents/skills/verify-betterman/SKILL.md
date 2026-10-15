@@ -18,7 +18,7 @@ This skill owns one app on `http://127.0.0.1:3000`. Playwright gives each test a
 
 When doctor already reports `READY` and the process on port 3000 matches the recorded pid and start time, and its cwd or command line is this repo, launch reuses that server. A `READY` server that fails that check is not reused. Cleanup stops only the tmux sessions recorded in this checkout's `run.json`. A server this skill did not start is left running.
 
-Listener pid, start time, and cwd are read from Linux `/proc`. On macOS and every other platform, launch and doctor exit 2 and print `Linux-only`. They do not guess ownership.
+Listener pid, start time, and cwd are read from Linux `/proc` when the base URL is loopback. On macOS and every other platform, that loopback check exits 2 and prints `Linux-only`. A doctor URL that is not loopback skips the listener check and still reports HTTP health. The skill does not guess ownership.
 
 State and session names are per checkout. The id is `VERIFY_ID` when that is set, otherwise the first 8 hex characters of the sha256 of the repo root. The state directory is `/tmp/betterman-verify-<id>/` and the tmux sessions are `bmv-<id>-convex` and `bmv-<id>-next`. Two checkouts do not share them.
 
@@ -38,8 +38,8 @@ pnpm verify:launch
 `pnpm verify:launch` is `node .agents/skills/verify-betterman/scripts/launch.mjs`. It does the following:
 
 1. If doctor is `READY` and the listener pid and start time in `run.json` match the process on port 3000, and that process is under this repo, print `REUSED` and exit 0. `READY` includes an IPv4 listen socket, `pageCount` greater than 0, and a hydration probe. A `READY` server whose pid, start time, or repo does not match is refused. An IPv6-only server is not reused.
-2. If port 3000 is open, doctor reports `empty-dataset`, and Convex is already listening on the loopback URL in `.env.local`, seed that dataset and check doctor again. On `READY`, print `SEEDED` and leave the existing Next process running. If it is still not `READY`, exit 2 without restarting it.
-3. If port 3000 is open for any other reason and this skill did not start it, exit 2 and leave that process alone.
+2. If port 3000 is open and doctor reports `empty-dataset`, seed only when the live listener belongs to this repo (its cwd is this checkout, or its command line contains the repo root) or this checkout already owns it (recorded pid, start time, repo, and Next session). On `READY`, print `SEEDED` and leave that Next process running. If the listener does not belong to this repo, exit 2, do not seed, and do not stop the process. The message says to stop that process yourself, then run `pnpm verify:launch` again.
+3. If port 3000 is open for any other reason and this skill did not start it, exit 2, leave that process alone, and print the same next step.
 4. Run `pnpm install --frozen-lockfile` when `node_modules` is missing.
 5. Run `CONVEX_AGENT_MODE=anonymous pnpm convex:check` when `.env.local` is missing.
 6. Install Playwright Chromium (`pnpm -C nextjs exec playwright install chromium`). Set `VERIFY_SKIP_BROWSER_INSTALL=1` to skip. If Chromium's system libraries are missing, the command above `bash scripts/install-playwright-ci.sh` installs them.
@@ -82,7 +82,7 @@ Anything else prints `NOT_READY` and exits 2. Codes:
 | --- | --- |
 | `unreachable` | Nothing answered on the base URL |
 | `home-unhealthy` | The home page is up without the search box, or the status is not 200, and this is not an empty dataset |
-| `empty-dataset` | Search has no `tar(1)` and info is 404 or `pageCount` is 0, or the home error says the dataset release is missing. Launch may seed. It does not restart a Next process it did not start |
+| `empty-dataset` | Search has no `tar(1)` and info is 404 or `pageCount` is 0, or the home error says the dataset release is missing. Launch seeds only when the listener belongs to this repo or this checkout owns it. Otherwise it refuses and leaves the process running |
 | `info-stale` | Search returns `tar(1)`, but info is 404 or `pageCount` is 0. Launch clears the Next fetch cache and restarts a Next process it started. It does not call that server `READY` |
 | `info-unreadable` | Home rendered, but info did not return the expected JSON and search did not prove `tar(1)` |
 | `search-missing-tar` | Info reports pages, and `tar(1)` is absent. Launch does not overwrite that dataset |
@@ -115,7 +115,7 @@ Feature sweep (every file under `references/features/` except the production-onl
 pnpm verify:drive
 ```
 
-Both commands run doctor first. If doctor exits 2, the browser does not open.
+Both commands run doctor first. If doctor exits 2, the browser does not open. When doctor is `READY`, smoke still refuses unless the listener pid, start time, and repo match this checkout's `run.json` and the recorded Next session is the one this skill started. That refusal says to stop that process yourself, then run `pnpm verify:launch` again.
 
 One feature, after doctor is `READY`:
 

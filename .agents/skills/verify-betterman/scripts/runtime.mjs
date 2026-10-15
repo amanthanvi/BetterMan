@@ -358,6 +358,12 @@ export function assertLinuxListenerSupport(platform = process.platform, hasProc 
   )
 }
 
+export function unownedListenerAction({ code, repoListener }) {
+  if (code === 'empty-dataset' && repoListener) return 'seed'
+  if (code === 'empty-dataset') return 'refuse-seed'
+  return 'refuse-foreign'
+}
+
 export function listenersOn(port) {
   assertLinuxListenerSupport()
   const inodes = listenInodes(port)

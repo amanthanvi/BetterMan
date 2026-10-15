@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { assertLinuxListenerSupport, checkHealth, confirmHydration, defaultBaseUrl } from './runtime.mjs'
+import { assertLinuxListenerSupport, baseUrlParts, checkHealth, confirmHydration, defaultBaseUrl } from './runtime.mjs'
 
 const help = `verify-betterman doctor
 
@@ -15,7 +15,8 @@ Exit 0 when all of the following are true:
 - port 3000 has an IPv4 listen socket, and TCP to 127.0.0.1 succeeds
 - Chromium can see React props on Cycle theme and a click writes bm-theme
 
-Exit 2 when the instance is not worth driving, or when /proc is unavailable (Linux-only). The check does not start processes,
+Exit 2 when the instance is not worth driving. A loopback URL also exits 2 when /proc is unavailable (Linux-only).
+A URL that is not loopback skips that listener check. The check does not start processes,
 seed data, or write the dataset. The hydration click runs in a throwaway browser.
 `
 
@@ -30,15 +31,16 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   process.exit(0)
 }
 
-try {
-  assertLinuxListenerSupport()
-} catch (error) {
-  process.stderr.write(`doctor: ${error instanceof Error ? error.message : String(error)}\n`)
-  process.exit(2)
-}
-
 const baseUrl = argValue('--base-url') || defaultBaseUrl
 const asJson = process.argv.includes('--json')
+if (baseUrlParts(baseUrl).loopback) {
+  try {
+    assertLinuxListenerSupport()
+  } catch (error) {
+    process.stderr.write(`doctor: ${error instanceof Error ? error.message : String(error)}\n`)
+    process.exit(2)
+  }
+}
 const report = await confirmHydration(baseUrl, await checkHealth(baseUrl))
 
 if (asJson) {

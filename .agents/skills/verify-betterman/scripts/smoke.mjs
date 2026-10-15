@@ -2,7 +2,19 @@
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 
-import { defaultBaseUrl, evidenceDir, ensureDirs, repoRoot, skillDir } from './runtime.mjs'
+import {
+  assertLinuxListenerSupport,
+  baseUrlParts,
+  defaultBaseUrl,
+  evidenceDir,
+  ensureDirs,
+  listenersOn,
+  readState,
+  repoRoot,
+  sameProcess,
+  sessions,
+  skillDir,
+} from './runtime.mjs'
 
 const drive = process.argv.includes('--drive')
 const help = `verify-betterman smoke
@@ -17,6 +29,8 @@ Usage:
 
 --drive walks the feature sweep in scripts/drive.spec.ts.
 Without --drive, scripts/smoke.spec.ts opens home, searches tar, and opens tar(1).
+After doctor reports READY, smoke refuses unless the listener pid, start time,
+and repo match this checkout. Stop that process yourself, then run pnpm verify:launch again.
 Extra arguments are forwarded to Playwright, for example:
   pnpm verify:drive -- -g "find in page"
 
@@ -59,6 +73,30 @@ const doctor = spawnSync(process.execPath, [path.join(skillDir, 'scripts/doctor.
 if (doctor.status !== 0) {
   process.stderr.write(`smoke: doctor exited ${doctor.status ?? 'signal'}; drive skipped\n`)
   process.exit(doctor.status ?? 1)
+}
+
+const { port, loopback } = baseUrlParts(baseUrl)
+if (!loopback) {
+  process.stderr.write(
+    `smoke: refusing ${baseUrl}. This skill drives only a loopback server this checkout started. Stop that process yourself, then run pnpm verify:launch again.\n`,
+  )
+  process.exit(2)
+}
+try {
+  assertLinuxListenerSupport()
+} catch (error) {
+  process.stderr.write(`smoke: ${error instanceof Error ? error.message : String(error)}\n`)
+  process.exit(2)
+}
+const previous = readState()
+const recorded = previous?.listeners?.next
+const sessionOwned = Array.isArray(previous?.sessions) && previous.sessions.includes(sessions.next)
+const ownsListener = Boolean(recorded?.pid) && sessionOwned && listenersOn(port).some((live) => sameProcess(recorded, live))
+if (!ownsListener) {
+  process.stderr.write(
+    'smoke: the listener pid, start time, and repo do not match this checkout. Refusing to drive it. Stop that process yourself, then run pnpm verify:launch again.\n',
+  )
+  process.exit(2)
 }
 
 const spec = drive ? 'drive.spec.ts' : 'smoke.spec.ts'

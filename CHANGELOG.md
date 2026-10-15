@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Docs: verification seeds an empty dataset only when the listener belongs to this checkout, smoke refuses a server it does not own, and the Linux listener check applies only to loopback.
 - Docs: the manual smoke workflow uses `VERIFY_ID=cix`, and its evidence artifact path matches that id.
 - Docs: verification evidence follows the repo root, `run.json` stays private, and the E2E seed is pinned to the prod dataset stage.
 - Docs: verification reuses a READY server only when the recorded pid and start time still match, and listener capture is Linux-only.
