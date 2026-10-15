@@ -96,8 +96,9 @@ try {
   process.stderr.write(`launch: ${error instanceof Error ? error.message : String(error)}\n`)
   process.exit(1)
 }
-snapshotGeneratedFiles()
+let tookOwnership = false
 process.on('exit', () => {
+  if (!tookOwnership) return
   try {
     restoreGeneratedFiles()
   } catch (error) {
@@ -337,6 +338,8 @@ async function ensureNext(forceRestart = false) {
     process.exit(1)
   }
   clearNextFetchCache()
+  snapshotGeneratedFiles()
+  tookOwnership = true
   process.stdout.write('launch: starting Next.js dev session\n')
   const nextScript = `#!/usr/bin/env bash
 set -euo pipefail

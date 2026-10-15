@@ -150,10 +150,59 @@ function writePrivateFile(filePath, body) {
   chmodSync(filePath, 0o700)
 }
 
+function readSnapshot() {
+  const file = snapshotPath()
+  if (!pathExists(file)) return null
+  const parsed = JSON.parse(readFileSync(file, 'utf8'))
+  if (parsed && typeof parsed === 'object' && parsed.entries && typeof parsed.entries === 'object' && !Array.isArray(parsed.entries)) {
+    return { owned: parsed.owned === true, writtenAt: parsed.writtenAt || '', entries: parsed.entries, file }
+  }
+  return { owned: false, writtenAt: '', entries: parsed, file }
+}
+
+function sameAsRecorded(abs, saved) {
+  if (saved === null) return !pathExists(abs)
+  if (!pathExists(abs)) return false
+  const stat = lstatSync(abs)
+  if (saved.kind === 'link') return stat.isSymbolicLink() && readlinkSync(abs) === saved.target
+  if (saved.kind !== 'file' || !stat.isFile()) return false
+  return readFileSync(abs).equals(Buffer.from(saved.data, 'base64'))
+}
+
+function backupGenerated(rel, abs, saved) {
+  const dir = path.join(stateDir, 'generated-backup')
+  mkdirSync(dir, { recursive: true, mode: 0o700 })
+  chmodSync(dir, 0o700)
+  const stamp = new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-')
+  const dest = path.join(dir, `${rel.replaceAll('/', '__')}.${stamp}`)
+  if (pathExists(abs) && lstatSync(abs).isFile()) writeFileSync(dest, readFileSync(abs), { mode: 0o600 })
+  if (saved && saved.kind === 'file') writeFileSync(`${dest}.snapshot`, Buffer.from(saved.data, 'base64'), { mode: 0o600 })
+  return dest
+}
+
+function applyRecorded(abs, saved) {
+  if (saved === null) {
+    if (pathExists(abs)) unlinkSync(abs)
+    return
+  }
+  if (saved.kind === 'link') {
+    if (pathExists(abs)) unlinkSync(abs)
+    symlinkSync(saved.target, abs)
+    return
+  }
+  const data = Buffer.from(saved.data, 'base64')
+  const current = pathExists(abs) && lstatSync(abs).isFile() ? readFileSync(abs) : null
+  if (!current || !current.equals(data)) {
+    const tmp = `${abs}.${process.pid}.verify-restore`
+    writeFileSync(tmp, data, { mode: saved.mode || 0o644 })
+    renameSync(tmp, abs)
+  }
+}
+
 export function snapshotGeneratedFiles() {
   ensureDirs()
-  const file = snapshotPath()
-  if (pathExists(file)) return
+  const existing = readSnapshot()
+  if (existing?.owned) return existing
   const entries = {}
   for (const rel of generatedRelPaths) {
     const abs = path.join(repoRoot, rel)
@@ -163,43 +212,40 @@ export function snapshotGeneratedFiles() {
     }
     const stat = lstatSync(abs)
     if (stat.isSymbolicLink()) {
-      entries[rel] = { kind: 'link', target: readlinkSync(abs) }
+      entries[rel] = { kind: 'link', target: readlinkSync(abs), mtimeMs: stat.mtimeMs }
       continue
     }
     entries[rel] = {
       kind: 'file',
       mode: stat.mode & 0o777,
+      mtimeMs: stat.mtimeMs,
       data: readFileSync(abs).toString('base64'),
     }
   }
-  writePrivateFile(file, `${JSON.stringify(entries)}\n`)
+  const body = { owned: true, writtenAt: new Date().toISOString(), entries }
+  writePrivateFile(snapshotPath(), `${JSON.stringify(body)}\n`)
+  return { ...body, file: snapshotPath() }
 }
 
 export function restoreGeneratedFiles({ removeSnapshot = false } = {}) {
-  const file = snapshotPath()
-  if (!pathExists(file)) return false
-  const entries = JSON.parse(readFileSync(file, 'utf8'))
-  for (const [rel, saved] of Object.entries(entries)) {
+  const snapshot = readSnapshot()
+  if (!snapshot) return { restored: false, skipped: [] }
+  let restored = false
+  const skipped = []
+  for (const [rel, saved] of Object.entries(snapshot.entries)) {
     const abs = path.join(repoRoot, rel)
-    if (saved === null) {
-      if (pathExists(abs)) unlinkSync(abs)
+    if (sameAsRecorded(abs, saved)) continue
+    if (!snapshot.owned) {
+      const backup = backupGenerated(rel, abs, saved)
+      process.stderr.write(`restore: ${rel} changed since the recorded snapshot. Leaving it in place and backing it up at ${backup}.\n`)
+      skipped.push(rel)
       continue
     }
-    if (saved.kind === 'link') {
-      if (pathExists(abs)) unlinkSync(abs)
-      symlinkSync(saved.target, abs)
-      continue
-    }
-    const data = Buffer.from(saved.data, 'base64')
-    const current = pathExists(abs) && lstatSync(abs).isFile() ? readFileSync(abs) : null
-    if (!current || !current.equals(data)) {
-      const tmp = `${abs}.${process.pid}.verify-restore`
-      writeFileSync(tmp, data, { mode: saved.mode || 0o644 })
-      renameSync(tmp, abs)
-    }
+    applyRecorded(abs, saved)
+    restored = true
   }
-  if (removeSnapshot) unlinkSync(file)
-  return true
+  if (removeSnapshot) unlinkSync(snapshot.file)
+  return { restored, skipped }
 }
 
 export function readState() {

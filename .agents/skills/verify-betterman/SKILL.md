@@ -166,7 +166,7 @@ pnpm verify:cleanup
 
 That runs `node .agents/skills/verify-betterman/scripts/cleanup.mjs`. It `tmux kill-session`s only `bmv-<id>-convex` and `bmv-<id>-next` when `run.json` lists them, including a session recorded before its ready check failed. It does not kill processes by name. It waits until the recorded Next pid is gone, then restores generated files. It leaves the evidence directory in place and prints that path. After every failed launch or drive, run cleanup before starting again so a half-started session does not keep the ports.
 
-`next dev` rewrites `nextjs/next-env.d.ts` and creates `nextjs/AGENTS.md` and `nextjs/CLAUDE.md`. The generated `AGENTS.md` says to commit that file. Do not. Launch snapshots those paths, and cleanup restores them after the sessions stop. A verification run should leave `git status` clean.
+`next dev` rewrites `nextjs/next-env.d.ts` and creates `nextjs/AGENTS.md` and `nextjs/CLAUDE.md`. The generated `AGENTS.md` says to commit that file. Do not. Launch writes `generated-snapshot.json` only after it owns the Next server, and only before that server starts. A refused launch does not write the snapshot. Cleanup restores an owned snapshot after the sessions stop. If a file changed since a snapshot that this checkout does not own, cleanup leaves the file in place, prints a warning, and copies it under `generated-backup/` in the state directory. A verification run should leave `git status` clean.
 
 Confirm the evidence directory still exists after cleanup before citing it.
 
@@ -179,6 +179,7 @@ Confirm the evidence directory still exists after cleanup before citing it.
 | `pnpm verify:smoke` | `scripts/smoke.mjs` (doctor, then `smoke.spec.ts`) |
 | `pnpm verify:drive` | `scripts/smoke.mjs --drive` (doctor, then `drive.spec.ts`) |
 | `pnpm verify:cleanup` | `scripts/cleanup.mjs` |
+| `pnpm verify:test` | `scripts/snapshot.test.mjs` |
 
 ```bash
 node .agents/skills/verify-betterman/scripts/launch.mjs --help

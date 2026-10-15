@@ -63,7 +63,7 @@ if (state) {
 await waitForRecordedExit(state?.listeners?.next)
 try {
   const restored = restoreGeneratedFiles({ removeSnapshot: true })
-  if (restored) process.stdout.write('cleanup: restored next dev generated files\n')
+  if (restored.restored) process.stdout.write('cleanup: restored next dev generated files\n')
 } catch (error) {
   process.stderr.write(`cleanup: restore generated files failed: ${error instanceof Error ? error.message : String(error)}\n`)
   process.exit(1)
