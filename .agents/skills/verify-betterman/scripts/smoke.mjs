@@ -39,7 +39,7 @@ function playwrightArgs() {
   const args = process.argv.slice(2)
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
-    if (arg === '--drive' || arg === '--help' || arg === '-h') continue
+    if (arg === '--' || arg === '--drive' || arg === '--help' || arg === '-h') continue
     if (arg === '--base-url') {
       index += 1
       continue
