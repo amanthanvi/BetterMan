@@ -170,4 +170,33 @@ server.listen(3000, '127.0.0.1')
   assert.equal(runtime.belongsToRepo({ cwd: sibling, cmdline: '' }), false)
   assert.equal(runtime.belongsToRepo({ cwd: '', cmdline: `node ${repoRoot}/nextjs/server.js` }), true)
   assert.equal(runtime.belongsToRepo({ cwd: '/tmp', cmdline: `node ${sibling}/nextjs/server.js` }), false)
+  const childEnv = runtime.buildLocalConvexEnv(
+    {
+      PATH: '/usr/bin',
+      HOME: '/home/me',
+      BETTERMAN_DATASET_STAGE: 'staging',
+      CONVEX_DEPLOY_KEY: 'secret',
+      CONVEX_URL: 'https://cloud.example',
+    },
+    { deployment: 'anonymous:anonymous-agent', backendUrl: 'http://127.0.0.1:3210', siteUrl: 'http://127.0.0.1:3211' },
+  )
+  assert.equal(childEnv.BETTERMAN_DATASET_STAGE, undefined)
+  assert.equal(childEnv.CONVEX_DEPLOY_KEY, undefined)
+  assert.equal(childEnv.CONVEX_URL, 'http://127.0.0.1:3210')
+  assert.equal(childEnv.CONVEX_AGENT_MODE, 'anonymous')
+  assert.equal(childEnv.PATH, '/usr/bin')
+})
+
+test('smoke reports a foreign state directory without a stack trace', () => {
+  const foreign = '/usr'
+  assert.notEqual(statSync(foreign).uid, process.getuid())
+  const result = spawnSync(process.execPath, [path.join(scriptDir, 'smoke.mjs')], {
+    cwd: repoRoot,
+    env: { ...process.env, VERIFY_STATE_DIR: foreign, VERIFY_EVIDENCE_DIR: foreign },
+    encoding: 'utf8',
+    timeout: 15_000,
+  })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /^smoke: refusing \/usr: owned by uid /m)
+  assert.doesNotMatch(result.stderr, /\n\s+at /)
 })

@@ -64,7 +64,12 @@ function playwrightArgs() {
 }
 
 const baseUrl = argValue('--base-url') || defaultBaseUrl
-ensureDirs()
+try {
+  ensureDirs()
+} catch (error) {
+  process.stderr.write(`smoke: ${error instanceof Error ? error.message : String(error)}\n`)
+  process.exit(1)
+}
 
 const doctor = spawnSync(process.execPath, [path.join(skillDir, 'scripts/doctor.mjs'), '--base-url', baseUrl], {
   cwd: repoRoot,

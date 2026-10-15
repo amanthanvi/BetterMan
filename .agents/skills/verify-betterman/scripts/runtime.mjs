@@ -48,6 +48,19 @@ export function scrubConvexEnv(base = process.env) {
   return env
 }
 
+const convexChildBaseKeys = ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_ALL', 'TZ', 'TMPDIR', 'TMP', 'TEMP', 'NVM_DIR', 'PNPM_HOME']
+
+export function buildLocalConvexEnv(base, { deployment = '', backendUrl = '', siteUrl = '' } = {}) {
+  const env = { CONVEX_AGENT_MODE: 'anonymous' }
+  for (const key of convexChildBaseKeys) {
+    if (base?.[key]) env[key] = base[key]
+  }
+  if (deployment.startsWith('anonymous:')) env.CONVEX_DEPLOYMENT = deployment
+  if (backendUrl) env.CONVEX_URL = backendUrl
+  if (siteUrl) env.CONVEX_SITE_URL = siteUrl
+  return env
+}
+
 export function clearNextFetchCache() {
   const dir = path.join(repoRoot, 'nextjs', '.next', 'dev', 'cache', 'fetch-cache')
   const resolved = path.resolve(dir)

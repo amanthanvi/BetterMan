@@ -23,6 +23,7 @@ import {
   readState,
   repoRoot,
   restoreGeneratedFiles,
+  buildLocalConvexEnv,
   runCommand,
   sameProcess,
   scrubConvexEnv,
@@ -146,12 +147,11 @@ function anonymousDeployment() {
 }
 
 function localConvexChildEnv() {
-  const env = { ...scrubConvexEnv(), CONVEX_AGENT_MODE: 'anonymous' }
-  const deployment = anonymousDeployment()
-  if (deployment) env.CONVEX_DEPLOYMENT = deployment
-  if (convexUrl) env.CONVEX_URL = convexUrl
-  if (convexSite) env.CONVEX_SITE_URL = convexSite
-  return env
+  return buildLocalConvexEnv(process.env, {
+    deployment: anonymousDeployment(),
+    backendUrl: convexUrl,
+    siteUrl: convexSite,
+  })
 }
 
 function localConvexShellExports() {
