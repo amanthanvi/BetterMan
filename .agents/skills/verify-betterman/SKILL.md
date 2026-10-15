@@ -16,7 +16,9 @@ A maintain pass (`maintain-verification-skill`) edits only this directory: `SKIL
 
 This skill owns one app on `http://127.0.0.1:3000`. Playwright gives each test a fresh browser context, so bookmarks, theme, and recent history stay inside that context. The Convex dataset is shared by every context on this machine.
 
-When doctor already reports `READY` and the process on port 3000 matches the pid and start time recorded for this checkout, launch reuses that server. Cleanup stops only the tmux sessions recorded in this checkout's `run.json`. A server this skill did not start is left running.
+When doctor already reports `READY` and the process on port 3000 matches the pid and start time recorded for this checkout, launch reuses that server. A `READY` server with a different pid or start time is not reused. Cleanup stops only the tmux sessions recorded in this checkout's `run.json`. A server this skill did not start is left running.
+
+Listener pid, start time, and cwd are read from Linux `/proc`. On macOS and every other platform, launch and doctor exit 2 and print `Linux-only`. They do not guess ownership.
 
 State and session names are per checkout. The id is `VERIFY_ID` when that is set, otherwise the first 8 hex characters of the sha256 of the repo root. The state directory is `/tmp/betterman-verify-<id>/` and the tmux sessions are `bmv-<id>-convex` and `bmv-<id>-next`. Two checkouts do not share them.
 
@@ -35,7 +37,7 @@ pnpm verify:launch
 
 `pnpm verify:launch` is `node .agents/skills/verify-betterman/scripts/launch.mjs`. It does the following:
 
-1. If doctor is `READY`, print `REUSED` and exit 0. `READY` includes an IPv4 listen socket and a hydration probe. An IPv6-only server is not reused.
+1. If doctor is `READY` and the listener pid and start time in `run.json` match the process on port 3000, print `REUSED` and exit 0. `READY` includes an IPv4 listen socket, `pageCount` greater than 0, and a hydration probe. A `READY` server whose pid or start time does not match is refused. An IPv6-only server is not reused.
 2. If port 3000 is open, doctor reports `empty-dataset`, and Convex is already listening on the loopback URL in `.env.local`, seed that dataset and check doctor again. On `READY`, print `SEEDED` and leave the existing Next process running. If it is still not `READY`, exit 2 without restarting it.
 3. If port 3000 is open for any other reason and this skill did not start it, exit 2 and leave that process alone.
 4. Run `pnpm install --frozen-lockfile` when `node_modules` is missing.

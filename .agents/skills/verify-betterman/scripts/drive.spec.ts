@@ -1,3 +1,5 @@
+import type { Locator, Page } from '@playwright/test'
+
 import { expect, shellReady, shot, test } from './evidence'
 
 test('home: empty recent and bookmarks, browse link', async ({ page }) => {
@@ -227,20 +229,29 @@ test('reading preferences: font size and reset', async ({ page }) => {
   await expect(dialog).toBeHidden()
 })
 
+async function selectUntilUrl(select: Locator, page: Page, value: string, expected: RegExp) {
+  const attempts = 3
+  let urlError: unknown
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    await select.selectOption(value)
+    try {
+      await expect(page).toHaveURL(expected, { timeout: 1_500 })
+      return
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (!message.includes('toHaveURL')) throw error
+      urlError = error
+    }
+  }
+  throw urlError
+}
+
 test('distro variant: ubuntu marker and an unknown distro query', async ({ page }) => {
   await page.goto('/man/tar/1')
   await shellReady(page)
   const select = page.getByLabel('Select distribution variant')
   await expect(select.locator('option')).toHaveText(['Debian', 'Ubuntu', 'Fedora'])
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await select.selectOption('ubuntu')
-    try {
-      await expect(page).toHaveURL(/distro=ubuntu/, { timeout: 1_500 })
-      break
-    } catch (error) {
-      if (attempt === 2) throw error
-    }
-  }
+  await selectUntilUrl(select, page, 'ubuntu', /distro=ubuntu/)
   await expect(page).toHaveURL(/distro=ubuntu/)
   await expect(page.getByText('Ubuntu variant: this page is intentionally different for E2E testing.')).toBeVisible()
   await shot(page, 'distro-ubuntu')

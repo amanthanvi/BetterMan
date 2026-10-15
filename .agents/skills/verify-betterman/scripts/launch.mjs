@@ -7,6 +7,7 @@ import {
   assertLocalSeedTarget,
   baseUrlParts,
   bashUnsetConvexRemote,
+  assertLinuxListenerSupport,
   belongsToRepo,
   checkHealth,
   clearNextFetchCache,
@@ -45,7 +46,7 @@ Usage:
   node .agents/skills/verify-betterman/scripts/launch.mjs [--base-url URL]
   pnpm verify:launch
 
-A READY instance is reused. Cleanup will not stop a server this skill did not start.
+A READY instance is reused only when its pid and start time match this checkout. Cleanup will not stop a server this skill did not start.
 Seed runs only when info is 404 or pageCount is 0, and only against a loopback anonymous Convex deployment.
 `
 
@@ -162,17 +163,30 @@ async function assess(includeHydration) {
   return confirmHydration(baseUrl, health)
 }
 
+try {
+  assertLinuxListenerSupport()
+} catch (error) {
+  process.stderr.write(`launch: ${error instanceof Error ? error.message : String(error)}\n`)
+  process.exit(2)
+}
+
 const initial = await assess(true)
+const previous = readState()
+const ownsNext = Boolean(ownedNextListener()) && Array.isArray(previous?.sessions) && previous.sessions.includes(sessions.next)
 if (initial.ok) {
   process.stdout.write(`${initial.lines.join('\n')}\n`)
+  if (!ownsNext) {
+    process.stderr.write(
+      'launch: doctor is READY, but the listener pid and start time do not match this checkout. Refusing to reuse it.\n',
+    )
+    process.exit(2)
+  }
   process.stdout.write('launch: REUSED existing READY instance\n')
   remember([])
   process.exit(0)
 }
 
 const listening = await tcpOpen(port)
-const previous = readState()
-const ownsNext = Boolean(ownedNextListener()) && Array.isArray(previous?.sessions) && previous.sessions.includes(sessions.next)
 if (listening && !ownsNext && initial.code !== 'empty-dataset') {
   process.stdout.write(`${initial.lines.join('\n')}\n`)
   process.stderr.write(

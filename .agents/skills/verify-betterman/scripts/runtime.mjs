@@ -356,7 +356,15 @@ export function sameProcess(recorded, live) {
   )
 }
 
+export function assertLinuxListenerSupport(platform = process.platform, hasProc = existsSync('/proc/net/tcp')) {
+  if (platform === 'linux' && hasProc) return
+  throw new Error(
+    'Linux-only: listener ownership reads /proc for the Next pid, start time, and cwd. This skill does not capture that listener on this platform.',
+  )
+}
+
 export function listenersOn(port) {
+  assertLinuxListenerSupport()
   const inodes = listenInodes(port)
   if (!inodes.size) return []
   const found = []

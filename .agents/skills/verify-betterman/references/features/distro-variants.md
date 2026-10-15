@@ -23,13 +23,14 @@ await page.goto('/man/tar/1')
 await expect(page.getByRole('button', { name: 'Cycle theme' })).toBeVisible()
 const select = page.getByLabel('Select distribution variant')
 await expect(select.locator('option')).toHaveText(['Debian', 'Ubuntu', 'Fedora'])
-for (let attempt = 0; attempt < 3; attempt += 1) {
+for (let attempt = 1; attempt <= 3; attempt += 1) {
   await select.selectOption('ubuntu')
   try {
     await expect(page).toHaveURL(/distro=ubuntu/, { timeout: 1_500 })
     break
   } catch (error) {
-    if (attempt === 2) throw error
+    const message = error instanceof Error ? error.message : String(error)
+    if (!message.includes('toHaveURL') || attempt === 3) throw error
   }
 }
 await expect(page).toHaveURL(/distro=ubuntu/)
@@ -40,7 +41,7 @@ Unknown query: `/search?q=tar&distro=not-a-distro` still shows `tar(1)` on the d
 
 ## Gotchas
 
-- The select is a controlled React control. `selectOption` before the change listener is attached resets to Debian, so retry until the URL contains `distro=ubuntu`. After `selectOption`, letter shortcuts are swallowed until focus moves.
+- The select is a controlled React control. `selectOption` before the change listener is attached resets to Debian. Retry that URL miss at most three times. Any other error fails on the first attempt, and the Ubuntu sentence is not retried. After `selectOption`, letter shortcuts are swallowed until focus moves.
 - Empty: Arch and Alpine are valid ids in the radio group and have no seeded release. Choosing them falls back to Debian when the release is missing. The URL may still say `arch` while the body is Debian. Read the footer dataset line or the page text before calling that a switch.
 - Error: a distro the normalizer rejects is ignored. Do not expect a 400 page for `?distro=not-a-distro`.
 - Hostile: `?distro=<script>` is ignored the same way. The search page must still render.
