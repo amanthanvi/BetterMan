@@ -9,9 +9,12 @@ def is_fedora_like() -> bool:
 
 
 def dnf_install(packages: list[str]) -> None:
-    # Fedora container base images commonly set tsflags=nodocs, which strips man pages.
-    # Clearing tsflags on `dnf install` isn't enough for preinstalled packages (dnf won't reinstall
-    # them), so we also `dnf reinstall` anything already present to backfill docs/man pages.
+    # Fedora container images set tsflags=nodocs, which strips man pages.
+    # `dnf install` will not replace a package the image already contains, so those
+    # need another transaction with docs enabled. dnf5 also refuses `dnf reinstall`
+    # when that exact image build is no longer on the mirror (Fedora 44's curl and
+    # tar are in that state). Upgrade them onto a published build first, then
+    # reinstall so packages that were already current get their man pages too.
     installed = [
         pkg
         for pkg in packages
@@ -25,11 +28,10 @@ def dnf_install(packages: list[str]) -> None:
     ]
 
     subprocess.run(["dnf", "-y", "-q", "install", "--setopt=tsflags=", *packages], check=True)
-    if installed:
-        subprocess.run(
-            ["dnf", "-y", "-q", "reinstall", "--setopt=tsflags=", *installed],
-            check=True,
-        )
+    if not installed:
+        return
+    subprocess.run(["dnf", "-y", "-q", "upgrade", "--setopt=tsflags=", *installed], check=True)
+    subprocess.run(["dnf", "-y", "-q", "reinstall", "--setopt=tsflags=", *installed], check=True)
 
 
 def rpm_arch() -> str:

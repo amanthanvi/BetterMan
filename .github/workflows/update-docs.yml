@@ -110,16 +110,27 @@ jobs:
       - run: pipx install uv
       - run: cd ingestion && uv sync --frozen
 
+      - name: Load distro ingest images
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ingestion
+          images_env="$(mktemp "${RUNNER_TEMP}/distro-images.XXXXXX")"
+          uv run python -c 'from ingestion.docker_runner import distro_image_env
+          for key, value in distro_image_env().items():
+              print(f"{key}={value}")' > "${images_env}"
+          if [[ ! -s "${images_env}" ]] || grep -Evq '^BETTERMAN_[A-Z0-9_]+_IMAGE_REF=[^[:space:]]+$' "${images_env}"; then
+            echo "Refusing to export malformed distro image entries:" >&2
+            cat "${images_env}" >&2
+            exit 1
+          fi
+          cat "${images_env}" >> "$GITHUB_ENV"
+
       - name: Ingest to Convex staging
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
-          BETTERMAN_DEBIAN_IMAGE_REF: debian:trixie
-          BETTERMAN_UBUNTU_IMAGE_REF: ubuntu:24.04
-          BETTERMAN_FEDORA_IMAGE_REF: fedora:41
-          BETTERMAN_ARCH_IMAGE_REF: archlinux:latest
-          BETTERMAN_ALPINE_IMAGE_REF: alpine:3.20
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
           BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
         shell: bash
