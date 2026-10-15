@@ -16,7 +16,7 @@ A maintain pass (`maintain-verification-skill`) edits only this directory: `SKIL
 
 This skill owns one app on `http://127.0.0.1:3000`. Playwright gives each test a fresh browser context, so bookmarks, theme, and recent history stay inside that context. The Convex dataset is shared by every context on this machine.
 
-When doctor already reports `READY` and the process on port 3000 matches the pid and start time recorded for this checkout, launch reuses that server. A `READY` server with a different pid or start time is not reused. Cleanup stops only the tmux sessions recorded in this checkout's `run.json`. A server this skill did not start is left running.
+When doctor already reports `READY` and the process on port 3000 matches the recorded pid and start time, and its cwd or command line is this repo, launch reuses that server. A `READY` server that fails that check is not reused. Cleanup stops only the tmux sessions recorded in this checkout's `run.json`. A server this skill did not start is left running.
 
 Listener pid, start time, and cwd are read from Linux `/proc`. On macOS and every other platform, launch and doctor exit 2 and print `Linux-only`. They do not guess ownership.
 
@@ -37,7 +37,7 @@ pnpm verify:launch
 
 `pnpm verify:launch` is `node .agents/skills/verify-betterman/scripts/launch.mjs`. It does the following:
 
-1. If doctor is `READY` and the listener pid and start time in `run.json` match the process on port 3000, print `REUSED` and exit 0. `READY` includes an IPv4 listen socket, `pageCount` greater than 0, and a hydration probe. A `READY` server whose pid or start time does not match is refused. An IPv6-only server is not reused.
+1. If doctor is `READY` and the listener pid and start time in `run.json` match the process on port 3000, and that process is under this repo, print `REUSED` and exit 0. `READY` includes an IPv4 listen socket, `pageCount` greater than 0, and a hydration probe. A `READY` server whose pid, start time, or repo does not match is refused. An IPv6-only server is not reused.
 2. If port 3000 is open, doctor reports `empty-dataset`, and Convex is already listening on the loopback URL in `.env.local`, seed that dataset and check doctor again. On `READY`, print `SEEDED` and leave the existing Next process running. If it is still not `READY`, exit 2 without restarting it.
 3. If port 3000 is open for any other reason and this skill did not start it, exit 2 and leave that process alone.
 4. Run `pnpm install --frozen-lockfile` when `node_modules` is missing.
@@ -54,7 +54,7 @@ Logs and state:
 - `/tmp/betterman-verify-<id>/` is mode `0700` and must be owned by the current user. Launch refuses a pre-created directory owned by someone else. Set `VERIFY_ID` to choose the id, or `VERIFY_STATE_DIR` to choose the directory.
 - `run.json` is written mode `0700`. It lists sessions this launch started, including a Convex session that failed before Next opened port 3000, plus the Next listener pid and start time
 - `bmv-<id>-convex.log` and `bmv-<id>-next.log`
-- `evidence/` is created at launch and kept by cleanup. Override the directory with `VERIFY_EVIDENCE_DIR`. When that is unset, Playwright hashes the repo root, the same id as launch, not the shell's current directory. Specs do not import the ESM runtime, because the test runner loads them as CommonJS. `VERIFY_ID` may be 2 to 32 characters, so `ci` is valid.
+- `evidence/` is created at launch and kept by cleanup. Override the directory with `VERIFY_EVIDENCE_DIR`. When that is unset, Playwright hashes the repo root, the same id as launch, not the shell's current directory. Specs do not import the ESM runtime, because the test runner loads them as CommonJS. `VERIFY_ID` is 3 to 32 characters. The manual smoke workflow sets `VERIFY_ID=cix`, so its evidence directory is `/tmp/betterman-verify-cix/evidence`.
 
 `pnpm next:dev` (`convex dev --start "pnpm -C nextjs dev"`) is the README command. The helper splits Convex and Next so the dataset can be seeded before Next caches an empty render. Use the helper.
 

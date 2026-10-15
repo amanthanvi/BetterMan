@@ -177,7 +177,7 @@ if (initial.ok) {
   process.stdout.write(`${initial.lines.join('\n')}\n`)
   if (!ownsNext) {
     process.stderr.write(
-      'launch: doctor is READY, but the listener pid and start time do not match this checkout. Refusing to reuse it.\n',
+      'launch: doctor is READY, but the listener pid, start time, and repo do not match this checkout. Refusing to reuse it.\n',
     )
     process.exit(2)
   }
