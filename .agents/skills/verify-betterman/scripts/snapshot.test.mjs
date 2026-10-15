@@ -160,8 +160,14 @@ server.listen(3000, '127.0.0.1')
   assert.equal(statSync(stateDir).mode & 0o777, 0o700)
   const { verifyIdFor } = require('./verify-paths.cjs')
   process.env.VERIFY_ID = 'ci'
-  assert.equal(verifyIdFor(repoRoot), 'ci')
-  process.env.VERIFY_ID = 'c'
-  assert.throws(() => verifyIdFor(repoRoot), /2-32/)
+  assert.throws(() => verifyIdFor(repoRoot), /3-32/)
+  process.env.VERIFY_ID = 'cix'
+  assert.equal(verifyIdFor(repoRoot), 'cix')
   delete process.env.VERIFY_ID
+  const sibling = `${repoRoot}-other`
+  assert.equal(runtime.belongsToRepo({ cwd: repoRoot, cmdline: '' }), true)
+  assert.equal(runtime.belongsToRepo({ cwd: `${repoRoot}/nextjs`, cmdline: '' }), true)
+  assert.equal(runtime.belongsToRepo({ cwd: sibling, cmdline: '' }), false)
+  assert.equal(runtime.belongsToRepo({ cwd: '', cmdline: `node ${repoRoot}/nextjs/server.js` }), true)
+  assert.equal(runtime.belongsToRepo({ cwd: '/tmp', cmdline: `node ${sibling}/nextjs/server.js` }), false)
 })

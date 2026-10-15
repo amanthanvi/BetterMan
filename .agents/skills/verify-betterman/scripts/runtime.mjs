@@ -381,11 +381,26 @@ export function processIdentity(pid) {
   return identity
 }
 
+function mentionsRepoPath(value, root = repoRoot) {
+  if (!value || !root) return false
+  let from = 0
+  while (from < value.length) {
+    const index = value.indexOf(root, from)
+    if (index === -1) return false
+    const before = index === 0 ? '' : value.charAt(index - 1)
+    const after = value.charAt(index + root.length)
+    const beforeOk = before === '' || before === path.sep || /\s/.test(before) || before === '"' || before === "'" || before === '='
+    const afterOk = after === '' || after === path.sep
+    if (beforeOk && afterOk) return true
+    from = index + root.length
+  }
+  return false
+}
+
 export function belongsToRepo(identity) {
   const cwd = identity?.cwd || ''
   const cmdline = identity?.cmdline || ''
-  const inTree = cwd === repoRoot || cwd.startsWith(`${repoRoot}${path.sep}`)
-  return inTree || cmdline.includes(repoRoot)
+  return mentionsRepoPath(cwd) || mentionsRepoPath(cmdline)
 }
 
 export function sameProcess(recorded, live) {
