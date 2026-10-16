@@ -18,15 +18,26 @@ Not available on this machine, so they are not folded into the counts:
 
 No `fleet/` directory exists in this checkout.
 
-The GitHub Project board for this recall was not created. `gh project create
---owner amanthanvi --title "BetterMan cleanup (AP-20261016-01)"` returned:
+The board for this recall already exists at
+<https://github.com/users/amanthanvi/projects/5>. No second project was
+created. `gh project create` had already failed with
+`cursor[bot] does not have permission to create projects on ownerId MDQ6VXNlcjIyMzA2MTA0`,
+and `viewer.projectsV2.totalCount` for that app is 0.
+
+Adding the three draft items to project 5 also failed. `gh project item-create
+5 --owner amanthanvi --title "1. Recall: feedback census"` returned:
 
 ```text
-GraphQL: cursor[bot] does not have permission to create projects on ownerId MDQ6VXNlcjIyMzA2MTA0. (createProjectV2)
+GraphQL: Could not resolve to a ProjectV2 with the number 5. (user.projectV2)
 ```
 
-The token is the Cursor GitHub App (`cursor[bot]`). It can read these pull
-requests. It cannot create Projects on `amanthanvi`.
+The same error is returned for `gh project link 5 --owner amanthanvi --repo
+amanthanvi/BetterMan`. The app can read these pull requests. It cannot see
+user projects, so the three titles are not on the board:
+
+- `1. Recall: feedback census`
+- `2. Correct: pitfall count over last 60 commits`
+- `3. Architect: CI guards + verification skill`
 
 ## Coverage
 
