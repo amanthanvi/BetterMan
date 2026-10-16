@@ -34,7 +34,8 @@ requests. It cannot create Projects on `amanthanvi`.
 [#326](https://github.com/amanthanvi/BetterMan/pull/326) target
 `t3/site-improvement-audit`, not `main`. CodeRabbit skips automatic review on
 any base other than the default branch. A later `@coderabbitai review` on each
-of those eight pull requests returned `Review rate limited`.
+of those eight pull requests returned `Review rate limited`. #322 still
+received one completed review of its head before that limit reply.
 
 | PR | Base | CodeRabbit | Greptile inline threads | Latest bot SHA vs head |
 | --- | --- | ---: | ---: | --- |
@@ -56,7 +57,7 @@ still open. CodeRabbit posted actionable line comments only on #318.
 
 Counts are distinct inline threads unless the row says pull requests.
 
-### 1. CodeRabbit does not review the stack (8 pull requests)
+### 1. CodeRabbit skips stacked bases, then hits the hourly limit (8 pull requests)
 
 [#319](https://github.com/amanthanvi/BetterMan/pull/319#issuecomment-6137003556)
 through
@@ -68,14 +69,22 @@ example
 The same limit reply is on #320, #321, #322, #323, #324, #325, and #326.
 CodeRabbit's own note on #318 says the plan includes one review per hour.
 
+Pull request 322 is the exception among the eight. It received a completed review of head
+`3296f6d1` with zero actionable comments
+([summary](https://github.com/amanthanvi/BetterMan/pull/322#issuecomment-6137236844)),
+and a later request was rate-limited. The other seven stacked pull requests
+have no CodeRabbit line review.
+
 [#306](https://github.com/amanthanvi/BetterMan/pull/306#issuecomment-6116298563)
 is a separate gate: automatic review is off because the repository has fewer
 than 10 stars. No CodeRabbit line comments were posted there.
 
 Guard: do not treat a green Greptile summary on a stacked pull request as a
-CodeRabbit review. Either retarget the pull request at `main` before the Dev
-gate, or enable CodeRabbit on non-default bases, and space review requests
-instead of fanning eight out in one minute.
+CodeRabbit review. #322 is the only stacked pull request in this set that
+CodeRabbit finished, and that review posted no line comments. Either retarget
+the pull request at `main` before the Dev gate, or enable CodeRabbit on
+non-default bases, and space review requests instead of fanning eight out in
+one minute.
 
 ### 2. Reviewed SHA lags the pull request head (4 pull requests)
 
@@ -188,4 +197,4 @@ These were searched for in CodeRabbit and Greptile bodies and did not repeat:
 - Deploy order between ingestion and Convex. No bot comment.
 - Prose drift between docs. One LanguageTool hyphen hit and one markdownlint MD041 warning inside the #318 CodeRabbit review details. Neither was an inline thread, and neither appeared on another pull request.
 
-#323 has no inline thread from either bot. Its Greptile summary still lags the head (theme 2).
+Pull request 323 has no inline thread from either bot. Its Greptile summary still lags the head (theme 2).
