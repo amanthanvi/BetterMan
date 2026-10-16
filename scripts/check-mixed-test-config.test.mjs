@@ -22,6 +22,17 @@ test('names the test-runner config files', () => {
   assert.equal(isApplicationCode('CHANGELOG.md'), false)
 })
 
+test('allows documentation next to test-runner config', () => {
+  assert.equal(isApplicationCode('nextjs/README.md'), false)
+  assert.equal(
+    evaluateMix({
+      paths: ['nextjs/playwright.config.ts', 'nextjs/README.md'],
+      labels: [],
+    }).ok,
+    true,
+  )
+})
+
 test('allows a harness-only change and an application-only change', () => {
   assert.equal(
     evaluateMix({
@@ -79,7 +90,10 @@ test('an action pin bump in ci.yml stays allowed', () => {
     }).ok,
     true,
   )
-  assert.equal(diffTouchesTestRunner('+        run: pnpm -C nextjs test'), false)
+  assert.equal(diffTouchesTestRunner('+        run: pnpm -C nextjs e2e'), true)
+  assert.equal(diffTouchesTestRunner('+        run: pnpm -C nextjs e2e --grep tar'), true)
+  assert.equal(diffTouchesTestRunner('+        run: pnpm -C nextjs test'), true)
+  assert.equal(diffTouchesTestRunner('+        run: pnpm -C nextjs lint'), false)
   assert.equal(diffTouchesTestRunner('+        run: pnpm next:e2e'), true)
   assert.equal(diffTouchesTestRunner('+        run: cd ingestion && uv run python -m pytest'), true)
   void head

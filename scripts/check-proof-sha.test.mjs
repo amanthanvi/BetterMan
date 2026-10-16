@@ -22,6 +22,15 @@ test('keeps a nested heading inside the Proof section and ignores a later sectio
   assert.match(checkProof({ body: outside, sha, author: 'amanthanvi' }).message, /does not cite/)
 })
 
+test('keeps a fenced shell comment and a SHA on a nested heading', () => {
+  const fenced = '## Proof\n\n```bash\n# results\n```\n\n' + sha + '\n'
+  assert.equal(checkProof({ body: fenced, sha, author: 'amanthanvi' }).ok, true)
+  const nested = `## Proof\n\n### Tested ${sha}\n`
+  assert.equal(checkProof({ body: nested, sha, author: 'amanthanvi' }).ok, true)
+  const comment = `## Proof\n\n# results\n\n${sha}\n`
+  assert.match(checkProof({ body: comment, sha, author: 'amanthanvi' }).message, /does not cite/)
+})
+
 test('does not treat a longer heading as the Proof section', () => {
   const body = `## Proof of work\n\n${sha}\n`
   assert.match(checkProof({ body, sha, author: 'amanthanvi' }).message, /missing/i)

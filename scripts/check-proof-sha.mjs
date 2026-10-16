@@ -4,11 +4,13 @@
 //
 // The heading text is exactly "Proof" at any ATX level, compared without
 // regard to case. The section runs until the next heading of the same or
-// higher level, so a nested heading still counts. The citation is the full
-// 40-character head SHA (github.event.pull_request.head.sha), matched
-// case-insensitively as its own token. A short SHA, or the same digits inside
-// a longer hex string, does not count. The SHA must appear in that section,
-// not elsewhere in the body.
+// higher level outside a fenced code block. Lines inside a fence are literal,
+// so a shell comment such as "# results" does not end the section. Nested
+// heading lines stay in the section, including a SHA written on that line.
+// The citation is the full 40-character head SHA
+// (github.event.pull_request.head.sha), matched case-insensitively as its own
+// token. A short SHA, or the same digits inside a longer hex string, does not
+// count. The SHA must appear in that section, not elsewhere in the body.
 //
 // A body edit re-runs .github/workflows/pr-proof.yml, so the section can be
 // corrected without a new commit.
@@ -26,14 +28,42 @@ function headingMatch(line) {
   return { level: match[1].length, text }
 }
 
+function openFence(line) {
+  const match = /^ {0,3}(`{3,}|~{3,})/.exec(line)
+  if (!match) return null
+  return { char: match[1][0], length: match[1].length }
+}
+
+function closesFence(line, fence) {
+  const match = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line)
+  if (!match) return false
+  return match[1][0] === fence.char && match[1].length >= fence.length
+}
+
 export function findProofSection(body) {
   const lines = String(body ?? '').replace(/^\uFEFF/, '').split(/\r?\n/)
   const chunks = []
   let current = null
+  let fence = null
   for (const line of lines) {
+    if (fence) {
+      if (current) current.lines.push(line)
+      if (closesFence(line, fence)) fence = null
+      continue
+    }
+    const opened = openFence(line)
+    if (opened) {
+      fence = opened
+      if (current) current.lines.push(line)
+      continue
+    }
     const heading = headingMatch(line)
     if (heading) {
       if (current && heading.level <= current.level) current = null
+      if (current && heading.level > current.level) {
+        current.lines.push(line)
+        continue
+      }
       if (!current && /^proof$/i.test(heading.text)) {
         current = { level: heading.level, lines: [] }
         chunks.push(current)

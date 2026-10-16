@@ -6,17 +6,19 @@
 //   vitest.config.*, vitest.workspace.*, playwright.config.*, jest.config.*,
 //   jest.setup.*, karma.conf.*, cypress.config.*, pytest.ini, tox.ini,
 //   .mocharc.*, and any changed line in .github/workflows/ci.yml that invokes
-//   vitest, playwright, pytest, jest, or the pnpm test scripts listed below.
+//   vitest, playwright, pytest, jest, or a pnpm test script. That includes
+//   `pnpm next:e2e` and the CI spelling `pnpm -C nextjs e2e`.
 // Application code:
-//   convex/ outside tests, ingestion/ingestion/, and nextjs/ outside tests
-//   and e2e. Docs, workflow pin bumps, and test files alone are allowed.
+//   convex/ outside tests, ingestion/ingestion/, and nextjs/ outside tests,
+//   e2e, and markdown. Docs, workflow pin bumps, and test files alone are allowed.
 
 import { execFileSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 
 export const BYPASS_LABEL = 'test-config-change'
 const CI_WORKFLOW = '.github/workflows/ci.yml'
-const TEST_SCRIPT = /(?:^|\s)pnpm(?:\s+-C\s+\S+)?\s+(?:convex:test|next:test|next:e2e|ingest:test|ops:test)\b/
+const TEST_SCRIPT =
+  /(?:^|\s)pnpm(?:\s+-C\s+\S+)?\s+(?:convex:test|next:test|next:e2e|ingest:test|ops:test|e2e|test)\b/
 const TEST_RUNNER = /(?:^|[^A-Za-z0-9_])(?:vitest|playwright|pytest|jest)(?:[^A-Za-z0-9_]|$)/
 
 function baseName(file) {
@@ -48,8 +50,12 @@ export function isTestFile(file) {
   return /\.(?:test|spec)\.(?:ts|tsx|js|mjs|py)$/.test(file)
 }
 
+export function isDocumentation(file) {
+  return file.endsWith('.md') || file.startsWith('docs/')
+}
+
 export function isApplicationCode(file) {
-  if (isTestRunnerConfig(file) || isTestFile(file)) return false
+  if (isTestRunnerConfig(file) || isTestFile(file) || isDocumentation(file)) return false
   if (file.startsWith('convex/')) return true
   if (file.startsWith('ingestion/ingestion/')) return true
   if (file.startsWith('nextjs/')) return true
