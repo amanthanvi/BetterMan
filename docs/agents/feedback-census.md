@@ -32,8 +32,8 @@ GraphQL: Could not resolve to a ProjectV2 with the number 5. (user.projectV2)
 ```
 
 The same error is returned for `gh project link 5 --owner amanthanvi --repo
-amanthanvi/BetterMan`. The app can read these pull requests. It cannot see
-user projects, so the three titles are not on the board:
+amanthanvi/BetterMan`. Every project query from this token resolves that way.
+The three titles are still unfiled:
 
 - `1. Recall: feedback census`
 - `2. Correct: pitfall count over last 60 commits`
