@@ -3,8 +3,9 @@
 Tags are `vX.Y.Z`. Minor for user-facing features, patch for fixes.
 
 1. Move the Unreleased entries in `CHANGELOG.md` under the new version heading.
-2. Confirm `main` is green.
-3. Tag and push:
+2. Bump `CACHE_VERSION` in `nextjs/public/sw.js` to the same version (the service worker cache key is hand-maintained).
+3. Confirm `main` is green.
+4. Tag and push:
 
    ```bash
    git tag -a vX.Y.Z -m "vX.Y.Z"

@@ -1,8 +1,9 @@
 import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
+import { httpAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
+import { validateContentFieldSize } from "./_legacyContent";
 
 const http = httpRouter();
 
@@ -58,6 +59,62 @@ async function readJson(req: Request): Promise<unknown> {
   }
 }
 
+function invalidPayload(message: string): Response {
+  return jsonResponse({ error: { code: "INVALID_INGEST_PAYLOAD", message } }, 400);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+type PayloadShape = {
+  strings: readonly string[];
+  numbers?: readonly string[];
+  records?: readonly string[];
+  stringArrays?: readonly string[];
+};
+
+// Catch cheap transport mistakes before casting. The mutation validators remain
+// authoritative for individual fields inside each batch entry.
+function matchesShape(body: Record<string, unknown>, shape: PayloadShape): boolean {
+  return shape.strings.every((key) => typeof body[key] === "string" && (body[key] as string).trim().length > 0) &&
+    (shape.numbers ?? []).every((key) => typeof body[key] === "number" && Number.isFinite(body[key])) &&
+    (shape.records ?? []).every((key) => Array.isArray(body[key]) && body[key].every(isRecord)) &&
+    (shape.stringArrays ?? []).every((key) => Array.isArray(body[key]) && body[key].every((value) => typeof value === "string"));
+}
+
+function ingestAction(
+  shape: PayloadShape,
+  handler: (ctx: ActionCtx, body: Record<string, unknown>) => Promise<Response>,
+) {
+  return httpAction(async (ctx, req) => {
+    const auth = await requireIngestSecret(req);
+    if (auth) return auth;
+    let body: unknown;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "INVALID_JSON") throw error;
+      return jsonResponse({ error: { code: "INVALID_JSON", message: "Request body must be valid JSON" } }, 400);
+    }
+    if (!isRecord(body) || !matchesShape(body, shape)) {
+      return invalidPayload("Request body has an invalid ingest payload shape");
+    }
+    try {
+      return await handler(ctx, body);
+    } catch (error) {
+      // Nested argument validation failures from the mutation validators are
+      // client errors: a 500 would make the ingest client retry a request that
+      // can never succeed. Domain errors (RELEASE_NOT_FOUND, DUPLICATE_…)
+      // keep their existing status mapping.
+      if (error instanceof Error && /validat/i.test(error.message)) {
+        return invalidPayload(error.message);
+      }
+      throw error;
+    }
+  });
+}
+
 function jsonField(value: unknown): string | undefined {
   if (value === null || typeof value === "undefined") return undefined;
   return JSON.stringify(value);
@@ -66,10 +123,10 @@ function jsonField(value: unknown): string | undefined {
 http.route({
   path: "/ingest/release",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction({
+    strings: ["datasetReleaseId", "locale", "distro", "imageRef", "imageDigest", "ingestedAt"],
+    numbers: ["pageCount", "aliasCount", "licenseCount"], records: ["sectionTotals", "licensePackages"],
+  }, async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.createRelease, body as never);
     return jsonResponse(result);
   }),
@@ -78,10 +135,7 @@ http.route({
 http.route({
   path: "/ingest/pages",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction({ strings: ["datasetReleaseId"], records: ["pages"] }, async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.insertPages, body as never);
     return jsonResponse(result);
   }),
@@ -90,17 +144,8 @@ http.route({
 http.route({
   path: "/ingest/pages/storage",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction({ strings: ["datasetReleaseId"], records: ["pages"] }, async (ctx, body) => {
     const payload = body as { datasetReleaseId: string; pages: Array<Record<string, unknown>> };
-    if (!payload || !Array.isArray(payload.pages)) {
-      return jsonResponse(
-        { error: { code: "INVALID_INGEST_PAYLOAD", message: "pages must be an array" } },
-        400,
-      );
-    }
 
     // Validate the entire batch before allocating files, including late entries.
     if (payload.pages.some((page) => !page || typeof page !== "object" ||
@@ -109,13 +154,23 @@ http.route({
         { error: { code: "INVALID_INGEST_PAYLOAD", message: "page.contentSha256 and page.doc are required" } }, 400,
       );
     }
-    const prepared = await Promise.all(payload.pages.map(async (page) => {
-      const text = serializeStoredPayload(page.contentSha256 as string, {
-        docJson: JSON.stringify(page.doc), synopsisJson: jsonField(page.synopsis),
-        optionsJson: jsonField(page.options), seeAlsoJson: jsonField(page.seeAlso),
-      });
-      return { page, text, digest: await storedPayloadDigest(text) };
-    }));
+    let prepared;
+    try {
+      prepared = await Promise.all(payload.pages.map(async (page) => {
+        const fields = {
+          docJson: JSON.stringify(page.doc), synopsisJson: jsonField(page.synopsis),
+          optionsJson: jsonField(page.options), seeAlsoJson: jsonField(page.seeAlso),
+        };
+        for (const [kind, value] of Object.entries(fields)) {
+          if (value !== undefined) validateContentFieldSize(value, kind);
+        }
+        const text = serializeStoredPayload(page.contentSha256 as string, fields);
+        return { page, text, digest: await storedPayloadDigest(text) };
+      }));
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.startsWith("CONTENT_FIELD_TOO_LARGE")) throw error;
+      return invalidPayload(error.message);
+    }
     const existing = await ctx.runQuery(internal.ingest.listContentBlobStorageByDigest, {
       contentDigests: prepared.map((item) => item.digest),
     });
@@ -169,10 +224,7 @@ http.route({
 http.route({
   path: "/ingest/aliases",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction({ strings: ["datasetReleaseId"], records: ["aliases"] }, async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.insertAliases, body as never);
     return jsonResponse(result);
   }),
@@ -181,10 +233,7 @@ http.route({
 http.route({
   path: "/ingest/licenses",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction({ strings: ["datasetReleaseId"], records: ["licenses"] }, async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.insertLicenses, body as never);
     return jsonResponse(result);
   }),
@@ -193,10 +242,7 @@ http.route({
 http.route({
   path: "/ingest/activate",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction({ strings: ["datasetReleaseId", "stage", "activatedAt"] }, async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.activateRelease, body as never);
     return jsonResponse(result, result.pending ? 409 : 200);
   }),
@@ -205,10 +251,7 @@ http.route({
 http.route({
   path: "/ingest/promote",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction({ strings: ["fromStage", "toStage", "activatedAt"], stringArrays: ["distros"] }, async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.promoteActiveReleases, body as never);
     return jsonResponse(result);
   }),

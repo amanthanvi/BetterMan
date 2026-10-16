@@ -13,6 +13,9 @@ import {
 } from "./lib";
 import {
   CONTENT_KINDS,
+  CONTENT_CHUNK_CHARS,
+  contentChunks,
+  splitContentFields,
   type ContentField,
   type ContentJsonKind,
   contentFieldsChars,
@@ -35,7 +38,6 @@ const DEFAULT_ORPHAN_BLOB_LIMIT = 25;
 const MAX_ORPHAN_BLOB_LIMIT = 100;
 const DEFAULT_STORAGE_STATS_LIMIT = 25;
 const MAX_STORAGE_STATS_LIMIT = 100;
-const CONTENT_CHUNK_CHARS = 400_000;
 
 type ReleaseChildTable =
   | "releaseSectionStats"
@@ -119,33 +121,6 @@ function bounded(value: number | undefined, fallback: number, max: number): numb
   return Math.max(1, Math.min(Math.floor(value), max));
 }
 
-function contentChunks(value: string): string[] {
-  const chunks = [];
-  for (let index = 0; index < value.length; index += CONTENT_CHUNK_CHARS) {
-    chunks.push(value.slice(index, index + CONTENT_CHUNK_CHARS));
-  }
-  return chunks;
-}
-
-function splitContentFields(contentFields: ContentField[]): {
-  inlinePayload: Partial<Record<ContentJsonKind, string>>;
-  chunkedFields: Array<{ kind: ContentJsonKind; value: string }>;
-} {
-  const inlinePayload: Partial<Record<ContentJsonKind, string>> = {};
-  const chunkedFields: Array<{ kind: ContentJsonKind; value: string }> = [];
-
-  for (const field of contentFields) {
-    if (typeof field.value !== "string") continue;
-    if (field.value.length > CONTENT_CHUNK_CHARS) {
-      chunkedFields.push({ kind: field.kind, value: field.value });
-    } else {
-      inlinePayload[field.kind] = field.value;
-    }
-  }
-
-  return { inlinePayload, chunkedFields };
-}
-
 async function insertContentBlobChunks(
   ctx: MutationCtx,
   args: {
@@ -221,7 +196,7 @@ async function findOrCreateContentBlob(
 ): Promise<{ blobId: Id<"manPageContentBlobs">; created: boolean }> {
   const { blobId: existingId, contentDigest } = await findReusableContentBlob(ctx, args);
   if (existingId) return { blobId: existingId, created: false };
-  const { inlinePayload, chunkedFields } = splitContentFields(args.contentFields);
+  const { inlinePayload, chunkedFields } = splitContentFields(args.contentFields, CONTENT_CHUNK_CHARS);
   const blobId = await ctx.db.insert("manPageContentBlobs", {
     contentSha256: args.contentSha256,
     contentDigest,

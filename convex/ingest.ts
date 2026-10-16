@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { contentChunks, splitContentFields, validateContentFieldSize, type ContentField, type ContentJsonKind } from "./_legacyContent";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { datasetStageValidator, distroValidator } from "./schema";
@@ -14,10 +15,6 @@ import {
 } from "./lib";
 
 const MAX_INLINE_CONTENT_CHARS = 500_000;
-const CONTENT_CHUNK_CHARS = 400_000;
-
-type ContentJsonKind = "docJson" | "synopsisJson" | "optionsJson" | "seeAlsoJson";
-type ContentField = { kind: ContentJsonKind; value: string | undefined };
 
 const sectionStatInput = v.object({
   section: v.string(),
@@ -135,37 +132,6 @@ async function validateNewPageRoute(ctx: MutationCtx, releaseId: Id<"datasetRele
   if (existing || alias) throw new Error("DUPLICATE_MAN_PAGE_ROUTE");
 }
 
-function shouldChunkContent(value: string): boolean {
-  return value.length > MAX_INLINE_CONTENT_CHARS;
-}
-
-function contentChunks(value: string): string[] {
-  const chunks = [];
-  for (let index = 0; index < value.length; index += CONTENT_CHUNK_CHARS) {
-    chunks.push(value.slice(index, index + CONTENT_CHUNK_CHARS));
-  }
-  return chunks;
-}
-
-function splitContentFields(contentFields: ContentField[]): {
-  inlinePayload: Partial<Record<ContentJsonKind, string>>;
-  chunkedFields: Array<{ kind: ContentJsonKind; value: string }>;
-} {
-  const inlinePayload: Partial<Record<ContentJsonKind, string>> = {};
-  const chunkedFields: Array<{ kind: ContentJsonKind; value: string }> = [];
-
-  for (const field of contentFields) {
-    if (typeof field.value !== "string") continue;
-    if (shouldChunkContent(field.value)) {
-      chunkedFields.push({ kind: field.kind, value: field.value });
-    } else {
-      inlinePayload[field.kind] = field.value;
-    }
-  }
-
-  return { inlinePayload, chunkedFields };
-}
-
 async function insertContentBlobChunks(
   ctx: MutationCtx,
   args: {
@@ -194,6 +160,9 @@ async function findOrCreateContentBlob(
     contentFields: ContentField[];
   },
 ): Promise<Id<"manPageContentBlobs">> {
+  for (const field of args.contentFields) {
+    if (typeof field.value === "string") validateContentFieldSize(field.value, field.kind);
+  }
   const fields = Object.fromEntries(args.contentFields.map(({ kind, value }) => [kind, value]));
   const contentDigest = await storedPayloadDigest(serializeStoredPayload(args.contentSha256, fields));
   const existing = await ctx.db
@@ -202,7 +171,7 @@ async function findOrCreateContentBlob(
     .unique();
   if (existing) return existing._id;
 
-  const { inlinePayload, chunkedFields } = splitContentFields(args.contentFields);
+  const { inlinePayload, chunkedFields } = splitContentFields(args.contentFields, MAX_INLINE_CONTENT_CHARS);
   const blobId = await ctx.db.insert("manPageContentBlobs", {
     contentSha256: args.contentSha256,
     contentDigest,

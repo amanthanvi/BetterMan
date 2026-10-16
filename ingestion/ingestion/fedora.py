@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from pathlib import Path
 
-
-def is_fedora_like() -> bool:
-    return Path("/etc/fedora-release").exists() or Path("/etc/redhat-release").exists()
+logger = logging.getLogger("betterman.ingestion")
 
 
 def dnf_install(packages: list[str]) -> None:
@@ -71,6 +70,20 @@ def build_manpath_to_package(paths: list[Path]) -> dict[str, str]:
         )
         lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
         if len(lines) != len(chunk):
+            # One unowned file desyncs the whole rpm -qf output; fall back to
+            # per-file queries so the rest of the chunk keeps attribution.
+            for path in chunk:
+                single = subprocess.run(
+                    ["rpm", "-qf", "--qf", "%{NAME}\n", path],
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+                name = single.stdout.strip().splitlines()
+                if single.returncode == 0 and name:
+                    mapping[path] = name[0].strip()
+                else:
+                    logger.warning("rpm -qf could not attribute %s", path)
             continue
         for path, pkg in zip(chunk, lines, strict=False):
             mapping[path] = pkg

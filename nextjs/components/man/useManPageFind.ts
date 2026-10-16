@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import type { BlockNode } from '../../lib/docModel'
 import { getScrollBehavior } from '../../lib/scroll'
+import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import type { DocRendererHandle } from '../doc/DocRenderer'
 import { buildFindIndex, locateFindMatch } from './findIndex'
 
@@ -25,17 +26,9 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const rawFindQuery = find.trim()
   const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
 
-  const [debouncedFindQuery, setDebouncedFindQuery] = useState('')
-
-  useEffect(() => {
-    if (!findQuery) {
-      setDebouncedFindQuery('')
-      return
-    }
-
-    const t = window.setTimeout(() => setDebouncedFindQuery(findQuery), FIND_DEBOUNCE_MS)
-    return () => window.clearTimeout(t)
-  }, [findQuery])
+  // Shared debounce hook; clearing applies immediately, only typing is debounced.
+  const debouncedRaw = useDebouncedValue(findQuery, FIND_DEBOUNCE_MS)
+  const debouncedFindQuery = findQuery ? debouncedRaw : ''
 
   const effectiveFindQuery = debouncedFindQuery
   const isStale = effectiveFindQuery !== findQuery

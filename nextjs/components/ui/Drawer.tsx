@@ -21,7 +21,7 @@ const SIDE = {
   /* Bottom sheet on mobile, right panel from sm up. */
   'sheet-right': {
     closed: 'translate-y-full sm:translate-y-0 sm:translate-x-full',
-    base: 'absolute inset-x-0 bottom-0 max-h-[75vh] border-t border-edge bg-raised shadow-lg shadow-black/25 sm:inset-x-auto sm:top-0 sm:right-0 sm:max-h-none sm:w-[min(92vw,20rem)] sm:border-t-0 sm:border-l',
+    base: 'absolute inset-x-0 bottom-0 max-h-[75dvh] border-t border-edge bg-raised shadow-lg shadow-black/25 sm:inset-x-auto sm:top-0 sm:right-0 sm:max-h-none sm:w-[min(92vw,20rem)] sm:border-t-0 sm:border-l',
   },
 } as const
 

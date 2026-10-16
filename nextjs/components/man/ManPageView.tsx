@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
 import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
-import { getScrollBehavior } from '../../lib/scroll'
+import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
 import { DocRenderer, shouldVirtualizeBlocks } from '../doc/DocRenderer'
 import { RecentPageRecorder } from '../recent/RecentPageRecorder'
@@ -153,6 +153,18 @@ export function ManPageView({
     return () => setScrollToId(null)
   }, [manFind.docRef, setScrollToId])
 
+  // Ctrl/⌘+F from the app shell opens the find bar (native find misses
+  // virtualized content, so the custom find bar must take over on man pages).
+  const openFindRef = useRef(manFind.openFind)
+  useEffect(() => {
+    openFindRef.current = manFind.openFind
+  })
+  useEffect(() => {
+    const onFindRequest = () => openFindRef.current()
+    window.addEventListener('bm:find-request', onFindRequest)
+    return () => window.removeEventListener('bm:find-request', onFindRequest)
+  }, [])
+
   useEffect(() => {
     if (shouldVirtualize) return
 
@@ -196,18 +208,7 @@ export function ManPageView({
       setSelectedOption(opt)
       flashOption(opt.anchorId)
 
-      const scrollBehavior = getScrollBehavior()
-      let attempts = 0
-      const tick = () => {
-        attempts += 1
-        const el = document.getElementById(opt.anchorId)
-        if (el) {
-          el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
-          return
-        }
-        if (attempts < 20) window.requestAnimationFrame(tick)
-      }
-      window.requestAnimationFrame(tick)
+      scrollToIdWhenRendered(opt.anchorId, { behavior: getScrollBehavior(), block: 'center' })
     }
 
     applyHash()
@@ -237,7 +238,12 @@ export function ManPageView({
     }
   }
 
-  const onSelectOption = (opt: OptionItem) => {
+  const onSelectOption = (opt: OptionItem, event?: React.MouseEvent<HTMLAnchorElement>) => {
+    // Modified clicks keep native link behavior (open in new tab/window).
+    if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)) return
+    // Keep pushState + smooth scroll as the single navigation path; native
+    // anchor navigation would double-fire (jitter, extra history entry).
+    event?.preventDefault()
     const scrollBehavior = getScrollBehavior()
     setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
 

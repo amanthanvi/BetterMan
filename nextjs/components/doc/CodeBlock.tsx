@@ -103,20 +103,26 @@ export function CodeBlock({
     if (!shouldSyntaxHighlight) return
 
     let cancelled = false
-    void loadHljs().then((hljs) => {
-      if (cancelled) return
-      try {
-        const next = (hljs as { highlight: (t: string, o: unknown) => { value: string } }).highlight(markedText, {
-          language,
-          ignoreIllegals: true,
-        }).value
-        startTransition(() => {
-          setHighlighted({ source: markedText, html: applyMarkers(next) })
-        })
-      } catch {
-        // keep fallback
-      }
-    })
+    void loadHljs()
+      .then((hljs) => {
+        if (cancelled) return
+        try {
+          const next = (hljs as { highlight: (t: string, o: unknown) => { value: string } }).highlight(markedText, {
+            language,
+            ignoreIllegals: true,
+          }).value
+          startTransition(() => {
+            setHighlighted({ source: markedText, html: applyMarkers(next) })
+          })
+        } catch {
+          // keep fallback
+        }
+      })
+      .catch(() => {
+        // Chunk load failed (offline/flaky): reset so the next code block
+        // retries instead of every block inheriting the rejected promise.
+        hljsPromise = null
+      })
 
     return () => {
       cancelled = true

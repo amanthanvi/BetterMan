@@ -1,18 +1,10 @@
-import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
 import { LicensesClient } from './LicensesClient'
 import { fetchLicenses, withDistroFallback } from '../../lib/api'
-import { normalizeDistro } from '../../lib/distro'
+import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 
 export const revalidate = 3600
-
-type SearchParams = Record<string, string | string[] | undefined>
-
-function getFirst(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0]
-  return value
-}
 
 export function generateMetadata(): Metadata {
   return {
@@ -28,9 +20,7 @@ export function generateMetadata(): Metadata {
 
 export default async function LicensesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
-  const cookieStore = await cookies()
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = await resolveRequestDistro(sp)
 
   const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
     fetchLicenses({ distro: activeDistro }),

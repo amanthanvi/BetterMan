@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gzip
 import logging
 import re
 import uuid
@@ -64,16 +63,16 @@ from ingestion.freebsd import (
 )
 from ingestion.macos import is_permissive_manpage, macos_arch, macos_version
 from ingestion.man_scan import ManSource, scan_man_sources
-from ingestion.mandoc import read_roff, render_html
+from ingestion.mandoc import decompress_roff, render_html
 from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import normalize_ws, sha256_hex
 
-_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+\\-]*$")
+_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]*$")
 _PKG_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9.+-]+$")
 _DOC_ROOT = Path("/usr/share/doc")
 _MAN_HREF_RE = re.compile(
-    r"^/man/(?P<name>[a-z0-9][a-z0-9._+\\-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
+    r"^/man/(?P<name>[a-z0-9][a-z0-9._+-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
 )
 
 logger = logging.getLogger("betterman.ingestion")
@@ -191,13 +190,16 @@ def ingest(
     parse_started = monotonic()
     for src in sources:
         try:
-            alias = _alias_for_source(src)
+            # One read per page: probe, hash, and mandoc all share these bytes.
+            raw = _read_bytes(src.path)
+            alias = _alias_for_source(src, raw)
             if alias is not None:
                 aliases.append(alias)
                 continue
             parsed_pages.append(
                 _parse_source(
                     src,
+                    raw,
                     packages=packages,
                     manpath_to_pkg=manpath_to_pkg,
                     arch=arch,
@@ -403,9 +405,9 @@ class _AliasRow:
     source_path: str
 
 
-def _alias_for_source(src: ManSource) -> _AliasRow | None:
+def _alias_for_source(src: ManSource, raw: bytes) -> _AliasRow | None:
     """Return an alias row when the source is a bare `.so` include stub."""
-    target = is_so_stub(read_roff(src.path))
+    target = is_so_stub(raw)
     if target is None:
         return None
     parsed = so_target_name_section(target)
@@ -487,13 +489,14 @@ def _filter_macos_sources(sources: list[ManSource]) -> list[ManSource]:
 
 def _parse_source(
     src: ManSource,
+    raw: bytes,
     *,
     packages: dict[str, str],
     manpath_to_pkg: dict[str, str],
     arch: str,
 ) -> _PageRow:
-    raw_bytes = _read_bytes(src.path)
-    html_result = render_html(src.path)
+    raw_bytes = raw
+    html_result = render_html(raw)
     parsed = parse_mandoc_html(html_result.html)
 
     page_id = uuid4()
@@ -535,10 +538,7 @@ def _dump_models(items: list[OptionItem] | list[SeeAlsoRef] | None) -> list[dict
 
 
 def _read_bytes(path: Path) -> bytes:
-    if path.name.endswith(".gz"):
-        with gzip.open(path, "rb") as f:
-            return f.read()
-    return path.read_bytes()
+    return decompress_roff(path.read_bytes())
 
 
 def _build_dataset_release_id(*, git_sha: str, mandoc_version: str | None, distro: str) -> str:
@@ -804,8 +804,10 @@ def _page_payload(
     sitemap_page: int,
     links: list[dict[str, str | None]],
 ) -> dict[str, object]:
-    search_text = normalize_ws(f"{row.name} {row.description} {row.headings_text} {row.plain_text}")
-    snippet_text = normalize_ws(f"{row.description} {row.plain_text}")
+    # The server recomputes search text from structured fields and ignores
+    # searchText entirely, and truncates snippetText to 240 chars — send only
+    # what is read (mirrors MAX_SNIPPET_TEXT_CHARS in convex/lib.ts).
+    snippet_text = normalize_ws(f"{row.description} {row.plain_text}")[:240]
     return {
         "externalId": str(row.page_id),
         "name": row.name,
@@ -822,7 +824,7 @@ def _page_payload(
         "synopsis": row.synopsis,
         "options": row.options,
         "seeAlso": row.see_also,
-        "searchText": search_text,
+        "searchText": "",
         "snippetText": snippet_text,
         "links": links,
     }

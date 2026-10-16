@@ -45,7 +45,9 @@ def test_run_ingest_container_builds_debian_command(monkeypatch) -> None:
     assert "--network" in docker_run
     assert "betterman_default" in docker_run
     assert any(part.startswith("CONVEX_HTTP_URL=") for part in docker_run)
-    assert any(part.startswith("CONVEX_INGEST_SECRET=") for part in docker_run)
+    # The ingest secret is forwarded by name only, never as a value on argv.
+    assert "CONVEX_INGEST_SECRET" in docker_run
+    assert not any(part.startswith("CONVEX_INGEST_SECRET=") for part in docker_run)
     assert any(part.startswith("BETTERMAN_IMAGE_DIGEST=") for part in docker_run)
 
     inner = docker_run[-1]

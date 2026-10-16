@@ -184,6 +184,13 @@ const cachedManByName = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
+const cachedResolveManByName = unstable_cache(
+  async (distro: Distro, name: string) =>
+    await convex().query(api.queries.resolveManByName, { distro, name }),
+  ['betterman', 'convex', 'resolve-man-by-name'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string) =>
     await convex().action(api.content.getManByNameAndSection, { distro, name, section }),
@@ -317,6 +324,27 @@ export async function fetchManByName(opts: {
   return { kind: 'page', data: result.data as ManPageResponse }
 }
 
+/** Light name-only resolution (no content/storage reads) for redirect routes. */
+export type ManResolveResult =
+  | { kind: 'page'; name: string; section: string }
+  | { kind: 'ambiguous'; options: AmbiguousPageResponse['options'] }
+  | ManAlias
+
+type ConvexResolveManByNameResult = ManResolveResult | { kind: 'not_found' }
+
+export async function fetchManResolve(opts: { distro: Distro; name: string }): Promise<ManResolveResult> {
+  const result = (await mapConvexError(() =>
+    cachedResolveManByName(opts.distro, opts.name),
+  )) as ConvexResolveManByNameResult
+
+  if (result.kind === 'not_found') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  if (result.kind === 'ambiguous') {
+    return { kind: 'ambiguous', options: result.options as AmbiguousPageResponse['options'] }
+  }
+  if (result.kind === 'alias') return { kind: 'alias', name: result.name, section: result.section }
+  return { kind: 'page', name: result.name, section: result.section }
+}
+
 export type ManByNameAndSectionResult = { kind: 'page'; data: ManPageResponse } | ManAlias
 
 /** Resolves a page, or reports the alias target when the URL is a `.so` stub. */
@@ -330,16 +358,6 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   )) as ConvexManByNameAndSectionResult
   if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
   return result
-}
-
-export async function fetchManByNameAndSection(opts: {
-  distro: Distro
-  name: string
-  section: string
-}): Promise<ManPageResponse> {
-  const result = await fetchManByNameAndSectionOrAlias(opts)
-  if (result.kind === 'alias') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
-  return result.data
 }
 
 export type RelatedResponse = { items: SectionPage[] }

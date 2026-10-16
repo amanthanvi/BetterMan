@@ -1,10 +1,11 @@
 import type { Doc } from "./_generated/dataModel";
 
 export type RelatedItem = Pick<Doc<"manPages">, "name" | "section" | "title" | "description">;
-type RelatedLink = Pick<Doc<"manPageLinks">, "toName" | "toSection" | "toTitle" | "toDescription">;
+type RelatedLink = Pick<Doc<"manPageLinks">, "toName" | "toSection" | "toTitle" | "toDescription" | "toMissing">;
 type ResolveTarget = (name: string, section: string) => Promise<RelatedItem | null>;
 
 export function cachedRelatedItem(link: RelatedLink): RelatedItem | null {
+  if (link.toMissing) return null;
   if (link.toTitle === undefined || link.toDescription === undefined) return null;
   return {
     name: link.toName,
@@ -28,6 +29,9 @@ export async function resolveRelatedItems(
   });
 
   const items = await Promise.all(uniqueLinks.map(async (link) => {
+    // Missing targets are cached only after sealing the release, when further
+    // uploads cannot introduce a target. Legacy/unsealed links still resolve.
+    if (link.toMissing) return null;
     const item = cachedRelatedItem(link) ?? await resolveTarget(link.toName, link.toSection);
     if (!item) return null;
     return {

@@ -17,7 +17,7 @@ const COOKIE_RESOLVED = 'bm-theme-resolved'
 
 function writeCookie(name: string, value: string) {
   try {
-    document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`
+    document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`
   } catch {
     // ignore
   }

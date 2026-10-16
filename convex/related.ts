@@ -67,6 +67,9 @@ export async function scheduleRelatedMetadataBackfill(
 ): Promise<boolean> {
   if (release.pruning) throw new Error("RELEASE_PRUNING");
   const version = release.relatedMetadataVersion ?? 0;
+  // Releases completed before negative caching was introduced retain their
+  // legacy fallback until explicitly invalidated and backfilled again. New
+  // releases receive misses independently; sealed releases cannot gain pages.
   if (release.relatedMetadataCompletedVersion === version) return false;
   if (release.relatedMetadataBackfillJobId) {
     const job = await ctx.db.system.get(release.relatedMetadataBackfillJobId);
@@ -159,14 +162,18 @@ export const backfillRelease = internalMutation({
 
     let updated = 0;
     for (const link of batch.page) {
-      if (cachedRelatedItem(link)) continue;
+      if (link.toMissing || cachedRelatedItem(link)) continue;
       const target = await pageByNameAndSection(ctx, {
         releaseId: release._id,
         name: link.toName,
         section: link.toSection,
       });
-      if (!target) continue;
-      await ctx.db.patch(link._id, { toTitle: target.title, toDescription: target.description });
+      // Only sealed releases reach this backfill. Cache misses here so related
+      // reads do not retry known dangling references; forward references remain
+      // resolvable throughout ingestion before the release is sealed.
+      await ctx.db.patch(link._id, target
+        ? { toTitle: target.title, toDescription: target.description }
+        : { toMissing: true });
       updated += 1;
     }
 

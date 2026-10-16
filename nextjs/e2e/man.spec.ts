@@ -251,6 +251,45 @@ test('man: extended section URLs work', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /openssl\(1ssl\)/i })).toBeVisible()
 })
 
+test('man: Ctrl+F opens the custom find bar but is suppressed under the palette', async ({ page }) => {
+  await page.goto('/man/tar/1')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+  await waitForInteractiveShell(page)
+
+  const findInput = page.locator('[data-bm-findbar]').getByRole('textbox', { name: 'Find in page' })
+  const paletteInput = page.getByRole('combobox', { name: 'Command palette input' })
+
+  // While the palette owns focus, Ctrl+F must not open the find bar behind it.
+  await pressShortcutUntilVisible(page, 'ControlOrMeta+K', paletteInput)
+  await page.keyboard.press('ControlOrMeta+F')
+  await expect(findInput).toHaveCount(0)
+  await expect(paletteInput).toBeFocused()
+
+  await page.keyboard.press('Escape')
+  await expect(paletteInput).toHaveCount(0)
+
+  // With no overlay open, Ctrl+F takes over from native find.
+  await page.keyboard.press('ControlOrMeta+F')
+  await expect(findInput).toBeFocused()
+})
+
+test('man: footer dataset info follows distro switches and restores on return', async ({ page }) => {
+  await page.goto('/man/tar/1')
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
+  await waitForInteractiveShell(page)
+
+  const infoText = page.getByRole('contentinfo', { name: 'Site footer' }).locator('span[title^="Dataset"]')
+  await expect(infoText).toBeVisible()
+  await expect(infoText).toHaveAttribute('title', /e2e-debian-/)
+
+  const variantSelect = page.getByLabel('Select distribution variant')
+  await selectOptionUntilURL(page, variantSelect, 'ubuntu', /distro=ubuntu/)
+  await expect(infoText).toHaveAttribute('title', /e2e-ubuntu-/)
+
+  await selectOptionUntilURL(page, variantSelect, 'debian', /\/man\/tar\/1$/)
+  await expect(infoText).toHaveAttribute('title', /e2e-debian-/)
+})
+
 test('man: distro variant selector swaps content', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()

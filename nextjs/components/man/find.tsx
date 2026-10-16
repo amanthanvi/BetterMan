@@ -1,5 +1,3 @@
-'use client'
-
 function cutFlagArgumentSyntax(token: string): string {
   const cutChars = ['[', '=', '<'] as const
   let cutAt = token.length

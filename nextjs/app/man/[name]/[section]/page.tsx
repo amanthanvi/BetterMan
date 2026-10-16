@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { cookies, headers } from 'next/headers'
+import { headers } from 'next/headers'
 import { notFound, permanentRedirect } from 'next/navigation'
 
 import { ManPageView } from '../../../../components/man/ManPageView'
@@ -15,20 +15,14 @@ import {
   suggest,
   withDistroFallback,
 } from '../../../../lib/api'
-import { normalizeDistro, withDistro } from '../../../../lib/distro'
+import { withDistro } from '../../../../lib/distro'
 import { getPublicOrigin } from '../../../../lib/public-origin'
+import { resolveRequestDistro, type SearchParams } from '../../../../lib/requestContext'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
 export const revalidate = 3600
 
-type SearchParams = Record<string, string | string[] | undefined>
-
 class AliasRedirect extends Error {}
-
-function getFirst(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0]
-  return value
-}
 
 export async function generateMetadata({
   params,
@@ -39,9 +33,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { name, section } = await params
   const sp = await searchParams
-  const cookieStore = await cookies()
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = await resolveRequestDistro(sp)
 
   const origin = getPublicOrigin({ headers: await headers() })
 
@@ -96,31 +88,36 @@ export default async function ManByNameAndSectionPage({
 }) {
   const { name, section } = await params
   const sp = await searchParams
-  const cookieStore = await cookies()
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const requestedDistro = normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian'
+  const requestedDistro = await resolveRequestDistro(sp)
   let activeDistro = requestedDistro
 
   let aliasTarget: { name: string; section: string } | null = null
   try {
-    const { data: resolved } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
+    // Fetch content and related links in parallel: related only needs the
+    // (lowercased) URL name/section, not the resolved content payload.
+    const { data: bundle } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
       activeDistro = candidateDistro
-      return fetchManByNameAndSectionOrAlias({
+      // Related starts in parallel but an alias redirect must not wait for it.
+      const relatedPromise = fetchRelated({
+        distro: candidateDistro,
+        name: name.toLowerCase(),
+        section,
+      }).catch(() => ({ items: [] }))
+      const data = await fetchManByNameAndSectionOrAlias({
         distro: candidateDistro,
         name: name.toLowerCase(),
         section,
       })
+      if (data.kind === 'alias') return { data, related: { items: [] } }
+      return { data, related: await relatedPromise }
     })
+    const resolved = bundle.data
+    const related = bundle.related
     if (resolved.kind === 'alias') {
       aliasTarget = { name: resolved.name, section: resolved.section }
       throw new AliasRedirect()
     }
     const pageData = resolved.data
-    const related = await fetchRelated({
-      distro: activeDistro,
-      name: pageData.page.name,
-      section: pageData.page.section,
-    }).catch(() => ({ items: [] }))
 
     const nonce = (await headers()).get('x-nonce') ?? undefined
     const jsonLd = safeJsonLdStringify({

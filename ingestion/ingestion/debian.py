@@ -2,25 +2,9 @@ from __future__ import annotations
 
 import os
 import subprocess
-from dataclasses import dataclass
 from pathlib import Path
 
 _DPKG_INFO_DIR = Path("/var/lib/dpkg/info")
-
-
-@dataclass(frozen=True)
-class DebianProvenance:
-    image_ref: str
-    image_digest: str
-    locale: str
-    arch: str
-    packages: dict[str, str]
-    requested_packages: list[str]
-    mandoc_version: str | None
-
-
-def is_debian_like() -> bool:
-    return Path("/etc/debian_version").exists() and _DPKG_INFO_DIR.exists()
 
 
 def _enable_manpages_if_excluded() -> bool:
