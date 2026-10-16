@@ -13,7 +13,12 @@ GraphQL query. PR Checker verdicts for the same pull requests are summarized
 in the checker section. #306's final verdict is APPROVED. The other nine are
 CHANGES-NEEDED.
 
-The cleanup board is <https://github.com/users/amanthanvi/projects/5>.
+The cleanup board is <https://github.com/users/amanthanvi/projects/5>. `cursor[bot]`
+could not add draft items there. The repo owner's bots will file these three:
+
+- `1. Recall: feedback census`
+- `2. Correct: pitfall count over last 60 commits`
+- `3. Architect: CI guards + verification skill`
 
 ## Coverage
 
@@ -25,7 +30,11 @@ and the same notice on
 [#319](https://github.com/amanthanvi/BetterMan/pull/319) through
 [#326](https://github.com/amanthanvi/BetterMan/pull/326) target
 `t3/site-improvement-audit`, so those eight also received the non-default-base
-skip, then a rate-limited manual request. The review gate is Greptile.
+skip, then a rate-limited manual request. Pull requests into `main` hit the
+same hourly limit once a review has been spent. [#318](https://github.com/amanthanvi/BetterMan/pull/318#issuecomment-6136929570)
+reported zero included reviews remaining, and a later manual request on
+[#328](https://github.com/amanthanvi/BetterMan/pull/328#issuecomment-6225978931)
+was rate-limited. The review gate is Greptile.
 
 | PR | Base | CodeRabbit | Greptile inline threads | Latest bot SHA vs head |
 | --- | --- | ---: | ---: | --- |
@@ -58,6 +67,9 @@ allowance was free
 zero line comments). The other stacked pull requests have no CodeRabbit line
 review. Manual requests on #319 through #326 were rate-limited, for example
 [#319](https://github.com/amanthanvi/BetterMan/pull/319#issuecomment-6137172075).
+That hourly limit is not limited to stacked bases. A pull request into `main`
+hits it too: #318 used the included review and had none left, and #328's
+follow-up request was rate-limited.
 
 The review gate is Greptile. A Greptile pass on the pull request head is the
 bot result these changes are held to.
