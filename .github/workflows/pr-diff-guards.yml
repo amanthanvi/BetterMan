@@ -1,0 +1,37 @@
+name: pr-diff-guards
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# A body edit must not cancel these jobs. The Proof check lives in pr-proof.yml
+# and is the workflow that runs on edited.
+concurrency:
+  group: pr-diff-guards-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  diff_guards:
+    name: diff_guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so the three-dot diff can find the merge base of the
+          # pull request head and the base branch tip.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: git diff --check
+        run: bash scripts/check-pr-whitespace.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
+
+      - name: Test-runner config mixed with application code
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node scripts/check-mixed-test-config.mjs

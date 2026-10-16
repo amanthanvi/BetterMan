@@ -11,6 +11,58 @@ class ActivationPending(RuntimeError):
     pass
 
 
+class ConvexContractError(RuntimeError):
+    """The deployed Convex app does not satisfy this ingest client's contract."""
+
+
+# Keep these aligned with convex/ingestContract.ts. Ingestion refuses to write
+# until GET /ingest/contract advertises the same schema version, functions,
+# declaration counts, and activate-pending flag.
+REQUIRED_SCHEMA_VERSION = 1
+REQUIRED_FUNCTIONS = (
+    "ingest.createRelease",
+    "ingest.insertStoredPages",
+    "ingest.insertAliases",
+    "ingest.insertLicenses",
+    "ingest.activateRelease",
+)
+REQUIRED_DECLARATION_COUNTS = ("pageCount", "aliasCount", "licenseCount")
+_CONTRACT_PATH = "/ingest/contract"
+
+
+def _clip(detail: str) -> str:
+    text = " ".join(detail.split())
+    if len(text) > 300:
+        return text[:300] + "..."
+    return text
+
+
+def _contract_problems(payload: object) -> list[str]:
+    if not isinstance(payload, dict):
+        return ["response was not a JSON object"]
+    problems: list[str] = []
+    version = payload.get("schemaVersion")
+    if type(version) is not int or version != REQUIRED_SCHEMA_VERSION:
+        problems.append(f"schemaVersion {version!r} != {REQUIRED_SCHEMA_VERSION}")
+    functions = payload.get("functions")
+    if not isinstance(functions, list):
+        problems.append("functions is missing")
+    else:
+        missing = [name for name in REQUIRED_FUNCTIONS if name not in functions]
+        if missing:
+            problems.append("missing functions: " + ", ".join(missing))
+    counts = payload.get("declarationCounts")
+    if not isinstance(counts, list):
+        problems.append("declarationCounts is missing")
+    else:
+        missing_counts = [name for name in REQUIRED_DECLARATION_COUNTS if name not in counts]
+        if missing_counts:
+            problems.append("missing declaration counts: " + ", ".join(missing_counts))
+    if payload.get("activatePending") is not True:
+        problems.append("activatePending is not true")
+    return problems
+
+
 def convex_http_url(raw: str) -> str:
     value = raw.strip().rstrip("/")
     if not value:
@@ -28,6 +80,73 @@ class ConvexIngestClient:
     def __post_init__(self) -> None:
         if not self.ingest_secret.strip():
             raise ValueError("CONVEX_INGEST_SECRET is required")
+
+    def require_deployed_contract(self) -> dict:
+        """Read GET /ingest/contract and fail before any ingest write.
+
+        A 404 means this client's functions are not deployed yet. A mismatched
+        schema version, function list, declaration count, or activate-pending
+        flag means the deployment is older or newer than this client. Either
+        case raises ConvexContractError and must stop the run.
+        """
+        try:
+            payload = self._get_json(_CONTRACT_PATH)
+        except HTTPError as exc:
+            detail = _clip(exc.read().decode("utf-8", errors="replace"))
+            if exc.code == 404:
+                raise ConvexContractError(
+                    "Deployed Convex does not advertise the ingest contract "
+                    "(GET /ingest/contract returned 404). "
+                    "Deploy Convex before ingestion writes."
+                ) from exc
+            if exc.code == 401:
+                raise ConvexContractError(
+                    "Convex rejected the ingest secret for GET /ingest/contract. "
+                    "Ingestion will not write."
+                ) from exc
+            raise ConvexContractError(
+                "Could not read the deployed Convex ingest contract "
+                f"(HTTP {exc.code}: {detail}). Deploy Convex before ingestion writes."
+            ) from exc
+        except URLError as exc:
+            raise ConvexContractError(
+                "Could not reach Convex to verify the ingest contract "
+                f"({exc.reason}). Deploy Convex before ingestion writes."
+            ) from exc
+
+        problems = _contract_problems(payload)
+        if problems:
+            raise ConvexContractError(
+                "Deployed Convex ingest contract does not match this client: "
+                + "; ".join(problems)
+                + ". Deploy Convex before ingestion writes."
+            )
+        return payload
+
+    def _get_json(self, path: str, *, timeout_seconds: float = 30) -> object:
+        url = f"{convex_http_url(self.http_url)}/{path.lstrip('/')}"
+        req = Request(
+            url,
+            method="GET",
+            headers={
+                "Authorization": f"Bearer {self.ingest_secret}",
+                "Accept": "application/json",
+            },
+        )
+        with urlopen(req, timeout=timeout_seconds) as res:
+            raw = res.read().decode("utf-8")
+        if not raw:
+            raise ConvexContractError(
+                "Deployed Convex ingest contract response was empty. "
+                "Deploy Convex before ingestion writes."
+            )
+        try:
+            return json.loads(raw)
+        except ValueError as exc:
+            raise ConvexContractError(
+                "Deployed Convex ingest contract response was not JSON. "
+                "Deploy Convex before ingestion writes."
+            ) from exc
 
     def activate_release(self, payload: dict, *, timeout_seconds: float = 300) -> dict:
         deadline = time.monotonic() + timeout_seconds
