@@ -29,8 +29,11 @@ function headingMatch(line) {
 }
 
 function openFence(line) {
-  const match = /^ {0,3}(`{3,}|~{3,})/.exec(line)
+  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line)
   if (!match) return null
+  // A backtick fence cannot have a backtick in the info string. That rejects
+  // a one-line span such as ```pnpm test```, which is not a fence.
+  if (match[1][0] === '`' && match[2].includes('`')) return null
   return { char: match[1][0], length: match[1].length }
 }
 

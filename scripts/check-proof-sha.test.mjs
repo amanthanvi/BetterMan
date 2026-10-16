@@ -31,6 +31,11 @@ test('keeps a fenced shell comment and a SHA on a nested heading', () => {
   assert.match(checkProof({ body: comment, sha, author: 'amanthanvi' }).message, /does not cite/)
 })
 
+test('does not hide Proof behind a one-line code span', () => {
+  const body = 'See ```pnpm test```.\n\n## Proof\n\n' + sha + '\n'
+  assert.equal(checkProof({ body, sha, author: 'amanthanvi' }).ok, true)
+})
+
 test('does not treat a longer heading as the Proof section', () => {
   const body = `## Proof of work\n\n${sha}\n`
   assert.match(checkProof({ body, sha, author: 'amanthanvi' }).message, /missing/i)
