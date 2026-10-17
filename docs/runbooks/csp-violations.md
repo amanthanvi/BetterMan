@@ -13,7 +13,7 @@ BetterMan uses CSP with strict script nonces and relaxed styles.
    - `Content-Security-Policy: …`
 2. Confirm scripts are nonce-protected:
    - `script-src 'self' 'nonce-…'`
-3. Confirm styles are allowed for TanStack Virtual:
+3. Confirm inline styles are allowed (React `style` props such as the contents marker):
    - `style-src 'self' 'unsafe-inline'`
 
 ## Most common causes

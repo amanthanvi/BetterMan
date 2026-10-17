@@ -5,8 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { BlockNode } from '../../lib/docModel'
 import { getScrollBehavior } from '../../lib/scroll'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
-import type { DocRendererHandle } from '../doc/DocRenderer'
-import { buildFindIndex, locateFindMatch } from './findIndex'
+import { countFindMatches } from './findCount'
 
 const FIND_DEBOUNCE_MS = 150
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
@@ -21,7 +20,6 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const pendingFocusRestoreTargetRef = useRef<HTMLElement | null>(null)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const findInputRef = useRef<HTMLInputElement | null>(null)
-  const docRef = useRef<DocRendererHandle | null>(null)
 
   const rawFindQuery = find.trim()
   const findQuery = rawFindQuery.length >= 2 ? rawFindQuery : ''
@@ -32,12 +30,10 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   const isStale = effectiveFindQuery !== findQuery
   const findEnabled = !isStale && effectiveFindQuery.length >= 2
 
-  const findIndex = useMemo(
-    () => (findEnabled ? buildFindIndex(blocks, effectiveFindQuery) : null),
+  const matchCount = useMemo(
+    () => (findEnabled ? countFindMatches(blocks, effectiveFindQuery) : 0),
     [blocks, effectiveFindQuery, findEnabled],
   )
-
-  const matchCount = findIndex?.total ?? 0
   const displayIndex = matchCount ? Math.min(activeFindIndex, matchCount - 1) : 0
 
   const findCountLabel =
@@ -90,33 +86,6 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     if (!matchCount) return
     const clamped = ((idx % matchCount) + matchCount) % matchCount
     const scrollBehavior = getScrollBehavior()
-
-    if (docRef.current?.isVirtualized && findIndex) {
-      const loc = locateFindMatch(findIndex.prefixByBlock, clamped)
-      if (!loc) return
-
-      docRef.current.scrollToBlockIndex(loc.blockIndex, { align: 'center', behavior: scrollBehavior })
-
-      let attempts = 0
-      const tick = () => {
-        attempts += 1
-        const block = document.querySelector<HTMLElement>(`[data-bm-block-index="${loc.blockIndex}"]`)
-        const marks = block ? Array.from(block.querySelectorAll<HTMLElement>('mark[data-bm-find]')) : []
-        if (marks.length) {
-          const el = marks[Math.min(loc.withinBlockIndex, marks.length - 1)]
-          if (!el) return
-          el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
-          if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-          el.classList.add('bm-find-active')
-          activeMarkRef.current = el
-          return
-        }
-        if (attempts < 20) window.requestAnimationFrame(tick)
-      }
-
-      window.requestAnimationFrame(tick)
-      return
-    }
 
     const marks = Array.from(document.querySelectorAll<HTMLElement>('mark[data-bm-find]'))
     if (!marks.length) return
@@ -173,7 +142,6 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
   }
 
   return {
-    docRef,
     find,
     findOpen,
     findInputRef,

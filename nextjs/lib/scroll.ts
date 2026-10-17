@@ -3,7 +3,10 @@ export function getScrollBehavior(): 'auto' | 'smooth' {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }
 
-/** Virtualized blocks mount a few frames after the virtualizer scrolls, so retry until the target exists. */
+/**
+ * Scroll on a later frame, after AppShell's mount scroll and after a hash-driven
+ * options expansion commits. Retry while the target has not rendered yet.
+ */
 export function scrollToIdWhenRendered(id: string, opts: { behavior: ScrollBehavior; block: ScrollLogicalPosition }) {
   let attempts = 0
 

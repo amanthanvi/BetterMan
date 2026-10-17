@@ -1,53 +1,10 @@
 import type { BlockNode, InlineNode } from '../../lib/docModel'
 
-export type FindIndex = {
-  prefixByBlock: number[]
-  total: number
-}
-
-export type FindLocation = {
-  blockIndex: number
-  withinBlockIndex: number
-}
-
-export function buildFindIndex(blocks: BlockNode[], query: string): FindIndex {
-  const q = query.trim()
-  if (q.length < 2) return { prefixByBlock: new Array(blocks.length).fill(0), total: 0 }
-
-  const needle = q.toLowerCase()
-  const prefixByBlock = new Array<number>(blocks.length)
-  let total = 0
-
-  for (let idx = 0; idx < blocks.length; idx += 1) {
-    total += countInBlock(blocks[idx]!, needle)
-    prefixByBlock[idx] = total
-  }
-
-  return { prefixByBlock, total }
-}
-
-export function locateFindMatch(prefixByBlock: number[], matchIndex: number): FindLocation | null {
-  if (!prefixByBlock.length) return null
-
-  const target = matchIndex + 1
-  let lo = 0
-  let hi = prefixByBlock.length - 1
-  let ans = -1
-
-  while (lo <= hi) {
-    const mid = Math.floor((lo + hi) / 2)
-    const v = prefixByBlock[mid]!
-    if (v >= target) {
-      ans = mid
-      hi = mid - 1
-    } else {
-      lo = mid + 1
-    }
-  }
-
-  if (ans < 0) return null
-  const prev = ans === 0 ? 0 : prefixByBlock[ans - 1]!
-  return { blockIndex: ans, withinBlockIndex: matchIndex - prev }
+/** Count case-insensitive, non-overlapping matches of the find query. */
+export function countFindMatches(blocks: BlockNode[], query: string): number {
+  const needle = query.trim().toLowerCase()
+  if (needle.length < 2) return 0
+  return countInBlocks(blocks, needle)
 }
 
 function countInBlock(block: BlockNode, needle: string): number {
