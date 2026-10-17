@@ -23,6 +23,18 @@ test('command palette: opens and navigates to a page', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 })
 
+test('command palette: @freebsd prefix opens the FreeBSD variant', async ({ page }) => {
+  await page.goto('/')
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Search' }).click()
+  await page.getByRole('combobox', { name: 'Command palette input' }).fill('@freebsd tar')
+  // The variant-specific description proves search ran against the FreeBSD dataset.
+  await page.getByRole('option', { name: /tar\(1\)/i }).filter({ hasText: 'FreeBSD variant' }).click()
+  await expect(page).toHaveURL(/\/man\/tar\/1\?distro=freebsd/)
+  await expect(page.getByLabel('Select distribution variant')).toHaveValue('freebsd')
+  await expect(page.getByText('FreeBSD variant: this page is intentionally different for E2E testing.')).toBeVisible()
+})
+
 test('command palette: a11y (no critical/serious violations)', async ({ page }) => {
   await page.goto('/')
   await waitForInteractiveShell(page)

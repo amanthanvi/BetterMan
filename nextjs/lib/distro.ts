@@ -1,10 +1,11 @@
-export type Distro = 'debian' | 'ubuntu' | 'fedora' | 'arch' | 'alpine'
+export type Distro = 'debian' | 'ubuntu' | 'fedora' | 'arch' | 'alpine' | 'freebsd' | 'macos'
 
 export const DISTRO_COOKIE = 'bm-distro'
 export const DISTRO_STORAGE_KEY = 'bm-distro'
 
 export const DISTRO_GROUPS: ReadonlyArray<{ label: string; items: readonly Distro[] }> = [
   { label: 'Linux', items: ['debian', 'ubuntu', 'fedora', 'arch', 'alpine'] as const },
+  { label: 'BSD', items: ['freebsd', 'macos'] as const },
 ] as const
 
 export const DISTROS: readonly Distro[] = DISTRO_GROUPS.flatMap((g) => g.items)
@@ -18,6 +19,8 @@ export const DISTRO_LABEL: Record<Distro, string> = {
   fedora: 'Fedora',
   arch: 'Arch Linux',
   alpine: 'Alpine',
+  freebsd: 'FreeBSD',
+  macos: 'macOS (BSD)',
 }
 
 export function normalizeDistro(value: unknown): Distro | null {
@@ -28,7 +31,9 @@ export function normalizeDistro(value: unknown): Distro | null {
     v === 'ubuntu' ||
     v === 'fedora' ||
     v === 'arch' ||
-    v === 'alpine'
+    v === 'alpine' ||
+    v === 'freebsd' ||
+    v === 'macos'
   )
     return v
   return null
