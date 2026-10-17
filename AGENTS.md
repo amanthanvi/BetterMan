@@ -35,6 +35,7 @@ BetterMan is a Next.js app on Vercel that reads man page data from Convex. A Pyt
 
 ```bash
 npx convex env set CONVEX_INGEST_SECRET dev
+npx convex env set RATE_LIMIT_TAG_KEY dev
 set -a; . ./.env.local; set +a
 BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL:-$VITE_CONVEX_SITE_URL}" node scripts/seed-convex-e2e.mjs
 ```
@@ -45,6 +46,7 @@ BETTERMAN_E2E_SEED=1 CONVEX_INGEST_SECRET=dev CONVEX_HTTP_URL="${CONVEX_SITE_URL
 set -a; . ./.env.local; set +a
 export CONVEX_URL="${CONVEX_URL:-$VITE_CONVEX_URL}"
 export NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL"
+export RATE_LIMIT_TAG_KEY=dev  # must match Convex, or rate-limited routes return 429
 CONVEX_AGENT_MODE=anonymous pnpm next:dev
 ```
 
