@@ -1,10 +1,21 @@
+import json
+import re
+from http.client import HTTPException, RemoteDisconnected
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import Mock
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import pytest
 
-from ingestion.convex_client import ActivationPending, ConvexIngestClient
+from ingestion.convex_client import (
+    REQUIRED_DECLARATION_COUNTS,
+    REQUIRED_FUNCTIONS,
+    REQUIRED_SCHEMA_VERSION,
+    ActivationPending,
+    ConvexContractError,
+    ConvexIngestClient,
+)
 
 
 def test_activation_retries_pending_http_conflict(monkeypatch):
@@ -85,6 +96,202 @@ def test_activation_timeout_does_not_report_publication(monkeypatch):
         ConvexIngestClient("https://test.convex.site", "test-secret").activate_release(
             {"datasetReleaseId": "new"}, timeout_seconds=2
         )
+
+
+def _contract_body(**overrides: object) -> bytes:
+    payload = {
+        "schemaVersion": REQUIRED_SCHEMA_VERSION,
+        "functions": list(REQUIRED_FUNCTIONS),
+        "declarationCounts": list(REQUIRED_DECLARATION_COUNTS),
+        "activatePending": True,
+    }
+    payload.update(overrides)
+    return json.dumps(payload).encode()
+
+
+def test_require_deployed_contract_accepts_a_matching_deployment(monkeypatch):
+    monkeypatch.setattr(
+        "ingestion.convex_client.urlopen", Mock(return_value=BytesIO(_contract_body()))
+    )
+    client = ConvexIngestClient("https://test.convex.site", "test-secret")
+    result = client.require_deployed_contract()
+    assert result["schemaVersion"] == REQUIRED_SCHEMA_VERSION
+    assert "ingest.activateRelease" in result["functions"]
+
+
+def test_require_deployed_contract_accepts_extra_functions(monkeypatch):
+    body = _contract_body(functions=[*REQUIRED_FUNCTIONS, "ingest.promoteActiveReleases"])
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BytesIO(body)))
+    ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        ({"schemaVersion": 0}, "schemaVersion"),
+        ({"functions": ["ingest.createRelease"]}, "missing functions"),
+        ({"declarationCounts": ["pageCount"]}, "declaration counts"),
+        ({"activatePending": False}, "activatePending"),
+    ],
+)
+def test_require_deployed_contract_rejects_a_partial_deployment(monkeypatch, payload, match):
+    monkeypatch.setattr(
+        "ingestion.convex_client.urlopen",
+        Mock(return_value=BytesIO(_contract_body(**payload))),
+    )
+    with pytest.raises(ConvexContractError, match=match):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_fails_fast_when_the_route_is_missing(monkeypatch):
+    error = HTTPError(
+        "https://test.convex.site/ingest/contract",
+        404,
+        "Not Found",
+        {},
+        BytesIO(b"missing"),
+    )
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=error))
+    with pytest.raises(ConvexContractError, match="404"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_rejects_a_bad_secret(monkeypatch):
+    error = HTTPError(
+        "https://test.convex.site/ingest/contract",
+        401,
+        "Unauthorized",
+        {},
+        BytesIO(b'{"error":{"code":"UNAUTHORIZED"}}'),
+    )
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=error))
+    with pytest.raises(ConvexContractError, match="ingest secret"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_rejects_a_non_json_body(monkeypatch):
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BytesIO(b"not-json")))
+    with pytest.raises(ConvexContractError, match="not JSON"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_rejects_an_empty_body(monkeypatch):
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BytesIO(b"")))
+    with pytest.raises(ConvexContractError, match="empty"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_reports_other_http_failures(monkeypatch):
+    error = HTTPError(
+        "https://test.convex.site/ingest/contract",
+        503,
+        "Unavailable",
+        {},
+        BytesIO(b"upstream down"),
+    )
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=error))
+    with pytest.raises(ConvexContractError, match="HTTP 503"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+@pytest.mark.parametrize(
+    ("failure", "match"),
+    [
+        ("utf-8", "not UTF-8"),
+        (HTTPException("truncated"), "truncated"),
+        (ConnectionError("reset"), "reset"),
+    ],
+)
+def test_require_deployed_contract_wraps_a_broken_read(monkeypatch, failure, match):
+    class BrokenBody(BytesIO):
+        def read(self, *args, **kwargs):
+            if failure == "utf-8":
+                return b"\xff"
+            raise failure
+
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BrokenBody(b"")))
+    with pytest.raises(ConvexContractError, match=match):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_skips_the_error_body_for_a_missing_route(monkeypatch):
+    class StallingError(HTTPError):
+        def read(self, *args, **kwargs):
+            raise TimeoutError("stalled")
+
+    error = StallingError(
+        "https://test.convex.site/ingest/contract",
+        404,
+        "Not Found",
+        {},
+        BytesIO(b""),
+    )
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=error))
+    with pytest.raises(ConvexContractError, match="404"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_wraps_a_timeout_while_reading_an_error_body(monkeypatch):
+    class StallingError(HTTPError):
+        def read(self, *args, **kwargs):
+            raise TimeoutError("stalled")
+
+    error = StallingError(
+        "https://test.convex.site/ingest/contract",
+        500,
+        "Server Error",
+        {},
+        BytesIO(b""),
+    )
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=error))
+    with pytest.raises(ConvexContractError, match="timed out"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_wraps_a_disconnect_before_the_response(monkeypatch):
+    monkeypatch.setattr(
+        "ingestion.convex_client.urlopen",
+        Mock(side_effect=RemoteDisconnected("closed")),
+    )
+    with pytest.raises(ConvexContractError, match="closed"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_wraps_a_read_timeout(monkeypatch):
+    class SlowBody(BytesIO):
+        def read(self, *args, **kwargs):
+            raise TimeoutError("timed out")
+
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=SlowBody(b"")))
+    with pytest.raises(ConvexContractError, match="timed out"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_reports_an_unreachable_deployment(monkeypatch):
+    monkeypatch.setattr(
+        "ingestion.convex_client.urlopen",
+        Mock(side_effect=URLError("deployment unavailable")),
+    )
+    with pytest.raises(ConvexContractError, match="Could not reach Convex"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_required_contract_matches_convex_source():
+    source = (Path(__file__).resolve().parents[2] / "convex" / "ingestContract.ts").read_text(
+        encoding="utf-8"
+    )
+    version = re.search(r"INGEST_CONTRACT_SCHEMA_VERSION = (\d+);", source)
+    functions = re.search(r"functions: \[([^\]]+)\]", source)
+    counts = re.search(r"declarationCounts: \[([^\]]+)\]", source)
+    pending = re.search(r"activatePending: (true|false)", source)
+    assert version is not None
+    assert functions is not None
+    assert counts is not None
+    assert pending is not None
+    assert int(version.group(1)) == REQUIRED_SCHEMA_VERSION
+    assert re.findall(r'"([^"]+)"', functions.group(1)) == list(REQUIRED_FUNCTIONS)
+    assert re.findall(r'"([^"]+)"', counts.group(1)) == list(REQUIRED_DECLARATION_COUNTS)
+    assert pending.group(1) == "true"
 
 
 def test_confirmed_activation_is_accepted_at_deadline(monkeypatch):

@@ -17,6 +17,7 @@ import type * as _storedPayload from "../_storedPayload.js";
 import type * as content from "../content.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
+import type * as ingestContract from "../ingestContract.js";
 import type * as lib from "../lib.js";
 import type * as maintenance from "../maintenance.js";
 import type * as manifest from "../manifest.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   content: typeof content;
   http: typeof http;
   ingest: typeof ingest;
+  ingestContract: typeof ingestContract;
   lib: typeof lib;
   maintenance: typeof maintenance;
   manifest: typeof manifest;
