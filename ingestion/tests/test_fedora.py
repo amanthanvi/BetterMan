@@ -35,6 +35,34 @@ def test_build_manpath_to_package_maps_rpm_owners(monkeypatch) -> None:
     assert mapping["/usr/share/man/man1/curl.1.gz"] == "pkg1"
 
 
+def test_build_manpath_to_package_handles_multi_owner_and_unowned_files(monkeypatch) -> None:
+    owners = {
+        "/usr/share/man/man1/ls.1": ["coreutils"],
+        "/usr/share/man/man1/shared.1": ["pkg-a", "pkg-b"],
+        "/usr/share/man/man1/stray.1": [],
+    }
+
+    def fake_run(cmd: list[str], **_kwargs: object):
+        lines = []
+        for path in cmd[4:]:
+            lines += owners[path] or [f"file {path} is not owned by any package"]
+        returncode = 0 if all(owners[path] for path in cmd[4:]) else 1
+        return SimpleNamespace(returncode=returncode, stdout="\n".join(lines) + "\n")
+
+    monkeypatch.setattr(fedora.subprocess, "run", fake_run)
+
+    # A second owner adds a line, so the chunk falls back to per-file queries.
+    assert fedora.build_manpath_to_package(paths=list(owners)) == {
+        "/usr/share/man/man1/ls.1": "coreutils",
+        "/usr/share/man/man1/shared.1": "pkg-a",
+    }
+    # Line counts match, but the unowned file's notice is not a package name.
+    del owners["/usr/share/man/man1/shared.1"]
+    assert fedora.build_manpath_to_package(paths=list(owners)) == {
+        "/usr/share/man/man1/ls.1": "coreutils",
+    }
+
+
 def test_dnf_install_reinstalls_preinstalled(monkeypatch) -> None:
     calls: list[list[str]] = []
 

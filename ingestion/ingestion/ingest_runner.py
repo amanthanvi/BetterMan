@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import gzip
 import logging
+import os
 import re
-import uuid
 from collections import Counter
+from collections.abc import Iterator
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,7 +34,7 @@ from ingestion.arch import (
     pacman_packages,
 )
 from ingestion.convex_client import ConvexIngestClient
-from ingestion.db import iso_utc_now, json_dumps, uuid4
+from ingestion.db import iso_utc_now, json_dumps
 from ingestion.debian import (
     apt_install,
     dpkg_arch,
@@ -69,11 +70,11 @@ from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_nam
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import normalize_ws, sha256_hex
 
-_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+\\-]*$")
+_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]*$")
 _PKG_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9.+-]+$")
 _DOC_ROOT = Path("/usr/share/doc")
 _MAN_HREF_RE = re.compile(
-    r"^/man/(?P<name>[a-z0-9][a-z0-9._+\\-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
+    r"^/man/(?P<name>[a-z0-9][a-z0-9._+-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
 )
 
 logger = logging.getLogger("betterman.ingestion")
@@ -111,6 +112,7 @@ def ingest(
     client = ConvexIngestClient(http_url=convex_url, ingest_secret=ingest_secret)
     contract = client.require_deployed_contract()
     _log("ingest_contract_ok", schemaVersion=contract.get("schemaVersion"))
+    workers = _ingest_worker_count()
 
     requested = _content_packages(sample=sample, distro=distro)
     if distro in {"debian", "ubuntu"}:
@@ -192,41 +194,11 @@ def ingest(
     if distro == "macos":
         package_manifest["osVersion"] = macos_version()
 
-    parsed_pages: list[_PageRow] = []
-    aliases: list[_AliasRow] = []
-    parse_failed = 0
-    parse_started = monotonic()
-    for src in sources:
-        try:
-            alias = _alias_for_source(src)
-            if alias is not None:
-                aliases.append(alias)
-                continue
-            parsed_pages.append(
-                _parse_source(
-                    src,
-                    packages=packages,
-                    manpath_to_pkg=manpath_to_pkg,
-                    arch=arch,
-                )
-            )
-        except Exception as exc:  # noqa: BLE001 (batch ingestion)
-            parse_failed += 1
-            _log("page_parse_failed", path=str(src.path), error=str(exc))
-
-        processed = len(parsed_pages) + len(aliases) + parse_failed
-        if processed and processed % 100 == 0:
-            elapsed = monotonic() - parse_started
-            rate = processed / elapsed if elapsed > 0 else 0.0
-            remaining = max(0, len(sources) - processed)
-            eta_s = int(remaining / rate) if rate > 0 else None
-            _log(
-                "parse_progress",
-                processed=processed,
-                total=len(sources),
-                pct=round((processed / len(sources)) * 100.0, 2) if sources else 0.0,
-                etaSeconds=eta_s,
-            )
+    parsed_pages, aliases, parse_failed = _parse_sources(
+        sources,
+        _ParseContext(distro=distro, arch=arch, packages=packages, manpath_to_pkg=manpath_to_pkg),
+        workers=workers,
+    )
 
     total = len(sources)
 
@@ -381,7 +353,7 @@ def ingest(
 
 @dataclass(frozen=True)
 class _PageRow:
-    page_id: uuid.UUID
+    page_id: str
     name: str
     section: str
     title: str
@@ -409,9 +381,9 @@ class _AliasRow:
     source_path: str
 
 
-def _alias_for_source(src: ManSource) -> _AliasRow | None:
+def _alias_for_source(src: ManSource, raw: bytes) -> _AliasRow | None:
     """Return an alias row when the source is a bare `.so` include stub."""
-    target = is_so_stub(read_roff(src.path))
+    target = is_so_stub(raw)
     if target is None:
         return None
     parsed = so_target_name_section(target)
@@ -482,7 +454,7 @@ def _filter_macos_sources(sources: list[ManSource]) -> list[ManSource]:
     out: list[ManSource] = []
     for src in sources:
         try:
-            raw = _read_bytes(src.path)
+            raw = read_roff(src.path)
         except Exception:  # noqa: BLE001
             continue
         if not is_permissive_manpage(raw):
@@ -491,30 +463,131 @@ def _filter_macos_sources(sources: list[ManSource]) -> list[ManSource]:
     return out
 
 
-def _parse_source(
-    src: ManSource,
-    *,
-    packages: dict[str, str],
-    manpath_to_pkg: dict[str, str],
-    arch: str,
-) -> _PageRow:
-    raw_bytes = _read_bytes(src.path)
-    html_result = render_html(src.path)
+@dataclass(frozen=True)
+class _ParseContext:
+    distro: str
+    arch: str
+    packages: dict[str, str]
+    manpath_to_pkg: dict[str, str]
+
+
+@dataclass(frozen=True)
+class _ParseResult:
+    page: _PageRow | None = None
+    alias: _AliasRow | None = None
+    error: str | None = None
+
+
+_MAX_INGEST_WORKERS = 8
+_worker_context: _ParseContext | None = None
+
+
+def _ingest_worker_count() -> int:
+    value = os.environ.get("BETTERMAN_INGEST_WORKERS", "").strip()
+    if not value:
+        return min(_MAX_INGEST_WORKERS, os.cpu_count() or 1)
+    try:
+        requested = int(value)
+    except ValueError:
+        raise RuntimeError("BETTERMAN_INGEST_WORKERS must be an integer") from None
+    return max(1, min(_MAX_INGEST_WORKERS, requested))
+
+
+def _parse_sources(
+    sources: list[ManSource], context: _ParseContext, *, workers: int
+) -> tuple[list[_PageRow], list[_AliasRow], int]:
+    pages: list[_PageRow] = []
+    aliases: list[_AliasRow] = []
+    failed = 0
+    started = monotonic()
+    results = _parse_results(sources, context, workers=workers)
+    for processed, (src, result) in enumerate(zip(sources, results, strict=True), start=1):
+        if result.error is not None:
+            failed += 1
+            _log("page_parse_failed", path=str(src.path), error=result.error)
+        elif result.alias is not None:
+            aliases.append(result.alias)
+        elif result.page is not None:
+            pages.append(result.page)
+
+        if processed % 100 == 0:
+            elapsed = monotonic() - started
+            rate = processed / elapsed if elapsed > 0 else 0.0
+            eta_s = int((len(sources) - processed) / rate) if rate > 0 else None
+            _log(
+                "parse_progress",
+                processed=processed,
+                total=len(sources),
+                pct=round((processed / len(sources)) * 100.0, 2),
+                etaSeconds=eta_s,
+            )
+    return pages, aliases, failed
+
+
+def _parse_results(
+    sources: list[ManSource], context: _ParseContext, *, workers: int
+) -> Iterator[_ParseResult]:
+    if workers == 1 or len(sources) < 2:
+        for src in sources:
+            yield _parse_one(src, context)
+        return
+    with ProcessPoolExecutor(
+        max_workers=min(workers, len(sources)),
+        initializer=_init_parse_worker,
+        initargs=(context,),
+    ) as executor:
+        # map yields in source order, so links, aliases and sitemap pages
+        # come out exactly as the sequential path produces them.
+        yield from executor.map(_parse_in_worker, sources)
+
+
+def _init_parse_worker(context: _ParseContext) -> None:
+    # Ship the package maps once per worker process, not once per page.
+    global _worker_context
+    _worker_context = context
+
+
+def _parse_in_worker(src: ManSource) -> _ParseResult:
+    assert _worker_context is not None
+    return _parse_one(src, _worker_context)
+
+
+def _parse_one(src: ManSource, context: _ParseContext) -> _ParseResult:
+    try:
+        raw = read_roff(src.path)
+        alias = _alias_for_source(src, raw)
+        if alias is not None:
+            return _ParseResult(alias=alias)
+        return _ParseResult(page=_parse_source(src, raw, context))
+    except Exception as exc:  # noqa: BLE001 (batch ingestion)
+        # Return the message rather than raising: one bad page must not stop
+        # executor.map, and arbitrary exceptions need not be picklable.
+        return _ParseResult(error=str(exc))
+
+
+def _page_external_id(*, distro: str, name: str, section: str) -> str:
+    # Same id for the same page across runs and worker counts. Convex scopes
+    # externalId to a release, and sources are already unique per (name, section).
+    return sha256_hex(f"{distro}/{name}/{section}".encode())[:32]
+
+
+def _parse_source(src: ManSource, raw: bytes, context: _ParseContext) -> _PageRow:
+    html_result = render_html(raw)
     parsed = parse_mandoc_html(html_result.html)
 
-    page_id = uuid4()
     source_path = str(src.path)
+    manpath_to_pkg = context.manpath_to_pkg
     source_package = manpath_to_pkg.get(source_path) or manpath_to_pkg.get(str(src.path.resolve()))
     source_package_version = None
     if source_package:
-        source_package_version = packages.get(source_package) or packages.get(
-            f"{source_package}:{arch}"
+        source_package_version = context.packages.get(source_package) or context.packages.get(
+            f"{source_package}:{context.arch}"
         )
 
     title = f"{src.name}({src.section})"
 
     return _PageRow(
-        page_id=page_id,
+        page_id=_page_external_id(distro=context.distro, name=src.name, section=src.section),
         name=src.name,
         section=src.section,
         title=title,
@@ -522,7 +595,7 @@ def _parse_source(
         source_path=source_path,
         source_package=source_package,
         source_package_version=source_package_version,
-        content_sha256=sha256_hex(raw_bytes),
+        content_sha256=sha256_hex(raw),
         has_parse_warnings=html_result.warnings is not None,
         doc=parsed.doc.model_dump(),
         plain_text=parsed.plain_text,
@@ -538,13 +611,6 @@ def _dump_models(items: list[OptionItem] | list[SeeAlsoRef] | None) -> list[dict
     if not items:
         return None
     return [item.model_dump() for item in items]
-
-
-def _read_bytes(path: Path) -> bytes:
-    if path.name.endswith(".gz"):
-        with gzip.open(path, "rb") as f:
-            return f.read()
-    return path.read_bytes()
 
 
 def _build_dataset_release_id(*, git_sha: str, mandoc_version: str | None, distro: str) -> str:

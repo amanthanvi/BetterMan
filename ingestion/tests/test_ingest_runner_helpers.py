@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import gzip
+import hashlib
+import shutil
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -11,12 +16,17 @@ from ingestion.ingest_runner import (
     _build_page_links,
     _content_packages,
     _filter_sources,
+    _ingest_worker_count,
     _iter_internal_doc_links,
     _PageRow,
     _parse_man_href,
+    _parse_sources,
+    _ParseContext,
     _resolve_aliases,
 )
 from ingestion.man_scan import ManSource
+
+_ROFF = Path(__file__).parent / "fixtures" / "roff"
 
 
 def test_filter_sources_dedupes_and_normalizes() -> None:
@@ -24,11 +34,77 @@ def test_filter_sources_dedupes_and_normalizes() -> None:
         ManSource(path="/usr/share/man/man1/FOO.1.gz", name="FOO", section="1"),
         ManSource(path="/usr/share/man/man1/foo.1", name="foo", section="1"),
         ManSource(path="/usr/share/man/man1/invalid name.1", name="invalid name", section="1"),
+        ManSource(path="/usr/share/man/man1/back\\slash.1", name="back\\slash", section="1"),
         ManSource(path="/usr/share/man/man5/bar.5", name="bar", section="5"),
     ]
 
     filtered = _filter_sources(sources)
     assert [(s.name, s.section) for s in filtered] == [("foo", "1"), ("bar", "5")]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"), [("1", 1), ("3", 3), (" 4 ", 4), ("0", 1), ("-2", 1), ("64", 8)]
+)
+def test_ingest_worker_count_is_clamped(monkeypatch, value: str, expected: int) -> None:
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", value)
+    assert _ingest_worker_count() == expected
+
+
+def test_ingest_worker_count_defaults_to_cpus_up_to_eight(monkeypatch) -> None:
+    monkeypatch.delenv("BETTERMAN_INGEST_WORKERS", raising=False)
+    monkeypatch.setattr(ingest_runner.os, "cpu_count", lambda: 32)
+    assert _ingest_worker_count() == 8
+    monkeypatch.setattr(ingest_runner.os, "cpu_count", lambda: None)
+    assert _ingest_worker_count() == 1
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "many")
+    with pytest.raises(RuntimeError, match="BETTERMAN_INGEST_WORKERS"):
+        _ingest_worker_count()
+
+
+@pytest.mark.skipif(shutil.which("mandoc") is None, reason="mandoc not installed")
+def test_parallel_parse_matches_sequential(monkeypatch, tmp_path: Path) -> None:
+    pools: list[int] = []
+
+    class RecordingPool(ProcessPoolExecutor):
+        def __init__(self, **kwargs) -> None:
+            pools.append(kwargs["max_workers"])
+            super().__init__(**kwargs)
+
+    monkeypatch.setattr(ingest_runner, "ProcessPoolExecutor", RecordingPool)
+    gz = tmp_path / "ls.1.GZ"
+    gz.write_bytes(gzip.compress((_ROFF / "ls.1").read_bytes()))
+    sources = [
+        ManSource(path=_ROFF / "ascii.7", name="ascii", section="7"),
+        ManSource(path=gz, name="ls", section="1"),
+        ManSource(path=_ROFF / "man.7", name="man", section="7"),
+        ManSource(path=tmp_path / "missing.1", name="missing", section="1"),
+        ManSource(path=_ROFF / "ssh_config.5", name="ssh_config", section="5"),
+        ManSource(path=_ROFF / "tar.1", name="tar", section="1"),
+    ]
+    context = _ParseContext(
+        distro="debian",
+        arch="amd64",
+        packages={"tar": "1.35"},
+        manpath_to_pkg={str(_ROFF / "tar.1"): "tar"},
+    )
+
+    sequential = _parse_sources(sources, context, workers=1)
+    parallel = _parse_sources(sources, context, workers=4)
+
+    assert pools == [4]
+    assert parallel == sequential
+    pages, aliases, failed = sequential
+    assert [(p.name, p.section) for p in pages] == [
+        ("ascii", "7"),
+        ("ls", "1"),
+        ("ssh_config", "5"),
+        ("tar", "1"),
+    ]
+    assert pages[1].content_sha256 == hashlib.sha256((_ROFF / "ls.1").read_bytes()).hexdigest()
+    assert pages[3].page_id == hashlib.sha256(b"debian/tar/1").hexdigest()[:32]
+    assert pages[3].source_package_version == "1.35"
+    assert [(a.name, a.target_name) for a in aliases] == [("man", "groff_man")]
+    assert failed == 1
 
 
 def test_content_packages_dedupes_base_packages() -> None:
@@ -61,6 +137,7 @@ def test_parse_man_href_supports_extended_sections() -> None:
     assert _parse_man_href("/man/curl/1") == ("curl", "1")
     assert _parse_man_href("/man/curl") == ("curl", None)
     assert _parse_man_href("https://example.com/man/curl/1") is None
+    assert _parse_man_href("/man/back\\slash/1") is None
 
 
 def test_iter_internal_doc_links_yields_nested_links() -> None:
@@ -256,11 +333,14 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
     monkeypatch.setattr(ingest_runner, "dpkg_arch", lambda: "amd64")
     monkeypatch.setattr(ingest_runner, "mandoc_pkg_version_dpkg", lambda _packages: "1.0")
     monkeypatch.setattr(ingest_runner, "build_manpath_to_package_dpkg", lambda: {})
+    # Monkeypatches do not reach spawn or forkserver worker processes.
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
+    monkeypatch.setattr(ingest_runner, "read_roff", lambda _path: b"")
     monkeypatch.setattr(ingest_runner, "_parse_source", lambda *_args, **_kwargs: pages[0])
     monkeypatch.setattr(
         ingest_runner,
         "_alias_for_source",
-        lambda source: _alias("stub", "real") if source.name == "stub" else None,
+        lambda source, _raw: _alias("stub", "real") if source.name == "stub" else None,
     )
     monkeypatch.setattr(
         ingest_runner,
