@@ -159,14 +159,15 @@ export const backfillRelease = internalMutation({
 
     let updated = 0;
     for (const link of batch.page) {
-      if (cachedRelatedItem(link)) continue;
+      if (link.toMissing || cachedRelatedItem(link)) continue;
       const target = await pageByNameAndSection(ctx, {
         releaseId: release._id,
         name: link.toName,
         section: link.toSection,
       });
-      if (!target) continue;
-      await ctx.db.patch(link._id, { toTitle: target.title, toDescription: target.description });
+      await ctx.db.patch(link._id, target
+        ? { toTitle: target.title, toDescription: target.description }
+        : { toMissing: true });
       updated += 1;
     }
 

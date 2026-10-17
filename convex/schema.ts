@@ -66,12 +66,7 @@ export default defineSchema({
     relatedMetadataBackfillCursor: v.optional(v.union(v.string(), v.null())),
     relatedMetadataBackfillVersion: v.optional(v.number()),
   })
-    .index("by_datasetReleaseId", ["datasetReleaseId"])
-    .index("by_locale_and_distro_and_datasetReleaseId", [
-      "locale",
-      "distro",
-      "datasetReleaseId",
-    ]),
+    .index("by_datasetReleaseId", ["datasetReleaseId"]),
 
   activeReleases: defineTable({
     stage: datasetStageValidator,
@@ -148,12 +143,7 @@ export default defineSchema({
     chunkIndex: v.number(),
     chunk: v.string(),
   })
-    .index("by_blobId_and_kind_and_chunkIndex", ["blobId", "kind", "chunkIndex"])
-    .index("by_contentSha256_and_kind_and_chunkIndex", [
-      "contentSha256",
-      "kind",
-      "chunkIndex",
-    ]),
+    .index("by_blobId_and_kind_and_chunkIndex", ["blobId", "kind", "chunkIndex"]),
 
   manPageContentChunks: defineTable({
     contentId: v.id("manPageContents"),
@@ -212,7 +202,8 @@ export default defineSchema({
     toExternalId: v.optional(v.string()),
     toName: v.string(),
     toSection: v.string(),
-    // Older releases and unresolved targets retain the lookup fallback.
+    // The post-seal backfill caches the target or toMissing; older links fall back to a lookup.
+    toMissing: v.optional(v.boolean()),
     toTitle: v.optional(v.string()),
     toDescription: v.optional(v.string()),
     linkType: v.union(v.literal("see_also"), v.literal("xref")),
@@ -227,8 +218,7 @@ export default defineSchema({
     version: v.string(),
     hasLicenseText: v.boolean(),
   })
-    .index("by_releaseId_and_packageName", ["releaseId", "packageName"])
-    .index("by_releaseId_and_hasLicenseText", ["releaseId", "hasLicenseText"]),
+    .index("by_releaseId_and_packageName", ["releaseId", "packageName"]),
 
   licenses: defineTable({
     releaseId: v.id("datasetReleases"),

@@ -1,7 +1,7 @@
 import type { Doc } from "./_generated/dataModel";
 
 export type RelatedItem = Pick<Doc<"manPages">, "name" | "section" | "title" | "description">;
-type RelatedLink = Pick<Doc<"manPageLinks">, "toName" | "toSection" | "toTitle" | "toDescription">;
+type RelatedLink = Pick<Doc<"manPageLinks">, "toName" | "toSection" | "toTitle" | "toDescription" | "toMissing">;
 type ResolveTarget = (name: string, section: string) => Promise<RelatedItem | null>;
 
 export function cachedRelatedItem(link: RelatedLink): RelatedItem | null {
@@ -28,6 +28,7 @@ export async function resolveRelatedItems(
   });
 
   const items = await Promise.all(uniqueLinks.map(async (link) => {
+    if (link.toMissing) return null;
     const item = cachedRelatedItem(link) ?? await resolveTarget(link.toName, link.toSection);
     if (!item) return null;
     return {

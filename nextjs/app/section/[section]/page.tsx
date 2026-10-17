@@ -5,8 +5,6 @@ import { listSection, withDistroFallback } from '../../../lib/api'
 import { isDefaultDistro, withDistro, type Distro } from '../../../lib/distro'
 import { getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
-export const revalidate = 3600
-
 function getGroupKey(name: string): string {
   const first = name.trim().charAt(0).toUpperCase()
   if (!first) return '#'

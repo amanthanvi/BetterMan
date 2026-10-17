@@ -1,5 +1,6 @@
 import { api } from '../../convex/_generated/api'
 import { unstable_cache } from 'next/cache'
+import type { FunctionReturnType } from 'convex/server'
 import type { Distro } from './distro'
 import type { AmbiguousPageResponse, ManPage, ManPageResponse } from './docModel'
 import { getConvexClient } from './convexClient'
@@ -184,6 +185,13 @@ const cachedManByName = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
+const cachedResolveManByName = unstable_cache(
+  async (distro: Distro, name: string) =>
+    await convex().query(api.queries.resolveManByName, { distro, name }),
+  ['betterman', 'convex', 'resolve-man-by-name'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string) =>
     await convex().action(api.content.getManByNameAndSection, { distro, name, section }),
@@ -317,6 +325,15 @@ export async function fetchManByName(opts: {
   return { kind: 'page', data: result.data as ManPageResponse }
 }
 
+export type ManResolveResult = Exclude<FunctionReturnType<typeof api.queries.resolveManByName>, { kind: 'not_found' }>
+
+/** Resolves a name-only URL from page metadata, without loading the document. */
+export async function fetchManResolve(opts: { distro: Distro; name: string }): Promise<ManResolveResult> {
+  const result = await mapConvexError(() => cachedResolveManByName(opts.distro, opts.name))
+  if (result.kind === 'not_found') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  return result
+}
+
 export type ManByNameAndSectionResult = { kind: 'page'; data: ManPageResponse } | ManAlias
 
 /** Resolves a page, or reports the alias target when the URL is a `.so` stub. */
@@ -390,11 +407,13 @@ export type SeoSitemapItem = {
 }
 
 export type SeoSitemapPageResponse = {
+  datasetReleaseId: string
   items: SeoSitemapItem[]
   page: number
 }
 
 type SeoSitemapPageChunkResponse = {
+  datasetReleaseId: string
   items: SeoSitemapItem[]
   page: number
   isDone: boolean
@@ -405,21 +424,53 @@ export async function fetchSeoReleases(): Promise<SeoReleasesResponse> {
   return await cachedSeoReleases()
 }
 
-export async function fetchSeoSitemapPage(opts: { distro: string; page: number }): Promise<SeoSitemapPageResponse> {
+async function loadSeoSitemapPage(distro: string, page: number): Promise<SeoSitemapPageResponse> {
   const items: SeoSitemapItem[] = []
-  let cursor: string | null = null
+    let cursor: string | null = null
 
   for (let chunk = 0; chunk < MAX_SITEMAP_CHUNKS; chunk += 1) {
     const result: SeoSitemapPageChunkResponse = await convex().query(api.queries.listSitemapPageChunk, {
-      distro: opts.distro as Distro,
-      page: opts.page,
+      distro: distro as Distro,
+      page,
       paginationOpts: { numItems: SITEMAP_CHUNK_ITEMS, cursor },
     })
     if (!result) throw apiError(404, 'SITEMAP_PAGE_NOT_FOUND', 'Sitemap page not found')
     items.push(...result.items)
-    if (result.isDone) return { items, page: opts.page }
+    if (result.isDone) return { datasetReleaseId: result.datasetReleaseId, items, page }
     cursor = result.continueCursor
   }
 
   throw apiError(503, 'SITEMAP_PAGE_TOO_LARGE', 'Sitemap page is too large')
+}
+
+class SitemapReleaseMismatch extends Error {
+  data: SeoSitemapPageResponse
+
+  constructor(data: SeoSitemapPageResponse) {
+    super('Sitemap page read a different release')
+    this.data = data
+  }
+}
+
+// Keyed by the prod release listed in fetchSeoReleases, which can lag a switch or a prune by up
+// to an hour. Throwing keeps another release's URLs out of this key; unstable_cache stores no errors.
+const cachedSeoSitemapPage = unstable_cache(
+  async (distro: string, datasetReleaseId: string, page: number): Promise<SeoSitemapPageResponse> => {
+    const data = await loadSeoSitemapPage(distro, page)
+    if (data.datasetReleaseId !== datasetReleaseId) throw new SitemapReleaseMismatch(data)
+    return data
+  },
+  ['betterman', 'convex', 'seo-sitemap-page'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+export async function fetchSeoSitemapPage(opts: { distro: string; page: number }): Promise<SeoSitemapPageResponse> {
+  const release = (await fetchSeoReleases()).items.find((item) => item.distro === opts.distro)
+  if (!release) throw apiError(404, 'SITEMAP_PAGE_NOT_FOUND', 'Sitemap page not found')
+  try {
+    return await cachedSeoSitemapPage(opts.distro, release.datasetReleaseId, opts.page)
+  } catch (err) {
+    if (err instanceof SitemapReleaseMismatch) return err.data
+    throw err
+  }
 }

@@ -19,7 +19,6 @@ const compatibilityFunctions = new Set([
   'queries.ts:listSection',
   'queries.ts:listSections',
   'queries.ts:listSeoReleases',
-  'queries.ts:listSitemapPage',
   'queries.ts:listSitemapPageChunk',
   'queries.ts:search',
   'queries.ts:suggest',

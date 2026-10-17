@@ -4,8 +4,6 @@ import { LicensesClient } from './LicensesClient'
 import { fetchLicenses, withDistroFallback } from '../../lib/api'
 import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 
-export const revalidate = 3600
-
 export function generateMetadata(): Metadata {
   return {
     title: 'Licenses — BetterMan',

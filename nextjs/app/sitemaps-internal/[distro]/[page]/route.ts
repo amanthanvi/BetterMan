@@ -61,7 +61,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
       headers: {
         'Content-Type': 'application/xml; charset=utf-8',
         'Cache-Control': 'public, max-age=3600',
-        ETag: etag,
+        ETag: weakEtag(['sitemap-page', distro, data.datasetReleaseId, String(page)]),
       },
     })
   } catch (err) {

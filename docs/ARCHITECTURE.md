@@ -24,6 +24,8 @@ A man page request hits `nextjs/app/man/[name]/[section]/page.tsx`, which calls 
 
 Personalization (theme, distro, bookmarks, history, reading preferences) lives in the browser. Theme and distro are mirrored into cookies so the server can render the right first paint.
 
+Every HTML response is rendered per request. The proxy issues a fresh CSP nonce, Next.js can only apply it during server rendering, and the root layout reads cookies, so page-level `revalidate` has no effect. Caching happens one layer down: `nextjs/lib/api.ts` wraps each Convex read, including sitemap pages, in `unstable_cache`.
+
 ## Data
 
 `ingestion/` runs `mandoc -Thtml` on each page and converts the HTML into the document model in `ingestion/ingestion/doc_model.py`. The TypeScript mirror is `nextjs/lib/docModel.ts`. Golden fixtures in both packages keep them aligned.
