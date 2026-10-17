@@ -1,6 +1,6 @@
 import json
 import re
-from http.client import HTTPException
+from http.client import HTTPException, RemoteDisconnected
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import Mock
@@ -211,6 +211,49 @@ def test_require_deployed_contract_wraps_a_broken_read(monkeypatch, failure, mat
 
     monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BrokenBody(b"")))
     with pytest.raises(ConvexContractError, match=match):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_skips_the_error_body_for_a_missing_route(monkeypatch):
+    class StallingError(HTTPError):
+        def read(self, *args, **kwargs):
+            raise TimeoutError("stalled")
+
+    error = StallingError(
+        "https://test.convex.site/ingest/contract",
+        404,
+        "Not Found",
+        {},
+        BytesIO(b""),
+    )
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=error))
+    with pytest.raises(ConvexContractError, match="404"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_wraps_a_timeout_while_reading_an_error_body(monkeypatch):
+    class StallingError(HTTPError):
+        def read(self, *args, **kwargs):
+            raise TimeoutError("stalled")
+
+    error = StallingError(
+        "https://test.convex.site/ingest/contract",
+        503,
+        "Unavailable",
+        {},
+        BytesIO(b""),
+    )
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=error))
+    with pytest.raises(ConvexContractError, match="timed out"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+def test_require_deployed_contract_wraps_a_disconnect_before_the_response(monkeypatch):
+    monkeypatch.setattr(
+        "ingestion.convex_client.urlopen",
+        Mock(side_effect=RemoteDisconnected("closed")),
+    )
+    with pytest.raises(ConvexContractError, match="closed"):
         ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
 
 

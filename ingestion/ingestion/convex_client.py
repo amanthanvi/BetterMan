@@ -31,6 +31,26 @@ REQUIRED_DECLARATION_COUNTS = ("pageCount", "aliasCount", "licenseCount")
 _CONTRACT_PATH = "/ingest/contract"
 
 
+def _contract_read_error(exc: BaseException) -> ConvexContractError:
+    if isinstance(exc, TimeoutError):
+        detail = f"timed out: {exc}"
+    elif isinstance(exc, UnicodeDecodeError):
+        detail = f"response was not UTF-8: {exc}"
+    else:
+        detail = str(exc)
+    return ConvexContractError(
+        "Could not read the deployed Convex ingest contract "
+        f"({detail}). Deploy Convex before ingestion writes."
+    )
+
+
+def _http_error_detail(exc: HTTPError) -> str:
+    try:
+        return _clip(exc.read().decode("utf-8", errors="replace"))
+    except (TimeoutError, UnicodeDecodeError, HTTPException, ConnectionError) as read_exc:
+        raise _contract_read_error(read_exc) from read_exc
+
+
 def _clip(detail: str) -> str:
     text = " ".join(detail.split())
     if len(text) > 300:
@@ -93,7 +113,6 @@ class ConvexIngestClient:
         try:
             payload = self._get_json(_CONTRACT_PATH)
         except HTTPError as exc:
-            detail = _clip(exc.read().decode("utf-8", errors="replace"))
             if exc.code == 404:
                 raise ConvexContractError(
                     "Deployed Convex does not advertise the ingest contract "
@@ -105,6 +124,7 @@ class ConvexIngestClient:
                     "Convex rejected the ingest secret for GET /ingest/contract. "
                     "Ingestion will not write."
                 ) from exc
+            detail = _http_error_detail(exc)
             raise ConvexContractError(
                 "Could not read the deployed Convex ingest contract "
                 f"(HTTP {exc.code}: {detail}). Deploy Convex before ingestion writes."
@@ -138,22 +158,12 @@ class ConvexIngestClient:
             with urlopen(req, timeout=timeout_seconds) as res:
                 try:
                     raw = res.read().decode("utf-8")
-                except UnicodeDecodeError as exc:
-                    raise ConvexContractError(
-                        "Could not read the deployed Convex ingest contract "
-                        f"(response was not UTF-8: {exc}). "
-                        "Deploy Convex before ingestion writes."
-                    ) from exc
-                except (HTTPException, ConnectionError) as exc:
-                    raise ConvexContractError(
-                        "Could not read the deployed Convex ingest contract "
-                        f"({exc}). Deploy Convex before ingestion writes."
-                    ) from exc
+                except (TimeoutError, UnicodeDecodeError, HTTPException, ConnectionError) as exc:
+                    raise _contract_read_error(exc) from exc
         except TimeoutError as exc:
-            raise ConvexContractError(
-                "Could not read the deployed Convex ingest contract "
-                f"(timed out: {exc}). Deploy Convex before ingestion writes."
-            ) from exc
+            raise _contract_read_error(exc) from exc
+        except (HTTPException, ConnectionError) as exc:
+            raise _contract_read_error(exc) from exc
         if not raw:
             raise ConvexContractError(
                 "Deployed Convex ingest contract response was empty. "
