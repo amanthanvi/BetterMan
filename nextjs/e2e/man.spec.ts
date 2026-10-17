@@ -287,6 +287,14 @@ test('man: distro variant selector swaps content', async ({ page }) => {
   await expect(marker).toBeVisible()
 })
 
+test('man: header names the distro served after a fallback', async ({ page }) => {
+  // Arch has no seeded release, so the page is served from Debian.
+  await page.goto('/man/gzip/1?distro=arch')
+  const header = page.locator('header').filter({ has: page.getByRole('heading', { level: 1, name: /gzip\(1\)/i }) })
+  await expect(header.getByText('Debian', { exact: true })).toBeVisible()
+  await expect(header.getByText('Arch Linux', { exact: true })).toHaveCount(0)
+})
+
 test('man: distro variant selector keeps full supported ordering', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()

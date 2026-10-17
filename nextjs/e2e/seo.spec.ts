@@ -36,3 +36,18 @@ test('seo: man pages emit JSON-LD with CSP nonce', async ({ page }) => {
   await expect(jsonLd).toHaveCount(1)
   expect((await jsonLd.textContent()) ?? '').toContain('"@type":"TechArticle"')
 })
+
+test('seo: man page share image follows the served distro', async ({ page }) => {
+  const ogImage = page.locator('meta[property="og:image"]')
+
+  await page.goto('/man/tar/1?distro=ubuntu')
+  await expect(ogImage).toHaveAttribute('content', /\/man\/tar\/1\/og\?distro=ubuntu$/)
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', /\/man\/tar\/1\/og\?distro=ubuntu$/)
+  const image = await page.request.get((await ogImage.getAttribute('content')) ?? '')
+  expect(image.status()).toBe(200)
+  expect(image.headers()['content-type']).toBe('image/png')
+
+  // Arch has no seeded release, so the share image falls back to Debian with the page.
+  await page.goto('/man/tar/1?distro=arch')
+  await expect(ogImage).toHaveAttribute('content', /\/man\/tar\/1\/og$/)
+})

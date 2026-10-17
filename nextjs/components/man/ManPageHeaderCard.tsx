@@ -88,9 +88,12 @@ export function ManPageHeaderCard({
         {variantPicker ? (
           <label className="inline-flex items-center gap-1.5">
             <span>distro</span>
+            {/* Uncontrolled so the choice stays visible while the server renders it; the key
+                resets it to whatever distro was actually served. */}
             <select
+              key={distro}
               name="distro"
-              value={distro}
+              defaultValue={distro}
               onChange={(e) => {
                 const next = normalizeDistro(e.target.value)
                 if (next) setDistro(next)

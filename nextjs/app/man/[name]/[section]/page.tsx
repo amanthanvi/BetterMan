@@ -16,6 +16,7 @@ import {
   withDistroFallback,
 } from '../../../../lib/api'
 import { withDistro } from '../../../../lib/distro'
+import { OG_SIZE } from '../../../../lib/og/card'
 import { getPublicOrigin } from '../../../../lib/public-origin'
 import { resolveRequestDistro, type SearchParams } from '../../../../lib/requestContext'
 import { safeJsonLdStringify } from '../../../../lib/seo'
@@ -57,6 +58,14 @@ export async function generateMetadata({
         title,
         description,
         type: 'article',
+        images: [
+          {
+            url: `${origin}${withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}/og`, distro)}`,
+            ...OG_SIZE,
+            alt: 'Man page',
+            type: 'image/png',
+          },
+        ],
       },
     }
   } catch (err) {
@@ -135,6 +144,7 @@ export default async function ManByNameAndSectionPage({
           page={pageData.page}
           content={pageData.content}
           variants={pageData.variants}
+          servedDistro={activeDistro}
           relatedItems={related.items}
         />
       </>
