@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
+from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -135,7 +136,19 @@ class ConvexIngestClient:
         )
         try:
             with urlopen(req, timeout=timeout_seconds) as res:
-                raw = res.read().decode("utf-8")
+                try:
+                    raw = res.read().decode("utf-8")
+                except UnicodeDecodeError as exc:
+                    raise ConvexContractError(
+                        "Could not read the deployed Convex ingest contract "
+                        f"(response was not UTF-8: {exc}). "
+                        "Deploy Convex before ingestion writes."
+                    ) from exc
+                except (HTTPException, ConnectionError) as exc:
+                    raise ConvexContractError(
+                        "Could not read the deployed Convex ingest contract "
+                        f"({exc}). Deploy Convex before ingestion writes."
+                    ) from exc
         except TimeoutError as exc:
             raise ConvexContractError(
                 "Could not read the deployed Convex ingest contract "

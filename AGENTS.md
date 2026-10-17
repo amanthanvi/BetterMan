@@ -16,7 +16,7 @@ BetterMan is a Next.js app on Vercel that reads man page data from Convex. A Pyt
 - The document model is defined twice on purpose: `ingestion/ingestion/doc_model.py` and `nextjs/lib/docModel.ts`. Golden fixtures keep them aligned. Change both together.
 - Public Convex functions must never accept a caller-chosen dataset stage. `scripts/check-convex-public-api.mjs` enforces this in CI.
 - Pull request guards are documented in `docs/agents/pr-guards.md`: whitespace, test-runner config mixed with application code, and a Proof heading that cites the head SHA.
-- Ingestion checks `GET /ingest/contract` before it writes. A missing route, a mismatched contract, or a read timeout raises `ConvexContractError` and does not write.
+- Ingestion checks `GET /ingest/contract` before it writes. A missing route, a mismatched contract, a read timeout, a non-UTF-8 body, or a broken read raises `ConvexContractError` and does not write.
 - `nextjs/e2e/` is the behavioral contract. Accessible names and `data-bm-*` hooks listed in `DESIGN.md` are asserted there.
 - Keep diffs scoped. Use Conventional Commits.
 - Add a line under Unreleased in `CHANGELOG.md` when behavior changes.

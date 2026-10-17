@@ -1,5 +1,6 @@
 import json
 import re
+from http.client import HTTPException
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import Mock
@@ -190,6 +191,26 @@ def test_require_deployed_contract_reports_other_http_failures(monkeypatch):
     )
     monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(side_effect=error))
     with pytest.raises(ConvexContractError, match="HTTP 503"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
+
+
+@pytest.mark.parametrize(
+    ("failure", "match"),
+    [
+        ("utf-8", "not UTF-8"),
+        (HTTPException("truncated"), "truncated"),
+        (ConnectionError("reset"), "reset"),
+    ],
+)
+def test_require_deployed_contract_wraps_a_broken_read(monkeypatch, failure, match):
+    class BrokenBody(BytesIO):
+        def read(self, *args, **kwargs):
+            if failure == "utf-8":
+                return b"\xff"
+            raise failure
+
+    monkeypatch.setattr("ingestion.convex_client.urlopen", Mock(return_value=BrokenBody(b"")))
+    with pytest.raises(ConvexContractError, match=match):
         ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
 
 
