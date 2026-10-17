@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
+import type { Distro } from '../../lib/distro'
 import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
 import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
@@ -88,11 +89,14 @@ export function ManPageView({
   page,
   content,
   variants,
+  servedDistro,
   relatedItems,
 }: {
   page: ManPage
   content: ManPageContent
   variants: ManPageVariant[]
+  /** The distro the server rendered, which differs from the preference after a fallback. */
+  servedDistro: Distro
   relatedItems: SectionPage[]
 }) {
   const toc = useToc()
@@ -272,7 +276,7 @@ export function ManPageView({
         page={page}
         synopsis={content.synopsis}
         variants={variants}
-        distro={distro.distro}
+        distro={servedDistro}
         hasToc={hasToc}
         onOpenContents={() => setTocOpen(true)}
         onOpenFind={manFind.openFind}

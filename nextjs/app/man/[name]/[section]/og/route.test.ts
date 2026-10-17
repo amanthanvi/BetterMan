@@ -8,8 +8,6 @@ const notFound = vi.hoisted(() =>
 
 const ogCard = vi.hoisted(() => vi.fn(async () => new Response('png', { status: 200 })))
 
-const headersMock = vi.hoisted(() => vi.fn(async () => new Headers()))
-
 const isRateLimited = vi.hoisted(() => vi.fn(async () => false))
 
 const apiMocks = vi.hoisted(() => {
@@ -32,18 +30,22 @@ const apiMocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('next/headers', () => ({ headers: headersMock }))
 vi.mock('next/navigation', () => ({ notFound }))
-vi.mock('../../../../lib/og/card', () => ({ ogCard, OG_SIZE: { width: 1200, height: 630 } }))
-vi.mock('../../../../lib/rateLimit', () => ({ isRateLimited }))
-vi.mock('../../../../lib/api', () => ({
+vi.mock('../../../../../lib/og/card', () => ({ ogCard, OG_SIZE: { width: 1200, height: 630 } }))
+vi.mock('../../../../../lib/rateLimit', () => ({ isRateLimited }))
+vi.mock('../../../../../lib/api', () => ({
   FastApiError: apiMocks.FastApiError,
   fetchManMetaByNameAndSection: apiMocks.fetchManMetaByNameAndSection,
   withDistroFallback: apiMocks.withDistroFallback,
 }))
-vi.mock('../../../../components/man/RunningHead', () => ({ sectionLabel: (section: string) => `Section ${section}` }))
+vi.mock('../../../../../components/man/RunningHead', () => ({ sectionLabel: (section: string) => `Section ${section}` }))
 
-import Image from './opengraph-image'
+import { GET } from './route'
+
+function get(name: string, section: string, search = '') {
+  const request = new Request(`https://betterman.sh/man/${encodeURIComponent(name)}/${section}/og${search}`)
+  return GET(request, { params: Promise.resolve({ name, section }) })
+}
 
 function page() {
   return {
@@ -66,9 +68,9 @@ beforeEach(() => {
   apiMocks.fetchManMetaByNameAndSection.mockResolvedValue(page())
 })
 
-describe('man page Open Graph image route', () => {
+describe('man page share image route', () => {
   it('does not render invalid path parameters', async () => {
-    await expect(Image({ params: Promise.resolve({ name: 'bad/name', section: '1' }) })).rejects.toThrow('NEXT_NOT_FOUND')
+    await expect(get('bad/name', '1')).rejects.toThrow('NEXT_NOT_FOUND')
     expect(notFound).toHaveBeenCalledOnce()
     expect(isRateLimited).not.toHaveBeenCalled()
     expect(ogCard).not.toHaveBeenCalled()
@@ -76,7 +78,7 @@ describe('man page Open Graph image route', () => {
 
   it('returns a private uncached 429 without rendering', async () => {
     isRateLimited.mockResolvedValueOnce(true)
-    const response = await Image({ params: Promise.resolve({ name: 'bash', section: '1' }) })
+    const response = await get('bash', '1')
     expect(response.status).toBe(429)
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(ogCard).not.toHaveBeenCalled()
@@ -84,24 +86,33 @@ describe('man page Open Graph image route', () => {
 
   it('does not render missing pages', async () => {
     apiMocks.withDistroFallback.mockRejectedValueOnce(new apiMocks.FastApiError(404, 'PAGE_NOT_FOUND', 'Page not found'))
-    await expect(Image({ params: Promise.resolve({ name: 'missing', section: '1' }) })).rejects.toThrow('NEXT_NOT_FOUND')
+    await expect(get('missing', '1')).rejects.toThrow('NEXT_NOT_FOUND')
     expect(ogCard).not.toHaveBeenCalled()
   })
 
   it('does not turn backend failures into missing images', async () => {
     apiMocks.withDistroFallback.mockRejectedValueOnce(new Error('convex unavailable'))
-    await expect(Image({ params: Promise.resolve({ name: 'bash', section: '1' }) })).rejects.toThrow('convex unavailable')
+    await expect(get('bash', '1')).rejects.toThrow('convex unavailable')
     expect(notFound).not.toHaveBeenCalled()
     expect(ogCard).not.toHaveBeenCalled()
   })
 
   it('renders a found page after validation and rate limiting', async () => {
-    await Image({ params: Promise.resolve({ name: 'bash', section: '1' }) })
+    await get('bash', '1')
     expect(ogCard).toHaveBeenCalledWith({
       head: 'BASH(1)',
       label: 'Section 1',
       name: 'bash(1)',
       description: 'command language interpreter',
     })
+  })
+
+  it('resolves the requested distro and defaults an unknown one to Debian', async () => {
+    await get('bash', '1', '?distro=ubuntu')
+    expect(apiMocks.withDistroFallback).toHaveBeenLastCalledWith('ubuntu', expect.any(Function))
+    expect(apiMocks.fetchManMetaByNameAndSection).toHaveBeenLastCalledWith({ distro: 'ubuntu', name: 'bash', section: '1' })
+
+    await get('bash', '1', '?distro=nope')
+    expect(apiMocks.withDistroFallback).toHaveBeenLastCalledWith('debian', expect.any(Function))
   })
 })
