@@ -23,6 +23,34 @@ test('command palette: opens and navigates to a page', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 })
 
+test('command palette: focuses the input on every open and returns focus on close', async ({ page }) => {
+  await page.goto('/man/tar/1')
+  await waitForInteractiveShell(page)
+
+  const input = page.getByRole('combobox', { name: 'Command palette input' })
+  const searchButton = page.getByRole('button', { name: 'Search' })
+  await searchButton.focus()
+
+  await pressShortcutUntilVisible(page, 'ControlOrMeta+K', input)
+  await expect(input).toBeFocused()
+
+  // The closing panel is aria-hidden until its exit animation ends and it unmounts.
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('combobox', { name: 'Command palette input', includeHidden: true })).toHaveCount(0)
+  await expect(searchButton).toBeFocused()
+
+  await page.keyboard.press('ControlOrMeta+K')
+  await expect(input).toBeFocused()
+  await page.keyboard.type('tar')
+  await expect(page.getByRole('option', { name: /tar\(1\)/i })).toBeVisible()
+
+  // Reopened while the exit animation is still running.
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('ControlOrMeta+K')
+  await expect(input).toBeVisible()
+  await expect(input).toBeFocused()
+})
+
 test('command palette: @freebsd prefix opens the FreeBSD variant', async ({ page }) => {
   await page.goto('/')
   await waitForInteractiveShell(page)
