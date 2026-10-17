@@ -1,8 +1,7 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { type ComponentType, useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
@@ -17,19 +16,25 @@ import { useToc } from '../state/toc'
 import { MoonIcon, SearchIcon, SunIcon } from '../icons'
 import { Kbd } from '../ui/Kbd'
 
-// One loader per overlay, shared with the idle preload so both fetch the same chunk.
-const overlayLoaders = {
-  palette: () => import('../palette/CommandPalette').then((m) => m.CommandPalette),
-  prefs: () => import('../reading/ReadingPrefsDrawer').then((m) => m.ReadingPrefsDrawer),
-  shortcuts: () => import('./ShortcutsDialog').then((m) => m.ShortcutsDialog),
-  toc: () => import('../toc/TocDrawer').then((m) => m.TocDrawer),
+// Shares one in-flight import between the idle preload and an open. A failed
+// chunk load (deploy skew, flaky network) is forgotten so the next call refetches.
+function retryingImport<T>(load: () => Promise<T>) {
+  let pending: Promise<T> | null = null
+  return () => {
+    pending ??= load().catch((err: unknown) => {
+      pending = null
+      throw err
+    })
+    return pending
+  }
 }
 
-// `ssr: false` gives each overlay its own Suspense boundary, so loading one never suspends the shell.
-const CommandPalette = dynamic(overlayLoaders.palette, { ssr: false })
-const ReadingPrefsDrawer = dynamic(overlayLoaders.prefs, { ssr: false })
-const ShortcutsDialog = dynamic(overlayLoaders.shortcuts, { ssr: false })
-const TocDrawer = dynamic(overlayLoaders.toc, { ssr: false })
+const overlayLoaders = {
+  palette: retryingImport(() => import('../palette/CommandPalette').then((m) => m.CommandPalette)),
+  prefs: retryingImport(() => import('../reading/ReadingPrefsDrawer').then((m) => m.ReadingPrefsDrawer)),
+  shortcuts: retryingImport(() => import('./ShortcutsDialog').then((m) => m.ShortcutsDialog)),
+  toc: retryingImport(() => import('../toc/TocDrawer').then((m) => m.TocDrawer)),
+}
 
 // About two seconds of frames to wait for a hash target behind a loading boundary.
 const HASH_TARGET_MAX_FRAMES = 120
@@ -38,11 +43,30 @@ function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
 }
 
-// Overlays load on first open, then stay mounted so their exit transitions run.
-function useOpenedOnce(open: boolean) {
-  const [opened, setOpened] = useState(open)
-  if (open && !opened) setOpened(true)
-  return opened
+// An overlay's component arrives on first open and then stays mounted so its exit
+// transition runs. No React.lazy: that would cache a failed load for the life of the
+// page and throw it into the nearest error boundary. Here a failure just closes the
+// overlay, and the next open imports again.
+function useOverlay<P>(load: () => Promise<ComponentType<P>>, open: boolean, onOpenChange: (open: boolean) => void) {
+  const [Overlay, setOverlay] = useState<ComponentType<P> | null>(null)
+
+  useEffect(() => {
+    if (!open || Overlay) return
+    let cancelled = false
+    load().then(
+      (component) => {
+        if (!cancelled) setOverlay(() => component)
+      },
+      () => {
+        if (!cancelled) onOpenChange(false)
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [Overlay, load, onOpenChange, open])
+
+  return Overlay
 }
 
 function dashboardHref(section: 'recent' | 'bookmarks', distro: string) {
@@ -63,10 +87,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [offline, setOffline] = useState(false)
   const [themeAnnouncement, setThemeAnnouncement] = useState('')
   const themeAnnouncementMountedRef = useRef(false)
-  const paletteOpened = useOpenedOnce(paletteOpen)
-  const shortcutsOpened = useOpenedOnce(shortcutsOpen)
-  const prefsOpened = useOpenedOnce(prefsOpen)
-  const tocOpened = useOpenedOnce(toc.open)
+  const CommandPalette = useOverlay(overlayLoaders.palette, paletteOpen, setPaletteOpen)
+  const ShortcutsDialog = useOverlay(overlayLoaders.shortcuts, shortcutsOpen, setShortcutsOpen)
+  const ReadingPrefsDrawer = useOverlay(overlayLoaders.prefs, prefsOpen, setPrefsOpen)
+  const TocDrawer = useOverlay(overlayLoaders.toc, toc.open, setTocOpen)
 
   const lastRouteKeyRef = useRef<string | null>(null)
   const scrollPositionsRef = useRef<Map<string, number>>(new Map())
@@ -417,10 +441,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ) : null}
       </header>
 
-      {tocOpened ? <TocDrawer /> : null}
-      {shortcutsOpened ? <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} isManPage={isManPage} /> : null}
-      {prefsOpened ? <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} /> : null}
-      {paletteOpened ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
+      {TocDrawer ? <TocDrawer /> : null}
+      {ShortcutsDialog ? <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} isManPage={isManPage} /> : null}
+      {ReadingPrefsDrawer ? <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} /> : null}
+      {CommandPalette ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
 
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-10 outline-none">
         {children}
