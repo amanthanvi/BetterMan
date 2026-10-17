@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
 import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
+import { extractExamples } from '../../lib/examples'
 import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
 import { DocRenderer, shouldVirtualizeBlocks } from '../doc/DocRenderer'
@@ -14,6 +15,7 @@ import { Toc } from '../toc/Toc'
 import { IconButton } from '../ui/IconButton'
 import { parseOptionTerms } from './find'
 import { ManPageFindBar } from './ManPageFindBar'
+import { ManPageExamples } from './ManPageExamples'
 import { ManPageFooterSections } from './ManPageFooterSections'
 import { ManPageHeaderCard } from './ManPageHeaderCard'
 import { ManPageOptionsSection, OPTIONS_COLLAPSE_THRESHOLD } from './ManPageOptionsSection'
@@ -96,6 +98,8 @@ export function ManPageView({
   const toc = useToc()
   const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
   const distro = useDistro()
+
+  const examples = useMemo(() => extractExamples(content.blocks), [content.blocks])
 
   const body = useMemo(
     () => stripHeaderSections(content.blocks, content.toc ?? [], { hasSynopsis: Boolean(content.synopsis?.length) }),
@@ -338,6 +342,8 @@ export function ManPageView({
         ) : null}
 
         <article className="mx-auto min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
+          <ManPageExamples examples={examples} />
+
           <ManPageOptionsSection
             optionTerms={optionTerms}
             onClearHighlight={() => setSelectedOption(null)}
