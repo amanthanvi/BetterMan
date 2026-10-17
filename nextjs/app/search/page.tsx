@@ -75,6 +75,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <nav aria-label="Section filter" className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
           <Link
             href={buildSearchHref({ q, section: '', distro })}
+            aria-current={!section ? 'page' : undefined}
             className={`px-0.5 py-1 font-mono text-xs transition-colors ${
               !section
                 ? 'font-semibold text-fg underline decoration-accent decoration-2 underline-offset-4 hover:no-underline'
@@ -87,6 +88,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             <Link
               key={s.section}
               href={buildSearchHref({ q, section: s.section, distro })}
+              aria-current={section === s.section ? 'page' : undefined}
               className={`px-0.5 py-1 font-mono text-xs transition-colors ${
                 section === s.section
                   ? 'font-semibold text-fg underline decoration-accent decoration-2 underline-offset-4 hover:no-underline'

@@ -99,4 +99,15 @@ describe('DocRenderer goldens', () => {
     const html = renderToStaticMarkup(<DocRenderer blocks={golden.doc.blocks} distro="debian" />)
     expect(html).toMatch(/<th[^>]*>Oct<\/th>/)
   })
+
+  it('marks unresolved cross-references as not available for screen readers', () => {
+    const blocks: BlockNode[] = [
+      {
+        type: 'paragraph',
+        inlines: [{ type: 'link', linkType: 'unresolved', href: '/man/nope/1', inlines: [{ type: 'text', text: 'nope(1)' }] }],
+      },
+    ]
+    const html = renderToStaticMarkup(<DocRenderer blocks={blocks} distro="debian" />)
+    expect(html).toContain('<span class="sr-only"> (not available)</span>')
+  })
 })

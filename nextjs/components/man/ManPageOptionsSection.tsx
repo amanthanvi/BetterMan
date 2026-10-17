@@ -28,7 +28,7 @@ export function ManPageOptionsSection({
   onToggleOptionsExpanded: () => void
   selectedAnchorId?: string | null
   flashAnchorId?: string | null
-  onSelectOption: (opt: OptionItem) => void
+  onSelectOption: (opt: OptionItem, event: React.MouseEvent<HTMLAnchorElement>) => void
 }) {
   const allOptions = options ?? []
   const hasOptions = allOptions.length > 0

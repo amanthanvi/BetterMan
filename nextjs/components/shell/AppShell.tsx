@@ -20,6 +20,9 @@ import { ShortcutsDialog } from './ShortcutsDialog'
 import { MoonIcon, SearchIcon, SunIcon } from '../icons'
 import { Kbd } from '../ui/Kbd'
 
+// About two seconds of frames to wait for a hash target behind a loading boundary.
+const HASH_TARGET_MAX_FRAMES = 120
+
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
 }
@@ -45,7 +48,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const lastRouteKeyRef = useRef<string | null>(null)
   const scrollPositionsRef = useRef<Map<string, number>>(new Map())
-  const isPopRef = useRef(false)
+  // Route key of the last back/forward. A same-route pop (hash only) never runs the
+  // route effect, so a boolean would stay set and mislabel the next push as a pop.
+  const popRouteKeyRef = useRef<string | null>(null)
 
   const routeKey = `${pathname}?${searchParams.toString()}`
   const routeParts = pathname.split('/').filter(Boolean)
@@ -93,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const onPop = () => {
-      isPopRef.current = true
+      popRouteKeyRef.current = `${window.location.pathname}?${new URLSearchParams(window.location.search).toString()}`
     }
 
     const prev = window.history.scrollRestoration
@@ -116,12 +121,49 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const nextY = isPopRef.current ? scrollPositionsRef.current.get(routeKey) ?? 0 : 0
-    isPopRef.current = false
+    const wasPop = popRouteKeyRef.current === routeKey
+    const nextY = wasPop ? scrollPositionsRef.current.get(routeKey) ?? 0 : 0
+    popRouteKeyRef.current = null
     lastRouteKeyRef.current = routeKey
 
     setTocOpen(false)
     window.scrollTo({ top: nextY, left: 0, behavior: 'auto' })
+
+    // Push navigations to `/#recent` and similar land on the hash target. The new
+    // page may still be behind a loading boundary, so wait briefly for the element.
+    // Pop navigations restore the saved scroll, including zero, and must not jump.
+    if (wasPop || !prevKey || window.location.hash.length < 2) return
+    let id: string
+    try {
+      id = decodeURIComponent(window.location.hash.slice(1))
+    } catch {
+      return
+    }
+    let frame = 0
+    let attempts = 0
+    const stop = () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('wheel', stop)
+      window.removeEventListener('touchmove', stop)
+      window.removeEventListener('keydown', stop)
+    }
+    const tick = () => {
+      const target = document.getElementById(id)
+      if (target) {
+        target.scrollIntoView({ behavior: 'auto', block: 'start' })
+        stop()
+      } else if (++attempts < HASH_TARGET_MAX_FRAMES) {
+        frame = window.requestAnimationFrame(tick)
+      } else {
+        stop()
+      }
+    }
+    // A slow boundary must not yank a reader who has already started scrolling.
+    window.addEventListener('wheel', stop, { passive: true })
+    window.addEventListener('touchmove', stop, { passive: true })
+    window.addEventListener('keydown', stop)
+    tick()
+    return stop
   }, [routeKey, setTocOpen])
 
   useEffect(() => {
