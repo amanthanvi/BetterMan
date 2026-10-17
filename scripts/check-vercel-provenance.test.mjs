@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { matchesGlob } from 'node:path'
 import { test } from 'node:test'
 import { requireVercelProvenance } from './check-vercel-provenance.mjs'
 
@@ -85,6 +86,7 @@ test('CI retains a mandatory provenance gate and runs its regression tests', () 
   const pkg = JSON.parse(readRepositoryFile('package.json'))
   assert.equal(pkg.scripts['deps:provenance'], 'node scripts/check-vercel-provenance.mjs')
   assert.equal(pkg.scripts['ops:test'], 'node --test scripts/*.test.mjs')
+  assert.ok(matchesGlob('scripts/check-vercel-provenance.test.mjs', 'scripts/*.test.mjs'), 'glob must cover this file')
   const ci = readRepositoryFile('.github/workflows/ci.yml')
   const nextjs = ci.split('\n  nextjs:\n')[1]?.split('\n  ingestion:\n')[0]
   assert.ok(nextjs, 'nextjs job must exist')

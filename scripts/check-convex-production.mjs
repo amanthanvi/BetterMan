@@ -14,6 +14,7 @@ Required:
 
 Optional:
   BETTERMAN_CHECK_DISTROS=debian
+  BETTERMAN_EXPECTED_RELEASE_IDS='{"debian":"<datasetReleaseId>"}'
   BETTERMAN_MIN_PAGE_COUNT=1
   BETTERMAN_CHECK_JSON=1
 `)
@@ -52,6 +53,27 @@ function parseMinPageCount() {
   return value
 }
 
+// When set, every checked distro must be active at exactly this release id.
+function parseExpectedReleaseIds(distros) {
+  const raw = process.env.BETTERMAN_EXPECTED_RELEASE_IDS?.trim()
+  if (!raw) return null
+  let expected
+  try {
+    expected = JSON.parse(raw)
+  } catch {
+    throw new Error('BETTERMAN_EXPECTED_RELEASE_IDS must be a JSON object of distro to datasetReleaseId')
+  }
+  if (!expected || typeof expected !== 'object' || Array.isArray(expected)) {
+    throw new Error('BETTERMAN_EXPECTED_RELEASE_IDS must be a JSON object of distro to datasetReleaseId')
+  }
+  for (const distro of distros) {
+    if (typeof expected[distro] !== 'string' || !expected[distro]) {
+      throw new Error(`BETTERMAN_EXPECTED_RELEASE_IDS has no release id for ${distro}`)
+    }
+  }
+  return expected
+}
+
 const GOLDEN_CHECKS = {
   debian: { query: 'tarr', name: 'tar', section: '1' },
   ubuntu: { query: 'tarr', name: 'tar', section: '1' },
@@ -66,12 +88,15 @@ function hasGoldenPage(results, golden) {
   return results.some((result) => result.name === golden.name && result.section === golden.section)
 }
 
-async function checkDistro(client, { distro, minPageCount }) {
+async function checkDistro(client, { distro, minPageCount, expectedReleaseId }) {
   const failures = []
   const golden = GOLDEN_CHECKS[distro]
   const info = await client.query(api.queries.getInfo, { distro })
   if (info.datasetReleaseId === 'uninitialized') {
     failures.push('no active release')
+  }
+  if (expectedReleaseId && info.datasetReleaseId !== expectedReleaseId) {
+    failures.push(`active release ${info.datasetReleaseId} != expected ${expectedReleaseId}`)
   }
   if (info.pageCount < minPageCount) {
     failures.push(`pageCount ${info.pageCount} < ${minPageCount}`)
@@ -161,6 +186,7 @@ async function main() {
 
   const distros = parseDistros()
   const minPageCount = parseMinPageCount()
+  const expectedReleaseIds = parseExpectedReleaseIds(distros)
   const client = new ConvexHttpClient(convexUrl)
   const releases = await client.query(api.queries.listSeoReleases, {})
   const activeDistros = new Set(releases.items.map((item) => item.distro))
@@ -184,7 +210,7 @@ async function main() {
       })
       continue
     }
-    results.push(await checkDistro(client, { distro, minPageCount }))
+    results.push(await checkDistro(client, { distro, minPageCount, expectedReleaseId: expectedReleaseIds?.[distro] }))
   }
 
   const payload = {
