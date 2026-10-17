@@ -7,8 +7,6 @@ import { resolveRequestDistro, type SearchParams } from '../lib/requestContext'
 import { ManSectionLabel, RunningHead } from '../components/man/RunningHead'
 import { Kbd } from '../components/ui/Kbd'
 
-export const revalidate = 3600
-
 export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
   const requestedDistro = await resolveRequestDistro(sp)

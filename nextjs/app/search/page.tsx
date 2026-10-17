@@ -8,8 +8,6 @@ import { getFirst, resolveRequestDistro, type SearchParams } from '../../lib/req
 import { SearchPageInput } from './SearchPageInput'
 import { SearchResultsClient } from './SearchResultsClient'
 
-export const revalidate = 300
-
 function buildSearchHref(opts: { q: string; section: string; distro: Distro }) {
   const params = new URLSearchParams()
   if (opts.q) params.set('q', opts.q)

@@ -7,9 +7,9 @@ import { ManPageView } from '../../../../components/man/ManPageView'
 import { JsonLdHead } from '../../../../components/seo/JsonLdHead'
 import {
   FastApiError,
-  fetchManByName,
   fetchManByNameAndSectionOrAlias,
   fetchManMetaByNameAndSection,
+  fetchManResolve,
   fetchRelated,
   isReleaseNotFoundError,
   suggest,
@@ -19,8 +19,6 @@ import { withDistro } from '../../../../lib/distro'
 import { getPublicOrigin } from '../../../../lib/public-origin'
 import { resolveRequestDistro, type SearchParams } from '../../../../lib/requestContext'
 import { safeJsonLdStringify } from '../../../../lib/seo'
-
-export const revalidate = 3600
 
 class AliasRedirect extends Error {}
 
@@ -95,22 +93,18 @@ export default async function ManByNameAndSectionPage({
   try {
     const { data: resolved } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
       activeDistro = candidateDistro
-      return fetchManByNameAndSectionOrAlias({
-        distro: candidateDistro,
-        name: name.toLowerCase(),
-        section,
-      })
+      const opts = { distro: candidateDistro, name: name.toLowerCase(), section }
+      // Start related links with the page, but an alias redirect does not wait for them.
+      const related = fetchRelated(opts).catch(() => ({ items: [] }))
+      const result = await fetchManByNameAndSectionOrAlias(opts)
+      return { result, related }
     })
-    if (resolved.kind === 'alias') {
-      aliasTarget = { name: resolved.name, section: resolved.section }
+    if (resolved.result.kind === 'alias') {
+      aliasTarget = { name: resolved.result.name, section: resolved.result.section }
       throw new AliasRedirect()
     }
-    const pageData = resolved.data
-    const related = await fetchRelated({
-      distro: activeDistro,
-      name: pageData.page.name,
-      section: pageData.page.section,
-    }).catch(() => ({ items: [] }))
+    const pageData = resolved.result.data
+    const related = await resolved.related
 
     const nonce = (await headers()).get('x-nonce') ?? undefined
     const jsonLd = safeJsonLdStringify({
@@ -162,7 +156,7 @@ export default async function ManByNameAndSectionPage({
     }
 
     const [alternatives, suggestions] = await Promise.all([
-      fetchManByName({ distro: activeDistro, name: name.toLowerCase() }).catch(() => null),
+      fetchManResolve({ distro: activeDistro, name: name.toLowerCase() }).catch(() => null),
       suggest({ distro: activeDistro, name: name.toLowerCase() }).catch(() => null),
     ])
 
@@ -200,12 +194,12 @@ export default async function ManByNameAndSectionPage({
             Found{' '}
             <Link
               href={withDistro(
-                `/man/${encodeURIComponent(alternatives.data.page.name)}/${encodeURIComponent(alternatives.data.page.section)}`,
+                `/man/${encodeURIComponent(alternatives.name)}/${encodeURIComponent(alternatives.section)}`,
                 activeDistro,
               )}
               className="underline underline-offset-4"
             >
-              {alternatives.data.page.name}({alternatives.data.page.section})
+              {alternatives.name}({alternatives.section})
             </Link>{' '}
             instead.
           </div>
