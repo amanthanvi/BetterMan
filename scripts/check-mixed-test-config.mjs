@@ -24,7 +24,7 @@ const CI_WORKFLOW = '.github/workflows/ci.yml'
 const TEST_SCRIPT =
   /(?:^|\s)pnpm(?:\s+-C\s+\S+)?\s+(?:convex:test|next:test|next:e2e|ingest:test|ops:test|e2e|test)\b/
 const TEST_RUNNER = /(?:^|[^A-Za-z0-9_])(?:vitest|playwright|pytest|jest)(?:[^A-Za-z0-9_]|$)/
-const TEST_SCRIPT_KEY = /^(?:test|e2e|[\w.-]*:(?:test|e2e)|test:[\w.-]+|e2e:[\w.-]+)$/
+const TEST_SCRIPT_KEY = /^(?:test|e2e|[\w.:-]*:(?:test|e2e)|test:[\w.:-]+|e2e:[\w.:-]+)$/
 const TEST_SECTION = /^\[{1,2}tool\.(?:pytest|coverage)(?:\.|[\]"])/
 
 function baseName(file) {
@@ -128,6 +128,8 @@ export function isDocumentation(file) {
 
 export function isApplicationCode(file) {
   if (isTestRunnerConfig(file) || isTestFile(file) || isDocumentation(file)) return false
+  const name = baseName(file)
+  if (name === 'package.json' || name === 'pyproject.toml') return false
   if (file.startsWith('convex/')) return true
   if (file.startsWith('ingestion/ingestion/')) return true
   if (file.startsWith('nextjs/')) return true

@@ -157,6 +157,16 @@ test('a changed package.json test script is test-runner config', () => {
   assert.equal(packageJsonTestScriptsChanged(before, ops), true)
   assert.equal(packageJsonTestScriptsChanged(before, lint), false)
   assert.equal(packageJsonTestScriptsChanged(before, before), false)
+  const colonBefore = JSON.stringify({ scripts: { 'test:unit:watch': 'vitest', 'next:unit:test': 'vitest' } })
+  const colonAfter = JSON.stringify({ scripts: { 'test:unit:watch': 'vitest --watch', 'next:unit:test': 'vitest' } })
+  assert.equal(packageJsonTestScriptsChanged(colonBefore, colonAfter), true)
+  assert.equal(
+    packageJsonTestScriptsChanged(
+      colonBefore,
+      JSON.stringify({ scripts: { 'test:unit:watch': 'vitest', 'next:unit:test': 'vitest --run' } }),
+    ),
+    true,
+  )
   const result = evaluateMix({
     paths: ['package.json', 'convex/http.ts'],
     sectionConfig: ['package.json'],
@@ -164,6 +174,26 @@ test('a changed package.json test script is test-runner config', () => {
   assert.equal(result.ok, false)
   assert.ok(result.testConfig.includes('package.json'))
   assert.equal(evaluateMix({ paths: ['package.json', 'convex/http.ts'] }).ok, true)
+})
+
+test('a test-script edit in nextjs/package.json is not application code', () => {
+  assert.equal(isApplicationCode('nextjs/package.json'), false)
+  assert.equal(isApplicationCode('nextjs/pyproject.toml'), false)
+  assert.equal(isApplicationCode('nextjs/app/page.tsx'), true)
+  assert.equal(
+    evaluateMix({
+      paths: ['nextjs/package.json'],
+      sectionConfig: ['nextjs/package.json'],
+    }).ok,
+    true,
+  )
+  const mixed = evaluateMix({
+    paths: ['nextjs/package.json', 'nextjs/app/page.tsx'],
+    sectionConfig: ['nextjs/package.json'],
+  })
+  assert.equal(mixed.ok, false)
+  assert.deepEqual(mixed.application, ['nextjs/app/page.tsx'])
+  assert.deepEqual(mixed.testConfig, ['nextjs/package.json'])
 })
 
 const mixScript = fileURLToPath(new URL('./check-mixed-test-config.mjs', import.meta.url))
