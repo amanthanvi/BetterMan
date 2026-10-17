@@ -225,6 +225,22 @@ test('man: find-in-page shows count and navigates matches', async ({ page }) => 
   await expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 
+test('man: long pages render every block, so find reaches the last match', async ({ page }) => {
+  await page.goto('/man/bash/1')
+  await expect(page.getByText('Filler block 120 for bash(1) long-page tests.')).toBeAttached()
+
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Find in page' }).click()
+  const findbar = page.locator('[data-bm-findbar]')
+  await findbar.getByRole('textbox', { name: 'Find in page' }).fill('filler block')
+  const count = findbar.getByText(/^\d+\/\d+$/)
+  await expect(count).toHaveText('1/120')
+
+  await findbar.getByRole('button', { name: 'Previous match' }).click()
+  await expect(count).toHaveText('120/120')
+  await expect(page.locator('mark.bm-find-active')).toBeInViewport()
+})
+
 test('man: options table splits flags and highlights terms', async ({ page }) => {
   const consoleErrors: string[] = []
   const pageErrors: string[] = []

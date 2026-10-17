@@ -184,7 +184,7 @@ function makePages(distro) {
 
   const bashBlocks = [{ type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' }]
   for (let i = 0; i < 120; i += 1) {
-    bashBlocks.push({ type: 'paragraph', inlines: [{ type: 'text', text: `Filler block ${i + 1} for bash(1) virtualization tests.` }] })
+    bashBlocks.push({ type: 'paragraph', inlines: [{ type: 'text', text: `Filler block ${i + 1} for bash(1) long-page tests.` }] })
   }
   const bash = page({
     name: 'bash',

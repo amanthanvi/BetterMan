@@ -8,7 +8,7 @@ import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, 
 import { extractExamples } from '../../lib/examples'
 import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
-import { DocRenderer, shouldVirtualizeBlocks } from '../doc/DocRenderer'
+import { DocRenderer } from '../doc/DocRenderer'
 import { RecentPageRecorder } from '../recent/RecentPageRecorder'
 import { useDistro } from '../state/distro'
 import { useToc } from '../state/toc'
@@ -124,7 +124,6 @@ export function ManPageView({
   const flashTimeoutRef = useRef<number | null>(null)
 
   const optionTerms = useMemo(() => (selectedOption ? parseOptionTerms(selectedOption.flags) : []), [selectedOption])
-  const shouldVirtualize = useMemo(() => shouldVirtualizeBlocks(body.blocks), [body.blocks])
 
   const hasToc = body.toc.length > 0
   const desktopSidebarExpanded = hasToc && sidebarOpen
@@ -156,14 +155,12 @@ export function ManPageView({
   useEffect(() => {
     setScrollToId((id) => {
       setActiveHeadingId(id)
-      manFind.docRef.current?.scrollToAnchor(id)
+      scrollToIdWhenRendered(id, { behavior: getScrollBehavior(), block: 'start' })
     })
     return () => setScrollToId(null)
-  }, [manFind.docRef, setScrollToId])
+  }, [setScrollToId])
 
   useEffect(() => {
-    if (shouldVirtualize) return
-
     const ids = body.toc.map((t) => t.id).filter(Boolean)
     const els = ids
       .map((id) => document.getElementById(id))
@@ -185,7 +182,7 @@ export function ManPageView({
 
     for (const el of els) observer.observe(el)
     return () => observer.disconnect()
-  }, [body.toc, shouldVirtualize, page.id])
+  }, [body.toc, page.id])
 
   useEffect(() => {
     const options = content.options ?? []
@@ -361,12 +358,10 @@ export function ManPageView({
           />
 
           <DocRenderer
-            ref={manFind.docRef}
             blocks={body.blocks}
             distro={distro.distro}
             findQuery={manFind.findEnabled ? manFind.findQuery : undefined}
             optionTerms={optionTerms}
-            onActiveHeadingChange={shouldVirtualize ? setActiveHeadingId : undefined}
           />
 
           <ManPageFooterSections

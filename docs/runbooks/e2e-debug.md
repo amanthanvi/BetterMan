@@ -19,5 +19,5 @@ Follow the exact Convex seed + Next.js startup sequence in CI’s `e2e` job. Aft
 ## Common causes
 
 - Duplicate accessible names (strict mode selector collisions).
-- Deferred UI updates (find-in-page, virtualized rendering) not awaited.
+- Deferred UI updates (find-in-page) not awaited.
 - Seed data drift (test expects a page that isn’t in the deterministic seed).
