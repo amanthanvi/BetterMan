@@ -282,7 +282,9 @@ jobs:
           node-version: 26
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      # Lifecycle scripts must not run before the secret-bearing step; the check
+      # script needs only convex/browser, not esbuild's postinstall.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Promote active Convex staging releases to prod
         id: promote
@@ -345,10 +347,26 @@ jobs:
             -H "Authorization: Bearer ${CONVEX_INGEST_SECRET}" \
             -H "Content-Type: application/json" \
             --data @promote.json \
+            -o promoted.json \
             "${CONVEX_HTTP_URL%/}/ingest/promote"
+          cat promoted.json
+          echo
+
+          release_ids="$(jq -ce '.promoted | map({key: .distro, value: .datasetReleaseId}) | from_entries' promoted.json)"
+          echo "release_ids=${release_ids}" >> "$GITHUB_OUTPUT"
 
       - name: Verify promoted production releases
         env:
           CONVEX_URL: ${{ vars.CONVEX_URL }}
           BETTERMAN_CHECK_DISTROS: ${{ steps.promote.outputs.distros }}
-        run: pnpm convex:prod-check
+          BETTERMAN_EXPECTED_RELEASE_IDS: ${{ steps.promote.outputs.release_ids }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # The script skips the id comparison when this is empty; never let that happen here.
+          if [[ -z "${BETTERMAN_EXPECTED_RELEASE_IDS}" ]]; then
+            echo "Promote produced no release ids to verify." >&2
+            exit 1
+          fi
+          pnpm convex:prod-check
