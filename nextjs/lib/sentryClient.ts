@@ -18,8 +18,8 @@ const onRejection = (event: PromiseRejectionEvent) => bufferError(event.reason)
 let sentry: Promise<SentryModule> | null = null
 
 function loadSentry(): Promise<SentryModule> {
-  sentry ??= import('./sentrySdk').then(
-    (Sentry) => {
+  sentry ??= import('./sentrySdk')
+    .then((Sentry) => {
       Sentry.init({
         dsn,
         environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV,
@@ -46,12 +46,12 @@ function loadSentry(): Promise<SentryModule> {
       window.removeEventListener('unhandledrejection', onRejection)
       for (const error of earlyErrors.splice(0)) Sentry.captureException(error, { mechanism: { handled: false } })
       return Sentry
-    },
-    (err: unknown) => {
+    })
+    .catch((err: unknown) => {
+      // Whether the chunk or init failed, the next capture tries again.
       sentry = null
       throw err
-    },
-  )
+    })
   return sentry
 }
 

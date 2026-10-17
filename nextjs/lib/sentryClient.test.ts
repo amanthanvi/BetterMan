@@ -69,4 +69,24 @@ describe('sentryClient', () => {
     await flush()
     expect(sdk.captureException).toHaveBeenCalledTimes(21)
   })
+
+  it('retries init after it throws, keeping the errors seen meanwhile', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', 'https://key@example.invalid/1')
+    const client = await import('./sentryClient')
+
+    sdk.init.mockImplementationOnce(() => {
+      throw new Error('init failed')
+    })
+    client.startClientErrorReporting()
+    await flush()
+    fireError('between')
+    expect(sdk.init).toHaveBeenCalledTimes(1)
+    expect(sdk.captureException).not.toHaveBeenCalled()
+
+    const boundaryError = new Error('boundary')
+    client.captureClientException(boundaryError)
+    await flush()
+    expect(sdk.init).toHaveBeenCalledTimes(2)
+    expect(sdk.captureException.mock.calls.map(([error]) => error)).toEqual(['between', boundaryError])
+  })
 })
