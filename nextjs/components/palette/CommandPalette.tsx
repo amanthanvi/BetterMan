@@ -247,13 +247,16 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     }
   }, [open])
 
-  useEffect(() => {
-    if (!open) return
-    inputRef.current?.focus()
-  }, [open])
-
-  useFocusTrap(open, dialogRef)
+  // After an exit animation the panel is unmounted when `open` flips true and mounts
+  // one render later, so both wait for `rendered`. The trap goes first to record the
+  // previously focused element before the input takes focus.
+  useFocusTrap(open && rendered, dialogRef)
   useBodyScrollLock(open)
+
+  useEffect(() => {
+    if (!open || !rendered) return
+    inputRef.current?.focus()
+  }, [open, rendered])
 
   useEffect(() => {
     if (!open || parsed.mode !== 'search') return
