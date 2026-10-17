@@ -21,19 +21,18 @@ function worker() {
   }
   const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => []), delete: vi.fn() }
   const fetch = vi.fn<(request: { url: string }) => Promise<Response>>()
-  let onFetch!: (event: unknown) => void
+  const listeners = new Map<string, (event: unknown) => void>()
   const self = {
     location: { origin },
-    addEventListener: (name: string, listener: (event: unknown) => void) => {
-      if (name === 'fetch') onFetch = listener
-    },
+    addEventListener: (name: string, listener: (event: unknown) => void) => listeners.set(name, listener),
+    clients: { claim: vi.fn(async () => undefined) },
   }
   runInNewContext(source, { self, caches, fetch, Response, URL })
 
   function request(path: string, mode = 'navigate') {
     let response!: Promise<Response>
     const pending: Promise<unknown>[] = []
-    onFetch({
+    listeners.get('fetch')!({
       request: { url: new URL(path, origin).href, method: 'GET', mode, destination: '' },
       respondWith: (value: Promise<Response>) => { response = value },
       waitUntil: (value: Promise<unknown>) => { pending.push(value) },
@@ -41,7 +40,13 @@ function worker() {
     return { response, pending }
   }
 
-  return { entries, cache, fetch, request }
+  async function activate() {
+    const pending: Promise<unknown>[] = []
+    listeners.get('activate')!({ waitUntil: (value: Promise<unknown>) => { pending.push(value) } })
+    await Promise.all(pending)
+  }
+
+  return { entries, cache, fetch, self, request, activate }
 }
 
 describe('service worker', () => {
@@ -86,5 +91,13 @@ describe('service worker', () => {
     w.fetch.mockRejectedValue(new TypeError('offline'))
 
     expect(await (await w.request('/man/ls/1').response).text()).toBe('cached')
+  })
+
+  it('still activates when trimming caches fails', async () => {
+    const w = worker()
+    w.cache.keys.mockRejectedValue(new Error('storage unavailable'))
+
+    await w.activate()
+    expect(w.self.clients.claim).toHaveBeenCalled()
   })
 })

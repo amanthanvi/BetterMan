@@ -73,7 +73,7 @@ self.addEventListener('activate', (event) => {
           [HTML_CACHE, MAX_HTML_ENTRIES],
           [API_CACHE, MAX_API_ENTRIES],
         ].map(async ([name, maxEntries]) => trimCache(await caches.open(name), maxEntries)),
-      )
+      ).catch(() => {})
       await self.clients.claim()
     })(),
   )
