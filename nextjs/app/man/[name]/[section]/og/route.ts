@@ -32,10 +32,14 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
 
   const title = `${data.page.name}(${data.page.section})`
 
-  return ogCard({
+  const response = await ogCard({
     head: title.toUpperCase(),
     label: sectionLabel(section),
     name: title,
     description: data.page.description || data.page.title,
   })
+  // Cards change only with a dataset release. A day fresh, then served stale
+  // while the CDN refreshes, bounds how long an old card outlives a release.
+  response.headers.set('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
+  return response
 }
