@@ -80,12 +80,6 @@ export function setReadingPrefs(prefs: ReadingPreferences) {
   writePrefs(prefs)
 }
 
-export function updateReadingPrefs(partial: Partial<Omit<ReadingPreferences, 'version'>>) {
-  const current = getReadingPrefs()
-  const next: ReadingPreferences = { ...current, ...partial, version: 1 }
-  writePrefs(next)
-}
-
 export function resetReadingPrefs() {
   writePrefs(DEFAULT_PREFS)
 }

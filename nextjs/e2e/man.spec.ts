@@ -131,6 +131,16 @@ test('man: reading preferences drawer applies settings', async ({ page }) => {
   await expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 
+test('man: switching distro from reading preferences keeps the URL hash', async ({ page }) => {
+  await page.goto('/man/tar/1#synopsis')
+  await waitForInteractiveShell(page)
+
+  await page.getByRole('button', { name: 'Reading preferences' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
+  await dialog.getByRole('radiogroup', { name: 'Default distro' }).getByRole('radio', { name: '@ubuntu' }).click()
+  await expect(page).toHaveURL(/\/man\/tar\/1\?distro=ubuntu#synopsis$/)
+})
+
 test('man: header and footer links work from man pages', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()

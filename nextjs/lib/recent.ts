@@ -116,22 +116,6 @@ export function clearRecent() {
   writeStore({ version: 1, items: [], lastCleared: Date.now() })
 }
 
-export type RecentKey =
-  | { kind: 'page'; name: string; section: string }
-  | { kind: 'search'; query: string }
-
-export function removeRecent(key: RecentKey) {
-  const store = getRecentStore()
-  const next = store.items.filter((x) => !matches(x, key))
-  if (next.length === store.items.length) return
-  writeStore({ ...store, items: next })
-}
-
-function matches(a: RecentItem, b: RecentKey) {
-  if (b.kind === 'page') return a.kind === 'page' && a.name === b.name && a.section === b.section
-  return a.kind === 'search' && a.query === b.query
-}
-
 export function recordRecentPage(opts: { name: string; section: string; description?: string }) {
   const item: RecentItem = {
     kind: 'page',

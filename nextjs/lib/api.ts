@@ -332,16 +332,6 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   return result
 }
 
-export async function fetchManByNameAndSection(opts: {
-  distro: Distro
-  name: string
-  section: string
-}): Promise<ManPageResponse> {
-  const result = await fetchManByNameAndSectionOrAlias(opts)
-  if (result.kind === 'alias') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
-  return result.data
-}
-
 export type RelatedResponse = { items: SectionPage[] }
 
 export type ManPageMetaResponse = { page: ManPage }

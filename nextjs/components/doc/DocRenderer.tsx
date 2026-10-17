@@ -16,7 +16,7 @@ import {
 
 import type { Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
-import { getScrollBehavior } from '../../lib/scroll'
+import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
 import { CodeBlock } from './CodeBlock'
 
@@ -90,22 +90,6 @@ export const DocRenderer = forwardRef<
     getItemKey: (idx) => blockKey(blocks[idx], idx),
   })
 
-  const fineTuneScrollToId = useCallback((id: string, opts: { behavior: BmScrollBehavior; block: ScrollLogicalPosition }) => {
-    let attempts = 0
-
-    const tick = () => {
-      attempts += 1
-      const el = document.getElementById(id)
-      if (el) {
-        el.scrollIntoView({ behavior: opts.behavior, block: opts.block })
-        return
-      }
-      if (attempts < 20) window.requestAnimationFrame(tick)
-    }
-
-    window.requestAnimationFrame(tick)
-  }, [])
-
   const scrollToBlockIndex = useCallback(
     (index: number, opts?: { align?: 'start' | 'center'; behavior?: BmScrollBehavior }) => {
       if (!isVirtualized) return
@@ -135,9 +119,9 @@ export const DocRenderer = forwardRef<
         })
       }
 
-      fineTuneScrollToId(id, { behavior, block })
+      scrollToIdWhenRendered(id, { behavior, block })
     },
-    [anchorToBlockIndex, fineTuneScrollToId, isVirtualized, virtualizer],
+    [anchorToBlockIndex, isVirtualized, virtualizer],
   )
 
   useImperativeHandle(

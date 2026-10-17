@@ -1,26 +1,17 @@
 import Link from 'next/link'
-import { cookies } from 'next/headers'
 
 import { HomeDashboardClient } from './HomeDashboardClient'
 import { fetchInfo, listSections, withDistroFallback } from '../lib/api'
-import { isDefaultDistro, normalizeDistro, withDistro, type Distro } from '../lib/distro'
+import { isDefaultDistro, withDistro } from '../lib/distro'
+import { resolveRequestDistro, type SearchParams } from '../lib/requestContext'
 import { ManSectionLabel, RunningHead } from '../components/man/RunningHead'
 import { Kbd } from '../components/ui/Kbd'
 
 export const revalidate = 3600
 
-type SearchParams = Record<string, string | string[] | undefined>
-
-function getFirst(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0]
-  return value
-}
-
 export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
-  const cookieStore = await cookies()
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const requestedDistro = (normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieDistro) ?? 'debian') satisfies Distro
+  const requestedDistro = await resolveRequestDistro(sp)
 
   const { distro, data } = await withDistroFallback(requestedDistro, async (activeDistro) =>
     Promise.all([fetchInfo(activeDistro), listSections(activeDistro)]),

@@ -143,7 +143,3 @@ export function toggleBookmark(opts: { name: string; section: string; descriptio
   addBookmark({ name: opts.name, section: opts.section, description: opts.description })
   return true
 }
-
-export function clearBookmarks() {
-  writeStore(defaultStore())
-}
