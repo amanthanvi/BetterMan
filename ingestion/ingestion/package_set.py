@@ -142,5 +142,3 @@ FULL_PACKAGE_SET_BY_DISTRO: dict[str, list[str]] = {
     "freebsd": FULL_PACKAGE_SET_FREEBSD,
     "macos": FULL_PACKAGE_SET_MACOS,
 }
-
-FULL_PACKAGE_SET: list[str] = FULL_PACKAGE_SET_DEBIAN
