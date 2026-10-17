@@ -105,13 +105,6 @@ def ingest(
     locale: str = "en",
     distro: str = "debian",
 ) -> IngestResult:
-    # Verify the deployed functions and schema version before installing
-    # packages or posting a release. Shipping both sides in one commit does
-    # not prove the deployment is current.
-    client = ConvexIngestClient(http_url=convex_url, ingest_secret=ingest_secret)
-    contract = client.require_deployed_contract()
-    _log("ingest_contract_ok", schemaVersion=contract.get("schemaVersion"))
-
     requested = _content_packages(sample=sample, distro=distro)
     if distro in {"debian", "ubuntu"}:
         apt_install(requested)
@@ -242,6 +235,7 @@ def ingest(
     success_rate = (handled / total) if total else 0.0
     publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
 
+    client = ConvexIngestClient(http_url=convex_url, ingest_secret=ingest_secret)
     page_links = _build_page_links(pages=parsed_pages)
     sitemap_pages = _build_sitemap_page_map(pages=parsed_pages)
     licenses = _collect_licenses(pages=parsed_pages)

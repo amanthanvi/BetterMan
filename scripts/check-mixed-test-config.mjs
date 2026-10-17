@@ -5,9 +5,13 @@
 // Test-runner config:
 //   vitest.config.*, vitest.workspace.*, playwright.config.*, jest.config.*,
 //   jest.setup.*, karma.conf.*, cypress.config.*, pytest.ini, tox.ini,
-//   .mocharc.*, and any changed line in .github/workflows/ci.yml that invokes
-//   vitest, playwright, pytest, jest, or a pnpm test script. That includes
-//   `pnpm next:e2e` and the CI spelling `pnpm -C nextjs e2e`.
+//   .mocharc.*, conftest.py, a changed [tool.pytest*] or [tool.coverage*]
+//   section in pyproject.toml, a changed test script in package.json
+//   (test, e2e, ops:test, *:test, *:e2e, test:*), and any changed line in
+//   .github/workflows/ci.yml that invokes vitest, playwright, pytest, jest,
+//   or a pnpm test script. That includes `pnpm next:e2e` and the CI spelling
+//   `pnpm -C nextjs e2e`. The rest of pyproject.toml and package.json is not
+//   test-runner config.
 // Application code:
 //   convex/ outside tests, ingestion/ingestion/, and nextjs/ outside tests,
 //   e2e, and markdown. Docs, workflow pin bumps, and test files alone are allowed.
@@ -20,6 +24,8 @@ const CI_WORKFLOW = '.github/workflows/ci.yml'
 const TEST_SCRIPT =
   /(?:^|\s)pnpm(?:\s+-C\s+\S+)?\s+(?:convex:test|next:test|next:e2e|ingest:test|ops:test|e2e|test)\b/
 const TEST_RUNNER = /(?:^|[^A-Za-z0-9_])(?:vitest|playwright|pytest|jest)(?:[^A-Za-z0-9_]|$)/
+const TEST_SCRIPT_KEY = /^(?:test|e2e|[\w.-]*:(?:test|e2e)|test:[\w.-]+|e2e:[\w.-]+)$/
+const TEST_SECTION = /^\[{1,2}tool\.(?:pytest|coverage)(?:\.|[\]"])/
 
 function baseName(file) {
   const parts = file.split('/')
@@ -38,9 +44,75 @@ export function isTestRunnerConfig(file) {
     /^cypress\.config\./.test(name) ||
     name === 'pytest.ini' ||
     name === 'tox.ini' ||
+    name === 'conftest.py' ||
     name === '.mocharc' ||
     /^\.mocharc\./.test(name)
   )
+}
+
+function sectionHeader(line) {
+  const match = /^(\[+\s*[^\]]+\])/.exec(line.trim())
+  if (!match) return null
+  return match[1].replace(/\s+/g, '')
+}
+
+function testToolSections(text) {
+  const sections = new Map()
+  let name = null
+  let lines = []
+  const flush = () => {
+    if (name && TEST_SECTION.test(name)) sections.set(name, lines.join('\n'))
+  }
+  for (const line of String(text ?? '').split(/\r?\n/)) {
+    const header = sectionHeader(line)
+    if (header) {
+      flush()
+      name = header
+      lines = [line]
+    } else if (name) {
+      lines.push(line)
+    }
+  }
+  flush()
+  return sections
+}
+
+export function pyprojectTestConfigChanged(before, after) {
+  const left = testToolSections(before)
+  const right = testToolSections(after)
+  const names = new Set([...left.keys(), ...right.keys()])
+  for (const name of names) {
+    if ((left.get(name) ?? '') !== (right.get(name) ?? '')) return true
+  }
+  return false
+}
+
+function readScripts(text) {
+  if (!text || !String(text).trim()) return { ok: true, scripts: {} }
+  try {
+    const parsed = JSON.parse(text)
+    const scripts = parsed && typeof parsed === 'object' ? parsed.scripts : null
+    if (!scripts || typeof scripts !== 'object' || Array.isArray(scripts)) return { ok: true, scripts: {} }
+    const out = {}
+    for (const [key, value] of Object.entries(scripts)) {
+      if (typeof value === 'string') out[key] = value
+    }
+    return { ok: true, scripts: out }
+  } catch {
+    return { ok: false, scripts: {} }
+  }
+}
+
+export function packageJsonTestScriptsChanged(before, after) {
+  const left = readScripts(before)
+  const right = readScripts(after)
+  if (!left.ok || !right.ok) return true
+  const keys = new Set([...Object.keys(left.scripts), ...Object.keys(right.scripts)])
+  for (const key of keys) {
+    if (!TEST_SCRIPT_KEY.test(key)) continue
+    if (left.scripts[key] !== right.scripts[key]) return true
+  }
+  return false
 }
 
 export function isTestFile(file) {
@@ -72,8 +144,8 @@ export function diffTouchesTestRunner(diffText) {
   return false
 }
 
-export function evaluateMix({ paths, labels = [], ciWorkflowDiff = '' }) {
-  const testConfig = [...new Set(paths.filter(isTestRunnerConfig))]
+export function evaluateMix({ paths, labels = [], ciWorkflowDiff = '', sectionConfig = [] }) {
+  const testConfig = [...new Set([...paths.filter(isTestRunnerConfig), ...sectionConfig])]
   const application = [...new Set(paths.filter(isApplicationCode))]
   if (diffTouchesTestRunner(ciWorkflowDiff) && !testConfig.includes(CI_WORKFLOW)) {
     testConfig.push(CI_WORKFLOW)
@@ -103,17 +175,47 @@ export function formatMixResult(result) {
   ].join('\n')
 }
 
-function changedPaths(base, head) {
+function changedEntries(base, head) {
   const out = execFileSync('git', ['diff', '--name-status', '-M', `${base}...${head}`], {
     encoding: 'utf8',
   })
-  const paths = []
+  const entries = []
   for (const line of out.split('\n')) {
     if (!line) continue
     const parts = line.split('\t')
-    paths.push(...parts.slice(1))
+    entries.push({ status: parts[0], paths: parts.slice(1) })
   }
-  return paths
+  return entries
+}
+
+function textAt(rev, file) {
+  try {
+    return execFileSync('git', ['show', `${rev}:${file}`], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+  } catch {
+    return ''
+  }
+}
+
+function sectionConfigPaths(base, head, entries) {
+  const extra = []
+  for (const entry of entries) {
+    const renamed = entry.status.startsWith('R') || entry.status.startsWith('C')
+    const beforePath = entry.paths[0]
+    const afterPath = renamed ? entry.paths[1] : entry.paths[0]
+    const name = baseName(afterPath)
+    if (name !== 'pyproject.toml' && name !== 'package.json') continue
+    const before = textAt(base, beforePath)
+    const after = textAt(head, afterPath)
+    const changed =
+      name === 'pyproject.toml'
+        ? pyprojectTestConfigChanged(before, after)
+        : packageJsonTestScriptsChanged(before, after)
+    if (changed) extra.push(afterPath)
+  }
+  return extra
 }
 
 function ciWorkflowDiff(base, head) {
@@ -146,10 +248,12 @@ function main() {
   if (!base) {
     throw new Error('usage: scripts/check-mixed-test-config.mjs --base <sha> [--head <sha>]')
   }
+  const entries = changedEntries(base, head)
   const result = evaluateMix({
-    paths: changedPaths(base, head),
+    paths: entries.flatMap((entry) => entry.paths),
     labels: readLabels(),
     ciWorkflowDiff: ciWorkflowDiff(base, head),
+    sectionConfig: sectionConfigPaths(base, head, entries),
   })
   console.log(formatMixResult(result))
   if (!result.ok) process.exitCode = 1

@@ -3,7 +3,6 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
-import { INGEST_CONTRACT } from "./ingestContract";
 
 const http = httpRouter();
 
@@ -63,16 +62,6 @@ function jsonField(value: unknown): string | undefined {
   if (value === null || typeof value === "undefined") return undefined;
   return JSON.stringify(value);
 }
-
-http.route({
-  path: "/ingest/contract",
-  method: "GET",
-  handler: httpAction(async (_ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    return jsonResponse(INGEST_CONTRACT);
-  }),
-});
 
 http.route({
   path: "/ingest/release",

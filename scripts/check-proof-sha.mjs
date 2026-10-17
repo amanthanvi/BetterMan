@@ -3,7 +3,8 @@
 // SHA. Dependabot pull requests are skipped.
 //
 // The heading text is exactly "Proof" at any ATX level, compared without
-// regard to case. The section runs until the next heading of the same or
+// regard to case. Up to three leading spaces are allowed, matching CommonMark.
+// The section runs until the next heading of the same or
 // higher level outside a fenced code block. Lines inside a fence are literal,
 // so a shell comment such as "# results" does not end the section. Nested
 // heading lines stay in the section, including a SHA written on that line.
@@ -22,7 +23,7 @@ const SHA_RE = /^[0-9a-f]{40}$/i
 const DEPENDABOT = 'dependabot[bot]'
 
 function headingMatch(line) {
-  const match = /^(#{1,6})[ \t]+(.+?)\s*$/.exec(line)
+  const match = /^ {0,3}(#{1,6})[ \t]+(.+?)\s*$/.exec(line)
   if (!match) return null
   const text = match[2].replace(/\s+#+\s*$/, '').trim()
   return { level: match[1].length, text }

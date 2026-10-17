@@ -36,6 +36,11 @@ test('does not hide Proof behind a one-line code span', () => {
   assert.equal(checkProof({ body, sha, author: 'amanthanvi' }).ok, true)
 })
 
+test('allows up to three leading spaces before the Proof heading', () => {
+  assert.equal(checkProof({ body: `   ## Proof\n\n${sha}\n`, sha, author: 'amanthanvi' }).ok, true)
+  assert.match(checkProof({ body: `    ## Proof\n\n${sha}\n`, sha, author: 'amanthanvi' }).message, /missing/i)
+})
+
 test('does not treat a longer heading as the Proof section', () => {
   const body = `## Proof of work\n\n${sha}\n`
   assert.match(checkProof({ body, sha, author: 'amanthanvi' }).message, /missing/i)

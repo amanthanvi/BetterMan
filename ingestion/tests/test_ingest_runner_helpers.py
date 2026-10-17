@@ -5,7 +5,6 @@ from uuid import uuid4
 import pytest
 
 from ingestion import ingest_runner
-from ingestion.convex_client import ConvexContractError
 from ingestion.ingest_runner import (
     _AliasRow,
     _build_page_links,
@@ -268,23 +267,16 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
         lambda **_kwargs: {"example": "Copyright example"} if with_alias_and_license else {},
     )
     calls = []
-    events = []
     monkeypatch.setattr(
         ingest_runner.ConvexIngestClient,
-        "require_deployed_contract",
-        lambda _self: events.append("contract") or {"schemaVersion": 1},
+        "post",
+        lambda _self, path, payload: calls.append((path, payload)),
     )
-
-    def post(_self, path, payload):
-        events.append("write")
-        calls.append((path, payload))
-
-    def activate(_self, payload):
-        events.append("write")
-        calls.append(("/ingest/activate", payload))
-
-    monkeypatch.setattr(ingest_runner.ConvexIngestClient, "post", post)
-    monkeypatch.setattr(ingest_runner.ConvexIngestClient, "activate_release", activate)
+    monkeypatch.setattr(
+        ingest_runner.ConvexIngestClient,
+        "activate_release",
+        lambda _self, payload: calls.append(("/ingest/activate", payload)),
+    )
 
     result = ingest_runner.ingest(
         sample=True,
@@ -297,8 +289,6 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
         git_sha="test",
     )
 
-    assert events[0] == "contract"
-    assert events.index("contract") < events.index("write")
     declaration = calls[0][1]
     assert calls[0][0] == "/ingest/release"
     assert declaration["pageCount"] == 1
@@ -314,31 +304,3 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
         )
     assert calls[-1][0] == "/ingest/activate"
     assert result.published
-
-
-def test_ingest_fails_before_writing_when_convex_contract_is_missing(monkeypatch):
-    def missing(_self):
-        raise ConvexContractError("GET /ingest/contract returned 404")
-
-    monkeypatch.setattr(ingest_runner.ConvexIngestClient, "require_deployed_contract", missing)
-    calls = []
-    monkeypatch.setattr(
-        ingest_runner.ConvexIngestClient,
-        "post",
-        lambda *_args, **_kwargs: calls.append("post"),
-    )
-    monkeypatch.setattr(ingest_runner, "apt_install", lambda _packages: calls.append("apt"))
-
-    with pytest.raises(ConvexContractError, match="404"):
-        ingest_runner.ingest(
-            sample=True,
-            activate=True,
-            convex_url="https://example.convex.site",
-            ingest_secret="test-secret",
-            dataset_stage="staging",
-            image_ref="test",
-            image_digest="test",
-            git_sha="test",
-        )
-
-    assert calls == []
