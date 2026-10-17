@@ -104,7 +104,7 @@ combinator (no merge — primitives own their recipes).
   "Find in page" / "Previous|Next match" / "Expand|Collapse sidebar" /
   "Load more results", table "Command-line options" (flags as separate exact
   texts), select "Select distribution variant" (a real `<select>`), regions
-  "Recent" / "Bookmarks", heading "Browse", TOC active link
+  "Recent" / "Bookmarks" / "Quick examples", heading "Browse", TOC active link
   `aria-current="location"`. Section labels may render uppercase — accessible
   name matching is case-insensitive.
 - **Keyboard map:** ⌘K palette · `/` search · `?` shortcuts · `d` theme ·
