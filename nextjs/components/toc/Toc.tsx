@@ -13,6 +13,8 @@ const TOC_INDENT_CLASSES = [
   'pl-[3.25rem]',
 ] as const
 
+const TOC_TITLE_MAX_LENGTH = 52
+
 export function Toc({
   items,
   activeId,
@@ -72,12 +74,14 @@ export function Toc({
         {items.map((item) => {
           const active = activeId === item.id
           const indent = TOC_INDENT_CLASSES[Math.min(5, Math.max(0, item.level - 2))]
+          const truncated = item.title.length > TOC_TITLE_MAX_LENGTH
 
           return (
             <li key={item.id} className="text-sm">
               <a
                 href={`#${item.id}`}
                 aria-current={active ? 'location' : undefined}
+                title={truncated ? item.title : undefined}
                 onClick={(e) => {
                   if (onNavigateToId) {
                     e.preventDefault()
@@ -95,7 +99,7 @@ export function Toc({
                   active ? 'font-medium text-fg' : 'text-muted hover:text-fg'
                 }`}
               >
-                <span className="block truncate">{item.title.length > 52 ? `${item.title.slice(0, 52)}…` : item.title}</span>
+                <span className="block truncate">{truncated ? `${item.title.slice(0, TOC_TITLE_MAX_LENGTH)}…` : item.title}</span>
               </a>
             </li>
           )

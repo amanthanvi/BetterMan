@@ -383,6 +383,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
               title="Not available in this dataset"
             >
               {renderInlines(inline.inlines, ctx, distro)}
+              <span className="sr-only"> (not available)</span>
             </span>
           )
         }

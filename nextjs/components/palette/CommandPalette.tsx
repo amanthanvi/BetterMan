@@ -432,7 +432,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 setActiveIndex(0)
               }}
               placeholder="Search man pages…"
-              className="h-10 w-full min-w-0 flex-1 bg-transparent px-1 font-mono text-sm text-fg outline-none placeholder:text-muted"
+              className="h-10 w-full min-w-0 flex-1 bg-transparent px-1 font-mono text-sm text-fg placeholder:text-muted"
               aria-label="Command palette input"
               role="combobox"
               aria-autocomplete="list"

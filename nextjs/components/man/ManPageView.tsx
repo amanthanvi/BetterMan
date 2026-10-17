@@ -226,7 +226,11 @@ export function ManPageView({
     }
   }
 
-  const onSelectOption = (opt: OptionItem) => {
+  const onSelectOption = (opt: OptionItem, event: React.MouseEvent<HTMLAnchorElement>) => {
+    // Modified and non-primary clicks keep the browser's link behavior (new tab, window, download).
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    // pushState below is the navigation; native hash navigation would repeat it.
+    event.preventDefault()
     const scrollBehavior = getScrollBehavior()
     setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
 

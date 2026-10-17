@@ -274,7 +274,9 @@ export function SearchResultsClient({
       </ol>
 
       <div className="mt-6 flex items-center justify-between gap-3">
-        <div className="text-xs text-muted">{results.length.toLocaleString()} results loaded</div>
+        <div className="text-xs text-muted" aria-live="polite">
+          {results.length.toLocaleString()} results loaded
+        </div>
         <button
           type="button"
           className="inline-flex items-center justify-center px-1 py-2 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent disabled:pointer-events-none disabled:no-underline disabled:opacity-50"
@@ -286,7 +288,11 @@ export function SearchResultsClient({
         </button>
       </div>
 
-      {error ? <div className="mt-3 text-xs text-accent">{error}</div> : null}
+      {error ? (
+        <div role="alert" className="mt-3 text-xs text-accent">
+          {error}
+        </div>
+      ) : null}
     </div>
   )
 }

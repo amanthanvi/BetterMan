@@ -18,7 +18,7 @@ export function OptionsTable({
   options: OptionItem[]
   selectedAnchorId?: string | null
   flashAnchorId?: string | null
-  onSelect?: (opt: OptionItem) => void
+  onSelect?: (opt: OptionItem, event: React.MouseEvent<HTMLAnchorElement>) => void
 }) {
   return (
     <div className="overflow-x-auto">
@@ -42,7 +42,7 @@ export function OptionsTable({
                     href={`#${opt.anchorId}`}
                     id={opt.anchorId}
                     className="group scroll-mt-24 inline-flex flex-wrap gap-x-3 gap-y-1 no-underline"
-                    onClick={() => onSelect?.(opt)}
+                    onClick={(e) => onSelect?.(opt, e)}
                   >
                     {flagParts.map((flag) => (
                       <span key={flag} className={flagClass}>

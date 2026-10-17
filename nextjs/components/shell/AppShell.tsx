@@ -20,6 +20,9 @@ import { ShortcutsDialog } from './ShortcutsDialog'
 import { MoonIcon, SearchIcon, SunIcon } from '../icons'
 import { Kbd } from '../ui/Kbd'
 
+// About two seconds of frames to wait for a hash target behind a loading boundary.
+const HASH_TARGET_MAX_FRAMES = 120
+
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
 }
@@ -122,6 +125,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     setTocOpen(false)
     window.scrollTo({ top: nextY, left: 0, behavior: 'auto' })
+
+    // Push navigations to `/#recent` and similar land on the hash target. The new
+    // page may still be behind a loading boundary, so wait briefly for the element.
+    if (!prevKey || nextY || window.location.hash.length < 2) return
+    let id: string
+    try {
+      id = decodeURIComponent(window.location.hash.slice(1))
+    } catch {
+      return
+    }
+    let frame = 0
+    let attempts = 0
+    const tick = () => {
+      const target = document.getElementById(id)
+      if (target) target.scrollIntoView({ behavior: 'auto', block: 'start' })
+      else if (++attempts < HASH_TARGET_MAX_FRAMES) frame = window.requestAnimationFrame(tick)
+    }
+    tick()
+    return () => window.cancelAnimationFrame(frame)
   }, [routeKey, setTocOpen])
 
   useEffect(() => {
