@@ -34,6 +34,7 @@ import {
 import {
   pageByNameAndSection,
   requireActiveRelease,
+  resolvePageByName,
   variantsForPage,
 } from "./_releaseLookups";
 
@@ -471,39 +472,10 @@ export const getManByNameReadModel = internalQuery({
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
     const release = await requireActiveRelease(ctx, args);
-    const pages = await ctx.db
-      .query("manPages")
-      .withIndex("by_releaseId_and_name_and_section", (q) =>
-        q.eq("releaseId", release._id).eq("name", name),
-      )
-      .take(20);
+    const result = await resolvePageByName(ctx, { releaseId: release._id, name });
+    if (result.kind !== "page") return result;
 
-    if (!pages.length) {
-      const aliases = await ctx.db
-        .query("manPageAliases")
-        .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", release._id).eq("name", name))
-        .take(2);
-      if (aliases.length === 1) {
-        return {
-          kind: "alias" as const,
-          name: aliases[0].targetName,
-          section: aliases[0].targetSection,
-        };
-      }
-      return { kind: "not_found" as const };
-    }
-    if (pages.length > 1) {
-      return {
-        kind: "ambiguous" as const,
-        options: pages.map((page) => ({
-          section: page.section,
-          title: page.title,
-          description: page.description,
-        })),
-      };
-    }
-
-    const data = await pageReadModel(ctx, { stage: args.stage, release, page: pages[0] });
+    const data = await pageReadModel(ctx, { stage: args.stage, release, page: result.page });
     if (!data) return { kind: "not_found" as const };
     return { kind: "page" as const, data };
   },

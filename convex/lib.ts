@@ -53,12 +53,6 @@ export function normalizeDistro(value: string | null): Distro {
   throw new Error("INVALID_DISTRO");
 }
 
-export function normalizeStage(value: string | null): DatasetStage {
-  const raw = value?.trim().toLowerCase() || "prod";
-  if ((DATASET_STAGES as readonly string[]).includes(raw)) return raw as DatasetStage;
-  throw new Error("INVALID_DATASET_STAGE");
-}
-
 export function normalizeName(value: string): string {
   return value.trim().toLowerCase();
 }

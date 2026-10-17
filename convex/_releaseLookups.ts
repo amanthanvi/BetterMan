@@ -37,6 +37,41 @@ export async function pageByNameAndSection(
     .unique();
 }
 
+// A page match outranks an alias; several pages are offered in index (section) order.
+export async function resolvePageByName(
+  ctx: QueryCtx,
+  args: { releaseId: Id<"datasetReleases">; name: string },
+) {
+  const pages = await ctx.db
+    .query("manPages")
+    .withIndex("by_releaseId_and_name_and_section", (q) =>
+      q.eq("releaseId", args.releaseId).eq("name", args.name),
+    )
+    .take(20);
+  if (pages.length === 1) return { kind: "page" as const, page: pages[0] };
+  if (pages.length > 1) {
+    return {
+      kind: "ambiguous" as const,
+      options: pages.map((page) => ({
+        section: page.section,
+        title: page.title,
+        description: page.description,
+      })),
+    };
+  }
+
+  const aliases = await ctx.db
+    .query("manPageAliases")
+    .withIndex("by_releaseId_and_name", (q) =>
+      q.eq("releaseId", args.releaseId).eq("name", args.name),
+    )
+    .take(2);
+  if (aliases.length === 1) {
+    return { kind: "alias" as const, name: aliases[0].targetName, section: aliases[0].targetSection };
+  }
+  return { kind: "not_found" as const };
+}
+
 export async function variantsForPage(
   ctx: QueryCtx,
   args: {

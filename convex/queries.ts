@@ -19,6 +19,7 @@ import {
   activeRelease,
   pageByNameAndSection,
   requireActiveRelease,
+  resolvePageByName,
 } from "./_releaseLookups";
 
 const SITEMAP_URLS_PER_FILE = 10_000;
@@ -169,6 +170,39 @@ export const getManMetaByNameAndSection = query({
         datasetReleaseId: release.datasetReleaseId,
       },
     };
+  },
+});
+
+// Name-only routes only redirect or list sections, so they skip document content.
+export const resolveManByName = query({
+  args: {
+    distro: distroValidator,
+    name: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      kind: v.literal("page"),
+      name: v.string(),
+      section: v.string(),
+      title: v.string(),
+      description: v.string(),
+    }),
+    v.object({
+      kind: v.literal("ambiguous"),
+      options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
+    }),
+    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string() }),
+    v.object({ kind: v.literal("not_found") }),
+  ),
+  handler: async (ctx, args) => {
+    const release = await requireActiveRelease(ctx, {
+      stage: PUBLIC_DATASET_STAGE,
+      distro: args.distro,
+    });
+    const result = await resolvePageByName(ctx, { releaseId: release._id, name: normalizeName(args.name) });
+    if (result.kind !== "page") return result;
+    const { name, section, title, description } = result.page;
+    return { kind: "page" as const, name, section, title, description };
   },
 });
 
@@ -582,32 +616,6 @@ export const listSeoReleases = query({
   },
 });
 
-export const listSitemapPage = query({
-  args: {
-    stage: publicStageCompatibilityValidator,
-    distro: distroValidator,
-    page: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const release = await activeRelease(ctx, {
-      stage: PUBLIC_DATASET_STAGE,
-      distro: args.distro,
-    });
-    if (!release) return null;
-    const pages = await ctx.db
-      .query("manPages")
-      .withIndex("by_releaseId_and_sitemapPage_and_name", (q) =>
-        q.eq("releaseId", release._id).eq("sitemapPage", args.page),
-      )
-      .take(SITEMAP_URLS_PER_FILE);
-    if (!pages.length) return null;
-    return {
-      items: pages.map((page) => ({ name: page.name, section: page.section })),
-      page: args.page,
-    };
-  },
-});
-
 export const listSitemapPageChunk = query({
   args: {
     stage: publicStageCompatibilityValidator,
@@ -633,6 +641,7 @@ export const listSitemapPageChunk = query({
       .paginate(paginationOpts);
     if (!result.page.length && args.paginationOpts.cursor === null) return null;
     return {
+      datasetReleaseId: release.datasetReleaseId,
       items: result.page.map((page) => ({ name: page.name, section: page.section })),
       page: args.page,
       isDone: result.isDone,

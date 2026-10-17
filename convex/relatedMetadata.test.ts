@@ -5,6 +5,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
+import { resolveRelatedItems } from "./_relatedLinks";
 
 const modules = import.meta.glob("./**/*.ts");
 const releaseInput = (datasetReleaseId: string, pageCount = 0) => ({
@@ -83,6 +84,7 @@ describe("related metadata backfill", () => {
     })).toMatchObject({ pending: false });
     const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(10));
     expect(links[0]).toMatchObject({ toTitle: "target(1)", toDescription: "target description" });
+    expect(links[1]).toMatchObject({ toMissing: true });
     expect(links[1]).not.toHaveProperty("toTitle");
     expect(await t.query(api.queries.getRelated, { distro: "debian", name: "source", section: "1" })).toEqual({
       items: [{ name: "target", section: "1", title: "target(1)", description: "target description" }],
@@ -182,6 +184,7 @@ describe("related metadata backfill", () => {
     })).rejects.toThrow("RELEASE_MANIFEST_UNVERIFIED");
     const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(10));
     expect(links[0]).toMatchObject({ toTitle: "target(1)" });
+    expect(links[1]).toMatchObject({ toMissing: true });
     expect(links[1]).not.toHaveProperty("toTitle");
   });
 
@@ -233,12 +236,12 @@ describe("related metadata backfill", () => {
         });
       }
     });
-    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "resumed" })).toMatchObject({ processed: 100, updated: 0, isDone: false });
+    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "resumed" })).toMatchObject({ processed: 100, updated: 100, isDone: false });
     await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "resumed", pages: [pageInput("later")] })).rejects.toThrow("RELEASE_SEALED");
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(200));
     expect(links).toHaveLength(105);
-    expect(links.every((link) => link.toTitle === undefined)).toBe(true);
+    expect(links.every((link) => link.toMissing === true && link.toTitle === undefined)).toBe(true);
     const release = await t.run((ctx) => ctx.db.get(releaseId));
     expect(release?.relatedMetadataCompletedVersion).toBe(release?.relatedMetadataVersion ?? 0);
     // Replaying already-uploaded pages neither changes metadata nor invalidates completion.
@@ -326,4 +329,14 @@ describe("active metadata readiness", () => {
     await expect(t.mutation(internal.related.backfillActiveReleases, {})).rejects.toThrow();
     expect((await t.run((ctx) => ctx.db.get(releaseId)))?.sealed).not.toBe(true);
   });
+});
+
+it("skips links cached as missing without looking up their target", async () => {
+  const lookup = vi.fn(async () => null);
+  const missing = { toName: "missing", toSection: "1", toMissing: true };
+  const cached = { toName: "target", toSection: "1", toTitle: "target(1)", toDescription: "target description" };
+  expect(await resolveRelatedItems([missing, cached], lookup, 50)).toEqual([
+    { name: "target", section: "1", title: "target(1)", description: "target description" },
+  ]);
+  expect(lookup).not.toHaveBeenCalled();
 });

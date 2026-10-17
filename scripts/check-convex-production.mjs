@@ -138,6 +138,18 @@ async function checkDistro(client, { distro, minPageCount, expectedReleaseId }) 
     failures.push(`golden page ${golden.name}/${golden.section} failed: ${error.message}`)
   }
 
+  try {
+    const resolved = await client.query(api.queries.resolveManByName, { distro, name: golden.name })
+    const sections = resolved.kind === 'page'
+      ? [resolved.section]
+      : resolved.kind === 'ambiguous' ? resolved.options.map((option) => option.section) : []
+    if (!sections.includes(golden.section)) {
+      failures.push(`golden name ${golden.name} did not resolve to section ${golden.section}`)
+    }
+  } catch (error) {
+    failures.push(`golden name ${golden.name} failed: ${error.message}`)
+  }
+
   let metadata = null
   try {
     metadata = await client.query(api.queries.getManMetaByNameAndSection, {
