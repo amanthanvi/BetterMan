@@ -2,11 +2,28 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
+import { cache } from 'react'
 
-import { FastApiError, fetchManResolve, isReleaseNotFoundError, suggest, withDistroFallback } from '../../../lib/api'
-import { withDistro } from '../../../lib/distro'
+import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
+import { FastApiError, fetchManResolve, withDistroFallback, type ManResolveResult } from '../../../lib/api'
+import { withDistro, type Distro } from '../../../lib/distro'
 import { getPublicOrigin } from '../../../lib/public-origin'
 import { resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+
+// Runs before anything streams, so an unknown name is an HTTP 404 and a single
+// match an HTTP redirect instead of a 200 that falls back on the client.
+// cache() shares one lookup between generateMetadata and the page per request.
+const resolveName = cache(async (name: string, requestedDistro: Distro): Promise<{ distro: Distro; result: ManResolveResult }> => {
+  try {
+    const { distro, data } = await withDistroFallback(requestedDistro, (distro) =>
+      fetchManResolve({ distro, name: name.toLowerCase() }),
+    )
+    return { distro, result: data }
+  } catch (err) {
+    if (err instanceof FastApiError && err.status === 404) notFound()
+    throw err
+  }
+})
 
 export async function generateMetadata({
   params,
@@ -17,54 +34,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { name } = await params
   const sp = await searchParams
-  const requestedDistro = await resolveRequestDistro(sp)
+  const { distro, result } = await resolveName(name, await resolveRequestDistro(sp))
+  // A single match redirects, so only the section picker has metadata to send.
+  if (result.kind !== 'ambiguous') return {}
 
   const origin = getPublicOrigin({ headers: await headers() })
-
-  try {
-    const { distro, data: result } = await withDistroFallback(requestedDistro, (activeDistro) =>
-      fetchManResolve({ distro: activeDistro, name: name.toLowerCase() }),
-    )
-    const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}`, distro)
-    const canonical = `${origin}${canonicalPath}`
-
-    if (result.kind === 'alias') {
-      return { title: `${result.name}(${result.section}) - BetterMan`, alternates: { canonical } }
-    }
-    if (result.kind === 'page') {
-      const title = `${result.name}(${result.section}) - BetterMan`
-      const description = result.description || result.title || `${result.name}(${result.section}) man page.`
-      return {
-        title,
-        description,
-        alternates: { canonical },
-        openGraph: { title, description, type: 'article' },
-      }
-    }
-
-    const title = `${name} — Choose section — BetterMan`
-    const description = `Multiple man page sections match “${name}”. Choose a section to continue.`
-    return {
-      title,
-      description,
-      alternates: { canonical },
-      openGraph: { title, description, type: 'website' },
-    }
-  } catch (err) {
-    if (err instanceof FastApiError && err.status === 404) {
-      const title = `${name} — Not found — BetterMan`
-      const description = `We couldn’t find “${name}” in the current BetterMan dataset.`
-      const canonicalPath = withDistro(`/man/${encodeURIComponent(name)}`, requestedDistro)
-      const canonical = `${origin}${canonicalPath}`
-
-      return {
-        title,
-        description,
-        alternates: { canonical },
-        robots: { index: false },
-      }
-    }
-    return { title: 'BetterMan' }
+  const canonical = `${origin}${withDistro(`/man/${encodeURIComponent(name)}`, distro)}`
+  const title = `${name} — Choose section — BetterMan`
+  const description = `Multiple man page sections match “${name}”. Choose a section to continue.`
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, type: 'website' },
   }
 }
 
@@ -77,112 +59,46 @@ export default async function ManByNamePage({
 }) {
   const { name } = await params
   const sp = await searchParams
-  const requestedDistro = await resolveRequestDistro(sp)
-  let activeDistro = requestedDistro
-
-  try {
-    const { distro, data: result } = await withDistroFallback(requestedDistro, async (candidateDistro) => {
-      activeDistro = candidateDistro
-      return fetchManResolve({ distro: candidateDistro, name: name.toLowerCase() })
-    })
-    if (result.kind === 'page') {
-      redirect(
-        withDistro(
-          `/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`,
-          distro,
-        ),
-      )
-    }
-    if (result.kind === 'alias') {
-      redirect(
-        withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, distro),
-      )
-    }
-
-    const title = `${name} — Choose section — BetterMan`
-    return (
-      <div className="mx-auto max-w-5xl">
-        <header className="border-b border-edge pb-6">
-          <h1 className="font-mono text-3xl font-semibold tracking-tight">{name}</h1>
-          <p className="mt-2 text-sm text-muted">
-            Multiple sections match this name. Pick one:
-          </p>
-        </header>
-
-        <ol className="mt-6 space-y-3">
-          {result.options.map((opt) => (
-            <li
-              key={opt.section}
-              className="border-b border-edge py-4 "
-            >
-              <Link
-                href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, distro)}
-                className="font-mono text-base font-semibold tracking-tight underline underline-offset-4"
-              >
-                {name}({opt.section})
-              </Link>
-              <div className="mt-1 text-sm text-muted">{opt.description}</div>
-            </li>
-          ))}
-        </ol>
-
-        <div className="mt-10 text-xs text-muted">
-          <span className="font-mono">{title}</span>
-        </div>
-      </div>
-    )
-  } catch (err) {
-    if (!(err instanceof FastApiError) || err.status !== 404) {
-      throw err
-    }
-    if (isReleaseNotFoundError(err)) {
-      notFound()
-    }
-
-    const suggestions = await suggest({ distro: activeDistro, name: name.toLowerCase() }).catch(() => null)
-
-    return (
-      <div className="mx-auto max-w-5xl">
-        <header className="border-b border-edge pb-6">
-          <h1 className="text-3xl font-semibold tracking-tight">Not found</h1>
-          <p className="mt-2 text-sm text-muted">
-            We couldn&apos;t find <span className="font-mono">{name}</span> in the current dataset.
-          </p>
-        </header>
-
-        {suggestions?.suggestions?.length ? (
-          <div className="mt-6 space-y-2 text-sm text-muted">
-            <div>Did you mean:</div>
-            <ul className="space-y-2">
-              {suggestions.suggestions.map((s) => (
-                <li key={`${s.name}:${s.section}`} className="flex flex-col">
-                  <Link
-                    href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, activeDistro)}
-                    className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
-                  >
-                    {s.name}({s.section})
-                  </Link>
-                  {s.description ? <div className="text-xs text-muted">{s.description}</div> : null}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        <div className="mt-6">
-          <Link
-            href={withDistro(`/search?q=${encodeURIComponent(name)}`, activeDistro)}
-            className="text-sm underline underline-offset-4"
-          >
-            Search for “{name}”
-          </Link>
-          .
-        </div>
-
-        <div className="mt-10 text-xs text-muted">
-          <span className="font-mono">{name} — Not found — BetterMan</span>
-        </div>
-      </div>
+  const { distro, result } = await resolveName(name, await resolveRequestDistro(sp))
+  if (result.kind !== 'ambiguous') {
+    // 307, not 308: the target depends on the distro cookie and on which sections
+    // the current release has, so browsers must not cache it.
+    redirect(
+      withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, distro),
     )
   }
+
+  const title = `${name} — Choose section — BetterMan`
+  return (
+    <div className="mx-auto max-w-5xl">
+      <header className="border-b border-edge pb-6">
+        <h1 className="font-mono text-3xl font-semibold tracking-tight">{name}</h1>
+        <p className="mt-2 text-sm text-muted">
+          Multiple sections match this name. Pick one:
+        </p>
+      </header>
+
+      <ol className="mt-6 space-y-3">
+        {result.options.map((opt) => (
+          <li
+            key={opt.section}
+            className="border-b border-edge py-4 "
+          >
+            <Link
+              href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, distro)}
+              className="font-mono text-base font-semibold tracking-tight underline underline-offset-4"
+            >
+              {name}({opt.section})
+              <LinkPendingHint />
+            </Link>
+            <div className="mt-1 text-sm text-muted">{opt.description}</div>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-10 text-xs text-muted">
+        <span className="font-mono">{title}</span>
+      </div>
+    </div>
+  )
 }

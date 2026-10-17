@@ -190,6 +190,17 @@
     --bm-code-accent: #e5484d;
   }
 
+  /* A clicked link into a route without a loading boundary dims until the payload lands. */
+  a:has(> [data-bm-link-pending]) {
+    opacity: 0.55;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    a:has(> [data-bm-link-pending]) {
+      transition: opacity 150ms var(--ease-out, ease-out);
+    }
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     html,
     body,

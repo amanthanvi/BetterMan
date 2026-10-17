@@ -1,6 +1,6 @@
-import { Skeleton } from '../../../../components/ui/Skeleton'
+import { Skeleton } from '../ui/Skeleton'
 
-export default function Loading() {
+export function ManPageSkeleton() {
   return (
     <div role="status" aria-label="Loading man page" className="mx-auto max-w-6xl">
       <Skeleton className="h-3 w-full" />

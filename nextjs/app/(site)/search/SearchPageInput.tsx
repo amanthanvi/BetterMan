@@ -3,8 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-import type { Distro } from '../../lib/distro'
-import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import type { Distro } from '../../../lib/distro'
+import { useDebouncedValue } from '../../../lib/useDebouncedValue'
 
 /**
  * Progressive enhancement over the GET form: typing debounces into

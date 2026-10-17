@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 import { LicensesClient } from './LicensesClient'
-import { fetchLicenses, withDistroFallback } from '../../lib/api'
-import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { fetchLicenses, withDistroFallback } from '../../../lib/api'
+import { resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
 export function generateMetadata(): Metadata {
   return {
