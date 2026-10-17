@@ -4,10 +4,6 @@ import subprocess
 from pathlib import Path
 
 
-def is_fedora_like() -> bool:
-    return Path("/etc/fedora-release").exists() or Path("/etc/redhat-release").exists()
-
-
 def dnf_install(packages: list[str]) -> None:
     # Fedora container base images commonly set tsflags=nodocs, which strips man pages.
     # Clearing tsflags on `dnf install` isn't enough for preinstalled packages (dnf won't reinstall
@@ -71,8 +67,24 @@ def build_manpath_to_package(paths: list[Path]) -> dict[str, str]:
         )
         lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
         if len(lines) != len(chunk):
+            # rpm prints one line per owning package, so a file with several
+            # owners (or a missing one, reported on stderr) shifts every later
+            # line. Query this chunk one file at a time instead.
+            for path in chunk:
+                single = subprocess.run(
+                    ["rpm", "-qf", "--qf", "%{NAME}\n", path],
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                )
+                owners = single.stdout.split()
+                if single.returncode == 0 and owners:
+                    mapping[path] = owners[0]
             continue
-        for path, pkg in zip(chunk, lines, strict=False):
-            mapping[path] = pkg
+        for path, pkg in zip(chunk, lines, strict=True):
+            # An unowned file prints "file ... is not owned by any package" on
+            # stdout in its slot; package names never contain spaces.
+            if " " not in pkg:
+                mapping[path] = pkg
 
     return mapping

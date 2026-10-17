@@ -46,13 +46,14 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
     ).strip()
 
     convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL", "")
-    ingest_secret = os.environ.get("CONVEX_INGEST_SECRET", "")
     dataset_stage = os.environ.get("BETTERMAN_DATASET_STAGE", "staging")
 
     network = os.environ.get("INGEST_DOCKER_NETWORK")
     if not network and _docker_network_exists("betterman_default"):
         network = "betterman_default"
 
+    # Bare `-e NAME` copies the value from this environment, so the secret
+    # never appears in the host process list.
     cmd = [
         "docker",
         "run",
@@ -60,7 +61,9 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "-e",
         f"CONVEX_HTTP_URL={convex_url}",
         "-e",
-        f"CONVEX_INGEST_SECRET={ingest_secret}",
+        "CONVEX_INGEST_SECRET",
+        "-e",
+        "BETTERMAN_INGEST_WORKERS",
         "-e",
         f"BETTERMAN_DATASET_STAGE={dataset_stage}",
         "-e",
