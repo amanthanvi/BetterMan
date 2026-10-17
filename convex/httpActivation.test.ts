@@ -58,10 +58,12 @@ it("cleans up storage uploaded by a rejected late batch without altering the sea
     hasParseWarnings: false, doc: {}, synopsis: null, options: null, seeAlso: null,
     searchText: "late", snippetText: "late", links: [],
   };
-  await expect(t.fetch("/ingest/pages/storage", {
+  const response = await t.fetch("/ingest/pages/storage", {
     method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
     body: JSON.stringify({ datasetReleaseId: "sealed", pages: [page] }),
-  })).rejects.toThrow("RELEASE_SEALED");
+  });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ error: { code: "RELEASE_SEALED" } });
   const remaining = await t.run((ctx) => ctx.db.system.query("_storage").take(10));
   expect(remaining.map((item) => item._id)).toEqual([existingStorage]);
   expect(await t.run((ctx) => ctx.db.query("manPages").take(1))).toEqual([]);

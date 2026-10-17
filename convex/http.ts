@@ -1,7 +1,8 @@
 import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
+import { httpAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { ingestClientError } from "./_ingestErrors";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { INGEST_CONTRACT } from "./ingestContract";
 import { secretsMatch } from "./lib";
@@ -34,12 +35,24 @@ async function requireIngestSecret(req: Request): Promise<Response | null> {
   return null;
 }
 
-async function readJson(req: Request): Promise<unknown> {
-  try {
-    return await req.json();
-  } catch {
-    throw new Error("INVALID_JSON");
-  }
+function ingestAction(handler: (ctx: ActionCtx, body: unknown) => Promise<Response>) {
+  return httpAction(async (ctx, req) => {
+    const auth = await requireIngestSecret(req);
+    if (auth) return auth;
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: { code: "INVALID_JSON", message: "Request body must be valid JSON" } }, 400);
+    }
+    try {
+      return await handler(ctx, body);
+    } catch (error) {
+      const known = ingestClientError(error);
+      if (!known) throw error;
+      return jsonResponse({ error: { code: known.code, message: known.message } }, known.status);
+    }
+  });
 }
 
 function jsonField(value: unknown): string | undefined {
@@ -60,10 +73,7 @@ http.route({
 http.route({
   path: "/ingest/release",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.createRelease, body as never);
     return jsonResponse(result);
   }),
@@ -72,10 +82,7 @@ http.route({
 http.route({
   path: "/ingest/pages",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.insertPages, body as never);
     return jsonResponse(result);
   }),
@@ -84,10 +91,7 @@ http.route({
 http.route({
   path: "/ingest/pages/storage",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction(async (ctx, body) => {
     const payload = body as { datasetReleaseId: string; pages: Array<Record<string, unknown>> };
     if (!payload || !Array.isArray(payload.pages)) {
       return jsonResponse(
@@ -163,10 +167,7 @@ http.route({
 http.route({
   path: "/ingest/aliases",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.insertAliases, body as never);
     return jsonResponse(result);
   }),
@@ -175,10 +176,7 @@ http.route({
 http.route({
   path: "/ingest/licenses",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.insertLicenses, body as never);
     return jsonResponse(result);
   }),
@@ -187,10 +185,7 @@ http.route({
 http.route({
   path: "/ingest/activate",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.activateRelease, body as never);
     return jsonResponse(result, result.pending ? 409 : 200);
   }),
@@ -199,10 +194,7 @@ http.route({
 http.route({
   path: "/ingest/promote",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    const auth = await requireIngestSecret(req);
-    if (auth) return auth;
-    const body = await readJson(req);
+  handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.promoteActiveReleases, body as never);
     return jsonResponse(result);
   }),

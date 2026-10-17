@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { contentChunks, splitContentFields, type ContentField, type ContentJsonKind } from "./_legacyContent";
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, verifyDeclaredManifest } from "./_releaseManifest";
@@ -12,12 +13,6 @@ import {
   sectionLabel,
   truncateText,
 } from "./lib";
-
-const MAX_INLINE_CONTENT_CHARS = 500_000;
-const CONTENT_CHUNK_CHARS = 400_000;
-
-type ContentJsonKind = "docJson" | "synopsisJson" | "optionsJson" | "seeAlsoJson";
-type ContentField = { kind: ContentJsonKind; value: string | undefined };
 
 const sectionStatInput = v.object({
   section: v.string(),
@@ -133,37 +128,6 @@ async function validateNewPageRoute(ctx: MutationCtx, releaseId: Id<"datasetRele
   const alias = await ctx.db.query("manPageAliases")
     .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).eq("name", page.name).eq("section", page.section)).unique();
   if (existing || alias) throw new Error("DUPLICATE_MAN_PAGE_ROUTE");
-}
-
-function shouldChunkContent(value: string): boolean {
-  return value.length > MAX_INLINE_CONTENT_CHARS;
-}
-
-function contentChunks(value: string): string[] {
-  const chunks = [];
-  for (let index = 0; index < value.length; index += CONTENT_CHUNK_CHARS) {
-    chunks.push(value.slice(index, index + CONTENT_CHUNK_CHARS));
-  }
-  return chunks;
-}
-
-function splitContentFields(contentFields: ContentField[]): {
-  inlinePayload: Partial<Record<ContentJsonKind, string>>;
-  chunkedFields: Array<{ kind: ContentJsonKind; value: string }>;
-} {
-  const inlinePayload: Partial<Record<ContentJsonKind, string>> = {};
-  const chunkedFields: Array<{ kind: ContentJsonKind; value: string }> = [];
-
-  for (const field of contentFields) {
-    if (typeof field.value !== "string") continue;
-    if (shouldChunkContent(field.value)) {
-      chunkedFields.push({ kind: field.kind, value: field.value });
-    } else {
-      inlinePayload[field.kind] = field.value;
-    }
-  }
-
-  return { inlinePayload, chunkedFields };
 }
 
 async function insertContentBlobChunks(

@@ -15,9 +15,11 @@ import {
   CONTENT_KINDS,
   type ContentField,
   type ContentJsonKind,
+  contentChunks,
   contentFieldsChars,
   readContentBlobField,
   readManPageContentFieldList,
+  splitContentFields,
 } from "./_legacyContent";
 
 const DEFAULT_RELEASE_LIMIT = 5;
@@ -35,7 +37,6 @@ const DEFAULT_ORPHAN_BLOB_LIMIT = 25;
 const MAX_ORPHAN_BLOB_LIMIT = 100;
 const DEFAULT_STORAGE_STATS_LIMIT = 25;
 const MAX_STORAGE_STATS_LIMIT = 100;
-const CONTENT_CHUNK_CHARS = 400_000;
 
 type ReleaseChildTable =
   | "releaseSectionStats"
@@ -117,33 +118,6 @@ const STORAGE_STATS_FIELDS: Record<StorageStatsTable, string[]> = {
 function bounded(value: number | undefined, fallback: number, max: number): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
   return Math.max(1, Math.min(Math.floor(value), max));
-}
-
-function contentChunks(value: string): string[] {
-  const chunks = [];
-  for (let index = 0; index < value.length; index += CONTENT_CHUNK_CHARS) {
-    chunks.push(value.slice(index, index + CONTENT_CHUNK_CHARS));
-  }
-  return chunks;
-}
-
-function splitContentFields(contentFields: ContentField[]): {
-  inlinePayload: Partial<Record<ContentJsonKind, string>>;
-  chunkedFields: Array<{ kind: ContentJsonKind; value: string }>;
-} {
-  const inlinePayload: Partial<Record<ContentJsonKind, string>> = {};
-  const chunkedFields: Array<{ kind: ContentJsonKind; value: string }> = [];
-
-  for (const field of contentFields) {
-    if (typeof field.value !== "string") continue;
-    if (field.value.length > CONTENT_CHUNK_CHARS) {
-      chunkedFields.push({ kind: field.kind, value: field.value });
-    } else {
-      inlinePayload[field.kind] = field.value;
-    }
-  }
-
-  return { inlinePayload, chunkedFields };
 }
 
 async function insertContentBlobChunks(

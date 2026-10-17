@@ -7,6 +7,10 @@ import pytest
 import ingestion.docker_runner as docker_runner
 
 
+def _named_env(cmd: list[str], name: str) -> bool:
+    return any(cmd[index] == "-e" and cmd[index + 1] == name for index in range(len(cmd) - 1))
+
+
 def test_run_ingest_container_rejects_unknown_distro() -> None:
     with pytest.raises(RuntimeError, match="unsupported distro"):
         docker_runner.run_ingest_container(sample=False, activate=True, distro="freebsd")
@@ -86,6 +90,76 @@ def test_run_ingest_container_uses_image_id_when_repo_digest_missing(monkeypatch
 
     docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
     assert "BETTERMAN_IMAGE_DIGEST=sha256:local-image-id" in docker_run
+
+
+def test_run_ingest_container_forwards_page_batch_limits_by_name(monkeypatch) -> None:
+    monkeypatch.setenv("BETTERMAN_DEBIAN_IMAGE_REF", "debian:custom")
+    monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
+    monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", "7")
+    monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", "1024")
+    monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = False, **_kwargs: object):
+        calls.append(cmd)
+        if cmd[:2] == ["docker", "pull"]:
+            return SimpleNamespace(returncode=0)
+        if cmd[:2] == ["docker", "run"]:
+            return SimpleNamespace(returncode=0)
+        raise AssertionError(f"unexpected run: {cmd}")
+
+    def fake_check_output(cmd: list[str], **_kwargs: object) -> str:
+        if cmd[:3] == ["docker", "image", "inspect"]:
+            return "debian:custom@sha256:deadbeef\n"
+        if cmd[:2] == ["git", "rev-parse"]:
+            return "abc123\n"
+        raise AssertionError(f"unexpected check_output: {cmd}")
+
+    monkeypatch.setattr(docker_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(docker_runner.subprocess, "check_output", fake_check_output)
+
+    assert docker_runner.run_ingest_container(sample=False, activate=True, distro="debian") == 0
+
+    docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
+    for name in (
+        "BETTERMAN_INGEST_PAGE_BATCH_ITEMS",
+        "BETTERMAN_INGEST_PAGE_BATCH_BYTES",
+    ):
+        assert _named_env(docker_run, name)
+        assert not any(part.startswith(f"{name}=") for part in docker_run)
+
+
+def test_run_ingest_container_omits_unset_page_batch_limits(monkeypatch) -> None:
+    monkeypatch.setenv("BETTERMAN_UBUNTU_IMAGE_REF", "ubuntu:custom")
+    monkeypatch.delenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", raising=False)
+    monkeypatch.delenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", raising=False)
+    monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = False, **_kwargs: object):
+        calls.append(cmd)
+        if cmd[:2] in (["docker", "pull"], ["docker", "run"]):
+            return SimpleNamespace(returncode=0)
+        raise AssertionError(f"unexpected run: {cmd}")
+
+    def fake_check_output(cmd: list[str], **_kwargs: object) -> str:
+        if cmd[:3] == ["docker", "image", "inspect"]:
+            return "ubuntu:custom@sha256:deadbeef\n"
+        if cmd[:2] == ["git", "rev-parse"]:
+            return "abc123\n"
+        raise AssertionError(f"unexpected check_output: {cmd}")
+
+    monkeypatch.setattr(docker_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(docker_runner.subprocess, "check_output", fake_check_output)
+
+    assert docker_runner.run_ingest_container(sample=False, activate=True, distro="ubuntu") == 0
+
+    docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
+    assert "BETTERMAN_INGEST_PAGE_BATCH_ITEMS" not in docker_run
+    assert "BETTERMAN_INGEST_PAGE_BATCH_BYTES" not in docker_run
 
 
 def test_run_ingest_container_passes_requested_platform(monkeypatch) -> None:

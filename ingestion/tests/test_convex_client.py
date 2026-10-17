@@ -1,6 +1,6 @@
 import json
 import re
-from http.client import HTTPException, RemoteDisconnected
+from http.client import HTTPException, IncompleteRead, RemoteDisconnected
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import Mock
@@ -16,6 +16,111 @@ from ingestion.convex_client import (
     ConvexContractError,
     ConvexIngestClient,
 )
+
+
+def _http_error(status: int, body: bytes = b"") -> HTTPError:
+    return HTTPError("https://test.convex.site/ingest/pages", status, "Failure", {}, BytesIO(body))
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        _http_error(503, b"outage"),
+        _http_error(429, b"slow down"),
+        URLError("unreachable"),
+        TimeoutError("timed out"),
+        RemoteDisconnected("closed"),
+        IncompleteRead(b""),
+    ],
+)
+def test_idempotent_posts_retry_transient_failures(monkeypatch, failure):
+    request = Mock(side_effect=[failure, BytesIO(b'{"inserted":1,"skipped":0}')])
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    sleep = Mock()
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", sleep)
+    client = ConvexIngestClient("https://test.convex.site", "test-secret")
+    assert client.post("/ingest/pages/storage", {}) == {"inserted": 1, "skipped": 0}
+    assert request.call_count == 2
+    sleep.assert_called_once()
+
+
+def _unreadable_http_error(status: int, read_error: BaseException) -> HTTPError:
+    class UnreadableError(HTTPError):
+        def read(self, *args: object, **kwargs: object) -> bytes:
+            raise read_error
+
+    return UnreadableError(
+        "https://test.convex.site/ingest/pages",
+        status,
+        "Failure",
+        {},
+        BytesIO(b""),
+    )
+
+
+@pytest.mark.parametrize(
+    "read_error",
+    [IncompleteRead(b""), TimeoutError("timed out")],
+    ids=["incomplete-read", "timeout"],
+)
+def test_503_retries_when_error_body_cannot_be_read(monkeypatch, read_error):
+    request = Mock(
+        side_effect=[
+            _unreadable_http_error(503, read_error),
+            BytesIO(b'{"inserted":1,"skipped":0}'),
+        ]
+    )
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    sleep = Mock()
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", sleep)
+    client = ConvexIngestClient("https://test.convex.site", "test-secret")
+    assert client.post("/ingest/pages/storage", {}) == {"inserted": 1, "skipped": 0}
+    assert request.call_count == 2
+    sleep.assert_called_once_with(1.0)
+
+
+@pytest.mark.parametrize(
+    "read_error",
+    [IncompleteRead(b""), TimeoutError("timed out")],
+    ids=["incomplete-read", "timeout"],
+)
+def test_unreadable_503_stays_bounded(monkeypatch, read_error):
+    def fail(*_args: object, **_kwargs: object) -> None:
+        raise _unreadable_http_error(503, read_error)
+
+    request = Mock(side_effect=fail)
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    client = ConvexIngestClient("https://test.convex.site", "test-secret")
+    with pytest.raises(RuntimeError, match="HTTP 503"):
+        client.post("/ingest/pages/storage", {})
+    assert request.call_count == 3
+
+
+def test_retries_are_bounded(monkeypatch):
+    request = Mock(side_effect=URLError("unreachable"))
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    with pytest.raises(RuntimeError, match="unreachable"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").post("/ingest/aliases", {})
+    assert request.call_count == 3
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404, 409])
+def test_client_errors_fail_immediately(monkeypatch, status):
+    request = Mock(side_effect=_http_error(status, b"rejected"))
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    with pytest.raises(RuntimeError, match=f"HTTP {status}: rejected"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").post("/ingest/licenses", {})
+    request.assert_called_once()
+
+
+def test_release_creation_posts_once(monkeypatch):
+    request = Mock(side_effect=_http_error(503, b"outage"))
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    with pytest.raises(RuntimeError, match="HTTP 503"):
+        ConvexIngestClient("https://test.convex.site", "test-secret").post("/ingest/release", {})
+    request.assert_called_once()
 
 
 def test_activation_retries_pending_http_conflict(monkeypatch):

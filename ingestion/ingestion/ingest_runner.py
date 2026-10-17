@@ -33,7 +33,7 @@ from ingestion.arch import (
     pacman_install,
     pacman_packages,
 )
-from ingestion.convex_client import ConvexIngestClient
+from ingestion.convex_client import ConvexIngestClient, encode_json
 from ingestion.db import iso_utc_now, json_dumps
 from ingestion.debian import (
     apt_install,
@@ -78,6 +78,7 @@ _MAN_HREF_RE = re.compile(
 )
 
 logger = logging.getLogger("betterman.ingestion")
+_PAGE_BATCH_FAILURE_LIMIT = 3
 
 
 def _log(event: str, **fields: object) -> None:
@@ -113,6 +114,7 @@ def ingest(
     contract = client.require_deployed_contract()
     _log("ingest_contract_ok", schemaVersion=contract.get("schemaVersion"))
     workers = _ingest_worker_count()
+    batch_limits = _page_batch_limits()
 
     requested = _content_packages(sample=sample, distro=distro)
     if distro in {"debian", "ubuntu"}:
@@ -243,38 +245,19 @@ def ingest(
         },
     )
 
-    insert_started = monotonic()
-    batch_size = 20
-    for start in range(0, len(parsed_pages), batch_size):
-        batch = parsed_pages[start : start + batch_size]
-        client.post(
-            "/ingest/pages/storage",
-            {
-                "datasetReleaseId": dataset_release_id,
-                "pages": [
-                    _page_payload(
-                        row,
-                        sitemap_page=sitemap_pages[str(row.page_id)],
-                        links=page_links.get(str(row.page_id), []),
-                    )
-                    for row in batch
-                ],
-            },
-        )
-
-        processed = min(start + len(batch), len(parsed_pages))
-        if processed % 100 == 0 or processed == len(parsed_pages):
-            elapsed = monotonic() - insert_started
-            rate = processed / elapsed if elapsed > 0 else 0.0
-            remaining = max(0, len(parsed_pages) - processed)
-            eta_s = int(remaining / rate) if rate > 0 else None
-            _log(
-                "insert_progress",
-                processed=processed,
-                total=len(parsed_pages),
-                pct=round((processed / len(parsed_pages)) * 100.0, 2) if parsed_pages else 0.0,
-                etaSeconds=eta_s,
+    _upload_pages(
+        client,
+        dataset_release_id=dataset_release_id,
+        limits=batch_limits,
+        pages=[
+            _page_payload(
+                row,
+                sitemap_page=sitemap_pages[str(row.page_id)],
+                links=page_links.get(str(row.page_id), []),
             )
+            for row in parsed_pages
+        ],
+    )
 
     if licenses:
         license_items = [
@@ -870,14 +853,121 @@ def _build_sitemap_page_map(*, pages: list[_PageRow]) -> dict[str, int]:
     return out
 
 
+def _page_batch_limits() -> tuple[int, int]:
+    """Pages and exact request bytes per batch, each overridable by environment.
+
+    Twenty pages keep each mutation small; eight MiB keeps a batch of large
+    pages well under Convex's 16 MiB function-argument limit. Read before the
+    release is created so a bad value cannot strand a half-uploaded release.
+    """
+    return (
+        _positive_int_env("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", 20),
+        _positive_int_env("BETTERMAN_INGEST_PAGE_BATCH_BYTES", 8 * 1024 * 1024),
+    )
+
+
+def _positive_int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if not raw:
+        return default
+    if not raw.strip().isdigit() or int(raw) < 1:
+        raise ValueError(f"{name} must be a positive integer")
+    return int(raw)
+
+
+def _page_batches(
+    pages: list[dict[str, object]], *, dataset_release_id: str, max_items: int, max_bytes: int
+) -> Iterator[list[dict[str, object]]]:
+    """Group page payloads so each request stays within max_items and max_bytes.
+
+    Sizes are the UTF-8 bytes post() sends. A single page above max_bytes is
+    posted alone; the server decides whether it fits.
+    """
+    envelope = len(encode_json({"datasetReleaseId": dataset_release_id, "pages": []}))
+    batch: list[dict[str, object]] = []
+    size = envelope
+    for page in pages:
+        page_bytes = len(encode_json(page))
+        if batch and (len(batch) >= max_items or size + 1 + page_bytes > max_bytes):
+            yield batch
+            batch, size = [], envelope
+        size += page_bytes + (1 if batch else 0)  # comma between entries
+        batch.append(page)
+    if batch:
+        yield batch
+
+
+def _upload_pages(
+    client: ConvexIngestClient,
+    *,
+    dataset_release_id: str,
+    limits: tuple[int, int],
+    pages: list[dict[str, object]],
+) -> None:
+    """Post page batches; abort after three consecutive failures.
+
+    A failed batch leaves the release short of its declared page count, so it
+    can never activate. The remaining batches are still tried so one run
+    reports every rejected batch, then the run fails before activation.
+    """
+    max_items, max_bytes = limits
+    started = monotonic()
+    processed = 0
+    failed_batches = 0
+    consecutive_failures = 0
+    for batch in _page_batches(
+        pages, dataset_release_id=dataset_release_id, max_items=max_items, max_bytes=max_bytes
+    ):
+        try:
+            client.post(
+                "/ingest/pages/storage", {"datasetReleaseId": dataset_release_id, "pages": batch}
+            )
+        except RuntimeError as exc:
+            failed_batches += 1
+            consecutive_failures += 1
+            _log(
+                "page_batch_failed",
+                pages=[f"{page['name']}({page['section']})" for page in batch],
+                consecutiveFailures=consecutive_failures,
+                error=str(exc)[:500],
+            )
+            if consecutive_failures >= _PAGE_BATCH_FAILURE_LIMIT:
+                raise RuntimeError(
+                    f"page upload aborted after {consecutive_failures} consecutive failed batches"
+                ) from exc
+            continue
+        consecutive_failures = 0
+
+        before = processed
+        processed += len(batch)
+        if processed // 100 > before // 100 or processed == len(pages):
+            elapsed = monotonic() - started
+            rate = processed / elapsed if elapsed > 0 else 0.0
+            remaining = max(0, len(pages) - processed)
+            eta_s = int(remaining / rate) if rate > 0 else None
+            _log(
+                "insert_progress",
+                processed=processed,
+                total=len(pages),
+                pct=round((processed / len(pages)) * 100.0, 2) if pages else 0.0,
+                etaSeconds=eta_s,
+            )
+
+    if failed_batches:
+        raise RuntimeError(
+            f"{failed_batches} page batch(es) failed; release {dataset_release_id} is incomplete"
+        )
+
+
 def _page_payload(
     row: _PageRow,
     *,
     sitemap_page: int,
     links: list[dict[str, str | None]],
 ) -> dict[str, object]:
-    search_text = normalize_ws(f"{row.name} {row.description} {row.headings_text} {row.plain_text}")
-    snippet_text = normalize_ws(f"{row.description} {row.plain_text}")
+    # The server ignores searchText and keeps 240 characters of snippetText
+    # (MAX_SNIPPET_TEXT_CHARS in convex/lib.ts); send only what it stores.
+    snippet_text = normalize_ws(f"{row.description} {row.plain_text}")[:240]
     return {
         "externalId": str(row.page_id),
         "name": row.name,
@@ -894,7 +984,7 @@ def _page_payload(
         "synopsis": row.synopsis,
         "options": row.options,
         "seeAlso": row.see_also,
-        "searchText": search_text,
+        "searchText": "",
         "snippetText": snippet_text,
         "links": links,
     }
