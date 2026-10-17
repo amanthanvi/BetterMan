@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Security: paths that only start with `api`, such as `/apiary`, now get the CSP and security headers. Only `/api` and `/api/...` skip the proxy.
 - Switching distro from the reading preferences drawer keeps the URL hash, as the man page distro picker already did.
 - CI: reject pull request whitespace with `git diff --check`, reject test-runner config mixed with application code unless the pull request is labeled `test-config-change`, and require a Proof heading that cites the full head SHA (Dependabot is exempt). Pytest and coverage sections, `conftest.py`, and package test scripts count as test-runner config. Those `pyproject.toml` and `package.json` comparisons use the merge base of the pull request. A manifest path is not application code, and test script names may contain extra colons.
 - Ingestion refuses to write until `GET /ingest/contract` shows the deployed Convex functions and schema version this client requires. A timeout, a non-UTF-8 body, a disconnect, or a broken read of that contract is the same refusal.
