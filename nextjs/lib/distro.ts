@@ -43,6 +43,12 @@ export function isDefaultDistro(distro: Distro): boolean {
   return distro === 'debian'
 }
 
+/** Option anchors are appended as written (`sort=`, `no~2`), like the options table's own links. */
+export function manPageHref(name: string, section: string, distro: string, anchorId?: string): string {
+  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)
+  return anchorId ? `${href}#${anchorId}` : href
+}
+
 export function withDistro(loc: string, distro: string): string {
   if (!distro || distro === 'debian') return loc
   const isAbsolute = /^https?:\/\//.test(loc)

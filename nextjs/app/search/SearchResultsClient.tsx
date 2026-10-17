@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import type { SearchResponse, SearchResult } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
-import { withDistro } from '../../lib/distro'
+import { manPageHref, withDistro } from '../../lib/distro'
 import { escapeRegExp } from '../../lib/textRanges'
 
 const BACKEND_HIGHLIGHT_MARKER_RE = /[\u27ea\u27eb]/g
@@ -40,10 +40,6 @@ function highlight(text: string, query: string): ReactNode[] {
 
   if (last < cleanedText.length) out.push(cleanedText.slice(last))
   return out.length ? out : [cleanedText]
-}
-
-function buildManHref(opts: { distro: Distro; name: string; section: string }) {
-  return withDistro(`/man/${encodeURIComponent(opts.name)}/${encodeURIComponent(opts.section)}`, opts.distro)
 }
 
 async function fetchMore(opts: {
@@ -84,20 +80,26 @@ function buildSynopsisSnippet(r: SearchResult): string {
 }
 
 function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResult }) {
-  const href = useMemo(() => buildManHref({ distro, name: r.name, section: r.section }), [distro, r.name, r.section])
+  const anchorId = r.match === 'option' ? r.anchorId : undefined
+  const href = useMemo(() => manPageHref(r.name, r.section, distro, anchorId), [anchorId, distro, r.name, r.section])
   const synopsis = useMemo(() => buildSynopsisSnippet(r), [r])
 
   return (
     <li className="border-b border-edge py-4 first:pt-1 last:border-b-0">
       <div className="flex flex-col gap-1.5">
-        <Link
-          href={href}
-          className="self-start font-mono text-sm font-semibold"
-          aria-label={`${r.name}(${r.section})`}
-          title={`${r.name}(${r.section})`}
-        >
-          {r.name}({r.section})
-        </Link>
+        <div className="flex items-baseline gap-3">
+          <Link
+            href={href}
+            className="font-mono text-sm font-semibold"
+            aria-label={`${r.name}(${r.section})`}
+            title={`${r.name}(${r.section})`}
+          >
+            {r.name}({r.section})
+          </Link>
+          {anchorId ? (
+            <span className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-muted">options</span>
+          ) : null}
+        </div>
 
         <div className="text-sm text-muted">{highlight(r.description, q)}</div>
 

@@ -9,7 +9,7 @@ import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, getBookmarks } from '../../lib/
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../../lib/recent'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useFocusTrap } from '../../lib/useFocusTrap'
-import { normalizeDistro, withDistro, type Distro } from '../../lib/distro'
+import { manPageHref, normalizeDistro, withDistro, type Distro } from '../../lib/distro'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { isTypingTarget } from '../../lib/dom'
 import { getScrollBehavior } from '../../lib/scroll'
@@ -37,6 +37,7 @@ type PaletteItem =
       description: string
       highlights?: string[]
       distro?: Distro
+      anchorId?: string
       run: () => void
     }
   | {
@@ -118,7 +119,8 @@ function bookmarksToItems(
   }))
 }
 
-function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro; runMan: (name: string, section: string, distroOverride?: Distro) => void }): PaletteItem {
+function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro; runMan: (name: string, section: string, distroOverride?: Distro, anchorId?: string) => void }): PaletteItem {
+  const anchorId = result.match === 'option' ? result.anchorId : undefined
   return {
     kind: 'page',
     id: `page:${result.name}:${result.section}`,
@@ -128,9 +130,10 @@ function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro
     description: result.description,
     highlights: result.highlights,
     distro: ctx.distro,
+    anchorId,
     run: () => {
       recordRecentSearch(ctx.query)
-      ctx.runMan(result.name, result.section, ctx.distro)
+      ctx.runMan(result.name, result.section, ctx.distro, anchorId)
     },
   }
 }
@@ -208,9 +211,20 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     close()
   }
 
-  const runMan = (name: string, section: string, distroOverride?: Distro) => {
+  const runMan = (name: string, section: string, distroOverride?: Distro, anchorId?: string) => {
     const targetDistro = distroOverride ?? effectiveDistro
-    router.push(withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, targetDistro))
+    const samePage =
+      anchorId !== undefined &&
+      targetDistro === distro.distro &&
+      decodeURIComponent(window.location.pathname).toLowerCase() === `/man/${name}/${section}`.toLowerCase()
+    if (samePage) {
+      // Already on the page: a router push of a hash-only change does not fire
+      // hashchange, which is what expands and selects the option row.
+      if (window.location.hash === `#${anchorId}`) window.dispatchEvent(new HashChangeEvent('hashchange'))
+      else window.location.hash = anchorId
+    } else {
+      router.push(manPageHref(name, section, targetDistro, anchorId))
+    }
     close()
   }
 
@@ -493,6 +507,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                         itemLabel(item)
                       )}
                     </div>
+                    {item.kind === 'page' && item.anchorId ? (
+                      <span className="shrink-0 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-muted">options</span>
+                    ) : null}
                     {item.kind === 'page' ? (
                       <div className="min-w-0 flex-1 truncate text-sm text-muted">{item.description}</div>
                     ) : item.kind === 'action' && item.detail ? (
