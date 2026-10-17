@@ -77,6 +77,14 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "-w",
         "/work",
     ]
+    # Pass by name (`-e NAME`) only when the host set the variable. Docker
+    # copies the value from this process, and an unset name would arrive empty.
+    for name in (
+        "BETTERMAN_INGEST_PAGE_BATCH_ITEMS",
+        "BETTERMAN_INGEST_PAGE_BATCH_BYTES",
+    ):
+        if os.environ.get(name):
+            cmd.extend(["-e", name])
     if platform:
         cmd.extend(["--platform", platform])
     if network:

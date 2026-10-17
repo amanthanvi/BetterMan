@@ -1,11 +1,21 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from dataclasses import dataclass
 from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+logger = logging.getLogger("betterman.ingestion")
+
+# Page, alias, and license posts are idempotent: the server skips rows it
+# already stored, so a 5xx, 429, or transport failure is retried a bounded
+# number of times. Release creation and activation post once.
+_RETRIED_PATHS = ("/ingest/pages", "/ingest/aliases", "/ingest/licenses")
+_MAX_ATTEMPTS = 3
+_RETRY_BACKOFF_SECONDS = 1.0
 
 
 class ActivationPending(RuntimeError):
@@ -51,6 +61,19 @@ def _http_error_detail(exc: HTTPError) -> str:
         raise _contract_read_error(read_exc) from read_exc
 
 
+def _post_error_detail(exc: HTTPError) -> str:
+    """Read an HTTP error body. A failed read does not change the status.
+
+    Page uploads retry from the status code. IncompleteRead, a timeout, or a
+    connection reset while reading a 5xx or 429 body must stay inside the
+    retry loop.
+    """
+    try:
+        return exc.read().decode("utf-8", errors="replace")
+    except (TimeoutError, HTTPException, ConnectionError) as read_exc:
+        return f"unreadable error body ({read_exc})"
+
+
 def _clip(detail: str) -> str:
     text = " ".join(detail.split())
     if len(text) > 300:
@@ -82,6 +105,28 @@ def _contract_problems(payload: object) -> list[str]:
     if payload.get("activatePending") is not True:
         problems.append("activatePending is not true")
     return problems
+
+
+def _activation_pending(detail: str) -> bool:
+    try:
+        pending = json.loads(detail)
+    except ValueError:
+        return False
+    return isinstance(pending, dict) and pending.get("pending") is True
+
+
+def _json_object(raw: str) -> dict:
+    if not raw:
+        return {}
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        raise RuntimeError("Convex ingest response was not a JSON object")
+    return data
+
+
+def encode_json(payload: object) -> bytes:
+    """Serialize exactly the bytes post() sends, so callers can size batches."""
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
 def convex_http_url(raw: str) -> str:
@@ -194,11 +239,10 @@ class ConvexIngestClient:
         raise RuntimeError("Release activation did not finish within the hydration deadline")
 
     def post(self, path: str, payload: object, *, timeout_seconds: float = 120) -> dict:
-        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         url = f"{convex_http_url(self.http_url)}/{path.lstrip('/')}"
         req = Request(
             url,
-            data=body,
+            data=encode_json(payload),
             method="POST",
             headers={
                 "Authorization": f"Bearer {self.ingest_secret}",
@@ -207,25 +251,27 @@ class ConvexIngestClient:
             },
         )
 
-        try:
-            with urlopen(req, timeout=timeout_seconds) as res:
-                raw = res.read().decode("utf-8")
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            if exc.code == 409 and path == "/ingest/activate":
-                try:
-                    pending = json.loads(detail)
-                except ValueError:
-                    pending = None
-                if isinstance(pending, dict) and pending.get("pending") is True:
+        attempts = _MAX_ATTEMPTS if path.startswith(_RETRIED_PATHS) else 1
+        for attempt in range(1, attempts + 1):
+            try:
+                with urlopen(req, timeout=timeout_seconds) as res:
+                    raw = res.read().decode("utf-8")
+            except HTTPError as exc:
+                detail = _post_error_detail(exc)
+                if exc.code == 409 and path == "/ingest/activate" and _activation_pending(detail):
                     raise ActivationPending("Related metadata hydration is pending") from exc
-            raise RuntimeError(f"Convex ingest HTTP {exc.code}: {detail}") from exc
-        except URLError as exc:
-            raise RuntimeError(f"Convex ingest request failed: {exc.reason}") from exc
-
-        if not raw:
-            return {}
-        data = json.loads(raw)
-        if not isinstance(data, dict):
-            raise RuntimeError("Convex ingest response was not a JSON object")
-        return data
+                cause = exc
+                retryable = exc.code >= 500 or exc.code == 429
+                error = RuntimeError(f"Convex ingest HTTP {exc.code}: {detail}")
+            except URLError as exc:
+                cause, retryable = exc, True
+                error = RuntimeError(f"Convex ingest request failed: {exc.reason}")
+            except (TimeoutError, HTTPException, ConnectionError) as exc:
+                cause, retryable = exc, True
+                error = RuntimeError(f"Convex ingest request failed: {exc}")
+            else:
+                return _json_object(raw)
+            if not retryable or attempt == attempts:
+                raise error from cause
+            logger.warning("Convex ingest %s attempt %d failed, retrying: %s", path, attempt, error)
+            time.sleep(_RETRY_BACKOFF_SECONDS * attempt)

@@ -4,13 +4,14 @@ import gzip
 import hashlib
 import shutil
 from concurrent.futures import ProcessPoolExecutor
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
 
 from ingestion import ingest_runner
-from ingestion.convex_client import ConvexContractError
+from ingestion.convex_client import ConvexContractError, ConvexIngestClient, encode_json
 from ingestion.ingest_runner import (
     _AliasRow,
     _build_page_links,
@@ -18,11 +19,15 @@ from ingestion.ingest_runner import (
     _filter_sources,
     _ingest_worker_count,
     _iter_internal_doc_links,
+    _page_batch_limits,
+    _page_batches,
+    _page_payload,
     _PageRow,
     _parse_man_href,
     _parse_sources,
     _ParseContext,
     _resolve_aliases,
+    _upload_pages,
 )
 from ingestion.man_scan import ManSource
 
@@ -394,6 +399,86 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
         )
     assert calls[-1][0] == "/ingest/activate"
     assert result.published
+
+
+def test_page_payload_sends_only_what_the_server_stores() -> None:
+    row = replace(_page("real", "1"), description="desc", plain_text="word " * 100)
+    payload = _page_payload(row, sitemap_page=1, links=[])
+    assert payload["searchText"] == ""
+    assert len(payload["snippetText"]) == 240
+    assert payload["snippetText"].startswith("desc word word")
+
+
+def test_page_batches_bound_items_and_exact_request_bytes() -> None:
+    pages: list[dict[str, object]] = [
+        {"externalId": f"p{i}", "doc": {"text": "é" * 10}} for i in range(5)
+    ]
+    request = lambda batch: encode_json({"datasetReleaseId": "r", "pages": batch})  # noqa: E731
+    two = len(request(pages[:2]))
+
+    batches = list(_page_batches(pages, dataset_release_id="r", max_items=20, max_bytes=two))
+    assert [len(batch) for batch in batches] == [2, 2, 1]
+    assert [len(request(batch)) for batch in batches[:2]] == [two, two]
+    assert [page for batch in batches for page in batch] == pages
+
+    singles = _page_batches(pages, dataset_release_id="r", max_items=20, max_bytes=two - 1)
+    assert [len(batch) for batch in singles] == [1, 1, 1, 1, 1]
+    capped = _page_batches(pages, dataset_release_id="r", max_items=3, max_bytes=10**9)
+    assert [len(batch) for batch in capped] == [3, 2]
+    # A page above the budget is posted alone rather than dropped.
+    oversized = _page_batches(pages, dataset_release_id="r", max_items=20, max_bytes=1)
+    assert [len(batch) for batch in oversized] == [1, 1, 1, 1, 1]
+
+
+def test_page_batch_limits_come_from_the_environment(monkeypatch) -> None:
+    monkeypatch.delenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", raising=False)
+    monkeypatch.delenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", raising=False)
+    assert _page_batch_limits() == (20, 8 * 1024 * 1024)
+    monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", "7")
+    monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", "1024")
+    assert _page_batch_limits() == (7, 1024)
+    for value in ["0", "-1", "abc", "1.5"]:
+        monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", value)
+        with pytest.raises(ValueError, match="BETTERMAN_INGEST_PAGE_BATCH_ITEMS must be"):
+            _page_batch_limits()
+
+
+def _upload_batches_of_one(monkeypatch, post, posted: list[str]) -> None:
+    def record(_self, path, payload):
+        name = payload["pages"][0]["name"]
+        posted.append(name)
+        return post(name)
+
+    monkeypatch.setattr(ingest_runner.ConvexIngestClient, "post", record)
+    pages: list[dict[str, object]] = [{"name": f"p{i}", "section": "1"} for i in range(5)]
+    _upload_pages(
+        ConvexIngestClient("https://example.convex.site", "s"),
+        dataset_release_id="r",
+        limits=(1, 8 * 1024 * 1024),
+        pages=pages,
+    )
+
+
+def test_upload_pages_aborts_after_three_consecutive_failed_batches(monkeypatch) -> None:
+    def outage(_name):
+        raise RuntimeError("Convex ingest HTTP 503: outage")
+
+    posted: list[str] = []
+    with pytest.raises(RuntimeError, match="3 consecutive failed batches"):
+        _upload_batches_of_one(monkeypatch, outage, posted)
+    assert posted == ["p0", "p1", "p2"]
+
+
+def test_upload_pages_tries_every_batch_then_fails_on_a_rejected_one(monkeypatch) -> None:
+    def reject_second(name):
+        if name == "p1":
+            raise RuntimeError("Convex ingest HTTP 409: DUPLICATE_MAN_PAGE_ROUTE")
+        return {"inserted": 1, "skipped": 0}
+
+    posted: list[str] = []
+    with pytest.raises(RuntimeError, match="1 page batch"):
+        _upload_batches_of_one(monkeypatch, reject_second, posted)
+    assert posted == ["p0", "p1", "p2", "p3", "p4"]
 
 
 def test_ingest_fails_before_writing_when_convex_contract_is_missing(monkeypatch):

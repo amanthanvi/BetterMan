@@ -132,7 +132,9 @@ it("cleans new uploads from a rejected batch without deleting reused files", asy
   expect((await upload(t, "existing", [page("existing")])).status).toBe(200);
   await t.run((ctx) => ctx.db.patch(sealed.releaseId, { sealed: true }));
   const before = await snapshot(t);
-  await expect(upload(t, "sealed", [page("reused"), page("new", "new payload")])).rejects.toThrow("RELEASE_SEALED");
+  const response = await upload(t, "sealed", [page("reused"), page("new", "new payload")]);
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ error: { code: "RELEASE_SEALED" } });
   expect(await snapshot(t)).toEqual(before);
   expect(await t.run(async (ctx) => (await ctx.storage.get(before.files[0]._id)) !== null)).toBe(true);
 });

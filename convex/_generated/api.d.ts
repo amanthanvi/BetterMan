@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
 import type * as _relatedLinks from "../_relatedLinks.js";
 import type * as _releaseIntegrity from "../_releaseIntegrity.js";
@@ -33,6 +34,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
   _relatedLinks: typeof _relatedLinks;
   _releaseIntegrity: typeof _releaseIntegrity;
