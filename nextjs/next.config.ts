@@ -4,6 +4,20 @@ import path from 'node:path'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, '..'),
+  async headers() {
+    return [
+      {
+        // Font file names carry no content hash, so cache long but not immutable.
+        source: '/fonts/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000' }],
+      },
+      {
+        source:
+          '/:icon(favicon\\.ico|favicon\\.svg|favicon-16\\.png|favicon-32\\.png|apple-touch-icon\\.png|icon-192\\.png|icon-512\\.png|betterman-mark\\.svg)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+    ]
+  },
   async rewrites() {
     return {
       beforeFiles: [
