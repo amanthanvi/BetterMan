@@ -20,7 +20,9 @@ const saved: ReadingPreferences = {
   codeTheme: 'dark',
 }
 
-function stubBrowser(stored: string | null) {
+const legacyDefaults: ReadingPreferences = { ...DEFAULT_PREFS, fontFamily: 'serif', lineHeight: 'relaxed' }
+
+function stubBrowser(stored: string | null, cookie = '') {
   const store = new Map<string, string>()
   if (stored !== null) store.set(READING_PREFS_STORAGE_KEY, stored)
   const cookieWrites: string[] = []
@@ -30,6 +32,9 @@ function stubBrowser(stored: string | null) {
     removeItem: (key: string) => store.delete(key),
   })
   vi.stubGlobal('document', {
+    get cookie() {
+      return cookie
+    },
     set cookie(value: string) {
       cookieWrites.push(value)
     },
@@ -39,11 +44,11 @@ function stubBrowser(stored: string | null) {
 
 afterEach(() => vi.unstubAllGlobals())
 
-describe('prefsFromCookie', () => {
-  it('defaults to the CSS fallback typography', () => {
-    expect(DEFAULT_PREFS).toMatchObject({ fontFamily: 'sans', lineHeight: 'normal' })
-  })
+it('defaults to the CSS fallback typography', () => {
+  expect(DEFAULT_PREFS).toMatchObject({ fontFamily: 'sans', lineHeight: 'normal' })
+})
 
+describe('prefsFromCookie', () => {
   it('parses a saved cookie value', () => {
     expect(prefsFromCookie(JSON.stringify(saved))).toEqual(saved)
   })
@@ -79,6 +84,20 @@ describe('reading preference persistence', () => {
     expect(cookieWrites).toEqual([
       `${READING_PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(saved))}; Path=/; Max-Age=31536000; SameSite=Lax`,
     ])
+  })
+
+  it('treats the old defaults stored by a legacy reset as unsaved', () => {
+    const { store, cookieWrites } = stubBrowser(JSON.stringify(legacyDefaults))
+    expect(restoreReadingPrefs()).toBeNull()
+    expect(store.has(READING_PREFS_STORAGE_KEY)).toBe(false)
+    expect(cookieWrites).toEqual([])
+  })
+
+  it('keeps serif and relaxed when they were saved with the cookie', () => {
+    const value = JSON.stringify(legacyDefaults)
+    const { cookieWrites } = stubBrowser(value, `${READING_PREFS_COOKIE}=${encodeURIComponent(value)}`)
+    expect(restoreReadingPrefs()).toEqual(legacyDefaults)
+    expect(cookieWrites).toHaveLength(1)
   })
 
   it('saves to both stores, and reset clears both instead of saving the defaults', () => {

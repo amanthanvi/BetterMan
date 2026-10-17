@@ -83,11 +83,40 @@ export function getStoredReadingPrefs(): ReadingPreferences | null {
   }
 }
 
+// Before the cookie existed, Reset stored these old defaults in localStorage.
+const LEGACY_DEFAULTS = JSON.stringify({
+  version: 1,
+  fontSize: 'medium',
+  fontFamily: 'serif',
+  lineHeight: 'relaxed',
+  columnWidth: 'normal',
+  codeTheme: 'auto',
+})
+
+function hasCookie(): boolean {
+  try {
+    return document.cookie.split(';').some((entry) => entry.trim().startsWith(`${READING_PREFS_COOKIE}=`))
+  } catch {
+    return false
+  }
+}
+
 // localStorage wins after hydration. Refreshing the cookie from it corrects a
 // missing or stale cookie, including one saved before the cookie existed.
 export function restoreReadingPrefs(): ReadingPreferences | null {
   const stored = getStoredReadingPrefs()
-  if (stored) syncReadingPrefsCookie(stored)
+  if (!stored) return null
+  // The old defaults without a cookie are a legacy reset, not a choice. Every
+  // save since then also writes the cookie, so a deliberate serif choice keeps it.
+  if (JSON.stringify(stored) === LEGACY_DEFAULTS && !hasCookie()) {
+    try {
+      localStorage.removeItem(READING_PREFS_STORAGE_KEY)
+    } catch {
+      // ignore
+    }
+    return null
+  }
+  syncReadingPrefsCookie(stored)
   return stored
 }
 
