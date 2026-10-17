@@ -25,6 +25,10 @@ async function loadHljs(): Promise<unknown> {
       core.default.registerLanguage('makefile', makefile.default)
       core.default.registerLanguage('python', python.default)
       return core.default
+    }).catch((err: unknown) => {
+      // A failed chunk load would otherwise stick; let the next block retry.
+      hljsPromise = null
+      throw err
     })
   }
 
@@ -103,9 +107,9 @@ export function CodeBlock({
     if (!shouldSyntaxHighlight) return
 
     let cancelled = false
-    void loadHljs().then((hljs) => {
-      if (cancelled) return
-      try {
+    loadHljs()
+      .then((hljs) => {
+        if (cancelled) return
         const next = (hljs as { highlight: (t: string, o: unknown) => { value: string } }).highlight(markedText, {
           language,
           ignoreIllegals: true,
@@ -113,10 +117,10 @@ export function CodeBlock({
         startTransition(() => {
           setHighlighted({ source: markedText, html: applyMarkers(next) })
         })
-      } catch {
+      })
+      .catch(() => {
         // keep fallback
-      }
-    })
+      })
 
     return () => {
       cancelled = true
