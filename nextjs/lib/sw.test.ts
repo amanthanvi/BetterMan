@@ -1,0 +1,90 @@
+import { readFileSync } from 'node:fs'
+import { runInNewContext } from 'node:vm'
+import { describe, expect, it, vi } from 'vitest'
+
+const source = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+const origin = 'https://betterman.test'
+
+function deferred() {
+  let resolve!: () => void
+  const promise = new Promise<void>((res) => { resolve = res })
+  return { promise, resolve }
+}
+
+function worker() {
+  const entries = new Map<string, Response>()
+  const cache = {
+    match: vi.fn(async (request: { url: string }) => entries.get(request.url)?.clone()),
+    put: vi.fn(async (request: { url: string }, response: Response) => { entries.set(request.url, response) }),
+    keys: vi.fn(async () => [...entries.keys()]),
+    delete: vi.fn(async (url: string) => entries.delete(url)),
+  }
+  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => []), delete: vi.fn() }
+  const fetch = vi.fn<(request: { url: string }) => Promise<Response>>()
+  let onFetch!: (event: unknown) => void
+  const self = {
+    location: { origin },
+    addEventListener: (name: string, listener: (event: unknown) => void) => {
+      if (name === 'fetch') onFetch = listener
+    },
+  }
+  runInNewContext(source, { self, caches, fetch, Response, URL })
+
+  function request(path: string, mode = 'navigate') {
+    let response!: Promise<Response>
+    const pending: Promise<unknown>[] = []
+    onFetch({
+      request: { url: new URL(path, origin).href, method: 'GET', mode, destination: '' },
+      respondWith: (value: Promise<Response>) => { response = value },
+      waitUntil: (value: Promise<unknown>) => { pending.push(value) },
+    })
+    return { response, pending }
+  }
+
+  return { entries, cache, fetch, request }
+}
+
+describe('service worker', () => {
+  it('responds without waiting for a slow cache write', async () => {
+    const w = worker()
+    const slowWrite = deferred()
+    w.cache.put.mockImplementationOnce(async (request, response) => {
+      await slowWrite.promise
+      w.entries.set(request.url, response)
+    })
+    w.fetch.mockImplementation(async (request) => new Response(new URL(request.url).pathname))
+
+    const slow = w.request('/man/ls/1')
+    expect(await (await slow.response).text()).toBe('/man/ls/1')
+    const other = w.request('/man/tar/1')
+    expect(await (await other.response).text()).toBe('/man/tar/1')
+    expect(w.entries.has(`${origin}/man/ls/1`)).toBe(false)
+
+    slowWrite.resolve()
+    await Promise.all([...slow.pending, ...other.pending])
+    expect(w.entries.has(`${origin}/man/ls/1`)).toBe(true)
+    expect(w.entries.has(`${origin}/man/tar/1`)).toBe(true)
+  })
+
+  it('serves an inline offline page for an uncached navigation', async () => {
+    const w = worker()
+    w.fetch.mockRejectedValue(new TypeError('offline'))
+
+    const res = await w.request('/man/ls/1').response
+    const html = await res.text()
+    expect(res.status).toBe(503)
+    expect(res.headers.get('Content-Type')).toBe('text/html; charset=utf-8')
+    expect(res.headers.get('Content-Security-Policy')).toContain("default-src 'none'")
+    expect(html).toContain('BETTERMAN(1)')
+    expect(html).toContain('<a href="/">')
+    expect(html).not.toMatch(/<script|<link|src=/i)
+  })
+
+  it('prefers a cached copy when the network fails', async () => {
+    const w = worker()
+    w.entries.set(`${origin}/man/ls/1`, new Response('cached'))
+    w.fetch.mockRejectedValue(new TypeError('offline'))
+
+    expect(await (await w.request('/man/ls/1').response).text()).toBe('cached')
+  })
+})
