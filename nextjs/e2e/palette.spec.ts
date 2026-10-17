@@ -35,6 +35,36 @@ test('command palette: @freebsd prefix opens the FreeBSD variant', async ({ page
   await expect(page.getByText('FreeBSD variant: this page is intentionally different for E2E testing.')).toBeVisible()
 })
 
+test('command palette: a flag query opens the page at its option row', async ({ page }) => {
+  await page.goto('/')
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Search' }).click()
+
+  const input = page.getByRole('combobox', { name: 'Command palette input' })
+  await input.fill('tar --create')
+  const option = page.getByRole('option', { name: /tar\(1\)/i })
+  await expect(option.getByText('options', { exact: true })).toBeVisible()
+  await option.click()
+  await expect(page).toHaveURL(/\/man\/tar\/1#opt-create$/)
+  await expect(page.locator('mark[data-bm-opt]').filter({ hasText: '--create' }).first()).toBeVisible()
+})
+
+test('command palette: a flag query on the open page selects the option row in place', async ({ page }) => {
+  await page.goto('/man/tar/1')
+  await waitForInteractiveShell(page)
+  await expect(page.locator('mark[data-bm-opt]')).toHaveCount(0)
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.getByRole('button', { name: 'Search' }).click()
+    const input = page.getByRole('combobox', { name: 'Command palette input' })
+    await input.fill('tar --create')
+    await page.getByRole('option', { name: /tar\(1\)/i }).click()
+    await expect(page.getByRole('dialog', { name: 'Command palette' })).toHaveCount(0)
+    await expect(page).toHaveURL(/\/man\/tar\/1#opt-create$/)
+    await expect(page.locator('mark[data-bm-opt]').filter({ hasText: '--create' }).first()).toBeVisible()
+  }
+})
+
 test('command palette: a11y (no critical/serious violations)', async ({ page }) => {
   await page.goto('/')
   await waitForInteractiveShell(page)

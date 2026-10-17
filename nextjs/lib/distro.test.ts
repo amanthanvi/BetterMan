@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { DISTRO_GROUPS, DISTRO_LABEL, DISTROS, DISTRO_ORDER, isDefaultDistro, normalizeDistro, withDistro } from './distro'
+import { DISTRO_GROUPS, DISTRO_LABEL, DISTROS, DISTRO_ORDER, isDefaultDistro, manPageHref, normalizeDistro, withDistro } from './distro'
 
 describe('distro helpers', () => {
   it('normalizes supported distros and rejects unsupported values', () => {
@@ -44,5 +44,13 @@ describe('distro helpers', () => {
     expect(withDistro('https://betterman.sh/man/tar/1', 'fedora')).toBe(
       'https://betterman.sh/man/tar/1?distro=fedora',
     )
+  })
+
+  it('builds man page links with the option anchor written as-is after the distro query', () => {
+    expect(manPageHref('tar', '1', 'debian')).toBe('/man/tar/1')
+    expect(manPageHref('tar', '1', 'debian', 'opt-create')).toBe('/man/tar/1#opt-create')
+    expect(manPageHref('tar', '1', 'arch', 'sort=')).toBe('/man/tar/1?distro=arch#sort=')
+    expect(manPageHref('rsync', '1', 'debian', 'no~2')).toBe('/man/rsync/1#no~2')
+    expect(manPageHref('ssh_config', '5', 'debian')).toBe('/man/ssh_config/5')
   })
 })

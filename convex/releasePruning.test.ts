@@ -31,6 +31,9 @@ async function seededRelease(completed = true) {
           releaseId, fromPageId: pageId, fromExternalId: name,
           toName: "target", toSection: "1", linkType: "see_also",
         });
+        await ctx.db.insert("manPageOptionFlags", {
+          releaseId, pageId, nameNorm: name, section: "1", flag: "-c", anchorId: "c", flags: "-c",
+        });
       }
     }
     return releaseId;

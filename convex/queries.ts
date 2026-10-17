@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { resolveRelatedItems } from "./_relatedLinks";
+import { parseOptionQuery } from "./_optionFlags";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { distroValidator, publicStageCompatibilityValidator } from "./schema";
@@ -359,7 +360,93 @@ export const getRelated = query({
   },
 });
 
-type RankedSearchDocument = Doc<"manPageSearchDocuments"> & { rank: number };
+type SearchHit = {
+  name: string;
+  section: string;
+  title: string;
+  description: string;
+  highlights: string[];
+  match?: "option";
+  anchorId?: string;
+};
+
+type RankedHit = SearchHit & { rank: number };
+
+function searchDocumentHit(doc: Doc<"manPageSearchDocuments">, queryText: string, rank: number): RankedHit {
+  return {
+    name: doc.name,
+    section: doc.section,
+    title: doc.title,
+    description: doc.description,
+    highlights: [deterministicSnippet(doc.snippetText, queryText)].filter(Boolean),
+    rank,
+  };
+}
+
+function compareHits(a: RankedHit, b: RankedHit): number {
+  const rank = b.rank - a.rank;
+  if (rank) return rank;
+  const len = a.name.length - b.name.length;
+  if (len) return len;
+  const name = a.name.localeCompare(b.name);
+  if (name) return name;
+  return a.section.localeCompare(b.section);
+}
+
+/** Option rows for one flag in page-name order, optionally scoped to a name prefix. */
+async function optionFlagRowsFor(
+  ctx: QueryCtx,
+  args: {
+    releaseId: Id<"datasetReleases">;
+    section: string | null;
+    flag: string;
+    namePrefix: string | null;
+    take: number;
+  },
+): Promise<Array<Doc<"manPageOptionFlags">>> {
+  const { releaseId, section, flag, namePrefix } = args;
+  const upper = namePrefix === null ? null : prefixUpperBound(namePrefix);
+  if (section !== null) {
+    return await ctx.db
+      .query("manPageOptionFlags")
+      .withIndex("by_releaseId_and_section_and_flag_and_nameNorm", (q) => {
+        const range = q.eq("releaseId", releaseId).eq("section", section).eq("flag", flag);
+        return namePrefix === null || upper === null ? range : range.gte("nameNorm", namePrefix).lt("nameNorm", upper);
+      })
+      .take(args.take);
+  }
+  return await ctx.db
+    .query("manPageOptionFlags")
+    .withIndex("by_releaseId_and_flag_and_nameNorm", (q) => {
+      const range = q.eq("releaseId", releaseId).eq("flag", flag);
+      return namePrefix === null || upper === null ? range : range.gte("nameNorm", namePrefix).lt("nameNorm", upper);
+    })
+    .take(args.take);
+}
+
+async function optionHit(ctx: QueryCtx, row: Doc<"manPageOptionFlags">, rank: number): Promise<RankedHit | null> {
+  const page = await ctx.db.get(row.pageId);
+  if (!page) return null;
+  return {
+    name: page.name,
+    section: page.section,
+    title: page.title,
+    description: page.description,
+    highlights: [row.flags],
+    match: "option",
+    anchorId: row.anchorId,
+    rank,
+  };
+}
+
+/** Releases ingested before the option index existed have no rows at all. */
+async function releaseHasOptionIndex(ctx: QueryCtx, releaseId: Id<"datasetReleases">): Promise<boolean> {
+  const row = await ctx.db
+    .query("manPageOptionFlags")
+    .withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", releaseId))
+    .first();
+  return row !== null;
+}
 
 function rankSearchDocument(
   doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
@@ -407,6 +494,46 @@ function typoFallbackQuery(queryNorm: string): string | null {
   return collapsed !== queryNorm && collapsed.length >= 2 ? collapsed : null;
 }
 
+async function textHits(
+  ctx: QueryCtx,
+  args: {
+    releaseId: Id<"datasetReleases">;
+    section: string | null;
+    queryText: string;
+    takeCount: number;
+  },
+): Promise<RankedHit[]> {
+  const { releaseId, section, queryText } = args;
+  const queryNorm = queryText.toLowerCase();
+  const fallbackNorm = typoFallbackQuery(queryNorm);
+
+  // Name prefix first, then the description search index (one line per page).
+  const prefixQueries = fallbackNorm ? [queryNorm, fallbackNorm] : [queryNorm];
+  const prefixDocs = (
+    await Promise.all(
+      prefixQueries.map((prefix) =>
+        searchDocsByNamePrefix(ctx, { releaseId, section, prefix, takeCount: args.takeCount }),
+      ),
+    )
+  ).flat();
+
+  // Always merge the same description candidates so every offset slices one
+  // stable ranked set. The index read is bounded by MAX_DESCRIPTION_HITS.
+  const descriptionDocs = await searchDocsByDescription(ctx, { releaseId, section, queryNorm });
+
+  const ranked = new Map<Id<"manPages">, RankedHit>();
+  prefixDocs.forEach((doc, index) => {
+    const current = ranked.get(doc.pageId);
+    const rank = rankSearchDocument(doc, queryNorm, index);
+    if (!current || rank > current.rank) ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rank));
+  });
+  descriptionDocs.forEach((doc, index) => {
+    if (ranked.has(doc.pageId)) return;
+    ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rankDescriptionDocument(doc, queryNorm, index)));
+  });
+  return [...ranked.values()].sort(compareHits);
+}
+
 export const search = query({
   args: {
     stage: publicStageCompatibilityValidator,
@@ -421,8 +548,6 @@ export const search = query({
     if (!queryText) {
       return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
     }
-    const queryNorm = queryText.toLowerCase();
-    const fallbackNorm = typoFallbackQuery(queryNorm);
     const section = args.section ? normalizeSection(args.section) : null;
     const limit = boundedInt(args.limit, 1, MAX_SEARCH_LIMIT);
     const offset = boundedInt(args.offset, 0, MAX_SEARCH_OFFSET);
@@ -432,69 +557,77 @@ export const search = query({
     });
     const takeCount = Math.min(offset + limit + 5, MAX_SEARCH_OFFSET + MAX_SEARCH_LIMIT);
 
-    // Name prefix first, then the description search index (one line per page).
-    const prefixQueries = fallbackNorm ? [queryNorm, fallbackNorm] : [queryNorm];
-    const prefixDocs = (
-      await Promise.all(
-        prefixQueries.map((prefix) =>
-          searchDocsByNamePrefix(ctx, {
-            releaseId: release._id,
-            section,
-            prefix,
-            takeCount,
-          }),
-        ),
-      )
-    ).flat();
-
-    // Always merge the same description candidates so every offset slices one
-    // stable ranked set. The index read is bounded by MAX_DESCRIPTION_HITS.
-    const descriptionDocs = await searchDocsByDescription(ctx, {
-      releaseId: release._id,
-      section,
-      queryNorm,
-    });
-
-    const ranked = new Map<string, RankedSearchDocument>();
-    prefixDocs.forEach((doc, index) => {
-      const current = ranked.get(doc._id);
-      const rank = rankSearchDocument(doc, queryNorm, index);
-      if (!current || rank > current.rank) ranked.set(doc._id, { ...doc, rank });
-    });
-    descriptionDocs.forEach((doc, index) => {
-      if (ranked.has(doc._id)) return;
-      ranked.set(doc._id, { ...doc, rank: rankDescriptionDocument(doc, queryNorm, index) });
-    });
-
-    const ordered = [...ranked.values()].sort((a, b) => {
-      const rank = b.rank - a.rank;
-      if (rank) return rank;
-      const len = a.name.length - b.name.length;
-      if (len) return len;
-      const name = a.name.localeCompare(b.name);
-      if (name) return name;
-      return a.section.localeCompare(b.section);
-    });
-    const visible = ordered.slice(offset, offset + limit);
-    const candidateNextOffset = offset + visible.length;
+    // One flag with at most one word reads the option index; the word scopes
+    // the page name by prefix (`tar -c`). Rows come in name order, read up to
+    // offset + limit + 1 so "Load more" pages like the name-prefix search, and
+    // only the visible slice fetches its page. Budget: 2 release rows +
+    // (offset + limit + 1) option rows + limit pages, so 43 documents for a
+    // 20-result first page and at most 303 at the offset cap. A `--Create`
+    // miss retries the lowercase spelling once; single-dash flags stay
+    // case-sensitive (`-c` is not `-C`). No page defining the flag costs one
+    // probe row, then the word alone (if any) runs the text search below; a
+    // release without any option rows keeps the text search. Several flags or
+    // several words are an ordinary text query.
+    const optionQuery = parseOptionQuery(queryText);
+    const isOptionQuery = optionQuery.flags.length === 1 && optionQuery.words.length <= 1;
+    let textQuery = queryText;
+    let visible: RankedHit[] | null = null;
+    let hasMore = false;
+    if (isOptionQuery) {
+      const [flag] = optionQuery.flags;
+      const lookup = {
+        releaseId: release._id,
+        section,
+        namePrefix: optionQuery.words.length ? normalizeName(optionQuery.words[0]) : null,
+        take: offset + limit + 1,
+      };
+      let rows = await optionFlagRowsFor(ctx, { ...lookup, flag });
+      if (!rows.length && flag.startsWith("--") && flag !== flag.toLowerCase()) {
+        rows = await optionFlagRowsFor(ctx, { ...lookup, flag: flag.toLowerCase() });
+      }
+      if (rows.length) {
+        visible = [];
+        for (const row of rows.slice(offset, offset + limit)) {
+          const hit = await optionHit(ctx, row, 0);
+          if (hit) visible.push(hit);
+        }
+        hasMore = rows.length > offset + limit;
+      } else if (await releaseHasOptionIndex(ctx, release._id)) {
+        if (!optionQuery.words.length) {
+          return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
+        }
+        textQuery = optionQuery.words.join(" ");
+      }
+    }
+    let ordered: RankedHit[] = [];
+    if (visible === null) {
+      ordered = await textHits(ctx, {
+        releaseId: release._id,
+        section,
+        queryText: textQuery,
+        takeCount,
+      });
+      visible = ordered.slice(offset, offset + limit);
+      hasMore = ordered.length > offset + visible.length;
+    }
     // Never advertise an offset the handler will clamp backward (MAX_SEARCH_OFFSET).
     const nextOffset =
-      ordered.length > candidateNextOffset && offset < MAX_SEARCH_OFFSET
-        ? Math.min(candidateNextOffset, MAX_SEARCH_OFFSET)
-        : null;
+      hasMore && offset < MAX_SEARCH_OFFSET ? Math.min(offset + visible.length, MAX_SEARCH_OFFSET) : null;
 
-    const suggestions = [...new Set(ordered.map((doc) => doc.nameNorm))]
-      .filter((name) => name !== queryNorm)
+    const textNorm = textQuery.toLowerCase();
+    const suggestions = [...new Set(ordered.map((hit) => hit.name.toLowerCase()))]
+      .filter((name) => name !== textNorm)
       .slice(0, 5);
 
     return {
       query: queryText,
-      results: visible.map((doc) => ({
-        name: doc.name,
-        section: doc.section,
-        title: doc.title,
-        description: doc.description,
-        highlights: [deterministicSnippet(doc.snippetText, queryText)].filter(Boolean),
+      results: visible.map((hit) => ({
+        name: hit.name,
+        section: hit.section,
+        title: hit.title,
+        description: hit.description,
+        highlights: hit.highlights,
+        ...(hit.anchorId ? { match: "option" as const, anchorId: hit.anchorId } : {}),
       })),
       suggestions,
       hasMore: nextOffset !== null,
