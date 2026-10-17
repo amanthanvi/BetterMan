@@ -31,10 +31,13 @@ export default async function Image({ params }: { params: Promise<{ name: string
 
   const title = `${data.page.name}(${data.page.section})`
 
-  return ogCard({
+  const response = await ogCard({
     head: title.toUpperCase(),
     label: sectionLabel(section),
     name: title,
     description: data.page.description || data.page.title,
   })
+  // Cards change only when a dataset release does; let the CDN absorb crawler fetches.
+  response.headers.set('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800')
+  return response
 }

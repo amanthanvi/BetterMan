@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
@@ -10,21 +11,38 @@ import { withDistro } from '../../lib/distro'
 import { getScrollBehavior } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
 import { parseReleaseId } from '../../lib/release'
-import { CommandPalette } from '../palette/CommandPalette'
-import { ReadingPrefsDrawer } from '../reading/ReadingPrefsDrawer'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
-import { TocDrawer } from '../toc/TocDrawer'
-import { ShortcutsDialog } from './ShortcutsDialog'
 import { MoonIcon, SearchIcon, SunIcon } from '../icons'
 import { Kbd } from '../ui/Kbd'
+
+// One loader per overlay, shared with the idle preload so both fetch the same chunk.
+const overlayLoaders = {
+  palette: () => import('../palette/CommandPalette').then((m) => m.CommandPalette),
+  prefs: () => import('../reading/ReadingPrefsDrawer').then((m) => m.ReadingPrefsDrawer),
+  shortcuts: () => import('./ShortcutsDialog').then((m) => m.ShortcutsDialog),
+  toc: () => import('../toc/TocDrawer').then((m) => m.TocDrawer),
+}
+
+// `ssr: false` gives each overlay its own Suspense boundary, so loading one never suspends the shell.
+const CommandPalette = dynamic(overlayLoaders.palette, { ssr: false })
+const ReadingPrefsDrawer = dynamic(overlayLoaders.prefs, { ssr: false })
+const ShortcutsDialog = dynamic(overlayLoaders.shortcuts, { ssr: false })
+const TocDrawer = dynamic(overlayLoaders.toc, { ssr: false })
 
 // About two seconds of frames to wait for a hash target behind a loading boundary.
 const HASH_TARGET_MAX_FRAMES = 120
 
 function isElementVisible(el: HTMLElement) {
   return el.getClientRects().length > 0
+}
+
+// Overlays load on first open, then stay mounted so their exit transitions run.
+function useOpenedOnce(open: boolean) {
+  const [opened, setOpened] = useState(open)
+  if (open && !opened) setOpened(true)
+  return opened
 }
 
 function dashboardHref(section: 'recent' | 'bookmarks', distro: string) {
@@ -45,6 +63,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [offline, setOffline] = useState(false)
   const [themeAnnouncement, setThemeAnnouncement] = useState('')
   const themeAnnouncementMountedRef = useRef(false)
+  const paletteOpened = useOpenedOnce(paletteOpen)
+  const shortcutsOpened = useOpenedOnce(shortcutsOpen)
+  const prefsOpened = useOpenedOnce(prefsOpen)
+  const tocOpened = useOpenedOnce(toc.open)
 
   const lastRouteKeyRef = useRef<string | null>(null)
   const scrollPositionsRef = useRef<Map<string, number>>(new Map())
@@ -94,6 +116,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     navigator.serviceWorker.register('/sw.js').catch(() => {
       // ignore
     })
+  }, [])
+
+  useEffect(() => {
+    // Fetch the overlay chunks once the page is idle, so a first open is immediate and works offline.
+    const preload = () => {
+      Promise.all(Object.values(overlayLoaders).map((load) => load())).catch(() => {
+        // Opening the overlay tries again.
+      })
+    }
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(preload, { timeout: 5000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const t = window.setTimeout(preload, 3000)
+    return () => window.clearTimeout(t)
   }, [])
 
   useEffect(() => {
@@ -380,10 +417,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ) : null}
       </header>
 
-      <TocDrawer />
-      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} isManPage={isManPage} />
-      <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} />
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      {tocOpened ? <TocDrawer /> : null}
+      {shortcutsOpened ? <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} isManPage={isManPage} /> : null}
+      {prefsOpened ? <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} /> : null}
+      {paletteOpened ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
 
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-10 outline-none">
         {children}

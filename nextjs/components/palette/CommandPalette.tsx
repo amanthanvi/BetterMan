@@ -315,6 +315,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   ]
 
   const items: PaletteItem[] = (() => {
+    // Closed and past its exit animation: skip the localStorage reads below.
+    if (!rendered) return []
+
     if (parsed.mode === 'actions') {
       const q = parsed.text.trim().toLowerCase()
       if (!q) return baseActions

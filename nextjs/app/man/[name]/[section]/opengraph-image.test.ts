@@ -96,7 +96,8 @@ describe('man page Open Graph image route', () => {
   })
 
   it('renders a found page after validation and rate limiting', async () => {
-    await Image({ params: Promise.resolve({ name: 'bash', section: '1' }) })
+    const response = await Image({ params: Promise.resolve({ name: 'bash', section: '1' }) })
+    expect(response.headers.get('Cache-Control')).toBe('public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800')
     expect(ogCard).toHaveBeenCalledWith({
       head: 'BASH(1)',
       label: 'Section 1',
