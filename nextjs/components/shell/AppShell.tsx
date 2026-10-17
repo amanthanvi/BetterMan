@@ -131,23 +131,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [routeKey])
 
   useEffect(() => {
-    const FLAG = '__bmPaletteRequested'
-    const EVENT = 'bm:palette-request'
-
-    const openIfRequested = () => {
-      if (!(window as unknown as Record<string, unknown>)[FLAG]) return
-      ;(window as unknown as Record<string, unknown>)[FLAG] = false
-      setPaletteOpen(true)
-    }
-
-    openIfRequested()
-
-    const onEvent = () => openIfRequested()
-    window.addEventListener(EVENT, onEvent)
-    return () => window.removeEventListener(EVENT, onEvent)
-  }, [])
-
-  useEffect(() => {
     const EVENT = 'bm:prefs-request'
     const onEvent = () => setPrefsOpen(true)
     window.addEventListener(EVENT, onEvent)

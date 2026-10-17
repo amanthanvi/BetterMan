@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
 import './globals.css'
-import { normalizeDistro } from '../lib/distro'
+import { DISTRO_COOKIE, normalizeDistro } from '../lib/distro'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
@@ -22,8 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const resolved = cookieStore.get('bm-theme-resolved')?.value
   const theme = resolved === 'dark' || resolved === 'light' ? resolved : undefined
 
-  const cookieDistro = cookieStore.get('bm-distro')?.value
-  const initialCookieDistro = normalizeDistro(cookieDistro) ?? undefined
+  const initialCookieDistro = normalizeDistro(cookieStore.get(DISTRO_COOKIE)?.value) ?? undefined
 
   const nonce = (await headers()).get('x-nonce') ?? undefined
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim()

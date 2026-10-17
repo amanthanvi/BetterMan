@@ -4,19 +4,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import type { Distro } from '../../lib/distro'
-import { normalizeDistro } from '../../lib/distro'
+import { DISTRO_COOKIE, DISTRO_STORAGE_KEY, normalizeDistro } from '../../lib/distro'
 
 type DistroContextValue = {
   distro: Distro
   setDistro: (distro: Distro) => void
 }
 
-const DISTRO_KEY = 'bm-distro'
-const COOKIE_DISTRO = 'bm-distro'
-
 function writeCookie(distro: Distro) {
   try {
-    document.cookie = `${COOKIE_DISTRO}=${encodeURIComponent(distro)}; Path=/; Max-Age=31536000; SameSite=Lax`
+    document.cookie = `${DISTRO_COOKIE}=${encodeURIComponent(distro)}; Path=/; Max-Age=31536000; SameSite=Lax`
   } catch {
     // ignore
   }
@@ -24,7 +21,7 @@ function writeCookie(distro: Distro) {
 
 function readStoredDistro(): Distro | null {
   try {
-    return normalizeDistro(localStorage.getItem(DISTRO_KEY))
+    return normalizeDistro(localStorage.getItem(DISTRO_STORAGE_KEY))
   } catch {
     // ignore
   }
@@ -33,7 +30,7 @@ function readStoredDistro(): Distro | null {
 
 function writeStoredDistro(distro: Distro) {
   try {
-    localStorage.setItem(DISTRO_KEY, distro)
+    localStorage.setItem(DISTRO_STORAGE_KEY, distro)
   } catch {
     // ignore
   }
@@ -44,7 +41,8 @@ function buildUrlWithDistro(opts: { pathname: string; searchParams: URLSearchPar
   if (opts.distro === 'debian') params.delete('distro')
   else params.set('distro', opts.distro)
   const qs = params.toString()
-  return qs ? `${opts.pathname}?${qs}` : opts.pathname
+  const base = qs ? `${opts.pathname}?${qs}` : opts.pathname
+  return `${base}${window.location.hash}`
 }
 
 const DistroContext = createContext<DistroContextValue | null>(null)

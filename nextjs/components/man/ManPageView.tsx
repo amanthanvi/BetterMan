@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
 import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
-import { getScrollBehavior } from '../../lib/scroll'
+import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
 import { DocRenderer, shouldVirtualizeBlocks } from '../doc/DocRenderer'
 import { RecentPageRecorder } from '../recent/RecentPageRecorder'
@@ -196,18 +196,7 @@ export function ManPageView({
       setSelectedOption(opt)
       flashOption(opt.anchorId)
 
-      const scrollBehavior = getScrollBehavior()
-      let attempts = 0
-      const tick = () => {
-        attempts += 1
-        const el = document.getElementById(opt.anchorId)
-        if (el) {
-          el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
-          return
-        }
-        if (attempts < 20) window.requestAnimationFrame(tick)
-      }
-      window.requestAnimationFrame(tick)
+      scrollToIdWhenRendered(opt.anchorId, { behavior: getScrollBehavior(), block: 'center' })
     }
 
     applyHash()
