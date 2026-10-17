@@ -1,0 +1,32 @@
+name: pr-proof
+
+on:
+  pull_request:
+    # edited covers a body-only Proof correction, which does not move the head SHA.
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: pr-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  proof_sha:
+    name: proof_sha
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The body is an environment variable so a pull request cannot inject
+      # shell syntax into this step. dependabot[bot] is skipped inside the script.
+      - name: Proof section cites the head SHA
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: node scripts/check-proof-sha.mjs
