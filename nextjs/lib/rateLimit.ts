@@ -1,3 +1,5 @@
+import { createHmac } from 'node:crypto'
+
 import { api as convexApi } from '../../convex/_generated/api'
 
 import { getConvexClient } from '@/lib/convexClient'
@@ -22,11 +24,25 @@ export function requestIdentifier(headers: Headers): string {
   return 'anonymous'
 }
 
+/**
+ * Fails closed: a missing key or a Convex error counts as limited, so a
+ * misconfiguration surfaces as 429s instead of silently disabling the limit.
+ */
 export async function isRateLimited(headers: Headers, kind: 'search' | 'page'): Promise<boolean> {
-  const result = await getConvexClient().mutation(convexApi.rateLimit.enforce, {
-    kind,
-    identifier: requestIdentifier(headers),
-  })
+  const key = process.env.RATE_LIMIT_TAG_KEY?.trim()
+  if (!key) {
+    console.error('[rate-limit] RATE_LIMIT_TAG_KEY is not configured')
+    return true
+  }
 
-  return !result.allowed
+  const identifier = requestIdentifier(headers)
+  const tag = createHmac('sha256', key).update(identifier).digest('hex')
+  try {
+    const result = await getConvexClient().mutation(convexApi.rateLimit.consume, { kind, identifier, tag })
+    return !result.allowed
+  } catch {
+    // The Convex error can echo the arguments; log nothing from it.
+    console.error('[rate-limit] enforcement failed')
+    return true
+  }
 }

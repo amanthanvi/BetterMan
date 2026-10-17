@@ -15,3 +15,5 @@ Tags are `vX.Y.Z`. Minor for user-facing features, patch for fixes.
 5. Optionally create a GitHub release: `gh release create vX.Y.Z --generate-notes`.
 
 Deployment is not tied to tags. Every push to `main` that passes CI deploys. Treat published tags as immutable.
+
+`RATE_LIMIT_TAG_KEY` must be set to the same value on the Convex deployment and in Vercel before deploying. If it is missing or differs, rate-limited routes return 429. While the no-op `rateLimit.enforce` shim exists, rolling Vercel back to a frontend that calls it turns rate limiting off.
