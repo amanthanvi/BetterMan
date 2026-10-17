@@ -98,7 +98,8 @@ describe('man page share image route', () => {
   })
 
   it('renders a found page after validation and rate limiting', async () => {
-    await get('bash', '1')
+    const response = await get('bash', '1')
+    expect(response.headers.get('Cache-Control')).toBe('public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
     expect(ogCard).toHaveBeenCalledWith({
       head: 'BASH(1)',
       label: 'Section 1',
