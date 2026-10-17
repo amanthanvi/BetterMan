@@ -5,10 +5,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReadingPreferences } from '../../lib/readingPrefs'
 import {
   DEFAULT_PREFS,
-  READING_PREFS_EVENT,
   READING_PREFS_STORAGE_KEY,
-  getReadingPrefs,
+  getStoredReadingPrefs,
   resetReadingPrefs,
+  restoreReadingPrefs,
   setReadingPrefs,
 } from '../../lib/readingPrefs'
 
@@ -33,8 +33,15 @@ function applyToBody(prefs: ReadingPreferences) {
   }
 }
 
-export function ReadingPrefsProvider({ children }: { children: React.ReactNode }) {
-  const [prefs, setPrefsState] = useState<ReadingPreferences>(() => getReadingPrefs())
+export function ReadingPrefsProvider({
+  children,
+  initialPrefs,
+}: {
+  children: React.ReactNode
+  initialPrefs: ReadingPreferences
+}) {
+  // Start from the server's cookie value so hydration matches the body attributes.
+  const [prefs, setPrefsState] = useState<ReadingPreferences>(initialPrefs)
 
   const setPrefs = useCallback((next: ReadingPreferences) => {
     setPrefsState(next)
@@ -59,20 +66,16 @@ export function ReadingPrefsProvider({ children }: { children: React.ReactNode }
   }, [prefs])
 
   useEffect(() => {
-    const sync = () => setPrefsState(getReadingPrefs())
+    const stored = restoreReadingPrefs()
+    if (stored) setPrefsState(stored)
 
-    const onPrefs = () => sync()
     const onStorage = (e: StorageEvent) => {
       if (e.key !== READING_PREFS_STORAGE_KEY) return
-      sync()
+      setPrefsState(getStoredReadingPrefs() ?? DEFAULT_PREFS)
     }
 
-    window.addEventListener(READING_PREFS_EVENT, onPrefs)
     window.addEventListener('storage', onStorage)
-    return () => {
-      window.removeEventListener(READING_PREFS_EVENT, onPrefs)
-      window.removeEventListener('storage', onStorage)
-    }
+    return () => window.removeEventListener('storage', onStorage)
   }, [])
 
   const value = useMemo(() => ({ prefs, setPrefs, updatePrefs, reset }), [prefs, reset, setPrefs, updatePrefs])

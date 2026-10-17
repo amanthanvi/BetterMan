@@ -118,6 +118,8 @@ test('man: reading preferences drawer applies settings', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
   await waitForInteractiveShell(page)
+  // Without saved preferences there is no cookie to freeze today's defaults.
+  expect((await page.context().cookies()).map((cookie) => cookie.name)).not.toContain('bm-reading-prefs')
 
   await page.getByRole('button', { name: 'Reading preferences' }).click()
   const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
@@ -126,6 +128,15 @@ test('man: reading preferences drawer applies settings', async ({ page }) => {
 
   await dialog.getByRole('radiogroup', { name: 'Font size' }).getByRole('radio', { name: 'L', exact: true }).click()
   await expect(page.locator('body')).toHaveAttribute('data-bm-font-size', 'large')
+
+  // The server HTML must carry the choice, so a post-hydration effect cannot
+  // mask a missing first-paint attribute.
+  const response = await page.reload()
+  expect(response?.status()).toBe(200)
+  expect(await response!.text()).toContain('data-bm-font-size="large"')
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Reading preferences' }).click()
+  await expect(dialog.getByRole('radiogroup', { name: 'Font size' }).getByRole('radio', { name: 'L', exact: true })).toBeChecked()
 
   await expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
   await expect(pageErrors, pageErrors.join('\n')).toEqual([])

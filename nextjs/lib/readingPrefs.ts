@@ -8,30 +8,30 @@ export type ReadingPreferences = {
 }
 
 export const READING_PREFS_STORAGE_KEY = 'bm-reading-prefs'
-export const READING_PREFS_EVENT = 'bm:reading-prefs-changed'
+export const READING_PREFS_COOKIE = 'bm-reading-prefs'
 
+// Matches the unset fallback in globals.css, so a visitor without saved
+// preferences renders the same before and after hydration.
 const DEFAULT_PREFS: ReadingPreferences = {
   version: 1,
   fontSize: 'medium',
-  fontFamily: 'serif',
-  lineHeight: 'relaxed',
+  fontFamily: 'sans',
+  lineHeight: 'normal',
   columnWidth: 'normal',
   codeTheme: 'auto',
 }
 
-function readRaw(): unknown {
+function parsePrefs(json: string | null | undefined): ReadingPreferences | null {
+  if (!json) return null
+  let raw: unknown
   try {
-    const raw = localStorage.getItem(READING_PREFS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    raw = JSON.parse(json)
   } catch {
     return null
   }
-}
-
-function parsePrefs(raw: unknown): ReadingPreferences {
-  if (!raw || typeof raw !== 'object') return DEFAULT_PREFS
+  if (!raw || typeof raw !== 'object') return null
   const r = raw as Record<string, unknown>
-  if (r.version !== 1) return DEFAULT_PREFS
+  if (r.version !== 1) return null
 
   const fontSize = r.fontSize
   const fontFamily = r.fontFamily
@@ -39,11 +39,11 @@ function parsePrefs(raw: unknown): ReadingPreferences {
   const columnWidth = r.columnWidth
   const codeTheme = r.codeTheme
 
-  if (fontSize !== 'small' && fontSize !== 'medium' && fontSize !== 'large' && fontSize !== 'xlarge') return DEFAULT_PREFS
-  if (fontFamily !== 'serif' && fontFamily !== 'sans' && fontFamily !== 'mono') return DEFAULT_PREFS
-  if (lineHeight !== 'compact' && lineHeight !== 'normal' && lineHeight !== 'relaxed') return DEFAULT_PREFS
-  if (columnWidth !== 'narrow' && columnWidth !== 'normal' && columnWidth !== 'wide') return DEFAULT_PREFS
-  if (codeTheme !== 'light' && codeTheme !== 'dark' && codeTheme !== 'auto') return DEFAULT_PREFS
+  if (fontSize !== 'small' && fontSize !== 'medium' && fontSize !== 'large' && fontSize !== 'xlarge') return null
+  if (fontFamily !== 'serif' && fontFamily !== 'sans' && fontFamily !== 'mono') return null
+  if (lineHeight !== 'compact' && lineHeight !== 'normal' && lineHeight !== 'relaxed') return null
+  if (columnWidth !== 'narrow' && columnWidth !== 'normal' && columnWidth !== 'wide') return null
+  if (codeTheme !== 'light' && codeTheme !== 'dark' && codeTheme !== 'auto') return null
 
   return {
     version: 1,
@@ -55,33 +55,60 @@ function parsePrefs(raw: unknown): ReadingPreferences {
   }
 }
 
-function emitChanged() {
+function writeCookie(value: string, maxAge: number) {
   try {
-    window.dispatchEvent(new CustomEvent(READING_PREFS_EVENT))
+    document.cookie = `${READING_PREFS_COOKIE}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax`
   } catch {
     // ignore
   }
 }
 
-function writePrefs(prefs: ReadingPreferences) {
+// The server renders from this cookie. It is written only for saved
+// preferences, so visitors without any keep following DEFAULT_PREFS.
+function syncReadingPrefsCookie(prefs: ReadingPreferences) {
+  writeCookie(JSON.stringify(prefs), 31536000)
+}
+
+// `raw` is the cookie value as Next.js returns it, already URI-decoded.
+export function prefsFromCookie(raw: string | undefined): ReadingPreferences {
+  return parsePrefs(raw) ?? DEFAULT_PREFS
+}
+
+// Saved preferences from localStorage, or null when there are none.
+export function getStoredReadingPrefs(): ReadingPreferences | null {
+  try {
+    return parsePrefs(localStorage.getItem(READING_PREFS_STORAGE_KEY))
+  } catch {
+    return null
+  }
+}
+
+// localStorage wins after hydration. Refreshing the cookie from it corrects a
+// missing or stale cookie, including one saved before the cookie existed.
+export function restoreReadingPrefs(): ReadingPreferences | null {
+  const stored = getStoredReadingPrefs()
+  if (stored) syncReadingPrefsCookie(stored)
+  return stored
+}
+
+export function setReadingPrefs(prefs: ReadingPreferences) {
   try {
     localStorage.setItem(READING_PREFS_STORAGE_KEY, JSON.stringify(prefs))
   } catch {
     // ignore
   }
-  emitChanged()
+  syncReadingPrefsCookie(prefs)
 }
 
-export function getReadingPrefs(): ReadingPreferences {
-  return parsePrefs(readRaw())
-}
-
-export function setReadingPrefs(prefs: ReadingPreferences) {
-  writePrefs(prefs)
-}
-
+// Clears saved preferences rather than saving the defaults, so future
+// default changes reach this visitor too.
 export function resetReadingPrefs() {
-  writePrefs(DEFAULT_PREFS)
+  try {
+    localStorage.removeItem(READING_PREFS_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+  writeCookie('', 0)
 }
 
 export { DEFAULT_PREFS }
