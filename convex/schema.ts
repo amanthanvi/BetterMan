@@ -183,6 +183,27 @@ export default defineSchema({
       filterFields: ["releaseId", "section"],
     }),
 
+  // One row per (page, flag) derived from parsed OPTIONS at ingest, so a flag
+  // query is an exact, case-sensitive index lookup that can be scoped by a
+  // page-name prefix. Releases ingested before this table have no rows.
+  manPageOptionFlags: defineTable({
+    releaseId: v.id("datasetReleases"),
+    pageId: v.id("manPages"),
+    nameNorm: v.string(),
+    section: v.string(),
+    flag: v.string(),
+    anchorId: v.string(),
+    // The option's flag text as written, for the result snippet.
+    flags: v.string(),
+  })
+    .index("by_releaseId_and_flag_and_nameNorm", ["releaseId", "flag", "nameNorm"])
+    .index("by_releaseId_and_section_and_flag_and_nameNorm", [
+      "releaseId",
+      "section",
+      "flag",
+      "nameNorm",
+    ]),
+
   // `.so` include stubs: /man/<name>/<section> redirects to the target page.
   manPageAliases: defineTable({
     releaseId: v.id("datasetReleases"),
