@@ -29,6 +29,10 @@ merge commit GitHub checks out for the job.
 
 A harness-only change, a test-only change, and an action pin bump in `ci.yml` stay allowed. Docs are not application code.
 
+`pyproject.toml` and `package.json` are compared from the merge base of the base and head commits, the same commit as `git diff base...head`, not from the base ref alone.
+
+Not detected: a top-level TOML dotted key (`tool.pytest.ini_options` or `tool.coverage.run` under `[tool]` or at the root), and a helper script that a test script calls. `"test": "node scripts/run-tests.mjs"` does not make `scripts/run-tests.mjs` test-runner config. Only a changed script whose name is `test`, `e2e`, `ops:test`, `*:test`, `*:e2e`, or `test:*` counts.
+
 The label `test-config-change` skips this failure. Apply it only when the mix is intentional, and say why in the pull request body. The label has to exist on the repository before GitHub will accept it.
 
 Labels are passed as `PR_LABELS_JSON` (`toJSON` of the label names) so a label cannot be split on a comma.

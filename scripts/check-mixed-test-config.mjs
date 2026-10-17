@@ -199,15 +199,21 @@ function textAt(rev, file) {
   }
 }
 
+function mergeBase(base, head) {
+  return execFileSync('git', ['merge-base', base, head], { encoding: 'utf8' }).trim()
+}
+
 function sectionConfigPaths(base, head, entries) {
   const extra = []
+  let beforeRev = ''
   for (const entry of entries) {
     const renamed = entry.status.startsWith('R') || entry.status.startsWith('C')
     const beforePath = entry.paths[0]
     const afterPath = renamed ? entry.paths[1] : entry.paths[0]
     const name = baseName(afterPath)
     if (name !== 'pyproject.toml' && name !== 'package.json') continue
-    const before = textAt(base, beforePath)
+    if (!beforeRev) beforeRev = mergeBase(base, head)
+    const before = textAt(beforeRev, beforePath)
     const after = textAt(head, afterPath)
     const changed =
       name === 'pyproject.toml'

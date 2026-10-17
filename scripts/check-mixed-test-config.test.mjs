@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import {
   diffTouchesTestRunner,
   evaluateMix,
@@ -159,4 +164,76 @@ test('a changed package.json test script is test-runner config', () => {
   assert.equal(result.ok, false)
   assert.ok(result.testConfig.includes('package.json'))
   assert.equal(evaluateMix({ paths: ['package.json', 'convex/http.ts'] }).ok, true)
+})
+
+const mixScript = fileURLToPath(new URL('./check-mixed-test-config.mjs', import.meta.url))
+const gitEnv = {
+  ...process.env,
+  GIT_AUTHOR_NAME: 'mix-test',
+  GIT_AUTHOR_EMAIL: 'mix-test@example.com',
+  GIT_COMMITTER_NAME: 'mix-test',
+  GIT_COMMITTER_EMAIL: 'mix-test@example.com',
+}
+
+function git(cwd, args) {
+  return execFileSync('git', args, { cwd, env: gitEnv, encoding: 'utf8' }).trim()
+}
+
+function writePyproject(cwd, failUnder, name) {
+  writeFileSync(
+    join(cwd, 'ingestion/pyproject.toml'),
+    `[project]\nname = "${name}"\n\n[tool.pytest.ini_options]\naddopts = "--cov-fail-under=${failUnder}"\n`,
+  )
+}
+
+function runMix(cwd, base, head) {
+  try {
+    const stdout = execFileSync(process.execPath, [mixScript, '--base', base, '--head', head], {
+      cwd,
+      env: gitEnv,
+      encoding: 'utf8',
+    })
+    return { status: 0, stdout }
+  } catch (error) {
+    return { status: error.status ?? 1, stdout: error.stdout?.toString() ?? '' }
+  }
+}
+
+test('compares pytest sections against the merge base, not the base ref', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'bm-mix-'))
+  mkdirSync(join(cwd, 'ingestion'), { recursive: true })
+  mkdirSync(join(cwd, 'convex'), { recursive: true })
+  git(cwd, ['init', '-b', 'main'])
+  writePyproject(cwd, 60, 'ingestion')
+  writeFileSync(join(cwd, 'convex/http.ts'), 'export const version = 1\n')
+  git(cwd, ['add', '.'])
+  git(cwd, ['commit', '-m', 'base'])
+  const fork = git(cwd, ['rev-parse', 'HEAD'])
+
+  writePyproject(cwd, 80, 'ingestion')
+  git(cwd, ['add', '.'])
+  git(cwd, ['commit', '-m', 'main moves the coverage floor'])
+  const base = git(cwd, ['rev-parse', 'HEAD'])
+
+  git(cwd, ['checkout', '-b', 'feature', fork])
+  writePyproject(cwd, 80, 'ingestion')
+  writeFileSync(join(cwd, 'convex/http.ts'), 'export const version = 2\n')
+  git(cwd, ['add', '.'])
+  git(cwd, ['commit', '-m', 'feature raises the floor and edits http'])
+  const head = git(cwd, ['rev-parse', 'HEAD'])
+
+  const changed = runMix(cwd, base, head)
+  assert.equal(changed.status, 1)
+  assert.match(changed.stdout, /ingestion\/pyproject.toml/)
+  assert.match(changed.stdout, /convex\/http.ts/)
+
+  git(cwd, ['checkout', 'feature'])
+  writePyproject(cwd, 60, 'ingestion-next')
+  writeFileSync(join(cwd, 'convex/http.ts'), 'export const version = 3\n')
+  git(cwd, ['add', '.'])
+  git(cwd, ['commit', '-m', 'feature edits the project name only'])
+  const nameOnly = git(cwd, ['rev-parse', 'HEAD'])
+  const unchangedSection = runMix(cwd, base, nameOnly)
+  assert.equal(unchangedSection.status, 0)
+  assert.match(unchangedSection.stdout, /not mixed/)
 })
