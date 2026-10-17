@@ -25,6 +25,9 @@ export type SearchResult = {
   title: string
   description: string
   highlights: string[]
+  /** Set when the page's OPTIONS defined the queried flag; anchorId is the option row. */
+  match?: 'option'
+  anchorId?: string
 }
 
 export type SearchResponse = {

@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { ingestClientError } from "./_ingestErrors";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
+import { optionFlagRows } from "./_optionFlags";
 import { INGEST_CONTRACT } from "./ingestContract";
 import { secretsMatch } from "./lib";
 
@@ -142,9 +143,10 @@ http.route({
         const { doc, synopsis, options, seeAlso, ...metadata } = page;
         void doc;
         void synopsis;
-        void options;
         void seeAlso;
-        pages.push({ ...metadata, contentStorageId });
+        // The option index is derived here from the parsed OPTIONS that only
+        // the stored payload keeps; ingestion sends nothing extra.
+        pages.push({ ...metadata, contentStorageId, optionFlags: optionFlagRows(options) });
       }
 
       result = await ctx.runMutation(internal.ingest.insertStoredPages, {

@@ -6,6 +6,7 @@ import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, verifyDeclaredManifest } from "./_releaseManifest";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
+import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
 import {
   compactManPageSearchText,
   DATASET_STAGES,
@@ -53,6 +54,14 @@ const pageInput = v.object({
   links: v.array(pageLinkInput),
 });
 
+// Derived by the /ingest/pages/storage action from page.options, which the
+// stored payload keeps out of this mutation. Not part of the ingest contract.
+const optionFlagInput = v.object({
+  flag: v.string(),
+  anchorId: v.string(),
+  flags: v.string(),
+});
+
 const storedPageInput = v.object({
   externalId: v.string(),
   name: v.string(),
@@ -66,6 +75,7 @@ const storedPageInput = v.object({
   contentSha256: v.string(),
   hasParseWarnings: v.boolean(),
   contentStorageId: v.id("_storage"),
+  optionFlags: v.optional(v.array(optionFlagInput)),
   searchText: v.string(),
   snippetText: v.string(),
   links: v.array(pageLinkInput),
@@ -128,6 +138,28 @@ async function validateNewPageRoute(ctx: MutationCtx, releaseId: Id<"datasetRele
   const alias = await ctx.db.query("manPageAliases")
     .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).eq("name", page.name).eq("section", page.section)).unique();
   if (existing || alias) throw new Error("DUPLICATE_MAN_PAGE_ROUTE");
+}
+
+async function insertOptionFlags(
+  ctx: MutationCtx,
+  args: {
+    releaseId: Id<"datasetReleases">;
+    pageId: Id<"manPages">;
+    page: { name: string; section: string };
+    rows: OptionFlagRow[];
+  },
+) {
+  for (const row of args.rows.slice(0, MAX_OPTION_FLAG_ROWS_PER_PAGE)) {
+    await ctx.db.insert("manPageOptionFlags", {
+      releaseId: args.releaseId,
+      pageId: args.pageId,
+      nameNorm: args.page.name.toLowerCase(),
+      section: args.page.section,
+      flag: row.flag,
+      anchorId: row.anchorId,
+      flags: row.flags,
+    });
+  }
 }
 
 async function insertContentBlobChunks(
@@ -388,6 +420,7 @@ export const insertPages = internalMutation({
         searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
       });
+      await insertOptionFlags(ctx, { releaseId: release._id, pageId, page, rows: optionFlagRows(page.options) });
 
       for (const link of page.links) {
         await ctx.db.insert("manPageLinks", {
@@ -485,6 +518,7 @@ export const insertStoredPages = internalMutation({
         searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
       });
+      await insertOptionFlags(ctx, { releaseId: release._id, pageId, page, rows: page.optionFlags ?? [] });
 
       for (const link of page.links) {
         await ctx.db.insert("manPageLinks", {

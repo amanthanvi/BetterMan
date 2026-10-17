@@ -42,6 +42,7 @@ type ReleaseChildTable =
   | "releaseSectionStats"
   | "manPages"
   | "manPageSearchDocuments"
+  | "manPageOptionFlags"
   | "manPageLinks"
   | "manPageAliases"
   | "licensePackages"
@@ -50,6 +51,7 @@ type ReleaseChildTable =
 const RELEASE_CHILD_TABLES: ReleaseChildTable[] = [
   "releaseSectionStats",
   "manPageSearchDocuments",
+  "manPageOptionFlags",
   "manPageLinks",
   "manPageAliases",
   "licensePackages",
@@ -67,6 +69,7 @@ const storageStatsTableValidator = v.union(
   v.literal("manPageContentChunks"),
   v.literal("manPageContents"),
   v.literal("manPageLinks"),
+  v.literal("manPageOptionFlags"),
   v.literal("manPageSearchDocuments"),
   v.literal("manPages"),
   v.literal("rateLimitBuckets"),
@@ -83,6 +86,7 @@ type StorageStatsTable =
   | "manPageContentChunks"
   | "manPageContents"
   | "manPageLinks"
+  | "manPageOptionFlags"
   | "manPageSearchDocuments"
   | "manPages"
   | "rateLimitBuckets"
@@ -98,6 +102,7 @@ const STORAGE_STATS_FIELDS: Record<StorageStatsTable, string[]> = {
   manPageContentChunks: ["chunk"],
   manPageContents: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageLinks: ["fromName", "fromSection", "toName", "toSection", "linkType"],
+  manPageOptionFlags: ["nameNorm", "section", "flag", "anchorId", "flags"],
   manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
   manPages: [
     "name",
@@ -287,6 +292,11 @@ async function sampleReleaseChildren(
               .query("manPageSearchDocuments")
               .withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", releaseId))
               .take(takeLimit)
+          : table === "manPageOptionFlags"
+            ? await ctx.db
+                .query("manPageOptionFlags")
+                .withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", releaseId))
+                .take(takeLimit)
           : table === "manPageLinks"
             ? await ctx.db
                 .query("manPageLinks")
@@ -338,6 +348,14 @@ async function deleteReleaseChildrenByTable(
     const rows = await ctx.db
       .query("manPageSearchDocuments")
       .withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", releaseId))
+      .take(limit);
+    for (const row of rows) await ctx.db.delete(row._id);
+    return rows.length;
+  }
+  if (table === "manPageOptionFlags") {
+    const rows = await ctx.db
+      .query("manPageOptionFlags")
+      .withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", releaseId))
       .take(limit);
     for (const row of rows) await ctx.db.delete(row._id);
     return rows.length;
@@ -656,6 +674,8 @@ export const estimateStorageStatsBatch = internalQuery({
                       ? await ctx.db.query("manPageContents").paginate(paginationOpts)
                       : args.table === "manPageLinks"
                         ? await ctx.db.query("manPageLinks").paginate(paginationOpts)
+                        : args.table === "manPageOptionFlags"
+                          ? await ctx.db.query("manPageOptionFlags").paginate(paginationOpts)
                         : args.table === "manPageSearchDocuments"
                           ? await ctx.db.query("manPageSearchDocuments").paginate(paginationOpts)
                           : args.table === "manPages"

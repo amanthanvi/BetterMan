@@ -58,6 +58,24 @@ test('search: a11y (no critical/serious violations)', async ({ page }) => {
   await expectNoCriticalOrSeriousViolations(page)
 })
 
+test('search: a flag finds the page that defines it and links to the option row', async ({ page }) => {
+  await page.goto('/search?q=--create')
+  const result = page.getByRole('list', { name: 'Search results' }).getByRole('listitem').first()
+  const link = result.getByRole('link', { name: 'tar(1)', exact: true })
+  await expect(link).toHaveAttribute('href', '/man/tar/1#opt-create')
+  await expect(result.getByText('options', { exact: true })).toBeVisible()
+  await expect(result.getByText('-c, --create')).toBeVisible()
+
+  await link.click()
+  await expect(page).toHaveURL(/\/man\/tar\/1#opt-create$/)
+  await expect(page.locator('mark[data-bm-opt]').filter({ hasText: '--create' }).first()).toBeVisible()
+
+  await page.goto('/search?q=tar%20-c')
+  await expect(page.getByRole('link', { name: 'tar(1)', exact: true })).toHaveAttribute('href', '/man/tar/1#opt-create')
+  await page.goto('/search?q=tar%20--bogus')
+  await expect(page.getByRole('link', { name: 'tar(1)', exact: true })).toHaveAttribute('href', '/man/tar/1')
+})
+
 test('search: description words find a page whose name does not match', async ({ page }) => {
   await page.goto('/search?q=archiving')
   await expect(page.getByRole('link', { name: /tar\(1\)/i })).toBeVisible()
