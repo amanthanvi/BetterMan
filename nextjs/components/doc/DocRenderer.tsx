@@ -8,6 +8,7 @@ import type { BlockNode, InlineNode } from '../../lib/docModel'
 import { scrollToIdWhenRendered } from '../../lib/scroll'
 import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
 import { CodeBlock } from './CodeBlock'
+import { LinkPendingHint } from '../ui/LinkPendingHint'
 
 type HighlightCtx = {
   findQuery?: string
@@ -241,6 +242,7 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, distro: Distro)
         return (
           <Link key={idx} href={withDistroHref(inline.href, distro)} className="underline underline-offset-4 decoration-accent-edge">
             {renderInlines(inline.inlines, ctx, distro)}
+            <LinkPendingHint />
           </Link>
         )
     }

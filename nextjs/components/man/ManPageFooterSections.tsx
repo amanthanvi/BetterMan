@@ -7,6 +7,7 @@ import type { SectionPage } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
 import { withDistro } from '../../lib/distro'
 import { ManSectionLabel } from './RunningHead'
+import { LinkPendingHint } from '../ui/LinkPendingHint'
 
 export function ManPageFooterSections({
   distro,
@@ -51,6 +52,7 @@ export function ManPageFooterSections({
                 <li key={key}>
                   <Link href={href} className="font-mono text-sm">
                     {title}
+                    <LinkPendingHint />
                   </Link>
                 </li>
               )
@@ -73,6 +75,7 @@ export function ManPageFooterSections({
                     {item.name}({item.section})
                   </span>
                   <span className="min-w-0 truncate text-sm text-muted">{item.description}</span>
+                  <LinkPendingHint />
                 </Link>
               </li>
             ))}

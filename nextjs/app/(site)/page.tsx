@@ -1,11 +1,12 @@
 import Link from 'next/link'
 
 import { HomeDashboardClient } from './HomeDashboardClient'
-import { fetchInfo, listSections, withDistroFallback } from '../lib/api'
-import { isDefaultDistro, withDistro } from '../lib/distro'
-import { resolveRequestDistro, type SearchParams } from '../lib/requestContext'
-import { ManSectionLabel, RunningHead } from '../components/man/RunningHead'
-import { Kbd } from '../components/ui/Kbd'
+import { fetchInfo, listSections, withDistroFallback } from '../../lib/api'
+import { isDefaultDistro, withDistro } from '../../lib/distro'
+import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { ManSectionLabel, RunningHead } from '../../components/man/RunningHead'
+import { Kbd } from '../../components/ui/Kbd'
+import { LinkPendingHint } from '../../components/ui/LinkPendingHint'
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
@@ -84,6 +85,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               <span className="text-muted group-hover:text-fg group-hover:underline group-hover:underline-offset-4">
                 {s.label}
               </span>
+              <LinkPendingHint />
             </Link>
           ))}
           {!visible.length ? <span className="text-sm text-muted">Sections unavailable.</span> : null}

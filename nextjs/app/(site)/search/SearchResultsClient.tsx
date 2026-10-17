@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
-import type { SearchResponse, SearchResult } from '../../lib/api'
-import type { Distro } from '../../lib/distro'
-import { manPageHref, withDistro } from '../../lib/distro'
-import { escapeRegExp } from '../../lib/textRanges'
+import type { SearchResponse, SearchResult } from '../../../lib/api'
+import type { Distro } from '../../../lib/distro'
+import { manPageHref, withDistro } from '../../../lib/distro'
+import { escapeRegExp } from '../../../lib/textRanges'
+import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
 
 const BACKEND_HIGHLIGHT_MARKER_RE = /[\u27ea\u27eb]/g
 
@@ -95,6 +96,7 @@ function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResu
             title={`${r.name}(${r.section})`}
           >
             {r.name}({r.section})
+            <LinkPendingHint />
           </Link>
           {anchorId ? (
             <span className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-muted">options</span>

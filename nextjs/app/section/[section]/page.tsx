@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 
-import { listSection, withDistroFallback } from '../../../lib/api'
+import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
+import { FastApiError, listSection, withDistroFallback } from '../../../lib/api'
 import { isDefaultDistro, withDistro, type Distro } from '../../../lib/distro'
 import { getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
@@ -67,6 +69,7 @@ function PaginationControl({
   return (
     <Link href={href} className={className}>
       {children}
+      <LinkPendingHint />
     </Link>
   )
 }
@@ -102,7 +105,10 @@ export default async function SectionPage({
 
   const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
     listSection({ distro: activeDistro, section, limit: 200, offset: safeOffset, cursor, before }),
-  )
+  ).catch((err: unknown) => {
+    if (err instanceof FastApiError && err.status === 404) notFound()
+    throw err
+  })
   const groups = groupByLeadingChar(data.results)
   const prevOffset = Math.max(0, data.offset - data.limit)
   const nextOffset = data.offset + data.results.length
@@ -176,6 +182,7 @@ export default async function SectionPage({
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm leading-snug text-muted">{r.description}</span>
                     </div>
+                    <LinkPendingHint />
                   </Link>
                 </li>
               ))}

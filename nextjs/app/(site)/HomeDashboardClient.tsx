@@ -3,24 +3,25 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
-import type { Distro } from '../lib/distro'
-import { withDistro } from '../lib/distro'
+import type { Distro } from '../../lib/distro'
+import { withDistro } from '../../lib/distro'
 import {
   BOOKMARKS_EVENT,
   BOOKMARKS_STORAGE_KEY,
   getBookmarks,
   removeBookmark,
   type BookmarkItem,
-} from '../lib/bookmarks'
+} from '../../lib/bookmarks'
 import {
   getRecent,
   RECENT_EVENT,
   RECENT_STORAGE_KEY,
   type RecentItem,
-} from '../lib/recent'
-import { EmptyState } from '../components/ui/EmptyState'
-import { Kbd } from '../components/ui/Kbd'
-import { formatRelativeTime } from '../lib/time'
+} from '../../lib/recent'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { Kbd } from '../../components/ui/Kbd'
+import { LinkPendingHint } from '../../components/ui/LinkPendingHint'
+import { formatRelativeTime } from '../../lib/time'
 
 type RecentPageItem = Extract<RecentItem, { kind: 'page' }>
 
@@ -42,6 +43,7 @@ function ManLink({ distro, name, section, children }: { distro: Distro; name: st
   return (
     <Link href={href} className="group min-w-0 flex-1 py-2.5 transition-colors hover:no-underline">
       {children}
+      <LinkPendingHint />
     </Link>
   )
 }

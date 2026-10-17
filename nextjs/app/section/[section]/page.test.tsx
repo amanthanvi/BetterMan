@@ -3,9 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SectionResponse } from '../../../lib/api'
 import type { Distro } from '../../../lib/distro'
 
-const mocks = vi.hoisted(() => ({ listSection: vi.fn() }))
+const mocks = vi.hoisted(() => {
+  class FastApiError extends Error {
+    constructor(public status: number, public code: string) {
+      super(code)
+    }
+  }
+  return {
+    FastApiError,
+    listSection: vi.fn(),
+    notFound: vi.fn(() => {
+      throw new Error('NEXT_HTTP_ERROR_FALLBACK;404')
+    }),
+  }
+})
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
+vi.mock('next/navigation', () => ({ notFound: mocks.notFound }))
 vi.mock('../../../lib/api', () => ({
+  FastApiError: mocks.FastApiError,
   listSection: mocks.listSection,
   withDistroFallback: async (distro: Distro, fn: (distro: Distro) => Promise<SectionResponse>) => ({
     distro, data: await fn(distro),
@@ -15,6 +30,14 @@ vi.mock('../../../lib/api', () => ({
 import SectionPage from './page'
 
 beforeEach(() => vi.clearAllMocks())
+
+it('answers an unknown section with notFound instead of an error page', async () => {
+  mocks.listSection.mockRejectedValue(new mocks.FastApiError(404, 'SECTION_NOT_FOUND'))
+  await expect(SectionPage({
+    params: Promise.resolve({ section: 'zzz' }), searchParams: Promise.resolve({}),
+  })).rejects.toThrow('NEXT_HTTP_ERROR_FALLBACK;404')
+  expect(mocks.notFound).toHaveBeenCalledOnce()
+})
 
 describe('section browse pagination', () => {
   it('keeps both navigation directions cursor-based past the legacy offset cap', async () => {
@@ -76,7 +99,7 @@ describe('section browse pagination', () => {
       searchParams: Promise.resolve({ distro: 'ubuntu', ...pagination }),
     }))
     expect(html).toContain('href="/section/1?distro=ubuntu"')
-    expect(html).toContain('>First page</a>')
+    expect(html).toContain('>First page<')
     expect(html).toContain('Showing 0 of 200 results.')
     expect(html.match(/aria-disabled="true"/g)).toHaveLength(2)
     expect(html).not.toContain('href="/section/1?offset=')

@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
-import type { Distro } from '../../lib/distro'
-import { listSections, search, withDistroFallback } from '../../lib/api'
-import { isDefaultDistro } from '../../lib/distro'
-import { getFirst, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import type { Distro } from '../../../lib/distro'
+import { listSections, search, withDistroFallback } from '../../../lib/api'
+import { isDefaultDistro } from '../../../lib/distro'
+import { getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 import { SearchPageInput } from './SearchPageInput'
 import { SearchResultsClient } from './SearchResultsClient'
 

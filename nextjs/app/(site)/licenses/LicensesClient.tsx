@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-import type { LicenseTextResponse, LicensesResponse } from '../../lib/api'
+import type { LicenseTextResponse, LicensesResponse } from '../../../lib/api'
 
 function buildLicenseTextUrl(opts: { distro: string; pkg: string }) {
   const url = new URL(`/api/v1/licenses/${encodeURIComponent(opts.pkg)}`, window.location.origin)
