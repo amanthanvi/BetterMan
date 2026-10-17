@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
 import './globals.css'
 import { DISTRO_COOKIE, normalizeDistro } from '../lib/distro'
+import { READING_PREFS_COOKIE, prefsFromCookie } from '../lib/readingPrefs'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
@@ -21,6 +22,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const resolved = cookieStore.get('bm-theme-resolved')?.value
   const theme = resolved === 'dark' || resolved === 'light' ? resolved : undefined
+
+  const readingPrefs = prefsFromCookie(cookieStore.get(READING_PREFS_COOKIE)?.value)
 
   const initialCookieDistro = normalizeDistro(cookieStore.get(DISTRO_COOKIE)?.value) ?? undefined
 
@@ -45,8 +48,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           crossOrigin="anonymous"
         />
       </head>
-      <body suppressHydrationWarning>
-        <Providers initialCookieDistro={initialCookieDistro}>{children}</Providers>
+      <body
+        data-bm-font-size={readingPrefs.fontSize}
+        data-bm-font-family={readingPrefs.fontFamily}
+        data-bm-line-height={readingPrefs.lineHeight}
+        data-bm-column-width={readingPrefs.columnWidth}
+        data-bm-code-theme={readingPrefs.codeTheme}
+        suppressHydrationWarning
+      >
+        <Providers initialCookieDistro={initialCookieDistro} initialReadingPrefs={readingPrefs}>
+          {children}
+        </Providers>
         {plausibleDomain ? (
           <script defer src="https://plausible.io/js/script.js" data-domain={plausibleDomain} nonce={nonce} />
         ) : null}
