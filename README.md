@@ -23,8 +23,11 @@ Needs Node 26, pnpm 10.34, Python 3.14, and `uv`.
 ```bash
 pnpm install
 pnpm convex:check   # provisions a local Convex deployment and writes .env.local
-pnpm next:dev       # Convex watcher plus Next.js on http://localhost:3000
+npx convex env set RATE_LIMIT_TAG_KEY dev
+RATE_LIMIT_TAG_KEY=dev pnpm next:dev   # Convex watcher plus Next.js on http://localhost:3000
 ```
+
+Next and Convex must share `RATE_LIMIT_TAG_KEY`; without it, search and page API routes return 429.
 
 The local deployment starts empty. Seed it with the E2E fixture while `pnpm next:dev` is running:
 

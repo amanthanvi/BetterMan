@@ -224,3 +224,21 @@ export function compactManPageSearchText(page: {
   }
   return truncateText(parts.join("\n"), MAX_SEARCH_TEXT_CHARS);
 }
+
+// Compare two secrets without leaking their contents through timing. Both
+// sides are hashed first so the comparison always runs over a fixed 32 bytes
+// and reveals nothing about the length or prefix of the configured secret.
+export async function secretsMatch(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [digestA, digestB] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(a)),
+    crypto.subtle.digest("SHA-256", encoder.encode(b)),
+  ]);
+
+  const bytesA = new Uint8Array(digestA);
+  const bytesB = new Uint8Array(digestB);
+
+  let diff = 0;
+  for (let i = 0; i < bytesA.length; i += 1) diff |= bytesA[i] ^ bytesB[i];
+  return diff === 0;
+}

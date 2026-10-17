@@ -112,6 +112,14 @@ vercel curl /api/v1/info \
 jq -e '.datasetReleaseId | select(type == "string" and length > 0 and . != "uninitialized")' \
   "${smoke_dir}/info.json" >/dev/null
 
+# Search is rate-limited, so a missing or mismatched RATE_LIMIT_TAG_KEY returns
+# 429 here before promotion instead of after.
+vercel curl '/api/v1/search?q=tar&limit=1' \
+  --deployment "$deployment_url" \
+  --yes \
+  -- --fail --silent --show-error >"${smoke_dir}/search.json"
+jq -e '.results | type == "array" and length > 0' "${smoke_dir}/search.json" >/dev/null
+
 vercel curl /robots.txt \
   --deployment "$deployment_url" \
   --yes \

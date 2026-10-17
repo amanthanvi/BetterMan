@@ -58,6 +58,7 @@ function context(path: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.stubEnv('RATE_LIMIT_TAG_KEY', 'route-test-key')
   convexMocks.mutation.mockResolvedValue({ allowed: true })
 })
 
