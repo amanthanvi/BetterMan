@@ -238,8 +238,8 @@ def test_require_deployed_contract_wraps_a_timeout_while_reading_an_error_body(m
 
     error = StallingError(
         "https://test.convex.site/ingest/contract",
-        503,
-        "Unavailable",
+        500,
+        "Server Error",
         {},
         BytesIO(b""),
     )
