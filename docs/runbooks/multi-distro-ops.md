@@ -128,6 +128,7 @@ Fedora base images can be built with docs disabled (`dnf` config `tsflags=nodocs
 
 - Fix (if you’re debugging manually):
   - Install with `--setopt=tsflags=` and reinstall any preinstalled packages with `--setopt=tsflags=` so their man pages are backfilled.
+  - If `dnf reinstall` reports a package "installed and available, but in different versions", the image carries a build the mirrors no longer have; `dnf distro-sync` those packages first, then reinstall.
 
 In BetterMan, the Fedora ingest path handles this automatically (see `ingestion/ingestion/fedora.py`).
 

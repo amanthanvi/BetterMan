@@ -5,9 +5,13 @@ from pathlib import Path
 
 
 def dnf_install(packages: list[str]) -> None:
-    # Fedora container base images commonly set tsflags=nodocs, which strips man pages.
+    # Fedora container base images set tsflags=nodocs, which strips man pages.
     # Clearing tsflags on `dnf install` isn't enough for preinstalled packages (dnf won't reinstall
     # them), so we also `dnf reinstall` anything already present to backfill docs/man pages.
+    # The image is built from Koji's buildroot, so a preinstalled build (fedora:44 ships
+    # curl-8.18.0-8 and tar-1.35-8) may not exist on the mirrors, and dnf5 refuses to
+    # reinstall a version it cannot find. distro-sync moves those onto the published build
+    # first; it is a no-op for packages already at the repo version.
     installed = [
         pkg
         for pkg in packages
@@ -21,11 +25,10 @@ def dnf_install(packages: list[str]) -> None:
     ]
 
     subprocess.run(["dnf", "-y", "-q", "install", "--setopt=tsflags=", *packages], check=True)
-    if installed:
-        subprocess.run(
-            ["dnf", "-y", "-q", "reinstall", "--setopt=tsflags=", *installed],
-            check=True,
-        )
+    if not installed:
+        return
+    for command in ("distro-sync", "reinstall"):
+        subprocess.run(["dnf", "-y", "-q", command, "--setopt=tsflags=", *installed], check=True)
 
 
 def rpm_arch() -> str:
