@@ -126,7 +126,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
           ) : loading ? (
             <div className="font-mono text-sm text-muted">Loading license text…</div>
           ) : error ? (
-            <div className="py-2 text-sm text-muted">
+            <div role="alert" className="py-2 text-sm text-muted">
               {error}
             </div>
           ) : license ? (

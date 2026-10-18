@@ -15,6 +15,7 @@ import {
   listSections,
   search,
   suggest,
+  withDistroFallback,
 } from '@/lib/api'
 import { normalizeDistro, type Distro } from '@/lib/distro'
 import { isRateLimited } from '@/lib/rateLimit'
@@ -237,7 +238,12 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       if (distro instanceof Response) return distro
       const name = first(req.nextUrl.searchParams.get('name'))
       if (!name || name.length > 200) return apiError(400, 'INVALID_NAME', 'Name is required')
-      return cachedJson(await suggest({ distro, name }), SEARCH_CACHE_SECONDS)
+      // Like the man page, fall back to Debian without an active release, and say
+      // so, so the caller does not label Debian rows as the requested distro.
+      const { distro: resolved, data } = await withDistroFallback(distro, (activeDistro) =>
+        suggest({ distro: activeDistro, name }),
+      )
+      return cachedJson({ ...data, distro: resolved }, SEARCH_CACHE_SECONDS)
     }
 
     if (parts.length === 1 && parts[0] === 'licenses') {

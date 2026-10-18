@@ -17,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
   fetchManMetaByNameAndSection: vi.fn(),
   search: vi.fn(),
   listSection: vi.fn(),
+  suggest: vi.fn(),
 }))
 
 const convexMocks = vi.hoisted(() => ({
@@ -37,7 +38,18 @@ vi.mock('@/lib/api', () => ({
   listSection: apiMocks.listSection,
   listSections: vi.fn(),
   search: apiMocks.search,
-  suggest: vi.fn(),
+  suggest: apiMocks.suggest,
+  // The real helper's rule: only a non-Debian distro without an active release falls back.
+  withDistroFallback: async (distro: string, fn: (distro: string) => Promise<unknown>) => {
+    try {
+      return { distro, data: await fn(distro) }
+    } catch (err) {
+      if (distro !== 'debian' && (err as { code?: string }).code === 'RELEASE_NOT_FOUND') {
+        return { distro: 'debian', data: await fn('debian') }
+      }
+      throw err
+    }
+  },
 }))
 
 vi.mock('@/lib/convexClient', () => ({
@@ -202,6 +214,30 @@ describe('public API aliases', () => {
 
     expect(res.status).toBe(308)
     expect(res.headers.get('location')).toBe('/api/v1/man/gzip/1?distro=ubuntu')
+  })
+})
+
+describe('suggest API', () => {
+  const suggestions = [{ name: 'tar', section: '1', description: 'archive' }]
+
+  it('answers for the requested distro and names it', async () => {
+    apiMocks.suggest.mockResolvedValueOnce({ query: 'ta', suggestions })
+
+    const res = await GET(request('/api/v1/suggest?name=ta&distro=ubuntu'), context(['v1', 'suggest']))
+
+    expect(apiMocks.suggest).toHaveBeenCalledWith({ distro: 'ubuntu', name: 'ta' })
+    await expect(res.json()).resolves.toEqual({ query: 'ta', suggestions, distro: 'ubuntu' })
+  })
+
+  it('falls back to Debian when the distro has no active release and says so', async () => {
+    apiMocks.suggest
+      .mockRejectedValueOnce(Object.assign(new apiMocks.FastApiError(404), { code: 'RELEASE_NOT_FOUND' }))
+      .mockResolvedValueOnce({ query: 'ta', suggestions })
+
+    const res = await GET(request('/api/v1/suggest?name=ta&distro=freebsd'), context(['v1', 'suggest']))
+
+    expect(apiMocks.suggest.mock.calls.map(([opts]) => opts.distro)).toEqual(['freebsd', 'debian'])
+    await expect(res.json()).resolves.toEqual({ query: 'ta', suggestions, distro: 'debian' })
   })
 })
 

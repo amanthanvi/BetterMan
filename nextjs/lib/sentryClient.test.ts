@@ -89,4 +89,19 @@ describe('sentryClient', () => {
     expect(sdk.init).toHaveBeenCalledTimes(2)
     expect(sdk.captureException.mock.calls.map(([error]) => error)).toEqual(['between', boundaryError])
   })
+
+  it.each([
+    [{ NEXT_PUBLIC_SENTRY_ENVIRONMENT: 'staging', NEXT_PUBLIC_VERCEL_ENV: 'preview' }, 'staging'],
+    [{ NEXT_PUBLIC_SENTRY_ENVIRONMENT: '', NEXT_PUBLIC_VERCEL_ENV: 'preview' }, 'preview'],
+    [{ NEXT_PUBLIC_SENTRY_ENVIRONMENT: '', NEXT_PUBLIC_VERCEL_ENV: '' }, 'test'],
+  ])('tags the browser environment from %j', async (env, expected) => {
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', 'https://key@example.invalid/1')
+    for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value)
+    const client = await import('./sentryClient')
+
+    client.startClientErrorReporting()
+    await flush()
+
+    expect(sdk.init).toHaveBeenCalledWith(expect.objectContaining({ environment: expected }))
+  })
 })

@@ -12,12 +12,10 @@ test('overlays: a palette chunk that fails to load closes the palette, and the n
   // Production chunk names are hashes, so pick the palette chunk by its content.
   let blocking = true
   let blocked = 0
-  let lastBlockedAt = 0
   await page.route(/\/_next\/static\/chunks\/.*\.js(\?|$)/, async (route) => {
     const response = await route.fetch()
     if (blocking && (await response.text()).includes('Command palette input')) {
       blocked += 1
-      lastBlockedAt = Date.now()
       await route.abort()
       return
     }
@@ -28,12 +26,10 @@ test('overlays: a palette chunk that fails to load closes the palette, and the n
   await waitForInteractiveShell(page)
   const blockedBeforeOpen = blocked
   await page.getByRole('button', { name: 'Search' }).click()
-  // Turbopack retries a failed chunk once, 200-600 ms later, before it rejects the
-  // import. The open has failed once an attempt since the click has been followed
-  // by a quiet period longer than that.
-  await expect
-    .poll(() => blocked > blockedBeforeOpen && Date.now() - lastBlockedAt > 700, { timeout: 10_000 })
-    .toBe(true)
+  // The shell announces the failed open once the import has rejected, however many
+  // times the bundler retried the chunk first.
+  await expect(page.getByText('Could not open. Try again.')).toHaveCount(1, { timeout: 10_000 })
+  expect(blocked).toBeGreaterThan(blockedBeforeOpen)
 
   const input = page.getByRole('combobox', { name: 'Command palette input' })
   await expect(input).toHaveCount(0)
@@ -43,5 +39,6 @@ test('overlays: a palette chunk that fails to load closes the palette, and the n
   blocking = false
   await page.getByRole('button', { name: 'Search' }).click()
   await expect(input).toBeVisible()
+  await expect(page.getByText('Could not open. Try again.')).toHaveCount(0)
   expect(pageErrors).toEqual([])
 })
