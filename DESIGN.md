@@ -111,5 +111,6 @@ combinator (no merge — primitives own their recipes).
   name matching is case-insensitive.
 - **Keyboard map:** ⌘K palette · `/` search · `?` shortcuts · `d` theme ·
   `b` sidebar/TOC · `t` top · `h` home · `p` prefs · `m` bookmark ·
-  Enter/Shift+Enter find navigation.
+  Enter/Shift+Enter find navigation. Single-key shortcuts are ignored while
+  typing in a field or while any modal (`aria-modal="true"`) is open.
 - Print stylesheet forces light monochrome via `--color-*` overrides.
