@@ -16,15 +16,28 @@ export function cancelScrollPin() {
   cancelActive?.()
 }
 
+type ScrollOpts = { behavior: ScrollBehavior; block: ScrollLogicalPosition }
+
 /**
  * Scroll on a later frame, after AppShell's mount scroll and after a hash-driven
  * options expansion commits. Retry while the target has not rendered yet.
- *
- * Content above the target can resize after this scroll (lazy syntax highlighting,
- * font swaps), so keep the target pinned while the page resizes, for a few seconds
- * or until the reader scrolls or another scroll starts.
  */
-export function scrollToIdWhenRendered(id: string, opts: { behavior: ScrollBehavior; block: ScrollLogicalPosition }) {
+export function scrollToIdWhenRendered(id: string, opts: ScrollOpts) {
+  pinScroll(() => document.getElementById(id), opts)
+}
+
+/** Scroll an element that is already in the document, such as a find match. */
+export function scrollElementIntoView(el: Element, opts: ScrollOpts) {
+  pinScroll(() => (el.isConnected ? el : null), opts)
+}
+
+/**
+ * Content above the target can resize after the scroll (lazy syntax highlighting,
+ * font swaps, man page blocks far from the viewport taking their real height once
+ * they render), so keep the target pinned while the page resizes, for a few
+ * seconds or until the reader scrolls or another scroll starts. One pin at a time.
+ */
+function pinScroll(getTarget: () => Element | null, opts: ScrollOpts) {
   cancelActive?.()
 
   let attempts = 0
@@ -38,15 +51,16 @@ export function scrollToIdWhenRendered(id: string, opts: { behavior: ScrollBehav
     if (cancelActive === stop) cancelActive = null
   }
   cancelActive = stop
-  for (const type of READER_INPUT_EVENTS) window.addEventListener(type, stop, { passive: true })
 
-  const scroll = (behavior: ScrollBehavior) =>
-    document.getElementById(id)?.scrollIntoView({ behavior, block: opts.block })
+  const scroll = (behavior: ScrollBehavior) => getTarget()?.scrollIntoView({ behavior, block: opts.block })
 
   const tick = () => {
     attempts += 1
-    if (document.getElementById(id)) {
+    if (getTarget()) {
       scroll(opts.behavior)
+      // Listen from this frame on: the keypress or click that asked for the scroll
+      // has finished dispatching, so it cannot stop its own pin.
+      for (const type of READER_INPUT_EVENTS) window.addEventListener(type, stop, { passive: true })
       const pinnedAt = performance.now()
       let height = document.body.offsetHeight
       observer = new ResizeObserver(() => {

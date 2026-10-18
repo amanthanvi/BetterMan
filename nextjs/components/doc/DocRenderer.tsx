@@ -59,10 +59,28 @@ export const DocRenderer = memo(function DocRenderer({
     }
   }, [])
 
+  // Long pages only: `.bm-doc > *` in globals.css gives each top-level block
+  // `content-visibility: auto`, and the estimate stands in for its height until
+  // it has rendered once. Short pages keep the plain block list.
+  const skipOffscreen = blocks.length > SKIP_OFFSCREEN_MIN_BLOCKS
+  const estimates = useMemo(() => (skipOffscreen ? blocks.map((block) => estimateBlockHeight(block)) : null), [blocks, skipOffscreen])
+
+  if (!estimates) {
+    return (
+      <div className="space-y-5">
+        {blocks.map((block, idx) => (
+          <BlockView key={blockKey(block, idx)} block={block} ctx={ctx} distro={distro} />
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="bm-doc">
       {blocks.map((block, idx) => (
-        <BlockView key={blockKey(block, idx)} block={block} ctx={ctx} distro={distro} />
+        <div key={blockKey(block, idx)} style={{ containIntrinsicBlockSize: `auto ${estimates[idx]}px` }}>
+          <BlockView block={block} ctx={ctx} distro={distro} />
+        </div>
       ))}
     </div>
   )
@@ -74,13 +92,51 @@ function blockKey(block: BlockNode, fallbackIdx: number) {
   return `${block.type}:${fallbackIdx}`
 }
 
+// Below this a full-document restyle is cheap anyway (ssh_config(5), 40 blocks:
+// about 130 ms at 4x CPU); bash(1) has 573 blocks.
+export const SKIP_OFFSCREEN_MIN_BLOCKS = 150
+
+// Rough desktop heights at the default reading preferences: 15px type at 1.65
+// line height in a 56rem column. Accuracy only affects the scrollbar and deep
+// links before a block first renders.
+const LINE_PX = 25
+
+function estimateBlockHeight(block: BlockNode, charsPerLine = 110): number {
+  switch (block.type) {
+    case 'heading':
+      return 54
+    case 'paragraph':
+      return LINE_PX * Math.ceil(Math.max(1, inlinesLength(block.inlines)) / charsPerLine)
+    case 'list':
+      return block.items.reduce((sum, item) => sum + 6 + item.reduce((s, b) => s + estimateBlockHeight(b, charsPerLine - 10), 0), 0)
+    case 'definition_list':
+      // The term column takes about a quarter of the width.
+      return block.items.reduce(
+        (sum, item) => sum + 12 + Math.max(LINE_PX, item.definitionBlocks.reduce((s, b) => s + estimateBlockHeight(b, 80), 0)),
+        0,
+      )
+    case 'code_block':
+      return 32 + 22 * block.text.split('\n').length
+    case 'table':
+      return 40 + 36 * block.rows.length
+    case 'horizontal_rule':
+      return 25
+  }
+}
+
+function inlinesLength(inlines: InlineNode[]): number {
+  return inlines.reduce((sum, inline) => sum + (inline.type === 'text' || inline.type === 'code' ? inline.text.length : inlinesLength(inline.inlines)), 0)
+}
+
 const BlockView = memo(function BlockView({ block, ctx, distro }: { block: BlockNode; ctx: HighlightCtx; distro: Distro }) {
   switch (block.type) {
     case 'heading': {
       const level = clamp(block.level, 2, 6)
       const Tag = (`h${level}` as unknown) as 'h2'
 
-      const base = 'scroll-mt-32 pt-8 first:pt-0 text-fg'
+      // In a long page every heading is the first child of its block wrapper;
+      // only the document's first block drops the padding.
+      const base = 'scroll-mt-32 pt-8 first:pt-0 [.bm-doc>:not(:first-child)>&]:pt-8 text-fg'
       const headingClass =
         level === 2
           ? 'font-mono text-lg font-semibold tracking-[0.04em] leading-[1.2]'

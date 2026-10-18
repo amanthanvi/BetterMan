@@ -253,6 +253,22 @@ test('man: long pages render every block, so find reaches the last match', async
   await findbar.getByRole('button', { name: 'Previous match' }).click()
   await expect(count).toHaveText('120/120')
   await expect(page.locator('mark.bm-find-active')).toBeInViewport()
+
+  // Blocks far from the viewport skip rendering on screen; print renders them all.
+  const lastBlock = page.getByText('Filler block 120 for bash(1) long-page tests.')
+  const blockVisibility = () => lastBlock.evaluate((el) => getComputedStyle(el.closest('p')!.parentElement!).contentVisibility)
+  expect(await blockVisibility()).toBe('auto')
+  await page.emulateMedia({ media: 'print' })
+  expect(await blockVisibility()).toBe('visible')
+  await expect(lastBlock).toBeVisible()
+})
+
+test('man: a deep link into a long page lands at the sticky-header offset', async ({ page }) => {
+  await page.goto('/man/bash/1#notes')
+  const heading = page.locator('h2#notes')
+  await expect(heading).toBeInViewport()
+  // scroll-mt-32: the heading sits 8rem under the viewport top, below the sticky header.
+  await expect.poll(async () => Math.round((await heading.boundingBox())?.y ?? Number.NaN)).toBe(128)
 })
 
 test('man: options table splits flags and highlights terms', async ({ page }) => {

@@ -359,6 +359,21 @@
     overflow: hidden;
   }
 
+  /* Man page body: blocks far from the viewport skip style, layout and paint.
+     content-visibility also clips paint to the block's padding box, so the
+     padding leaves room for focus rings and the mobile full-bleed code tint,
+     and the negative margins give it back so the column does not move. The
+     blocks sit 1.25rem apart, like space-y-5. */
+  .bm-doc > * {
+    content-visibility: auto;
+    margin: -4px -1rem;
+    padding: 4px 1rem;
+  }
+
+  .bm-doc > * + * {
+    margin-block-start: calc(1.25rem - 4px);
+  }
+
   .hljs {
     background: transparent;
     color: var(--bm-code-fg);
@@ -489,6 +504,11 @@
 
     .bm-expand[data-collapsed="true"] {
       grid-template-rows: 1fr !important;
+    }
+
+    /* Print renders the whole page, not only what was near the viewport. */
+    .bm-doc > * {
+      content-visibility: visible;
     }
   }
 }
