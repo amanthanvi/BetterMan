@@ -209,7 +209,10 @@ jobs:
           set -euo pipefail
 
           export PATH="$GITHUB_WORKSPACE/tooling/node_modules/.bin:$PATH"
-          if [[ "$(vercel --version)" != "58.4.4" ]]; then
+          # The same trusted manifest deps:provenance verified above, so the
+          # binary on PATH is the one whose provenance passed.
+          trusted_vercel="$(jq -r '.devDependencies.vercel' "$GITHUB_WORKSPACE/tooling/package.json")"
+          if [[ ! "$trusted_vercel" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || "$(vercel --version)" != "$trusted_vercel" ]]; then
             echo "Trusted Vercel CLI version mismatch." >&2
             exit 1
           fi
