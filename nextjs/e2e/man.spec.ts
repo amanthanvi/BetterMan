@@ -327,6 +327,53 @@ test('man: distro variant selector keeps full supported ordering', async ({ page
   ])
 })
 
+test('man: distro variant selector paints the page colours its native popup copies', async ({ page }) => {
+  // Chromium renders the dropdown as a separate page with a white body and copies the
+  // <select>'s computed background-color and color onto the option list, so the select
+  // has to carry an opaque page background in every theme or dark ink lands on white.
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
+  await page.goto('/man/tar/1')
+  await waitForInteractiveShell(page)
+
+  const variantSelect = page.getByLabel('Select distribution variant')
+  await expect(variantSelect).toBeVisible()
+  // The client sets data-theme after hydration; before that the cycle button is inert.
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+
+  const paint = () =>
+    variantSelect.evaluate((select) => {
+      const own = getComputedStyle(select)
+      const root = getComputedStyle(document.documentElement)
+      const option = getComputedStyle(select.querySelector('option')!)
+      return {
+        scheme: own.colorScheme,
+        background: own.backgroundColor,
+        color: own.color,
+        optionColor: option.color,
+        pageBackground: root.backgroundColor,
+        pageColor: root.color,
+      }
+    })
+
+  const dark = await paint()
+  expect(dark.scheme).toBe('dark')
+  expect(dark.background).toBe(dark.pageBackground)
+  expect(dark.background).not.toMatch(/, 0\)$/)
+  expect(dark.color).toBe(dark.pageColor)
+  expect(dark.optionColor).toBe(dark.pageColor)
+
+  // System mode follows the dark OS here; one cycle switches to the explicit light theme.
+  await page.getByRole('button', { name: 'Cycle theme' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+
+  const light = await paint()
+  expect(light.scheme).toBe('light')
+  expect(light.background).toBe(light.pageBackground)
+  expect(light.background).not.toBe(dark.background)
+  expect(light.color).toBe(light.pageColor)
+  expect(light.optionColor).toBe(light.pageColor)
+})
+
 test('man: ambiguous by-name route renders picker', async ({ page }) => {
   await page.goto('/man/printf')
   await expect(page.getByRole('heading', { name: 'printf' })).toBeVisible()
