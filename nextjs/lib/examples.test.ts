@@ -6,6 +6,11 @@ import { extractExamples } from './examples'
 const h = (text: string, level = 2): BlockNode => ({ type: 'heading', id: text.toLowerCase(), text, level })
 const p = (text: string): BlockNode => ({ type: 'paragraph', inlines: [{ type: 'text', text }] })
 const code = (text: string): BlockNode => ({ type: 'code_block', id: `c-${text}`, text, languageHint: 'bash' })
+const list = (items: BlockNode[][]): BlockNode => ({ type: 'list', ordered: false, items })
+const definitionList = (definitionBlocks: BlockNode[]): BlockNode => ({
+  type: 'definition_list',
+  items: [{ termInlines: [{ type: 'text', text: 'term' }], definitionBlocks }],
+})
 
 describe('extractExamples', () => {
   it('reads a top-level EXAMPLES or EXAMPLE section and stops at the next section', () => {
@@ -50,5 +55,22 @@ describe('extractExamples', () => {
     expect(extractExamples([])).toEqual([])
     expect(extractExamples([h('DESCRIPTION'), code('x')])).toEqual([])
     expect(extractExamples([h('EXAMPLES'), p('See the manual.'), h('SEE ALSO')])).toEqual([])
+  })
+
+  it('does not carry a paragraph label across a list sitting between it and a code block', () => {
+    const blocks = [h('EXAMPLES'), p('Common uses:'), list([[code('tar -cf a.tar dir')]])]
+    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'tar -cf a.tar dir', languageHint: 'bash' }])
+  })
+
+  it('does not carry a paragraph label across a definition list sitting between it and a code block', () => {
+    const blocks = [h('EXAMPLES'), p('Common uses:'), definitionList([code('tar -xf a.tar')])]
+    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'tar -xf a.tar', languageHint: 'bash' }])
+  })
+
+  it('lets a paragraph inside a list item label its own code block', () => {
+    const blocks = [h('EXAMPLES'), p('Common uses:'), list([[p('Create an archive:'), code('tar -cf a.tar dir')]])]
+    expect(extractExamples(blocks)).toEqual([
+      { label: 'Create an archive:', text: 'tar -cf a.tar dir', languageHint: 'bash' },
+    ])
   })
 })

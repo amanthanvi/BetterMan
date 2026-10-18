@@ -10,7 +10,7 @@ const MAX_SNIPPET_LINES = 10
  * Short code blocks from the page's top-level EXAMPLES (or EXAMPLE) section.
  * Longer blocks are whole programs or config files, not commands, so they are
  * left to the full section. A label is the one-line paragraph or subsection
- * heading directly above a snippet.
+ * heading directly above a snippet. Any other block clears a pending label.
  */
 export function extractExamples(blocks: BlockNode[]): ExampleSnippet[] {
   const topLevel = Math.min(...blocks.flatMap((block) => (block.type === 'heading' ? [block.level] : [])))
@@ -38,6 +38,10 @@ export function extractExamples(blocks: BlockNode[]): ExampleSnippet[] {
         examples.push({ label, text, languageHint: block.languageHint })
         if (examples.length === MAX_EXAMPLES) break
       }
+      label = null
+    } else {
+      // walkBlocks yields a container before its children, so a paragraph inside
+      // an item can still label that item's code block.
       label = null
     }
   }
