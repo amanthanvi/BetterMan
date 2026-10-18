@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { type ComponentType, useEffect, useRef, useState } from 'react'
+import { type ComponentType, useCallback, useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
@@ -45,9 +45,14 @@ function isElementVisible(el: HTMLElement) {
 
 // An overlay's component arrives on first open and then stays mounted so its exit
 // transition runs. No React.lazy: that would cache a failed load for the life of the
-// page and throw it into the nearest error boundary. Here a failure just closes the
-// overlay, and the next open imports again.
-function useOverlay<P>(load: () => Promise<ComponentType<P>>, open: boolean, onOpenChange: (open: boolean) => void) {
+// page and throw it into the nearest error boundary. Here a failure closes the
+// overlay and reports it, and the next open imports again.
+function useOverlay<P>(
+  load: () => Promise<ComponentType<P>>,
+  open: boolean,
+  onOpenChange: (open: boolean) => void,
+  onLoadError: () => void,
+) {
   const [Overlay, setOverlay] = useState<ComponentType<P> | null>(null)
 
   useEffect(() => {
@@ -58,13 +63,15 @@ function useOverlay<P>(load: () => Promise<ComponentType<P>>, open: boolean, onO
         if (!cancelled) setOverlay(() => component)
       },
       () => {
-        if (!cancelled) onOpenChange(false)
+        if (cancelled) return
+        onOpenChange(false)
+        onLoadError()
       },
     )
     return () => {
       cancelled = true
     }
-  }, [Overlay, load, onOpenChange, open])
+  }, [Overlay, load, onLoadError, onOpenChange, open])
 
   return Overlay
 }
@@ -87,10 +94,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [offline, setOffline] = useState(false)
   const [themeAnnouncement, setThemeAnnouncement] = useState('')
   const themeAnnouncementMountedRef = useRef(false)
-  const CommandPalette = useOverlay(overlayLoaders.palette, paletteOpen, setPaletteOpen)
-  const ShortcutsDialog = useOverlay(overlayLoaders.shortcuts, shortcutsOpen, setShortcutsOpen)
-  const ReadingPrefsDrawer = useOverlay(overlayLoaders.prefs, prefsOpen, setPrefsOpen)
-  const TocDrawer = useOverlay(overlayLoaders.toc, toc.open, setTocOpen)
+  const [overlayNotice, setOverlayNotice] = useState('')
+  const onOverlayLoadError = useCallback(() => setOverlayNotice('Could not open. Try again.'), [])
+  const CommandPalette = useOverlay(overlayLoaders.palette, paletteOpen, setPaletteOpen, onOverlayLoadError)
+  const ShortcutsDialog = useOverlay(overlayLoaders.shortcuts, shortcutsOpen, setShortcutsOpen, onOverlayLoadError)
+  const ReadingPrefsDrawer = useOverlay(overlayLoaders.prefs, prefsOpen, setPrefsOpen, onOverlayLoadError)
+  const TocDrawer = useOverlay(overlayLoaders.toc, toc.open, setTocOpen, onOverlayLoadError)
+  const anyOverlayOpen = paletteOpen || shortcutsOpen || prefsOpen || toc.open
+
+  // Clearing on open lets the same notice be announced again after the next failure.
+  useEffect(() => {
+    if (anyOverlayOpen) setOverlayNotice('')
+  }, [anyOverlayOpen])
 
   const lastRouteKeyRef = useRef<string | null>(null)
   const scrollPositionsRef = useRef<Map<string, number>>(new Map())
@@ -402,6 +417,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div aria-live="polite" className="sr-only">
             {themeAnnouncement}
+          </div>
+          <div aria-live="polite" className="sr-only">
+            {overlayNotice}
           </div>
 
           <div className="ml-auto flex items-center gap-4">

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-import type { SuggestResponse, Suggestion } from '../../lib/api'
+import type { SuggestApiResponse, Suggestion } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
 import { useDistro } from '../state/distro'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
@@ -16,6 +16,8 @@ export function ManNotFound() {
   const { name, section } = useParams<{ name: string; section?: string }>()
   const { distro } = useDistro()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  // Debian when the requested distro has no active release, as on the man page.
+  const [suggestionsDistro, setSuggestionsDistro] = useState(distro)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -28,9 +30,12 @@ export function ManNotFound() {
     })
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return (await res.json()) as SuggestResponse
+        return (await res.json()) as SuggestApiResponse
       })
-      .then((payload) => setSuggestions(payload.suggestions))
+      .then((payload) => {
+        setSuggestions(payload.suggestions)
+        setSuggestionsDistro(payload.distro)
+      })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
         setSuggestions([])
@@ -57,7 +62,7 @@ export function ManNotFound() {
             {suggestions.map((s) => (
               <li key={`${s.name}:${s.section}`} className="flex flex-col">
                 <Link
-                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, distro)}
+                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, suggestionsDistro)}
                   className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
                 >
                   {s.name}({s.section})

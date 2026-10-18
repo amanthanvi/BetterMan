@@ -56,6 +56,9 @@ export type Suggestion = { name: string; section: string; description: string }
 
 export type SuggestResponse = { query: string; suggestions: Suggestion[] }
 
+/** `distro` is where the suggestions came from: Debian when the requested distro has no active release. */
+export type SuggestApiResponse = SuggestResponse & { distro: Distro }
+
 export type LicensePackage = { name: string; version: string; hasLicenseText: boolean }
 
 export type LicensesResponse = {

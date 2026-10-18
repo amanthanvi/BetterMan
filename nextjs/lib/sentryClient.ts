@@ -22,7 +22,9 @@ function loadSentry(): Promise<SentryModule> {
     .then((Sentry) => {
       Sentry.init({
         dsn,
-        environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV,
+        // Only NEXT_PUBLIC_ variables reach the browser; Vercel exposes NEXT_PUBLIC_VERCEL_ENV.
+        environment:
+          process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NODE_ENV,
         tracesSampleRate: 0.1,
         // Preserve the pre-v11 defaults: v11 turns collection of user info,
         // cookies, headers, bodies, and query params on unless told otherwise.
