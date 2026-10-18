@@ -1,13 +1,27 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from pathlib import Path
+
+logger = logging.getLogger("betterman.ingestion")
 
 _APK_INSTALLED_DB = Path("/lib/apk/db/installed")
 
 
 def apk_install(packages: list[str]) -> None:
     subprocess.run(["apk", "add", "--no-cache", *packages], check=True)
+
+    # Alpine ships man pages in <pkg>-doc subpackages. The `docs` metapackage pulls in the
+    # -doc package of every installed package through install_if. openssh-doc keys on the
+    # `openssh` metapackage, which openssh-client does not install, so it is named here. A
+    # failure only costs pages, so it must not abort the ingest.
+    docs = ["docs"]
+    if "openssh-client" in packages:
+        docs.append("openssh-doc")
+    result = subprocess.run(["apk", "add", "--no-cache", *docs], check=False)
+    if result.returncode != 0:
+        logger.warning("apk add %s failed (exit %d); continuing", docs, result.returncode)
 
 
 def apk_arch() -> str:
