@@ -34,7 +34,7 @@ export function ManNotFound() {
       })
       .then((payload) => {
         setSuggestions(payload.suggestions)
-        setSuggestionsDistro(payload.distro)
+        setSuggestionsDistro(payload.distro ?? distro)
       })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
