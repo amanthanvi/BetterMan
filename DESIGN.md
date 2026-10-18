@@ -19,7 +19,9 @@ Read (the man page).
    (`underline underline-offset-4 decoration-edge-strong hover:decoration-accent`)
    or unboxed icon glyphs whose hover is an ink change (`text-muted → text-fg`)
    — never a border or fill change. Inputs are underline-only
-   (`border-0 border-b border-edge bg-transparent`). `Kbd` is the sole bordered
+   (`border-0 border-b border-edge bg-transparent`); a native `<select>` uses
+   `bg-bg` instead, which looks the same on the page but gives Chromium an opaque
+   background to copy into its dropdown popup. `Kbd` is the sole bordered
    micro-chip (keyboard notation). The one solid control is the rare primary
    action (`bg-accent`, e.g. error Retry).
 4. **Signature furniture:** every man page (and the home page, which is

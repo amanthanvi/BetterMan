@@ -89,7 +89,10 @@ export function ManPageHeaderCard({
           <label className="inline-flex items-center gap-1.5">
             <span>distro</span>
             {/* Uncontrolled so the choice stays visible while the server renders it; the key
-                resets it to whatever distro was actually served. */}
+                resets it to whatever distro was actually served.
+                bg-bg, not bg-transparent: Chromium draws the dropdown as its own page with a
+                white body and copies this element's computed background-color and color onto
+                the list, so a transparent select shows dark-theme ink on white. */}
             <select
               key={distro}
               name="distro"
@@ -98,7 +101,7 @@ export function ManPageHeaderCard({
                 const next = normalizeDistro(e.target.value)
                 if (next) setDistro(next)
               }}
-              className="border-0 border-b border-edge bg-transparent px-0.5 py-0.5 text-xs text-fg"
+              className="border-0 border-b border-edge bg-bg px-0.5 py-0.5 text-xs text-fg"
               aria-label="Select distribution variant"
             >
               {variantPicker.ordered.map((v) => {
