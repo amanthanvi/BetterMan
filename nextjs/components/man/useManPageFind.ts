@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { BlockNode } from '../../lib/docModel'
-import { getScrollBehavior } from '../../lib/scroll'
+import { getScrollBehavior, scrollElementIntoView } from '../../lib/scroll'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { countFindMatches } from './findCount'
 
@@ -91,7 +91,7 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     if (!marks.length) return
     const el = marks[Math.min(clamped, marks.length - 1)]
     if (!el) return
-    el.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
+    scrollElementIntoView(el, { behavior: scrollBehavior, block: 'center' })
     if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
     el.classList.add('bm-find-active')
     activeMarkRef.current = el
