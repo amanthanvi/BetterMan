@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import type { Distro } from '../../lib/distro'
@@ -62,6 +62,7 @@ export function DistroProvider({
   const urlDistro = normalizeDistro(searchParams.get('distro'))
 
   const [distro, setDistroState] = useState<Distro>(() => urlDistro ?? initialCookieDistro ?? 'debian')
+  const pendingUrlRef = useRef<string | null>(null)
 
   const setDistro = useCallback(
     (next: Distro) => {
@@ -74,10 +75,23 @@ export function DistroProvider({
         searchParams: new URLSearchParams(search),
         distro: next,
       })
+      pendingUrlRef.current = url
       router.replace(url, { scroll: false })
     },
     [pathname, router, search],
   )
+
+  // Next 16.4 caches the first page's hash in that route's URL and appends the
+  // requested hash again on a later visit, so `/man/tar/1#a` becomes `#a#a`.
+  // A null state lets Next copy its own history state and sync its router URL.
+  useEffect(() => {
+    const url = pendingUrlRef.current
+    pendingUrlRef.current = null
+    if (!url) return
+    const intended = new URL(url, window.location.origin)
+    if (intended.pathname !== window.location.pathname || intended.search !== window.location.search) return
+    if (intended.hash !== window.location.hash) window.history.replaceState(null, '', url)
+  }, [pathname, search])
 
   useEffect(() => {
     if (!urlDistro) return

@@ -7,7 +7,7 @@ import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { singleKeyShortcutsBlocked } from '../../lib/dom'
 import { withDistro } from '../../lib/distro'
-import { getScrollBehavior } from '../../lib/scroll'
+import { getScrollBehavior, READER_INPUT_EVENTS } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
 import { parseReleaseId } from '../../lib/release'
 import { useDistro } from '../state/distro'
@@ -219,9 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     let attempts = 0
     const stop = () => {
       window.cancelAnimationFrame(frame)
-      window.removeEventListener('wheel', stop)
-      window.removeEventListener('touchmove', stop)
-      window.removeEventListener('keydown', stop)
+      for (const type of READER_INPUT_EVENTS) window.removeEventListener(type, stop)
     }
     const tick = () => {
       const target = document.getElementById(id)
@@ -235,9 +233,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     }
     // A slow boundary must not yank a reader who has already started scrolling.
-    window.addEventListener('wheel', stop, { passive: true })
-    window.addEventListener('touchmove', stop, { passive: true })
-    window.addEventListener('keydown', stop)
+    for (const type of READER_INPUT_EVENTS) window.addEventListener(type, stop, { passive: true })
     tick()
     return stop
   }, [routeKey, setTocOpen])

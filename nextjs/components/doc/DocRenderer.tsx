@@ -5,7 +5,7 @@ import { memo, useEffect, useMemo, type ReactNode } from 'react'
 
 import type { Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
-import { scrollToIdWhenRendered } from '../../lib/scroll'
+import { cancelScrollPin, scrollToIdWhenRendered } from '../../lib/scroll'
 import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
 import { CodeBlock } from './CodeBlock'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
@@ -53,7 +53,10 @@ export const DocRenderer = memo(function DocRenderer({
 
     onHash()
     window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
+    return () => {
+      window.removeEventListener('hashchange', onHash)
+      cancelScrollPin()
+    }
   }, [])
 
   return (
