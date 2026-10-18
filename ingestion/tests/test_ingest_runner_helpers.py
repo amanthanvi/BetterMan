@@ -159,6 +159,13 @@ def test_content_packages_include_tar_for_golden_checks() -> None:
         assert "tar" in _content_packages(sample=False, distro=distro)
 
 
+def test_content_packages_include_the_man7_stub_target() -> None:
+    # man-pages' man.7 is `.so man7/groff_man.7`; the target is in groff, not groff-base.
+    for distro in ["debian", "ubuntu", "fedora", "arch"]:
+        assert "groff" in _content_packages(sample=False, distro=distro)
+    assert "mandoc-doc" in _content_packages(sample=False, distro="alpine")
+
+
 def test_parse_man_href_supports_extended_sections() -> None:
     assert _parse_man_href("/man/openssl/1ssl") == ("openssl", "1ssl")
     assert _parse_man_href("/man/curl/1") == ("curl", "1")

@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+# man-pages ships man.7 as `.so man7/groff_man.7`. groff_man(7) and the other
+# groff_*(7) references live in the full groff package, not in the groff-base
+# that man-db pulls in, so without groff the man(7) alias has no target and is
+# dropped at ingest time.
 FULL_PACKAGE_SET_DEBIAN: list[str] = [
     "manpages",
     "manpages-dev",
+    "groff",
     "bash",
     "coreutils",
     "util-linux",
@@ -39,6 +44,7 @@ FULL_PACKAGE_SET_UBUNTU: list[str] = FULL_PACKAGE_SET_DEBIAN
 
 FULL_PACKAGE_SET_FEDORA: list[str] = [
     "man-pages",
+    "groff",
     "bash",
     "coreutils",
     "util-linux",
@@ -71,6 +77,7 @@ FULL_PACKAGE_SET_FEDORA: list[str] = [
 
 FULL_PACKAGE_SET_ARCH: list[str] = [
     "man-pages",
+    "groff",
     "bash",
     "coreutils",
     "util-linux",
@@ -100,8 +107,10 @@ FULL_PACKAGE_SET_ARCH: list[str] = [
     "procps-ng",
 ]
 
+# Alpine has no groff; its man(7), mdoc(7), and roff(7) are mandoc's own pages.
 FULL_PACKAGE_SET_ALPINE: list[str] = [
     "man-pages",
+    "mandoc-doc",
     "busybox-doc",
     "bash",
     "coreutils",
