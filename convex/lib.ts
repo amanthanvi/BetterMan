@@ -175,7 +175,9 @@ export function prefixUpperBound(prefix: string): string {
 
 export function truncateText(value: string, maxChars: number): string {
   if (value.length <= maxChars) return value;
-  return value.slice(0, maxChars);
+  // Do not leave half of a surrogate pair at the cut.
+  const high = value.charCodeAt(maxChars - 1);
+  return value.slice(0, high >= 0xd800 && high <= 0xdbff ? maxChars - 1 : maxChars);
 }
 
 export function normalizeSearchDocumentText(value: string): string {

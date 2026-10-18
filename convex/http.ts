@@ -46,6 +46,9 @@ function ingestAction(handler: (ctx: ActionCtx, body: unknown) => Promise<Respon
     } catch {
       return jsonResponse({ error: { code: "INVALID_JSON", message: "Request body must be valid JSON" } }, 400);
     }
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return jsonResponse({ error: { code: "INVALID_INGEST_PAYLOAD", message: "Request body must be a JSON object" } }, 400);
+    }
     try {
       return await handler(ctx, body);
     } catch (error) {

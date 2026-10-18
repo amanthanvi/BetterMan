@@ -4,9 +4,9 @@ import gzip
 import hashlib
 import shutil
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import replace
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 
@@ -64,6 +64,28 @@ def test_ingest_worker_count_defaults_to_cpus_up_to_eight(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "many")
     with pytest.raises(RuntimeError, match="BETTERMAN_INGEST_WORKERS"):
         _ingest_worker_count()
+
+
+def test_broken_parse_pool_names_the_first_source_without_a_result(monkeypatch) -> None:
+    class DyingPool:
+        def __init__(self, **_kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc) -> None:
+            return None
+
+        def map(self, _fn, _sources):
+            yield ingest_runner._ParseResult(error="first")
+            raise BrokenProcessPool("terminated abruptly")
+
+    monkeypatch.setattr(ingest_runner, "ProcessPoolExecutor", DyingPool)
+    sources = [ManSource(path=Path(f"/man/p{i}.1"), name=f"p{i}", section="1") for i in range(3)]
+    context = _ParseContext(distro="debian", arch="amd64", packages={}, manpath_to_pkg={})
+    with pytest.raises(RuntimeError, match=r"before source 2 of 3 \(/man/p1\.1\)"):
+        list(ingest_runner._parse_results(sources, context, workers=2))
 
 
 @pytest.mark.skipif(shutil.which("mandoc") is None, reason="mandoc not installed")
@@ -164,10 +186,10 @@ def test_iter_internal_doc_links_yields_nested_links() -> None:
 
 
 def test_build_page_links_returns_xref_and_see_also_payloads() -> None:
-    foo_id = uuid4()
-    bar1_id = uuid4()
-    bar5_id = uuid4()
-    baz_id = uuid4()
+    foo_id = "foo-id"
+    bar1_id = "bar1-id"
+    bar5_id = "bar5-id"
+    baz_id = "baz-id"
 
     foo_doc = {
         "blocks": [
@@ -199,8 +221,8 @@ def test_build_page_links_returns_xref_and_see_also_payloads() -> None:
             synopsis=None,
             options=None,
             see_also=[
-                {"name": "bar", "section": "1", "resolvedPageId": str(bar1_id)},
-                {"name": "bar", "section": "1", "resolvedPageId": str(bar1_id)},
+                {"name": "bar", "section": "1", "resolvedPageId": bar1_id},
+                {"name": "bar", "section": "1", "resolvedPageId": bar1_id},
             ],
             headings_text="",
             see_also_refs=[],
@@ -265,13 +287,13 @@ def test_build_page_links_returns_xref_and_see_also_payloads() -> None:
     ]
 
     links_by_page = _build_page_links(pages=pages)
-    links = links_by_page[str(foo_id)]
+    links = links_by_page[foo_id]
 
     link_types = [link["linkType"] for link in links]
     assert link_types.count("see_also") == 1
     assert link_types.count("xref") == 2
     assert {
-        "toExternalId": str(bar1_id),
+        "toExternalId": bar1_id,
         "toName": "bar",
         "toSection": "1",
         "linkType": "see_also",
@@ -280,7 +302,7 @@ def test_build_page_links_returns_xref_and_see_also_payloads() -> None:
 
 def _page(name: str, section: str) -> _PageRow:
     return _PageRow(
-        page_id=uuid4(),
+        page_id=f"{name}.{section}",
         name=name,
         section=section,
         title=f"{name}({section})",
@@ -439,7 +461,7 @@ def test_page_batch_limits_come_from_the_environment(monkeypatch) -> None:
     assert _page_batch_limits() == (7, 1024)
     for value in ["0", "-1", "abc", "1.5"]:
         monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", value)
-        with pytest.raises(ValueError, match="BETTERMAN_INGEST_PAGE_BATCH_ITEMS must be"):
+        with pytest.raises(RuntimeError, match="BETTERMAN_INGEST_PAGE_BATCH_ITEMS must be"):
             _page_batch_limits()
 
 

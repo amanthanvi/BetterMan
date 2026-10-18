@@ -3,6 +3,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { truncateText } from "./lib";
 import schema from "./schema";
 import { serializeStoredPayload } from "./_storedPayload";
 
@@ -221,4 +222,11 @@ it("fails closed when a shared blob has more than 100 mutable references", async
     .withIndex("by_blobId", (q) => q.eq("blobId", blobId)).take(102))).toHaveLength(101);
   expect((await fixture.t.run((ctx) => ctx.db.system.query("_storage").take(10))).map((file) => file._id))
     .toEqual([storageId]);
+});
+
+it("truncates text without leaving half of a surrogate pair", () => {
+  expect(truncateText("abc", 3)).toBe("abc");
+  expect(truncateText("abcd", 3)).toBe("abc");
+  expect(truncateText("ab\u{1F600}cd", 3)).toBe("ab");
+  expect(truncateText("ab\u{1F600}cd", 4)).toBe("ab\u{1F600}");
 });
