@@ -118,11 +118,6 @@ jobs:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
-          BETTERMAN_DEBIAN_IMAGE_REF: debian:trixie
-          BETTERMAN_UBUNTU_IMAGE_REF: ubuntu:24.04
-          BETTERMAN_FEDORA_IMAGE_REF: fedora:41
-          BETTERMAN_ARCH_IMAGE_REF: archlinux:latest
-          BETTERMAN_ALPINE_IMAGE_REF: alpine:3.20
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
           BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
         shell: bash

@@ -300,3 +300,41 @@ def test_run_ingest_container_builds_alpine_command(monkeypatch) -> None:
     inner = docker_run[-1]
     assert "apk add --no-cache" in inner
     assert "--distro alpine" in inner
+
+
+@pytest.mark.parametrize(
+    ("distro", "image"),
+    [
+        ("debian", "debian:trixie"),
+        ("ubuntu", "ubuntu:24.04"),
+        ("fedora", "fedora:44"),
+        ("arch", "archlinux:latest"),
+        ("alpine", "alpine:3.24"),
+    ],
+)
+def test_run_ingest_container_defaults_to_supported_image(monkeypatch, distro, image) -> None:
+    monkeypatch.delenv(f"BETTERMAN_{distro.upper()}_IMAGE_REF", raising=False)
+    monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
+
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], check: bool = False, **_kwargs: object):
+        calls.append(cmd)
+        return SimpleNamespace(returncode=0)
+
+    def fake_check_output(cmd: list[str], **_kwargs: object) -> str:
+        if cmd[:3] == ["docker", "image", "inspect"]:
+            return f"{image}@sha256:cafebabe\n"
+        if cmd[:2] == ["git", "rev-parse"]:
+            return "def456\n"
+        raise AssertionError(f"unexpected check_output: {cmd}")
+
+    monkeypatch.setattr(docker_runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(docker_runner.subprocess, "check_output", fake_check_output)
+
+    assert docker_runner.run_ingest_container(sample=True, activate=False, distro=distro) == 0
+
+    assert calls[0] == ["docker", "pull", image]
+    docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
+    assert docker_run[-4] == image
+    assert f"BETTERMAN_IMAGE_REF={image}" in docker_run

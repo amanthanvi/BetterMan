@@ -13,9 +13,9 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
     default_images = {
         "debian": "debian:trixie",
         "ubuntu": "ubuntu:24.04",
-        "fedora": "fedora:41",
+        "fedora": "fedora:44",
         "arch": "archlinux:latest",
-        "alpine": "alpine:3.20",
+        "alpine": "alpine:3.24",
     }
     image_env = {
         "debian": "BETTERMAN_DEBIAN_IMAGE_REF",
