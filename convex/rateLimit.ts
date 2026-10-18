@@ -80,18 +80,6 @@ export const consume = mutation({
   },
 });
 
-// Compatibility only: deploy.yml installs Convex before Next, so the promoted
-// frontend keeps calling this name until the release that calls `consume` is
-// live. It never touches buckets. Delete it once a frontend that calls
-// `consume` is promoted and no rollback target still calls `enforce`.
-export const enforce = mutation({
-  args: {
-    kind: rateLimitKindValidator,
-    identifier: v.string(),
-  },
-  handler: async () => ({ allowed: true, count: 0, retryAfterSeconds: 1 }),
-});
-
 // Internal: this deletes rows on a time predicate. As a public mutation taking
 // a caller-supplied `now`, one call with a far-future timestamp emptied the
 // whole table and turned rate limiting off. The cron in crons.ts starts it;

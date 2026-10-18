@@ -76,18 +76,6 @@ describe("consume", () => {
   });
 });
 
-describe("enforce compatibility shim", () => {
-  it("accepts the old call shape and never spends a bucket", async () => {
-    const t = convexTest(schema, modules);
-    for (let i = 0; i < 61; i += 1) {
-      expect(await t.mutation(api.rateLimit.enforce, { kind: "search", identifier: "victim" })).toEqual({
-        allowed: true, count: 0, retryAfterSeconds: 1,
-      });
-    }
-    expect(await buckets(t)).toEqual([]);
-  });
-});
-
 describe("cleanupExpired", () => {
   it("deletes buckets at or past expiry and keeps live ones", async () => {
     const t = convexTest(schema, modules);
