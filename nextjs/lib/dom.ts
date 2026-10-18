@@ -7,3 +7,7 @@ export function isTypingTarget(el: Element | null): boolean {
   return false
 }
 
+// The overlays set aria-modal only while open, so shortcuts resume as soon as one closes.
+export function singleKeyShortcutsBlocked(doc: Document): boolean {
+  return isTypingTarget(doc.activeElement) || doc.querySelector('[aria-modal="true"]') !== null
+}

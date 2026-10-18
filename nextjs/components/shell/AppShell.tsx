@@ -5,7 +5,7 @@ import { type ComponentType, useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
-import { isTypingTarget } from '../../lib/dom'
+import { singleKeyShortcutsBlocked } from '../../lib/dom'
 import { withDistro } from '../../lib/distro'
 import { getScrollBehavior } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
@@ -248,7 +248,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return
       }
 
-      if (isTypingTarget(document.activeElement)) return
+      if (singleKeyShortcutsBlocked(document)) return
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '?') {
         e.preventDefault()
