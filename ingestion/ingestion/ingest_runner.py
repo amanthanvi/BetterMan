@@ -6,6 +6,7 @@ import re
 from collections import Counter
 from collections.abc import Iterator
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -252,8 +253,8 @@ def ingest(
         pages=[
             _page_payload(
                 row,
-                sitemap_page=sitemap_pages[str(row.page_id)],
-                links=page_links.get(str(row.page_id), []),
+                sitemap_page=sitemap_pages[row.page_id],
+                links=page_links.get(row.page_id, []),
             )
             for row in parsed_pages
         ],
@@ -521,7 +522,19 @@ def _parse_results(
     ) as executor:
         # map yields in source order, so links, aliases and sitemap pages
         # come out exactly as the sequential path produces them.
-        yield from executor.map(_parse_in_worker, sources)
+        delivered = 0
+        try:
+            for result in executor.map(_parse_in_worker, sources):
+                yield result
+                delivered += 1
+        except BrokenProcessPool as exc:
+            # A worker died (usually the OOM killer) and the pool cannot say
+            # which page it was parsing. The first source without a result is
+            # the earliest candidate.
+            raise RuntimeError(
+                f"parse worker pool broke before source {delivered + 1} of {len(sources)} "
+                f"({sources[delivered].path}) returned; a worker was likely killed for memory"
+            ) from exc
 
 
 def _init_parse_worker(context: _ParseContext) -> None:
@@ -673,13 +686,13 @@ def _iter_internal_doc_links(obj: object):
 
 
 def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
-    index: dict[tuple[str, str], str] = {(p.name, p.section): str(p.page_id) for p in pages}
+    index: dict[tuple[str, str], str] = {(p.name, p.section): p.page_id for p in pages}
     by_name: dict[str, list[str]] = {}
     for p in pages:
         by_name.setdefault(p.name, []).append(p.section)
 
     for page in pages:
-        from_id = str(page.page_id)
+        from_id = page.page_id
 
         if page.see_also:
             for ref in page.see_also:
@@ -727,7 +740,7 @@ def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
 
 def _build_page_links(*, pages: list[_PageRow]) -> dict[str, list[dict[str, str | None]]]:
     index: dict[tuple[str, str], _PageRow] = {(p.name, p.section): p for p in pages}
-    by_id: dict[str, _PageRow] = {str(p.page_id): p for p in pages}
+    by_id: dict[str, _PageRow] = {p.page_id: p for p in pages}
     by_name: dict[str, list[str]] = {}
     for p in pages:
         by_name.setdefault(p.name, []).append(p.section)
@@ -735,7 +748,7 @@ def _build_page_links(*, pages: list[_PageRow]) -> dict[str, list[dict[str, str 
     out: dict[str, list[dict[str, str | None]]] = {}
     seen: set[tuple[str, str, str]] = set()
     for page in pages:
-        from_id = str(page.page_id)
+        from_id = page.page_id
         if page.see_also:
             for ref in page.see_also:
                 to_id = ref.get("resolvedPageId")
@@ -775,13 +788,13 @@ def _build_page_links(*, pages: list[_PageRow]) -> dict[str, list[dict[str, str 
             if section is None:
                 if len(candidates) == 1:
                     target = index.get((name, candidates[0]))
-                    to_id = str(target.page_id) if target else None
+                    to_id = target.page_id if target else None
                 else:
                     # ambiguous, but still linkable via /man/{name}
                     continue
             else:
                 target = index.get((name, section))
-                to_id = str(target.page_id) if target else None
+                to_id = target.page_id if target else None
 
             if to_id is None or to_id == from_id:
                 continue
@@ -849,7 +862,7 @@ def _build_license_packages(
 def _build_sitemap_page_map(*, pages: list[_PageRow]) -> dict[str, int]:
     out: dict[str, int] = {}
     for index, page in enumerate(sorted(pages, key=lambda p: (p.name, p.section)), start=1):
-        out[str(page.page_id)] = ((index - 1) // 10_000) + 1
+        out[page.page_id] = ((index - 1) // 10_000) + 1
     return out
 
 
@@ -871,7 +884,7 @@ def _positive_int_env(name: str, default: int) -> int:
     if not raw:
         return default
     if not raw.strip().isdigit() or int(raw) < 1:
-        raise ValueError(f"{name} must be a positive integer")
+        raise RuntimeError(f"{name} must be a positive integer")
     return int(raw)
 
 
@@ -969,7 +982,7 @@ def _page_payload(
     # (MAX_SNIPPET_TEXT_CHARS in convex/lib.ts); send only what it stores.
     snippet_text = normalize_ws(f"{row.description} {row.plain_text}")[:240]
     return {
-        "externalId": str(row.page_id),
+        "externalId": row.page_id,
         "name": row.name,
         "section": row.section,
         "sitemapPage": sitemap_page,

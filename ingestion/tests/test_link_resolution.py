@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 from ingestion.ingest_runner import _PageRow, _resolve_doc_links_and_see_also
 
 
 def test_resolve_doc_links_marks_missing_xrefs_unresolved() -> None:
-    bar_id = uuid4()
-    foo_id = uuid4()
+    bar_id = "bar-id"
+    foo_id = "foo-id"
 
     foo_doc = {
         "toc": [{"id": "name", "title": "NAME", "level": 2}],
@@ -92,5 +90,5 @@ def test_resolve_doc_links_marks_missing_xrefs_unresolved() -> None:
     assert bar_link["linkType"] == "internal"
 
     resolved = {r["name"]: r.get("resolvedPageId") for r in (foo.see_also or [])}
-    assert resolved["bar"] == str(bar_id)
+    assert resolved["bar"] == bar_id
     assert resolved["missing"] is None

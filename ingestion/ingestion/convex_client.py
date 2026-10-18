@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import ssl
 import time
 from dataclasses import dataclass
 from http.client import HTTPException
@@ -10,10 +11,11 @@ from urllib.request import Request, urlopen
 
 logger = logging.getLogger("betterman.ingestion")
 
-# Page, alias, and license posts are idempotent: the server skips rows it
-# already stored, so a 5xx, 429, or transport failure is retried a bounded
-# number of times. Release creation and activation post once.
-_RETRIED_PATHS = ("/ingest/pages", "/ingest/aliases", "/ingest/licenses")
+# Release, page, alias, and license posts are idempotent: the server returns
+# the existing release for an identical manifest and skips rows it already
+# stored, so a 5xx, 429, or transport failure is retried a bounded number of
+# times. Activation posts once; its caller owns the pending-hydration loop.
+_RETRIED_PATHS = ("/ingest/release", "/ingest/pages", "/ingest/aliases", "/ingest/licenses")
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = 1.0
 
@@ -256,6 +258,7 @@ class ConvexIngestClient:
             try:
                 with urlopen(req, timeout=timeout_seconds) as res:
                     raw = res.read().decode("utf-8")
+                result = _json_object(raw)
             except HTTPError as exc:
                 detail = _post_error_detail(exc)
                 if exc.code == 409 and path == "/ingest/activate" and _activation_pending(detail):
@@ -266,11 +269,18 @@ class ConvexIngestClient:
             except URLError as exc:
                 cause, retryable = exc, True
                 error = RuntimeError(f"Convex ingest request failed: {exc.reason}")
-            except (TimeoutError, HTTPException, ConnectionError) as exc:
+            except (
+                TimeoutError,
+                HTTPException,
+                ConnectionError,
+                ssl.SSLError,
+                UnicodeDecodeError,
+                json.JSONDecodeError,
+            ) as exc:
                 cause, retryable = exc, True
                 error = RuntimeError(f"Convex ingest request failed: {exc}")
             else:
-                return _json_object(raw)
+                return result
             if not retryable or attempt == attempts:
                 raise error from cause
             logger.warning("Convex ingest %s attempt %d failed, retrying: %s", path, attempt, error)

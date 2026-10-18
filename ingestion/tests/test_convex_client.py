@@ -1,5 +1,6 @@
 import json
 import re
+import ssl
 from http.client import HTTPException, IncompleteRead, RemoteDisconnected
 from io import BytesIO
 from pathlib import Path
@@ -31,6 +32,20 @@ def _http_error(status: int, body: bytes = b"") -> HTTPError:
         TimeoutError("timed out"),
         RemoteDisconnected("closed"),
         IncompleteRead(b""),
+        ssl.SSLError("decryption failed"),
+        BytesIO(b"<html>bad gateway</html>"),
+        BytesIO(b"\xff\xfe"),
+    ],
+    ids=[
+        "503",
+        "429",
+        "unreachable",
+        "timeout",
+        "disconnect",
+        "incomplete-read",
+        "ssl",
+        "non-json-body",
+        "non-utf8-body",
     ],
 )
 def test_idempotent_posts_retry_transient_failures(monkeypatch, failure):
@@ -115,11 +130,18 @@ def test_client_errors_fail_immediately(monkeypatch, status):
     request.assert_called_once()
 
 
-def test_release_creation_posts_once(monkeypatch):
+def test_release_creation_retries_but_activation_posts_once(monkeypatch):
+    request = Mock(side_effect=[_http_error(503, b"outage"), BytesIO(b'{"existed":true}')])
+    monkeypatch.setattr("ingestion.convex_client.urlopen", request)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    client = ConvexIngestClient("https://test.convex.site", "test-secret")
+    assert client.post("/ingest/release", {}) == {"existed": True}
+    assert request.call_count == 2
+
     request = Mock(side_effect=_http_error(503, b"outage"))
     monkeypatch.setattr("ingestion.convex_client.urlopen", request)
     with pytest.raises(RuntimeError, match="HTTP 503"):
-        ConvexIngestClient("https://test.convex.site", "test-secret").post("/ingest/release", {})
+        client.post("/ingest/activate", {})
     request.assert_called_once()
 
 
