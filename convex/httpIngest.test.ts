@@ -41,6 +41,15 @@ it("returns 400 for a body that is not JSON", async () => {
   expect(await response.json()).toMatchObject({ error: { code: "INVALID_JSON" } });
 });
 
+it("returns 400 for a JSON body that is not an object", async () => {
+  const t = convexTest(schema, modules);
+  for (const body of ["[]", "null", "7", '"text"']) {
+    const response = await post(t, "/ingest/release", body);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "INVALID_INGEST_PAYLOAD" } });
+  }
+});
+
 it("returns 400 when the mutation validator rejects a page", async () => {
   const t = convexTest(schema, modules);
   await createRelease(t, "release");
