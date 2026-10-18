@@ -186,12 +186,29 @@ function makePages(distro) {
   for (let i = 0; i < 120; i += 1) {
     bashBlocks.push({ type: 'paragraph', inlines: [{ type: 'text', text: `Filler block ${i + 1} for bash(1) long-page tests.` }] })
   }
+  // Code blocks above BUGS give late layout shifts something to move after a
+  // deep link has already scrolled to it.
+  const bashSample = Array.from({ length: 14 }, (_, i) =>
+    i % 3 === 0 ? `# step ${i + 1}: check the input` : `if [ -n "$1" ]; then echo "run ${i + 1}"; fi`,
+  ).join('\n')
+  bashBlocks.push({ type: 'heading', id: 'notes', level: 2, text: 'NOTES' })
+  for (let i = 0; i < 5; i += 1) {
+    bashBlocks.push({ type: 'code_block', id: `notes-code-${i + 1}`, text: bashSample, languageHint: 'bash' })
+  }
+  bashBlocks.push({ type: 'heading', id: 'bugs', level: 2, text: 'BUGS' })
+  for (let i = 0; i < 30; i += 1) {
+    bashBlocks.push({ type: 'paragraph', inlines: [{ type: 'text', text: `Known issue ${i + 1}.` }] })
+  }
   const bash = page({
     name: 'bash',
     section: '1',
     title: 'bash(1)',
     description: 'GNU Bourne-Again SHell',
-    toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }],
+    toc: [
+      { id: 'description', title: 'DESCRIPTION', level: 2 },
+      { id: 'notes', title: 'NOTES', level: 2 },
+      { id: 'bugs', title: 'BUGS', level: 2 },
+    ],
     blocks: bashBlocks,
     synopsis: ['bash [options] [command_string | file]'],
   })

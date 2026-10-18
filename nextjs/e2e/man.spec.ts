@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
 import { pressShortcutUntilVisible, selectOptionUntilURL, waitForInteractiveShell } from './shortcuts'
@@ -152,6 +152,20 @@ test('man: switching distro from reading preferences keeps the URL hash', async 
   await expect(page).toHaveURL(/\/man\/tar\/1\?distro=ubuntu#synopsis$/)
 })
 
+test('man: switching distro twice keeps a single URL hash', async ({ page }) => {
+  await page.goto('/man/tar/1#synopsis')
+  await waitForInteractiveShell(page)
+
+  const variantSelect = page.getByLabel('Select distribution variant')
+  await selectOptionUntilURL(page, variantSelect, 'ubuntu', /\/man\/tar\/1\?distro=ubuntu#synopsis$/)
+  await selectOptionUntilURL(page, variantSelect, 'debian', /\/man\/tar\/1#synopsis$/)
+
+  await page.getByRole('button', { name: 'Reading preferences' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
+  await dialog.getByRole('radiogroup', { name: 'Default distro' }).getByRole('radio', { name: '@ubuntu' }).click()
+  await expect(page).toHaveURL(/\/man\/tar\/1\?distro=ubuntu#synopsis$/)
+})
+
 test('man: header and footer links work from man pages', async ({ page }) => {
   await page.goto('/man/tar/1')
   await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
@@ -281,6 +295,72 @@ test('man: TOC navigation updates the URL hash and scrolls', async ({ page }) =>
   await expect(page).toHaveURL(/\/man\/tar\/1#examples$/)
   await page.waitForFunction((y) => window.scrollY > y + 30, yBefore)
   await expect(examples).toHaveAttribute('aria-current', 'location')
+})
+
+// Chromium's scroll anchoring hides most late shifts, so turn it off and grow the
+// article the way lazy highlighting does after the hash scroll has already run.
+async function shiftContentAbove(page: Page, px: number) {
+  await page.addStyleTag({ content: 'html { overflow-anchor: none }' })
+  await page.evaluate((height) => {
+    const spacer = document.createElement('div')
+    spacer.style.height = `${height}px`
+    document.querySelector('article')?.prepend(spacer)
+  }, px)
+}
+
+function topOf(page: Page, id: string) {
+  return page.locator(`#${id}`).evaluate((el) => Math.round(el.getBoundingClientRect().top))
+}
+
+async function gotoPinnedDeepLink(page: Page) {
+  await page.goto('/man/bash/1#bugs')
+  await expect(page.locator('#notes-code-5')).toBeAttached()
+  await page.waitForFunction(() => Object.keys(document.getElementById('bugs')!).some((key) => key.startsWith('__reactFiber')))
+  // The pin starts on the frame after hydration effects run.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  await expect.poll(() => topOf(page, 'bugs')).toBe(128)
+}
+
+test('man: a hash deep link stays at the header offset after late layout shifts', async ({ page }) => {
+  await gotoPinnedDeepLink(page)
+
+  await shiftContentAbove(page, 300)
+  await expect.poll(() => topOf(page, 'bugs')).toBe(128)
+
+  // Once the reader scrolls, later shifts leave the page where they put it.
+  await page.mouse.wheel(0, 40)
+  await expect.poll(() => topOf(page, 'bugs')).toBeLessThan(100)
+  await shiftContentAbove(page, 300)
+  await expect.poll(() => topOf(page, 'bugs')).toBeGreaterThan(350)
+  await page.waitForTimeout(300)
+  expect(await topOf(page, 'bugs')).toBeGreaterThan(350)
+})
+
+test('man: a hash deep link stops re-pinning after a few seconds', async ({ page }) => {
+  await gotoPinnedDeepLink(page)
+
+  await page.evaluate(() => {
+    const now = performance.now.bind(performance)
+    performance.now = () => now() + 60_000
+  })
+  await shiftContentAbove(page, 300)
+  // Highlighting can still nudge the heading by a few pixels; a re-pin would put it back at 128.
+  await expect.poll(() => topOf(page, 'bugs')).toBeGreaterThan(400)
+  await page.waitForTimeout(300)
+  expect(await topOf(page, 'bugs')).toBeGreaterThan(400)
+})
+
+test('man: TOC navigation stays at the header offset after late layout shifts', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/man/bash/1')
+  await waitForInteractiveShell(page)
+
+  await page.locator('[data-bm-sidebar]').getByRole('link', { name: 'BUGS' }).click()
+  await expect(page).toHaveURL(/\/man\/bash\/1#bugs$/)
+  await expect.poll(() => topOf(page, 'bugs')).toBe(128)
+
+  await shiftContentAbove(page, 300)
+  await expect.poll(() => topOf(page, 'bugs')).toBe(128)
 })
 
 test('man: extended section URLs work', async ({ page }) => {
