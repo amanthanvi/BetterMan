@@ -10,7 +10,9 @@ const MAX_SNIPPET_LINES = 10
  * Short code blocks from the page's top-level EXAMPLES (or EXAMPLE) section.
  * Longer blocks are whole programs or config files, not commands, so they are
  * left to the full section. A label is the one-line paragraph or subsection
- * heading directly above a snippet. Any other block clears a pending label.
+ * heading directly above a snippet in the same list item or definition. Any
+ * other block, a new list or definition item, or the end of a list or
+ * definition list clears a pending label.
  */
 export function extractExamples(blocks: BlockNode[]): ExampleSnippet[] {
   const topLevel = Math.min(...blocks.flatMap((block) => (block.type === 'heading' ? [block.level] : [])))
@@ -18,7 +20,21 @@ export function extractExamples(blocks: BlockNode[]): ExampleSnippet[] {
   let sectionLevel: number | null = null
   let label: string | null = null
 
-  for (const block of walkBlocks(blocks)) {
+  for (const event of walkBlocks(blocks)) {
+    switch (event.type) {
+      case 'item_start':
+      case 'container_end':
+        label = null
+        continue
+      case 'block':
+        break
+      default: {
+        const unreachable: never = event
+        return unreachable
+      }
+    }
+    const block = event.block
+
     if (sectionLevel === null) {
       if (block.type === 'heading' && block.level === topLevel && /^examples?$/i.test(block.text.trim())) {
         sectionLevel = block.level
@@ -26,23 +42,37 @@ export function extractExamples(blocks: BlockNode[]): ExampleSnippet[] {
       continue
     }
 
-    if (block.type === 'heading') {
-      if (block.level <= sectionLevel) break
-      label = shortLabel(block.text)
-    } else if (block.type === 'paragraph') {
-      label = shortLabel(inlineText(block.inlines))
-    } else if (block.type === 'code_block') {
-      const text = trimBlankLines(block.text)
-      if (text && text.split('\n').length <= MAX_SNIPPET_LINES) {
-        // Copy display data only: the block id stays unique to the source section.
-        examples.push({ label, text, languageHint: block.languageHint })
-        if (examples.length === MAX_EXAMPLES) break
+    switch (block.type) {
+      case 'heading':
+        if (block.level <= sectionLevel) return examples
+        label = shortLabel(block.text)
+        break
+      case 'paragraph':
+        label = shortLabel(inlineText(block.inlines))
+        break
+      case 'code_block': {
+        const text = trimBlankLines(block.text)
+        if (text && text.split('\n').length <= MAX_SNIPPET_LINES) {
+          // Copy display data only: the block id stays unique to the source section.
+          examples.push({ label, text, languageHint: block.languageHint })
+          if (examples.length === MAX_EXAMPLES) return examples
+        }
+        label = null
+        break
       }
-      label = null
-    } else {
-      // walkBlocks yields a container before its children, so a paragraph inside
-      // an item can still label that item's code block.
-      label = null
+      case 'list':
+      case 'definition_list':
+      case 'table':
+      case 'horizontal_rule':
+        // The container is yielded before its children, so a paragraph inside an
+        // item can still label that item's code. item_start and container_end
+        // drop a label that would otherwise cross an item or leave the container.
+        label = null
+        break
+      default: {
+        const unreachable: never = block
+        return unreachable
+      }
     }
   }
 
@@ -58,13 +88,26 @@ function shortLabel(text: string): string | null {
   return trimmed && trimmed.length <= MAX_LABEL_LENGTH && !trimmed.includes('\n') ? trimmed : null
 }
 
-function* walkBlocks(blocks: BlockNode[]): Generator<BlockNode> {
+type WalkEvent =
+  | { type: 'block'; block: BlockNode }
+  | { type: 'item_start' }
+  | { type: 'container_end' }
+
+function* walkBlocks(blocks: BlockNode[]): Generator<WalkEvent> {
   for (const block of blocks) {
-    yield block
+    yield { type: 'block', block }
     if (block.type === 'list') {
-      for (const item of block.items) yield* walkBlocks(item)
+      for (const item of block.items) {
+        yield { type: 'item_start' }
+        yield* walkBlocks(item)
+      }
+      yield { type: 'container_end' }
     } else if (block.type === 'definition_list') {
-      for (const item of block.items) yield* walkBlocks(item.definitionBlocks)
+      for (const item of block.items) {
+        yield { type: 'item_start' }
+        yield* walkBlocks(item.definitionBlocks)
+      }
+      yield { type: 'container_end' }
     }
   }
 }

@@ -7,10 +7,15 @@ const h = (text: string, level = 2): BlockNode => ({ type: 'heading', id: text.t
 const p = (text: string): BlockNode => ({ type: 'paragraph', inlines: [{ type: 'text', text }] })
 const code = (text: string): BlockNode => ({ type: 'code_block', id: `c-${text}`, text, languageHint: 'bash' })
 const list = (items: BlockNode[][]): BlockNode => ({ type: 'list', ordered: false, items })
-const definitionList = (definitionBlocks: BlockNode[]): BlockNode => ({
+const definitionList = (...definitions: BlockNode[][]): BlockNode => ({
   type: 'definition_list',
-  items: [{ termInlines: [{ type: 'text', text: 'term' }], definitionBlocks }],
+  items: definitions.map((definitionBlocks) => ({
+    termInlines: [{ type: 'text', text: 'term' }],
+    definitionBlocks,
+  })),
 })
+const table = (): BlockNode => ({ type: 'table', headers: ['Flag'], rows: [['-c']] })
+const rule = (): BlockNode => ({ type: 'horizontal_rule' })
 
 describe('extractExamples', () => {
   it('reads a top-level EXAMPLES or EXAMPLE section and stops at the next section', () => {
@@ -72,5 +77,40 @@ describe('extractExamples', () => {
     expect(extractExamples(blocks)).toEqual([
       { label: 'Create an archive:', text: 'tar -cf a.tar dir', languageHint: 'bash' },
     ])
+  })
+
+  it('lets a subsection heading inside a list item label its own code block', () => {
+    const blocks = [h('EXAMPLES'), list([[h('Listing', 3), code('tar -tvf a.tar')]])]
+    expect(extractExamples(blocks)).toEqual([{ label: 'Listing', text: 'tar -tvf a.tar', languageHint: 'bash' }])
+  })
+
+  it('does not carry a paragraph label across a table sitting between it and a code block', () => {
+    const blocks = [h('EXAMPLES'), p('Common uses:'), table(), code('tar -cf a.tar dir')]
+    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'tar -cf a.tar dir', languageHint: 'bash' }])
+  })
+
+  it('does not carry a paragraph label across a horizontal rule sitting between it and a code block', () => {
+    const blocks = [h('EXAMPLES'), p('Common uses:'), rule(), code('tar -tf a.tar')]
+    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'tar -tf a.tar', languageHint: 'bash' }])
+  })
+
+  it('does not let a paragraph inside a list label a code block after the list', () => {
+    const blocks = [h('EXAMPLES'), list([[p('Inner:')]]), code('a')]
+    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'a', languageHint: 'bash' }])
+  })
+
+  it('does not carry a paragraph label from one list item into the next item', () => {
+    const blocks = [h('EXAMPLES'), list([[p('A:')], [code('a')]])]
+    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'a', languageHint: 'bash' }])
+  })
+
+  it('does not let a paragraph inside a definition list label a code block after the list', () => {
+    const blocks = [h('EXAMPLES'), definitionList([p('Inner:')]), code('a')]
+    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'a', languageHint: 'bash' }])
+  })
+
+  it('does not carry a paragraph label from one definition into the next', () => {
+    const blocks = [h('EXAMPLES'), definitionList([p('A:')], [code('a')])]
+    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'a', languageHint: 'bash' }])
   })
 })
