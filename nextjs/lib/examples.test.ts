@@ -62,9 +62,31 @@ describe('extractExamples', () => {
     expect(extractExamples([h('EXAMPLES'), p('See the manual.'), h('SEE ALSO')])).toEqual([])
   })
 
-  it('does not carry a paragraph label across a list sitting between it and a code block', () => {
-    const blocks = [h('EXAMPLES'), p('Common uses:'), list([[code('tar -cf a.tar dir')]])]
-    expect(extractExamples(blocks)).toEqual([{ label: null, text: 'tar -cf a.tar dir', languageHint: 'bash' }])
+  it('labels an indented code block, which ingestion stores as a one-item list, with the paragraph above it', () => {
+    const blocks = [
+      h('EXAMPLES'),
+      p('Create an archive:'),
+      list([[code('tar -cf a.tar dir')]]),
+      p('List it:'),
+      list([[code('tar -tf a.tar')]]),
+    ]
+    expect(extractExamples(blocks)).toEqual([
+      { label: 'Create an archive:', text: 'tar -cf a.tar dir', languageHint: 'bash' },
+      { label: 'List it:', text: 'tar -tf a.tar', languageHint: 'bash' },
+    ])
+  })
+
+  it('labels only the first item of a list with the paragraph above it', () => {
+    const blocks = [h('EXAMPLES'), p('Common uses:'), list([[code('tar -cf a.tar dir')], [code('tar -tf a.tar')]])]
+    expect(extractExamples(blocks)).toEqual([
+      { label: 'Common uses:', text: 'tar -cf a.tar dir', languageHint: 'bash' },
+      { label: null, text: 'tar -tf a.tar', languageHint: 'bash' },
+    ])
+  })
+
+  it('lets a subsection heading label code in the indented block below it', () => {
+    const blocks = [h('EXAMPLES'), h('Listing', 3), list([[code('tar -tvf a.tar')]])]
+    expect(extractExamples(blocks)).toEqual([{ label: 'Listing', text: 'tar -tvf a.tar', languageHint: 'bash' }])
   })
 
   it('does not carry a paragraph label across a definition list sitting between it and a code block', () => {
