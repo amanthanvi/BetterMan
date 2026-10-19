@@ -5,6 +5,7 @@ All notable changes to BetterMan are documented here.
 ## Unreleased
 
 - Ingestion: FreeBSD is ingested on a FreeBSD 15.1 VM instead of 15.0. The FreeBSD-ports package repository is now built for 15.1, so `pkg update` on a 15.0 userland refused it and every FreeBSD ingest failed before parsing a page.
+- Reading: an examples preview label no longer carries past the code block it introduces: a later list or definition item, the end of a list or definition list, or a definition list, table, or horizontal rule between the label and a code block drops it. A short paragraph or subsection heading still labels the code in the indented block below it, the first item of a list below it, or the same item.
 - Keyboard: single-key shortcuts (`?`, `/`, `d`, `b`, `t`, `h`, `p`, `m`) no longer fire while a dialog, drawer, or the command palette is open, even when focus is on a button or radio inside it or has left it. Ctrl/⌘K and the typing-field guard are unchanged.
 - Man page 404 suggestions follow the same Debian fallback as the page: `/api/v1/suggest` falls back to Debian when the requested distro has no active release and returns the `distro` it answered for, and the links use it, instead of the suggestions vanishing.
 - Accessibility: the licenses page announces a failed license-text load as an alert; an overlay (palette, shortcuts, reading preferences, contents) that fails to load announces "Could not open. Try again." instead of closing silently.
