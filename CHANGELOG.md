@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Accessibility: the header search control's name is "Search ⌘K", the shortcuts close control's name is "Close keyboard shortcuts, Esc", and the search load-more control keeps "Load more results" while also naming "Loading" or "All results loaded" when that is the visible text. axe-core 4.14 flags a serious mismatch when the visible words are missing from the accessible name.
 - Ingestion: FreeBSD is ingested on a FreeBSD 15.1 VM instead of 15.0. The FreeBSD-ports package repository is now built for 15.1, so `pkg update` on a 15.0 userland refused it and every FreeBSD ingest failed before parsing a page.
 - Reading: an examples preview label no longer carries past the code block it introduces: a later list or definition item, the end of a list or definition list, or a definition list, table, or horizontal rule between the label and a code block drops it. A short paragraph or subsection heading still labels the code in the indented block below it, the first item of a list below it, or the same item.
 - Keyboard: single-key shortcuts (`?`, `/`, `d`, `b`, `t`, `h`, `p`, `m`) no longer fire while a dialog, drawer, or the command palette is open, even when focus is on a button or radio inside it or has left it. Ctrl/⌘K and the typing-field guard are unchanged.

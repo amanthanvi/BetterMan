@@ -110,7 +110,7 @@ test('keyboard shortcuts dialog: a11y after immediate reopen', async ({ page }) 
   const closeButton = page.getByRole('button', { name: 'Close keyboard shortcuts' })
   const dialogPanel = page
     .locator('[data-state]')
-    .filter({ has: page.locator('button[aria-label="Close keyboard shortcuts"]') })
+    .filter({ has: page.locator('button[aria-label="Close keyboard shortcuts, Esc"]') })
   await expect(closeButton).toBeVisible()
   await page.evaluate(() => {
     const originalSetTimeout = window.setTimeout.bind(window)

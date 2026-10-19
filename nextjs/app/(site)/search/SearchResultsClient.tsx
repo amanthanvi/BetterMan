@@ -286,7 +286,13 @@ export function SearchResultsClient({
           className="inline-flex items-center justify-center px-1 py-2 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent disabled:pointer-events-none disabled:no-underline disabled:opacity-50"
           onClick={onLoadMore}
           disabled={!canLoadMore || loading}
-          aria-label="Load more results"
+          aria-label={
+            loading
+              ? 'Load more results, Loading'
+              : hasMore
+                ? 'Load more results'
+                : 'Load more results, All results loaded'
+          }
         >
           {loading ? 'Loading…' : hasMore ? 'Load more' : 'All results loaded'}
         </button>
