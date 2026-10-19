@@ -102,7 +102,7 @@ combinator (no merge — primitives own their recipes).
   "Command palette input", textbox "Find in page", nav "On this page" /
   "Section filter", dialogs "Table of contents" / "Reading preferences" /
   "Keyboard shortcuts", radiogroup "Font size" (radio "L"), buttons
-  "Cycle theme" / "Search" / "Open contents" / "Reading preferences" /
+  "Cycle theme" / "Search ⌘K" / "Open contents" / "Reading preferences" /
   "Find in page" / "Previous|Next match" / "Expand|Collapse sidebar" /
   "Load more results", table "Command-line options" (flags as separate exact
   texts), select "Select distribution variant" (a real `<select>`), regions

@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Accessibility: the header search control's name is "Search ⌘K", the shortcuts close control's name is "Close keyboard shortcuts, Esc", and the search load-more control keeps "Load more results" while also naming "Loading" or "All results loaded" when that is the visible text. axe-core 4.14 flags a serious mismatch when the visible words are missing from the accessible name.
 - CI: the e2e job runs on Ubuntu 24.04 instead of `ubuntu-latest`. On Ubuntu 26.04 runners, Playwright's dependency install timed out in about a third of runs because the Azure Ubuntu mirror served its font packages at roughly 50 KB/s; Ubuntu 24.04 installs them in seconds.
 - Security: Next.js 16.4.2 (#374) and Vite 8.3.3 (#378) clear their open advisories, including unauthenticated remote code execution in Next.js 16.0.0 through 16.4.0. Vitest moves to 5.0.5 for `@vitest/mocker`, and the transitive `undici` 6.x/7.x, `fast-uri`, and `zod` 4.x resolve to 6.29.1/7.30.1, 3.1.9, and 4.6.7. The `zod` 3.22.4 inside the pinned Vercel CLI stays, since no 3.x release fixes GHSA-mrhx-c7xc-m3w5.
 - CI: the e2e job installs Playwright again on `ubuntu-latest`, which is now Ubuntu 26.04. There `timeout` is uutils coreutils and GNU's is `gnutimeout`, so the installer uses whichever of the two is GNU and still refuses to run without one.
