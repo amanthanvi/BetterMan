@@ -204,7 +204,9 @@ jobs:
       - name: Ingest FreeBSD to Convex staging
         uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1
         with:
-          release: "15.0"
+          # pkg builds the FreeBSD:15 repository for the newest 15.x minor and
+          # rejects an older userland, so bump this when a new minor ships.
+          release: "15.1"
           envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA BETTERMAN_INGEST_SAMPLE"
           usesh: true
           run: |
