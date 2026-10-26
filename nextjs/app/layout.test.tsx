@@ -38,4 +38,11 @@ describe('RootLayout', () => {
     )
     expect(html).toContain('<output>large</output>')
   })
+
+  it('advertises the OpenSearch descriptor', async () => {
+    const html = renderToStaticMarkup(await RootLayout({ children: null }))
+    expect(html).toContain(
+      '<link rel="search" type="application/opensearchdescription+xml" title="BetterMan" href="/opensearch.xml"/>',
+    )
+  })
 })

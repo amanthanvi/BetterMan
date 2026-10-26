@@ -10,6 +10,12 @@ The BetterMan web app. Next.js App Router, React 19, Tailwind v4.
 
 Run with `pnpm next:dev` from the repository root. `pnpm next:grammar` enforces the visual rules before lint.
 
+## Short URLs and OpenSearch
+
+`app/[...short]` turns `/tar`, `/tar.1`, `/2/open`, and `/tar/-x` into redirects to `/man/...`; `lib/shortUrl.ts` parses them. Any path whose first segment is a top-level folder in `app/` (route groups included) or an entry in `public/` is left alone. `next.config.ts` reads that list from disk at build time (`lib/reservedPathSegments.ts`), so a new top-level route needs no extra step.
+
+`/opensearch.xml` points browsers at `/search?q=` and at `GET /api/v1/suggest?q={prefix}&format=opensearch`. Without `format`, `/api/v1/suggest` answers `{ query, suggestions, distro }` for `q` or `name`.
+
 ## Section pagination
 
 `GET /api/v1/sections/{section}` (also available at the original singular

@@ -16,9 +16,12 @@ import {
   search,
   suggest,
   withDistroFallback,
+  type Suggestion,
 } from '@/lib/api'
-import { normalizeDistro, type Distro } from '@/lib/distro'
+import { normalizeDistro, withDistro, type Distro } from '@/lib/distro'
+import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
+import { manPath } from '@/lib/shortUrl'
 
 export const runtime = 'nodejs'
 const PUBLIC_CACHE_SECONDS = 60 * 60
@@ -48,7 +51,7 @@ function attachServerTiming(response: Response, metrics: ServerTimingMetric[]): 
 
 function json(value: unknown, init?: ResponseInit): Response {
   const headers = new Headers(init?.headers)
-  headers.set('Content-Type', 'application/json; charset=utf-8')
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json; charset=utf-8')
   return new Response(JSON.stringify(value), { ...init, headers })
 }
 
@@ -71,6 +74,26 @@ function aliasRedirect(req: Request, distro: string, name: string, section: stri
     status: 308,
     headers: { Location: `${url.pathname}${url.search}`, 'Cache-Control': `public, max-age=${PUBLIC_CACHE_SECONDS}` },
   })
+}
+
+// OpenSearch suggestions: [query, completions, descriptions, URLs], one row per name.
+function openSearchSuggestions(req: NextRequest, query: string, suggestions: Suggestion[], distro: Distro): Response {
+  const origin = getPublicOrigin(req)
+  const byName = new Map<string, Suggestion[]>()
+  for (const suggestion of suggestions) {
+    const key = suggestion.name.toLowerCase()
+    byName.set(key, [...(byName.get(key) ?? []), suggestion])
+  }
+  const rows = [...byName.entries()].map(([name, pages]) => ({
+    name: pages[0].name,
+    description: pages[0].description,
+    url: `${origin}${withDistro(manPath(name, pages.length === 1 ? pages[0].section : null), distro)}`,
+  }))
+  return cachedJson(
+    [query, rows.map((row) => row.name), rows.map((row) => row.description), rows.map((row) => row.url)],
+    SEARCH_CACHE_SECONDS,
+    { headers: { 'Content-Type': 'application/x-suggestions+json; charset=utf-8' } },
+  )
 }
 
 function apiError(status: number, code: string, message: string): Response {
@@ -236,13 +259,19 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       if (limited) return limited
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
-      const name = first(req.nextUrl.searchParams.get('name'))
+      // `q` is the spelling the OpenSearch descriptor uses.
+      const name = first(req.nextUrl.searchParams.get('name')) ?? first(req.nextUrl.searchParams.get('q'))
       if (!name || name.length > 200) return apiError(400, 'INVALID_NAME', 'Name is required')
+      const format = first(req.nextUrl.searchParams.get('format'))
+      if (format !== undefined && format !== 'opensearch') {
+        return apiError(422, 'INVALID_QUERY_PARAM', 'Invalid format')
+      }
       // Like the man page, fall back to Debian without an active release, and say
       // so, so the caller does not label Debian rows as the requested distro.
       const { distro: resolved, data } = await withDistroFallback(distro, (activeDistro) =>
         suggest({ distro: activeDistro, name }),
       )
+      if (format === 'opensearch') return openSearchSuggestions(req, name, data.suggestions, resolved)
       return cachedJson({ ...data, distro: resolved }, SEARCH_CACHE_SECONDS)
     }
 
