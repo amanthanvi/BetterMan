@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- Security: Next.js 16.4.2 (#374) and Vite 8.3.3 (#378) clear their open advisories, including unauthenticated remote code execution in Next.js 16.0.0 through 16.4.0. Vitest moves to 5.0.5 for `@vitest/mocker`, and the transitive `undici` 6.x/7.x, `fast-uri`, and `zod` 4.x resolve to 6.29.1/7.30.1, 3.1.9, and 4.6.7. The `zod` 3.22.4 inside the pinned Vercel CLI stays, since no 3.x release fixes GHSA-mrhx-c7xc-m3w5.
 - CI: the e2e job installs Playwright again on `ubuntu-latest`, which is now Ubuntu 26.04. There `timeout` is uutils coreutils and GNU's is `gnutimeout`, so the installer uses whichever of the two is GNU and still refuses to run without one.
 - Ingestion: FreeBSD is ingested on a FreeBSD 15.1 VM instead of 15.0. The FreeBSD-ports package repository is now built for 15.1, so `pkg update` on a 15.0 userland refused it and every FreeBSD ingest failed before parsing a page.
 - Reading: an examples preview label no longer carries past the code block it introduces: a later list or definition item, the end of a list or definition list, or a definition list, table, or horizontal rule between the label and a code block drops it. A short paragraph or subsection heading still labels the code in the indented block below it, the first item of a list below it, or the same item.
