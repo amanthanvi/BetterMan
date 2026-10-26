@@ -130,3 +130,21 @@ def test_stub_is_detected() -> None:
     assert is_so_stub((_ROFF / "man.7").read_bytes()) == "man7/groff_man.7"
     assert so_target_name_section("man7/groff_man.7") == ("groff_man", "7")
     assert is_so_stub((_ROFF / "rbash.1").read_bytes()) is None
+
+
+@pytest.mark.parametrize(
+    ("name", "flags"),
+    [
+        ("tar.1", ["-c, --create", "-x, --extract, --get"]),
+        ("git-commit.1", ["-a, --all"]),
+        ("dash-prose.1", ["-a"]),
+    ],
+)
+def test_option_extraction_from_roff(name: str, flags: list[str]) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+    assert parsed.options
+    extracted = [option.flags for option in parsed.options]
+    for flag in flags:
+        assert flag in extracted
+    if name == "dash-prose.1":
+        assert extracted == flags

@@ -9,7 +9,8 @@ _PACMAN_CONF_PATH = Path("/etc/pacman.conf")
 
 def pacman_install(packages: list[str]) -> None:
     _ensure_pacman_extracts_man_pages()
-    subprocess.run(["pacman", "-Syu", "--noconfirm", "--needed", *packages], check=True)
+    # Reinstall preinstalled packages too: the container omitted their man pages.
+    subprocess.run(["pacman", "-Syu", "--noconfirm", *packages], check=True)
 
 
 def pacman_arch() -> str:
@@ -25,6 +26,19 @@ def pacman_packages() -> dict[str, str]:
         name, version = line.split(maxsplit=1)
         packages[name.strip()] = version.strip()
     return packages
+
+
+def package_license_ids() -> dict[str, str]:
+    out: dict[str, str] = {}
+    for desc in _PACMAN_LOCAL_DIR.glob("*/desc"):
+        name = _read_pacman_desc_field(desc, field="NAME")
+        try:
+            content = desc.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if name and "%LICENSE%\n" in content:
+            out[name] = content.split("%LICENSE%\n", 1)[1].split("\n\n", 1)[0]
+    return out
 
 
 def mandoc_pkg_version(packages: dict[str, str]) -> str | None:

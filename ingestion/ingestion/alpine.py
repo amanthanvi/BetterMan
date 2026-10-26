@@ -10,7 +10,9 @@ _APK_INSTALLED_DB = Path("/lib/apk/db/installed")
 
 
 def apk_install(packages: list[str]) -> None:
-    subprocess.run(["apk", "add", "--no-cache", *packages], check=True)
+    # tar-doc is required even if the best-effort docs metapackage fails.
+    required_docs = ["tar-doc"] if "tar" in packages else []
+    subprocess.run(["apk", "add", "--no-cache", *packages, *required_docs], check=True)
 
     # Alpine ships man pages in <pkg>-doc subpackages. The `docs` metapackage pulls in the
     # -doc package of every installed package through install_if. openssh-doc keys on the
@@ -31,6 +33,19 @@ def apk_arch() -> str:
 def apk_packages() -> dict[str, str]:
     packages, _ = _parse_installed_db()
     return packages
+
+
+def package_license_ids() -> dict[str, str]:
+    try:
+        content = _APK_INSTALLED_DB.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    out: dict[str, str] = {}
+    for record in content.split("\n\n"):
+        fields = dict(line.split(":", 1) for line in record.splitlines() if ":" in line)
+        if fields.get("P") and fields.get("L"):
+            out[fields["P"]] = fields["L"]
+    return out
 
 
 def mandoc_pkg_version(packages: dict[str, str]) -> str | None:

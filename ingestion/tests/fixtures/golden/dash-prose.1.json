@@ -1,0 +1,144 @@
+{
+ "description": "regression fixture for prose lists",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "dash-prose - regression fixture for prose lists",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Include every entry.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "a",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "-a",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        }
+       ],
+       "type": "definition_list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "notes",
+    "level": 2,
+    "text": "NOTES",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This is prose, not a command-line flag.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "first",
+      "termInlines": [
+       {
+        "text": "- first observation",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This mixed definition list must not become an option index.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "ordinary",
+      "termInlines": [
+       {
+        "text": "ordinary term",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "notes",
+    "level": 2,
+    "title": "NOTES"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "a",
+   "argument": null,
+   "description": "Include every entry.",
+   "flags": "-a"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

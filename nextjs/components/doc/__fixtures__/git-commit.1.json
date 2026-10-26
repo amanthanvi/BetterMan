@@ -1,0 +1,5357 @@
+{
+ "description": "Record changes to the repository",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "git-commit - Record changes to the repository",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "synopsis",
+    "level": 2,
+    "text": "SYNOPSIS",
+    "type": "heading"
+   },
+   {
+    "id": null,
+    "languageHint": null,
+    "text": "git commit [-a | --interactive | --patch] [-s] [-v] [-u<mode>] [--amend]\n\n\n           [--dry-run] [(-c | -C | --squash) <commit> | --fixup [(amend|reword):]<commit>]\n\n\n           [-F <file> | -m <msg>] [--reset-author] [--allow-empty]\n\n\n           [--allow-empty-message] [--no-verify] [-e] [--author=<author>]\n\n\n           [--date=<date>] [--cleanup=<mode>] [--[no-]status]\n\n\n           [-i | -o] [--pathspec-from-file=<file> [--pathspec-file-nul]]\n\n\n           [(--trailer <token>[(=|:)<value>])...] [-S[<keyid>]]\n\n\n           [--] [<pathspec>...]",
+    "type": "code_block"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Create a new commit containing the current contents of the index and the given log message describing the changes. The new commit is a direct child of HEAD, usually the tip of the current branch, and the branch is updated to point to it (unless no branch is associated with the working tree, in which case HEAD is \"detached\" as described in ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-checkout/1",
+      "inlines": [
+       {
+        "text": "git-checkout(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ").",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The content to be committed can be specified in several ways:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "1.by using ",
+         "type": "text"
+        },
+        {
+         "href": "/man/git-add/1",
+         "inlines": [
+          {
+           "text": "git-add(1)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": " to incrementally \"add\" changes to the index before using the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "commit",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " command (Note: even modified files must be \"added\");",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "2.by using ",
+         "type": "text"
+        },
+        {
+         "href": "/man/git-rm/1",
+         "inlines": [
+          {
+           "text": "git-rm(1)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": " to remove files from the working tree and the index, again before using the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "commit",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " command;",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "3.by listing files as arguments to the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "commit",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " command (without --interactive or --patch switch), in which case the commit will ignore changes staged in the index, and instead record the current content of the listed files (which must already be known to Git);",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "4.by using the -a switch with the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "commit",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " command to automatically \"add\" changes from all known files (i.e. all files that are already listed in the index) and to automatically \"rm\" files in the index that have been removed from the working tree, and then perform the actual commit;",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "5.by using the --interactive or --patch switches with the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "commit",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " command to decide one by one which files or hunks should be part of the commit in addition to contents in the index, before finalizing the operation. See the “Interactive Mode” section of ",
+         "type": "text"
+        },
+        {
+         "href": "/man/git-add/1",
+         "inlines": [
+          {
+           "text": "git-add(1)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": " to learn how to operate these modes.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "--dry-run",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " option can be used to obtain a summary of what is included by any of the above for the next commit by giving the same set of parameters (options and paths).",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "If you make a commit and then find a mistake immediately after that, you can recover from it with ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git reset",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": ".",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Tell the command to automatically stage files that have been modified and deleted, but new files you have not told Git about are not affected.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-a-all",
+      "termInlines": [
+       {
+        "text": "-a, --all",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use the interactive patch selection interface to choose which changes to commit. See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-add/1",
+          "inlines": [
+           {
+            "text": "git-add(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for details.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-p-patch",
+      "termInlines": [
+       {
+        "text": "-p, --patch",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Take an existing commit object, and reuse the log message and the authorship information (including the timestamp) when creating the commit.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-c-commit-reuse-message-commit",
+      "termInlines": [
+       {
+        "text": "-C <commit>, --reuse-message=<commit>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Like ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-C",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ", but with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-c",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " the editor is invoked, so that the user can further edit the commit message.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-c-commit-reedit-message-commit",
+      "termInlines": [
+       {
+        "text": "-c <commit>, --reedit-message=<commit>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Create a new commit which \"fixes up\" ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " when applied with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git rebase --autosquash",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". Plain ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--fixup=<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " creates a \"fixup!\" commit which changes the content of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " but leaves its log message untouched. ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--fixup=amend:<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is similar but creates an \"amend!\" commit which also replaces the log message of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " with the log message of the \"amend!\" commit. ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--fixup=reword:<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " creates an \"amend!\" commit which replaces the log message of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " with its own log message but makes no changes to the content of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The commit created by plain ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--fixup=<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " has a subject composed of \"fixup!\" followed by the subject line from <commit>, and is recognized specially by ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git rebase --autosquash",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-m",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " option may be used to supplement the log message of the created commit, but the additional commentary will be thrown away once the \"fixup!\" commit is squashed into ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " by ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git rebase --autosquash",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The commit created by ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--fixup=amend:<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is similar but its subject is instead prefixed with \"amend!\". The log message of <commit> is copied into the log message of the \"amend!\" commit and opened in an editor so it can be refined. When ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git rebase --autosquash",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " squashes the \"amend!\" commit into ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", the log message of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is replaced by the refined log message from the \"amend!\" commit. It is an error for the \"amend!\" commit’s log message to be empty unless ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--allow-empty-message",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is specified.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "inlines": [
+           {
+            "text": "--fixup=reword:<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is shorthand for ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--fixup=amend:<commit> --only",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". It creates an \"amend!\" commit with only a log message (ignoring any changes staged in the index). When squashed by ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git rebase --autosquash",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", it replaces the log message of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " without making any other changes.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "Neither \"fixup!\" nor \"amend!\" commits change authorship of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<commit>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " when applied by ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git rebase --autosquash",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-rebase/1",
+          "inlines": [
+           {
+            "text": "git-rebase(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for details.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-fixup-amend-reword-commit",
+      "termInlines": [
+       {
+        "text": "--fixup=[(amend|reword):]<commit>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Construct a commit message for use with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "rebase --autosquash",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". The commit message subject line is taken from the specified commit with a prefix of \"squash! \". Can be used with additional commit message options (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-m",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "/",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-c",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "/",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-C",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "/",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-F",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "). See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-rebase/1",
+          "inlines": [
+           {
+            "text": "git-rebase(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for details.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-squash-commit",
+      "termInlines": [
+       {
+        "text": "--squash=<commit>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When used with -C/-c/--amend options, or when committing after a conflicting cherry-pick, declare that the authorship of the resulting commit now belongs to the committer. This also renews the author timestamp.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-reset-author",
+      "termInlines": [
+       {
+        "text": "--reset-author",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When doing a dry-run, give the output in the short-format. See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-status/1",
+          "inlines": [
+           {
+            "text": "git-status(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for details. Implies ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--dry-run",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-short",
+      "termInlines": [
+       {
+        "text": "--short",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Show the branch and tracking info even in short-format.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-branch",
+      "termInlines": [
+       {
+        "text": "--branch",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When doing a dry-run, give the output in a porcelain-ready format. See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-status/1",
+          "inlines": [
+           {
+            "text": "git-status(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for details. Implies ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--dry-run",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-porcelain",
+      "termInlines": [
+       {
+        "text": "--porcelain",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When doing a dry-run, give the output in the long-format. Implies ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--dry-run",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-long",
+      "termInlines": [
+       {
+        "text": "--long",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When showing ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "short",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "porcelain",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " status output, print the filename verbatim and terminate the entries with NUL, instead of LF. If no format is given, implies the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--porcelain",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " output format. Without the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-z",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " option, filenames with \"unusual\" characters are quoted as explained for the configuration variable ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "core.quotePath",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " (see ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-config/1",
+          "inlines": [
+           {
+            "text": "git-config(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ").",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-z-null",
+      "termInlines": [
+       {
+        "text": "-z, --null",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Take the commit message from the given file. Use ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " to read the message from the standard input.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-f-file-file-file",
+      "termInlines": [
+       {
+        "text": "-F <file>, --file=<file>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Override the commit author. Specify an explicit author using the standard ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "A U Thor <author@example.com>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " format. Otherwise <author> is assumed to be a pattern and is used to search for an existing commit by that author (i.e. rev-list --all -i --author=<author>); the commit author is then copied from the first such commit found.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-author-author",
+      "termInlines": [
+       {
+        "text": "--author=<author>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Override the author date used in the commit.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-date-date",
+      "termInlines": [
+       {
+        "text": "--date=<date>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use the given <msg> as the commit message. If multiple ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-m",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " options are given, their values are concatenated as separate paragraphs.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-m",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " option is mutually exclusive with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-c",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-C",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", and ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-F",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-m-msg-message-msg",
+      "termInlines": [
+       {
+        "text": "-m <msg>, --message=<msg>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When editing the commit message, start the editor with the contents in the given file. The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "commit.template",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " configuration variable is often used to give this option implicitly to the command. This mechanism can be used by projects that want to guide participants with some hints on what to write in the message in what order. If the user exits the editor without editing the message, the commit is aborted. This has no effect when a message is given by other means, e.g. with the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-m",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-F",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " options.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-t-file-template-file",
+      "termInlines": [
+       {
+        "text": "-t <file>, --template=<file>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Add a ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "Signed-off-by",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " trailer by the committer at the end of the commit log message. The meaning of a signoff depends on the project to which you’re committing. For example, it may certify that the committer has the rights to submit the work under the project’s license or agrees to some contributor representation, such as a Developer Certificate of Origin. (See ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "https://developercertificate.org",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " for the one used by the Linux kernel and Git projects.) Consult the documentation or leadership of the project to which you’re contributing to understand how the signoffs are used in that project.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The --no-signoff option can be used to countermand an earlier --signoff option on the command line.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-s-signoff-no-signoff",
+      "termInlines": [
+       {
+        "text": "-s, --signoff, --no-signoff",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specify a (<token>, <value>) pair that should be applied as a trailer. (e.g. ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git commit --trailer \"Signed-off-by:C O Mitter \\ <committer@example.com>\" --trailer \"Helped-by:C O Mitter \\ <committer@example.com>\"",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " will add the \"Signed-off-by\" trailer and the \"Helped-by\" trailer to the commit message.) The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "trailer.*",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " configuration variables (",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-interpret-trailers/1",
+          "inlines": [
+           {
+            "text": "git-interpret-trailers(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ") can be used to define if a duplicated trailer is omitted, where in the run of trailers each trailer would appear, and other details.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-trailer-token-value",
+      "termInlines": [
+       {
+        "text": "--trailer <token>[(=|:)<value>]",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "By default, the pre-commit and commit-msg hooks are run. When any of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--no-verify",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-n",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is given, these are bypassed. See also ",
+          "type": "text"
+         },
+         {
+          "href": "/man/githooks/5",
+          "inlines": [
+           {
+            "text": "githooks(5)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-n-no-verify",
+      "termInlines": [
+       {
+        "text": "-n, --[no-]verify",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Usually recording a commit that has the exact same tree as its sole parent commit is a mistake, and the command prevents you from making such a commit. This option bypasses the safety, and is primarily for use by foreign SCM interface scripts.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-allow-empty",
+      "termInlines": [
+       {
+        "text": "--allow-empty",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Like --allow-empty this command is primarily for use by foreign SCM interface scripts. It allows you to create a commit with an empty commit message without using plumbing commands like ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-commit-tree/1",
+          "inlines": [
+           {
+            "text": "git-commit-tree(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-allow-empty-message",
+      "termInlines": [
+       {
+        "text": "--allow-empty-message",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This option determines how the supplied commit message should be cleaned up before committing. The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<mode>",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " can be ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "strip",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "whitespace",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "verbatim",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "scissors",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "default",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "strip",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "Strip leading and trailing empty lines, trailing whitespace, commentary and collapse consecutive empty lines.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "whitespace",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "Same as ",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "strip",
+               "type": "text"
+              }
+             ],
+             "type": "strong"
+            },
+            {
+             "text": " except #commentary is not removed.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "verbatim",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "Do not change the message at all.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "scissors",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "items": [
+            [
+             {
+              "id": null,
+              "languageHint": null,
+              "text": "# ------------------------ >8 ------------------------",
+              "type": "code_block"
+             }
+            ]
+           ],
+           "ordered": false,
+           "type": "list"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "default",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "Same as ",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "strip",
+               "type": "text"
+              }
+             ],
+             "type": "strong"
+            },
+            {
+             "text": " if the message is to be edited. Otherwise ",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "whitespace",
+               "type": "text"
+              }
+             ],
+             "type": "strong"
+            },
+            {
+             "text": ".",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The default can be changed by the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "commit.cleanup",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " configuration variable (see ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-config/1",
+          "inlines": [
+           {
+            "text": "git-config(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ").",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-cleanup-mode",
+      "termInlines": [
+       {
+        "text": "--cleanup=<mode>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The message taken from file with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-F",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", command line with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-m",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", and from commit object with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-C",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " are usually used as the commit log message unmodified. This option lets you further edit the message taken from these sources.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-e-edit",
+      "termInlines": [
+       {
+        "text": "-e, --edit",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use the selected commit message without launching an editor. For example, ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git commit --amend --no-edit",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " amends a commit without changing its commit message.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-no-edit",
+      "termInlines": [
+       {
+        "text": "--no-edit",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Replace the tip of the current branch by creating a new commit. The recorded tree is prepared as usual (including the effect of the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-i",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-o",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " options and explicit pathspec), and the message from the original commit is used as the starting point, instead of an empty message, when no other message is specified from the command line via options such as ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-m",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-F",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-c",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", etc. The new commit has the same parents and author as the current one (the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--reset-author",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " option can countermand this).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "It is a rough equivalent for:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "id": null,
+           "languageHint": null,
+           "text": "\n\n\n        $ git reset --soft HEAD^\n\n\n        $ ... do something else to come up with the right tree ...\n\n\n        $ git commit -c ORIG_HEAD",
+           "type": "code_block"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "but can be used to amend a merge commit.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "You should understand the implications of rewriting history if you amend a commit that has already been published. (See the \"RECOVERING FROM UPSTREAM REBASE\" section in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-rebase/1",
+          "inlines": [
+           {
+            "text": "git-rebase(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ".)",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-amend",
+      "termInlines": [
+       {
+        "text": "--amend",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Bypass the post-rewrite hook.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-no-post-rewrite",
+      "termInlines": [
+       {
+        "text": "--no-post-rewrite",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Before making a commit out of staged contents so far, stage the contents of paths given on the command line as well. This is usually not what you want unless you are concluding a conflicted merge.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-i-include",
+      "termInlines": [
+       {
+        "text": "-i, --include",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Make a commit by taking the updated working tree contents of the paths specified on the command line, disregarding any contents that have been staged for other paths. This is the default mode of operation of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "git commit",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " if any paths are given on the command line, in which case this option can be omitted. If this option is specified together with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--amend",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", then no paths need to be specified, which can be used to amend the last commit without committing changes that have already been staged. If used together with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--allow-empty",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " paths are also not required, and an empty commit will be created.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-o-only",
+      "termInlines": [
+       {
+        "text": "-o, --only",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Pathspec is passed in ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<file>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " instead of commandline args. If ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "<file>",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is exactly ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " then standard input is used. Pathspec elements are separated by LF or CR/LF. Pathspec elements can be quoted as explained for the configuration variable ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "core.quotePath",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " (see ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-config/1",
+          "inlines": [
+           {
+            "text": "git-config(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": "). See also ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--pathspec-file-nul",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " and global ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--literal-pathspecs",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-pathspec-from-file-file",
+      "termInlines": [
+       {
+        "text": "--pathspec-from-file=<file>",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Only meaningful with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--pathspec-from-file",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". Pathspec elements are separated with NUL character and all other characters are taken literally (including newlines and quotes).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-pathspec-file-nul",
+      "termInlines": [
+       {
+        "text": "--pathspec-file-nul",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Show untracked files.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The mode parameter is optional (defaults to ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "all",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": "), and is used to specify the handling of untracked files; when -u is not used, the default is ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "normal",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ", i.e. show untracked files and directories.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "The possible options are:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "•",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "no",
+               "type": "text"
+              }
+             ],
+             "type": "emphasis"
+            },
+            {
+             "text": " - Show no untracked files",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "•",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "normal",
+               "type": "text"
+              }
+             ],
+             "type": "emphasis"
+            },
+            {
+             "text": " - Shows untracked files and directories",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "•",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "all",
+               "type": "text"
+              }
+             ],
+             "type": "emphasis"
+            },
+            {
+             "text": " - Also shows individual files in untracked directories.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "text": "All usual spellings for Boolean value ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "true",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " are taken as ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "normal",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " and ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "false",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " as ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "no",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". The default can be changed using the status.showUntrackedFiles configuration variable documented in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-config/1",
+          "inlines": [
+           {
+            "text": "git-config(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-u-mode-untracked-files-mode",
+      "termInlines": [
+       {
+        "text": "-u[<mode>], --untracked-files[=<mode>]",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Show unified diff between the HEAD commit and what would be committed at the bottom of the commit message template to help the user describe the commit by reminding what changes the commit has. Note that this diff output doesn’t have its lines prefixed with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "#",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". This diff will not be a part of the commit message. See the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "commit.verbose",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " configuration variable in ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-config/1",
+          "inlines": [
+           {
+            "text": "git-config(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "If specified twice, show in addition the unified diff between what would be committed and the worktree files, i.e. the unstaged changes to tracked files.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-v-verbose",
+      "termInlines": [
+       {
+        "text": "-v, --verbose",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Suppress commit summary message.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-q-quiet",
+      "termInlines": [
+       {
+        "text": "-q, --quiet",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Do not create a commit, but show a list of paths that are to be committed, paths with local changes that will be left uncommitted and paths that are untracked.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-dry-run",
+      "termInlines": [
+       {
+        "text": "--dry-run",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Include the output of ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-status/1",
+          "inlines": [
+           {
+            "text": "git-status(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " in the commit message template when using an editor to prepare the commit message. Defaults to on, but can be used to override configuration variable commit.status.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-status",
+      "termInlines": [
+       {
+        "text": "--status",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Do not include the output of ",
+          "type": "text"
+         },
+         {
+          "href": "/man/git-status/1",
+          "inlines": [
+           {
+            "text": "git-status(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " in the commit message template when using an editor to prepare the default commit message.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-no-status",
+      "termInlines": [
+       {
+        "text": "--no-status",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "GPG-sign commits. The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "keyid",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " argument is optional and defaults to the committer identity; if specified, it must be stuck to the option without a space. ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--no-gpg-sign",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is useful to countermand both ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "commit.gpgSign",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " configuration variable, and earlier ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--gpg-sign",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-s-keyid-gpg-sign-keyid-no-gpg-sign",
+      "termInlines": [
+       {
+        "text": "-S[<keyid>], --gpg-sign[=<keyid>], --no-gpg-sign",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "--",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Do not interpret any more arguments as options.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "<pathspec>...",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "For more details, see the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "pathspec",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " entry in ",
+         "type": "text"
+        },
+        {
+         "href": "/man/gitglossary/7",
+         "inlines": [
+          {
+           "text": "gitglossary(7)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": ".",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "examples",
+    "level": 2,
+    "text": "EXAMPLES",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "When recording your own work, the contents of modified files in your working tree are temporarily stored to a staging area called the \"index\" with ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git add",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": ". A file can be reverted back, only in the index but not in the working tree, to that of the last commit with ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git restore --staged <file>",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": ", which effectively reverts ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git add",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": " and prevents the changes to this file from participating in the next commit. After building the state to be committed incrementally with these commands, ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git commit",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " (without any pathname parameter) is used to record what has been staged so far. This is the most basic form of the command. An example:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "$ edit hello.c\n$ git rm goodbye.c\n$ git add hello.c\n$ git commit",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Instead of staging files after each individual change, you can tell ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git commit",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " to notice the changes to the files whose contents are tracked in your working tree and do corresponding ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git add",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git rm",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " for you. That is, this example does the same as the earlier example if there is no other change in your working tree:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "$ edit hello.c\n$ rm goodbye.c\n$ git commit -a",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The command ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git commit -a",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " first looks at your working tree, notices that you have modified hello.c and removed goodbye.c, and performs necessary ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git add",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git rm",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " for you.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "After staging changes to many files, you can alter the order the changes are recorded in, by giving pathnames to ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git commit",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": ". When pathnames are given, the command makes a commit that only records the changes made to the named paths:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "$ edit hello.c hello.h\n$ git add hello.c hello.h\n$ edit Makefile\n$ git commit Makefile",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "This makes a commit that records the modification to ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "Makefile",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": ". The changes staged for ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "hello.c",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "hello.h",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " are not included in the resulting commit. However, their changes are not lost — they are still staged and merely held back. After the above sequence, if you do:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "$ git commit",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "this second commit would record the changes to ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "hello.c",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "hello.h",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " as expected.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "After a merge (initiated by ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git merge",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": " or ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git pull",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": ") stops because of conflicts, cleanly merged paths are already staged to be committed for you, and paths that conflicted are left in unmerged state. You would have to first check which paths are conflicting with ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git status",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": " and after fixing them manually in your working tree, you would stage the result as usual with ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git add",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": ":",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "$ git status | grep unmerged\nunmerged: hello.c\n$ edit hello.c\n$ git add hello.c",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "After resolving conflicts and staging the result, ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git ls-files -u",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " would stop mentioning the conflicted path. When you are done, run ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git commit",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " to finally record the merge:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "$ git commit",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "As with the case to record your own changes, you can use ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "-a",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " option to save typing. One difference is that during a merge resolution, you cannot use ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "git commit",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " with pathnames to alter the order the changes are committed, because the merge should be recorded as a single commit. In fact, the command refuses to run when given pathnames (but see ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "-i",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " option).",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "commit-information",
+    "level": 2,
+    "text": "COMMIT INFORMATION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Author and committer information is taken from the following environment variables, if set:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "GIT_AUTHOR_NAME\nGIT_AUTHOR_EMAIL\nGIT_AUTHOR_DATE\nGIT_COMMITTER_NAME\nGIT_COMMITTER_EMAIL\nGIT_COMMITTER_DATE",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "(nb \"<\", \">\" and \"\\n\"s are stripped)",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The author and committer names are by convention some form of a personal name (that is, the name by which other humans refer to you), although Git does not enforce or require any particular form. Arbitrary Unicode may be used, subject to the constraints listed above. This name has no effect on authentication; for that, see the ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "credential.username",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " variable in ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-config/1",
+      "inlines": [
+       {
+        "text": "git-config(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ".",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "In case (some of) these environment variables are not set, the information is taken from the configuration items ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "user.name",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "user.email",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": ", or, if not present, the environment variable EMAIL, or, if that is not set, system user name and the hostname used for outgoing mail (taken from ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "/etc/mailname",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and falling back to the fully qualified hostname when that file does not exist).",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "author.name",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "committer.name",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and their corresponding email options override ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "user.name",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "user.email",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " if set and are overridden themselves by the environment variables.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The typical usage is to set just the ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "user.name",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "user.email",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " variables; the other options are provided for more complex use cases.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "date-formats",
+    "level": 2,
+    "text": "DATE FORMATS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "GIT_AUTHOR_DATE",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "GIT_COMMITTER_DATE",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " environment variables support the following date formats:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Git internal format",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "It is ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "<unix-timestamp> <time-zone-offset>",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ", where ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "<unix-timestamp>",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " is the number of seconds since the UNIX epoch. ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "<time-zone-offset>",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " is a positive or negative offset from UTC. For example CET (which is 1 hour ahead of UTC) is ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "+0100",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ".",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "RFC 2822",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "The standard date format as described by RFC 2822, for example ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "Thu, 07 Apr 2005 22:13:13 +0200",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ".",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "ISO 8601",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        [
+         {
+          "inlines": [
+           {
+            "inlines": [
+             {
+              "text": "Note",
+              "type": "text"
+             }
+            ],
+            "type": "strong"
+           },
+           {
+            "text": "   In addition, the date part is accepted in the following formats: ",
+            "type": "text"
+           },
+           {
+            "inlines": [
+             {
+              "text": "YYYY.MM.DD",
+              "type": "text"
+             }
+            ],
+            "type": "strong"
+           },
+           {
+            "text": ", ",
+            "type": "text"
+           },
+           {
+            "inlines": [
+             {
+              "text": "MM/DD/YYYY",
+              "type": "text"
+             }
+            ],
+            "type": "strong"
+           },
+           {
+            "text": " and ",
+            "type": "text"
+           },
+           {
+            "inlines": [
+             {
+              "text": "DD.MM.YYYY",
+              "type": "text"
+             }
+            ],
+            "type": "strong"
+           },
+           {
+            "text": ".",
+            "type": "text"
+           }
+          ],
+          "type": "paragraph"
+         }
+        ]
+       ],
+       "ordered": false,
+       "type": "list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "In addition to recognizing all date formats above, the ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "--date",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " option will also try to make sense of other, more human-centric date formats, such as relative dates like \"yesterday\" or \"last Friday at noon\".",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "discussion",
+    "level": 2,
+    "text": "DISCUSSION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Though not required, it’s a good idea to begin the commit message with a single short (no more than 50 characters) line summarizing the change, followed by a blank line and then a more thorough description. The text up to the first blank line in a commit message is treated as the commit title, and that title is used throughout Git. For example, ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-format-patch/1",
+      "inlines": [
+       {
+        "text": "git-format-patch(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " turns a commit into email, and it uses the title on the Subject line and the rest of the commit in the body.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Git is to some extent character encoding agnostic.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "•The contents of the blob objects are uninterpreted sequences of bytes. There is no encoding translation at the core level.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Note that Git at the core level treats path names simply as sequences of non-NUL bytes, there are no path name encoding conversions (except on Mac and Windows). Therefore, using non-ASCII path names will mostly work even on platforms and file systems that use legacy extended ASCII encodings. However, repositories created on such systems will not work properly on UTF-8-based systems (e.g. Linux, Mac, Windows) and vice versa. Additionally, many Git-based tools simply assume path names to be UTF-8 and will fail to display other encodings correctly.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "•Commit log messages are typically encoded in UTF-8, but other extended ASCII encodings are also supported. This includes ISO-8859-x, CP125x and many others, but ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "not",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " UTF-16/32, EBCDIC and CJK multi-byte encodings (GBK, Shift-JIS, Big5, EUC-x, CP9xx etc.).",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Although we encourage that the commit log messages are encoded in UTF-8, both the core and Git Porcelain are designed not to force UTF-8 on projects. If all participants of a particular project find it more convenient to use legacy encodings, Git does not forbid it. However, there are a few things to keep in mind.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        [
+         {
+          "id": null,
+          "languageHint": null,
+          "text": "[i18n]\n\n\n        commitEncoding = ISO-8859-1",
+          "type": "code_block"
+         }
+        ]
+       ],
+       "ordered": false,
+       "type": "list"
+      },
+      {
+       "inlines": [
+        {
+         "text": "Commit objects created with the above setting record the value of ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "i18n.commitEncoding",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " in their ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "encoding",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " header. This is to help other people who look at them later. Lack of this header implies that the commit log message is encoded in UTF-8.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        [
+         {
+          "id": null,
+          "languageHint": null,
+          "text": "[i18n]\n\n\n        logOutputEncoding = ISO-8859-1",
+          "type": "code_block"
+         }
+        ]
+       ],
+       "ordered": false,
+       "type": "list"
+      },
+      {
+       "inlines": [
+        {
+         "text": "If you do not have this configuration variable, the value of ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "i18n.commitEncoding",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " is used instead.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Note that we deliberately chose not to re-code the commit log message when a commit is made to force UTF-8 at the commit object level, because re-coding to UTF-8 is not necessarily a reversible operation.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "environment-and-configuration-variables",
+    "level": 2,
+    "text": "ENVIRONMENT AND CONFIGURATION VARIABLES",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The editor used to edit the commit log message will be chosen from the ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "GIT_EDITOR",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " environment variable, the core.editor configuration variable, the ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "VISUAL",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " environment variable, or the ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "EDITOR",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " environment variable (in that order). See ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-var/1",
+      "inlines": [
+       {
+        "text": "git-var(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " for details.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Everything above this line in this section isn’t included from the ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-config/1",
+      "inlines": [
+       {
+        "text": "git-config(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " documentation. The content that follows is the same as what’s found there:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "inlines": [
+     {
+      "text": "commit.cleanup",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "This setting overrides the default of the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "--cleanup",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " option in ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git commit",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ". See ",
+         "type": "text"
+        },
+        {
+         "href": "/man/git-commit/1",
+         "inlines": [
+          {
+           "text": "git-commit(1)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": " for details. Changing the default can be useful when you always want to keep lines that begin with the comment character ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "#",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " in your log message, in which case you would do ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git config commit.cleanup whitespace",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " (note that you will have to remove the help lines that begin with ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "#",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " in the commit log template yourself, if you do this).",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "commit.gpgSign",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A boolean to specify whether all commits should be GPG signed. Use of this option when doing operations such as rebase can result in a large number of commits being signed. It may be convenient to use an agent to avoid typing your GPG passphrase several times.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "commit.status",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A boolean to enable/disable inclusion of status information in the commit message template when using an editor to prepare the commit message. Defaults to true.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "commit.template",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Specify the pathname of a file to use as the template for new commit messages.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "commit.verbose",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A boolean or int to specify the level of verbosity with ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git commit",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ". See ",
+         "type": "text"
+        },
+        {
+         "href": "/man/git-commit/1",
+         "inlines": [
+          {
+           "text": "git-commit(1)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": ".",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "hooks",
+    "level": 2,
+    "text": "HOOKS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "This command can run ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "commit-msg",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "prepare-commit-msg",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "pre-commit",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "post-commit",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " and ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "post-rewrite",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " hooks. See ",
+      "type": "text"
+     },
+     {
+      "href": "/man/githooks/5",
+      "inlines": [
+       {
+        "text": "githooks(5)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " for more information.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "files",
+    "level": 2,
+    "text": "FILES",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "$GIT_DIR/COMMIT_EDITMSG",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "This file contains the commit message of a commit in progress. If ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git commit",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " exits due to an error before creating a commit, any commit message that has been provided by the user (e.g., in an editor session) will be available in this file, but will be overwritten by the next invocation of ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git commit",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ".",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "text": "SEE ALSO",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "href": "/man/git-add/1",
+      "inlines": [
+       {
+        "text": "git-add(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-rm/1",
+      "inlines": [
+       {
+        "text": "git-rm(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-mv/1",
+      "inlines": [
+       {
+        "text": "git-mv(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-merge/1",
+      "inlines": [
+       {
+        "text": "git-merge(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git-commit-tree/1",
+      "inlines": [
+       {
+        "text": "git-commit-tree(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "git",
+    "level": 2,
+    "text": "GIT",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "Part of the ",
+      "type": "text"
+     },
+     {
+      "href": "/man/git/1",
+      "inlines": [
+       {
+        "text": "git(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " suite",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "synopsis",
+    "level": 2,
+    "title": "SYNOPSIS"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "examples",
+    "level": 2,
+    "title": "EXAMPLES"
+   },
+   {
+    "id": "commit-information",
+    "level": 2,
+    "title": "COMMIT INFORMATION"
+   },
+   {
+    "id": "date-formats",
+    "level": 2,
+    "title": "DATE FORMATS"
+   },
+   {
+    "id": "discussion",
+    "level": 2,
+    "title": "DISCUSSION"
+   },
+   {
+    "id": "environment-and-configuration-variables",
+    "level": 2,
+    "title": "ENVIRONMENT AND CONFIGURATION VARIABLES"
+   },
+   {
+    "id": "hooks",
+    "level": 2,
+    "title": "HOOKS"
+   },
+   {
+    "id": "files",
+    "level": 2,
+    "title": "FILES"
+   },
+   {
+    "id": "see-also",
+    "level": 2,
+    "title": "SEE ALSO"
+   },
+   {
+    "id": "git",
+    "level": 2,
+    "title": "GIT"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-a-all",
+   "argument": null,
+   "description": "Tell the command to automatically stage files that have been modified and deleted, but new files you have not told Git about are not affected.",
+   "flags": "-a, --all"
+  },
+  {
+   "anchorId": "def-p-patch",
+   "argument": null,
+   "description": "Use the interactive patch selection interface to choose which changes to commit. See git-add(1) for details.",
+   "flags": "-p, --patch"
+  },
+  {
+   "anchorId": "def-c-commit-reuse-message-commit",
+   "argument": "<commit>",
+   "description": "Take an existing commit object, and reuse the log message and the authorship information (including the timestamp) when creating the commit.",
+   "flags": "-C <commit>, --reuse-message"
+  },
+  {
+   "anchorId": "def-c-commit-reedit-message-commit",
+   "argument": "<commit>",
+   "description": "Like -C, but with -c the editor is invoked, so that the user can further edit the commit message.",
+   "flags": "-c <commit>, --reedit-message"
+  },
+  {
+   "anchorId": "def-fixup-amend-reword-commit",
+   "argument": "[(amend|reword):]<commit>",
+   "description": "Create a new commit which \"fixes up\" <commit> when applied with git rebase --autosquash. Plain --fixup=<commit> creates a \"fixup!\" commit which changes the content of <commit> but leaves its log message untouched. --fixup=amend:<commit> is similar but creates an \"amend!\" commit which also replaces the log message of <commit> with the log message of the \"amend!\" commit. --fixup=reword:<commit> creates an \"amend!\" commit which replaces the log message of <commit> with its own log message but makes no changes to the content of <commit>. The commit created by plain --fixup=<commit> has a subject composed of \"fixup!\" followed by the subject line from <commit>, and is recognized specially by git rebase --autosquash. The -m option may be used to supplement the log message of the created commit, but the additional commentary will be thrown away once the \"fixup!\" commit is squashed into <commit> by git rebase --autosquash. The commit created by --fixup=amend:<commit> is similar but its subject is instead prefixed with \"amend!\". The log message of <commit> is copied into the log message of the \"amend!\" commit and opened in an editor so it can be refined. When git rebase --autosquash squashes the \"amend!\" commit into <commit>, the log message of <commit> is replaced by the refined log message from the \"amend!\" commit. It is an error for the \"amend!\" commit’s log message to be empty unless --allow-empty-message is specified. --fixup=reword:<commit> is shorthand for --fixup=amend:<commit> --only. It creates an \"amend!\" commit with only a log message (ignoring any changes staged in the index). When squashed by git rebase --autosquash, it replaces the log message of <commit> without making any other changes. Neither \"fixup!\" nor \"amend!\" commits change authorship of <commit> when applied by git rebase --autosquash. See git-rebase(1) for details.",
+   "flags": "--fixup"
+  },
+  {
+   "anchorId": "def-squash-commit",
+   "argument": "<commit>",
+   "description": "Construct a commit message for use with rebase --autosquash. The commit message subject line is taken from the specified commit with a prefix of \"squash! \". Can be used with additional commit message options (-m/-c/-C/-F). See git-rebase(1) for details.",
+   "flags": "--squash"
+  },
+  {
+   "anchorId": "def-reset-author",
+   "argument": null,
+   "description": "When used with -C/-c/--amend options, or when committing after a conflicting cherry-pick, declare that the authorship of the resulting commit now belongs to the committer. This also renews the author timestamp.",
+   "flags": "--reset-author"
+  },
+  {
+   "anchorId": "def-short",
+   "argument": null,
+   "description": "When doing a dry-run, give the output in the short-format. See git-status(1) for details. Implies --dry-run.",
+   "flags": "--short"
+  },
+  {
+   "anchorId": "def-branch",
+   "argument": null,
+   "description": "Show the branch and tracking info even in short-format.",
+   "flags": "--branch"
+  },
+  {
+   "anchorId": "def-porcelain",
+   "argument": null,
+   "description": "When doing a dry-run, give the output in a porcelain-ready format. See git-status(1) for details. Implies --dry-run.",
+   "flags": "--porcelain"
+  },
+  {
+   "anchorId": "def-long",
+   "argument": null,
+   "description": "When doing a dry-run, give the output in the long-format. Implies --dry-run.",
+   "flags": "--long"
+  },
+  {
+   "anchorId": "def-z-null",
+   "argument": null,
+   "description": "When showing short or porcelain status output, print the filename verbatim and terminate the entries with NUL, instead of LF. If no format is given, implies the --porcelain output format. Without the -z option, filenames with \"unusual\" characters are quoted as explained for the configuration variable core.quotePath (see git-config(1)).",
+   "flags": "-z, --null"
+  },
+  {
+   "anchorId": "def-f-file-file-file",
+   "argument": "<file>",
+   "description": "Take the commit message from the given file. Use - to read the message from the standard input.",
+   "flags": "-F <file>, --file"
+  },
+  {
+   "anchorId": "def-author-author",
+   "argument": "<author>",
+   "description": "Override the commit author. Specify an explicit author using the standard A U Thor <author@example.com> format. Otherwise <author> is assumed to be a pattern and is used to search for an existing commit by that author (i.e. rev-list --all -i --author=<author>); the commit author is then copied from the first such commit found.",
+   "flags": "--author"
+  },
+  {
+   "anchorId": "def-date-date",
+   "argument": "<date>",
+   "description": "Override the author date used in the commit.",
+   "flags": "--date"
+  },
+  {
+   "anchorId": "def-m-msg-message-msg",
+   "argument": "<msg>",
+   "description": "Use the given <msg> as the commit message. If multiple -m options are given, their values are concatenated as separate paragraphs. The -m option is mutually exclusive with -c, -C, and -F.",
+   "flags": "-m <msg>, --message"
+  },
+  {
+   "anchorId": "def-t-file-template-file",
+   "argument": "<file>",
+   "description": "When editing the commit message, start the editor with the contents in the given file. The commit.template configuration variable is often used to give this option implicitly to the command. This mechanism can be used by projects that want to guide participants with some hints on what to write in the message in what order. If the user exits the editor without editing the message, the commit is aborted. This has no effect when a message is given by other means, e.g. with the -m or -F options.",
+   "flags": "-t <file>, --template"
+  },
+  {
+   "anchorId": "def-s-signoff-no-signoff",
+   "argument": null,
+   "description": "Add a Signed-off-by trailer by the committer at the end of the commit log message. The meaning of a signoff depends on the project to which you’re committing. For example, it may certify that the committer has the rights to submit the work under the project’s license or agrees to some contributor representation, such as a Developer Certificate of Origin. (See https://developercertificate.org for the one used by the Linux kernel and Git projects.) Consult the documentation or leadership of the project to which you’re contributing to understand how the signoffs are used in that project. The --no-signoff option can be used to countermand an earlier --signoff option on the command line.",
+   "flags": "-s, --signoff, --no-signoff"
+  },
+  {
+   "anchorId": "def-trailer-token-value",
+   "argument": "<token>[(=|:)<value>]",
+   "description": "Specify a (<token>, <value>) pair that should be applied as a trailer. (e.g. git commit --trailer \"Signed-off-by:C O Mitter \\ <committer@example.com>\" --trailer \"Helped-by:C O Mitter \\ <committer@example.com>\" will add the \"Signed-off-by\" trailer and the \"Helped-by\" trailer to the commit message.) The trailer.* configuration variables (git-interpret-trailers(1)) can be used to define if a duplicated trailer is omitted, where in the run of trailers each trailer would appear, and other details.",
+   "flags": "--trailer"
+  },
+  {
+   "anchorId": "def-n-no-verify",
+   "argument": null,
+   "description": "By default, the pre-commit and commit-msg hooks are run. When any of --no-verify or -n is given, these are bypassed. See also githooks(5).",
+   "flags": "-n, --[no-]verify"
+  },
+  {
+   "anchorId": "def-allow-empty",
+   "argument": null,
+   "description": "Usually recording a commit that has the exact same tree as its sole parent commit is a mistake, and the command prevents you from making such a commit. This option bypasses the safety, and is primarily for use by foreign SCM interface scripts.",
+   "flags": "--allow-empty"
+  },
+  {
+   "anchorId": "def-allow-empty-message",
+   "argument": null,
+   "description": "Like --allow-empty this command is primarily for use by foreign SCM interface scripts. It allows you to create a commit with an empty commit message without using plumbing commands like git-commit-tree(1).",
+   "flags": "--allow-empty-message"
+  },
+  {
+   "anchorId": "def-cleanup-mode",
+   "argument": "<mode>",
+   "description": "This option determines how the supplied commit message should be cleaned up before committing. The <mode> can be strip, whitespace, verbatim, scissors or default. strip Strip leading and trailing empty lines, trailing whitespace, commentary and collapse consecutive empty lines. whitespace Same as strip except #commentary is not removed. verbatim Do not change the message at all. scissors # ------------------------ >8 ------------------------ default Same as strip if the message is to be edited. Otherwise whitespace. The default can be changed by the commit.cleanup configuration variable (see git-config(1)).",
+   "flags": "--cleanup"
+  },
+  {
+   "anchorId": "def-e-edit",
+   "argument": null,
+   "description": "The message taken from file with -F, command line with -m, and from commit object with -C are usually used as the commit log message unmodified. This option lets you further edit the message taken from these sources.",
+   "flags": "-e, --edit"
+  },
+  {
+   "anchorId": "def-no-edit",
+   "argument": null,
+   "description": "Use the selected commit message without launching an editor. For example, git commit --amend --no-edit amends a commit without changing its commit message.",
+   "flags": "--no-edit"
+  },
+  {
+   "anchorId": "def-amend",
+   "argument": null,
+   "description": "Replace the tip of the current branch by creating a new commit. The recorded tree is prepared as usual (including the effect of the -i and -o options and explicit pathspec), and the message from the original commit is used as the starting point, instead of an empty message, when no other message is specified from the command line via options such as -m, -F, -c, etc. The new commit has the same parents and author as the current one (the --reset-author option can countermand this). It is a rough equivalent for: $ git reset --soft HEAD^ $ ... do something else to come up with the right tree ... $ git commit -c ORIG_HEAD but can be used to amend a merge commit. You should understand the implications of rewriting history if you amend a commit that has already been published. (See the \"RECOVERING FROM UPSTREAM REBASE\" section in git-rebase(1).)",
+   "flags": "--amend"
+  },
+  {
+   "anchorId": "def-no-post-rewrite",
+   "argument": null,
+   "description": "Bypass the post-rewrite hook.",
+   "flags": "--no-post-rewrite"
+  },
+  {
+   "anchorId": "def-i-include",
+   "argument": null,
+   "description": "Before making a commit out of staged contents so far, stage the contents of paths given on the command line as well. This is usually not what you want unless you are concluding a conflicted merge.",
+   "flags": "-i, --include"
+  },
+  {
+   "anchorId": "def-o-only",
+   "argument": null,
+   "description": "Make a commit by taking the updated working tree contents of the paths specified on the command line, disregarding any contents that have been staged for other paths. This is the default mode of operation of git commit if any paths are given on the command line, in which case this option can be omitted. If this option is specified together with --amend, then no paths need to be specified, which can be used to amend the last commit without committing changes that have already been staged. If used together with --allow-empty paths are also not required, and an empty commit will be created.",
+   "flags": "-o, --only"
+  },
+  {
+   "anchorId": "def-pathspec-from-file-file",
+   "argument": "<file>",
+   "description": "Pathspec is passed in <file> instead of commandline args. If <file> is exactly - then standard input is used. Pathspec elements are separated by LF or CR/LF. Pathspec elements can be quoted as explained for the configuration variable core.quotePath (see git-config(1)). See also --pathspec-file-nul and global --literal-pathspecs.",
+   "flags": "--pathspec-from-file"
+  },
+  {
+   "anchorId": "def-pathspec-file-nul",
+   "argument": null,
+   "description": "Only meaningful with --pathspec-from-file. Pathspec elements are separated with NUL character and all other characters are taken literally (including newlines and quotes).",
+   "flags": "--pathspec-file-nul"
+  },
+  {
+   "anchorId": "def-u-mode-untracked-files-mode",
+   "argument": "[<mode>]",
+   "description": "Show untracked files. The mode parameter is optional (defaults to all), and is used to specify the handling of untracked files; when -u is not used, the default is normal, i.e. show untracked files and directories. The possible options are: •no - Show no untracked files •normal - Shows untracked files and directories •all - Also shows individual files in untracked directories. All usual spellings for Boolean value true are taken as normal and false as no. The default can be changed using the status.showUntrackedFiles configuration variable documented in git-config(1).",
+   "flags": "-u[<mode>], --untracked-files"
+  },
+  {
+   "anchorId": "def-v-verbose",
+   "argument": null,
+   "description": "Show unified diff between the HEAD commit and what would be committed at the bottom of the commit message template to help the user describe the commit by reminding what changes the commit has. Note that this diff output doesn’t have its lines prefixed with #. This diff will not be a part of the commit message. See the commit.verbose configuration variable in git-config(1). If specified twice, show in addition the unified diff between what would be committed and the worktree files, i.e. the unstaged changes to tracked files.",
+   "flags": "-v, --verbose"
+  },
+  {
+   "anchorId": "def-q-quiet",
+   "argument": null,
+   "description": "Suppress commit summary message.",
+   "flags": "-q, --quiet"
+  },
+  {
+   "anchorId": "def-dry-run",
+   "argument": null,
+   "description": "Do not create a commit, but show a list of paths that are to be committed, paths with local changes that will be left uncommitted and paths that are untracked.",
+   "flags": "--dry-run"
+  },
+  {
+   "anchorId": "def-status",
+   "argument": null,
+   "description": "Include the output of git-status(1) in the commit message template when using an editor to prepare the commit message. Defaults to on, but can be used to override configuration variable commit.status.",
+   "flags": "--status"
+  },
+  {
+   "anchorId": "def-no-status",
+   "argument": null,
+   "description": "Do not include the output of git-status(1) in the commit message template when using an editor to prepare the default commit message.",
+   "flags": "--no-status"
+  },
+  {
+   "anchorId": "def-s-keyid-gpg-sign-keyid-no-gpg-sign",
+   "argument": null,
+   "description": "GPG-sign commits. The keyid argument is optional and defaults to the committer identity; if specified, it must be stuck to the option without a space. --no-gpg-sign is useful to countermand both commit.gpgSign configuration variable, and earlier --gpg-sign.",
+   "flags": "-S[<keyid>], --gpg-sign[=<keyid>], --no-gpg-sign"
+  }
+ ],
+ "seeAlso": [
+  {
+   "name": "git-add",
+   "resolvedPageId": null,
+   "section": "1"
+  },
+  {
+   "name": "git-rm",
+   "resolvedPageId": null,
+   "section": "1"
+  },
+  {
+   "name": "git-mv",
+   "resolvedPageId": null,
+   "section": "1"
+  },
+  {
+   "name": "git-merge",
+   "resolvedPageId": null,
+   "section": "1"
+  },
+  {
+   "name": "git-commit-tree",
+   "resolvedPageId": null,
+   "section": "1"
+  }
+ ],
+ "synopsis": [
+  "git commit [-a | --interactive | --patch] [-s] [-v] [-u<mode>] [--amend]",
+  "           [--dry-run] [(-c | -C | --squash) <commit> | --fixup [(amend|reword):]<commit>]",
+  "           [-F <file> | -m <msg>] [--reset-author] [--allow-empty]",
+  "           [--allow-empty-message] [--no-verify] [-e] [--author=<author>]",
+  "           [--date=<date>] [--cleanup=<mode>] [--[no-]status]",
+  "           [-i | -o] [--pathspec-from-file=<file> [--pathspec-file-nul]]",
+  "           [(--trailer <token>[(=|:)<value>])...] [-S[<keyid>]]",
+  "           [--] [<pathspec>...]"
+ ]
+}

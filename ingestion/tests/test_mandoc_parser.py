@@ -237,7 +237,7 @@ def test_parse_mandoc_html_recognizes_ascii_dash_bullets_without_capturing_optio
     assert [option.flags for option in parsed.options] == ["-a", "--all", "+O"]
 
 
-def test_parse_mandoc_html_scopes_derived_options_to_options_sections() -> None:
+def test_parse_mandoc_html_includes_flag_definitions_outside_options_sections() -> None:
     html = """<!doctype html>
 <html>
   <body>
@@ -250,7 +250,7 @@ def test_parse_mandoc_html_scopes_derived_options_to_options_sections() -> None:
         <dl><dt>+O [shopt_option]</dt><dd>disable a shell option</dd></dl>
       </section>
       <section><h1 id="NOTES">NOTES</h1>
-        <dl><dt>-x</dt><dd>not an option in this context</dd></dl>
+        <dl><dt>-x</dt><dd>extract an archive</dd></dl>
       </section>
     </div>
   </body>
@@ -263,4 +263,64 @@ def test_parse_mandoc_html_scopes_derived_options_to_options_sections() -> None:
     assert [(option.flags, option.argument, option.description) for option in parsed.options] == [
         ("-a, --all", None, "include every item"),
         ("+O", "[shopt_option]", "disable a shell option"),
+        ("-x", None, "extract an archive"),
+    ]
+
+
+def test_nested_options_keep_body_ids_and_exclude_dash_prose() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text">
+      <h1>OPTIONS</h1><div class="Bd-indent"><dl>
+        <dt id="all">-a, --all</dt><dd>All entries.
+          <dl><dt id="nested">--nested</dt><dd>Nested flag.</dd></dl>
+        </dd></dl></div>
+      <h1>NOTES</h1><dl>
+        <dt>- first observation</dt><dd>Prose starting with a dash.</dd>
+        <dt>ordinary term</dt><dd>Not a flag.</dd>
+      </dl></div>""")
+    assert parsed.options is not None
+    assert [(o.flags, o.anchorId) for o in parsed.options] == [
+        ("-a, --all", "all"),
+        ("--nested", "nested"),
+    ]
+    outer = parsed.doc.blocks[1].items[0][0].items[0]
+    assert outer.id == "all"
+    assert outer.definitionBlocks[0].items[0].id == "nested"
+
+
+def test_docbook_option_paragraphs_become_anchored_definitions() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text">
+      <h1>OPTIONS</h1><p class="Pp">-a, --all</p>
+      <div class="Bd-indent">Stage all changes.<p>Keep this paragraph.</p></div>
+      <p class="Pp">- first observation</p><div class="Bd-indent">Prose.</div>
+      <dl><dt id="original">--original</dt><dd>Original definition.</dd></dl>
+      </div>""")
+    assert parsed.options
+    assert [o.flags for o in parsed.options] == ["-a, --all", "--original"]
+    assert "Stage all changes." in parsed.options[0].description
+    assert "Keep this paragraph." in parsed.options[0].description
+    assert parsed.options[1].anchorId == "original"
+
+
+def test_nested_options_exclude_mixed_dash_prose() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <div class="Bd-indent"><dl>
+        <dt>-a</dt><dd>All entries.</dd>
+        <dt>- first observation</dt><dd>Prose, not a flag.</dd>
+      </dl></div></div>""")
+    assert parsed.options and [option.flags for option in parsed.options] == ["-a"]
+
+
+def test_converted_option_cannot_claim_an_existing_body_id() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <p class="Pp">-a</p><div class="Bd-indent">New definition.</div>
+      <dl><dt id="def-a">--existing</dt><dd>Existing explicit ID.</dd>
+        <dt>-b</dt><dd>Existing generated ID.</dd></dl>
+      <p class="Pp">-b</p><div class="Bd-indent">Another new definition.</div>
+      </div>""")
+    assert parsed.options
+    assert [(option.flags, option.anchorId) for option in parsed.options] == [
+        ("-a", "def-a-2"),
+        ("--existing", "def-a"),
+        ("-b", "def-b"),
+        ("-b", "def-b-2"),
     ]

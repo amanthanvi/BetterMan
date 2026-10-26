@@ -24,3 +24,19 @@ cp tests/fixtures/golden/*.json ../nextjs/components/doc/__fixtures__/
 ```
 
 The Next.js test `components/doc/DocRenderer.golden.test.tsx` renders the same JSON, so the two copies must match.
+
+The curated command-page check runs after parsing and alias resolution, before any
+release upload. Arch reinstalls requested packages to restore man pages omitted
+by its container image; Alpine requires `tar-doc` alongside `tar`. New package
+sets should extend the representative command expectations in `ingest_runner.py`.
+
+Fedora, Arch, and Alpine collect package notices from `/usr/share/licenses`.
+Arch also resolves declared SPDX licenses there; Alpine installs
+`spdx-licenses-text` and resolves declarations from `/usr/share/spdx/text` because
+many `-doc` packages ship no license copy. FreeBSD and the filtered macOS corpus
+record base-system package/version provenance and upstream source links.
+These dataset corrections take effect at the next monthly ingest.
+
+`git-commit.1` was captured from
+<https://manpages.debian.org/trixie/git-man/git-commit.1.en.gz> (Git 2.47.3).
+`dash-prose.1` is a synthetic negative fixture for option extraction.

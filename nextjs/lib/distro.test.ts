@@ -29,7 +29,7 @@ describe('distro helpers', () => {
     ])
     expect(DISTRO_LABEL.alpine).toBe('Alpine')
     expect(DISTRO_LABEL.freebsd).toBe('FreeBSD')
-    expect(DISTRO_LABEL.macos).toBe('macOS (BSD)')
+    expect(DISTRO_LABEL.macos).toBe('macOS (BSD-licensed subset)')
   })
 
   it('applies distro query params only for non-default distros', () => {

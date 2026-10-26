@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import platform
 import re
 from collections import Counter
 from collections.abc import Iterator
@@ -23,12 +24,14 @@ from ingestion.alpine import (
 from ingestion.alpine import (
     mandoc_pkg_version as mandoc_pkg_version_apk,
 )
+from ingestion.alpine import package_license_ids as apk_license_ids
 from ingestion.arch import (
     build_manpath_to_package as build_manpath_to_package_pacman,
 )
 from ingestion.arch import (
     mandoc_pkg_version as mandoc_pkg_version_pacman,
 )
+from ingestion.arch import package_license_ids as pacman_license_ids
 from ingestion.arch import (
     pacman_arch,
     pacman_install,
@@ -74,6 +77,20 @@ from ingestion.util import normalize_ws, sha256_hex
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]*$")
 _PKG_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9.+-]+$")
 _DOC_ROOT = Path("/usr/share/doc")
+_LICENSE_ROOT = Path("/usr/share/licenses")
+_ALPINE_SPDX_ROOT = Path("/usr/share/spdx/text")
+_BASE_PROVENANCE = {
+    "freebsd": (
+        "freebsd-base",
+        "FreeBSD base-system manual pages",
+        "https://www.freebsd.org/copyright/",
+    ),
+    "macos": (
+        "macos-base",
+        "macOS license-filtered base-system manual pages (BSD-licensed subset)",
+        "https://opensource.apple.com/",
+    ),
+}
 _MAN_HREF_RE = re.compile(
     r"^/man/(?P<name>[a-z0-9][a-z0-9._+-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
 )
@@ -178,6 +195,12 @@ def ingest(
         mandoc_version = None
         manpath_to_pkg = {}
 
+    if distro in _BASE_PROVENANCE:
+        base_package = _BASE_PROVENANCE[distro][0]
+        packages[base_package] = (
+            macos_version() if distro == "macos" else platform.release()
+        ) or "unknown"
+
     dataset_release_id = _build_dataset_release_id(
         git_sha=git_sha, mandoc_version=mandoc_version, distro=distro
     )
@@ -207,6 +230,9 @@ def ingest(
 
     _resolve_doc_links_and_see_also(pages=parsed_pages)
     aliases = _resolve_aliases(aliases=aliases, pages=parsed_pages)
+    _require_command_pages(
+        distro=distro, requested=requested, pages=parsed_pages, aliases=aliases, sample=sample
+    )
 
     # Aliases count as handled sources for the success gate, but the release
     # page count, section totals, and sitemaps only cover parsed pages.
@@ -219,7 +245,7 @@ def ingest(
 
     page_links = _build_page_links(pages=parsed_pages)
     sitemap_pages = _build_sitemap_page_map(pages=parsed_pages)
-    licenses = _collect_licenses(pages=parsed_pages)
+    licenses = _collect_licenses(pages=parsed_pages, distro=distro)
     license_packages = _build_license_packages(
         package_manifest=package_manifest,
         packages_with_text=set(licenses),
@@ -267,7 +293,7 @@ def ingest(
                 "licenseId": f"pkg:{package_name}",
                 "licenseName": package_name,
                 "licenseText": text,
-                "sourceUrl": None,
+                "sourceUrl": (_BASE_PROVENANCE[distro][2] if distro in _BASE_PROVENANCE else None),
             }
             for package_name, text in sorted(licenses.items())
         ]
@@ -574,6 +600,12 @@ def _parse_source(src: ManSource, raw: bytes, context: _ParseContext) -> _PageRo
     source_path = str(src.path)
     manpath_to_pkg = context.manpath_to_pkg
     source_package = manpath_to_pkg.get(source_path) or manpath_to_pkg.get(str(src.path.resolve()))
+    if (
+        not source_package
+        and context.distro in _BASE_PROVENANCE
+        and src.path.is_relative_to(Path("/usr/share/man"))
+    ):
+        source_package = _BASE_PROVENANCE[context.distro][0]
     source_package_version = None
     if source_package:
         source_package_version = context.packages.get(source_package) or context.packages.get(
@@ -619,7 +651,9 @@ def _build_dataset_release_id(*, git_sha: str, mandoc_version: str | None, distr
 def _content_packages(*, sample: bool, distro: str) -> list[str]:
     if distro in {"freebsd", "macos"}:
         base: list[str] = []
-    elif distro in {"arch", "alpine"}:
+    elif distro == "alpine":
+        base = ["mandoc", "spdx-licenses-text"]
+    elif distro == "arch":
         base = ["mandoc"]
     else:
         base = ["mandoc", "man-db"]
@@ -653,6 +687,97 @@ def _content_packages(*, sample: bool, distro: str) -> list[str]:
         seen.add(pkg)
         out.append(pkg)
     return out
+
+
+_COMMAND_PAGES = {
+    **{
+        name: (name, "1")
+        for name in (
+            "bash",
+            "curl",
+            "wget",
+            "rsync",
+            "tar",
+            "vim",
+            "less",
+            "git",
+            "make",
+            "gcc",
+            "gdb",
+            "openssl",
+            "perl",
+            "grep",
+            "sed",
+            "gawk",
+            "systemd",
+            "groff",
+            "python",
+            "python3",
+            "mandoc",
+        )
+    },
+    "coreutils": ("ls", "1"),
+    "findutils": ("find", "1"),
+    "util-linux": ("mount", "8"),
+    "openssh-client": ("ssh_config", "5"),
+    "openssh-clients": ("ssh_config", "5"),
+    "openssh": ("ssh_config", "5"),
+    "vim-enhanced": ("vim", "1"),
+    "nginx": ("nginx", "8"),
+    "man-db": ("man", "1"),
+    "netcat-openbsd": ("nc", "1"),
+    "openbsd-netcat": ("nc", "1"),
+    "apache2": ("apache2", "8"),
+    "apache": ("httpd", "8"),
+    "httpd": ("httpd", "8"),
+    "iproute2": ("ip", "8"),
+    "iproute": ("ip", "8"),
+    "procps": ("ps", "1"),
+    "procps-ng": ("ps", "1"),
+    "postgresql-client": ("psql", "1"),
+    "postgresql": ("psql", "1"),
+    "default-mysql-client": ("mysql", "1"),
+}
+# Documentation, license data, and development headers have no own command page.
+_NON_COMMAND_PACKAGES = {
+    "manpages",
+    "manpages-dev",
+    "man-pages",
+    "mandoc-doc",
+    "busybox-doc",
+    "libssl-dev",
+    "openssl-devel",
+    "spdx-licenses-text",
+}
+_SAMPLE_PAGES = {("bash", "1"), ("ls", "1"), ("curl", "1"), ("tar", "1"), ("ssh_config", "5")}
+
+
+def _require_command_pages(
+    *,
+    distro: str,
+    requested: list[str],
+    pages: list[_PageRow],
+    aliases: list[_AliasRow],
+    sample: bool,
+) -> None:
+    unclassified = sorted(set(requested) - _COMMAND_PAGES.keys() - _NON_COMMAND_PACKAGES)
+    if unclassified:
+        raise RuntimeError("no command-page expectation for packages: " + ", ".join(unclassified))
+    expected = {
+        ("httpd", "8") if distro == "alpine" and pkg == "apache2" else _COMMAND_PAGES[pkg]
+        for pkg in requested
+        if pkg in _COMMAND_PAGES
+    }
+    if sample:
+        expected &= _SAMPLE_PAGES
+    # Distros use section suffixes such as openssl(1ssl) and openssl(1ossl).
+    present = {(p.name, p.section[:1]) for p in pages} | {(a.name, a.section[:1]) for a in aliases}
+    missing = sorted(expected - present)
+    if missing:
+        raise RuntimeError(
+            "publish blocked: missing package-set command pages: "
+            + ", ".join(f"{name}({section})" for name, section in missing)
+        )
 
 
 def _parse_man_href(href: str) -> tuple[str, str | None] | None:
@@ -817,19 +942,69 @@ def _build_page_links(*, pages: list[_PageRow]) -> dict[str, list[dict[str, str 
     return out
 
 
-def _collect_licenses(*, pages: list[_PageRow]) -> dict[str, str]:
+def _collect_licenses(*, pages: list[_PageRow], distro: str) -> dict[str, str]:
     packages = {p.source_package for p in pages if p.source_package}
-    if not packages:
-        return {}
-
     licenses: dict[str, str] = {}
+    if distro in _BASE_PROVENANCE:
+        package, label, url = _BASE_PROVENANCE[distro]
+        version = next(
+            (p.source_package_version for p in pages if p.source_package == package), None
+        )
+        licenses[package] = (
+            f"{label}\nOS version: {version or 'unknown'}\nSource: {url}\n"
+            "Provenance record; individual source files retain their own license notices."
+        )
+    license_ids = {}
+    if distro == "arch":
+        license_ids = pacman_license_ids()
+    elif distro == "alpine":
+        license_ids = apk_license_ids()
     for pkg in sorted(packages):
-        text = _read_debian_copyright(pkg)
-        if text is None:
-            continue
-        licenses[pkg] = text
-
+        if distro in {"debian", "ubuntu"}:
+            text = _read_debian_copyright(pkg)
+        else:
+            text = _read_package_licenses(pkg)
+            if not text and distro == "alpine" and pkg.endswith("-doc"):
+                text = _read_package_licenses(pkg.removesuffix("-doc"))
+        shared = _read_spdx_licenses(
+            license_ids.get(pkg, ""),
+            root=_ALPINE_SPDX_ROOT if distro == "alpine" else _LICENSE_ROOT / "spdx",
+        )
+        if text or shared:
+            licenses[pkg] = "\n\n".join(part for part in (text, shared) if part)
     return licenses
+
+
+def _read_spdx_licenses(expression: str, *, root: Path) -> str | None:
+    texts: list[str] = []
+    for identifier in sorted(set(re.findall(r"[A-Za-z0-9][A-Za-z0-9.+-]*", expression))):
+        try:
+            path = (root / f"{identifier}.txt").resolve(strict=True)
+            if path.is_relative_to(root.resolve(strict=True)) and path.is_file():
+                texts.append(f"{identifier}\n{path.read_text(encoding='utf-8', errors='replace')}")
+        except OSError:
+            continue
+    return f"Declared license: {expression}\n\n" + "\n\n".join(texts) if texts else None
+
+
+def _read_package_licenses(pkg: str) -> str | None:
+    if not _PKG_NAME_RE.fullmatch(pkg):
+        return None
+    try:
+        root = _LICENSE_ROOT.resolve(strict=True)
+        directory = (_LICENSE_ROOT / pkg).resolve(strict=True)
+        if not directory.is_relative_to(root) or not directory.is_dir():
+            return None
+        texts: list[str] = []
+        for file in sorted(directory.rglob("*")):
+            resolved = file.resolve(strict=True)
+            if resolved.is_relative_to(root) and resolved.is_file():
+                text = resolved.read_text(encoding="utf-8", errors="replace")
+                if text.strip():
+                    texts.append(f"{file.relative_to(directory)}\n{text}")
+        return "\n\n".join(texts) or None
+    except OSError:
+        return None
 
 
 def _build_license_packages(
