@@ -42,8 +42,8 @@ importers:
   .:
     dependencies:
       convex:
-        specifier: ^1.45.0
-        version: 1.45.0(react@19.3.1)
+        specifier: ^1.48.0
+        version: 1.48.0(react@19.3.1)
     devDependencies:
       '@edge-runtime/vm':
         specifier: 5.0.0
@@ -53,7 +53,7 @@ importers:
         version: 26.6.4
       convex-test:
         specifier: 0.0.60
-        version: 0.0.60(convex@1.45.0(react@19.3.1))
+        version: 0.0.60(convex@1.48.0(react@19.3.1))
       sigstore:
         specifier: 5.0.0
         version: 5.0.0
@@ -76,8 +76,8 @@ importers:
         specifier: ^11.0.0
         version: 11.1.0(@babel/core@7.29.7)(next@16.4.2(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.0)(@types/node@26.6.4)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)(webpack@5.105.0(esbuild@0.28.2))
       convex:
-        specifier: ^1.45.0
-        version: 1.45.0(react@19.3.1)
+        specifier: ^1.48.0
+        version: 1.48.0(react@19.3.1)
       highlight.js:
         specifier: ^11.12.0
         version: 11.12.0
@@ -2512,8 +2512,8 @@ packages:
     peerDependencies:
       convex: ^1.43.0
 
-  convex@1.45.0:
-    resolution: {integrity: sha512-AV3B56Ptu/14d76g3urBJ50dwpiZa6uJaLT84OWox5aCwZIJiuAamdjv3lLHDzs8vv5kC31anEZohhUe3qJ2bA==}
+  convex@1.48.0:
+    resolution: {integrity: sha512-M9jEgTvCN8ziP/VgQQUH+j0ijM7g+NmQd8tFlvETK8/HMC/aaqHZwcu4hBO30X5DV2VIyYK4mOoLQGIb1766ew==}
     engines: {node: '>=20.0.0', npm: '>=7.0.0'}
     hasBin: true
     peerDependencies:
@@ -6981,11 +6981,11 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-test@0.0.60(convex@1.45.0(react@19.3.1)):
+  convex-test@0.0.60(convex@1.48.0(react@19.3.1)):
     dependencies:
-      convex: 1.45.0(react@19.3.1)
+      convex: 1.48.0(react@19.3.1)
 
-  convex@1.45.0(react@19.3.1):
+  convex@1.48.0(react@19.3.1):
     dependencies:
       esbuild: 0.28.2
       prettier: 3.9.6
