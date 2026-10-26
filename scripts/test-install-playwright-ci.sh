@@ -82,9 +82,9 @@ run_case() {
   local command
   for command in ${fake_commands[@]+"${fake_commands[@]}"}; do
     assert_equal "$case_name" timeout "$expected_timeout" "${command%% *}" || return 1
-    if [[ "$command" == *" install-deps chromium" ]]; then
+    if [[ "$command" == "$expected_timeout --kill-after=15s 165s pnpm -C nextjs exec playwright install-deps chromium" ]]; then
       stages+=(dependencies)
-    elif [[ "$command" == *" install chromium" ]]; then
+    elif [[ "$command" == "$expected_timeout --kill-after=15s 165s pnpm -C nextjs exec playwright install chromium" ]]; then
       stages+=(browser)
     else
       stages+=(unknown)
@@ -110,8 +110,20 @@ run_case non-gnu-gnutimeout 127 "" "" || exit 1
 fake_gnutimeout_version="timeout (GNU coreutils) 9.7"
 expected_timeout=gnutimeout run_case uutils-with-gnutimeout 0 dependencies,browser "" 0 0 || exit 1
 expected_timeout=gnutimeout run_case gnutimeout-kill 137 dependencies "" 137 || exit 1
+# GNU timeout wins even when gnutimeout is also GNU (both present).
 fake_timeout_version="timeout (GNU coreutils) test"
+run_case gnu-timeout-preferred 0 dependencies,browser "" 0 0 || exit 1
+# Ubuntu 24.04: GNU timeout and no gnutimeout. The subshell drops the mock and
+# empties PATH so command -v really finds nothing for gnutimeout.
+(
+  unset -f gnutimeout
+  # shellcheck disable=SC2123 # every command the installer runs here is a mock
+  PATH=/nonexistent
+  run_case gnutimeout-not-on-path 0 dependencies,browser "" 0 0
+) || exit 1
+fake_gnutimeout_version=""
 
+# The remaining cases run as on Ubuntu 24.04: GNU timeout, no gnutimeout.
 run_case success 0 dependencies,browser "" 0 0 || exit 1
 run_case dependency-retry 0 dependencies,dependencies,browser 5 1 0 0 || exit 1
 run_case dependency-timeout 124 dependencies "" 124 || exit 1
@@ -120,4 +132,4 @@ run_case dependency-exhausted 1 dependencies,dependencies 5 2 3 || exit 1
 run_case browser-retry 0 dependencies,browser,browser 5 0 1 0 || exit 1
 run_case browser-exhausted 1 dependencies,browser,browser 5 0 1 2 || exit 1
 
-echo "Playwright CI installer tests passed (12 scenarios)."
+echo "Playwright CI installer tests passed (14 scenarios)."
