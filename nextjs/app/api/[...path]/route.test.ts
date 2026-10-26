@@ -1,19 +1,10 @@
 import fc from 'fast-check'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import type * as Api from '@/lib/api'
 
 const apiMocks = vi.hoisted(() => ({
   fetchManByNameAndSectionOrAlias: vi.fn(),
-  FastApiError: class FastApiError extends Error {
-    status: number
-    bodyText?: string
-
-    constructor(status: number, bodyText?: string) {
-      super(`HTTP ${status}`)
-      this.status = status
-      this.bodyText = bodyText
-    }
-  },
   fetchManMetaByNameAndSection: vi.fn(),
   search: vi.fn(),
   listSection: vi.fn(),
@@ -24,38 +15,34 @@ const convexMocks = vi.hoisted(() => ({
   mutation: vi.fn(),
 }))
 
-vi.mock('@/lib/api', () => ({
-  FastApiError: apiMocks.FastApiError,
-  fetchInfo: vi.fn(),
-  fetchLicenseText: vi.fn(),
-  fetchLicenses: vi.fn(),
-  fetchManByName: vi.fn(),
-  fetchManByNameAndSectionOrAlias: apiMocks.fetchManByNameAndSectionOrAlias,
-  fetchManMetaByNameAndSection: apiMocks.fetchManMetaByNameAndSection,
-  fetchRelated: vi.fn(),
-  fetchSeoReleases: vi.fn(),
-  fetchSeoSitemapPage: vi.fn(),
-  listSection: apiMocks.listSection,
-  listSections: vi.fn(),
-  search: apiMocks.search,
-  suggest: apiMocks.suggest,
-  // The real helper's rule: only a non-Debian distro without an active release falls back.
-  withDistroFallback: async (distro: string, fn: (distro: string) => Promise<unknown>) => {
-    try {
-      return { distro, data: await fn(distro) }
-    } catch (err) {
-      if (distro !== 'debian' && (err as { code?: string }).code === 'RELEASE_NOT_FOUND') {
-        return { distro: 'debian', data: await fn('debian') }
-      }
-      throw err
-    }
-  },
-}))
+vi.mock('@/lib/api', async () => {
+  const actual = await vi.importActual<typeof Api>('@/lib/api')
+  return {
+    // Same class the real withDistroFallback checks with instanceof.
+    FastApiError: actual.FastApiError,
+    fetchInfo: vi.fn(),
+    fetchLicenseText: vi.fn(),
+    fetchLicenses: vi.fn(),
+    fetchManByName: vi.fn(),
+    fetchManByNameAndSectionOrAlias: apiMocks.fetchManByNameAndSectionOrAlias,
+    fetchManMetaByNameAndSection: apiMocks.fetchManMetaByNameAndSection,
+    fetchRelated: vi.fn(),
+    fetchSeoReleases: vi.fn(),
+    fetchSeoSitemapPage: vi.fn(),
+    listSection: apiMocks.listSection,
+    listSections: vi.fn(),
+    search: apiMocks.search,
+    suggest: apiMocks.suggest,
+    // Real helper, so the suggest fallback test goes through isReleaseNotFoundError.
+    withDistroFallback: actual.withDistroFallback,
+  }
+})
 
 vi.mock('@/lib/convexClient', () => ({
   getConvexClient: () => convexMocks,
 }))
 
+import { FastApiError } from '@/lib/api'
 import { GET } from './route'
 
 function request(path: string): NextRequest {
@@ -123,8 +110,10 @@ describe('public API timing and metadata', () => {
 
   it('preserves metadata not-found responses with timing', async () => {
     apiMocks.fetchManMetaByNameAndSection.mockRejectedValueOnce(
-      new apiMocks.FastApiError(
+      new FastApiError(
         404,
+        'PAGE_NOT_FOUND',
+        'Page not found',
         JSON.stringify({ error: { code: 'PAGE_NOT_FOUND', message: 'Page not found' } }),
       ),
     )
@@ -231,13 +220,30 @@ describe('suggest API', () => {
 
   it('falls back to Debian when the distro has no active release and says so', async () => {
     apiMocks.suggest
-      .mockRejectedValueOnce(Object.assign(new apiMocks.FastApiError(404), { code: 'RELEASE_NOT_FOUND' }))
+      .mockRejectedValueOnce(
+        new FastApiError(
+          404,
+          'RELEASE_NOT_FOUND',
+          'Dataset release not found',
+          JSON.stringify({ error: { code: 'RELEASE_NOT_FOUND', message: 'Dataset release not found' } }),
+        ),
+      )
       .mockResolvedValueOnce({ query: 'ta', suggestions })
 
     const res = await GET(request('/api/v1/suggest?name=ta&distro=freebsd'), context(['v1', 'suggest']))
 
     expect(apiMocks.suggest.mock.calls.map(([opts]) => opts.distro)).toEqual(['freebsd', 'debian'])
     await expect(res.json()).resolves.toEqual({ query: 'ta', suggestions, distro: 'debian' })
+  })
+
+  it('does not fall back for an error that only carries the missing-release code', async () => {
+    const lookalike = Object.assign(new Error('Dataset release not found'), { code: 'RELEASE_NOT_FOUND' })
+    apiMocks.suggest.mockRejectedValueOnce(lookalike)
+
+    await expect(GET(request('/api/v1/suggest?name=ta&distro=freebsd'), context(['v1', 'suggest']))).rejects.toBe(
+      lookalike,
+    )
+    expect(apiMocks.suggest.mock.calls.map(([opts]) => opts.distro)).toEqual(['freebsd'])
   })
 })
 
