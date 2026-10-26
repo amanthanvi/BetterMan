@@ -168,12 +168,9 @@ jobs:
   e2e:
     needs:
       - nextjs
-    # Not ubuntu-latest: on Ubuntu 26.04 runners the Azure Ubuntu mirror serves
-    # Playwright's font packages (about 25 MB) at roughly 50 KB/s in about a
-    # third of runs, which overruns the installer's 165-second dependency
-    # budget. Ubuntu 24.04 installs them in seconds.
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    # Covers a 15-minute prefetch plus the installer's retries (about 12 minutes).
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -194,13 +191,67 @@ jobs:
         id: playwright-version
         shell: bash
         # Key on the installed version, not the requested semver range.
-        run: echo "version=$(node -p "require('./nextjs/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(node -p "require('./nextjs/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      # The .deb files the prefetch below downloads, so most runs never wait on
+      # the Ubuntu mirror. apt still fetches any package whose version changed.
+      - name: Cache Playwright system packages
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.cache/playwright-apt
+          key: ${{ runner.os }}-${{ steps.playwright-version.outputs.image }}-playwright-apt-${{ steps.playwright-version.outputs.version }}
+
+      # Download the system packages Playwright's install-deps adds before the
+      # installer runs. apt-get --download-only never runs dpkg, so this step can
+      # wait out a slow Ubuntu mirror (it has served them at about 45 KB/s) and be
+      # stopped at any point; the installer then installs from apt's cache inside
+      # its 165-second dpkg budget.
+      - name: Prefetch Playwright system packages
+        continue-on-error: true
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache_dir="$HOME/.cache/playwright-apt"
+          mkdir -p "$cache_dir"
+          sudo apt-get update -qq
+          if compgen -G "$cache_dir/*.deb" >/dev/null; then
+            sudo cp "$cache_dir"/*.deb /var/cache/apt/archives/
+          fi
+          # The dry run exits 1 when packages are missing, so its status is not
+          # an error signal; its output is.
+          dry_run="$(pnpm -C nextjs exec playwright install-deps --dry-run chromium 2>&1)" || true
+          packages=()
+          while IFS= read -r package; do
+            packages+=("$package")
+          done < <(sed -n 's/^  \([a-z0-9][a-z0-9.+:-]*\)$/\1/p' <<<"$dry_run")
+          if ((${#packages[@]} == 0)); then
+            if [[ "$dry_run" == *"All system dependencies are installed."* ]]; then
+              echo "No Playwright system packages to fetch."
+            else
+              echo "::warning::Playwright's dependency dry run listed no packages, so nothing was prefetched."
+              tail -n 20 <<<"$dry_run"
+            fi
+            exit 0
+          fi
+          echo "Fetching ${#packages[@]} packages: ${packages[*]}"
+          for attempt in 1 2 3; do
+            if sudo apt-get install --download-only -y -q --no-install-recommends "${packages[@]}"; then
+              cp /var/cache/apt/archives/*.deb "$cache_dir"/ 2>/dev/null || true
+              exit 0
+            fi
+            echo "Package prefetch attempt ${attempt}/3 failed." >&2
+            sleep 5
+          done
+          exit 1
 
       - name: Install Playwright browsers
         shell: bash
