@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "fixture": "scripts/perf-fixture.ts v1: 7 distros x 32 pages; bash(1) has 160 paragraphs and a code example",
+  "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 3; 5s observation after network idle",
+  "metrics": {
+    "home.htmlBytes": {
+      "baseline": 29894,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "home.calls": {
+      "baseline": 2,
+      "relative": 0,
+      "absolute": 0
+    },
+    "home.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "home.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "home.jsBytes": {
+      "baseline": 551396,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "home.jsGzipBytes": {
+      "baseline": 170422,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "home.lcpMs": {
+      "baseline": 56,
+      "relative": 0.5,
+      "absolute": 1000
+    },
+    "home.cls": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0.02
+    },
+    "man.htmlBytes": {
+      "baseline": 108694,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "man.calls": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "man.documents": {
+      "baseline": 26,
+      "relative": 0,
+      "absolute": 0
+    },
+    "man.storageReads": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "man.jsBytes": {
+      "baseline": 636172,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "man.jsGzipBytes": {
+      "baseline": 203037,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "man.lcpMs": {
+      "baseline": 68,
+      "relative": 0.5,
+      "absolute": 1000
+    },
+    "man.cls": {
+      "baseline": 0.0399150146484375,
+      "relative": 0,
+      "absolute": 0.02
+    },
+    "search.htmlBytes": {
+      "baseline": 44086,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "search.calls": {
+      "baseline": 2,
+      "relative": 0,
+      "absolute": 0
+    },
+    "search.documents": {
+      "baseline": 30,
+      "relative": 0,
+      "absolute": 0
+    },
+    "search.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "search.jsBytes": {
+      "baseline": 553768,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "search.jsGzipBytes": {
+      "baseline": 171381,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "section.htmlBytes": {
+      "baseline": 58955,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "section.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "section.documents": {
+      "baseline": 35,
+      "relative": 0,
+      "absolute": 0
+    },
+    "section.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "section.jsBytes": {
+      "baseline": 546012,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "section.jsGzipBytes": {
+      "baseline": 168696,
+      "relative": 0.02,
+      "absolute": 0
+    }
+  },
+  "sourceHead": "36d8936a5bfef480ae0cc425a47b7cd2151b4aea",
+  "toolchain": {
+    "next": "16.4.2",
+    "playwright": "1.64.1",
+    "convex": "1.48.0",
+    "convexTest": "0.0.60"
+  },
+  "fixtureSha256": "d0bc8109a04a832533f1863f5b7b80ca3ada6860e0a8b7368739149f2077f822"
+}
