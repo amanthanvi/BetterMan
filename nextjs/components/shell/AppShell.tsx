@@ -423,7 +423,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               className="group inline-flex h-9 items-center justify-center gap-2 px-1 text-muted transition-colors hover:text-fg"
               onClick={() => setPaletteOpen(true)}
-              aria-label="Search"
+              aria-label="Search ⌘K"
               title="Command palette (Ctrl/⌘ K)"
             >
               <SearchIcon className="size-4" />

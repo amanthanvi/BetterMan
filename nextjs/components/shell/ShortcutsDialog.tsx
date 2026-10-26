@@ -66,7 +66,7 @@ export function ShortcutsDialog({
             Press <span className="font-mono">Esc</span> to close.
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} aria-label="Close keyboard shortcuts">
+        <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} aria-label="Close keyboard shortcuts, Esc">
           Esc
         </Button>
       </div>
