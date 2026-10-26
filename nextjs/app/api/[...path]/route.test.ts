@@ -235,6 +235,16 @@ describe('suggest API', () => {
     expect(apiMocks.suggest.mock.calls.map(([opts]) => opts.distro)).toEqual(['freebsd', 'debian'])
     await expect(res.json()).resolves.toEqual({ query: 'ta', suggestions, distro: 'debian' })
   })
+
+  it('does not fall back for an error that only carries the missing-release code', async () => {
+    const lookalike = Object.assign(new Error('Dataset release not found'), { code: 'RELEASE_NOT_FOUND' })
+    apiMocks.suggest.mockRejectedValueOnce(lookalike)
+
+    await expect(GET(request('/api/v1/suggest?name=ta&distro=freebsd'), context(['v1', 'suggest']))).rejects.toBe(
+      lookalike,
+    )
+    expect(apiMocks.suggest.mock.calls.map(([opts]) => opts.distro)).toEqual(['freebsd'])
+  })
 })
 
 describe('section pagination API', () => {
