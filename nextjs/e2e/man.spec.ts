@@ -482,6 +482,14 @@ test('man: a11y (no critical/serious violations)', async ({ page }) => {
   await expectNoCriticalOrSeriousViolations(page)
 })
 
+test('man: a11y with reading preferences open (no critical/serious violations)', async ({ page }) => {
+  await page.goto('/man/tar/1')
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Reading preferences' }).click()
+  await expect(page.getByRole('dialog', { name: 'Reading preferences' })).toBeVisible()
+  await expectNoCriticalOrSeriousViolations(page)
+})
+
 test('man: .so alias redirects to its target page', async ({ page }) => {
   const res = await page.goto('/man/gunzip/1')
   expect(res?.ok()).toBeTruthy()
