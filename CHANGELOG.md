@@ -4,6 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
+- CI: the e2e job installs Playwright again on `ubuntu-latest`, which is now Ubuntu 26.04. There `timeout` is uutils coreutils and GNU's is `gnutimeout`, so the installer uses whichever of the two is GNU and still refuses to run without one.
 - Ingestion: FreeBSD is ingested on a FreeBSD 15.1 VM instead of 15.0. The FreeBSD-ports package repository is now built for 15.1, so `pkg update` on a 15.0 userland refused it and every FreeBSD ingest failed before parsing a page.
 - Reading: an examples preview label no longer carries past the code block it introduces: a later list or definition item, the end of a list or definition list, or a definition list, table, or horizontal rule between the label and a code block drops it. A short paragraph or subsection heading still labels the code in the indented block below it, the first item of a list below it, or the same item.
 - Keyboard: single-key shortcuts (`?`, `/`, `d`, `b`, `t`, `h`, `p`, `m`) no longer fire while a dialog, drawer, or the command palette is open, even when focus is on a button or radio inside it or has left it. Ctrl/⌘K and the typing-field guard are unchanged.
