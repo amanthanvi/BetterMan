@@ -1,20 +1,33 @@
 #!/usr/bin/env bash
 
-# Linux CI helper: requires GNU timeout semantics (`--kill-after`). Local
-# diagnostics should run test-install-playwright-ci.sh, which mocks timeout.
+# Linux CI helper: requires GNU timeout semantics (`--kill-after` grace, and the
+# signal reaching the whole process group). Ubuntu 26.04 ships uutils as
+# `timeout` and keeps GNU's as `gnutimeout`, so either name is accepted when it
+# is GNU coreutils. Local diagnostics should run test-install-playwright-ci.sh,
+# which mocks both.
+resolve_gnu_timeout() {
+  local candidate
+  local version
+
+  for candidate in timeout gnutimeout; do
+    if command -v "$candidate" >/dev/null 2>&1 &&
+      version="$("$candidate" --version 2>&1)" &&
+      [[ "$version" == *"GNU coreutils"* ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
 install_playwright_ci() {
   local attempt
   local status
   local dependencies_ready=false
-  local timeout_version
+  local timeout_command
 
-  if ! command -v timeout >/dev/null 2>&1; then
-    echo "GNU timeout is required by the Linux CI Playwright installer." >&2
-    return 127
-  fi
-  if ! timeout_version="$(timeout --version 2>&1)" ||
-    [[ "$timeout_version" != *"GNU coreutils"* ]]; then
-    echo "GNU timeout is required by the Linux CI Playwright installer." >&2
+  if ! timeout_command="$(resolve_gnu_timeout)"; then
+    echo "GNU timeout is required by the Linux CI Playwright installer; neither timeout nor gnutimeout is GNU coreutils." >&2
     return 127
   fi
 
@@ -23,7 +36,7 @@ install_playwright_ci() {
   # attempt on the same runner.
   for attempt in 1 2; do
     status=0
-    timeout --kill-after=15s 165s \
+    "$timeout_command" --kill-after=15s 165s \
       pnpm -C nextjs exec playwright install-deps chromium || status=$?
     if ((status == 0)); then
       dependencies_ready=true
@@ -46,7 +59,7 @@ install_playwright_ci() {
   # process group and allows 15 seconds for cleanup after each 165-second run.
   for attempt in 1 2; do
     status=0
-    timeout --kill-after=15s 165s \
+    "$timeout_command" --kill-after=15s 165s \
       pnpm -C nextjs exec playwright install chromium || status=$?
     if ((status == 0)); then
       return 0
