@@ -168,7 +168,11 @@ jobs:
   e2e:
     needs:
       - nextjs
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: on Ubuntu 26.04 runners the Azure Ubuntu mirror serves
+    # Playwright's font packages (about 25 MB) at roughly 50 KB/s in about a
+    # third of runs, which overruns the installer's 165-second dependency
+    # budget. Ubuntu 24.04 installs them in seconds.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
