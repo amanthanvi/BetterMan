@@ -15,6 +15,7 @@ import type * as _relatedLinks from "../_relatedLinks.js";
 import type * as _releaseIntegrity from "../_releaseIntegrity.js";
 import type * as _releaseLookups from "../_releaseLookups.js";
 import type * as _releaseManifest from "../_releaseManifest.js";
+import type * as _searchTypos from "../_searchTypos.js";
 import type * as _storedPayload from "../_storedPayload.js";
 import type * as content from "../content.js";
 import type * as crons from "../crons.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   _releaseIntegrity: typeof _releaseIntegrity;
   _releaseLookups: typeof _releaseLookups;
   _releaseManifest: typeof _releaseManifest;
+  _searchTypos: typeof _searchTypos;
   _storedPayload: typeof _storedPayload;
   content: typeof content;
   crons: typeof crons;

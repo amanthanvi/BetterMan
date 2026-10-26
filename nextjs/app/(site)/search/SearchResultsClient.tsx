@@ -73,7 +73,7 @@ function buildSynopsisSnippet(r: SearchResult): string {
 
   if (!lines.length) return ''
 
-  const picked = lines.slice(-2)
+  const picked = r.match === 'option' ? lines.slice(0, 8) : lines.slice(-2)
   const maxLen = 180
   return picked
     .map((l) => (l.length > maxLen ? `${l.slice(0, maxLen)}…` : l))
@@ -227,6 +227,9 @@ export function SearchResultsClient({
     return (
       <div className="mt-8 text-sm text-muted">
         No results for <span className="font-mono text-fg">{q}</span>.
+        {q.trim().includes(' ') ? (
+          <span> Search command names, flags, or words from a page’s description. Full shell commands and natural-language questions are not supported yet.</span>
+        ) : null}
         {q.includes('.') || q.includes('_') ? null : (
           <span> Names with dots or underscores are searched as written, like <span className="font-mono">ssh_config</span>.</span>
         )}

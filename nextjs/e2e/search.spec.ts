@@ -37,6 +37,23 @@ test('search: live query updates preserve input focus', async ({ page }) => {
 test('search: typo still finds relevant results', async ({ page }) => {
   await page.goto('/search?q=tarr')
   await expect(page.getByRole('link', { name: /tar\(1\)/i })).toBeVisible()
+  await expect(page.getByText('Did you mean:', { exact: false })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'tar', exact: true })).toHaveAttribute('href', '/search?q=tar')
+})
+
+test('search: citations resolve the exact section without correction copy', async ({ page }) => {
+  await page.goto('/search?q=tar%281%29')
+  const first = page.getByRole('list', { name: 'Search results' }).getByRole('listitem').first()
+  await expect(first.getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
+  await expect(page.getByText('Did you mean:', { exact: false })).toHaveCount(0)
+})
+
+test('search: unsupported questions give guidance without an unrelated answer', async ({ page }) => {
+  await page.goto('/search?q=how%20do%20I%20extract%20a%20tarball')
+  await expect(page.getByText('No results for', { exact: false })).toBeVisible()
+  await expect(page.getByText('natural-language questions are not supported yet', { exact: false })).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Search results' })).toHaveCount(0)
+  await expect(page.getByText('Did you mean:', { exact: false })).toHaveCount(0)
 })
 
 test('search: load more disables when all results are loaded', async ({ page }) => {
