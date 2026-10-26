@@ -169,7 +169,7 @@ jobs:
     needs:
       - nextjs
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -190,7 +190,9 @@ jobs:
         id: playwright-version
         shell: bash
         # Key on the installed version, not the requested semver range.
-        run: echo "version=$(node -p "require('./nextjs/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(node -p "require('./nextjs/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
@@ -198,17 +200,31 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
 
+      # The .deb files the prefetch below downloads, so most runs never wait on
+      # the Ubuntu mirror. apt still fetches any package whose version changed.
+      - name: Cache Playwright system packages
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.cache/playwright-apt
+          key: ${{ runner.os }}-${{ steps.playwright-version.outputs.image }}-playwright-apt-${{ steps.playwright-version.outputs.version }}
+
       # Download the system packages Playwright's install-deps adds before the
       # installer runs. apt-get --download-only never runs dpkg, so this step can
-      # wait out a slow Ubuntu mirror and be stopped at any point; the installer
-      # then installs from apt's cache inside its 165-second dpkg budget.
+      # wait out a slow Ubuntu mirror (it has served them at about 45 KB/s) and be
+      # stopped at any point; the installer then installs from apt's cache inside
+      # its 165-second dpkg budget.
       - name: Prefetch Playwright system packages
         continue-on-error: true
-        timeout-minutes: 10
+        timeout-minutes: 15
         shell: bash
         run: |
           set -euo pipefail
+          cache_dir="$HOME/.cache/playwright-apt"
+          mkdir -p "$cache_dir"
           sudo apt-get update -qq
+          if compgen -G "$cache_dir/*.deb" >/dev/null; then
+            sudo cp "$cache_dir"/*.deb /var/cache/apt/archives/
+          fi
           packages=()
           while IFS= read -r package; do
             packages+=("$package")
@@ -223,6 +239,7 @@ jobs:
           echo "Fetching ${#packages[@]} packages: ${packages[*]}"
           for attempt in 1 2 3; do
             if sudo apt-get install --download-only -y -q --no-install-recommends "${packages[@]}"; then
+              cp /var/cache/apt/archives/*.deb "$cache_dir"/ 2>/dev/null || true
               exit 0
             fi
             echo "Package prefetch attempt ${attempt}/3 failed." >&2
