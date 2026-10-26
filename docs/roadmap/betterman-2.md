@@ -94,54 +94,54 @@ Decided: deterministic features computed from the corpus, plus build-time genera
 
 ## Workstreams
 
-Issue links are added as the issues are filed.
+Each ID links to its issue.
 
 ### A. Look-independent fixes and quick wins (now)
 
 | ID | Workstream |
 |---|---|
-| A1 | Reader correctness. Duplicate option/definition IDs (91 on tar(1)). `-e` highlight matching inside words. Find bar skips match 1 and has no shortcut. Opening a `?distro=` link overwrites the default distro, and bare links then 404. SEE ALSO/RELATED duplication. External URLs not linkified. Sections 2/3 code defaults to bash highlighting. Home says "Sections 1–9" but lists 8. |
-| A2 | Search correctness. `name(section)` queries. Clustered short flags (`-xzf`). "Did you mean" shows on successful queries and never on empty ones. Honest copy for non-lookup queries. Real edit-distance typo tolerance. |
-| A3 | Ingestion correctness. Options nested under or outside the OPTIONS heading (tar's operation modes, git-commit's zero options). Arch and Alpine tar(1) missing. Licenses for Fedora, Arch, Alpine, FreeBSD, and macOS. Label macOS as a BSD-licensed subset. |
-| A4 | Short URLs (`/tar`, `/tar.1`, `/tar/-x`) and OpenSearch with suggestions. |
-| A5 | Non-browser access: robots policy for answer engines, a Vercel challenge exemption for `/man/*`, and `.txt` plain-text pages. |
-| A6 | Hash-based CSP and edge caching of man pages. |
-| A7 | Performance and cost budgets measured and enforced in CI. |
-| A8 | First-party Plausible plus a few custom events. |
-| A9 | 404 page in man's voice with did-you-mean; per-page "report a problem" link. |
+| [A1](https://github.com/amanthanvi/BetterMan/issues/384) | Reader correctness. Duplicate option/definition IDs (91 on tar(1)). `-e` highlight matching inside words. Find bar skips match 1 and has no shortcut. Opening a `?distro=` link overwrites the default distro, and bare links then 404. SEE ALSO/RELATED duplication. External URLs not linkified. Sections 2/3 code defaults to bash highlighting. Home says "Sections 1–9" but lists 8. |
+| [A2](https://github.com/amanthanvi/BetterMan/issues/385) | Search correctness. `name(section)` queries. Clustered short flags (`-xzf`). "Did you mean" shows on successful queries and never on empty ones. Honest copy for non-lookup queries. Real edit-distance typo tolerance. |
+| [A3](https://github.com/amanthanvi/BetterMan/issues/386) | Ingestion correctness. Options nested under or outside the OPTIONS heading (tar's operation modes, git-commit's zero options). Arch and Alpine tar(1) missing. Licenses for Fedora, Arch, Alpine, FreeBSD, and macOS. Label macOS as a BSD-licensed subset. |
+| [A4](https://github.com/amanthanvi/BetterMan/issues/387) | Short URLs (`/tar`, `/tar.1`, `/tar/-x`) and OpenSearch with suggestions. |
+| [A5](https://github.com/amanthanvi/BetterMan/issues/388) | Non-browser access: robots policy for answer engines, a Vercel challenge exemption for `/man/*`, and `.txt` plain-text pages. |
+| [A6](https://github.com/amanthanvi/BetterMan/issues/389) | Hash-based CSP and edge caching of man pages. |
+| [A7](https://github.com/amanthanvi/BetterMan/issues/390) | Performance and cost budgets measured and enforced in CI. |
+| [A8](https://github.com/amanthanvi/BetterMan/issues/391) | First-party Plausible plus a few custom events. |
+| [A9](https://github.com/amanthanvi/BetterMan/issues/392) | 404 page in man's voice with did-you-mean; per-page "report a problem" link. |
 
 ### B. Data track
 
 | ID | Workstream |
 |---|---|
-| B1 | Full-Debian extraction pipeline:<br>• Contents and Packages indexes, `.deb` extraction, symlink and `.so` resolution, alternatives, conflict policy.<br>• Streaming or two-pass memory, parallel upload.<br>• Convex scale fixes: release manifest over 1 MiB, the 8,192-element license array, release-document read cost, section caps (114 sections, the 5,000 offset), Perl `Foo::Bar` names, prune at scale. |
-| B2 | Full extraction for Ubuntu (shares B1), Fedora (rpm), Arch (pkg), and Alpine (apk). |
-| B3 | All languages: language-aware schema, search, and sitemaps; hreflang; drift detection. |
-| B4 | Popularity priors (popcon and Plausible) and the index-by-demand sitemap and `noindex` policy. |
-| B5 | Search: popularity-aware ranking, symbol index, task-phrase index, explain parser (full shell line → tokens → option definitions). |
-| B6 | Generated layer: provider-swappable client, summaries, gap-fill examples, task phrases, tldr-pages ingestion with attribution, flag verifier, provenance, hash-gated regeneration within Go caps. |
-| B7 | Derived data: portability diffs and variant grouping, "new in X" marks, referenced-by index, subcommand families, package pages, most-used flags. |
-| B8 | Concept explainers anchored to section 7, with model-panel review and owner skim. |
-| B9 | UI localization pipeline: string catalog, LLM translation, review, community fixes. |
-| B10 | Provider collisions and the "provided by" switch. |
+| [B1](https://github.com/amanthanvi/BetterMan/issues/393) | Full-Debian extraction pipeline:<br>• Contents and Packages indexes, `.deb` extraction, symlink and `.so` resolution, alternatives, conflict policy.<br>• Streaming or two-pass memory, parallel upload.<br>• Convex scale fixes: release manifest over 1 MiB, the 8,192-element license array, release-document read cost, section caps (114 sections, the 5,000 offset), Perl `Foo::Bar` names, prune at scale. |
+| [B2](https://github.com/amanthanvi/BetterMan/issues/394) | Full extraction for Ubuntu (shares B1), Fedora (rpm), Arch (pkg), and Alpine (apk). |
+| [B3](https://github.com/amanthanvi/BetterMan/issues/395) | All languages: language-aware schema, search, and sitemaps; hreflang; drift detection. |
+| [B4](https://github.com/amanthanvi/BetterMan/issues/396) | Popularity priors (popcon and Plausible) and the index-by-demand sitemap and `noindex` policy. |
+| [B5](https://github.com/amanthanvi/BetterMan/issues/397) | Search: popularity-aware ranking, symbol index, task-phrase index, explain parser (full shell line → tokens → option definitions). |
+| [B6](https://github.com/amanthanvi/BetterMan/issues/398) | Generated layer: provider-swappable client, summaries, gap-fill examples, task phrases, tldr-pages ingestion with attribution, flag verifier, provenance, hash-gated regeneration within Go caps. |
+| [B7](https://github.com/amanthanvi/BetterMan/issues/399) | Derived data: portability diffs and variant grouping, "new in X" marks, referenced-by index, subcommand families, package pages, most-used flags. |
+| [B8](https://github.com/amanthanvi/BetterMan/issues/400) | Concept explainers anchored to section 7, with model-panel review and owner skim. |
+| [B9](https://github.com/amanthanvi/BetterMan/issues/401) | UI localization pipeline: string catalog, LLM translation, review, community fixes. |
+| [B10](https://github.com/amanthanvi/BetterMan/issues/402) | Provider collisions and the "provided by" switch. |
 
 ### C. Design track
 
 | ID | Workstream |
 |---|---|
-| C1 | Bake-off phase 1 (22 runs), gallery, checks, and blind critique, then owner pick (sign-off). |
-| C2 | Bake-off phase 2: three assigned directions by the winning model. |
-| C3 | Final direction and name decision (sign-off), then a rewrite of DESIGN.md, tokens, the grammar checker, and the e2e contracts. |
-| C4 | Answer-first man page: options index, composer, xref previews, concept surfacing, `less` keys, live tables, portability, version, language, provider, and distro UI. |
-| C5 | Search as home, living placeholder, explain UI, results, section and package browse. |
-| C6 | Share cards, typographic finesse, print stylesheet. |
-| C7 | Reading-preferences pruning, driven by A8 data. |
+| [C1](https://github.com/amanthanvi/BetterMan/issues/403) | Bake-off phase 1 (22 runs), gallery, checks, and blind critique, then owner pick (sign-off). |
+| [C2](https://github.com/amanthanvi/BetterMan/issues/404) | Bake-off phase 2: three assigned directions by the winning model. |
+| [C3](https://github.com/amanthanvi/BetterMan/issues/405) | Final direction and name decision (sign-off), then a rewrite of DESIGN.md, tokens, the grammar checker, and the e2e contracts. |
+| [C4](https://github.com/amanthanvi/BetterMan/issues/406) | Answer-first man page: options index, composer, xref previews, concept surfacing, `less` keys, live tables, portability, version, language, provider, and distro UI. |
+| [C5](https://github.com/amanthanvi/BetterMan/issues/407) | Search as home, living placeholder, explain UI, results, section and package browse. |
+| [C6](https://github.com/amanthanvi/BetterMan/issues/408) | Share cards, typographic finesse, print stylesheet. |
+| [C7](https://github.com/amanthanvi/BetterMan/issues/409) | Reading-preferences pruning, driven by A8 data. |
 
 ### D. Launch
 
 | ID | Workstream |
 |---|---|
-| D1 | BetterMan 2 relaunch once B1, C3–C5 and the core of B5–B7 ship. |
+| [D1](https://github.com/amanthanvi/BetterMan/issues/410) | BetterMan 2 relaunch once B1, C3–C5 and the core of B5–B7 ship. |
 
 ## Open risks
 
