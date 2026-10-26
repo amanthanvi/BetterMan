@@ -5,6 +5,12 @@ world is **the typeset Unix manual, on screen** — the Bell Labs printed manual
 as design authority. Surfaces are Operate (home, search, section, palette) and
 Read (the man page).
 
+> **Status (2026-10-26):** BetterMan 2 opens this grammar, and the contracts
+> below, to replacement by the design bake-off described in
+> `docs/roadmap/betterman-2.md`. Everything here stays in force, and
+> `pnpm next:grammar` stays enforced, until the owner signs off on the new
+> direction and this file is rewritten for it.
+
 ## The grammar (the actual design system)
 
 1. **Structure is typographic.** Hierarchy comes from type roles, whitespace,
