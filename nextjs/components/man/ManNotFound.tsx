@@ -8,16 +8,15 @@ import type { SuggestApiResponse, Suggestion } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
 import { useDistro } from '../state/distro'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
+import { ManDistroAvailability } from './ManDistroAvailability'
 
 // Rendered by the `/man/[name]` not-found boundary, which Next passes to the
 // client router as a fallback on every request, so the lookup only runs once
 // the 404 is actually shown.
 export function ManNotFound() {
   const { name, section } = useParams<{ name: string; section?: string }>()
-  const { distro } = useDistro()
+  const { distro, urlDistro } = useDistro()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
-  // Debian when the requested distro has no active release, as on the man page.
-  const [suggestionsDistro, setSuggestionsDistro] = useState(distro)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -32,10 +31,7 @@ export function ManNotFound() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return (await res.json()) as SuggestApiResponse
       })
-      .then((payload) => {
-        setSuggestions(payload.suggestions)
-        setSuggestionsDistro(payload.distro ?? distro)
-      })
+      .then((payload) => setSuggestions(payload.suggestions))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
         setSuggestions([])
@@ -55,6 +51,8 @@ export function ManNotFound() {
         </p>
       </header>
 
+      {section ? <ManDistroAvailability name={name} section={section} distro={distro} /> : null}
+
       {suggestions.length ? (
         <div className="mt-6 space-y-2 text-sm text-muted">
           <div>Did you mean:</div>
@@ -62,7 +60,7 @@ export function ManNotFound() {
             {suggestions.map((s) => (
               <li key={`${s.name}:${s.section}`} className="flex flex-col">
                 <Link
-                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, suggestionsDistro)}
+                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, urlDistro)}
                   className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
                 >
                   {s.name}({s.section})
@@ -77,7 +75,7 @@ export function ManNotFound() {
 
       <div className="mt-6">
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent(name)}`, distro)}
+          href={withDistro(`/search?q=${encodeURIComponent(name)}`, urlDistro)}
           className="text-sm underline underline-offset-4"
         >
           Search for “{name}”

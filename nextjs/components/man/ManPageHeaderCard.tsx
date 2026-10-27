@@ -65,7 +65,7 @@ export function ManPageHeaderCard({
             </IconButton>
           ) : null}
 
-          <IconButton onClick={onOpenFind} aria-label="Find in page" title="Find in page">
+          <IconButton onClick={onOpenFind} aria-label="Find in page" title="Find in page (F)">
             <SearchIcon className="size-4" />
           </IconButton>
 

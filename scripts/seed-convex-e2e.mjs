@@ -93,6 +93,14 @@ function makePages(distro) {
         { type: 'text', text: ' Use it to bundle directories into a single file. tarr is a common typo.' },
       ],
     },
+    {
+      type: 'paragraph',
+      inlines: [
+        { type: 'text', text: 'Run it from ' },
+        { type: 'link', href: '/man/bash/1', linkType: 'internal', inlines: [{ type: 'text', text: 'bash(1)' }] },
+        { type: 'text', text: '. Non-compressed input and --catalog are unrelated to -c. Report bugs at https://www.gnu.org/software/tar/.' },
+      ],
+    },
   ]
 
   const variantLabel = { ubuntu: 'Ubuntu', freebsd: 'FreeBSD', macos: 'macOS' }[distro]
@@ -145,6 +153,8 @@ function makePages(distro) {
     seeAlso: [{ name: 'gzip', section: '1', resolvedPageId: gzip.externalId }, { name: 'cpio', section: '1', resolvedPageId: null }],
   })
   tar.links.push({ toExternalId: gzip.externalId, toName: 'gzip', toSection: '1', linkType: 'see_also' })
+  // The SEE ALSO paragraph links gzip(1) again, as ingestion records it.
+  tar.links.push({ toExternalId: gzip.externalId, toName: 'gzip', toSection: '1', linkType: 'xref' })
 
   const printf1 = page({
     name: 'printf',
@@ -161,7 +171,11 @@ function makePages(distro) {
     title: 'printf(3)',
     description: 'formatted output conversion',
     toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }],
-    blocks: [{ type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' }, { type: 'paragraph', inlines: [{ type: 'text', text: 'printf() writes formatted output to stdout.' }] }],
+    blocks: [
+      { type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' },
+      { type: 'paragraph', inlines: [{ type: 'text', text: 'printf() writes formatted output to stdout.' }] },
+      { type: 'code_block', id: 'description-code', text: 'int printf(const char *restrict format, ...);', languageHint: null },
+    ],
   })
 
   const openssl = page({
@@ -213,7 +227,27 @@ function makePages(distro) {
     synopsis: ['bash [options] [command_string | file]'],
   })
 
-  return [gzip, tar, printf1, printf3, openssl, evp, bash]
+  tar.links.push({ toExternalId: bash.externalId, toName: 'bash', toSection: '1', linkType: 'xref' })
+
+  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash]
+  // Linux only, so FreeBSD and macOS have a page another distro carries.
+  if (distro !== 'freebsd' && distro !== 'macos') {
+    pages.push(
+      page({
+        name: 'systemctl',
+        section: '1',
+        title: 'systemctl(1)',
+        description: 'Control the systemd system and service manager',
+        toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }],
+        blocks: [
+          { type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' },
+          { type: 'paragraph', inlines: [{ type: 'text', text: 'systemctl inspects and controls systemd.' }] },
+        ],
+        synopsis: ['systemctl [OPTIONS...] COMMAND [UNIT...]'],
+      }),
+    )
+  }
+  return pages
 }
 
 const now = new Date().toISOString()

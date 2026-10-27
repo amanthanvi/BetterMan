@@ -5,6 +5,7 @@ import type * as Api from '@/lib/api'
 
 const apiMocks = vi.hoisted(() => ({
   fetchManByNameAndSectionOrAlias: vi.fn(),
+  fetchManDistros: vi.fn(),
   fetchManMetaByNameAndSection: vi.fn(),
   search: vi.fn(),
   listSection: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock('@/lib/api', async () => {
     fetchLicenses: vi.fn(),
     fetchManByName: vi.fn(),
     fetchManByNameAndSectionOrAlias: apiMocks.fetchManByNameAndSectionOrAlias,
+    fetchManDistros: apiMocks.fetchManDistros,
     fetchManMetaByNameAndSection: apiMocks.fetchManMetaByNameAndSection,
     fetchRelated: vi.fn(),
     fetchSeoReleases: vi.fn(),
@@ -219,6 +221,18 @@ describe('public API aliases', () => {
 
     expect(res.status).toBe(308)
     expect(res.headers.get('location')).toBe('/api/v1/man/gzip/1?distro=ubuntu')
+  })
+})
+
+describe('man page distros API', () => {
+  it('lists the distros that have a page, whatever distro the caller is on', async () => {
+    apiMocks.fetchManDistros.mockResolvedValueOnce({ distros: ['debian', 'ubuntu'] })
+
+    const res = await GET(request('/api/v1/man/SystemCTL/1/distros?distro=macos'), context(['v1', 'man', 'SystemCTL', '1', 'distros']))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ distros: ['debian', 'ubuntu'] })
+    expect(apiMocks.fetchManDistros).toHaveBeenCalledWith({ name: 'systemctl', section: '1' })
   })
 })
 

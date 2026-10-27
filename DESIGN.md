@@ -102,6 +102,9 @@ combinator (no merge — primitives own their recipes).
   article.
 - **Highlights:** `mark[data-bm-find]`, `mark[data-bm-opt]`, `.bm-mark`,
   `.bm-find-active`.
+- **Option anchors:** the body definition keeps the parser's id, so
+  `#<anchorId>` lands there; the options-index row is `#opt-<anchorId>`
+  (`~2`, `~3`, … if taken). Both select the option. No id repeats on a page.
 - **Data hooks:** `data-bm-app-header/app-footer/sidebar/findbar/home-search/page-search`.
 - **Accessible names asserted by `nextjs/e2e/`:** banner "Site header",
   contentinfo "Site footer", searchbox "Search man pages", combobox
@@ -112,11 +115,12 @@ combinator (no merge — primitives own their recipes).
   "Find in page" / "Previous|Next match" / "Expand|Collapse sidebar" /
   "Load more results", table "Command-line options" (flags as separate exact
   texts), select "Select distribution variant" (a real `<select>`), regions
-  "Recent" / "Bookmarks" / "Quick examples", heading "Browse", TOC active link
+  "Recent" / "Bookmarks" / "Quick examples" / "Other distributions" (man page
+  404), complementaries "See also" / "Related commands", heading "Browse", TOC active link
   `aria-current="location"`. Section labels may render uppercase — accessible
   name matching is case-insensitive.
 - **Keyboard map:** ⌘K palette · `/` search · `?` shortcuts · `d` theme ·
-  `b` sidebar/TOC · `t` top · `h` home · `p` prefs · `m` bookmark ·
-  Enter/Shift+Enter find navigation. Single-key shortcuts are ignored while
+  `b` sidebar/TOC · `t` top · `h` home · `p` prefs · `m` bookmark · `f` find
+  (man pages) · Enter/Shift+Enter find navigation. Single-key shortcuts are ignored while
   typing in a field or while any modal (`aria-modal="true"`) is open.
 - Print stylesheet forces light monochrome via `--color-*` overrides.

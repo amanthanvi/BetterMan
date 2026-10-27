@@ -13,6 +13,7 @@ export function ManPageOptionsSection({
   optionTerms,
   onClearHighlight,
   options,
+  rowIds,
   optionsCount,
   optionsExpanded,
   onToggleOptionsExpanded,
@@ -23,6 +24,7 @@ export function ManPageOptionsSection({
   optionTerms: string[]
   onClearHighlight: () => void
   options?: OptionItem[] | null
+  rowIds: ReadonlyMap<string, string>
   optionsCount: number
   optionsExpanded: boolean
   onToggleOptionsExpanded: () => void
@@ -59,6 +61,7 @@ export function ManPageOptionsSection({
           <div className="mt-3">
             <OptionsTable
               options={previewOptions}
+              rowIds={rowIds}
               selectedAnchorId={selectedAnchorId}
               onSelect={onSelectOption}
               flashAnchorId={flashAnchorId}
@@ -70,7 +73,8 @@ export function ManPageOptionsSection({
               <div aria-hidden={optionsExpanded ? undefined : true} {...(optionsExpanded ? {} : { inert: true })}>
                 <OptionsTable
                   options={restOptions}
-                  selectedAnchorId={selectedAnchorId}
+                  rowIds={rowIds}
+              selectedAnchorId={selectedAnchorId}
                   onSelect={onSelectOption}
                   flashAnchorId={flashAnchorId}
                 />

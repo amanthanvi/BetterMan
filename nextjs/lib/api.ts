@@ -216,7 +216,13 @@ const cachedManMetaByNameAndSection = unstable_cache(
 const cachedRelated = unstable_cache(
   async (distro: Distro, name: string, section: string) =>
     await convex().query(api.queries.getRelated, { distro, name, section }),
-  ['betterman', 'convex', 'related'],
+  ['betterman', 'convex', 'related', 'v2'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+const cachedManDistros = unstable_cache(
+  async (name: string, section: string) => await convex().query(api.queries.listManDistros, { name, section }),
+  ['betterman', 'convex', 'man-distros'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -359,6 +365,12 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
 export type RelatedResponse = { items: SectionPage[] }
 
 export type ManPageMetaResponse = { page: ManPage }
+
+export type ManDistrosResponse = { distros: Distro[] }
+
+export async function fetchManDistros(opts: { name: string; section: string }): Promise<ManDistrosResponse> {
+  return await cachedManDistros(opts.name, opts.section)
+}
 
 export async function fetchRelated(opts: {
   distro: Distro

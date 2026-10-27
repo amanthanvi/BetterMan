@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../../../lib/api'
-import { withDistro } from '../../../../lib/distro'
+import { canonicalWithDistro } from '../../../../lib/distro'
 import { getPublicOrigin } from '../../../../lib/public-origin'
 
 export const dynamic = 'force-dynamic'
@@ -47,7 +47,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
     const rows = data.items
       .map((item: SeoSitemapItem) => {
         const locBase = `${origin}/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`
-        const loc = withDistro(locBase, distro)
+        const loc = canonicalWithDistro(locBase, distro)
         return `  <url>\n    <loc>${loc}</loc>\n  </url>`
       })
       .join('\n')

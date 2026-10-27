@@ -11,11 +11,14 @@ function splitFlags(flags: string): string[] {
 
 export function OptionsTable({
   options,
+  rowIds,
   selectedAnchorId,
   flashAnchorId,
   onSelect,
 }: {
   options: OptionItem[]
+  /** Row anchor per `anchorId`, distinct from the body definition's id. */
+  rowIds: ReadonlyMap<string, string>
   selectedAnchorId?: string | null
   flashAnchorId?: string | null
   onSelect?: (opt: OptionItem, event: React.MouseEvent<HTMLAnchorElement>) => void
@@ -27,6 +30,7 @@ export function OptionsTable({
           {options.map((opt) => {
             const selected = selectedAnchorId === opt.anchorId
             const flashing = flashAnchorId === opt.anchorId
+            const rowId = rowIds.get(opt.anchorId) ?? `opt-${opt.anchorId}`
             const flagParts = splitFlags(opt.flags)
             const flagClass = `font-mono text-sm font-semibold transition-colors group-hover:text-accent ${
               selected ? 'text-accent underline decoration-2 underline-offset-4' : 'text-fg'
@@ -39,8 +43,8 @@ export function OptionsTable({
               >
                 <td className="w-[28ch] py-2.5 pl-0 pr-4 align-top">
                   <a
-                    href={`#${opt.anchorId}`}
-                    id={opt.anchorId}
+                    href={`#${rowId}`}
+                    id={rowId}
                     className="group scroll-mt-24 inline-flex flex-wrap gap-x-3 gap-y-1 no-underline"
                     onClick={(e) => onSelect?.(opt, e)}
                   >

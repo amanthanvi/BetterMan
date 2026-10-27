@@ -6,9 +6,9 @@ import { cache } from 'react'
 
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
 import { FastApiError, fetchManResolve, withDistroFallback, type ManResolveResult } from '../../../lib/api'
-import { withDistro, type Distro } from '../../../lib/distro'
+import { canonicalWithDistro, withDistro, type Distro } from '../../../lib/distro'
 import { getPublicOrigin } from '../../../lib/public-origin'
-import { resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
 // Runs before anything streams, so an unknown name is an HTTP 404 and a single
 // match an HTTP redirect instead of a 200 that falls back on the client.
@@ -39,7 +39,7 @@ export async function generateMetadata({
   if (result.kind !== 'ambiguous') return {}
 
   const origin = getPublicOrigin({ headers: await headers() })
-  const canonical = `${origin}${withDistro(`/man/${encodeURIComponent(name)}`, distro)}`
+  const canonical = `${origin}${canonicalWithDistro(`/man/${encodeURIComponent(name)}`, distro)}`
   const title = `${name} — Choose section — BetterMan`
   const description = `Multiple man page sections match “${name}”. Choose a section to continue.`
   return {
@@ -59,12 +59,13 @@ export default async function ManByNamePage({
 }) {
   const { name } = await params
   const sp = await searchParams
-  const { distro, result } = await resolveName(name, await resolveRequestDistro(sp))
+  const { result } = await resolveName(name, await resolveRequestDistro(sp))
+  const urlDistro = explicitDistro(sp)
   if (result.kind !== 'ambiguous') {
     // 307, not 308: the target depends on the distro cookie and on which sections
     // the current release has, so browsers must not cache it.
     redirect(
-      withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, distro),
+      withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, urlDistro),
     )
   }
 
@@ -85,7 +86,7 @@ export default async function ManByNamePage({
             className="border-b border-edge py-4 "
           >
             <Link
-              href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, distro)}
+              href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, urlDistro)}
               className="font-mono text-base font-semibold tracking-tight underline underline-offset-4"
             >
               {name}({opt.section})

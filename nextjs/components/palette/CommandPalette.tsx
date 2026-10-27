@@ -133,7 +133,7 @@ function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro
     anchorId,
     run: () => {
       recordRecentSearch(ctx.query)
-      ctx.runMan(result.name, result.section, ctx.distro, anchorId)
+      ctx.runMan(result.name, result.section, undefined, anchorId)
     },
   }
 }
@@ -181,6 +181,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const parsed = useMemo(() => parsePaletteInput(input), [input])
   const parsedSearch = useMemo(() => (parsed.mode === 'search' ? parseSearchText(parsed.text) : { text: parsed.text.trim() }), [parsed.mode, parsed.text])
   const effectiveDistro = parsed.mode === 'search' && parsedSearch.distro ? parsedSearch.distro : distro.distro
+  // Navigation carries an `@distro` token, else the current URL's own `?distro=`.
+  const linkDistro = parsed.mode === 'search' && parsedSearch.distro ? parsedSearch.distro : distro.urlDistro
   const debouncedQuery = useDebouncedValue(parsed.mode === 'search' ? parsedSearch.text : parsed.text.trim(), 120)
 
   const [bookmarkSet, setBookmarkSet] = useState<Set<string>>(() => new Set())
@@ -206,16 +208,15 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     const query = q.trim()
     if (!query) return
     recordRecentSearch(query)
-    const targetDistro = distroOverride ?? effectiveDistro
-    router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, targetDistro))
+    router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, distroOverride ?? linkDistro))
     close()
   }
 
   const runMan = (name: string, section: string, distroOverride?: Distro, anchorId?: string) => {
-    const targetDistro = distroOverride ?? effectiveDistro
+    const targetDistro = distroOverride ?? linkDistro
     const samePage =
       anchorId !== undefined &&
-      targetDistro === distro.distro &&
+      (targetDistro ?? distro.preferred) === distro.distro &&
       decodeURIComponent(window.location.pathname).toLowerCase() === `/man/${name}/${section}`.toLowerCase()
     if (samePage) {
       // Already on the page: a router push of a hash-only change does not fire
@@ -296,7 +297,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     id: `action-section-${s}`,
     label: `Go to section ${s}`,
     run: () => {
-      router.push(withDistro(`/section/${encodeURIComponent(s)}`, effectiveDistro))
+      router.push(withDistro(`/section/${encodeURIComponent(s)}`, linkDistro))
       close()
     },
   }))
@@ -314,7 +315,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       id: 'action-home',
       label: 'Go home',
       run: () => {
-        router.push('/')
+        router.push(withDistro('/', linkDistro))
         close()
       },
     },

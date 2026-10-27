@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-import type { Distro } from '../../../lib/distro'
+import { useDistro } from '../../../components/state/distro'
 import { useDebouncedValue } from '../../../lib/useDebouncedValue'
 
 /**
@@ -14,11 +14,9 @@ import { useDebouncedValue } from '../../../lib/useDebouncedValue'
 export function SearchPageInput({
   initialQ,
   section,
-  distro,
 }: {
   initialQ: string
   section: string
-  distro: Distro
 }) {
   const router = useRouter()
   const [value, setValue] = useState(initialQ)
@@ -28,6 +26,7 @@ export function SearchPageInput({
   const lastPushedRef = useRef(initialQuery)
   const restoreFocusRef = useRef(false)
   const isExternalNavigation = initialQuery !== lastPushedRef.current
+  const { urlDistro: distro } = useDistro()
 
   useEffect(() => {
     const cancelFocusRestore = () => {
@@ -80,7 +79,7 @@ export function SearchPageInput({
     const params = new URLSearchParams()
     if (next) params.set('q', next)
     if (section) params.set('section', section)
-    if (distro !== 'debian') params.set('distro', distro)
+    if (distro) params.set('distro', distro)
     const qs = params.toString()
     restoreFocusRef.current = document.activeElement === inputRef.current
     router.replace(qs ? `/search?${qs}` : '/search', { scroll: false })

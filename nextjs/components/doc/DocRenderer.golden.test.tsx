@@ -74,7 +74,7 @@ describe('DocRenderer goldens', () => {
 
       walkBlocks(golden.doc.blocks)
 
-      const html = renderToStaticMarkup(<DocRenderer blocks={golden.doc.blocks} distro="debian" />)
+      const html = renderToStaticMarkup(<DocRenderer blocks={golden.doc.blocks} urlDistro={null} />)
       expect(html.length).toBeGreaterThan(200)
       for (const item of golden.doc.toc) {
         expect(item.title).not.toMatch(/\n/)
@@ -88,7 +88,7 @@ describe('DocRenderer goldens', () => {
 
   it('tar(1) has cross-reference links and a populated SEE ALSO', () => {
     const golden = JSON.parse(readFileSync(join(dir, 'tar.1.json'), 'utf8')) as Exclude<Golden, { alias: unknown }>
-    const html = renderToStaticMarkup(<DocRenderer blocks={golden.doc.blocks} distro="debian" />)
+    const html = renderToStaticMarkup(<DocRenderer blocks={golden.doc.blocks} urlDistro={null} />)
     expect(html).toContain('href="/man/gzip/1"')
     expect(golden.seeAlso.map((r) => r.name)).toContain('gzip')
     expect(golden.doc.toc.map((t) => t.title)).toContain('SEE ALSO')
@@ -96,7 +96,7 @@ describe('DocRenderer goldens', () => {
 
   it('ascii(7) table renders a header row', () => {
     const golden = JSON.parse(readFileSync(join(dir, 'ascii.7.json'), 'utf8')) as Exclude<Golden, { alias: unknown }>
-    const html = renderToStaticMarkup(<DocRenderer blocks={golden.doc.blocks} distro="debian" />)
+    const html = renderToStaticMarkup(<DocRenderer blocks={golden.doc.blocks} urlDistro={null} />)
     expect(html).toMatch(/<th[^>]*>Oct<\/th>/)
   })
 
@@ -107,7 +107,7 @@ describe('DocRenderer goldens', () => {
         inlines: [{ type: 'link', linkType: 'unresolved', href: '/man/nope/1', inlines: [{ type: 'text', text: 'nope(1)' }] }],
       },
     ]
-    const html = renderToStaticMarkup(<DocRenderer blocks={blocks} distro="debian" />)
+    const html = renderToStaticMarkup(<DocRenderer blocks={blocks} urlDistro={null} />)
     expect(html).toContain('<span class="sr-only"> (not available)</span>')
   })
 })

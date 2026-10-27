@@ -60,7 +60,7 @@ describe("related metadata backfill", () => {
     const source = {
       ...pageInput("source"),
       links: [
-        { toExternalId: "target", toName: "target", toSection: "1", linkType: "see_also" as const },
+        { toExternalId: "target", toName: "target", toSection: "1", linkType: "xref" as const },
         { toExternalId: null, toName: "missing", toSection: "1", linkType: "xref" as const },
       ],
     };

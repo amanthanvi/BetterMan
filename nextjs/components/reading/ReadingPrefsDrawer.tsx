@@ -104,7 +104,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
       <div className="mt-6 space-y-6">
         <SegmentedRadioGroup
           label="Default distro"
-          value={distro.distro}
+          value={distro.preferred}
           options={distroOptions}
           onChange={(next) => distro.setDistro(next)}
           scroll

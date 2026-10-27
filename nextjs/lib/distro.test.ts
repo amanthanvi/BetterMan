@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { DISTRO_GROUPS, DISTRO_LABEL, DISTROS, DISTRO_ORDER, isDefaultDistro, manPageHref, normalizeDistro, withDistro } from './distro'
+import {
+  canonicalWithDistro,
+  DISTRO_GROUPS,
+  DISTRO_LABEL,
+  DISTROS,
+  DISTRO_ORDER,
+  manPageHref,
+  normalizeDistro,
+  withDistro,
+} from './distro'
 
 describe('distro helpers', () => {
   it('normalizes supported distros and rejects unsupported values', () => {
@@ -32,25 +41,26 @@ describe('distro helpers', () => {
     expect(DISTRO_LABEL.macos).toBe('macOS (BSD-licensed subset)')
   })
 
-  it('applies distro query params only for non-default distros', () => {
-    expect(isDefaultDistro('debian')).toBe(true)
-    expect(isDefaultDistro('ubuntu')).toBe(false)
-    expect(isDefaultDistro('freebsd')).toBe(false)
-
-    expect(withDistro('/search?q=tar', 'debian')).toBe('/search?q=tar')
+  it('carries the URL distro into links, Debian included, and leaves bare links bare', () => {
+    expect(withDistro('/search?q=tar', null)).toBe('/search?q=tar')
+    expect(withDistro('/search?q=tar', 'debian')).toBe('/search?q=tar&distro=debian')
     expect(withDistro('/search?q=tar', 'ubuntu')).toBe('/search?q=tar&distro=ubuntu')
     expect(withDistro('/man/tar/1#examples', 'arch')).toBe('/man/tar/1?distro=arch#examples')
-    expect(withDistro('/man/tar/1#examples', 'freebsd')).toBe('/man/tar/1?distro=freebsd#examples')
-    expect(withDistro('https://betterman.sh/man/tar/1', 'fedora')).toBe(
-      'https://betterman.sh/man/tar/1?distro=fedora',
-    )
+    expect(withDistro('/search?q=tar&distro=ubuntu', 'debian')).toBe('/search?q=tar&distro=debian')
+  })
+
+  it('keeps Debian bare in canonical URLs', () => {
+    expect(canonicalWithDistro('/man/tar/1', 'debian')).toBe('/man/tar/1')
+    expect(canonicalWithDistro('/man/tar/1#examples', 'freebsd')).toBe('/man/tar/1?distro=freebsd#examples')
+    expect(canonicalWithDistro('https://betterman.sh/man/tar/1', 'fedora')).toBe('https://betterman.sh/man/tar/1?distro=fedora')
   })
 
   it('builds man page links with the option anchor written as-is after the distro query', () => {
-    expect(manPageHref('tar', '1', 'debian')).toBe('/man/tar/1')
-    expect(manPageHref('tar', '1', 'debian', 'opt-create')).toBe('/man/tar/1#opt-create')
+    expect(manPageHref('tar', '1', null)).toBe('/man/tar/1')
+    expect(manPageHref('tar', '1', null, 'opt-create')).toBe('/man/tar/1#opt-create')
+    expect(manPageHref('tar', '1', 'debian', 'opt-create')).toBe('/man/tar/1?distro=debian#opt-create')
     expect(manPageHref('tar', '1', 'arch', 'sort=')).toBe('/man/tar/1?distro=arch#sort=')
-    expect(manPageHref('rsync', '1', 'debian', 'no~2')).toBe('/man/rsync/1#no~2')
-    expect(manPageHref('ssh_config', '5', 'debian')).toBe('/man/ssh_config/5')
+    expect(manPageHref('rsync', '1', null, 'no~2')).toBe('/man/rsync/1#no~2')
+    expect(manPageHref('ssh_config', '5', null)).toBe('/man/ssh_config/5')
   })
 })

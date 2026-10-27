@@ -1,5 +1,7 @@
 'use client'
 
+import { escapeRegExp } from '../../lib/textRanges'
+
 function cutFlagArgumentSyntax(token: string): string {
   const cutChars = ['[', '=', '<'] as const
   let cutAt = token.length
@@ -45,4 +47,20 @@ export function parseOptionTerms(flags: string): string[] {
   }
 
   return out
+}
+
+/**
+ * Matches any of the flags as a whole token: `-e` matches `-e`, `(-e)` and
+ * `-e=x`, but not the `-e` inside `non-existent`, `--exclude` or `-exec`.
+ */
+export function buildOptionRegex(terms?: string[]): RegExp | undefined {
+  const cleaned = (terms ?? [])
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length || a.localeCompare(b))
+
+  if (!cleaned.length) return undefined
+
+  const body = cleaned.map((t) => escapeRegExp(t)).join('|')
+  return new RegExp(`(?<![\\w-])(?:${body})(?![\\w-])`, 'g')
 }

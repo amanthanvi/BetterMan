@@ -9,8 +9,13 @@ export function getFirst(value: string | string[] | undefined): string | undefin
   return value
 }
 
+/** The URL's own `?distro=`, which in-app links carry; null for a bare URL. */
+export function explicitDistro(sp: SearchParams): Distro | null {
+  return normalizeDistro(getFirst(sp.distro))
+}
+
 /** `?distro=` wins over the distro cookie, which wins over the default. */
 export async function resolveRequestDistro(sp: SearchParams): Promise<Distro> {
   const cookieStore = await cookies()
-  return normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieStore.get(DISTRO_COOKIE)?.value) ?? 'debian'
+  return explicitDistro(sp) ?? normalizeDistro(cookieStore.get(DISTRO_COOKIE)?.value) ?? 'debian'
 }

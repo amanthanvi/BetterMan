@@ -1,8 +1,8 @@
 import type { ExampleSnippet } from '../../lib/examples'
-import { CodeBlock } from '../doc/CodeBlock'
+import { CodeBlock, type CodeLanguage } from '../doc/CodeBlock'
 import { ManSectionLabel } from './RunningHead'
 
-export function ManPageExamples({ examples }: { examples: ExampleSnippet[] }) {
+export function ManPageExamples({ examples, codeLanguage }: { examples: ExampleSnippet[]; codeLanguage?: CodeLanguage }) {
   if (!examples.length) return null
 
   return (
@@ -12,7 +12,7 @@ export function ManPageExamples({ examples }: { examples: ExampleSnippet[] }) {
         {examples.map((example, index) => (
           <div key={index} className="space-y-2">
             {example.label ? <p className="text-sm text-muted">{example.label}</p> : null}
-            <CodeBlock text={example.text} languageHint={example.languageHint} />
+            <CodeBlock text={example.text} languageHint={example.languageHint} defaultLanguage={codeLanguage} />
           </div>
         ))}
       </div>

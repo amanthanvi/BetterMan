@@ -1,8 +1,8 @@
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
 
 import { search, withDistroFallback } from '../../lib/api'
-import { withDistro, type Distro } from '../../lib/distro'
-import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { withDistro } from '../../lib/distro'
+import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { manPath, parseShortUrl, type ShortUrl } from '../../lib/shortUrl'
 
 function reservedSegments(): Set<string> {
@@ -34,9 +34,9 @@ function queryString(sp: SearchParams): string {
 // Without a match, or when the search fails, the reader still lands on the
 // page (or its section picker), which settles its own status.
 async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: SearchParams): Promise<string> {
-  const requestedDistro = await resolveRequestDistro(sp)
-  const pageHref = (distro: Distro) => withDistro(manPath(target.name, target.section), distro)
-  const found = await withDistroFallback(requestedDistro, (activeDistro) =>
+  const urlDistro = explicitDistro(sp)
+  const pageHref = withDistro(manPath(target.name, target.section), urlDistro)
+  const found = await withDistroFallback(await resolveRequestDistro(sp), (activeDistro) =>
     search({
       distro: activeDistro,
       q: `${target.name} ${target.flag}`,
@@ -44,13 +44,13 @@ async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: Sea
       limit: 10,
     }),
   ).catch(() => null)
-  if (!found) return pageHref(requestedDistro)
+  if (!found) return pageHref
 
   const hit = found.data.results.find(
     (result) => result.match === 'option' && result.anchorId && result.name.toLowerCase() === target.name,
   )
-  if (hit) return `${withDistro(manPath(target.name, hit.section), found.distro)}#${hit.anchorId}`
-  return pageHref(found.distro)
+  if (hit) return `${withDistro(manPath(target.name, hit.section), urlDistro)}#${hit.anchorId}`
+  return pageHref
 }
 
 export default async function ShortUrlPage({

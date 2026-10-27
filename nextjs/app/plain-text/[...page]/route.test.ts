@@ -98,6 +98,19 @@ it('offers explicit text URLs for ambiguous names', async () => {
   expect(await res.text()).toContain('/man/printf/3.txt?distro=ubuntu')
 })
 
+it('keeps only the request distro in redirects and choices, Debian included, after a fallback', async () => {
+  vi.mocked(fetchManResolve).mockRejectedValueOnce(new FastApiError(404, 'RELEASE_NOT_FOUND', 'Missing'))
+    .mockResolvedValueOnce({ kind: 'alias', name: 'gzip', section: '1' })
+  const fallback = await GET(req('?distro=arch'), ctx(['gunzip']))
+  expect(fallback.headers.get('location')).toBe('/man/gzip/1.txt?distro=arch')
+
+  const explicitDebian = await GET(req('?distro=debian'), ctx(['TAR']))
+  expect(explicitDebian.headers.get('location')).toBe('/man/tar/1.txt?distro=debian')
+
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }] })
+  expect(await (await GET(req(), ctx(['printf']))).text()).toContain('/man/printf/3.txt\n')
+})
+
 it('keeps aliases in plain text and honors distro', async () => {
   vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1' })
   const res = await GET(req('?distro=ubuntu'), ctx(['gunzip']))
