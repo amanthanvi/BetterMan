@@ -51,6 +51,18 @@ requested chunks, and page-load API requests. CI uploads it as the
   CLS uses the largest session window (one-second gap, five-second maximum),
   excluding recent input. Budgets compare medians of five, including the
   median per-navigation **LCP minus FCP**, which must be **≤100 ms**.
+- **Search query cost:** additional direct `queries:search` invocations measure
+  typo fallback (`grpe` and crowded `systemd.servcie`), exact citation (`open(2)`
+  with a competing `open(1)`), citation alias (`man(7)`), single flag (`--gzip`), short cluster (`tar -xzf`),
+  and section-8 cluster (`ss -tlnp`). These count the same runtime function,
+  document and blob reads, including repeated candidate reads. They exclude
+  SSR, hydration and rate-limit work; the original browser search page-view
+  budget still measures that complete scope. Assertions require the intended
+  result, correction signal, option match and ordered cluster highlights.
+  Saturated fixtures exercise the 43-document single-flag and 66-document typo
+  query caps, with no tolerance for increases.
+  Overflow option rows detect a removed flag bound; five populated typo-prefix
+  ranges detect a removed shared candidate ceiling.
 
 Bytes allow 2% above baseline; function calls, documents and blob reads allow
 no increase. LCP uses `min(1000 ms, max(2.5 × baseline, baseline + 250 ms))`:
@@ -115,8 +127,12 @@ never shell-interpolated text. See [PR guards](agents/pr-guards.md). Include
 before/after evidence, offsets, changed measurement scope and known limits in
 that section. Spend increases still need the roadmap's owner approval.
 
-The fixture remains seven distros ×32 pages, stored content, cached related
-metadata and a 160-paragraph bash document with a highlighted code example.
+The four browser cases retain seven distros ×32 pages, stored content, cached
+related metadata and a 160-paragraph bash document with a highlighted code
+example. A separate extended fixture adds Debian search metadata, derived
+option rows, an alias, and dense typo-prefix buckets for the direct query
+cases; it does not change the original browser corpus or its read budgets.
 These counters model fixture request work, not Convex invoices, internal index
 scan bytes, retries or full-corpus behavior. Lab vitals do not represent field
-latency or later interaction. Option/alias/typo fixtures are deferred to #412.
+latency or later interaction. The query-only supplemental pages have no stored
+document body: these cases cover search resolution, not destination rendering.
