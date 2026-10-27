@@ -1,0 +1,199 @@
+{
+ "description": "search for files",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "find - search for files",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "tests",
+    "level": 2,
+    "text": "TESTS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Base of file name (the path with the leading directories removed) matches shell pattern ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "pattern",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". Because the leading directories of the file names are removed, the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "pattern",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " should not include a slash, because `-name a/b' will never match anything (and you probably want to use ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-path",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " instead). An exception to this is when using only a slash as ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "pattern",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " (`-name /'), because that is a valid string for matching the root directory \"/\" (because the base name of \"/\" is \"/\"). A warning is issued if you try to pass a pattern containing a - but not consisting solely of one - slash, unless the environment variable ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "POSIXLY_CORRECT",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is set or the option ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-nowarn",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " is used.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "text": "To ignore a directory and the files under it, use ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-prune",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " rather than checking every file in the tree; see an example in the description of that action. Braces are not recognised as being special, despite the fact that some shells including Bash imbue braces with a special meaning in shell patterns. The filename matching is performed with the use of the ",
+          "type": "text"
+         },
+         {
+          "href": "/man/fnmatch/3",
+          "inlines": [
+           {
+            "text": "fnmatch(3)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " library function. Don't forget to enclose the pattern in quotes in order to protect it from expansion by the shell.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "name-2",
+      "termInlines": [
+       {
+        "text": "-name ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "pattern",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "tests",
+    "level": 2,
+    "title": "TESTS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "name-2",
+   "argument": "pattern",
+   "description": "Base of file name (the path with the leading directories removed) matches shell pattern pattern. Because the leading directories of the file names are removed, the pattern should not include a slash, because `-name a/b' will never match anything (and you probably want to use -path instead). An exception to this is when using only a slash as pattern (`-name /'), because that is a valid string for matching the root directory \"/\" (because the base name of \"/\" is \"/\"). A warning is issued if you try to pass a pattern containing a - but not consisting solely of one - slash, unless the environment variable POSIXLY_CORRECT is set or the option -nowarn is used. To ignore a directory and the files under it, use -prune rather than checking every file in the tree; see an example in the description of that action. Braces are not recognised as being special, despite the fact that some shells including Bash imbue braces with a special meaning in shell patterns. The filename matching is performed with the use of the fnmatch(3) library function. Don't forget to enclose the pattern in quotes in order to protect it from expansion by the shell.",
+   "flags": "-name"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

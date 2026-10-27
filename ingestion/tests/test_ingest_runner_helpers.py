@@ -30,6 +30,7 @@ from ingestion.ingest_runner import (
     _upload_pages,
 )
 from ingestion.man_scan import ManSource
+from ingestion.mandoc_parser import parse_mandoc_html
 
 _ROFF = Path(__file__).parent / "fixtures" / "roff"
 
@@ -476,6 +477,25 @@ def test_page_payload_sends_only_what_the_server_stores() -> None:
     assert payload["searchText"] == ""
     assert len(payload["snippetText"]) == 240
     assert payload["snippetText"].startswith("desc word word")
+
+
+def test_page_payload_keeps_definition_opening_in_options_and_search_snippet() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1><dl>
+      <dt id="f">-f</dt><dd>Use archive file or device <i>ARCHIVE</i>.
+      Examine <code>TAPE</code> first.<p>A later paragraph.</p></dd></dl></div>""")
+    row = replace(
+        _page("tar", "1"),
+        doc=parsed.doc.model_dump(),
+        plain_text=parsed.plain_text,
+        options=[option.model_dump() for option in parsed.options or []],
+    )
+    payload = _page_payload(row, sitemap_page=1, links=[])
+    assert payload["options"][0]["description"] == (
+        "Use archive file or device ARCHIVE. Examine TAPE first. A later paragraph."
+    )
+    assert payload["options"][0]["anchorId"] == "f"
+    assert "Use archive file or device" in payload["snippetText"]
+    assert "TAPE" in payload["snippetText"]
 
 
 def test_page_batches_bound_items_and_exact_request_bytes() -> None:

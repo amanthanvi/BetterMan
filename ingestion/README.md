@@ -25,6 +25,15 @@ cp tests/fixtures/golden/*.json ../nextjs/components/doc/__fixtures__/
 
 The Next.js test `components/doc/DocRenderer.golden.test.tsx` renders the same JSON, so the two copies must match.
 
+`definition-leading-text.1` covers inline content before paragraphs and nested
+blocks, including prose before a single-line code example. `find-name.1` is an
+excerpt from Debian's find(1). The tar and ssh_config goldens retain their opening
+archive/TAPE and ForwardAgent explanations. `tests/test_definition_content.py`
+checks every roff fixture against its rendered source: each `<dd>` opening must
+survive in the matching definition body (or the visible page body for converted
+prose bullets). This guard ignores markup/whitespace differences and checks
+repeated terms in document order. Run it with `pnpm ingest:test`.
+
 The curated command-page check runs after parsing and alias resolution, before any
 release upload. Arch reinstalls requested packages to restore man pages omitted
 by its container image; Alpine requires `tar-doc` alongside `tar`. Debian/Ubuntu

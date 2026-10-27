@@ -1,0 +1,28 @@
+.TH LEADING 1 "2026-10-26" "Parser fixture"
+.SH NAME
+leading \- preserve definition paragraphs
+.SH OPTIONS
+.TP
+.BI "-f " ARCHIVE
+Use archive file or device
+.IR ARCHIVE .
+If this option is not given, examine the environment variable
+.BR TAPE .
+.PP
+An archive name with a colon specifies a remote file.
+.RS
+A nested
+.B inline
+paragraph before a block.
+.PP
+A nested continuation.
+.RE
+.TP
+.B --plain
+Only one paragraph.
+.SH EXAMPLES
+.IP \(bu
+Search for files which are executable but not readable.
+.EX
+$ find /sbin -executable ! -readable -print
+.EE

@@ -2009,6 +2009,15 @@
     "type": "code_block"
    },
    {
+    "inlines": [
+     {
+      "text": "or",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
     "id": null,
     "languageHint": null,
     "text": "tar -c -v -f etc.tar /etc",
@@ -2065,6 +2074,15 @@
     "type": "code_block"
    },
    {
+    "inlines": [
+     {
+      "text": "or (abbreviating some options):",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
     "id": null,
     "languageHint": null,
     "text": "tar --cre --file=etc.tar --verb /etc",
@@ -2111,6 +2129,54 @@
     "items": [
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Append archives to the end of another archive. The arguments are treated as the names of archives to append. All archives must be of the same format as the archive they are appended to, otherwise the resulting archive might be unusable with non-GNU implementations of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "tar",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". Notice also that when more than one archive is given, the members from archives other than the first one will be accessible in the resulting archive only when using the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-i",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--ignore-zeros",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ") option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -2267,6 +2333,15 @@
        {
         "inlines": [
          {
+          "text": "Delete from the archive. The arguments supply names of the archive members to be removed. At least one argument must be given.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
           "text": "This option does not operate on compressed archives. There is no short option equivalent.",
           "type": "text"
          }
@@ -2391,6 +2466,93 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Test the archive volume label and exit. When used without arguments, it prints the volume label (if any) and exits with status ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "0",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ". When one or more command line arguments are given. ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "tar",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " compares the volume label with each argument. It exits with code ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "0",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " if a match is found, and with code ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "1",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " otherwise. No output is displayed, unless used together with the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-v",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--verbose",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ") option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -2699,6 +2861,119 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Handle new GNU-format incremental backups. ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "FILE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is the name of a ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "snapshot file",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", where ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "tar",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " stores additional information which is used to decide which files changed since the previous incremental dump and, consequently, must be dumped again. If ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "FILE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " does not exist when creating an archive, it will be created and all files will be added to the resulting archive (the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "level 0",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " dump). To create incremental archives of non-zero level ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "N",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", you need a copy of the snapshot file created for level ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "N-1",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", and use it as ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "FILE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -4158,6 +4433,15 @@
         {
          "definitionBlocks": [
           {
+           "inlines": [
+            {
+             "text": "Type of the file. It is a single letter with the following meaning:",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          },
+          {
            "id": null,
            "languageHint": null,
            "text": "\n\tf\tRegular file\n\td\tDirectory\n\tl\tSymbolic link\n\th\tHard link\n\tb\tBlock device\n\tc\tCharacter device",
@@ -4903,6 +5187,54 @@
        {
         "inlines": [
          {
+          "text": "Force ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "NAME",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " as group for added files. If ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "GID",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is not supplied, ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "NAME",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " can be either a user name or numeric GID. In this case the missing part (GID or name) will be inferred from the current host's group database.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
           "text": "When used with ",
           "type": "text"
          },
@@ -4994,6 +5326,54 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Read group translation map from ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "FILE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". Empty lines are ignored. Comments are introduced with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "#",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " sign and extend to the end of line. Each non-empty line in ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "FILE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " defines translation for a single group. It must consist of two fields, delimited by any amount of whitespace:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "id": null,
         "languageHint": null,
@@ -5438,6 +5818,54 @@
        {
         "inlines": [
          {
+          "text": "Force ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "NAME",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " as owner for added files. If ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "UID",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is not supplied, ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "NAME",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " can be either a user name or numeric UID. In this case the missing part (UID or name) will be inferred from the current host's user database.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
           "text": "When used with ",
           "type": "text"
          },
@@ -5529,6 +5957,54 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Read owner translation map from ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "FILE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". Empty lines are ignored. Comments are introduced with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "#",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " sign and extend to the end of line. Each non-empty line in ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "FILE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " defines translation for a single UID. It must consist of two fields, delimited by any amount of whitespace:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "id": null,
         "languageHint": null,
@@ -5857,6 +6333,67 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "When creating an archive, sort directory entries according to ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "ORDER",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ", which is one of ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "none",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "name",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ", or ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "inode",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -6227,6 +6764,80 @@
     "items": [
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use archive file or device ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "ARCHIVE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". If this option is not given, ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "tar",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " will first examine the environment variable `TAPE'. If it is set, its value will be used as the archive name. Otherwise, ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "tar",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " will assume the compiled-in default. The default value can be inspected either using the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--show-defaults",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " option, or at the end of the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "tar --help",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " output.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -6908,6 +7519,54 @@
     "items": [
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Change tape after writing ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "N",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": "x1024 bytes. If ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "N",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is followed by a size suffix (see the subsection ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "Size suffixes",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " below), the suffix specifies the multiplicative factor to be used instead of 1024.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -9916,6 +10575,28 @@
        {
         "inlines": [
          {
+          "text": "Treat each line read from a file list as if it were supplied in the command line. I.e., leading and trailing whitespace is removed and, if the resulting string begins with a dash, it is treated as ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "tar",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " command line option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
           "text": "This is the default behavior. The ",
           "type": "text"
          },
@@ -10021,6 +10702,28 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Instruct subsequent ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-T",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " options to read null-terminated names verbatim (disables special handling of names that start with a dash).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -10330,6 +11033,28 @@
        {
         "inlines": [
          {
+          "text": "Get names to extract or create from ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "FILE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
           "text": "Unless specified otherwise, the ",
           "type": "text"
          },
@@ -10579,6 +11304,67 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Treat each line obtained from a file list as a file name, even if it starts with a dash. File lists are supplied with the ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--files-from",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " (",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "-T",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ") option. The default behavior is to handle names supplied in file lists as if they were typed in the command line, i.e. any names starting with a dash are treated as ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "tar",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " options. The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "--verbatim-files-from",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " option disables this behavior.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -12014,6 +12800,54 @@
        {
         "inlines": [
          {
+          "text": "Enable or disable warning messages identified by ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "KEYWORD",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". The messages are suppressed if ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "KEYWORD",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is prefixed with ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "no-",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": " and enabled otherwise.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
           "text": "Multiple ",
           "type": "text"
          },
@@ -12659,6 +13493,28 @@
         },
         {
          "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Controls verbose description of failures occurring when trying to run alternative decompressor programs. This warning is disabled by default (unless ",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "--verbose",
+               "type": "text"
+              }
+             ],
+             "type": "strong"
+            },
+            {
+             "text": " is used). A common example of what you can get when using this warning is:",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          },
           {
            "id": null,
            "languageHint": null,
@@ -13710,7 +14566,7 @@
   {
    "anchorId": "A",
    "argument": null,
-   "description": "Compressed archives cannot be concatenated.",
+   "description": "Append archives to the end of another archive. The arguments are treated as the names of archives to append. All archives must be of the same format as the archive they are appended to, otherwise the resulting archive might be unusable with non-GNU implementations of tar. Notice also that when more than one archive is given, the members from archives other than the first one will be accessible in the resulting archive only when using the -i (--ignore-zeros) option. Compressed archives cannot be concatenated.",
    "flags": "-A, --catenate, --concatenate"
   },
   {
@@ -13728,7 +14584,7 @@
   {
    "anchorId": "delete",
    "argument": null,
-   "description": "This option does not operate on compressed archives. There is no short option equivalent.",
+   "description": "Delete from the archive. The arguments supply names of the archive members to be removed. At least one argument must be given. This option does not operate on compressed archives. There is no short option equivalent.",
    "flags": "--delete"
   },
   {
@@ -13746,7 +14602,7 @@
   {
    "anchorId": "test",
    "argument": null,
-   "description": "There is no short option equivalent for this option.",
+   "description": "Test the archive volume label and exit. When used without arguments, it prints the volume label (if any) and exits with status 0. When one or more command line arguments are given. tar compares the volume label with each argument. It exits with code 0 if a match is found, and with code 1 otherwise. No output is displayed, unless used together with the -v (--verbose) option. There is no short option equivalent for this option.",
    "flags": "--test-label"
   },
   {
@@ -13794,7 +14650,7 @@
   {
    "anchorId": "g",
    "argument": "FILE",
-   "description": "When listing or extracting, the actual content of FILE is not inspected, it is needed only due to syntactical requirements. It is therefore common practice to use /dev/null in its place.",
+   "description": "Handle new GNU-format incremental backups. FILE is the name of a snapshot file, where tar stores additional information which is used to decide which files changed since the previous incremental dump and, consequently, must be dumped again. If FILE does not exist when creating an archive, it will be created and all files will be added to the resulting archive (the level 0 dump). To create incremental archives of non-zero level N, you need a copy of the snapshot file created for level N-1, and use it as FILE. When listing or extracting, the actual content of FILE is not inspected, it is needed only due to syntactical requirements. It is therefore common practice to use /dev/null in its place.",
    "flags": "-g, --listed-incremental"
   },
   {
@@ -13974,13 +14830,13 @@
   {
    "anchorId": "group",
    "argument": "NAME[:GID]",
-   "description": "When used with --group-map=FILE, affects only those files whose owner group is not listed in FILE.",
+   "description": "Force NAME as group for added files. If GID is not supplied, NAME can be either a user name or numeric GID. In this case the missing part (GID or name) will be inferred from the current host's group database. When used with --group-map=FILE, affects only those files whose owner group is not listed in FILE.",
    "flags": "--group"
   },
   {
    "anchorId": "group~2",
    "argument": "FILE",
-   "description": "OLDGRP NEWGRP[:NEWGID] OLDGRP is either a valid group name or a GID prefixed with +. Unless NEWGID is supplied, NEWGRP must also be either a valid group name or a +GID. Otherwise, both NEWGRP and NEWGID need not be listed in the system group database. As a result, each input file with owner group OLDGRP will be stored in archive with owner group NEWGRP and GID NEWGID.",
+   "description": "Read group translation map from FILE. Empty lines are ignored. Comments are introduced with # sign and extend to the end of line. Each non-empty line in FILE defines translation for a single group. It must consist of two fields, delimited by any amount of whitespace: OLDGRP NEWGRP[:NEWGID] OLDGRP is either a valid group name or a GID prefixed with +. Unless NEWGID is supplied, NEWGRP must also be either a valid group name or a +GID. Otherwise, both NEWGRP and NEWGID need not be listed in the system group database. As a result, each input file with owner group OLDGRP will be stored in archive with owner group NEWGRP and GID NEWGID.",
    "flags": "--group-map"
   },
   {
@@ -14028,13 +14884,13 @@
   {
    "anchorId": "owner",
    "argument": "NAME[:UID]",
-   "description": "When used with --owner-map=FILE, affects only those files whose owner is not listed in FILE.",
+   "description": "Force NAME as owner for added files. If UID is not supplied, NAME can be either a user name or numeric UID. In this case the missing part (UID or name) will be inferred from the current host's user database. When used with --owner-map=FILE, affects only those files whose owner is not listed in FILE.",
    "flags": "--owner"
   },
   {
    "anchorId": "owner~2",
    "argument": "FILE",
-   "description": "OLDUSR NEWUSR[:NEWUID] OLDUSR is either a valid user name or a UID prefixed with +. Unless NEWUID is supplied, NEWUSR must also be either a valid user name or a +UID. Otherwise, both NEWUSR and NEWUID need not be listed in the system user database. As a result, each input file owned by OLDUSR will be stored in archive with owner name NEWUSR and UID NEWUID.",
+   "description": "Read owner translation map from FILE. Empty lines are ignored. Comments are introduced with # sign and extend to the end of line. Each non-empty line in FILE defines translation for a single UID. It must consist of two fields, delimited by any amount of whitespace: OLDUSR NEWUSR[:NEWUID] OLDUSR is either a valid user name or a UID prefixed with +. Unless NEWUID is supplied, NEWUSR must also be either a valid user name or a +UID. Otherwise, both NEWUSR and NEWUID need not be listed in the system user database. As a result, each input file owned by OLDUSR will be stored in archive with owner name NEWUSR and UID NEWUID.",
    "flags": "--owner-map"
   },
   {
@@ -14058,7 +14914,7 @@
   {
    "anchorId": "sort=",
    "argument": "ORDER",
-   "description": "The default is --sort=none, which stores archive members in the same order as returned by the operating system. Using --sort=name ensures the member ordering in the created archive is uniform and reproducible. Using --sort=inode reduces the number of disk seeks made when creating the archive and thus can considerably speed up archivation. This sorting order is supported only if the underlying system provides the necessary information.",
+   "description": "When creating an archive, sort directory entries according to ORDER, which is one of none, name, or inode. The default is --sort=none, which stores archive members in the same order as returned by the operating system. Using --sort=name ensures the member ordering in the created archive is uniform and reproducible. Using --sort=inode reduces the number of disk seeks made when creating the archive and thus can considerably speed up archivation. This sorting order is supported only if the underlying system provides the necessary information.",
    "flags": "--sort"
   },
   {
@@ -14112,7 +14968,7 @@
   {
    "anchorId": "f",
    "argument": "ARCHIVE",
-   "description": "An archive name that has a colon in it specifies a file or device on a remote machine. The part before the colon is taken as the machine name or IP address, and the part after it as the file or device pathname, e.g.: --file=remotehost:/dev/sr0 An optional username can be prefixed to the hostname, placing a @ sign between them. By default, the remote host is accessed via the rsh(1) command. Nowadays it is common to use ssh(1) instead. You can do so by giving the following command line option: --rsh-command=/usr/bin/ssh The remote machine should have the rmt(8) command installed. If its pathname does not match tar's default, you can inform tar about the correct pathname using the --rmt-command option.",
+   "description": "Use archive file or device ARCHIVE. If this option is not given, tar will first examine the environment variable `TAPE'. If it is set, its value will be used as the archive name. Otherwise, tar will assume the compiled-in default. The default value can be inspected either using the --show-defaults option, or at the end of the tar --help output. An archive name that has a colon in it specifies a file or device on a remote machine. The part before the colon is taken as the machine name or IP address, and the part after it as the file or device pathname, e.g.: --file=remotehost:/dev/sr0 An optional username can be prefixed to the hostname, placing a @ sign between them. By default, the remote host is accessed via the rsh(1) command. Nowadays it is common to use ssh(1) instead. You can do so by giving the following command line option: --rsh-command=/usr/bin/ssh The remote machine should have the rmt(8) command installed. If its pathname does not match tar's default, you can inform tar about the correct pathname using the --rmt-command option.",
    "flags": "-f, --file"
   },
   {
@@ -14130,7 +14986,7 @@
   {
    "anchorId": "L",
    "argument": "N",
-   "description": "This option implies -M.",
+   "description": "Change tape after writing Nx1024 bytes. If N is followed by a size suffix (see the subsection Size suffixes below), the suffix specifies the multiplicative factor to be used instead of 1024. This option implies -M.",
    "flags": "-L, --tape-length"
   },
   {
@@ -14412,13 +15268,13 @@
   {
    "anchorId": "no~14",
    "argument": null,
-   "description": "This is the default behavior. The --no-verbatim-files-from option is provided as a way to restore it after --verbatim-files-from option. This option is positional: it affects all --files-from options that occur after it in, until --verbatim-files-from option or end of line, whichever occurs first. It is implied by the --no-null option.",
+   "description": "Treat each line read from a file list as if it were supplied in the command line. I.e., leading and trailing whitespace is removed and, if the resulting string begins with a dash, it is treated as tar command line option. This is the default behavior. The --no-verbatim-files-from option is provided as a way to restore it after --verbatim-files-from option. This option is positional: it affects all --files-from options that occur after it in, until --verbatim-files-from option or end of line, whichever occurs first. It is implied by the --no-null option.",
    "flags": "--no-verbatim-files-from"
   },
   {
    "anchorId": "null",
    "argument": null,
-   "description": "See also --verbatim-files-from.",
+   "description": "Instruct subsequent -T options to read null-terminated names verbatim (disables special handling of names that start with a dash). See also --verbatim-files-from.",
    "flags": "--null"
   },
   {
@@ -14454,7 +15310,7 @@
   {
    "anchorId": "T",
    "argument": "FILE",
-   "description": "Unless specified otherwise, the FILE must contain a list of names separated by ASCII LF (i.e. one name per line). The names read are handled the same way as command line arguments. They undergo quote removal and word splitting, and any string that starts with a - is handled as tar command line option. If this behavior is undesirable, it can be turned off using the --verbatim-files-from option. The --null option instructs tar that the names in FILE are separated by ASCII NUL character, instead of LF. It is useful if the list is generated by find(1) -print0 predicate.",
+   "description": "Get names to extract or create from FILE. Unless specified otherwise, the FILE must contain a list of names separated by ASCII LF (i.e. one name per line). The names read are handled the same way as command line arguments. They undergo quote removal and word splitting, and any string that starts with a - is handled as tar command line option. If this behavior is undesirable, it can be turned off using the --verbatim-files-from option. The --null option instructs tar that the names in FILE are separated by ASCII NUL character, instead of LF. It is useful if the list is generated by find(1) -print0 predicate.",
    "flags": "-T, --files-from"
   },
   {
@@ -14466,7 +15322,7 @@
   {
    "anchorId": "verbatim",
    "argument": null,
-   "description": "This option affects all --files-from options that occur after it in the command line. Its effect is reverted by the --no-verbatim-files-from option. This option is implied by the --null option. See also --add-file.",
+   "description": "Treat each line obtained from a file list as a file name, even if it starts with a dash. File lists are supplied with the --files-from (-T) option. The default behavior is to handle names supplied in file lists as if they were typed in the command line, i.e. any names starting with a dash are treated as tar options. The --verbatim-files-from option disables this behavior. This option affects all --files-from options that occur after it in the command line. Its effect is reverted by the --no-verbatim-files-from option. This option is implied by the --null option. See also --add-file.",
    "flags": "--verbatim-files-from"
   },
   {
@@ -14628,7 +15484,7 @@
   {
    "anchorId": "warning",
    "argument": "KEYWORD",
-   "description": "Multiple --warning options accumulate. Keywords controlling general tar operation:",
+   "description": "Enable or disable warning messages identified by KEYWORD. The messages are suppressed if KEYWORD is prefixed with no- and enabled otherwise. Multiple --warning options accumulate. Keywords controlling general tar operation:",
    "flags": "--warning"
   },
   {

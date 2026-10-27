@@ -126,8 +126,10 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             blocks.append(b)
 
     def inlines_from_container(container: Tag) -> list[InlineNode]:
+        return inlines_from_nodes(list(container.children))
+
+    def inlines_from_nodes(children: list[object]) -> list[InlineNode]:
         out: list[InlineNode] = []
-        children = list(container.children)
         index = 0
         while index < len(children):
             child = children[index]
@@ -165,6 +167,8 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
         return InlineLink(href=href, inlines=[InlineText(text=label)], linkType=link_type), rest
 
     def inlines_from_node(node: object) -> list[InlineNode]:
+        if isinstance(node, Comment):
+            return []
         if isinstance(node, NavigableString):
             text = re.sub(r"\s+", " ", str(node))
             if not text:
@@ -233,14 +237,29 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
 
         return inlines_from_container(node)
 
+    def is_block(node: object) -> bool:
+        return isinstance(node, Tag) and (
+            node.name in {"p", "pre", "div", "dl", "ul", "ol", "table", "section", "hr"}
+            or re.fullmatch(r"h[1-6]", node.name) is not None
+        )
+
     def blocks_from_container(container: Tag) -> list[object]:
         out: list[object] = []
+        pending: list[object] = []
+
+        def flush_inlines() -> None:
+            inlines = inlines_from_nodes(pending)
+            if _has_meaningful_inlines(inlines):
+                out.append(BlockParagraph(inlines=inlines))
+            pending.clear()
+
         for child in container.children:
-            if isinstance(child, NavigableString):
-                continue
-            if not isinstance(child, Tag):
-                continue
-            out.extend(blocks_from_tag(child))
+            if is_block(child):
+                flush_inlines()
+                out.extend(blocks_from_tag(child))
+            else:
+                pending.append(child)
+        flush_inlines()
         return out
 
     def blocks_from_tag(tag: Tag) -> list[object]:
@@ -299,7 +318,15 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                         ):
                             pre = dd_children[0]
                             pre_text = _pre_text(pre).strip()
-                            if pre_text and "\n" not in pre_text:
+                            if (
+                                pre_text
+                                and "\n" not in pre_text
+                                and not _has_meaningful_inlines(
+                                    inlines_from_nodes(
+                                        [child for child in dd.children if child is not pre]
+                                    )
+                                )
+                            ):
                                 continuation = inlines_from_container(pre)
                                 item_blocks.append(
                                     BlockParagraph(
@@ -308,7 +335,12 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                                 )
                                 continue
 
-                        definition_blocks = blocks_from_container(dd)
+                        # Inline-only prose bullets join their term and continuation.
+                        definition_blocks = (
+                            blocks_from_container(dd)
+                            if any(is_block(child) for child in dd.children)
+                            else []
+                        )
                         if not definition_blocks:
                             definition_inlines = inlines_from_container(dd)
                             if _has_meaningful_inlines(definition_inlines):

@@ -20,7 +20,12 @@ from pathlib import Path
 
 import pytest
 
-from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
+from ingestion.mandoc_parser import (
+    _blocks_to_text,
+    is_so_stub,
+    parse_mandoc_html,
+    so_target_name_section,
+)
 
 _ROFF = Path(__file__).parent / "fixtures" / "roff"
 _GOLDEN = Path(__file__).parent / "fixtures" / "golden"
@@ -109,6 +114,57 @@ def test_mdoc_synopsis_is_a_line_not_a_table() -> None:
     parsed = parse_mandoc_html(_render(_ROFF / "ls.1.mdoc"))
     assert parsed.synopsis and parsed.synopsis[0].startswith("ls [")
     assert not any(block.type == "table" for block in parsed.doc.blocks)
+
+
+@pytest.mark.parametrize(
+    ("name", "anchor", "opening", "continuation", "flag"),
+    [
+        (
+            "tar.1",
+            "f",
+            "Use archive file or device ARCHIVE.",
+            "tar will first examine the environment variable `TAPE'.",
+            "-f, --file",
+        ),
+        (
+            "find-name.1",
+            "name-2",
+            "Base of file name (the path with the leading directories removed)",
+            "matches shell pattern pattern.",
+            "-name",
+        ),
+        (
+            "ssh_config.5",
+            "ForwardAgent",
+            "Specifies whether the connection to the authentication agent (if any)",
+            "Agent forwarding should be enabled with caution.",
+            None,
+        ),
+    ],
+)
+def test_real_definition_openings_and_option_descriptions_survive(
+    name: str, anchor: str, opening: str, continuation: str, flag: str | None
+) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+
+    def definitions(blocks):
+        for block in blocks:
+            if block.type == "definition_list":
+                for item in block.items:
+                    yield item
+                    yield from definitions(item.definitionBlocks)
+            elif block.type == "list":
+                for item in block.items:
+                    yield from definitions(item)
+
+    definition = next(item for item in definitions(parsed.doc.blocks) if item.id == anchor)
+    text = _blocks_to_text(definition.definitionBlocks)
+    assert text.startswith(opening)
+    assert continuation in text
+    if flag is not None:
+        option = next(option for option in parsed.options or [] if option.flags == flag)
+        assert option.anchorId == anchor
+        assert option.description == text
 
 
 def test_tbl_first_row_becomes_headers() -> None:
