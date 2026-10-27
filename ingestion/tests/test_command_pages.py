@@ -18,7 +18,6 @@ def clear_escape_hatch(monkeypatch) -> None:
     ("distro", "packages", "reason"),
     [
         ("debian", ["gcc", "gdb"], "non-free"),
-        ("ubuntu", ["perl", "python3"], "Ubuntu 24.04 main packages"),
     ],
 )
 def test_verified_distro_exclusions_are_logged(caplog, distro, packages, reason) -> None:
@@ -34,7 +33,14 @@ def test_verified_distro_exclusions_are_logged(caplog, distro, packages, reason)
 
 @pytest.mark.parametrize(
     ("distro", "package"),
-    [("ubuntu", "gcc"), ("ubuntu", "gdb"), ("debian", "perl"), ("debian", "python3")],
+    [
+        ("ubuntu", "gcc"),
+        ("ubuntu", "gdb"),
+        ("debian", "perl"),
+        ("debian", "python3"),
+        ("ubuntu", "perl"),
+        ("ubuntu", "python3"),
+    ],
 )
 def test_exclusions_do_not_disable_other_distros(distro, package) -> None:
     with pytest.raises(RuntimeError, match="missing package-set command pages"):
@@ -47,6 +53,10 @@ def test_exclusions_do_not_disable_other_distros(distro, package) -> None:
     ("distro", "package", "page", "owner"),
     [
         ("ubuntu", "util-linux", "mount(8)", "mount"),
+        ("ubuntu", "perl", "perl(1)", "perl-base"),
+        ("ubuntu", "python3", "python3(1)", "python3-minimal"),
+        ("debian", "perl", "perl(1)", "perl-base"),
+        ("debian", "python3", "python3(1)", "python3-minimal"),
         ("fedora", "coreutils", "ls(1)", "coreutils-common"),
         ("fedora", "util-linux", "mount(8)", "util-linux-core"),
         ("arch", "tar", "tar(1)", "tar"),
@@ -65,15 +75,25 @@ def test_missing_page_error_names_owner(distro, package, page, owner) -> None:
 def test_explicit_escape_hatch_logs_missing_pages_and_owners(monkeypatch, caplog) -> None:
     monkeypatch.setenv("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES", "1")
     caplog.set_level(logging.INFO, logger="betterman.ingestion")
-    runner._require_command_pages(
+    missing = runner._require_command_pages(
         distro="fedora", requested=["coreutils"], pages=[], aliases=[], sample=False
     )
+    assert caplog.records[0].levelno == logging.WARNING
     event = json.loads(caplog.records[0].message)
     assert event["event"] == "command_pages_missing_allowed"
     assert event["distro"] == "fedora"
-    assert event["missing"] == [
-        {"name": "ls", "section": "1", "package": "coreutils", "ownerPackage": "coreutils-common"}
-    ]
+    assert (
+        missing
+        == event["missing"]
+        == [
+            {
+                "name": "ls",
+                "section": "1",
+                "package": "coreutils",
+                "ownerPackage": "coreutils-common",
+            }
+        ]
+    )
 
 
 @pytest.mark.parametrize("value", ["", "0", "true"])

@@ -133,22 +133,14 @@ function search(t: Harness, q: string, section: string | null = null) {
 
 describe("option search", () => {
   it("uses golden argument metadata and stops before attached argument letters", async () => {
-    // #414 supplies the missing operation/common options; keep the real parser
-    // shape and existing golden -f/-z rows until that fixture lands.
-    const options = [...tarGolden.options,
-      { flags: "-x, --extract", anchorId: "extract", argument: null },
-      { flags: "-c, --create", anchorId: "create", argument: null },
-      { flags: "-C, --directory", anchorId: "directory", argument: "DIR" },
-      { flags: "-o", anchorId: "o", argument: null },
-    ];
-    const t = await seeded([page("tar", options), page("mysql", [
+    const t = await seeded([page("tar", tarGolden.options), page("mysql", [
       { flags: "-u, --user=USER", anchorId: "user" },
       ...["r", "o", "t"].map((letter) => ({ flags: `-${letter}`, anchorId: letter })),
     ])], 66);
     expect((await search(t, "tar -xzf")).results[0]).toMatchObject({
-      anchorId: "extract", highlights: ["-x, --extract", "-z, --gzip, --gunzip, --ungzip", "-f, --file"],
+      anchorId: "x", highlights: ["-x, --extract, --get", "-z, --gzip, --gunzip, --ungzip", "-f, --file"],
     });
-    expect((await search(t, "tar -Cfoo")).results[0]).toMatchObject({ anchorId: "directory", highlights: ["-C, --directory"] });
+    expect((await search(t, "tar -Cfoo")).results[0]).toMatchObject({ anchorId: "C", highlights: ["-C, --directory"] });
     expect((await search(t, "tar -gf")).results[0]).toMatchObject({ anchorId: "g", highlights: ["-g, --listed-incremental"] });
     expect((await search(t, "mysql -uroot")).results[0]).toMatchObject({ anchorId: "user", highlights: ["-u, --user=USER"] });
     const rows = await t.run(async (ctx) => {

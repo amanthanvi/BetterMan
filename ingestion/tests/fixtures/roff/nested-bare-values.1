@@ -1,0 +1,40 @@
+.TH NESTED-BARE-VALUES 1 "2026-10-26" "BetterMan regression fixture"
+.SH NAME
+nested-bare-values \- nested argument values are not command options
+.SH OPTIONS
+.TP
+.B \-\-proto
+Protocol modifiers, as in Ubuntu curl:
+.RS
+.TP
+.B +
+Permit this protocol.
+.TP
+.B \-
+Remove this protocol.
+.RE
+.TP
+.B \-\-field
+Field selection, as in numfmt:
+.RS
+.TP
+.B \-
+All fields.
+.RE
+.TP
+.B \-\-compat
+Compatibility entries, as in nsswitch.conf:
+.RS
+.TP
+.B +
+Include entries.
+.RE
+.TP
+.B \-
+Read standard input, as in su and shutdown.
+.TP
+.B \-\-
+Stop option processing, as in sudo.
+.TP
+.B +
+Relative alarm time, as in leave.

@@ -354,6 +354,45 @@ def test_nested_values_are_not_options_but_nested_flags_keep_their_ids() -> None
     assert [item.id for item in values] == ["gnu", "nested", "env"]
 
 
+def test_nested_bare_values_keep_body_ids_but_are_not_options() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <div class="Bd-indent"><dl>
+        <dt id="proto">--proto</dt><dd><div class="Bd-indent"><dl>
+          <dt id="def"><b>+</b></dt><dd>Permit this protocol.</dd>
+          <dt id="def-2"><b>-</b></dt><dd>Remove this protocol.</dd>
+          <dt id="nested">--nested</dt><dd>A real nested flag.</dd>
+        </dl></div></dd>
+        <dt id="field">--field</dt><dd><dl>
+          <dt id="allfields"><b>-</b></dt><dd>All fields.</dd>
+        </dl></dd>
+        <dt id="compat">--compat</dt><dd><ul><li><dl>
+          <dt id="include"><code class="Fl">+</code></dt><dd>Include entries.</dd>
+        </dl></li></ul></dd>
+        <dt id="stdin"><b>-</b></dt><dd>Read standard input.</dd>
+        <dt id="end"><b>--</b></dt><dd>End option processing.</dd>
+        <dt id="relative"><b>+</b></dt><dd>Relative alarm time.</dd>
+      </dl></div></div>""")
+    assert parsed.options
+    assert [(option.flags, option.anchorId) for option in parsed.options] == [
+        ("--proto", "proto"),
+        ("--field", "field"),
+        ("--compat", "compat"),
+        ("-", "stdin"),
+        ("--", "end"),
+        ("+", "relative"),
+        ("--nested", "nested"),
+    ]
+    items = parsed.doc.blocks[1].items[0][0].items
+    assert [item.id for item in items] == ["proto", "field", "compat", "stdin", "end", "relative"]
+    assert [item.id for item in items[0].definitionBlocks[0].items[0][0].items] == [
+        "def",
+        "def-2",
+        "nested",
+    ]
+    assert items[1].definitionBlocks[0].items[0].id == "allfields"
+    assert items[2].definitionBlocks[0].items[0][0].items[0].id == "include"
+
+
 def test_conditional_operators_stay_in_body_and_real_command_flags_stay_indexed() -> None:
     parsed = parse_mandoc_html("""<div class="manual-text">
       <h1>OPTIONS</h1><dl><dt id="real-a">-a</dt><dd>Shell flag.</dd></dl>
@@ -417,3 +456,28 @@ def test_mdoc_command_markup_needs_option_context_for_bare_tokens() -> None:
       </dl></div>""")
     assert parsed.options and [(o.flags, o.anchorId) for o in parsed.options] == [("+", "relative")]
     assert [item.id for item in parsed.doc.blocks[1].items] == ["hash", "left", "plus"]
+
+
+def test_field_range_peers_do_not_make_a_bare_minus_an_option() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <dl><dt>--field=FIELDS</dt><dd>Select fields.</dd></dl>
+      <h2>FIELDS supports cut(1) style field ranges:</h2><dl>
+        <dt id="number">N</dt><dd>The Nth field.</dd>
+        <dt id="last"><b>-M</b></dt><dd>First through Mth field.</dd>
+        <dt id="allfields">-</dt><dd>All fields.</dd>
+      </dl></div>""")
+    assert parsed.options and "allfields" not in [option.anchorId for option in parsed.options]
+    assert [item.id for item in parsed.doc.blocks[3].items] == ["number", "last", "allfields"]
+
+
+def test_compatibility_entry_peers_do_not_make_a_bare_plus_an_option() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>DESCRIPTION</h1>
+      <h2>Compatibility mode (compat)</h2><div class="Bd-indent">
+      <p>For passwd and shadow databases:</p><div class="Bd-indent"><dl>
+        <dt id="user"><b>+</b><i>user</i></dt><dd>Include this user.</dd>
+        <dt id="netgroup"><b>-@</b><i>netgroup</i></dt><dd>Exclude this netgroup.</dd>
+        <dt id="allusers"><b>+</b></dt><dd>Include all users.</dd>
+      </dl></div></div></div>""")
+    assert parsed.options and "allusers" not in [option.anchorId for option in parsed.options]
+    entries = parsed.doc.blocks[2].items[0][1].items[0][0].items
+    assert [item.id for item in entries] == ["user", "netgroup", "allusers"]

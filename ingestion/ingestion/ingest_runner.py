@@ -102,8 +102,8 @@ _PAGE_BATCH_FAILURE_LIMIT = 3
 _LICENSE_DOCUMENT_MAX_BYTES = 1024 * 1024 - 1024
 
 
-def _log(event: str, **fields: object) -> None:
-    logger.info(json_dumps({"ts": iso_utc_now(), "event": event, **fields}))
+def _log(event: str, *, level: int = logging.INFO, **fields: object) -> None:
+    logger.log(level, json_dumps({"ts": iso_utc_now(), "event": event, **fields}))
 
 
 @dataclass(frozen=True)
@@ -233,9 +233,13 @@ def ingest(
 
     _resolve_doc_links_and_see_also(pages=parsed_pages)
     aliases = _resolve_aliases(aliases=aliases, pages=parsed_pages)
-    _require_command_pages(
+    allowed_missing = _require_command_pages(
         distro=distro, requested=requested, pages=parsed_pages, aliases=aliases, sample=sample
     )
+    package_manifest["commandPageCheck"] = {
+        "allowMissingCommandPages": os.environ.get("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES") == "1",
+        "allowedMissingPages": allowed_missing,
+    }
 
     # Aliases count as handled sources for the success gate, but the release
     # page count, section totals, and sitemaps only cover parsed pages.
@@ -746,21 +750,26 @@ _NON_COMMAND_PACKAGES = {
     "spdx-licenses-text",
 }
 _SAMPLE_PAGES = {("bash", "1"), ("ls", "1"), ("curl", "1"), ("tar", "1"), ("ssh_config", "5")}
-# Verified against Debian trixie and Ubuntu 24.04's selected main/free packages.
-# Keep these distro-specific: Ubuntu ships gcc/gdb pages; Debian ships perl/python3.
+# Debian trixie ships these command pages only in non-free documentation packages.
 _COMMAND_PAGE_EXCLUSIONS = {
     "debian": {
         "gcc": "gcc(1) is in gcc-14-doc in non-free, outside the selected main packages",
         "gdb": "gdb(1) is in gdb-doc in non-free, outside the selected main packages",
     },
-    "ubuntu": {
-        "perl": "perl(1) is not shipped by the selected Ubuntu 24.04 main packages",
-        "python3": "python3(1) is not shipped by the selected Ubuntu 24.04 main packages",
-    },
 }
 _COMMAND_PAGE_OWNERS = {
-    "debian": {"util-linux": "mount", "git": "git-man"},
-    "ubuntu": {"util-linux": "mount", "git": "git-man"},
+    "debian": {
+        "util-linux": "mount",
+        "git": "git-man",
+        "perl": "perl-base",
+        "python3": "python3-minimal",
+    },
+    "ubuntu": {
+        "util-linux": "mount",
+        "git": "git-man",
+        "perl": "perl-base",
+        "python3": "python3-minimal",
+    },
     "fedora": {"coreutils": "coreutils-common", "util-linux": "util-linux-core"},
     "alpine": {"tar": "tar-doc"},
 }
@@ -773,11 +782,11 @@ def _require_command_pages(
     pages: list[_PageRow],
     aliases: list[_AliasRow],
     sample: bool,
-) -> None:
+) -> list[dict[str, str]]:
     """Block uploads with missing representative pages after alias resolution.
 
     BETTERMAN_ALLOW_MISSING_COMMAND_PAGES=1 in the ingestion process explicitly
-    bypasses missing pages with a command_pages_missing_allowed log. It never
+    bypasses missing pages with a command_pages_missing_allowed warning. It never
     bypasses unclassified packages. Distro exclusions are individually logged.
     """
     unclassified = sorted(set(requested) - _COMMAND_PAGES.keys() - _NON_COMMAND_PACKAGES)
@@ -811,8 +820,13 @@ def _require_command_pages(
     ]
     if missing:
         if os.environ.get("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES") == "1":
-            _log("command_pages_missing_allowed", distro=distro, missing=missing)
-            return
+            _log(
+                "command_pages_missing_allowed",
+                level=logging.WARNING,
+                distro=distro,
+                missing=missing,
+            )
+            return missing
         raise RuntimeError(
             "publish blocked: missing package-set command pages: "
             + ", ".join(
@@ -822,6 +836,8 @@ def _require_command_pages(
             )
             + "; set BETTERMAN_ALLOW_MISSING_COMMAND_PAGES=1 to override (logged)"
         )
+
+    return []
 
 
 def _parse_man_href(href: str) -> tuple[str, str | None] | None:

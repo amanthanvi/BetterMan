@@ -1,0 +1,485 @@
+{
+ "description": "nsswitch compatibility entries are configuration values",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "nsswitch-compat - nsswitch compatibility entries are configuration values",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "id": "compatibility-mode-compat",
+    "level": 3,
+    "text": "Compatibility mode (compat)",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The following entries are valid in this mode:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "For ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "passwd",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " and ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "shadow",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " databases:",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
+      {
+       "items": [
+        [
+         {
+          "items": [
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Include the specified user.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-user",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "+",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             },
+             {
+              "inlines": [
+               {
+                "text": "user",
+                "type": "text"
+               }
+              ],
+              "type": "emphasis"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Include the specified user with overridden fields.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-user-2",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "+",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             },
+             {
+              "inlines": [
+               {
+                "text": "user::::::",
+                "type": "text"
+               }
+              ],
+              "type": "emphasis"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Include all users in the netgroup.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-netgroup",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "+@",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             },
+             {
+              "inlines": [
+               {
+                "text": "netgroup",
+                "type": "text"
+               }
+              ],
+              "type": "emphasis"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Exclude the specified user.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-user-3",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "-",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             },
+             {
+              "inlines": [
+               {
+                "text": "user",
+                "type": "text"
+               }
+              ],
+              "type": "emphasis"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Exclude all users in the netgroup.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-netgroup-2",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "-@",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             },
+             {
+              "inlines": [
+               {
+                "text": "netgroup",
+                "type": "text"
+               }
+              ],
+              "type": "emphasis"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Include all users not previously excluded.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "+",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             }
+            ]
+           }
+          ],
+          "type": "definition_list"
+         }
+        ]
+       ],
+       "ordered": false,
+       "type": "list"
+      },
+      {
+       "inlines": [
+        {
+         "text": "For ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "group",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " database:",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
+      {
+       "items": [
+        [
+         {
+          "items": [
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Include the specified group.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-group",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "+",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             },
+             {
+              "inlines": [
+               {
+                "text": "group",
+                "type": "text"
+               }
+              ],
+              "type": "emphasis"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Exclude the specified group.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-group-2",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "-",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             },
+             {
+              "inlines": [
+               {
+                "text": "group",
+                "type": "text"
+               }
+              ],
+              "type": "emphasis"
+             }
+            ]
+           },
+           {
+            "definitionBlocks": [
+             {
+              "inlines": [
+               {
+                "text": "Include all groups not previously excluded.",
+                "type": "text"
+               }
+              ],
+              "type": "paragraph"
+             }
+            ],
+            "id": "def-2",
+            "termInlines": [
+             {
+              "inlines": [
+               {
+                "text": "+",
+                "type": "text"
+               }
+              ],
+              "type": "strong"
+             }
+            ]
+           }
+          ],
+          "type": "definition_list"
+         }
+        ]
+       ],
+       "ordered": false,
+       "type": "list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   },
+   {
+    "id": "compatibility-mode-compat",
+    "level": 3,
+    "title": "Compatibility mode (compat)"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-user",
+   "argument": null,
+   "description": "Include the specified user.",
+   "flags": "+user"
+  },
+  {
+   "anchorId": "def-user-2",
+   "argument": null,
+   "description": "Include the specified user with overridden fields.",
+   "flags": "+user::::::"
+  },
+  {
+   "anchorId": "def-netgroup",
+   "argument": null,
+   "description": "Include all users in the netgroup.",
+   "flags": "+@netgroup"
+  },
+  {
+   "anchorId": "def-user-3",
+   "argument": null,
+   "description": "Exclude the specified user.",
+   "flags": "-user"
+  },
+  {
+   "anchorId": "def-netgroup-2",
+   "argument": null,
+   "description": "Exclude all users in the netgroup.",
+   "flags": "-@netgroup"
+  },
+  {
+   "anchorId": "def-group",
+   "argument": null,
+   "description": "Include the specified group.",
+   "flags": "+group"
+  },
+  {
+   "anchorId": "def-group-2",
+   "argument": null,
+   "description": "Exclude the specified group.",
+   "flags": "-group"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

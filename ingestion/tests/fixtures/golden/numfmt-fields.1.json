@@ -1,0 +1,238 @@
+{
+ "description": "numfmt field ranges are argument values",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "numfmt-fields - numfmt field ranges are argument values",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Replace the numbers in these input fields.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "field",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--field",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "=",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "FIELDS",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "fields-supports-cut-1-style-field-ranges",
+    "level": 3,
+    "text": "FIELDS supports cut (1) style field ranges:",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "N'th field, counted from 1",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "N",
+      "termInlines": [
+       {
+        "text": "N",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "from N'th field, to end of line",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-n",
+      "termInlines": [
+       {
+        "text": "N-",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "from N'th to M'th field (inclusive)",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-n-m",
+      "termInlines": [
+       {
+        "text": "N-M",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "from first to M'th field (inclusive)",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "M",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-M",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "all fields",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "text": "-",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "fields-supports-cut-1-style-field-ranges",
+    "level": 3,
+    "title": "FIELDS supports cut (1) style field ranges:"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "field",
+   "argument": "FIELDS",
+   "description": "Replace the numbers in these input fields.",
+   "flags": "--field"
+  },
+  {
+   "anchorId": "N",
+   "argument": null,
+   "description": "N'th field, counted from 1",
+   "flags": "N"
+  },
+  {
+   "anchorId": "def-n",
+   "argument": null,
+   "description": "from N'th field, to end of line",
+   "flags": "N-"
+  },
+  {
+   "anchorId": "def-n-m",
+   "argument": null,
+   "description": "from N'th to M'th field (inclusive)",
+   "flags": "N-M"
+  },
+  {
+   "anchorId": "M",
+   "argument": null,
+   "description": "from first to M'th field (inclusive)",
+   "flags": "-M"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

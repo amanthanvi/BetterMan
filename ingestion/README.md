@@ -28,19 +28,24 @@ The Next.js test `components/doc/DocRenderer.golden.test.tsx` renders the same J
 The curated command-page check runs after parsing and alias resolution, before any
 release upload. Arch reinstalls requested packages to restore man pages omitted
 by its container image; Alpine requires `tar-doc` alongside `tar`. Debian/Ubuntu
-also reinstall the `mount` owner, and Fedora restores `coreutils-common` and
+also reinstall the `mount`, `perl-base`, `python3-minimal`, and installed
+`python3.*-minimal` owners to restore pages stripped before ingestion starts.
+Fedora restores `coreutils-common` and
 `util-linux-core`, whose pages the base image strips. New package sets must
 extend the representative command expectations in `ingest_runner.py`.
 
 Expectations are distro-specific: Debian trixie excludes `gcc(1)` and `gdb(1)`
-because their documentation requires non-free packages; Ubuntu 24.04 excludes
-`perl(1)` and `python3(1)` because the selected main packages do not ship them.
+because their documentation requires non-free packages. Ubuntu requires
+`perl(1)` and `python3(1)` after restoring their minimal-package owners.
 Each exclusion logs its reason. Missing-page errors name the requested package
 and expected owner. Alpine's best-effort `docs` install can now block the release
 if it leaves a required page absent. For an intentional exception, set
 `BETTERMAN_ALLOW_MISSING_COMMAND_PAGES=1` on the host ingestion command; Docker
-forwards it by name. The override logs every missing page as
-`command_pages_missing_allowed` and never bypasses unclassified packages.
+forwards it by name. The override logs every missing page at WARNING as
+`command_pages_missing_allowed` and never bypasses unclassified packages. Every
+release package manifest records `commandPageCheck.allowMissingCommandPages`
+and `allowedMissingPages` (name, section, requested package, and expected owner),
+so use of the override remains auditable after ingestion.
 
 Fedora, Arch, and Alpine collect package notices from `/usr/share/licenses`.
 Fedora also resolves RPM-marked license files and named license documents in
@@ -70,3 +75,8 @@ or date/stat/printf format modifiers. The `option-shapes` fixture rejects numeri
 ranges, compiler prose, and shell operators while retaining symbolic/grouped
 flags. Tar's golden excludes environment names and format values, and parser
 tests exclude bash's conditional-expression operators.
+
+Bare tokens nested inside option definitions or their indented argument lists are
+values, not options. A mixed field-range or compatibility-entry list cannot
+establish CLI context solely through one flag-shaped peer; extraction keeps the
+original body terms and anchors intact.

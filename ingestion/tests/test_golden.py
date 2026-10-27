@@ -168,6 +168,8 @@ def test_tar_nested_environment_and_format_values_are_not_options() -> None:
 def test_curl_tlsv1_owns_minus_one_instead_of_range_example(name: str) -> None:
     parsed = parse_mandoc_html(_render(_ROFF / name))
     assert parsed.options
+    if name == "curl.1":
+        assert len(parsed.options) == 270
     owners = [option for option in parsed.options if "-1" in option.flags]
     assert len(owners) == 1
     assert owners[0].flags == "-1, --tlsv1"
@@ -196,7 +198,7 @@ def test_bare_options_exclude_bullets_exit_status_and_format_modifiers(
 
 def test_bash_conditional_operators_are_not_command_options() -> None:
     parsed = parse_mandoc_html(_render(_ROFF / "bash.1"))
-    assert parsed.options
+    assert parsed.options and len(parsed.options) == 153
     start = next(
         index
         for index, block in enumerate(parsed.doc.blocks)
@@ -246,3 +248,53 @@ def test_printf_modifiers_do_not_become_bare_options() -> None:
     assert parsed.options is None
     definitions = next(block for block in parsed.doc.blocks if block.type == "definition_list")
     assert [item.id for item in definitions.items] == ["_", "def", "+", "0"]
+
+
+def test_nested_bare_argument_values_keep_body_ids_and_real_bare_options() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "nested-bare-values.1"))
+    assert parsed.options
+    assert [(option.flags, option.anchorId) for option in parsed.options] == [
+        ("--proto", "proto"),
+        ("--field", "field"),
+        ("--compat", "compat"),
+        ("-", "def-5"),
+        ("--", "def-6"),
+        ("+", "def-7"),
+    ]
+    definitions = [block for block in parsed.doc.blocks if block.type == "list"]
+    assert [[item.id for item in block.items[0][0].items] for block in definitions] == [
+        ["def", "def-2"],
+        ["def-3"],
+        ["def-4"],
+    ]
+
+
+def test_numfmt_field_range_minus_is_not_a_cli_option() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "numfmt-fields.1"))
+    assert parsed.options and len(parsed.options) == 5
+    assert not any(option.flags == "-" for option in parsed.options)
+    fields = parsed.doc.blocks[-1].items
+    assert [item.id for item in fields] == ["N", "def-n", "def-n-m", "M", "def"]
+
+
+def test_nsswitch_compatibility_plus_is_not_a_cli_option() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "nsswitch-compat.5"))
+    assert parsed.options and len(parsed.options) == 7
+    assert not any(option.flags == "+" for option in parsed.options)
+    body = parsed.doc.model_dump_json()
+    assert '"id":"def"' in body and '"id":"def-2"' in body
+    assert body.index('"id":"def"') < body.index('"id":"def-2"')
+
+
+@pytest.mark.parametrize(
+    ("name", "bare_flags"),
+    [("strings-mixed-peers.1", ["-", "--"]), ("vim-stdin.1", ["-"])],
+)
+def test_flat_cli_operand_and_value_peers_keep_bare_options(
+    name: str, bare_flags: list[str]
+) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+    assert parsed.options
+    assert [option.flags for option in parsed.options if option.flags in {"-", "--", "+"}] == (
+        bare_flags
+    )

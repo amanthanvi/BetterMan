@@ -358,9 +358,11 @@ def test_resolve_aliases_follows_long_chains_and_drops_cycles() -> None:
 @pytest.mark.parametrize("with_alias_and_license", [False, True])
 @pytest.mark.parametrize("missing_command", [False, True])
 @pytest.mark.parametrize("oversize_license", [False, True])
+@pytest.mark.parametrize("allow_missing", [False, True])
 def test_ingest_declares_uploaded_aliases_and_licenses(
-    monkeypatch, with_alias_and_license, missing_command, oversize_license
+    monkeypatch, with_alias_and_license, missing_command, oversize_license, allow_missing
 ):
+    monkeypatch.setenv("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES", "1" if allow_missing else "0")
     pages = [_page("real" if missing_command else "tar", "1")]
     monkeypatch.setattr(ingest_runner, "_content_packages", lambda **_kwargs: ["tar"])
     sources = [ManSource(path=pages[0].source_path, name="real", section="1")]
@@ -409,10 +411,10 @@ def test_ingest_declares_uploaded_aliases_and_licenses(
     monkeypatch.setattr(ingest_runner.ConvexIngestClient, "post", post)
     monkeypatch.setattr(ingest_runner.ConvexIngestClient, "activate_release", activate)
 
-    if missing_command or oversize_license:
+    if (missing_command and not allow_missing) or oversize_license:
         error = (
             r"missing package-set command pages: tar\(1\)"
-            if missing_command
+            if missing_command and not allow_missing
             else "license document exceeds Convex 1 MiB limit"
         )
         with pytest.raises(RuntimeError, match=error):
@@ -445,6 +447,14 @@ def test_ingest_declares_uploaded_aliases_and_licenses(
     assert events.index("contract") < events.index("write")
     declaration = calls[0][1]
     assert calls[0][0] == "/ingest/release"
+    assert declaration["packageManifest"]["commandPageCheck"] == {
+        "allowMissingCommandPages": allow_missing,
+        "allowedMissingPages": (
+            [{"name": "tar", "section": "1", "package": "tar", "ownerPackage": "tar"}]
+            if missing_command
+            else []
+        ),
+    }
     assert declaration["pageCount"] == 1
     assert declaration["sectionTotals"] == [{"section": "1", "total": 1}]
     assert declaration["aliasCount"] == int(with_alias_and_license)

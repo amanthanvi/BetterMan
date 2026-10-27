@@ -361,7 +361,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                     definitionBlocks=definition_blocks,
                 )
                 items.append(item)
-                if item_id and _is_bare_option_term(dt):
+                if item_id and _is_bare_option_term(dt, for_extraction=True):
                     bare_option_ids.add(item_id)
                 if id(dt) in converted_terms:
                     deferred_ids.append((item, _compact_text(dt)))
@@ -598,7 +598,7 @@ def _is_bullet_definition_list(term_pairs: list[tuple[Tag, list[Tag]]]) -> bool:
     )
 
 
-def _is_bare_option_term(term: Tag) -> bool:
+def _is_bare_option_term(term: Tag, *, for_extraction: bool = False) -> bool:
     if _compact_text(term) not in {"-", "--", "+"}:
         return False
     heading = term.find_previous(re.compile(r"^h[1-6]$"))
@@ -606,6 +606,7 @@ def _is_bare_option_term(term: Tag) -> bool:
     if re.search(r"format|modifier|conversion", title, re.IGNORECASE):
         return False
     introduction = term.parent.find_previous_sibling()
+    peers = [_compact_text(peer) for peer in term.parent.find_all("dt", recursive=False)]
     return bool(
         (_options_heading_re.search(title) and term.find(["b", "code"]) is not None)
         or term.select_one(".Fl")
@@ -614,9 +615,14 @@ def _is_bare_option_term(term: Tag) -> bool:
             and introduction is not None
             and _options_heading_re.search(_compact_text(introduction))
         )
-        or any(
-            _option_term_re.search(_compact_text(peer))
-            for peer in term.parent.find_all("dt", recursive=False)
+        or (
+            any(_option_term_re.search(peer) for peer in peers)
+            # Reject mixed value peers only in argument/configuration subsections.
+            and (
+                not for_extraction
+                or not re.search(r"\bfield ranges\b|\bcompatibility mode\b", title, re.IGNORECASE)
+                or all(peer in {"-", "--", "+"} or _option_term_re.search(peer) for peer in peers)
+            )
         )
     )
 
@@ -826,13 +832,15 @@ def _split_option_argument(flags: str) -> tuple[str, str | None]:
 def _extract_options_from_doc(doc: DocumentModel, bare_option_ids: set[str]) -> list[OptionItem]:
     out: list[OptionItem] = []
     used: set[str] = set()
-    for block, require_flag_shape in _option_definition_lists(doc.blocks):
+    for block, require_flag_shape, under_definition in _option_definition_lists(doc.blocks):
         for item in block.items:
             flags_raw = normalize_ws(_inlines_to_text(item.termInlines))
             desc = normalize_ws(_blocks_to_text(item.definitionBlocks))
             if not flags_raw or not desc:
                 continue
             bare_option = item.id in bare_option_ids
+            if bare_option and under_definition:
+                continue
             if _bullet_term_re.search(flags_raw) and not bare_option:
                 continue
             if require_flag_shape and not bare_option and _option_term_re.search(flags_raw) is None:
@@ -855,9 +863,10 @@ def _option_definition_lists(
     options_level: int | None = None,
     nested: bool = False,
     excluded_level: int | None = None,
-) -> Iterator[tuple[BlockDefinitionList, bool]]:
+    under_definition: bool = False,
+) -> Iterator[tuple[BlockDefinitionList, bool, bool]]:
     # Roff indentation nests lists; options also occur outside OPTIONS headings.
-    for block in blocks:
+    for index, block in enumerate(blocks):
         if isinstance(block, BlockHeading):
             if excluded_level is not None and block.level <= excluded_level:
                 excluded_level = None
@@ -869,15 +878,25 @@ def _option_definition_lists(
                 options_level = None
         elif isinstance(block, BlockDefinitionList):
             if excluded_level is None:
-                yield block, options_level is None or nested
+                yield block, options_level is None or nested, under_definition
             for item in block.items:
                 yield from _option_definition_lists(
-                    item.definitionBlocks, options_level, True, excluded_level
+                    item.definitionBlocks, options_level, True, excluded_level, True
                 )
         elif isinstance(block, BlockList):
+            # man(7) .RS argument lists can be siblings of their option definition.
+            previous = blocks[index - 1] if index > 0 else None
+            follows_definition = isinstance(previous, BlockDefinitionList) and any(
+                _option_term_re.search(_inlines_to_text(item.termInlines))
+                for item in previous.items
+            )
             for item_blocks in block.items:
                 yield from _option_definition_lists(
-                    item_blocks, options_level, True, excluded_level
+                    item_blocks,
+                    options_level,
+                    True,
+                    excluded_level,
+                    under_definition or follows_definition,
                 )
 
 

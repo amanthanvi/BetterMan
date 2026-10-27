@@ -1,0 +1,23 @@
+.TH NUMFMT-FIELDS 1 "2026-10-26" "BetterMan regression fixture"
+.SH NAME
+numfmt-fields \- numfmt field ranges are argument values
+.SH OPTIONS
+.TP
+.BR \-\-field = FIELDS
+Replace the numbers in these input fields.
+.SS "FIELDS supports \fBcut\fP(1) style field ranges:"
+.TP
+N
+N'th field, counted from 1
+.TP
+N\-
+from N'th field, to end of line
+.TP
+N\-M
+from N'th to M'th field (inclusive)
+.TP
+\fB\-M\fR
+from first to M'th field (inclusive)
+.TP
+\-
+all fields
