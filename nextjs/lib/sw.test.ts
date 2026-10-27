@@ -29,11 +29,11 @@ function worker() {
   }
   runInNewContext(source, { self, caches, fetch, Response, URL })
 
-  function request(path: string, mode = 'navigate') {
+  function request(path: string, mode = 'navigate', destination = '') {
     let response!: Promise<Response>
     const pending: Promise<unknown>[] = []
     listeners.get('fetch')!({
-      request: { url: new URL(path, origin).href, method: 'GET', mode, destination: '' },
+      request: { url: new URL(path, origin).href, method: 'GET', mode, destination },
       respondWith: (value: Promise<Response>) => { response = value },
       waitUntil: (value: Promise<unknown>) => { pending.push(value) },
     })
@@ -50,6 +50,14 @@ function worker() {
 }
 
 describe('service worker', () => {
+  it('leaves the unhashed tracker to HTTP caching', () => {
+    const w = worker()
+    const request = w.request('/assets/site.js', 'cors', 'script')
+    expect(request.response).toBeUndefined()
+    expect(w.cache.match).not.toHaveBeenCalled()
+    expect(w.fetch).not.toHaveBeenCalled()
+  })
+
   it('responds without waiting for a slow cache write', async () => {
     const w = worker()
     const slowWrite = deferred()

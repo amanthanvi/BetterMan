@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 
 import type { SearchResponse, SearchResult } from '../../lib/api'
+import { trackEvent } from '../../lib/analytics'
 import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, getBookmarks } from '../../lib/bookmarks'
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../../lib/recent'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
@@ -175,6 +176,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const wasOpen = useRef(false)
+
+  useEffect(() => {
+    if (open && !wasOpen.current) trackEvent('palette opened')
+    wasOpen.current = open
+  }, [open])
 
   const [input, setInput] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)

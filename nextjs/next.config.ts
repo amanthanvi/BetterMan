@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
+        { source: '/assets/site.js', destination: '/api/measurement/script' },
+        { source: '/assets/entry', destination: '/api/measurement/event' },
         {
           source: '/sitemap-:distro-:page.xml',
           destination: '/sitemaps-internal/:distro/:page',

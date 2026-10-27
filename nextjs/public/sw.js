@@ -157,6 +157,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+  // The upstream tracker has no content hash; let its HTTP TTL refresh it.
+  if (url.pathname === '/assets/site.js') return
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(event, HTML_CACHE, MAX_HTML_ENTRIES))

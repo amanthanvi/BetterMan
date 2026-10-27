@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ReadingPrefsProvider, useReadingPrefs } from '../components/state/readingPrefs'
 import type { ReadingPreferences } from '../lib/readingPrefs'
@@ -18,7 +18,7 @@ vi.mock('next/headers', () => ({
   cookies: async () => ({
     get: (name: string) => (name === 'bm-reading-prefs' ? { value: JSON.stringify(saved) } : undefined),
   }),
-  headers: async () => ({ get: () => null }),
+  headers: async () => ({ get: () => 'test-nonce' }),
 }))
 vi.mock('./providers', () => ({
   Providers: ({ children, initialReadingPrefs }: { children: React.ReactNode; initialReadingPrefs: ReadingPreferences }) => (
@@ -31,6 +31,19 @@ function PrefsProbe() {
 }
 
 describe('RootLayout', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('loads only a deferred same-origin tracker with the request nonce', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PLAUSIBLE_DOMAIN', 'betterman.sh')
+    const html = renderToStaticMarkup(await RootLayout({ children: null }))
+    expect(html).toContain('<script defer="" src="/assets/site.js" data-api="/assets/entry" data-domain="betterman.sh" nonce="test-nonce"></script>')
+    expect(html).not.toContain('plausible.io')
+  })
+
+  it('omits the tracker when analytics is unconfigured', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PLAUSIBLE_DOMAIN', '')
+    expect(renderToStaticMarkup(await RootLayout({ children: null }))).not.toContain('/assets/site.js')
+  })
   it('stamps saved reading preferences on the server-rendered body and seeds the provider', async () => {
     const html = renderToStaticMarkup(await RootLayout({ children: <PrefsProbe /> }))
     expect(html).toContain(
