@@ -4,7 +4,7 @@ import {
   fetchManByNameAndSectionOrAlias,
   withDistroFallback,
 } from '@/lib/api'
-import { normalizeDistro, withDistro } from '@/lib/distro'
+import { canonicalWithDistro, normalizeDistro, withDistro } from '@/lib/distro'
 import { renderManText } from '@/lib/manText'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
@@ -41,8 +41,9 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
     if (target.kind === 'page') section = target.section
   }
   const rawDistro = new URL(request.url).searchParams.get('distro')?.trim()
-  const requestedDistro = rawDistro ? normalizeDistro(rawDistro) : 'debian'
-  if (!requestedDistro) return text('Invalid distro\n', 400)
+  const urlDistro = rawDistro ? normalizeDistro(rawDistro) : null
+  if (rawDistro && !urlDistro) return text('Invalid distro\n', 400)
+  const requestedDistro = urlDistro ?? 'debian'
   if (await isRateLimited(request.headers, 'page')) return text('Too many requests\n', 429)
 
   try {
@@ -52,12 +53,12 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
         : await fetchManByNameAndSectionOrAlias({ distro, name: name.toLowerCase(), section: section.toLowerCase() }),
     )
     if (data.kind === 'ambiguous') {
-      return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => withDistro(`${manPath(name, option.section)}.txt`, distro)).join('\n')}\n`, 409)
+      return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => withDistro(`${manPath(name, option.section)}.txt`, urlDistro)).join('\n')}\n`, 409)
     }
     if (data.kind === 'alias' || !('data' in data)) {
-      return text('', 308, { Location: withDistro(`${manPath(data.name, data.section)}.txt`, distro) })
+      return text('', 308, { Location: withDistro(`${manPath(data.name, data.section)}.txt`, urlDistro) })
     }
-    const canonical = `${getPublicOrigin(request)}${withDistro(manPath(data.data.page.name, data.data.page.section), distro)}`
+    const canonical = `${getPublicOrigin(request)}${canonicalWithDistro(manPath(data.data.page.name, data.data.page.section), distro)}`
     return text(renderManText(data.data), 200, { Link: `<${canonical}>; rel="canonical"` })
   } catch (err) {
     if (err instanceof FastApiError) {

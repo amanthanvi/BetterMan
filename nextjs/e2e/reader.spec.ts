@@ -215,7 +215,7 @@ test('reader: a page missing from the active distro links to the distros that ha
   const res = await page.goto('/man/systemctl/1?distro=macos')
   expect(res?.status()).toBe(404)
   const others = page.getByRole('region', { name: 'Other distributions' })
-  await expect(others).toContainText('Not in macOS (BSD).')
+  await expect(others).toContainText('Not in macOS (BSD-licensed subset).')
   await expect(others.getByRole('link')).toHaveText(['Debian', 'Ubuntu', 'Fedora'])
 
   await others.getByRole('link', { name: 'Ubuntu' }).click()
