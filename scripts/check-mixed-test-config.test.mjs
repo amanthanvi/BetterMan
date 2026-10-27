@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import {
+  actionConfigChanged,
   diffTouchesTestRunner,
   evaluateMix,
   isApplicationCode,
@@ -111,6 +112,32 @@ test('an action pin bump in ci.yml stays allowed', () => {
   assert.equal(diffTouchesTestRunner('+        run: pnpm next:e2e'), true)
   assert.equal(diffTouchesTestRunner('+        run: cd ingestion && uv run python -m pytest'), true)
   void head
+})
+
+test('extracted Playwright setup remains test-runner config, with pin-only updates allowed', () => {
+  const action = '.github/actions/setup-playwright/action.yml'
+  const application = 'nextjs/app/page.tsx'
+  for (const path of ['scripts/prefetch-playwright-ci.sh', 'scripts/install-playwright-ci.sh']) {
+    assert.equal(isTestRunnerConfig(path), true)
+    assert.equal(evaluateMix({ paths: [path, application] }).ok, false)
+    assert.equal(evaluateMix({ paths: [path, application], labels: ['test-config-change'] }).ok, true)
+    assert.equal(evaluateMix({ paths: [path] }).ok, true)
+  }
+  const pinOnly = '-      uses: actions/cache@old # v5\n+      uses: actions/cache@new # v6'
+  assert.equal(actionConfigChanged(pinOnly), false)
+  assert.equal(evaluateMix({ paths: [action, application], setupPlaywrightDiff: pinOnly }).ok, true)
+  for (const diff of [
+    '+      run: bash scripts/install-playwright-ci.sh',
+    '-        key: old\n+        key: new',
+    '-      uses: actions/cache@old\n+      uses: other/cache@new',
+    '-      uses: actions/cache@old\n+    uses: actions/cache@new',
+    '-      uses: actions/cache@old\n-      uses: actions/checkout@old\n+      uses: actions/checkout@new\n+      uses: actions/cache@new',
+    '-      uses: actions/cache@old',
+  ]) {
+    assert.equal(actionConfigChanged(diff), true)
+    assert.equal(evaluateMix({ paths: [action, application], setupPlaywrightDiff: diff }).ok, false)
+    assert.equal(evaluateMix({ paths: [action], setupPlaywrightDiff: diff }).ok, true)
+  }
 })
 
 test('a changed pytest or coverage section is test-runner config', () => {
@@ -266,4 +293,40 @@ test('compares pytest sections against the merge base, not the base ref', () => 
   const unchangedSection = runMix(cwd, base, nameOnly)
   assert.equal(unchangedSection.status, 0)
   assert.match(unchangedSection.stdout, /not mixed/)
+})
+
+test('git diff catches extracted Playwright setup edits, deletions and renames mixed with app code', t => {
+  const cwd = mkdtempSync(join(tmpdir(), 'bm-mix-playwright-'))
+  t.after(() => rmSync(cwd, { recursive: true, force: true }))
+  const action = '.github/actions/setup-playwright/action.yml'
+  mkdirSync(join(cwd, '.github/actions/setup-playwright'), { recursive: true })
+  mkdirSync(join(cwd, 'scripts'), { recursive: true })
+  mkdirSync(join(cwd, 'nextjs/app'), { recursive: true })
+  git(cwd, ['init', '-b', 'main'])
+  writeFileSync(join(cwd, action), 'runs:\n  steps:\n    - uses: actions/cache@old # v5\n    - run: bash scripts/install-playwright-ci.sh\n')
+  writeFileSync(join(cwd, 'scripts/install-playwright-ci.sh'), 'install\n')
+  writeFileSync(join(cwd, 'scripts/prefetch-playwright-ci.sh'), 'prefetch\n')
+  writeFileSync(join(cwd, 'nextjs/app/page.tsx'), 'export const version = 1\n')
+  git(cwd, ['add', '.'])
+  git(cwd, ['commit', '-m', 'base'])
+  const base = git(cwd, ['rev-parse', 'HEAD'])
+  writeFileSync(join(cwd, 'nextjs/app/page.tsx'), 'export const version = 2\n')
+  writeFileSync(join(cwd, action), 'runs:\n  steps:\n    - uses: actions/cache@new # v6\n    - run: bash scripts/install-playwright-ci.sh\n')
+  git(cwd, ['add', '.'])
+  git(cwd, ['commit', '-m', 'pin-only update and app'])
+  assert.equal(runMix(cwd, base, 'HEAD').status, 0)
+  writeFileSync(join(cwd, action), 'runs:\n  steps:\n    - uses: actions/cache@new # v6\n    - run: echo skipped\n')
+  git(cwd, ['add', '.'])
+  git(cwd, ['commit', '-m', 'setup changed'])
+  assert.equal(runMix(cwd, base, 'HEAD').status, 1)
+  git(cwd, ['mv', action, '.github/actions/setup-playwright/renamed.yml'])
+  git(cwd, ['rm', 'scripts/install-playwright-ci.sh'])
+  git(cwd, ['mv', 'scripts/prefetch-playwright-ci.sh', 'scripts/prefetch-renamed.sh'])
+  git(cwd, ['add', '.'])
+  git(cwd, ['commit', '-m', 'remove and rename setup'])
+  const result = runMix(cwd, base, 'HEAD')
+  assert.equal(result.status, 1)
+  assert.match(result.stdout, /setup-playwright\/action.yml/)
+  assert.match(result.stdout, /scripts\/install-playwright-ci.sh/)
+  assert.match(result.stdout, /scripts\/prefetch-playwright-ci.sh/)
 })

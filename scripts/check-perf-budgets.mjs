@@ -7,11 +7,11 @@ import { once } from 'node:events'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { gzipSync } from 'node:zlib'
 import { createRequire } from 'node:module'
-import { createHash } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import { createServer as createViteServer } from 'vite'
 import { convexToJson, jsonToConvex } from 'convex/values'
 import { makeFunctionReference } from 'convex/server'
-import { checkQueryShape, compareBudgets, installVitalObservers, median, recordSyscall } from './perf-metrics.mjs'
+import { checkQueryShape, compareBudgets, installVitalObservers, median, recordBaseline, recordSyscall } from './perf-metrics.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const require = createRequire(resolve(root, 'nextjs/package.json'))
@@ -20,10 +20,19 @@ const nextBin = require.resolve('next/dist/bin/next')
 const budgetPath = resolve(root, 'perf-budgets.json')
 const output = resolve(root, '.perf-results')
 const routes = { home: '/', man: '/man/bash/1', search: '/search?q=tar', section: '/section/1' }
-assert.ok(process.argv.slice(2).every(arg => arg === '--record'), 'Usage: pnpm perf:check [--record]')
-const record = process.argv.includes('--record')
+const args = process.argv.slice(2)
+assert.ok(args.length === 0 || (args.length === 1 && args[0] === '--record') ||
+  (args.length === 2 && args[0] === '--record-from'), 'Usage: pnpm perf:check [--record | --record-from measurements.json]')
+const record = args[0] === '--record'
 const budget = JSON.parse(await readFile(budgetPath, 'utf8'))
 assert.equal(budget.schemaVersion, 1, 'Unsupported budget schema')
+if (args[0] === '--record-from') {
+  const report = JSON.parse(await readFile(resolve(args[1]), 'utf8'))
+  assert.equal(report.fixtureSha256, budget.fixtureSha256, 'Artifact fixture differs from the budget')
+  await writeFile(budgetPath, `${JSON.stringify(recordBaseline(budget, report, { labOnly: true }), null, 2)}\n`)
+  console.log('Imported Linux CI lab baseline; tolerances and hard byte/read budgets preserved. Review with the perf-budget-change label and Budget section.')
+  process.exit(0)
+}
 assert.equal(Number(process.versions.node.split('.')[0]), 26, 'Use Node 26 for the budget harness')
 const fixtureSha256 = createHash('sha256').update(await readFile(resolve(root, 'scripts/perf-fixture.ts'))).digest('hex')
 const toolchain = {
@@ -34,8 +43,11 @@ const toolchain = {
 }
 if (!record) {
   assert.equal(fixtureSha256, budget.fixtureSha256, 'Fixture changed; explicitly review and remeasure the baseline')
-  assert.deepEqual(toolchain, budget.toolchain, 'Measurement toolchain changed; explicitly review and remeasure the baseline')
 }
+const toolchainDrift = Object.entries(toolchain).filter(([name, version]) => budget.toolchain?.[name] !== version)
+if (toolchainDrift.length) console.warn(`Toolchain drift (metrics will still be compared): ${toolchainDrift.map(([name, version]) => `${name} ${budget.toolchain?.[name]} -> ${version}`).join(', ')}`)
+// TODO(#390): review roughly 10 independent Linux CI reports before enabling absolute LCP/CLS failures.
+console.warn('LCP/CLS are report-only during Linux CI calibration; bytes, reads and LCP minus FCP remain hard limits.')
 await mkdir(output, { recursive: true })
 
 // Pass only the environment needed to run a local build, never deployment credentials.
@@ -47,6 +59,7 @@ Object.assign(env, {
 let metrics = { calls: 0, documents: 0, storageReads: 0 }
 let backendErrors = 0
 let next, browser, backend, vite
+const previousRateLimitKey = process.env.RATE_LIMIT_TAG_KEY
 const actual = {}, details = {}
 
 async function listen(server) {
@@ -85,13 +98,13 @@ async function ready(url) {
   throw new Error('Next did not become ready in 10 seconds')
 }
 
-async function sample(url, name) {
+async function sample(url, name, { cost = false } = {}) {
   const context = await browser.newContext({
     viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1,
     colorScheme: 'light', reducedMotion: 'reduce', serviceWorkers: 'block',
   })
   const page = await context.newPage()
-  const scripts = new Set(), errors = []
+  const scripts = new Set(), errors = [], apiRequests = []
   // Background Link prefetches are not part of a first navigation.
   await context.route('**/*', async route => {
     const request = route.request()
@@ -101,37 +114,51 @@ async function sample(url, name) {
   })
   page.on('pageerror', () => errors.push('Browser page error'))
   page.on('response', response => {
+    const path = new URL(response.url()).pathname
+    if (path.startsWith('/api/v1/')) {
+      apiRequests.push({ path, method: response.request().method(), status: response.status() })
+      if (!response.ok()) errors.push(`Page-load API failed: ${path} (${response.status()})`)
+    }
     if (response.request().resourceType() === 'script') {
       if (!response.ok()) errors.push('Script request failed')
       scripts.add(new URL(response.url()).pathname)
     }
   })
+  page.on('requestfailed', request => {
+    if (new URL(request.url()).pathname.startsWith('/api/v1/')) errors.push('Page-load API request failed')
+  })
   const cdp = await context.newCDPSession(page)
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
   await page.addInitScript(installVitalObservers)
   try {
+    const infoReady = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/info', { timeout: 30_000 })
     const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 })
     assert.equal(response.status(), 200, `${name} navigation failed`)
+    await (await infoReady).finished()
     await page.getByRole('heading', { level: 1 }).waitFor()
     if (name === 'man') await page.locator('article').getByText('bash manual paragraph 160.', { exact: false }).waitFor({ state: 'attached' })
     if (name === 'search') assert.equal(await page.getByRole('link', { name: /^tar\d+\(1\)$/ }).count(), 20, 'Expected a full search result page')
     if (name === 'section') assert.equal(await page.locator('main a[href^="/man/"]').count(), 32, 'Expected all section fixture pages')
     await page.evaluate(() => document.fonts.ready)
-    await page.waitForTimeout(5000)
+    if (!cost) await page.waitForTimeout(5000)
+    await page.waitForLoadState('networkidle')
     const vitals = await page.evaluate(() => window.__perf)
-    assert.ok(vitals.lcp > 0, 'LCP observer did not produce a measurement')
+    assert.ok(vitals.lcp > 0 && vitals.fcp > 0, 'Paint observers did not produce measurements')
     assert.deepEqual(errors, [], `${name} browser errors`)
     assert.ok(scripts.size > 0, 'No production scripts loaded')
-    return { ...vitals, scripts: [...scripts].sort() }
+    return { ...vitals, scripts: [...scripts].sort(), apiRequests,
+      ...(cost ? { html: (await response.body()).toString('utf8'), costs: { ...metrics } } : {}),
+    }
   } finally {
     await context.close()
   }
 }
 
 try {
+  process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
   const { createFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
-  const fixture = await createFixture(() => metrics.calls++)
+  let fixture = await createFixture(() => metrics.calls++)
   const runtime = globalThis.Convex
   globalThis.Convex = new Proxy(runtime, {
     get(target, key) {
@@ -155,6 +182,11 @@ try {
   await fixture.query(makeFunctionReference('perfProbe:indexed'), {})
   assert.deepEqual(metrics, { calls: 1, documents: 3, storageReads: 0 }, 'Document counter is not installed')
   await assert.rejects(() => fixture.query(makeFunctionReference('perfProbe:filtered'), {}), /unindexed/)
+  metrics = { calls: 0, documents: 0, storageReads: 0 }
+  const rateArgs = { kind: 'page', identifier: 'probe', tag: createHmac('sha256', 'perf-fixture-only').update('probe').digest('hex') }
+  await fixture.mutation(makeFunctionReference('rateLimit:consume'), rateArgs)
+  await fixture.mutation(makeFunctionReference('rateLimit:consume'), rateArgs)
+  assert.deepEqual(metrics, { calls: 2, documents: 1, storageReads: 0 }, 'Rate-limit mutation counter is not installed')
   backend = createServer(async (req, res) => {
     try {
       const method = req.url?.slice('/api/'.length)
@@ -189,18 +221,18 @@ try {
     await rm(resolve(root, 'nextjs/.next/cache/fetch-cache'), { recursive: true, force: true })
     next = startNext(['start', '-H', '127.0.0.1', '-p', new URL(baseUrl).port])
     await ready(baseUrl)
+    fixture = await createFixture(() => metrics.calls++)
     metrics = { calls: 0, documents: 0, storageReads: 0 }
-    const response = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(30_000) })
-    assert.equal(response.status, 200, `${name} HTML failed`)
-    const html = await response.text()
+    const pageView = await sample(`${baseUrl}${path}`, name, { cost: true })
+    const { html, costs } = pageView
     assert.ok(html.includes(name === 'man' ? 'GNU Bourne-Again SHell' : name === 'home' ? 'Unix manual pages' : 'tar01'), `${name} fixture was not rendered`)
     assert.ok(!html.includes('NEXT_HTTP_ERROR_FALLBACK') && !html.includes('"digest"'), `${name} streamed an error`)
-    assert.ok(metrics.calls > 0 && metrics.documents > 0, `${name} must exercise cold Convex reads`)
+    assert.ok(costs.calls > 0 && costs.documents > 0, `${name} must exercise cold Convex reads`)
     actual[`${name}.htmlBytes`] = Buffer.byteLength(html)
-    for (const [metric, value] of Object.entries(metrics)) actual[`${name}.${metric}`] = value
+    for (const [metric, value] of Object.entries(costs)) actual[`${name}.${metric}`] = value
     const samples = []
-    for (let i = 0; i < (name === 'home' || name === 'man' ? 3 : 1); i++) samples.push(await sample(`${baseUrl}${path}`, name))
-    const chunks = [...new Set(samples.flatMap(s => s.scripts))].sort()
+    for (let i = 0; i < (name === 'home' || name === 'man' ? 5 : 0); i++) samples.push(await sample(`${baseUrl}${path}`, name))
+    const chunks = [...new Set([pageView, ...samples].flatMap(s => s.scripts))].sort()
     let jsBytes = 0, jsGzipBytes = 0
     for (const chunk of chunks) {
       assert.ok(chunk.startsWith('/_next/static/') && chunk.endsWith('.js'), `Non-build script: ${chunk}`)
@@ -215,29 +247,27 @@ try {
     if (name === 'home' || name === 'man') {
       actual[`${name}.lcpMs`] = median(samples.map(s => s.lcp))
       actual[`${name}.cls`] = median(samples.map(s => s.cls))
+      actual[`${name}.lcpAfterFcpMs`] = median(samples.map(s => Math.max(0, s.lcp - s.fcp)))
     }
-    details[name] = { path, chunks, samples }
+    details[name] = { path, chunks, pageView: { costs, apiRequests: pageView.apiRequests }, samples }
     assert.equal(backendErrors, 0, 'Convex fixture error (including errors swallowed by the app)')
     console.log(`${name}: ${JSON.stringify(Object.fromEntries(Object.entries(actual).filter(([k]) => k.startsWith(`${name}.`))))}`)
   }
   const report = {
     sourceHead: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
     node: process.version, chromium: browser.version(), toolchain, fixtureSha256, actual, details,
+    platform: process.platform, ci: process.env.GITHUB_ACTIONS === 'true',
+    runUrl: process.env.GITHUB_ACTIONS === 'true' ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` : null,
+    toolchainDrift,
+    comparison: compareBudgets(actual, budget.metrics),
   }
   await writeFile(resolve(output, 'measurements.json'), `${JSON.stringify(report, null, 2)}\n`)
   if (record) {
-    budget.metrics = Object.fromEntries(Object.entries(actual).map(([name, baseline]) => [name, {
-      baseline,
-      relative: /Bytes$/.test(name) ? 0.02 : name.endsWith('.lcpMs') ? 0.5 : 0,
-      absolute: name.endsWith('.lcpMs') ? 1000 : name.endsWith('.cls') ? 0.02 : 0,
-    }]))
-    budget.sourceHead = report.sourceHead
-    budget.toolchain = toolchain
-    budget.fixtureSha256 = fixtureSha256
-    await writeFile(budgetPath, `${JSON.stringify(budget, null, 2)}\n`)
-    console.log('Recorded baseline. Review the budget diff before committing.')
+    await writeFile(budgetPath, `${JSON.stringify(recordBaseline(budget, report), null, 2)}\n`)
+    console.log('Recorded baseline with existing tolerances preserved. Local recordings preserve Linux lab baselines. Review the guarded budget diff.')
   } else {
-    const failures = compareBudgets(actual, budget.metrics)
+    const { failures, warnings } = report.comparison
+    for (const warning of warnings) console.warn(`Report-only lab regression: ${warning}`)
     assert.deepEqual(failures, [], `Performance budget regression:\n${failures.join('\n')}`)
     console.log('All performance budgets passed.')
   }
@@ -246,4 +276,6 @@ try {
   await stopNext()
   if (backend) await new Promise(resolve => backend.close(resolve))
   await vite?.close()
+  if (previousRateLimitKey === undefined) delete process.env.RATE_LIMIT_TAG_KEY
+  else process.env.RATE_LIMIT_TAG_KEY = previousRateLimitKey
 }

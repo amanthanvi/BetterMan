@@ -1,100 +1,122 @@
 # Performance and cost budgets
 
-`perf-budgets.json` locks the BetterMan 2 A7 baseline. The
-`performance_budgets` job in `.github/workflows/ci.yml` runs `pnpm perf:check`
-on every PR and main push. It needs no deploy key, secret, local Convex
-deployment, or production access. No application instrumentation is installed.
+`perf-budgets.json` records BetterMan 2 A7's baseline. The
+`performance_budgets` CI job runs `pnpm perf:check` on every PR and main push.
+It needs no deployment credentials, local Convex deployment, or production
+access. The harness reuses locked Playwright, Vite and convex-test dependencies;
+no instrumentation is shipped in the application.
 
-Use Node 26, `pnpm install --frozen-lockfile`, and the Chromium installed by
-`pnpm -C nextjs exec playwright install chromium` on macOS. Linux CI shares
-E2E's cached system-package prefetch and bounded installer through
-`.github/actions/setup-playwright`. Then run:
+Use Node 26 and `pnpm install --frozen-lockfile`. On macOS install Chromium
+with `pnpm -C nextjs exec playwright install chromium`; Linux CI uses the shared
+E2E browser cache, package prefetch and bounded installer. In this worktree run:
 
 ```bash
 pnpm ops:test
 pnpm perf:check
 ```
 
-The command builds Next in production mode, launches its own loopback server,
-and cleans up its exact child processes. It overwrites `nextjs/.next`, so stop
-any dev server using this worktree first. Results, script chunk lists, browser
-version, and individual lab samples are in `.perf-results/measurements.json`
-(also uploaded as the CI `performance-budgets` artifact).
+The command builds production Next, starts its own loopback servers, and stops
+its exact child processes on completion/failure. It overwrites `nextjs/.next`;
+stop a dev server using this worktree first. `.perf-results/measurements.json`
+contains measurements, individual samples, versions, platform, CI run URL,
+requested chunks, and page-load API requests. CI uploads it as the
+`performance-budgets` artifact even when a budget comparison fails.
 
-## What is measured
+## Measurements and limits
 
-- **First-load JavaScript:** uncompressed and gzip-9 bytes of the unique
-  production `.next/static` chunks requested as scripts by a fresh Chromium
-  context on home, `/man/bash/1`, `/search?q=tar`, and `/section/1`. This includes
-  shared runtime and hydration/dynamically loaded scripts. Next 16 no longer
-  prints a first-load JS table; the built files are the source of truth.
-  Background Next Link prefetches and service workers are excluded. This is
-  modern Chromium's actual script set, not all chunks emitted by the build.
-- **HTML:** bytes in the full decoded UTF-8 HTTP response, including streamed
-  RSC payloads, for those four pages. Assertions require successful fixture
-  content rather than an empty/error/404 page.
-- **Lab LCP and CLS:** home and the long man page, fresh browser context on each
-  of three navigations, 1280×800 at device scale 1, light theme, reduced motion,
-  4× CPU slowdown and no network throttle. The backend/data cache is warm;
-  browser caches and local personalization are cold. PerformanceObservers
-  start before navigation; after network idle and fonts ready, observe for
-  another five seconds. CLS uses the largest session window (one-second gap,
-  maximum five seconds), excluding recent input. Each metric uses the median
-  of three samples. These are bounded local lab checks, not field Web Vitals,
-  and do not cover later scrolling or interaction.
-- **Convex cost:** each route's first complete HTTP request, after restarting
-  Next and deleting its fetch cache. The real production Next data layer calls
-  the real Convex functions over an ephemeral loopback HTTP adapter backed by
-  the installed `convex-test`. Counters include top-level and nested function
-  calls, every non-null DB get/streamed row/paginated row (including repeated
-  reads and rows later filtered out), and storage blob reads. This catches
-  extra Next calls as well as extra reads inside Convex functions. Failed
-  backend calls fail the check even if the application swallows the error.
+- **First-load JS:** raw and gzip-9 bytes of unique production `.next/static`
+  chunks requested as scripts by fresh Chromium contexts on `/`, `/man/bash/1`,
+  `/search?q=tar`, and `/section/1`. Shared, hydration and dynamically loaded
+  scripts count. Next 16 has no first-load JS table; built chunks are the source
+  of truth. Background Link prefetch and service workers are excluded.
+- **HTML:** decoded UTF-8 bytes of the complete streamed browser navigation
+  response, including RSC payloads. Assertions verify fixture content, a full
+  search result page and the long document, rather than accepting error pages.
+- **Page-view Convex cost:** the first cold browser navigation on each route,
+  after restarting Next and deleting its data cache. Counters remain active
+  through hydration, AppShell's `/api/v1/info` response, and network idle. All
+  on-load `/api/v1/*` work, including any rate-limit mutations, is counted with
+  SSR work; API failures fail even when the application swallows them. A fresh
+  in-memory fixture per route prevents rate-bucket state from earlier routes
+  changing these counts. Later lab samples do not accumulate into the page-view
+  count. Calls include nested registered functions; documents include repeated
+  gets and every streamed/paginated row, plus separate blob-read counts. Runtime
+  probes verify nested calls, repeated reads and real signed rate-limit
+  mutations before measurement. DB filters and unindexed scans fail closed
+  because convex-test cannot account for their hidden scan cost.
+- **Lab vitals:** five warm-data, cold-browser navigations each for home and
+  the long man page. Chromium uses 1280×800, device scale 1, light theme,
+  reduced motion, 4× CPU slowdown and no network throttle. Observers start
+  before navigation; after fonts/network idle, observe another five seconds.
+  CLS uses the largest session window (one-second gap, five-second maximum),
+  excluding recent input. Budgets compare medians of five, including the
+  median per-navigation **LCP minus FCP**, which must be **≤100 ms**.
 
-The installed runtime is probed for nested calls, repeated document reads and
-scan rejection before measuring. Database `.filter()` and unindexed full-table
-scans fail closed: the test backend filters before returning rows and cannot
-account for the hidden scan cost. Use an index instead. Application-side
-filtering is covered because those rows have already crossed the DB boundary.
+Bytes allow 2% above baseline; function calls, documents and blob reads allow
+no increase. LCP uses `min(1000 ms, max(2.5 × baseline, baseline + 250 ms))`:
+its descriptor combines `relative: 1.5` and `absolute: 250` with `combine: max`
+and `cap: 1000`. Other descriptors use `baseline × (1 + relative) + absolute`.
+CLS has 0.02 absolute headroom. `--record` preserves every existing tolerance,
+cap, combination rule and report-only flag; it cannot add/remove metrics.
+Missing, invalid, negative or non-finite measurements fail closed.
 
-The versioned in-memory fixture in `scripts/perf-fixture.ts` has all seven
-distros with 32 pages each, a stored content blob per page, cached related
-metadata, and a bash page with 160 paragraphs plus a highlighted code example.
-`tar` matches more than a search result page, exercising pagination bounds.
-It is seeded directly with the schema, like the existing Convex tests; no
-ingestion or production data is changed. Vite only loads those test modules;
-it does not transform the production Next build. Existing locked Playwright,
-Vite and convex-test dependencies are reused; no new dependency is needed.
+**TODO (#390): LCP and CLS are report-only until roughly 10 independent Linux
+CI reports establish their spread.** Exceedances print warnings and appear in
+artifacts; bytes, Convex counts and LCP−FCP remain hard-failing. Enabling the
+absolute lab gates needs a reviewed budget-policy change, not an automatic
+sample-count switch. The initial Linux reference is home LCP 172 ms/CLS 0 and
+man LCP 208 ms/CLS 0.04119434204101563, from run
+[40423220715](https://github.com/amanthanvi/BetterMan/actions/runs/40423220715),
+artifact 12698631579. That pre-fix artifact had three samples per route and is
+explicitly marked provisional; future measurements and imports require five.
+The corresponding provisional LCP warning ceilings are 430 ms and 520 ms.
 
-`documents` is a deterministic harness read count, not an invoice estimate.
-The test backend models index results and cannot measure Convex's internal
-index scans, billing bytes, network latency, retries, corpus-scale behavior,
-or cache hit rates. Search currently budgets one prefix query and its page
-chrome; add other representative cases when changing search paths. Stored
-content, not legacy inline/chunked content, is the fixed man-page path.
+Package-version drift is recorded and warned about; metrics are still compared
+against the existing budgets so dependency bumps do not require rerecording.
+A changed fixture hash still requires an intentional baseline update.
 
-## Tolerances and buying budget
+## Buying budget and intentional updates
 
-Each metric records `baseline`, `relative`, and `absolute`; the ceiling is
-`baseline × (1 + relative) + absolute`. Bytes have 2% headroom for build/HTML
-variation. Function calls, documents and storage reads have zero headroom.
-LCP has 50% plus 1000 ms for runner/platform scheduling variation. CLS has
-0.02 absolute headroom; a baseline of zero remains checked. Missing, extra,
-negative and non-finite metrics fail closed. No retries hide a failed budget.
+A feature buys budget by cutting work on the **same affected route/metric**:
+reuse a shared module, remove a dependency, reduce HTML, or precompute at ingest.
+Other routes or units do not cancel a regression. Do not treat tolerance as
+routine feature budget or raise baselines after every feature.
 
-A feature buys budget by deleting or reducing other work on the **same
-affected route/metric**: reuse a shared module, remove a dependency, reduce
-serialized HTML, or precompute at ingest to eliminate runtime reads. The full
-measurement must still pass. Improvements on another route or in another unit
-do not cancel a regression. Do not consume tolerances as routine feature
-budget or ratchet baselines upward after every change.
+From a clean checkout, run the normal check first, then `pnpm perf:check
+--record` to update byte/read baselines. A local macOS recording preserves the
+Linux lab reference. All existing tolerances are preserved. Review the JSON
+diff and rerun the normal check before committing.
 
-To intentionally update a baseline, start from a clean checkout, run the
-normal check first, then `pnpm perf:check --record`. Review every changed
-number, the fixture and browser/toolchain versions, and the individual samples;
-run `pnpm perf:check` again to validate the proposed limits. Commit the JSON
-diff with the feature or a focused harness PR, explain the reason and any
-offsetting cuts, and include before/after measurements in its Proof. A fixture,
-measurement-method or toolchain change requires an explicit remeasurement;
-never silently widen tolerances to make CI green. Spend increases still need
-the owner approval required by the roadmap.
+To record lab baselines from Linux CI, download the **performance-budgets**
+artifact for the intended revision from the Actions run page, extract it to a
+task-scoped directory, and run inside this worktree:
+
+```bash
+# One explicit download of a known completed run; no watcher is needed.
+gh run download <run-id> --repo amanthanvi/BetterMan --name performance-budgets --dir .perf-results/linux-ci
+pnpm perf:check --record-from .perf-results/linux-ci/measurements.json
+pnpm perf:check
+```
+
+Check the artifact's run URL, `sourceHead` (Actions may build a merge SHA),
+fixture hash, toolchain and five individual samples per route against the
+intended run. The importer requires Linux CI metadata, matching fixture hash,
+five samples and correct medians. It updates only LCP/CLS baselines, preserving
+hard byte/read/delta budgets and every tolerance. Linux CI `--record` can update
+all baselines; both routes must still have five valid lab samples.
+
+The PR diff guard requires **both** the exact `perf-budget-change` label and a
+non-placeholder **`## Budget`** section explaining the trade whenever the
+budget JSON, perf harness, `perf:check` command, or its CI enforcement changes.
+It explicitly diagnoses raised baselines, wider tolerances and removed metrics.
+This includes a `--record` + commit, baseline decreases, initial setup and
+harness edits that could hide a regression. Labels arrive as `PR_LABELS_JSON`,
+never shell-interpolated text. See [PR guards](agents/pr-guards.md). Include
+before/after evidence, offsets, changed measurement scope and known limits in
+that section. Spend increases still need the roadmap's owner approval.
+
+The fixture remains seven distros ×32 pages, stored content, cached related
+metadata and a 160-paragraph bash document with a highlighted code example.
+These counters model fixture request work, not Convex invoices, internal index
+scan bytes, retries or full-corpus behavior. Lab vitals do not represent field
+latency or later interaction. Option/alias/typo fixtures are deferred to #412.

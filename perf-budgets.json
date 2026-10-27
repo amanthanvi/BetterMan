@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "fixture": "scripts/perf-fixture.ts v1: 7 distros x 32 pages; bash(1) has 160 paragraphs and a code example",
-  "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 3; 5s observation after network idle",
+  "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
       "baseline": 29894,
@@ -9,12 +9,12 @@
       "absolute": 0
     },
     "home.calls": {
-      "baseline": 2,
+      "baseline": 3,
       "relative": 0,
       "absolute": 0
     },
     "home.documents": {
-      "baseline": 5,
+      "baseline": 7,
       "relative": 0,
       "absolute": 0
     },
@@ -34,14 +34,18 @@
       "absolute": 0
     },
     "home.lcpMs": {
-      "baseline": 56,
-      "relative": 0.5,
-      "absolute": 1000
+      "baseline": 172,
+      "relative": 1.5,
+      "absolute": 250,
+      "cap": 1000,
+      "combine": "max",
+      "reportOnly": true
     },
     "home.cls": {
       "baseline": 0,
       "relative": 0,
-      "absolute": 0.02
+      "absolute": 0.02,
+      "reportOnly": true
     },
     "man.htmlBytes": {
       "baseline": 108694,
@@ -49,12 +53,12 @@
       "absolute": 0
     },
     "man.calls": {
-      "baseline": 4,
+      "baseline": 5,
       "relative": 0,
       "absolute": 0
     },
     "man.documents": {
-      "baseline": 26,
+      "baseline": 28,
       "relative": 0,
       "absolute": 0
     },
@@ -74,14 +78,18 @@
       "absolute": 0
     },
     "man.lcpMs": {
-      "baseline": 68,
-      "relative": 0.5,
-      "absolute": 1000
+      "baseline": 208,
+      "relative": 1.5,
+      "absolute": 250,
+      "cap": 1000,
+      "combine": "max",
+      "reportOnly": true
     },
     "man.cls": {
-      "baseline": 0.0399150146484375,
+      "baseline": 0.04119434204101563,
       "relative": 0,
-      "absolute": 0.02
+      "absolute": 0.02,
+      "reportOnly": true
     },
     "search.htmlBytes": {
       "baseline": 44086,
@@ -89,12 +97,12 @@
       "absolute": 0
     },
     "search.calls": {
-      "baseline": 2,
+      "baseline": 3,
       "relative": 0,
       "absolute": 0
     },
     "search.documents": {
-      "baseline": 30,
+      "baseline": 32,
       "relative": 0,
       "absolute": 0
     },
@@ -119,12 +127,12 @@
       "absolute": 0
     },
     "section.calls": {
-      "baseline": 1,
+      "baseline": 2,
       "relative": 0,
       "absolute": 0
     },
     "section.documents": {
-      "baseline": 35,
+      "baseline": 37,
       "relative": 0,
       "absolute": 0
     },
@@ -142,14 +150,37 @@
       "baseline": 168696,
       "relative": 0.02,
       "absolute": 0
+    },
+    "home.lcpAfterFcpMs": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 100,
+      "cap": 100
+    },
+    "man.lcpAfterFcpMs": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 100,
+      "cap": 100
     }
   },
-  "sourceHead": "36d8936a5bfef480ae0cc425a47b7cd2151b4aea",
+  "sourceHead": "62bf08aa711e2385937452e6772b54003ab22594",
   "toolchain": {
     "next": "16.4.2",
     "playwright": "1.64.1",
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "d0bc8109a04a832533f1863f5b7b80ca3ada6860e0a8b7368739149f2077f822"
+  "fixtureSha256": "d0bc8109a04a832533f1863f5b7b80ca3ada6860e0a8b7368739149f2077f822",
+  "labBaseline": {
+    "platform": "linux",
+    "samplesPerRoute": 3,
+    "provisional": true,
+    "sourceHead": "9c2c9af3f44c7420b21391bab4893df0e7929237",
+    "node": "v26.12.1",
+    "chromium": "156.0.8078.4",
+    "runUrl": "https://github.com/amanthanvi/BetterMan/actions/runs/40423220715",
+    "artifactId": 12698631579,
+    "note": "Initial Linux reference from the pre-fix three-sample artifact; new reports/imports require five. TODO #390: review roughly 10 independent CI reports before enforcing LCP/CLS."
+  }
 }

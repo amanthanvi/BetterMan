@@ -11,7 +11,8 @@
 //   .github/workflows/ci.yml that invokes vitest, playwright, pytest, jest,
 //   or a pnpm test script. That includes `pnpm next:e2e` and the CI spelling
 //   `pnpm -C nextjs e2e`. The rest of pyproject.toml and package.json is not
-//   test-runner config.
+//   test-runner config. Extracted setup-playwright/action.yml and the
+//   install/prefetch-playwright-ci.sh helpers retain the same protection.
 // Application code:
 //   convex/ outside tests, ingestion/ingestion/, and nextjs/ outside tests,
 //   e2e, and markdown. Docs, workflow pin bumps, and test files alone are allowed.
@@ -21,6 +22,8 @@ import { pathToFileURL } from 'node:url'
 
 export const BYPASS_LABEL = 'test-config-change'
 const CI_WORKFLOW = '.github/workflows/ci.yml'
+const PLAYWRIGHT_ACTION = '.github/actions/setup-playwright/action.yml'
+const PLAYWRIGHT_SCRIPTS = ['scripts/prefetch-playwright-ci.sh', 'scripts/install-playwright-ci.sh']
 const TEST_SCRIPT =
   /(?:^|\s)pnpm(?:\s+-C\s+\S+)?\s+(?:convex:test|next:test|next:e2e|ingest:test|ops:test|e2e|test)\b/
 const TEST_RUNNER = /(?:^|[^A-Za-z0-9_])(?:vitest|playwright|pytest|jest)(?:[^A-Za-z0-9_]|$)/
@@ -45,6 +48,7 @@ export function isTestRunnerConfig(file) {
     name === 'pytest.ini' ||
     name === 'tox.ini' ||
     name === 'conftest.py' ||
+    PLAYWRIGHT_SCRIPTS.includes(file) ||
     name === '.mocharc' ||
     /^\.mocharc\./.test(name)
   )
@@ -146,8 +150,24 @@ export function diffTouchesTestRunner(diffText) {
   return false
 }
 
-export function evaluateMix({ paths, labels = [], ciWorkflowDiff = '', sectionConfig = [] }) {
+// Pin-only updates preserve the action and its inputs, as in ci.yml.
+export function actionConfigChanged(diffText) {
+  const removed = [], added = []
+  for (const line of diffText.split('\n')) {
+    if (!/^[+-]/.test(line) || /^(?:\+\+\+|---)/.test(line)) continue
+    const pin = /^(\s*(?:-\s*)?uses:\s*[^\s@]+)@[^\s]+(?:\s*#.*)?$/.exec(line.slice(1))
+    if (!pin) return true
+    const pins = line.startsWith('-') ? removed : added
+    pins.push(pin[1])
+  }
+  return JSON.stringify(removed) !== JSON.stringify(added)
+}
+
+export function evaluateMix({ paths, labels = [], ciWorkflowDiff = '', setupPlaywrightDiff = '', sectionConfig = [] }) {
   const testConfig = [...new Set([...paths.filter(isTestRunnerConfig), ...sectionConfig])]
+  if (paths.includes(PLAYWRIGHT_ACTION) && (!setupPlaywrightDiff || actionConfigChanged(setupPlaywrightDiff))) {
+    testConfig.push(PLAYWRIGHT_ACTION)
+  }
   const application = [...new Set(paths.filter(isApplicationCode))]
   if (diffTouchesTestRunner(ciWorkflowDiff) && !testConfig.includes(CI_WORKFLOW)) {
     testConfig.push(CI_WORKFLOW)
@@ -226,8 +246,8 @@ function sectionConfigPaths(base, head, entries) {
   return extra
 }
 
-function ciWorkflowDiff(base, head) {
-  return execFileSync('git', ['diff', '-U0', `${base}...${head}`, '--', CI_WORKFLOW], {
+function fileDiff(base, head, file) {
+  return execFileSync('git', ['diff', '-U0', `${base}...${head}`, '--', file], {
     encoding: 'utf8',
   })
 }
@@ -260,7 +280,8 @@ function main() {
   const result = evaluateMix({
     paths: entries.flatMap((entry) => entry.paths),
     labels: readLabels(),
-    ciWorkflowDiff: ciWorkflowDiff(base, head),
+    ciWorkflowDiff: fileDiff(base, head, CI_WORKFLOW),
+    setupPlaywrightDiff: fileDiff(base, head, PLAYWRIGHT_ACTION),
     sectionConfig: sectionConfigPaths(base, head, entries),
   })
   console.log(formatMixResult(result))
