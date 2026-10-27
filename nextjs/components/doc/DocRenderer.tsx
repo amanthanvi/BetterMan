@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { memo, useEffect, useMemo, type ReactNode } from 'react'
 
-import { withDistro, type LinkDistro } from '../../lib/distro'
+import { withDistro, type Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
 import { findExternalUrls } from '../../lib/externalUrls'
 import { cancelScrollPin, scrollToIdWhenRendered } from '../../lib/scroll'
@@ -24,14 +24,14 @@ type HighlightCtx = {
 // active heading, copy feedback).
 export const DocRenderer = memo(function DocRenderer({
   blocks,
-  link,
+  urlDistro,
   findQuery,
   optionTerms,
   codeLanguage,
 }: {
   blocks: BlockNode[]
-  /** Internal links keep this reading context's distro. */
-  link: LinkDistro
+  /** The page URL's own `?distro=`, which internal links carry; null for a bare URL. */
+  urlDistro: Distro | null
   findQuery?: string
   optionTerms?: string[]
   /** Highlighting for code blocks the parser gave no language. */
@@ -79,7 +79,7 @@ export const DocRenderer = memo(function DocRenderer({
     return (
       <div className="space-y-5">
         {blocks.map((block, idx) => (
-          <BlockView key={blockKey(block, idx)} block={block} ctx={ctx} link={link} />
+          <BlockView key={blockKey(block, idx)} block={block} ctx={ctx} urlDistro={urlDistro} />
         ))}
       </div>
     )
@@ -89,7 +89,7 @@ export const DocRenderer = memo(function DocRenderer({
     <div className="bm-doc">
       {blocks.map((block, idx) => (
         <div key={blockKey(block, idx)} style={{ containIntrinsicBlockSize: `auto ${estimates[idx]}px` }}>
-          <BlockView block={block} ctx={ctx} link={link} />
+          <BlockView block={block} ctx={ctx} urlDistro={urlDistro} />
         </div>
       ))}
     </div>
@@ -138,7 +138,7 @@ function inlinesLength(inlines: InlineNode[]): number {
   return inlines.reduce((sum, inline) => sum + (inline.type === 'text' || inline.type === 'code' ? inline.text.length : inlinesLength(inline.inlines)), 0)
 }
 
-const BlockView = memo(function BlockView({ block, ctx, link }: { block: BlockNode; ctx: HighlightCtx; link: LinkDistro }) {
+const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: BlockNode; ctx: HighlightCtx; urlDistro: Distro | null }) {
   switch (block.type) {
     case 'heading': {
       const level = clamp(block.level, 2, 6)
@@ -175,7 +175,7 @@ const BlockView = memo(function BlockView({ block, ctx, link }: { block: BlockNo
     }
 
     case 'paragraph':
-      return <p className="text-fg">{renderInlines(block.inlines, ctx, link)}</p>
+      return <p className="text-fg">{renderInlines(block.inlines, ctx, urlDistro)}</p>
 
     case 'list': {
       const ListTag = (block.ordered ? 'ol' : 'ul') as 'ol'
@@ -185,7 +185,7 @@ const BlockView = memo(function BlockView({ block, ctx, link }: { block: BlockNo
             <li key={idx}>
               <div className="space-y-2">
                 {itemBlocks.map((child, childIdx) => (
-                  <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} link={link} />
+                  <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} urlDistro={urlDistro} />
                 ))}
               </div>
             </li>
@@ -202,11 +202,11 @@ const BlockView = memo(function BlockView({ block, ctx, link }: { block: BlockNo
           {block.items.map((item, idx) => (
             <div key={item.id ?? idx} className="grid gap-x-6 sm:grid-cols-[minmax(8ch,28ch)_minmax(0,1fr)]">
               <dt id={item.id ?? undefined} className="scroll-mt-32 break-words font-mono text-sm font-semibold text-fg">
-                {renderInlines(item.termInlines, ctx, link)}
+                {renderInlines(item.termInlines, ctx, urlDistro)}
               </dt>
               <dd className="mt-1.5 min-w-0 space-y-2 pl-4 text-fg sm:mt-0 sm:pl-0">
                 {item.definitionBlocks.map((child, childIdx) => (
-                  <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} link={link} />
+                  <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} urlDistro={urlDistro} />
                 ))}
               </dd>
             </div>
@@ -260,7 +260,7 @@ const BlockView = memo(function BlockView({ block, ctx, link }: { block: BlockNo
 })
 
 /** `linkify` turns plain-text URLs into links; it is off inside an existing link. */
-function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, link: LinkDistro, linkify = true): ReactNode[] {
+function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, urlDistro: Distro | null, linkify = true): ReactNode[] {
   return inlines.map((inline, idx) => {
     switch (inline.type) {
       case 'text':
@@ -275,20 +275,20 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, link: LinkDistr
       case 'emphasis':
         return (
           <em key={idx} className="italic">
-            {renderInlines(inline.inlines, ctx, link, linkify)}
+            {renderInlines(inline.inlines, ctx, urlDistro, linkify)}
           </em>
         )
       case 'strong':
         return (
           <strong key={idx} className="font-semibold">
-            {renderInlines(inline.inlines, ctx, link, linkify)}
+            {renderInlines(inline.inlines, ctx, urlDistro, linkify)}
           </strong>
         )
       case 'link':
         if (inline.linkType === 'external') {
           return (
             <ExternalLink key={idx} href={inline.href}>
-              {renderInlines(inline.inlines, ctx, link, false)}
+              {renderInlines(inline.inlines, ctx, urlDistro, false)}
             </ExternalLink>
           )
         }
@@ -299,14 +299,14 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, link: LinkDistr
               className="cursor-not-allowed text-muted underline decoration-edge-strong decoration-dotted underline-offset-4"
               title="Not available in this dataset"
             >
-              {renderInlines(inline.inlines, ctx, link, false)}
+              {renderInlines(inline.inlines, ctx, urlDistro, false)}
               <span className="sr-only"> (not available)</span>
             </span>
           )
         }
         return (
-          <Link key={idx} href={inline.href.startsWith('/') ? withDistro(inline.href, link) : inline.href} className="underline underline-offset-4 decoration-accent-edge">
-            {renderInlines(inline.inlines, ctx, link, false)}
+          <Link key={idx} href={inline.href.startsWith('/') ? withDistro(inline.href, urlDistro) : inline.href} className="underline underline-offset-4 decoration-accent-edge">
+            {renderInlines(inline.inlines, ctx, urlDistro, false)}
             <LinkPendingHint />
           </Link>
         )

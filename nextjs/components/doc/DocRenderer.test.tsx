@@ -4,12 +4,10 @@ import { describe, expect, it } from 'vitest'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
 import { DocRenderer } from './DocRenderer'
 
-const DEBIAN = { distro: 'debian', preferred: 'debian' } as const
-
 const paragraph = (...inlines: InlineNode[]): BlockNode[] => [{ type: 'paragraph', inlines }]
 const text = (value: string): InlineNode => ({ type: 'text', text: value })
 const render = (blocks: BlockNode[], props: { findQuery?: string; optionTerms?: string[] } = {}) =>
-  renderToStaticMarkup(<DocRenderer blocks={blocks} link={DEBIAN} {...props} />)
+  renderToStaticMarkup(<DocRenderer blocks={blocks} urlDistro={null} {...props} />)
 
 describe('DocRenderer plain-text URLs', () => {
   it('links validated URLs in text and table cells as external links', () => {
@@ -42,13 +40,13 @@ describe('DocRenderer plain-text URLs', () => {
 
 describe('DocRenderer cross-references', () => {
   const xref = paragraph({ type: 'link', linkType: 'internal', href: '/man/gzip/1', inlines: [text('gzip(1)')] })
-  const hrefFor = (link: { distro: 'debian' | 'ubuntu'; preferred: 'debian' | 'ubuntu' }) =>
-    renderToStaticMarkup(<DocRenderer blocks={xref} link={link} />).match(/href="([^"]+)"/)?.[1]
+  const hrefFor = (urlDistro: 'debian' | 'ubuntu' | null) =>
+    renderToStaticMarkup(<DocRenderer blocks={xref} urlDistro={urlDistro} />).match(/href="([^"]+)"/)?.[1]
 
-  it('keeps the reading context distro, including Debian when the stored default differs', () => {
-    expect(hrefFor({ distro: 'debian', preferred: 'debian' })).toBe('/man/gzip/1')
-    expect(hrefFor({ distro: 'debian', preferred: 'ubuntu' })).toBe('/man/gzip/1?distro=debian')
-    expect(hrefFor({ distro: 'ubuntu', preferred: 'ubuntu' })).toBe('/man/gzip/1?distro=ubuntu')
+  it("carries the page URL's distro, Debian included, and stays bare on a bare page", () => {
+    expect(hrefFor(null)).toBe('/man/gzip/1')
+    expect(hrefFor('debian')).toBe('/man/gzip/1?distro=debian')
+    expect(hrefFor('ubuntu')).toBe('/man/gzip/1?distro=ubuntu')
   })
 })
 

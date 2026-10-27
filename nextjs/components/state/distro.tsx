@@ -9,6 +9,8 @@ import { DISTRO_COOKIE, DISTRO_STORAGE_KEY, normalizeDistro } from '../../lib/di
 type DistroContextValue = {
   /** What the current URL shows: `?distro=`, else the stored default. */
   distro: Distro
+  /** The URL's own `?distro=`, which in-app links carry; null for a bare URL. */
+  urlDistro: Distro | null
   /** The stored default distro. */
   preferred: Distro
   /** Make `distro` the stored default and show it. */
@@ -106,7 +108,7 @@ export function DistroProvider({
     writeCookie(stored)
   }, [])
 
-  const value = useMemo(() => ({ distro, preferred, setDistro }), [distro, preferred, setDistro])
+  const value = useMemo(() => ({ distro, urlDistro, preferred, setDistro }), [distro, urlDistro, preferred, setDistro])
   return <DistroContext.Provider value={value}>{children}</DistroContext.Provider>
 }
 

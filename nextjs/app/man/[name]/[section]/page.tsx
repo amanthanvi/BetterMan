@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { notFound, permanentRedirect } from 'next/navigation'
+import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { Suspense, cache } from 'react'
 
 import { ManPageSkeleton } from '../../../../components/man/ManPageSkeleton'
@@ -15,10 +15,10 @@ import {
   type ManAlias,
 } from '../../../../lib/api'
 import type { ManPage } from '../../../../lib/docModel'
-import { canonicalLinkDistro, normalizeDistro, withDistro, type Distro } from '../../../../lib/distro'
+import { canonicalWithDistro, withDistro, type Distro } from '../../../../lib/distro'
 import { OG_SIZE } from '../../../../lib/og/card'
 import { getPublicOrigin } from '../../../../lib/public-origin'
-import { getFirst, resolveRequestDistro, type SearchParams } from '../../../../lib/requestContext'
+import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../../../lib/requestContext'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
 type Lookup = { distro: Distro; name: string; section: string }
@@ -59,7 +59,7 @@ export async function generateMetadata({
   if (data.kind === 'alias') return {}
 
   const origin = getPublicOrigin({ headers: await headers() })
-  const canonical = `${origin}${withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, canonicalLinkDistro(distro))}`
+  const canonical = `${origin}${canonicalWithDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)}`
   const title = `${data.page.name}(${data.page.section}) - BetterMan`
   const description = data.page.description || data.page.title || `${data.page.name}(${data.page.section}) man page.`
 
@@ -73,7 +73,7 @@ export async function generateMetadata({
       type: 'article',
       images: [
         {
-          url: `${origin}${withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}/og`, canonicalLinkDistro(distro))}`,
+          url: `${origin}${canonicalWithDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}/og`, distro)}`,
           ...OG_SIZE,
           alt: 'Man page',
           type: 'image/png',
@@ -94,11 +94,12 @@ export default async function ManByNameAndSectionPage({
   const sp = await searchParams
   const { distro, data } = await locate(name, section, await resolveRequestDistro(sp))
   if (data.kind === 'alias') {
-    // Browsers cache a 308, so the target keeps exactly the request's `?distro=`
-    // instead of one derived from the distro cookie.
-    const target = `/man/${encodeURIComponent(data.name)}/${encodeURIComponent(data.section)}`
-    const requested = normalizeDistro(getFirst(sp.distro))
-    permanentRedirect(requested ? `${target}?distro=${requested}` : target)
+    const urlDistro = explicitDistro(sp)
+    const target = withDistro(`/man/${encodeURIComponent(data.name)}/${encodeURIComponent(data.section)}`, urlDistro)
+    // Browsers cache a 308, so only an explicit `?distro=` gets one; a bare URL
+    // resolved the alias on the stored default, which can change.
+    if (urlDistro) permanentRedirect(target)
+    redirect(target)
   }
 
   const nonce = (await headers()).get('x-nonce') ?? undefined

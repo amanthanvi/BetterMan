@@ -6,7 +6,7 @@ import { type ComponentType, useCallback, useEffect, useRef, useState } from 're
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { FIND_REQUEST_EVENT, singleKeyShortcutsBlocked } from '../../lib/dom'
-import { withDistro, type LinkDistro } from '../../lib/distro'
+import { withDistro, type Distro } from '../../lib/distro'
 import { getScrollBehavior, READER_INPUT_EVENTS } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
 import { parseReleaseId } from '../../lib/release'
@@ -76,8 +76,8 @@ function useOverlay<P>(
   return Overlay
 }
 
-function dashboardHref(section: 'recent' | 'bookmarks', link: LinkDistro) {
-  return `${withDistro('/', link)}#${section}`
+function dashboardHref(section: 'recent' | 'bookmarks', urlDistro: Distro | null) {
+  return `${withDistro('/', urlDistro)}#${section}`
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -315,7 +315,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'h') {
         e.preventDefault()
-        router.push(dashboardHref('recent', distro))
+        router.push(dashboardHref('recent', distro.urlDistro))
         return
       }
 
@@ -412,7 +412,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </a>
       <header data-bm-app-header aria-label="Site header" className="sticky top-0 z-20 border-b border-edge bg-bg">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
-          <a href={withDistro('/', distro)} className="inline-flex items-center gap-2 text-fg hover:text-fg hover:no-underline">
+          <a href={withDistro('/', distro.urlDistro)} className="inline-flex items-center gap-2 text-fg hover:text-fg hover:no-underline">
             <span className="font-mono text-sm font-semibold tracking-tight text-accent">&gt;_</span>
             <span className="text-sm font-semibold tracking-tight">BetterMan</span>
           </a>
@@ -487,7 +487,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-4">
             <a
-              href={withDistro('/licenses', distro)}
+              href={withDistro('/licenses', distro.urlDistro)}
               className="text-muted underline underline-offset-4 hover:text-fg"
             >
               Licenses

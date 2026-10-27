@@ -105,32 +105,35 @@ describe('short URL options', () => {
     await expect(visit('/tar/-c')).rejects.toHaveProperty('message', '307 /man/tar/5#opt-create')
   })
 
-  it('scopes the lookup to the section and keeps the reader distro', async () => {
+  it('scopes the lookup to the reader distro and leaves a bare URL bare', async () => {
     mocks.cookieDistro = 'ubuntu'
     mocks.search.mockResolvedValue(results({ match: 'option', anchorId: 'C' }))
-    await expect(visit('/tar.1/-C')).rejects.toHaveProperty('message', '307 /man/tar/1?distro=ubuntu#C')
+    await expect(visit('/tar.1/-C')).rejects.toHaveProperty('message', '307 /man/tar/1#C')
     expect(mocks.search).toHaveBeenCalledWith({ distro: 'ubuntu', q: 'tar -C', section: '1', limit: 10 })
   })
 
-  it('follows the Debian fallback for a distro without a release', async () => {
+  it('searches the Debian fallback and keeps the explicit distro', async () => {
     mocks.search.mockResolvedValue(results({ match: 'option', anchorId: 'x' }))
-    await expect(visit('/tar/-x', { distro: 'arch' })).rejects.toHaveProperty('message', '307 /man/tar/1#x')
+    await expect(visit('/tar/-x', { distro: 'arch' })).rejects.toHaveProperty('message', '307 /man/tar/1?distro=arch#x')
     expect(mocks.search).toHaveBeenCalledWith(expect.objectContaining({ distro: 'debian' }))
   })
 
   it.each([
     ['/tar/-x', {}, '307 /man/tar'],
     ['/tar.1/-x', { distro: 'ubuntu' }, '307 /man/tar/1?distro=ubuntu'],
+    ['/tar/-x', { distro: 'debian' }, '307 /man/tar?distro=debian'],
   ])('lands %s %j on the page when the option search fails', async (path, sp, expected) => {
     mocks.search.mockRejectedValue(new Error('Convex unavailable'))
     await expect(visit(path, sp)).rejects.toHaveProperty('message', expected)
   })
 
   it.each([
-    ['/tar/-q', '307 /man/tar'],
-    ['/tar.1/-q', '307 /man/tar/1'],
-  ])('lands %s on the page when no option matches', async (path, expected) => {
+    ['/tar/-q', {}, '307 /man/tar'],
+    ['/tar.1/-q', {}, '307 /man/tar/1'],
+    ['/tar/-q', { distro: 'arch' }, '307 /man/tar?distro=arch'],
+    ['/tar.1/-q', { distro: 'debian' }, '307 /man/tar/1?distro=debian'],
+  ])('lands %s %j on the page when no option matches', async (path, sp, expected) => {
     mocks.search.mockResolvedValue(results())
-    await expect(visit(path)).rejects.toHaveProperty('message', expected)
+    await expect(visit(path, sp)).rejects.toHaveProperty('message', expected)
   })
 })

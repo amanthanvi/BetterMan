@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
-import { withDistro, type LinkDistro } from '../../lib/distro'
+import { withDistro, type Distro } from '../../lib/distro'
 import {
   BOOKMARKS_EVENT,
   BOOKMARKS_STORAGE_KEY,
@@ -17,6 +17,7 @@ import {
   RECENT_STORAGE_KEY,
   type RecentItem,
 } from '../../lib/recent'
+import { useDistro } from '../../components/state/distro'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Kbd } from '../../components/ui/Kbd'
 import { LinkPendingHint } from '../../components/ui/LinkPendingHint'
@@ -32,12 +33,12 @@ function formatRelativeFromMs(ms: number): string {
   }
 }
 
-function ManLink({ link, name, section, children }: { link: LinkDistro; name: string; section: string; children: React.ReactNode }) {
+function ManLink({ urlDistro, name, section, children }: { urlDistro: Distro | null; name: string; section: string; children: React.ReactNode }) {
   const href = useMemo(() => {
     const encodedName = encodeURIComponent(name)
     const encodedSection = encodeURIComponent(section)
-    return withDistro(`/man/${encodedName}/${encodedSection}`, link)
-  }, [link, name, section])
+    return withDistro(`/man/${encodedName}/${encodedSection}`, urlDistro)
+  }, [urlDistro, name, section])
 
   return (
     <Link href={href} className="group min-w-0 flex-1 py-2.5 transition-colors hover:no-underline">
@@ -48,20 +49,20 @@ function ManLink({ link, name, section, children }: { link: LinkDistro; name: st
 }
 
 function EntryRow({
-  link,
+  urlDistro,
   name,
   section,
   description,
   timestamp,
 }: {
-  link: LinkDistro
+  urlDistro: Distro | null
   name: string
   section: string
   description?: string
   timestamp: number
 }) {
   return (
-    <ManLink link={link} name={name} section={section}>
+    <ManLink urlDistro={urlDistro} name={name} section={section}>
       <div className="flex items-baseline justify-between gap-3">
         <div className="flex min-w-0 items-baseline gap-3">
           <span className="shrink-0 font-mono text-sm font-semibold text-fg group-hover:text-accent">
@@ -75,7 +76,8 @@ function EntryRow({
   )
 }
 
-export function HomeDashboardClient({ link }: { link: LinkDistro }) {
+export function HomeDashboardClient() {
+  const { urlDistro } = useDistro()
   const [recentPages, setRecentPages] = useState<RecentPageItem[]>([])
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
 
@@ -119,7 +121,7 @@ export function HomeDashboardClient({ link }: { link: LinkDistro }) {
             <div className="mt-2">
               {recentPages.map((it) => (
                 <div key={`${it.name}:${it.section}:${it.at}`} className="flex items-stretch border-b border-edge last:border-b-0">
-                  <EntryRow link={link} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
+                  <EntryRow urlDistro={urlDistro} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
                 </div>
               ))}
             </div>
@@ -139,7 +141,7 @@ export function HomeDashboardClient({ link }: { link: LinkDistro }) {
             <div className="mt-2">
               {bookmarks.map((it) => (
                 <div key={`${it.name}:${it.section}:${it.addedAt}`} className="group/row flex items-stretch border-b border-edge last:border-b-0">
-                  <EntryRow link={link} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
+                  <EntryRow urlDistro={urlDistro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
                   <button
                     type="button"
                     className="flex shrink-0 items-center justify-center px-3 text-xs text-muted opacity-100 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0"

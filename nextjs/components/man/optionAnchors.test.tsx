@@ -9,8 +9,6 @@ import { DocRenderer } from '../doc/DocRenderer'
 import { OptionsTable } from './OptionsTable'
 import { collectBlockIds, optionRowIds } from './optionAnchors'
 
-const DEBIAN = { distro: 'debian', preferred: 'debian' } as const
-
 const dir = join(__dirname, '../doc/__fixtures__')
 const goldens = readdirSync(dir)
   .filter((f) => f.endsWith('.json'))
@@ -22,7 +20,7 @@ function renderedIds(options: OptionItem[], blocks: BlockNode[]): string[] {
   const html = renderToStaticMarkup(
     <>
       <OptionsTable options={options} rowIds={rowIds} />
-      <DocRenderer blocks={blocks} link={DEBIAN} />
+      <DocRenderer blocks={blocks} urlDistro={null} />
     </>,
   )
   return [...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])

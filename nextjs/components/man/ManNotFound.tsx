@@ -15,10 +15,8 @@ import { ManDistroAvailability } from './ManDistroAvailability'
 // the 404 is actually shown.
 export function ManNotFound() {
   const { name, section } = useParams<{ name: string; section?: string }>()
-  const { distro, preferred } = useDistro()
+  const { distro, urlDistro } = useDistro()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
-  // Debian when the requested distro has no active release, as on the man page.
-  const [suggestionsDistro, setSuggestionsDistro] = useState(distro)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -33,10 +31,7 @@ export function ManNotFound() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return (await res.json()) as SuggestApiResponse
       })
-      .then((payload) => {
-        setSuggestions(payload.suggestions)
-        setSuggestionsDistro(payload.distro ?? distro)
-      })
+      .then((payload) => setSuggestions(payload.suggestions))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
         setSuggestions([])
@@ -65,7 +60,7 @@ export function ManNotFound() {
             {suggestions.map((s) => (
               <li key={`${s.name}:${s.section}`} className="flex flex-col">
                 <Link
-                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, { distro: suggestionsDistro, preferred })}
+                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, urlDistro)}
                   className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
                 >
                   {s.name}({s.section})
@@ -80,7 +75,7 @@ export function ManNotFound() {
 
       <div className="mt-6">
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent(name)}`, { distro, preferred })}
+          href={withDistro(`/search?q=${encodeURIComponent(name)}`, urlDistro)}
           className="text-sm underline underline-offset-4"
         >
           Search for “{name}”

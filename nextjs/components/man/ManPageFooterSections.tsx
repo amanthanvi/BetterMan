@@ -4,17 +4,17 @@ import Link from 'next/link'
 
 import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
-import { withDistro, type LinkDistro } from '../../lib/distro'
+import { withDistro, type Distro } from '../../lib/distro'
 import { ManSectionLabel } from './RunningHead'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
 
 export function ManPageFooterSections({
-  link,
+  urlDistro,
   seeAlso,
   relatedItems,
   hasParseWarnings = false,
 }: {
-  link: LinkDistro
+  urlDistro: Distro | null
   seeAlso?: ManPageContent['seeAlso']
   relatedItems: SectionPage[]
   hasParseWarnings?: boolean
@@ -44,8 +44,8 @@ export function ManPageFooterSections({
               }
 
               const href = ref.section
-                ? withDistro(`/man/${encodeURIComponent(ref.name)}/${encodeURIComponent(ref.section)}`, link)
-                : withDistro(`/man/${encodeURIComponent(ref.name)}`, link)
+                ? withDistro(`/man/${encodeURIComponent(ref.name)}/${encodeURIComponent(ref.section)}`, urlDistro)
+                : withDistro(`/man/${encodeURIComponent(ref.name)}`, urlDistro)
 
               return (
                 <li key={key}>
@@ -67,7 +67,7 @@ export function ManPageFooterSections({
             {related.map((item) => (
               <li key={`${item.name}:${item.section}`}>
                 <Link
-                  href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, link)}
+                  href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, urlDistro)}
                   className="group flex items-baseline gap-3 py-1.5 transition-colors hover:no-underline"
                 >
                   <span className="shrink-0 font-mono text-sm text-accent group-hover:underline group-hover:underline-offset-4">

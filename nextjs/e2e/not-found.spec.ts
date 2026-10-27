@@ -18,9 +18,10 @@ test('not found: a missing man page is a 404 that suggests nearby names', async 
   await expect(page).toHaveURL(/\/man\/tar\/1$/)
 })
 
-test('not found: for a distro without a release, suggestions fall back to Debian and link as Debian', async ({ page }) => {
+test('not found: for a distro without a release, suggestions fall back to Debian and keep the URL distro', async ({ page }) => {
   const res = await page.goto('/man/ta/9?distro=arch')
   expect(res?.status()).toBe(404)
   await page.getByRole('link', { name: 'tar(1)' }).click()
-  await expect(page).toHaveURL(/\/man\/tar\/1$/)
+  await expect(page).toHaveURL(/\/man\/tar\/1\?distro=arch$/)
+  await expect(page.getByRole('heading', { name: /tar\(1\)/i })).toBeVisible()
 })

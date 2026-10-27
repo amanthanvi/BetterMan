@@ -40,36 +40,28 @@ export function normalizeDistro(value: unknown): Distro | null {
 }
 
 /**
- * Who a link is for: the distro the current page shows, and the reader's stored
- * default, which a URL without `?distro=` resolves to.
+ * Adds the current URL's explicit `?distro=` to an in-app link, Debian included,
+ * so following it keeps the reading context. A bare URL passes null: its links
+ * stay bare and resolve on the reader's stored default when followed.
  */
-export type LinkDistro = { distro: Distro; preferred: Distro }
-
-/** A reader with no stored default, such as a crawler or a share-card fetcher. */
-export function canonicalLinkDistro(distro: Distro): LinkDistro {
-  return { distro, preferred: 'debian' }
+export function withDistro(loc: string, distro: Distro | null): string {
+  return distro ? setDistroParam(loc, distro) : loc
 }
 
-/**
- * The `?distro=` a link needs to keep showing `distro`, or null when a bare URL
- * already does: Debian for a reader whose default is Debian. Other distros keep
- * the parameter even when they are the default, as they always have.
- */
-export function distroParam({ distro, preferred }: LinkDistro): Distro | null {
-  return distro === 'debian' && preferred === 'debian' ? null : distro
+/** Canonical, share-image, sitemap and OpenSearch URLs, where Debian is the bare form. */
+export function canonicalWithDistro(loc: string, distro: string): string {
+  return distro === 'debian' ? loc : setDistroParam(loc, distro)
+}
+
+function setDistroParam(loc: string, distro: string): string {
+  const isAbsolute = /^https?:\/\//.test(loc)
+  const url = isAbsolute ? new URL(loc) : new URL(loc, 'https://example.invalid')
+  url.searchParams.set('distro', distro)
+  return isAbsolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`
 }
 
 /** Option anchors are appended as written (`sort=`, `no~2`), like the options table's own links. */
-export function manPageHref(name: string, section: string, link: LinkDistro, anchorId?: string): string {
-  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, link)
+export function manPageHref(name: string, section: string, distro: Distro | null, anchorId?: string): string {
+  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)
   return anchorId ? `${href}#${anchorId}` : href
-}
-
-export function withDistro(loc: string, link: LinkDistro): string {
-  const param = distroParam(link)
-  if (!param) return loc
-  const isAbsolute = /^https?:\/\//.test(loc)
-  const url = isAbsolute ? new URL(loc) : new URL(loc, 'https://example.invalid')
-  url.searchParams.set('distro', param)
-  return isAbsolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`
 }

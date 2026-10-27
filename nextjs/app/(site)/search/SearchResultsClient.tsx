@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { SearchResponse, SearchResult } from '../../../lib/api'
-import { manPageHref, withDistro, type Distro, type LinkDistro } from '../../../lib/distro'
+import { manPageHref, withDistro, type Distro } from '../../../lib/distro'
+import { useDistro } from '../../../components/state/distro'
 import { escapeRegExp } from '../../../lib/textRanges'
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
 
@@ -79,9 +80,9 @@ function buildSynopsisSnippet(r: SearchResult): string {
     .join('\n')
 }
 
-function ResultCard({ link, q, r }: { link: LinkDistro; q: string; r: SearchResult }) {
+function ResultCard({ urlDistro, q, r }: { urlDistro: Distro | null; q: string; r: SearchResult }) {
   const anchorId = r.match === 'option' ? r.anchorId : undefined
-  const href = useMemo(() => manPageHref(r.name, r.section, link, anchorId), [anchorId, link, r.name, r.section])
+  const href = useMemo(() => manPageHref(r.name, r.section, urlDistro, anchorId), [anchorId, urlDistro, r.name, r.section])
   const synopsis = useMemo(() => buildSynopsisSnippet(r), [r])
 
   return (
@@ -135,17 +136,18 @@ function getSuggestions(initial: SearchResponse | null, q: string): string[] {
 }
 
 export function SearchResultsClient({
-  link,
+  distro,
   q,
   section,
   initial,
 }: {
-  link: LinkDistro
+  /** The distro the results came from, after any Debian fallback. */
+  distro: Distro
   q: string
   section: string
   initial: SearchResponse | null
 }) {
-  const { distro } = link
+  const { urlDistro } = useDistro()
   const [results, setResults] = useState<SearchResult[]>(() => initial?.results ?? [])
   const [hasMore, setHasMore] = useState<boolean>(() => initial?.hasMore ?? false)
   const [loading, setLoading] = useState(false)
@@ -198,21 +200,21 @@ export function SearchResultsClient({
       <div className="mt-8 text-sm text-muted">
         Search by command name or by what it does. Try{' '}
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent('tar')}`, link)}
+          href={withDistro(`/search?q=${encodeURIComponent('tar')}`, urlDistro)}
           className="font-mono"
         >
           tar
         </Link>
         ,{' '}
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent('ssh')}`, link)}
+          href={withDistro(`/search?q=${encodeURIComponent('ssh')}`, urlDistro)}
           className="font-mono"
         >
           ssh
         </Link>
         ,{' '}
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent('copy files')}`, link)}
+          href={withDistro(`/search?q=${encodeURIComponent('copy files')}`, urlDistro)}
           className="font-mono"
         >
           copy files
@@ -241,7 +243,7 @@ export function SearchResultsClient({
               <span key={s}>
                 {idx ? ', ' : ''}
                 <Link
-                  href={withDistro(`/search?q=${encodeURIComponent(s)}`, link)}
+                  href={withDistro(`/search?q=${encodeURIComponent(s)}`, urlDistro)}
                   className="font-mono"
                 >
                   {s}
@@ -264,7 +266,7 @@ export function SearchResultsClient({
             <span key={s}>
               {idx ? ', ' : ''}
               <Link
-                href={withDistro(`/search?q=${encodeURIComponent(s)}`, link)}
+                href={withDistro(`/search?q=${encodeURIComponent(s)}`, urlDistro)}
                 className="font-mono"
               >
                 {s}
@@ -277,7 +279,7 @@ export function SearchResultsClient({
 
       <ol aria-label="Search results">
         {results.map((r) => (
-          <ResultCard key={`${r.name}:${r.section}`} link={link} q={q} r={r} />
+          <ResultCard key={`${r.name}:${r.section}`} urlDistro={urlDistro} q={q} r={r} />
         ))}
       </ol>
 

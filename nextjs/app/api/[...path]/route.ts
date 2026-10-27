@@ -19,7 +19,7 @@ import {
   withDistroFallback,
   type Suggestion,
 } from '@/lib/api'
-import { normalizeDistro, withDistro, type Distro } from '@/lib/distro'
+import { canonicalWithDistro, normalizeDistro, type Distro } from '@/lib/distro'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
 import { nonHtmlSecurityHeaders } from '@/lib/securityHeaders'
@@ -92,7 +92,7 @@ function openSearchSuggestions(req: NextRequest, query: string, suggestions: Sug
   const rows = [...byName.entries()].map(([name, pages]) => ({
     name: pages[0].name,
     description: pages[0].description,
-    url: `${origin}${withDistro(manPath(name, pages.length === 1 ? pages[0].section : null), distro)}`,
+    url: `${origin}${canonicalWithDistro(manPath(name, pages.length === 1 ? pages[0].section : null), distro)}`,
   }))
   return cachedJson(
     [query, rows.map((row) => row.name), rows.map((row) => row.description), rows.map((row) => row.url)],

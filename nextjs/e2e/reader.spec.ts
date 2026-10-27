@@ -116,14 +116,18 @@ test('reader: a shared ?distro= link keeps a chosen default', async ({ page }) =
   await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
 })
 
-test('reader: an explicit Debian link keeps Debian through links while the default stays Ubuntu', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+async function chooseUbuntuDefault(page: Page) {
   await page.goto('/man/tar/1')
   await waitForInteractiveShell(page)
   await page.getByRole('button', { name: 'Reading preferences' }).click()
   const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
   await dialog.getByRole('radiogroup', { name: 'Default distro' }).getByRole('radio', { name: '@ubuntu' }).click()
   await expect.poll(() => storedDistro(page)).toEqual({ cookie: 'ubuntu', local: 'ubuntu' })
+}
+
+test('reader: an explicit Debian link keeps Debian through links while the default stays Ubuntu', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await chooseUbuntuDefault(page)
 
   await page.goto('/man/tar/1?distro=debian')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('tar')
@@ -133,20 +137,78 @@ test('reader: an explicit Debian link keeps Debian through links while the defau
   await page.getByRole('button', { name: 'Copy link to clipboard' }).click()
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/man\/tar\/1\?distro=debian$/)
 
+  const siteHeader = page.getByRole('banner', { name: 'Site header' })
+  await expect(siteHeader.getByRole('link', { name: /BetterMan/ })).toHaveAttribute('href', '/?distro=debian')
   await expect(page.locator('article p').getByRole('link', { name: 'bash(1)' })).toHaveAttribute('href', '/man/bash/1?distro=debian')
   await page.getByRole('complementary', { name: 'See also' }).getByRole('link', { name: 'gzip(1)' }).click()
   await expect(page).toHaveURL(/\/man\/gzip\/1\?distro=debian$/)
   const header = page.locator('header').filter({ has: page.getByRole('heading', { level: 1, name: /gzip\(1\)/i }) })
   await expect(header.getByText('Debian', { exact: true })).toBeVisible()
-  expect(await storedDistro(page)).toEqual({ cookie: 'ubuntu', local: 'ubuntu' })
 
-  // A `.so` alias keeps the explicit distro too.
-  await page.goto('/man/gunzip/1?distro=debian')
-  await expect(page).toHaveURL(/\/man\/gzip\/1\?distro=debian$/)
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Search' }).click()
+  await page.getByRole('combobox', { name: 'Command palette input' }).fill('>go home')
+  await page.getByRole('option', { name: /Go home/ }).click()
+  await expect(page).toHaveURL(/\/\?distro=debian$/)
+  await page.getByRole('region', { name: 'Browse sections' }).getByRole('link', { name: /^1\b/ }).click()
+  await expect(page).toHaveURL(/\/section\/1\?distro=debian$/)
+  await expect(page.getByRole('link', { name: /^tar\(1\)/ })).toHaveAttribute('href', '/man/tar/1?distro=debian')
+
+  await page.goto('/search?q=tar&distro=debian')
+  await page.getByRole('link', { name: /tar\(1\)/i }).first().click()
+  await expect(page).toHaveURL(/\/man\/tar\/1\?distro=debian$/)
+  await expect(page.getByText(UBUNTU_MARKER)).toHaveCount(0)
+  expect(await storedDistro(page)).toEqual({ cookie: 'ubuntu', local: 'ubuntu' })
 
   // A bare URL still resolves on the stored default.
   await page.goto('/man/tar/1')
   await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
+})
+
+test('reader: a bare URL keeps its links bare, so they resolve on the stored default', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await chooseUbuntuDefault(page)
+
+  await page.goto('/man/tar/1')
+  await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Copy link to clipboard' }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/man\/tar\/1$/)
+  await expect(page.getByRole('banner', { name: 'Site header' }).getByRole('link', { name: /BetterMan/ })).toHaveAttribute('href', '/')
+  await expect(page.locator('article p').getByRole('link', { name: 'bash(1)' })).toHaveAttribute('href', '/man/bash/1')
+  await expect(page.getByRole('complementary', { name: 'See also' }).getByRole('link', { name: 'gzip(1)' })).toHaveAttribute('href', '/man/gzip/1')
+})
+
+test('reader: links from a server snapshot taken before the stored default reached the cookie stay bare', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('bm-e2e-seeded')) {
+      localStorage.setItem('bm-distro', 'ubuntu')
+      sessionStorage.setItem('bm-e2e-seeded', '1')
+    }
+  })
+  await page.goto('/search?q=tar')
+  await waitForInteractiveShell(page)
+  await expect.poll(() => storedDistro(page)).toEqual({ cookie: 'ubuntu', local: 'ubuntu' })
+  const result = page.getByRole('link', { name: /tar\(1\)/i }).first()
+  await expect(result).toHaveAttribute('href', '/man/tar/1')
+  await result.click()
+  await expect(page).toHaveURL(/\/man\/tar\/1$/)
+  await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
+})
+
+test('reader: link hrefs on an explicit-distro URL do not depend on the distro cookie', async ({ request }) => {
+  const hrefs = async (path: string, cookie: string | null) => {
+    const res = await request.get(path, { headers: cookie ? { cookie: `bm-distro=${cookie}` } : {} })
+    expect(res.status(), path).toBe(200)
+    return [...(await res.text()).matchAll(/<a\b[^>]*\shref="(\/[^"]*)"/g)].map((m) => m[1])
+  }
+  for (const path of ['/man/tar/1?distro=debian', '/?distro=debian', '/search?q=tar&distro=debian', '/section/1?distro=debian']) {
+    const plain = await hrefs(path, null)
+    expect(plain.length, path).toBeGreaterThan(1)
+    for (const href of plain) expect(href, path).toContain('distro=debian')
+    expect(await hrefs(path, 'ubuntu'), path).toEqual(plain)
+    expect(await hrefs(path, 'macos'), path).toEqual(plain)
+  }
 })
 
 test('reader: a page missing from the active distro links to the distros that have it', async ({ page }) => {

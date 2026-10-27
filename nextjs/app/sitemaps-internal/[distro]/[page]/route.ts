@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { FastApiError, fetchSeoReleases, fetchSeoSitemapPage } from '../../../../lib/api'
-import { canonicalLinkDistro, normalizeDistro, withDistro } from '../../../../lib/distro'
+import { canonicalWithDistro } from '../../../../lib/distro'
 import { getPublicOrigin } from '../../../../lib/public-origin'
 
 export const dynamic = 'force-dynamic'
@@ -15,10 +15,9 @@ type SeoRelease = Awaited<ReturnType<typeof fetchSeoReleases>>['items'][number]
 type SeoSitemapItem = Awaited<ReturnType<typeof fetchSeoSitemapPage>>['items'][number]
 
 export async function GET(request: Request, ctx: { params: Promise<{ distro?: string; page?: string }> }) {
-  const { distro: distroRaw, page: pageRaw } = await ctx.params
+  const { distro, page: pageRaw } = await ctx.params
   const origin = getPublicOrigin(request)
-  const distro = normalizeDistro(distroRaw)
-  if (!distro || distro !== distroRaw || !pageRaw) return new Response(null, { status: 404 })
+  if (!distro || !pageRaw) return new Response(null, { status: 404 })
   const page = Number(pageRaw)
 
   if (!Number.isInteger(page) || page < 1) return new Response(null, { status: 404 })
@@ -48,7 +47,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
     const rows = data.items
       .map((item: SeoSitemapItem) => {
         const locBase = `${origin}/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`
-        const loc = withDistro(locBase, canonicalLinkDistro(distro))
+        const loc = canonicalWithDistro(locBase, distro)
         return `  <url>\n    <loc>${loc}</loc>\n  </url>`
       })
       .join('\n')

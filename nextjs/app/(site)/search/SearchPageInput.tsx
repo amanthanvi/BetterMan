@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-import { distroParam, type LinkDistro } from '../../../lib/distro'
+import { useDistro } from '../../../components/state/distro'
 import { useDebouncedValue } from '../../../lib/useDebouncedValue'
 
 /**
@@ -14,11 +14,9 @@ import { useDebouncedValue } from '../../../lib/useDebouncedValue'
 export function SearchPageInput({
   initialQ,
   section,
-  link,
 }: {
   initialQ: string
   section: string
-  link: LinkDistro
 }) {
   const router = useRouter()
   const [value, setValue] = useState(initialQ)
@@ -28,7 +26,7 @@ export function SearchPageInput({
   const lastPushedRef = useRef(initialQuery)
   const restoreFocusRef = useRef(false)
   const isExternalNavigation = initialQuery !== lastPushedRef.current
-  const distro = distroParam(link)
+  const { urlDistro: distro } = useDistro()
 
   useEffect(() => {
     const cancelFocusRestore = () => {
