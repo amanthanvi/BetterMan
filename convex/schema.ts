@@ -195,6 +195,7 @@ export default defineSchema({
     anchorId: v.string(),
     // The option's flag text as written, for the result snippet.
     flags: v.string(),
+    takesArgument: v.optional(v.boolean()),
   })
     .index("by_releaseId_and_flag_and_nameNorm", ["releaseId", "flag", "nameNorm"])
     .index("by_releaseId_and_section_and_flag_and_nameNorm", [

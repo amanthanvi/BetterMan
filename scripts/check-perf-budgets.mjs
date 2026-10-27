@@ -157,7 +157,7 @@ async function sample(url, name, { cost = false } = {}) {
 try {
   process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
-  const { createFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
+  const { createFixture, createSearchFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
   let fixture = await createFixture(() => metrics.calls++)
   const runtime = globalThis.Convex
   globalThis.Convex = new Proxy(runtime, {
@@ -252,6 +252,45 @@ try {
     details[name] = { path, chunks, pageView: { costs, apiRequests: pageView.apiRequests }, samples }
     assert.equal(backendErrors, 0, 'Convex fixture error (including errors swallowed by the app)')
     console.log(`${name}: ${JSON.stringify(Object.fromEntries(Object.entries(actual).filter(([k]) => k.startsWith(`${name}.`))))}`)
+  }
+  // Direct query costs exclude SSR, hydration and rate-limit work; the original
+  // search page-view case above continues to count that complete request scope.
+  fixture = await createSearchFixture(() => metrics.calls++)
+  for (const [name, q, expected, highlights] of [
+    ['searchTypo', 'grpe', 'grep(1)', []],
+    ['searchTypoCrowded', 'systemd.servcie', 'systemd.service(5)', []],
+    ['searchCitation', 'open(2)', 'open(2)', []],
+    ['searchAlias', 'man(7)', 'man(7)', []],
+    ['searchFlag', '--gzip', 'gzip0(1)', ['-z, --gzip']],
+    ['searchCluster', 'tar -xzf', 'tar(1)', ['-x, --extract', '-z, --gzip', '-f, --file']],
+    ['searchCluster8', 'ss -tlnp', 'ss(8)', ['-t', '-l', '-n', '-p']],
+  ]) {
+    metrics = { calls: 0, documents: 0, storageReads: 0 }
+    const result = await fixture.query(makeFunctionReference('queries:search'), {
+      distro: 'debian', q, section: null, limit: 20, offset: 0,
+    })
+    const hit = result.results[0]
+    assert.equal(`${hit?.name}(${hit?.section})`, expected, `${name} must resolve the intended page`)
+    if (name !== 'searchFlag') assert.equal(result.results.length, 1, `${name} must exclude unrelated results`)
+    if (highlights.length) assert.deepEqual(hit.highlights, highlights, `${name} must exercise the intended query path`)
+    if (name.startsWith('searchTypo')) {
+      assert.equal(result.correctedQuery, hit.name, 'Typo case must use the zero-result correction fallback')
+      assert.ok(metrics.documents <= 66, 'Typo query exceeded its document cap')
+    } else {
+      assert.equal(result.correctedQuery, undefined, 'Ordinary results must not use typo fallback')
+    }
+    if (highlights.length) {
+      assert.equal(hit.match, 'option', 'Flag cases must resolve option rows')
+      assert.equal(hit.anchorId, name === 'searchCluster' ? 'extract' : name === 'searchCluster8' ? 't' : 'gzip')
+    }
+    if (name === 'searchFlag') {
+      assert.equal(result.results.length, 20)
+      assert.equal(result.hasMore, true)
+      assert.ok(metrics.documents <= 43, 'Single flag query exceeded its document cap')
+    }
+    for (const [metric, value] of Object.entries(metrics)) actual[`${name}.${metric}`] = value
+    details[name] = { q, scope: 'direct Convex search query', costs: { ...metrics }, resultCount: result.results.length }
+    console.log(`${name}: ${JSON.stringify(metrics)}`)
   }
   const report = {
     sourceHead: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),

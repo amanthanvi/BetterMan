@@ -16,7 +16,12 @@ const FLAG_RE = /^(?:-{1,2}|\+)[A-Za-z0-9?#@%:!][A-Za-z0-9_.+:#-]*$/;
 const ATTACHED_PLACEHOLDER_RE =
   /^(-[A-Za-z])(?:NUM|N|FILE|FILES|PATTERN|PATTERNS|ACTION|DIR|DIRECTORY|STRING|COMMAND|TYPE|LEVEL|SIZE|LIST|GLOB|FORMAT|WHEN|MODE|NAME|ARG|ARGS|VALUE|KEY|PATH|COUNT|WIDTH|SEP|SECS|SECONDS|TIME|DATE|CHARS|LINES|BYTES|DEPTH)$/;
 
-export type OptionFlagRow = { flag: string; anchorId: string; flags: string };
+export type OptionFlagRow = { flag: string; anchorId: string; flags: string; takesArgument?: boolean };
+
+export function flagTakesArgument(flags: string): boolean {
+  return /[=<]|(?:^|[\s,|])\[?[A-Z][A-Z_]*\b/.test(flags) ||
+    flags.split(/[\s,|/]+/).some((part) => ATTACHED_PLACEHOLDER_RE.test(part));
+}
 
 /** `--sort=ORDER` and `--color[=WHEN]` key as `--sort` and `--color`; case is kept. */
 export function flagKey(token: string): string | null {
@@ -52,12 +57,13 @@ export function optionFlagRows(options: unknown): OptionFlagRow[] {
   const seen = new Set<string>();
   for (const option of options) {
     if (!option || typeof option !== "object") continue;
-    const { flags, anchorId } = option as { flags?: unknown; anchorId?: unknown };
+    const { flags, anchorId, argument } = option as { flags?: unknown; anchorId?: unknown; argument?: unknown };
     if (typeof flags !== "string" || typeof anchorId !== "string" || !anchorId) continue;
     for (const flag of optionKeys(flags)) {
       if (seen.has(flag)) continue;
       seen.add(flag);
-      rows.push({ flag, anchorId, flags: flags.trim().slice(0, MAX_FLAG_CHARS) });
+      const takesArgument = (typeof argument === "string" && argument.trim().length > 0) || flagTakesArgument(flags);
+      rows.push({ flag, anchorId, flags: flags.trim().slice(0, MAX_FLAG_CHARS), ...(takesArgument ? { takesArgument: true } : {}) });
       if (rows.length >= MAX_OPTION_FLAG_ROWS_PER_PAGE) return rows;
     }
   }

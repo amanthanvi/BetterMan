@@ -34,6 +34,7 @@ export type SearchResponse = {
   query: string
   results: SearchResult[]
   suggestions: string[]
+  correctedQuery?: string
   hasMore: boolean
   nextOffset?: number | null
 }

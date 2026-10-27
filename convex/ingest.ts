@@ -60,6 +60,7 @@ const optionFlagInput = v.object({
   flag: v.string(),
   anchorId: v.string(),
   flags: v.string(),
+  takesArgument: v.optional(v.boolean()),
 });
 
 const storedPageInput = v.object({
@@ -158,6 +159,7 @@ async function insertOptionFlags(
       flag: row.flag,
       anchorId: row.anchorId,
       flags: row.flags,
+      ...(row.takesArgument ? { takesArgument: true } : {}),
     });
   }
 }

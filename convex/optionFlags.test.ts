@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { api, internal } from "./_generated/api";
-import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, parseOptionQuery } from "./_optionFlags";
+import { flagTakesArgument, MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, parseOptionQuery } from "./_optionFlags";
+import { nameEditDistance } from "./_searchTypos";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -80,6 +81,9 @@ function page(name: string, options: Option[] | null, overrides: Partial<{ secti
 
 const tarOptions: Option[] = [
   { flags: "-c, --create", anchorId: "opt-create", description: "Create a new archive." },
+  { flags: "-x, --extract", anchorId: "opt-extract" },
+  { flags: "-z, --gzip", anchorId: "opt-gzip" },
+  { flags: "-f, --file", anchorId: "opt-file" },
   { flags: "-C, --directory=DIR", anchorId: "opt-directory", description: "Change to DIR." },
   { flags: "--version", anchorId: "opt-version", description: "Print version." },
 ];
@@ -112,11 +116,110 @@ function search(t: Harness, q: string, section: string | null = null) {
 }
 
 describe("option search", () => {
+  it("uses golden argument metadata and stops before attached argument letters", async () => {
+    // #414 supplies the missing operation/common options; keep the real parser
+    // shape and existing golden -f/-z rows until that fixture lands.
+    const options = [...tarGolden.options,
+      { flags: "-x, --extract", anchorId: "extract", argument: null },
+      { flags: "-c, --create", anchorId: "create", argument: null },
+      { flags: "-C, --directory", anchorId: "directory", argument: "DIR" },
+      { flags: "-o", anchorId: "o", argument: null },
+    ];
+    const t = await seeded([page("tar", options), page("mysql", [
+      { flags: "-u, --user=USER", anchorId: "user" },
+      ...["r", "o", "t"].map((letter) => ({ flags: `-${letter}`, anchorId: letter })),
+    ])], 66);
+    expect((await search(t, "tar -xzf")).results[0]).toMatchObject({
+      anchorId: "extract", highlights: ["-x, --extract", "-z, --gzip, --gunzip, --ungzip", "-f, --file"],
+    });
+    expect((await search(t, "tar -Cfoo")).results[0]).toMatchObject({ anchorId: "directory", highlights: ["-C, --directory"] });
+    expect((await search(t, "tar -gf")).results[0]).toMatchObject({ anchorId: "g", highlights: ["-g, --listed-incremental"] });
+    expect((await search(t, "mysql -uroot")).results[0]).toMatchObject({ anchorId: "user", highlights: ["-u, --user=USER"] });
+    const rows = await t.run(async (ctx) => {
+      const release = await ctx.db.query("datasetReleases").first();
+      return await Promise.all(["-f", "-C", "-u"].map((flag) => ctx.db.query("manPageOptionFlags")
+        .withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", release!._id).eq("flag", flag)).first()));
+    });
+    expect(rows[0]).toMatchObject({ takesArgument: true });
+    expect(rows[1]).toMatchObject({ takesArgument: true });
+    // Older rows have only flags text; argument syntax still stops the cluster.
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("manPageOptionFlags").withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q
+        .eq("releaseId", rows[0]!.releaseId).eq("flag", "-u")).first();
+      await ctx.db.patch(row!._id, { takesArgument: undefined });
+    });
+    expect((await search(t, "mysql -uroot")).results[0].highlights).toEqual(["-u, --user=USER"]);
+    for (const flags of ["-u USER", "-n N", "-u <user>", "-u, --user=USER", "-ePATTERNS"]) expect(flagTakesArgument(flags)).toBe(true);
+    expect(flagTakesArgument("-fPIC")).toBe(false);
+  });
+
+  it("groups section-8 clusters by page and preserves real flag command prefixes", async () => {
+    const flags = (letters: string) => [...letters].map((letter) => ({ flags: `-${letter}`, anchorId: letter }));
+    const t = await seeded([
+      page("iptables", flags("nvL"), { section: "8" }),
+      page("ss", flags("tlnp"), { section: "8" }),
+      page("netstat", flags("tulpn"), { section: "8" }),
+      page("ip", [{ flags: "-br, -brief", anchorId: "brief" }], { section: "8" }),
+      page("find", [{ flags: "-name", anchorId: "name", argument: "PATTERN" }]),
+      page("mixed", flags("n")), page("mixed", flags("v"), { section: "8" }),
+    ], 66);
+    for (const [name, cluster] of [["iptables", "nvL"], ["ss", "tlnp"], ["netstat", "tulpn"]]) {
+      expect((await search(t, `${name} -${cluster}`)).results).toEqual([expect.objectContaining({
+        name, section: "8", highlights: [...cluster].map((letter) => `-${letter}`),
+      })]);
+      expect((await search(t, `${name} -${cluster}`, "1")).results).toEqual([]);
+    }
+    expect((await search(t, "ip -br")).results[0]).toMatchObject({ name: "ip", section: "8", anchorId: "brief" });
+    for (const q of ["find -name", "fin -name"]) expect((await search(t, q)).results[0], q).toMatchObject({ name: "find", anchorId: "name" });
+    expect((await search(t, "mixed -nv")).results.every((hit) => hit.match !== "option")).toBe(true);
+  });
+
+  it("keeps the longest cluster miss and deepest name fallback within 303 reads", async () => {
+    const flags = [..."abcdefg"].map((letter) => ({ flags: `-${letter}`, anchorId: letter }));
+    const t = await seeded(["1", "5", "8"].map((section) => page("tool", flags, { section })), 303);
+    await t.run(async (ctx) => {
+      const source = await ctx.db.query("manPageSearchDocuments").first();
+      const { _id, _creationTime, ...fields } = source!;
+      void _id; void _creationTime;
+      for (let i = 0; i < 300; i += 1) {
+        const name = `tool${String(i).padStart(3, "0")}`;
+        await ctx.db.insert("manPageSearchDocuments", { ...fields, name, nameNorm: name });
+      }
+    });
+    const result = await t.query(api.queries.search, { distro: "debian", q: "tool -abcdefgh", section: null, limit: 50, offset: 200 });
+    expect(result.results.every((hit) => hit.match !== "option")).toBe(true);
+  });
+
+  it("splits missing short clusters, keeps real multi-letter flags, and links the first option", async () => {
+    const t = await seeded([
+      page("tar", tarOptions),
+      page("gcc", [
+        { flags: "-fPIC", anchorId: "pic" },
+        { flags: "-f", anchorId: "f" }, { flags: "-P", anchorId: "p" },
+        { flags: "-I", anchorId: "i" }, { flags: "-C", anchorId: "c" },
+      ]),
+      page("cp", [{ flags: "-R, --recursive", anchorId: "recursive" }]),
+      page("tarsnap", [{ flags: "-xzf", anchorId: "compound" }]),
+    ], 66);
+    expect((await search(t, "tar -xzf")).results).toEqual([expect.objectContaining({
+      name: "tar", section: "1", match: "option", anchorId: "opt-extract",
+      highlights: ["-x, --extract", "-z, --gzip", "-f, --file"],
+    })]);
+    expect((await search(t, "gcc -fPIC")).results).toEqual([expect.objectContaining({ anchorId: "pic", highlights: ["-fPIC"] })]);
+    expect((await search(t, "cp -R")).results).toEqual([expect.objectContaining({ name: "cp", anchorId: "recursive" })]);
+    expect((await search(t, "tar --gzip")).results).toEqual([expect.objectContaining({ name: "tar", anchorId: "opt-gzip" })]);
+    expect((await search(t, "tar -xzQ")).results[0]).not.toHaveProperty("match");
+    expect((await search(t, "tar -xzf", "5")).results).toEqual([]);
+  });
+
   it("derives rows from the stored-payload upload without an ingestion change", async () => {
     const t = await seeded([page("tar", tarOptions), page("cp", null)]);
-    const rows = await t.run((ctx) => ctx.db.query("manPageOptionFlags").take(10));
+    const rows = await t.run((ctx) => ctx.db.query("manPageOptionFlags").take(20));
     expect(rows.map((row) => [row.nameNorm, row.flag, row.anchorId])).toEqual([
       ["tar", "-c", "opt-create"], ["tar", "--create", "opt-create"],
+      ["tar", "-x", "opt-extract"], ["tar", "--extract", "opt-extract"],
+      ["tar", "-z", "opt-gzip"], ["tar", "--gzip", "opt-gzip"],
+      ["tar", "-f", "opt-file"], ["tar", "--file", "opt-file"],
       ["tar", "-C", "opt-directory"], ["tar", "--directory", "opt-directory"],
       ["tar", "--version", "opt-version"],
     ]);
@@ -130,8 +233,8 @@ describe("option search", () => {
       pageCount: 1, aliasCount: 0, licenseCount: 0, sectionTotals: [{ section: "1", total: 1 }], licensePackages: [],
     });
     await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "legacy", pages: [page("tar", tarOptions)] });
-    const rows = await t.run((ctx) => ctx.db.query("manPageOptionFlags").take(10));
-    expect(rows.map((row) => row.flag)).toEqual(["-c", "--create", "-C", "--directory", "--version"]);
+    const rows = await t.run((ctx) => ctx.db.query("manPageOptionFlags").take(20));
+    expect(rows.map((row) => row.flag)).toEqual(["-c", "--create", "-x", "--extract", "-z", "--gzip", "-f", "--file", "-C", "--directory", "--version"]);
   });
 
   it("finds pages by flag, by name plus flag in either order, and links the option anchor", async () => {
@@ -227,8 +330,150 @@ describe("option search", () => {
         description: "the tar archiver", descNorm: "the tar archiver", searchText: "tar", snippetText: "the tar archiver",
       });
     });
-    // The whole query goes to the name and description search, as before this index.
+    // Without option rows, a named lookup still finds the page without an anchor.
     expect((await search(t, "--create")).results).toEqual([]);
     expect((await search(t, "tar --create")).results.map((hit) => [hit.name, hit.match])).toEqual([["tar", undefined]]);
+  });
+});
+
+describe("search correctness", () => {
+  it("retains realistic description recall for multi-word queries", async () => {
+    const t = await seeded([
+      page("du", null, { description: "estimate file space usage" }),
+      page("df", null, { description: "report file system disk space usage" }),
+      page("fdisk", null, { description: "manipulate disk partition table" }),
+      page("git-log", null, { description: "Show commit logs" }),
+      page("chmod", null, { description: "change file mode bits" }),
+      page("rm", null, { description: "remove files or directories" }),
+      page("ls", null, { description: "list directory contents" }),
+      page("true", null, { description: "do nothing, successfully" }),
+    ], 66);
+    for (const [q, names] of [
+      ["disk usage", ["du", "df", "fdisk"]], ["git log", ["git-log"]],
+      ["change file permissions", ["chmod"]], ["remove a file", ["rm"]], ["list files", ["ls"]],
+    ] as const) {
+      const result = await search(t, q);
+      expect(result.results.map((hit) => hit.name), q).toEqual(expect.arrayContaining([...names]));
+      expect(result.results.map((hit) => hit.name), q).not.toContain("true");
+      expect(result.suggestions).toEqual([]);
+    }
+  });
+
+  it("falls back from citation sections to suffixed sections, preferring exact sections", async () => {
+    const t = await seeded([
+      page("openssl", null, { section: "1ssl" }), page("file::spec", null, { section: "3perl" }),
+      page("printf", null, { section: "3" }), page("printf", null, { section: "3p" }),
+      page("stdint.h", null, { section: "0p" }),
+    ], 66);
+    for (const [q, name, section] of [
+      ["openssl(1)", "openssl", "1ssl"], ["File::Spec(3)", "file::spec", "3perl"],
+      ["stdint.h(0p)", "stdint.h", "0p"], ["printf(3p)", "printf", "3p"], ["printf(3)", "printf", "3"],
+    ]) expect((await search(t, q)).results[0], q).toMatchObject({ name, section });
+    expect((await search(t, "printf(3)")).results.map((hit) => hit.section)).toEqual(["3"]);
+    expect((await search(t, "openssl(2)")).results).toEqual([]);
+  });
+
+  it("finds citation aliases such as Linux man(7) without losing their URL", async () => {
+    const t = await seeded([page("groff_man", null, { section: "7" })], 66);
+    await t.run(async (ctx) => {
+      const release = await ctx.db.query("datasetReleases").first();
+      await ctx.db.insert("manPageAliases", {
+        releaseId: release!._id, datasetReleaseId: "options", name: "man", section: "7",
+        targetName: "groff_man", targetSection: "7",
+      });
+    });
+    expect((await search(t, "man(7)")).results[0]).toMatchObject({ name: "man", section: "7", title: "man(7)" });
+  });
+
+  it("treats citations as a name and section, ahead of other prefix matches", async () => {
+    const t = await seeded([
+      page("open", null, { section: "1" }), page("open", null, { section: "2" }),
+      page("openat", null, { section: "2" }),
+      page("printf", null, { section: "1" }), page("printf", null, { section: "3" }),
+      page("man", null, { section: "1" }), page("man", null, { section: "7" }),
+    ], 66);
+    for (const [q, name, section] of [["open(2)", "open", "2"], ["printf(3)", "printf", "3"], ["man(7)", "man", "7"]]) {
+      const result = await search(t, q);
+      expect(result.results[0], q).toMatchObject({ name, section });
+      expect(result.results.every((hit) => hit.section === section)).toBe(true);
+      expect(result.suggestions).toEqual([]);
+    }
+    expect((await search(t, "OPEN(2)", "1")).results[0]).toMatchObject({ name: "open", section: "2" });
+  });
+
+  it("corrects transpositions, insertions, deletions and substitutions only after zero ordinary hits", async () => {
+    const t = await seeded([
+      page("grep", null), page("chmod", null), page("tar", null), page("tarsnap", null),
+      page("git", null), page("echo", null), page("cat", null),
+      page("cp", null, { description: "copy files and directories" }),
+    ], 66);
+    for (const [q, expected] of [["grpe", "grep"], ["chmdo", "chmod"], ["greep", "grep"], ["grp", "grep"], ["grap", "grep"], ["tarr", "tar"], ["gti", "git"], ["ehco", "echo"], ["cta", "cat"], ["rgep", "grep"]]) {
+      const result = await search(t, q);
+      expect(result.suggestions, q).toContain(expected);
+      expect(result.results[0], q).toMatchObject({ name: expected });
+      expect(result.correctedQuery, q).toBe(expected);
+    }
+    expect((await search(t, "tar")).suggestions).toEqual([]);
+    expect((await search(t, "copy files")).suggestions).toEqual([]);
+    expect((await search(t, "copy files")).results[0]).toMatchObject({ name: "cp" });
+    expect((await search(t, "grpe", "3")).suggestions).toEqual([]);
+    expect((await search(t, "totallyunrelated")).results).toEqual([]);
+    expect((await search(t, "--grpe")).suggestions).toEqual([]);
+  });
+
+  it("does not turn unsupported questions into true(1) or spelling suggestions", async () => {
+    const t = await seeded([
+      page("true", null, { description: "do nothing, successfully" }),
+      page("tar", null, { description: "an archiving utility" }),
+    ], 66);
+    const result = await search(t, "how do I extract a tarball");
+    expect(result.results).toEqual([]);
+    expect(result.suggestions).toEqual([]);
+  });
+
+  it("caps typo candidates at 64 indexed rows even in a dense name bucket", async () => {
+    const t = await seeded([page("grep", null)], 66);
+    await t.run(async (ctx) => {
+      const source = await ctx.db.query("manPageSearchDocuments").first();
+      const { _id, _creationTime, ...fields } = source!;
+      void _id; void _creationTime;
+      for (let i = 0; i < 100; i += 1) {
+        const name = `g${String(i).padStart(4, "0")}`;
+        await ctx.db.insert("manPageSearchDocuments", { ...fields, name, nameNorm: name });
+      }
+    });
+    // Zero ordinary hits + 2 release rows + at most 64 typo candidates.
+    const result = await search(t, "g000o");
+    expect(result.results[0]).toMatchObject({ name: "g0000" });
+    expect(result.suggestions).toContain("g0000");
+    expect(result.results.every((hit) => hit.name <= "g0063")).toBe(true);
+    // Unrelated g* names cannot crowd grep out of its gr* bucket.
+    expect((await search(t, "grpe")).results[0]).toMatchObject({ name: "grep" });
+  });
+
+  it("finds a crowded dotted-name typo in a focused bucket within 66 reads", async () => {
+    const t = await seeded([page("systemd.service", null)], 66);
+    await t.run(async (ctx) => {
+      const source = await ctx.db.query("manPageSearchDocuments").first();
+      const { _id, _creationTime, ...fields } = source!;
+      void _id; void _creationTime;
+      for (let i = 0; i < 150; i += 1) {
+        const name = `systemd-${i}`;
+        await ctx.db.insert("manPageSearchDocuments", { ...fields, name, nameNorm: name });
+      }
+    });
+    const result = await search(t, "systemd.servcie");
+    expect(result.results[0]).toMatchObject({ name: "systemd.service" });
+    expect(result.correctedQuery).toBe("systemd.service");
+  });
+
+  it("counts adjacent transpositions as one edit and rejects distant names", () => {
+    expect(nameEditDistance("grpe", "grep")).toBe(1);
+    expect(nameEditDistance("chmdo", "chmod")).toBe(1);
+    expect(nameEditDistance("grep", "grep")).toBe(0);
+    expect(nameEditDistance("grep", "green")).toBe(2);
+    expect(nameEditDistance("chca", "chabc")).toBe(2);
+    expect(nameEditDistance("chabc", "chca")).toBe(2);
+    expect(nameEditDistance("grep", "chmod")).toBeGreaterThan(2);
   });
 });
