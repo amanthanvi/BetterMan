@@ -5,6 +5,14 @@ from pathlib import Path
 
 
 def dnf_install(packages: list[str]) -> None:
+    packages = packages.copy()
+    # These split packages own ls(1)/mount(8), including in the nodocs base image.
+    for package, owner in {
+        "coreutils": "coreutils-common",
+        "util-linux": "util-linux-core",
+    }.items():
+        if package in packages and owner not in packages:
+            packages.append(owner)
     # Fedora container base images set tsflags=nodocs, which strips man pages.
     # Clearing tsflags on `dnf install` isn't enough for preinstalled packages (dnf won't reinstall
     # them), so we also `dnf reinstall` anything already present to backfill docs/man pages.

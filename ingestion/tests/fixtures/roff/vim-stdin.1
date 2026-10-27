@@ -1,0 +1,33 @@
+.TH VIM-STDIN 1 "2026-10-26" "BetterMan regression fixture"
+.SH DESCRIPTION
+.TP 12
+file ..
+A list of filenames.
+The first one will be the current file and read into the buffer.
+The cursor will be positioned on the first line of the buffer.
+You can get to the other files with the ":next" command.
+To edit a file that starts with a dash, precede the filelist with "\-\-".
+.TP
+\-
+The file to edit is read from stdin.  Commands are read from stderr, which
+should be a tty.
+.TP
+\-t {tag}
+The file to edit and the initial cursor position depends on a "tag", a sort
+of goto label.
+{tag} is looked up in the tags file, the associated file becomes the current
+file and the associated command is executed.
+Mostly this is used for C programs, in which case {tag} could be a function
+name.
+The effect is that the file containing that function becomes the current file
+and the cursor is positioned on the start of the function.
+See ":help tag\-commands".
+.TP
+\-q [errorfile]
+Start in quickFix mode.
+The file [errorfile] is read and the first error is displayed.
+If [errorfile] is omitted, the filename is obtained from the 'errorfile'
+option (defaults to "AztecC.Err" for the Amiga, "errors.err" on other
+systems).
+Further errors can be jumped to with the ":cn" command.
+See ":help quickfix".

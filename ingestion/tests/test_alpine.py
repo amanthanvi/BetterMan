@@ -41,3 +41,20 @@ def test_apk_install_survives_docs_failure(monkeypatch) -> None:
     alpine.apk_install(["mandoc", "bash"])
 
     assert len(calls) == 2
+
+
+def test_apk_install_requires_tar_doc_in_primary_install(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(alpine.subprocess, "run", _fake_run(calls, docs_returncode=1))
+    alpine.apk_install(["tar"])
+    assert calls[0] == ["apk", "add", "--no-cache", "tar", "tar-doc"]
+
+
+def test_apk_license_ids_read_package_expressions(monkeypatch, tmp_path) -> None:
+    db = tmp_path / "installed"
+    db.write_text("P:tar-doc\nL:GPL-3.0-or-later\n\nP:example\nL:MIT OR BSD-2-Clause\n")
+    monkeypatch.setattr(alpine, "_APK_INSTALLED_DB", db)
+    assert alpine.package_license_ids() == {
+        "tar-doc": "GPL-3.0-or-later",
+        "example": "MIT OR BSD-2-Clause",
+    }

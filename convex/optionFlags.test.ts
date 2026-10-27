@@ -15,6 +15,9 @@ type Option = { flags: string; anchorId: string; argument?: string | null; descr
 const tarGolden = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/tar.1.json"), "utf8")) as {
   options: Option[];
 };
+const curlGolden = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/curl-options.1.json"), "utf8")) as {
+  options: Option[];
+};
 
 beforeEach(() => vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret"));
 afterEach(() => vi.unstubAllEnvs());
@@ -26,9 +29,14 @@ function keys(options: Option[]): string[] {
 describe("option flag derivation", () => {
   it("indexes every tar(1) option by each of its flags, keeping anchors with ~ and =", () => {
     const rows = optionFlagRows(tarGolden.options);
-    expect(rows).toHaveLength(124);
+    expect(rows).toHaveLength(215);
     expect(new Set(rows.map((row) => row.anchorId)).size).toBe(tarGolden.options.length);
     const byFlag = new Map(rows.map((row) => [row.flag, row]));
+    expect(byFlag.get("-c")?.anchorId).toBe("c");
+    expect(byFlag.get("--create")?.anchorId).toBe("c");
+    for (const flag of ["-x", "--extract", "--get"]) {
+      expect(byFlag.get(flag)?.anchorId).toBe("x");
+    }
     expect(byFlag.get("-g")).toMatchObject({ anchorId: "g", flags: "-g, --listed-incremental" });
     expect(byFlag.get("--listed-incremental")).toMatchObject({ anchorId: "g" });
     expect(byFlag.get("--sort")?.anchorId).toBe("sort=");
@@ -36,6 +44,14 @@ describe("option flag derivation", () => {
     expect(byFlag.get("--pax-option")?.anchorId).toBe("pax~2");
     expect(byFlag.get("--info-script")?.anchorId).toBe(byFlag.get("--new-volume-script")?.anchorId);
     expect(byFlag.has("listed-incremental")).toBe(false);
+  });
+
+  it("gives curl -1 to --tlsv1 instead of the nested --range example", () => {
+    const rows = optionFlagRows(curlGolden.options);
+    expect(rows.find((row) => row.flag === "-1")).toMatchObject({
+      anchorId: "def-1-tlsv1", flags: "-1, --tlsv1",
+    });
+    expect(rows.some((row) => row.anchorId === "def-0-0-1")).toBe(false);
   });
 
   it("keeps only real flags and splits attached placeholders", () => {
@@ -117,22 +133,14 @@ function search(t: Harness, q: string, section: string | null = null) {
 
 describe("option search", () => {
   it("uses golden argument metadata and stops before attached argument letters", async () => {
-    // #414 supplies the missing operation/common options; keep the real parser
-    // shape and existing golden -f/-z rows until that fixture lands.
-    const options = [...tarGolden.options,
-      { flags: "-x, --extract", anchorId: "extract", argument: null },
-      { flags: "-c, --create", anchorId: "create", argument: null },
-      { flags: "-C, --directory", anchorId: "directory", argument: "DIR" },
-      { flags: "-o", anchorId: "o", argument: null },
-    ];
-    const t = await seeded([page("tar", options), page("mysql", [
+    const t = await seeded([page("tar", tarGolden.options), page("mysql", [
       { flags: "-u, --user=USER", anchorId: "user" },
       ...["r", "o", "t"].map((letter) => ({ flags: `-${letter}`, anchorId: letter })),
     ])], 66);
     expect((await search(t, "tar -xzf")).results[0]).toMatchObject({
-      anchorId: "extract", highlights: ["-x, --extract", "-z, --gzip, --gunzip, --ungzip", "-f, --file"],
+      anchorId: "x", highlights: ["-x, --extract, --get", "-z, --gzip, --gunzip, --ungzip", "-f, --file"],
     });
-    expect((await search(t, "tar -Cfoo")).results[0]).toMatchObject({ anchorId: "directory", highlights: ["-C, --directory"] });
+    expect((await search(t, "tar -Cfoo")).results[0]).toMatchObject({ anchorId: "C", highlights: ["-C, --directory"] });
     expect((await search(t, "tar -gf")).results[0]).toMatchObject({ anchorId: "g", highlights: ["-g, --listed-incremental"] });
     expect((await search(t, "mysql -uroot")).results[0]).toMatchObject({ anchorId: "user", highlights: ["-u, --user=USER"] });
     const rows = await t.run(async (ctx) => {

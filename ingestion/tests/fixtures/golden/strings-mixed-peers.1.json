@@ -1,0 +1,533 @@
+{
+ "description": "",
+ "doc": {
+  "blocks": [
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The options to ",
+      "type": "text"
+     },
+     {
+      "href": "/man/strings/1",
+      "inlines": [
+       {
+        "text": "strings(1)",
+        "type": "text"
+       }
+      ],
+      "linkType": "internal",
+      "type": "link"
+     },
+     {
+      "text": " are:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This option causes ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "strings",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " to look for strings in all sections of the object file (including the (__TEXT,__text) section.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "a",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-a",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This option causes ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "strings",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " to look for strings in all bytes of the files (the default for non-object files).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "This option causes ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "strings",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " to treat all the following arguments as files.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-2",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Preceded each string by its offset in the file (in decimal).",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "o",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-o",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Write each string preceded by its byte offset from the start of the file. The format shall be dependent on the single character used as the format option-argument:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "t",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-t",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "inlines": [
+         {
+          "text": "format",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The offset shall be written in decimal.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "d",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "d",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The offset shall be written in octal.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "o~2",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "o",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The offset shall be written in hexadecimal.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "x",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "x",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The decimal ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "number",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is used as the minimum string length rather than the default of 4.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-number",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "inlines": [
+         {
+          "text": "number",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specify the minimum string length, where the number argument is a positive decimal integer. The default shall be 4.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "n",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-n",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "inlines": [
+         {
+          "text": "number",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specifies the architecture, ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "arch_type,",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " of the file for ",
+          "type": "text"
+         },
+         {
+          "href": "/man/strings/1",
+          "inlines": [
+           {
+            "text": "strings(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " to operate on when the file is a universal file. (See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/arch/3",
+          "inlines": [
+           {
+            "text": "arch(3)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for the currently know ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "arch_type",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": "s.) The ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "arch_type",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " can be \"all\" to operate on all architectures in the file.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "arch",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-arch",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "inlines": [
+         {
+          "text": "arch_type",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "a",
+   "argument": null,
+   "description": "This option causes strings to look for strings in all sections of the object file (including the (__TEXT,__text) section.",
+   "flags": "-a"
+  },
+  {
+   "anchorId": "def",
+   "argument": null,
+   "description": "This option causes strings to look for strings in all bytes of the files (the default for non-object files).",
+   "flags": "-"
+  },
+  {
+   "anchorId": "def-2",
+   "argument": null,
+   "description": "This option causes strings to treat all the following arguments as files.",
+   "flags": "--"
+  },
+  {
+   "anchorId": "o",
+   "argument": null,
+   "description": "Preceded each string by its offset in the file (in decimal).",
+   "flags": "-o"
+  },
+  {
+   "anchorId": "t",
+   "argument": null,
+   "description": "Write each string preceded by its byte offset from the start of the file. The format shall be dependent on the single character used as the format option-argument:",
+   "flags": "-tformat"
+  },
+  {
+   "anchorId": "def-number",
+   "argument": null,
+   "description": "The decimal number is used as the minimum string length rather than the default of 4.",
+   "flags": "-number"
+  },
+  {
+   "anchorId": "n",
+   "argument": null,
+   "description": "Specify the minimum string length, where the number argument is a positive decimal integer. The default shall be 4.",
+   "flags": "-nnumber"
+  },
+  {
+   "anchorId": "arch",
+   "argument": null,
+   "description": "Specifies the architecture, arch_type, of the file for strings(1) to operate on when the file is a universal file. (See arch(3) for the currently know arch_types.) The arch_type can be \"all\" to operate on all architectures in the file.",
+   "flags": "-archarch_type"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

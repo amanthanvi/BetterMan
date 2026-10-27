@@ -237,7 +237,7 @@ def test_parse_mandoc_html_recognizes_ascii_dash_bullets_without_capturing_optio
     assert [option.flags for option in parsed.options] == ["-a", "--all", "+O"]
 
 
-def test_parse_mandoc_html_scopes_derived_options_to_options_sections() -> None:
+def test_parse_mandoc_html_includes_flag_definitions_outside_options_sections() -> None:
     html = """<!doctype html>
 <html>
   <body>
@@ -250,7 +250,7 @@ def test_parse_mandoc_html_scopes_derived_options_to_options_sections() -> None:
         <dl><dt>+O [shopt_option]</dt><dd>disable a shell option</dd></dl>
       </section>
       <section><h1 id="NOTES">NOTES</h1>
-        <dl><dt>-x</dt><dd>not an option in this context</dd></dl>
+        <dl><dt>-x</dt><dd>extract an archive</dd></dl>
       </section>
     </div>
   </body>
@@ -263,4 +263,221 @@ def test_parse_mandoc_html_scopes_derived_options_to_options_sections() -> None:
     assert [(option.flags, option.argument, option.description) for option in parsed.options] == [
         ("-a, --all", None, "include every item"),
         ("+O", "[shopt_option]", "disable a shell option"),
+        ("-x", None, "extract an archive"),
     ]
+
+
+def test_nested_options_keep_body_ids_and_exclude_dash_prose() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text">
+      <h1>OPTIONS</h1><div class="Bd-indent"><dl>
+        <dt id="all">-a, --all</dt><dd>All entries.
+          <dl><dt id="nested">--nested</dt><dd>Nested flag.</dd></dl>
+        </dd></dl></div>
+      <h1>NOTES</h1><dl>
+        <dt>- first observation</dt><dd>Prose starting with a dash.</dd>
+        <dt>ordinary term</dt><dd>Not a flag.</dd>
+      </dl></div>""")
+    assert parsed.options is not None
+    assert [(o.flags, o.anchorId) for o in parsed.options] == [
+        ("-a, --all", "all"),
+        ("--nested", "nested"),
+    ]
+    outer = parsed.doc.blocks[1].items[0][0].items[0]
+    assert outer.id == "all"
+    assert outer.definitionBlocks[0].items[0].id == "nested"
+
+
+def test_docbook_option_paragraphs_become_anchored_definitions() -> None:
+    parsed = parse_mandoc_html("""<!-- Generator: DocBook XSL Stylesheets -->
+      <div class="manual-text">
+      <h1>OPTIONS</h1><p class="Pp">-a, --all</p>
+      <div class="Bd-indent">Stage all changes.<p>Keep this paragraph.</p></div>
+      <p class="Pp">- first observation</p><div class="Bd-indent">Prose.</div>
+      <dl><dt id="original">--original</dt><dd>Original definition.</dd></dl>
+      </div>""")
+    assert parsed.options
+    assert [o.flags for o in parsed.options] == ["-a, --all", "--original"]
+    assert "Stage all changes." in parsed.options[0].description
+    assert "Keep this paragraph." in parsed.options[0].description
+    assert parsed.options[1].anchorId == "original"
+
+
+def test_nested_options_exclude_mixed_dash_prose() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <div class="Bd-indent"><dl>
+        <dt>-a</dt><dd>All entries.</dd>
+        <dt>- first observation</dt><dd>Prose, not a flag.</dd>
+      </dl></div></div>""")
+    assert parsed.options and [option.flags for option in parsed.options] == ["-a"]
+
+
+def test_converted_option_cannot_claim_an_existing_body_id() -> None:
+    parsed = parse_mandoc_html("""<!-- Generator: DocBook XSL Stylesheets -->
+      <div class="manual-text"><h1>OPTIONS</h1>
+      <p class="Pp">-a</p><div class="Bd-indent">New definition.</div>
+      <dl><dt id="def-a">--existing</dt><dd>Existing explicit ID.</dd>
+        <dt>-b</dt><dd>Existing generated ID.</dd></dl>
+      <p class="Pp">-b</p><div class="Bd-indent">Another new definition.</div>
+      </div>""")
+    assert parsed.options
+    assert [(option.flags, option.anchorId) for option in parsed.options] == [
+        ("-a", "def-a-2"),
+        ("--existing", "def-a"),
+        ("-b", "def-b"),
+        ("-b", "def-b-2"),
+    ]
+
+
+def test_docbook_word_in_prose_does_not_authorize_paragraph_conversion() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <p class="Pp">-T sets the key table, even in a DocBook viewer.</p>
+      <div class="Bd-indent"><pre>bind-key -Troot a list-keys</pre></div>
+      </div>""")
+    assert parsed.options is None
+    assert parsed.doc.blocks[1].type == "paragraph"
+    assert parsed.doc.blocks[2].type == "list"
+
+
+def test_nested_values_are_not_options_but_nested_flags_keep_their_ids() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <dl><dt id="format">--format=FORMAT</dt><dd><dl>
+        <dt id="gnu">gnu</dt><dd>GNU format.</dd>
+        <dt id="nested">-x</dt><dd>Extract.</dd>
+        <dt id="env">TAR_FORMAT</dt><dd>Current format.</dd>
+      </dl></dd></dl></div>""")
+    assert parsed.options
+    assert [(o.flags, o.anchorId) for o in parsed.options] == [
+        ("--format", "format"),
+        ("-x", "nested"),
+    ]
+    values = parsed.doc.blocks[1].items[0].definitionBlocks[0].items
+    assert [item.id for item in values] == ["gnu", "nested", "env"]
+
+
+def test_nested_bare_values_keep_body_ids_but_are_not_options() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <div class="Bd-indent"><dl>
+        <dt id="proto">--proto</dt><dd><div class="Bd-indent"><dl>
+          <dt id="def"><b>+</b></dt><dd>Permit this protocol.</dd>
+          <dt id="def-2"><b>-</b></dt><dd>Remove this protocol.</dd>
+          <dt id="nested">--nested</dt><dd>A real nested flag.</dd>
+        </dl></div></dd>
+        <dt id="field">--field</dt><dd><dl>
+          <dt id="allfields"><b>-</b></dt><dd>All fields.</dd>
+        </dl></dd>
+        <dt id="compat">--compat</dt><dd><ul><li><dl>
+          <dt id="include"><code class="Fl">+</code></dt><dd>Include entries.</dd>
+        </dl></li></ul></dd>
+        <dt id="stdin"><b>-</b></dt><dd>Read standard input.</dd>
+        <dt id="end"><b>--</b></dt><dd>End option processing.</dd>
+        <dt id="relative"><b>+</b></dt><dd>Relative alarm time.</dd>
+      </dl></div></div>""")
+    assert parsed.options
+    assert [(option.flags, option.anchorId) for option in parsed.options] == [
+        ("--proto", "proto"),
+        ("--field", "field"),
+        ("--compat", "compat"),
+        ("-", "stdin"),
+        ("--", "end"),
+        ("+", "relative"),
+        ("--nested", "nested"),
+    ]
+    items = parsed.doc.blocks[1].items[0][0].items
+    assert [item.id for item in items] == ["proto", "field", "compat", "stdin", "end", "relative"]
+    assert [item.id for item in items[0].definitionBlocks[0].items[0][0].items] == [
+        "def",
+        "def-2",
+        "nested",
+    ]
+    assert items[1].definitionBlocks[0].items[0].id == "allfields"
+    assert items[2].definitionBlocks[0].items[0][0].items[0].id == "include"
+
+
+def test_conditional_operators_stay_in_body_and_real_command_flags_stay_indexed() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text">
+      <h1>OPTIONS</h1><dl><dt id="real-a">-a</dt><dd>Shell flag.</dd></dl>
+      <h1>CONDITIONAL EXPRESSIONS</h1><dl>
+        <dt id="test-a">-a file</dt><dd>File exists.</dd>
+        <dt id="test-z">-z string</dt><dd>String is empty.</dd>
+      </dl><h1>BUILTINS</h1><dl>
+        <dt id="real-z">-z</dt><dd>Real builtin flag.</dd>
+      </dl></div>""")
+    assert parsed.options
+    assert [(o.flags, o.anchorId) for o in parsed.options] == [("-a", "real-a"), ("-z", "real-z")]
+    assert [item.id for item in parsed.doc.blocks[3].items] == ["test-a", "test-z"]
+
+
+def test_option_shapes_reject_ranges_prose_and_operators_without_changing_body_ids() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <dl><dt id="real">--real</dt><dd><dl>
+        <dt id="range">(-1, 2)</dt><dd>Numeric interval.</dd>
+        <dt id="prose">-&lt;The address of a label is taken&gt;</dt><dd>Prose.</dd>
+        <dt id="digit">-&lt;digit&gt;</dt><dd>Symbolic flag.</dd>
+        <dt id="less">-&lt;, --less-than</dt><dd>Literal punctuation flag.</dd>
+        <dt id="slash">-/</dt><dd>Punctuation flag.</dd>
+        <dt id="caret">-^</dt><dd>Punctuation flag.</dd>
+        <dt id="group">--(heading|footing)-(left|right)</dt><dd>Grouped flag.</dd>
+      </dl></dd></dl><h1>Operators</h1><dl>
+        <dt id="increment">++ --</dt><dd>Increment and decrement.</dd>
+        <dt id="pattern">+(pattern-list)</dt><dd>Shell globbing.</dd>
+        <dt id="all">-a</dt><dd>Real flag.</dd>
+      </dl></div>""")
+    assert parsed.options
+    assert [option.anchorId for option in parsed.options] == [
+        "real",
+        "digit",
+        "less",
+        "slash",
+        "caret",
+        "group",
+        "all",
+    ]
+    nested = parsed.doc.blocks[1].items[0].definitionBlocks[0]
+    assert [item.id for item in nested.items] == [
+        "range",
+        "prose",
+        "digit",
+        "less",
+        "slash",
+        "caret",
+        "group",
+    ]
+    assert [item.id for item in parsed.doc.blocks[3].items] == ["increment", "pattern", "all"]
+
+
+def test_mdoc_command_markup_needs_option_context_for_bare_tokens() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>DESCRIPTION</h1>
+      <dl><dt id="hash"><code class="Cm">#</code></dt><dd>Alternate format.</dd>
+        <dt id="left"><code class="Cm">-</code></dt><dd>Left-adjust.</dd>
+        <dt id="plus"><code class="Cm">+</code></dt><dd>Always show a sign.</dd>
+      </dl><p class="Pp">The following options are available:</p>
+      <dl><dt id="time">hhmm</dt><dd>Alarm time.</dd>
+        <dt id="relative"><code class="Cm">+</code></dt><dd>Relative alarm time.</dd>
+      </dl></div>""")
+    assert parsed.options and [(o.flags, o.anchorId) for o in parsed.options] == [("+", "relative")]
+    assert [item.id for item in parsed.doc.blocks[1].items] == ["hash", "left", "plus"]
+
+
+def test_field_range_peers_do_not_make_a_bare_minus_an_option() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <dl><dt>--field=FIELDS</dt><dd>Select fields.</dd></dl>
+      <h2>FIELDS supports cut(1) style field ranges:</h2><dl>
+        <dt id="number">N</dt><dd>The Nth field.</dd>
+        <dt id="last"><b>-M</b></dt><dd>First through Mth field.</dd>
+        <dt id="allfields">-</dt><dd>All fields.</dd>
+      </dl></div>""")
+    assert parsed.options and "allfields" not in [option.anchorId for option in parsed.options]
+    assert [item.id for item in parsed.doc.blocks[3].items] == ["number", "last", "allfields"]
+
+
+def test_compatibility_entry_peers_do_not_make_a_bare_plus_an_option() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>DESCRIPTION</h1>
+      <h2>Compatibility mode (compat)</h2><div class="Bd-indent">
+      <p>For passwd and shadow databases:</p><div class="Bd-indent"><dl>
+        <dt id="user"><b>+</b><i>user</i></dt><dd>Include this user.</dd>
+        <dt id="netgroup"><b>-@</b><i>netgroup</i></dt><dd>Exclude this netgroup.</dd>
+        <dt id="allusers"><b>+</b></dt><dd>Include all users.</dd>
+      </dl></div></div></div>""")
+    assert parsed.options and "allusers" not in [option.anchorId for option in parsed.options]
+    entries = parsed.doc.blocks[2].items[0][1].items[0][0].items
+    assert [item.id for item in entries] == ["user", "netgroup", "allusers"]

@@ -1,0 +1,49 @@
+.TH NSSWITCH-COMPAT 5 "2026-10-26" "BetterMan regression fixture"
+.SH NAME
+nsswitch-compat \- nsswitch compatibility entries are configuration values
+.SH DESCRIPTION
+.SS Compatibility mode (compat)
+The following entries are valid in this mode:
+.RS 4
+.PP
+For
+.B passwd
+and
+.B shadow
+databases:
+.RS 4
+.TP 12
+.BI + user
+Include the specified user.
+.TP
+.BI + user::::::
+Include the specified user with overridden fields.
+.TP
+.BI +@ netgroup
+Include all users in the netgroup.
+.TP
+.BI \- user
+Exclude the specified user.
+.TP
+.BI \-@ netgroup
+Exclude all users in the netgroup.
+.TP
+.B +
+Include all users not previously excluded.
+.RE
+.PP
+For
+.B group
+database:
+.RS 4
+.TP 12
+.BI + group
+Include the specified group.
+.TP
+.BI \- group
+Exclude the specified group.
+.TP
+.B +
+Include all groups not previously excluded.
+.RE
+.RE

@@ -34,7 +34,7 @@ def _installed_packages(packages: list[str], *, env: dict[str, str]) -> list[str
     installed: list[str] = []
     for pkg in packages:
         proc = subprocess.run(
-            ["dpkg-query", "-W", "-f", "${Status}", pkg],
+            ["dpkg-query", "-W", "-f", "${Package}\t${Status}\n", pkg],
             check=False,
             env=env,
             text=True,
@@ -42,17 +42,28 @@ def _installed_packages(packages: list[str], *, env: dict[str, str]) -> list[str
         )
         if proc.returncode != 0:
             continue
-        if "install ok installed" in proc.stdout:
-            installed.append(pkg)
+        for line in proc.stdout.splitlines():
+            name, _, status = line.partition("\t")
+            if status == "install ok installed" and name not in installed:
+                installed.append(name)
     return installed
 
 
 def apt_install(packages: list[str]) -> None:
+    # mount(8) belongs to mount, not util-linux, and Ubuntu's base strips its docs.
+    if "util-linux" in packages and "mount" not in packages:
+        packages = [*packages, "mount"]
     env = os.environ | {"DEBIAN_FRONTEND": "noninteractive"}
 
     reinstall: list[str] = []
     if _enable_manpages_if_excluded():
-        reinstall = _installed_packages(packages, env=env)
+        owners = packages.copy()
+        if "perl" in packages:
+            owners.append("perl-base")
+        if "python3" in packages:
+            # Match the installed runtime owner without pinning the distro Python version.
+            owners.extend(["python3-minimal", "python3.*-minimal"])
+        reinstall = _installed_packages(owners, env=env)
 
     subprocess.run(["apt-get", "update", "-qq"], check=True, env=env)
     subprocess.run(

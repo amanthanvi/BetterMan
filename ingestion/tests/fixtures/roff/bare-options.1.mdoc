@@ -1,0 +1,28 @@
+.Dd October 26, 2026
+.Dt BARE-OPTIONS 1
+.Os
+.Sh NAME
+.Nm bare-options
+.Nd bare options used by su, shutdown, and leave
+.Sh DESCRIPTION
+.Bl -tag -width flag
+.It Fl l
+Start a login shell, as in su.
+.It Fl
+A login shell, as in su; read a shutdown time from standard input, as in shutdown.
+.El
+.Pp
+The following options are available:
+.Bl -tag -width hhmm
+.It Ar hhmm
+An absolute alarm time.
+.It Cm \&+
+An alarm time relative to now, as in leave.
+.El
+.Sh Formats
+.Bl -tag -width flag
+.It Cm +
+A numeric formatting modifier, as in stat.
+.It Cm -
+Left-align a field, as in stat.
+.El

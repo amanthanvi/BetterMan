@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 
-from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
 from ingestion.doc_model import (
     BlockCode,
@@ -11,6 +12,7 @@ from ingestion.doc_model import (
     BlockHeading,
     BlockHorizontalRule,
     BlockList,
+    BlockNode,
     BlockParagraph,
     BlockTable,
     DefinitionListItem,
@@ -39,7 +41,11 @@ _bare_xref_re = re.compile(
 )
 _bullet_term_re = re.compile(r"^\s*(?:\*|\+|-|•)(?:\s+|$)")
 _options_heading_re = re.compile(r"\bOPTIONS?\b", re.IGNORECASE)
-_option_term_re = re.compile(r"^\s*[\[(]?(?:--?|\+)(?:[^\s,|\])]|$)")
+# Keep symbolic placeholders and grouped flags, not numeric ranges or shell operators.
+_option_term_re = re.compile(
+    r"^\s*(?![\[(][+-]?\d+\s*,)[\[(]?"
+    r"(?:--?(?:<[^<>\s]+>|<(?=[\s,|]|$)|[^-\s,|\])<])|\+[^+\s,|\])(<])"
+)
 # mdoc semantic classes that mandoc renders as bare <code>/<var>/<span>.
 _MDOC_CODE_CLASSES = {"Pa", "Fl", "Cm", "Nm", "Ev", "Ic", "Li", "Dv", "Fn", "Fd", "In", "Cd"}
 _MDOC_EMPHASIS_CLASSES = {"Ar", "Va", "Fa", "Ft", "Vt", "Em"}
@@ -62,6 +68,48 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
     manual_text = soup.select_one(".manual-text") or soup.select_one("#manual-text") or soup.body
     if manual_text is None:
         raise ValueError("mandoc output missing manual text container")
+
+    converted_terms: set[int] = set()
+    deferred_ids: list[tuple[DefinitionListItem, str]] = []
+    bare_option_ids: set[str] = set()
+    # DocBook (git-commit) uses .PP + .RS instead of .TP for flag definitions.
+    docbook = any(
+        re.search(r"^\s*Generator:\s*DocBook\b", comment, re.MULTILINE)
+        for comment in soup.find_all(string=lambda node: isinstance(node, Comment))
+    )
+    for paragraph in manual_text.select("p.Pp") if docbook else []:
+        definition = paragraph.find_next_sibling()
+        if (
+            _option_term_re.search(_compact_text(paragraph))
+            and definition is not None
+            and definition.name == "div"
+            and "Bd-indent" in (definition.get("class") or [])
+        ):
+            inline_paragraph: Tag | None = None
+            for child in list(definition.children):
+                if isinstance(child, Tag) and child.name in {
+                    "p",
+                    "pre",
+                    "div",
+                    "dl",
+                    "ul",
+                    "ol",
+                    "table",
+                    "section",
+                }:
+                    inline_paragraph = None
+                else:
+                    if inline_paragraph is None:
+                        inline_paragraph = soup.new_tag("p")
+                        child.insert_before(inline_paragraph)
+                    inline_paragraph.append(child.extract())
+            dl = soup.new_tag("dl")
+            paragraph.insert_before(dl)
+            paragraph.name = "dt"
+            converted_terms.add(id(paragraph))
+            definition.name = "dd"
+            dl.append(paragraph.extract())
+            dl.append(definition.extract())
 
     used_ids: set[str] = set()
     toc: list[TocItem] = []
@@ -299,19 +347,24 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                     definition_blocks.extend(dd_blocks)
 
                 raw_id = dt.get("id") if isinstance(dt.get("id"), str) else None
-                if raw_id:
+                if id(dt) in converted_terms:
+                    item_id = None
+                elif raw_id:
                     item_id = stable_unique_id(raw_id, used_ids)
                 else:
                     term_text = _compact_text(dt) or "definition"
                     item_id = stable_unique_slug(f"def-{term_text}", used_ids)
 
-                items.append(
-                    DefinitionListItem(
-                        id=item_id,
-                        termInlines=term_inlines,
-                        definitionBlocks=definition_blocks,
-                    )
+                item = DefinitionListItem(
+                    id=item_id,
+                    termInlines=term_inlines,
+                    definitionBlocks=definition_blocks,
                 )
+                items.append(item)
+                if item_id and _is_bare_option_term(dt, for_extraction=True):
+                    bare_option_ids.add(item_id)
+                if id(dt) in converted_terms:
+                    deferred_ids.append((item, _compact_text(dt)))
 
             if not items:
                 return []
@@ -384,11 +437,14 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
 
         push_blocks(blocks_from_tag(child))
 
+    # Existing headings and dt elements keep first claim on their original IDs.
+    for item, term_text in deferred_ids:
+        item.id = stable_unique_slug(f"def-{term_text}", used_ids)
     doc = DocumentModel(toc=toc, blocks=blocks)  # validates node shapes
 
     description = _extract_description(manual_text) or ""
     synopsis = _extract_synopsis(manual_text)
-    options = _extract_options_from_doc(doc)
+    options = _extract_options_from_doc(doc, bare_option_ids)
     see_also = _extract_see_also(manual_text)
 
     plain_text = normalize_ws(manual_text.get_text(" "))
@@ -537,7 +593,37 @@ def _definition_list_pairs(children: list[Tag]) -> list[tuple[Tag, list[Tag]]]:
 
 def _is_bullet_definition_list(term_pairs: list[tuple[Tag, list[Tag]]]) -> bool:
     return bool(term_pairs) and all(
-        _bullet_term_re.match(term.get_text()) for term, _definitions in term_pairs
+        _bullet_term_re.match(term.get_text()) and not _is_bare_option_term(term)
+        for term, _definitions in term_pairs
+    )
+
+
+def _is_bare_option_term(term: Tag, *, for_extraction: bool = False) -> bool:
+    if _compact_text(term) not in {"-", "--", "+"}:
+        return False
+    heading = term.find_previous(re.compile(r"^h[1-6]$"))
+    title = _compact_text(heading) if heading else ""
+    if re.search(r"format|modifier|conversion", title, re.IGNORECASE):
+        return False
+    introduction = term.parent.find_previous_sibling()
+    peers = [_compact_text(peer) for peer in term.parent.find_all("dt", recursive=False)]
+    return bool(
+        (_options_heading_re.search(title) and term.find(["b", "code"]) is not None)
+        or term.select_one(".Fl")
+        or (
+            term.select_one(".Cm")
+            and introduction is not None
+            and _options_heading_re.search(_compact_text(introduction))
+        )
+        or (
+            any(_option_term_re.search(peer) for peer in peers)
+            # Reject mixed value peers only in argument/configuration subsections.
+            and (
+                not for_extraction
+                or not re.search(r"\bfield ranges\b|\bcompatibility mode\b", title, re.IGNORECASE)
+                or all(peer in {"-", "--", "+"} or _option_term_re.search(peer) for peer in peers)
+            )
+        )
     )
 
 
@@ -743,17 +829,21 @@ def _split_option_argument(flags: str) -> tuple[str, str | None]:
     return match.group("flags").rstrip(), argument
 
 
-def _extract_options_from_doc(doc: DocumentModel) -> list[OptionItem]:
+def _extract_options_from_doc(doc: DocumentModel, bare_option_ids: set[str]) -> list[OptionItem]:
     out: list[OptionItem] = []
     used: set[str] = set()
-    definition_lists, require_flag_shape = _option_definition_lists(doc)
-    for block in definition_lists:
+    for block, require_flag_shape, under_definition in _option_definition_lists(doc.blocks):
         for item in block.items:
             flags_raw = normalize_ws(_inlines_to_text(item.termInlines))
             desc = normalize_ws(_blocks_to_text(item.definitionBlocks))
             if not flags_raw or not desc:
                 continue
-            if require_flag_shape and _option_term_re.search(flags_raw) is None:
+            bare_option = item.id in bare_option_ids
+            if bare_option and under_definition:
+                continue
+            if _bullet_term_re.search(flags_raw) and not bare_option:
+                continue
+            if require_flag_shape and not bare_option and _option_term_re.search(flags_raw) is None:
                 continue
             flags, argument = _split_option_argument(flags_raw)
             anchor = item.id or stable_unique_slug(flags, used)
@@ -768,30 +858,46 @@ def _extract_options_from_doc(doc: DocumentModel) -> list[OptionItem]:
     return out
 
 
-def _option_definition_lists(doc: DocumentModel) -> tuple[list[BlockDefinitionList], bool]:
-    scoped: list[BlockDefinitionList] = []
-    fallback: list[BlockDefinitionList] = []
-    options_level: int | None = None
-    saw_options_heading = False
-
-    for block in doc.blocks:
+def _option_definition_lists(
+    blocks: list[BlockNode],
+    options_level: int | None = None,
+    nested: bool = False,
+    excluded_level: int | None = None,
+    under_definition: bool = False,
+) -> Iterator[tuple[BlockDefinitionList, bool, bool]]:
+    # Roff indentation nests lists; options also occur outside OPTIONS headings.
+    for index, block in enumerate(blocks):
         if isinstance(block, BlockHeading):
+            if excluded_level is not None and block.level <= excluded_level:
+                excluded_level = None
+            if normalize_ws(block.text).upper() == "CONDITIONAL EXPRESSIONS":
+                excluded_level = block.level
             if _options_heading_re.search(normalize_ws(block.text)):
-                saw_options_heading = True
                 options_level = block.level
             elif options_level is not None and block.level <= options_level:
                 options_level = None
-            continue
-
-        if not isinstance(block, BlockDefinitionList):
-            continue
-        fallback.append(block)
-        if options_level is not None:
-            scoped.append(block)
-
-    if saw_options_heading:
-        return scoped, False
-    return fallback, True
+        elif isinstance(block, BlockDefinitionList):
+            if excluded_level is None:
+                yield block, options_level is None or nested, under_definition
+            for item in block.items:
+                yield from _option_definition_lists(
+                    item.definitionBlocks, options_level, True, excluded_level, True
+                )
+        elif isinstance(block, BlockList):
+            # man(7) .RS argument lists can be siblings of their option definition.
+            previous = blocks[index - 1] if index > 0 else None
+            follows_definition = isinstance(previous, BlockDefinitionList) and any(
+                _option_term_re.search(_inlines_to_text(item.termInlines))
+                for item in previous.items
+            )
+            for item_blocks in block.items:
+                yield from _option_definition_lists(
+                    item_blocks,
+                    options_level,
+                    True,
+                    excluded_level,
+                    under_definition or follows_definition,
+                )
 
 
 def _extract_see_also(manual_text: Tag) -> list[SeeAlsoRef] | None:

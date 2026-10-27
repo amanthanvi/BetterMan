@@ -130,3 +130,171 @@ def test_stub_is_detected() -> None:
     assert is_so_stub((_ROFF / "man.7").read_bytes()) == "man7/groff_man.7"
     assert so_target_name_section("man7/groff_man.7") == ("groff_man", "7")
     assert is_so_stub((_ROFF / "rbash.1").read_bytes()) is None
+
+
+@pytest.mark.parametrize(
+    ("name", "flags"),
+    [
+        ("tar.1", ["-c, --create", "-x, --extract, --get"]),
+        ("git-commit.1", ["-a, --all"]),
+        ("dash-prose.1", ["-a"]),
+    ],
+)
+def test_option_extraction_from_roff(name: str, flags: list[str]) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+    assert parsed.options
+    extracted = [option.flags for option in parsed.options]
+    for flag in flags:
+        assert flag in extracted
+    if name == "dash-prose.1":
+        assert extracted == flags
+
+
+def test_tar_nested_environment_and_format_values_are_not_options() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "tar.1"))
+    assert parsed.options and len(parsed.options) == 156
+    flags = [option.flags for option in parsed.options]
+    assert "-c, --create" in flags
+    assert "-x, --extract, --get" in flags
+    assert not any(flag.startswith("TAR_") for flag in flags)
+    assert not {"gnu", "oldgnu", "pax, posix", "ustar", "v7"}.intersection(flags)
+    # Values keep their original body anchors even though they are not indexed.
+    body = parsed.doc.model_dump_json()
+    for anchor in ("TAR_FILETYPE", "TAR_FORMAT", "gnu", "oldgnu", "ustar", "v7"):
+        assert f'"id":"{anchor}"' in body
+
+
+@pytest.mark.parametrize("name", ["curl.1", "curl-options.1"])
+def test_curl_tlsv1_owns_minus_one_instead_of_range_example(name: str) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+    assert parsed.options
+    if name == "curl.1":
+        assert len(parsed.options) == 270
+    owners = [option for option in parsed.options if "-1" in option.flags]
+    assert len(owners) == 1
+    assert owners[0].flags == "-1, --tlsv1"
+    assert owners[0].anchorId == "def-1-tlsv1"
+    assert not any(option.flags == "0-0,-1" for option in parsed.options)
+
+
+def test_tmux_flag_prose_is_not_a_docbook_option_definition() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "tmux-prose.1"))
+    assert parsed.options is None
+    description = parsed.doc.blocks[3:]
+    assert [block.type for block in description] == ["paragraph", "list"]
+    assert "sets the client's key table" in parsed.plain_text
+
+
+@pytest.mark.parametrize(
+    ("name", "flags"),
+    [("bare-options.1", ["-a", "-", "--"]), ("bare-options.1.mdoc", ["-l", "-", "+"])],
+)
+def test_bare_options_exclude_bullets_exit_status_and_format_modifiers(
+    name: str, flags: list[str]
+) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+    assert parsed.options and [option.flags for option in parsed.options] == flags
+
+
+def test_bash_conditional_operators_are_not_command_options() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "bash.1"))
+    assert parsed.options and len(parsed.options) == 153
+    start = next(
+        index
+        for index, block in enumerate(parsed.doc.blocks)
+        if block.type == "heading" and block.text == "CONDITIONAL EXPRESSIONS"
+    )
+    end = next(
+        index
+        for index in range(start + 1, len(parsed.doc.blocks))
+        if parsed.doc.blocks[index].type == "heading"
+        and parsed.doc.blocks[index].level <= parsed.doc.blocks[start].level
+    )
+    conditional_ids = {
+        item.id
+        for block in parsed.doc.blocks[start + 1 : end]
+        if block.type == "definition_list"
+        for item in block.items
+    }
+    assert len(conditional_ids) == 36
+    assert conditional_ids.isdisjoint(option.anchorId for option in parsed.options)
+    assert any(option.flags == "-c" for option in parsed.options)
+    assert any(option.flags == "-a" for option in parsed.options)
+    assert not any(option.flags == "+(pattern-list)" for option in parsed.options)
+
+
+def test_git_commit_docbook_options_are_preserved() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "git-commit.1"))
+    assert parsed.options and len(parsed.options) == 38
+
+
+def test_option_shapes_keep_symbolic_and_grouped_flags_but_not_values_or_operators() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "option-shapes.1"))
+    assert parsed.options and [option.flags for option in parsed.options] == [
+        "-q",
+        "-<digit>",
+        "-<, --less-than",
+        "-/",
+        "-^",
+        "--(heading|footing)-(left|center|right)",
+        "[--password app-specific-password]",
+        "-a",
+        "+O",
+    ]
+
+
+def test_printf_modifiers_do_not_become_bare_options() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "printf-modifiers.1"))
+    assert parsed.options is None
+    definitions = next(block for block in parsed.doc.blocks if block.type == "definition_list")
+    assert [item.id for item in definitions.items] == ["_", "def", "+", "0"]
+
+
+def test_nested_bare_argument_values_keep_body_ids_and_real_bare_options() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "nested-bare-values.1"))
+    assert parsed.options
+    assert [(option.flags, option.anchorId) for option in parsed.options] == [
+        ("--proto", "proto"),
+        ("--field", "field"),
+        ("--compat", "compat"),
+        ("-", "def-5"),
+        ("--", "def-6"),
+        ("+", "def-7"),
+    ]
+    definitions = [block for block in parsed.doc.blocks if block.type == "list"]
+    assert [[item.id for item in block.items[0][0].items] for block in definitions] == [
+        ["def", "def-2"],
+        ["def-3"],
+        ["def-4"],
+    ]
+
+
+def test_numfmt_field_range_minus_is_not_a_cli_option() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "numfmt-fields.1"))
+    assert parsed.options and len(parsed.options) == 5
+    assert not any(option.flags == "-" for option in parsed.options)
+    fields = parsed.doc.blocks[-1].items
+    assert [item.id for item in fields] == ["N", "def-n", "def-n-m", "M", "def"]
+
+
+def test_nsswitch_compatibility_plus_is_not_a_cli_option() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "nsswitch-compat.5"))
+    assert parsed.options and len(parsed.options) == 7
+    assert not any(option.flags == "+" for option in parsed.options)
+    body = parsed.doc.model_dump_json()
+    assert '"id":"def"' in body and '"id":"def-2"' in body
+    assert body.index('"id":"def"') < body.index('"id":"def-2"')
+
+
+@pytest.mark.parametrize(
+    ("name", "bare_flags"),
+    [("strings-mixed-peers.1", ["-", "--"]), ("vim-stdin.1", ["-"])],
+)
+def test_flat_cli_operand_and_value_peers_keep_bare_options(
+    name: str, bare_flags: list[str]
+) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+    assert parsed.options
+    assert [option.flags for option in parsed.options if option.flags in {"-", "--", "+"}] == (
+        bare_flags
+    )

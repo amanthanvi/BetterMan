@@ -45,13 +45,46 @@ def test_installed_packages_filters_non_installed(monkeypatch) -> None:
     def fake_run(cmd: list[str], **_kwargs: object):
         pkg = cmd[-1]
         if pkg == "bash":
-            return SimpleNamespace(returncode=0, stdout="install ok installed")
+            return SimpleNamespace(returncode=0, stdout="bash\tinstall ok installed\n")
         if pkg == "curl":
-            return SimpleNamespace(returncode=0, stdout="deinstall ok config-files")
+            return SimpleNamespace(returncode=0, stdout="curl\tdeinstall ok config-files\n")
         return SimpleNamespace(returncode=1, stdout="")
 
     monkeypatch.setattr(debian.subprocess, "run", fake_run)
     assert debian._installed_packages(["bash", "curl", "missing"], env={}) == ["bash"]
+
+
+def test_apt_install_restores_preinstalled_mount_owner(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **kwargs: object):
+        calls.append(cmd)
+        if cmd[0] == "dpkg-query":
+            return SimpleNamespace(
+                returncode=0, stdout="mount\tinstall ok installed\n" if cmd[-1] == "mount" else ""
+            )
+        assert kwargs["check"] is True
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(debian, "_enable_manpages_if_excluded", lambda: True)
+    monkeypatch.setattr(debian.subprocess, "run", fake_run)
+    requested = ["util-linux"]
+    debian.apt_install(requested)
+
+    assert requested == ["util-linux"]
+    installs = [cmd for cmd in calls if cmd[:2] == ["apt-get", "install"]]
+    assert installs[0][-2:] == ["util-linux", "mount"]
+    assert installs[1][-2:] == ["--reinstall", "mount"]
+
+
+def test_apt_install_does_not_reinstall_without_excludes(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(debian, "_enable_manpages_if_excluded", lambda: False)
+    monkeypatch.setattr(debian.subprocess, "run", lambda cmd, **_kwargs: calls.append(cmd))
+    debian.apt_install(["util-linux", "mount"])
+    assert len(calls) == 2
+    assert calls[1][-2:] == ["util-linux", "mount"]
+    assert "--reinstall" not in calls[1]
 
 
 def test_enable_manpages_if_excluded_removes_man_excludes(tmp_path, monkeypatch) -> None:
@@ -70,3 +103,36 @@ def test_enable_manpages_if_excluded_removes_man_excludes(tmp_path, monkeypatch)
 
     assert debian._enable_manpages_if_excluded() is True
     assert "path-exclude=/usr/share/man/" not in excludes.read_text(encoding="utf-8")
+
+
+def test_apt_install_restores_preinstalled_perl_and_versioned_python_owners(monkeypatch):
+    calls = []
+
+    def run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "dpkg-query":
+            names = (
+                ["python3.12-minimal", "python3.13-minimal"]
+                if cmd[-1] == "python3.*-minimal"
+                else [cmd[-1]]
+            )
+            return SimpleNamespace(
+                returncode=0, stdout="".join(f"{p}\tinstall ok installed\n" for p in names)
+            )
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(debian, "_enable_manpages_if_excluded", lambda: True)
+    monkeypatch.setattr(debian.subprocess, "run", run)
+    requested = ["perl", "python3"]
+    debian.apt_install(requested)
+    assert requested == ["perl", "python3"]
+    reinstall = next(cmd for cmd in calls if "--reinstall" in cmd)
+    assert reinstall[reinstall.index("--reinstall") + 1 :] == [
+        "perl",
+        "python3",
+        "perl-base",
+        "python3-minimal",
+        "python3.12-minimal",
+        "python3.13-minimal",
+    ]
+    assert not any("*" in p for p in reinstall)

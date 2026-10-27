@@ -13708,6 +13708,84 @@
  },
  "options": [
   {
+   "anchorId": "A",
+   "argument": null,
+   "description": "Compressed archives cannot be concatenated.",
+   "flags": "-A, --catenate, --concatenate"
+  },
+  {
+   "anchorId": "c",
+   "argument": null,
+   "description": "Create a new archive. Arguments supply the names of the files to be archived. Directories are archived recursively, unless the --no-recursion option is given.",
+   "flags": "-c, --create"
+  },
+  {
+   "anchorId": "d",
+   "argument": null,
+   "description": "Find differences between archive and file system. The arguments are optional and specify archive members to compare. If not given, the current working directory is assumed.",
+   "flags": "-d, --diff, --compare"
+  },
+  {
+   "anchorId": "delete",
+   "argument": null,
+   "description": "This option does not operate on compressed archives. There is no short option equivalent.",
+   "flags": "--delete"
+  },
+  {
+   "anchorId": "r",
+   "argument": null,
+   "description": "Append files to the end of an archive. Arguments have the same meaning as for -c (--create).",
+   "flags": "-r, --append"
+  },
+  {
+   "anchorId": "def-t-list",
+   "argument": null,
+   "description": "List the contents of an archive. Arguments are optional. When given, they specify the names of the members to list.",
+   "flags": "-t, --list"
+  },
+  {
+   "anchorId": "test",
+   "argument": null,
+   "description": "There is no short option equivalent for this option.",
+   "flags": "--test-label"
+  },
+  {
+   "anchorId": "u",
+   "argument": null,
+   "description": "Append files which are newer than the corresponding copy in the archive. Arguments have the same meaning as with the -c and -r options. Notice, that newer files don't replace their old archive copies, but instead are appended to the end of archive. The resulting archive can thus contain several members of the same name, corresponding to various versions of the same file.",
+   "flags": "-u, --update"
+  },
+  {
+   "anchorId": "x",
+   "argument": null,
+   "description": "Extract files from an archive. Arguments are optional. When given, they specify names of the archive members to be extracted.",
+   "flags": "-x, --extract, --get"
+  },
+  {
+   "anchorId": "show",
+   "argument": null,
+   "description": "Show built-in defaults for various tar options and exit.",
+   "flags": "--show-defaults"
+  },
+  {
+   "anchorId": "def-help",
+   "argument": null,
+   "description": "Display a short option summary and exit.",
+   "flags": "-?, --help"
+  },
+  {
+   "anchorId": "usage",
+   "argument": null,
+   "description": "Display a list of available options and exit.",
+   "flags": "--usage"
+  },
+  {
+   "anchorId": "version",
+   "argument": null,
+   "description": "Print program version and copyright information and exit.",
+   "flags": "--version"
+  },
+  {
    "anchorId": "check",
    "argument": null,
    "description": "Check device numbers when creating incremental archives (default).",
@@ -14200,6 +14278,216 @@
    "flags": "--zstd"
   },
   {
+   "anchorId": "add",
+   "argument": "FILE",
+   "description": "Add FILE to the archive (useful if its name starts with a dash).",
+   "flags": "--add-file"
+  },
+  {
+   "anchorId": "backup",
+   "argument": "[CONTROL]",
+   "description": "Backup before removal. The CONTROL argument, if supplied, controls the backup policy. Its valid values are:",
+   "flags": "--backup"
+  },
+  {
+   "anchorId": "C",
+   "argument": "DIR",
+   "description": "Change to DIR before performing any operations. This option is order-sensitive, i.e. it affects all options that follow.",
+   "flags": "-C, --directory"
+  },
+  {
+   "anchorId": "exclude",
+   "argument": "PATTERN",
+   "description": "Exclude files matching PATTERN, a glob(3)-style wildcard pattern.",
+   "flags": "--exclude"
+  },
+  {
+   "anchorId": "exclude~2",
+   "argument": null,
+   "description": "Exclude backup and lock files.",
+   "flags": "--exclude-backups"
+  },
+  {
+   "anchorId": "exclude~3",
+   "argument": null,
+   "description": "Exclude contents of directories containing file CACHEDIR.TAG, except for the tag file itself.",
+   "flags": "--exclude-caches"
+  },
+  {
+   "anchorId": "exclude~4",
+   "argument": null,
+   "description": "Exclude directories containing file CACHEDIR.TAG and the file itself.",
+   "flags": "--exclude-caches-all"
+  },
+  {
+   "anchorId": "exclude~5",
+   "argument": null,
+   "description": "Exclude everything under directories containing CACHEDIR.TAG",
+   "flags": "--exclude-caches-under"
+  },
+  {
+   "anchorId": "exclude~6",
+   "argument": "FILE",
+   "description": "Before dumping a directory, see if it contains FILE. If so, read exclusion patterns from this file. The patterns affect only the directory itself.",
+   "flags": "--exclude-ignore"
+  },
+  {
+   "anchorId": "exclude~7",
+   "argument": "FILE",
+   "description": "Same as --exclude-ignore, except that patterns from FILE affect both the directory and all its subdirectories.",
+   "flags": "--exclude-ignore-recursive"
+  },
+  {
+   "anchorId": "exclude~8",
+   "argument": "FILE",
+   "description": "Exclude contents of directories containing FILE, except for FILE itself.",
+   "flags": "--exclude-tag"
+  },
+  {
+   "anchorId": "exclude~9",
+   "argument": "FILE",
+   "description": "Exclude directories containing FILE.",
+   "flags": "--exclude-tag-all"
+  },
+  {
+   "anchorId": "exclude~10",
+   "argument": "FILE",
+   "description": "Exclude everything under directories containing FILE.",
+   "flags": "--exclude-tag-under"
+  },
+  {
+   "anchorId": "exclude~11",
+   "argument": null,
+   "description": "Exclude version control system directories.",
+   "flags": "--exclude-vcs"
+  },
+  {
+   "anchorId": "exclude~12",
+   "argument": null,
+   "description": "Exclude files that match patterns read from VCS-specific ignore files. Supported files are: .cvsignore, .gitignore, .bzrignore, and .hgignore.",
+   "flags": "--exclude-vcs-ignores"
+  },
+  {
+   "anchorId": "h",
+   "argument": null,
+   "description": "Follow symlinks; archive and dump the files they point to.",
+   "flags": "-h, --dereference"
+  },
+  {
+   "anchorId": "hard",
+   "argument": null,
+   "description": "Follow hard links; archive and dump the files they refer to.",
+   "flags": "--hard-dereference"
+  },
+  {
+   "anchorId": "K",
+   "argument": "MEMBER",
+   "description": "Begin at the given member in the archive.",
+   "flags": "-K, --starting-file"
+  },
+  {
+   "anchorId": "newer",
+   "argument": "DATE",
+   "description": "Work on files whose data changed after the DATE. If DATE starts with / or . it is taken to be a file name; the mtime of that file is used as the date.",
+   "flags": "--newer-mtime"
+  },
+  {
+   "anchorId": "no~11",
+   "argument": null,
+   "description": "Disable the effect of the previous --null option.",
+   "flags": "--no-null"
+  },
+  {
+   "anchorId": "no~12",
+   "argument": null,
+   "description": "Avoid descending automatically in directories.",
+   "flags": "--no-recursion"
+  },
+  {
+   "anchorId": "no~13",
+   "argument": null,
+   "description": "Do not unquote input file or member names.",
+   "flags": "--no-unquote"
+  },
+  {
+   "anchorId": "no~14",
+   "argument": null,
+   "description": "This is the default behavior. The --no-verbatim-files-from option is provided as a way to restore it after --verbatim-files-from option. This option is positional: it affects all --files-from options that occur after it in, until --verbatim-files-from option or end of line, whichever occurs first. It is implied by the --no-null option.",
+   "flags": "--no-verbatim-files-from"
+  },
+  {
+   "anchorId": "null",
+   "argument": null,
+   "description": "See also --verbatim-files-from.",
+   "flags": "--null"
+  },
+  {
+   "anchorId": "N",
+   "argument": "DATE",
+   "description": "Only store files newer than DATE. If DATE starts with / or . it is taken to be a file name; the mtime of that file is used as the date.",
+   "flags": "-N, --newer=DATE, --after-date"
+  },
+  {
+   "anchorId": "one~2",
+   "argument": null,
+   "description": "Stay in local file system when creating archive.",
+   "flags": "--one-file-system"
+  },
+  {
+   "anchorId": "P",
+   "argument": null,
+   "description": "Don't strip leading slashes from file names when creating archives.",
+   "flags": "-P, --absolute-names"
+  },
+  {
+   "anchorId": "recursion",
+   "argument": null,
+   "description": "Recurse into directories (default).",
+   "flags": "--recursion"
+  },
+  {
+   "anchorId": "suffix",
+   "argument": "STRING",
+   "description": "Backup before removal, override usual suffix. Default suffix is ~, unless overridden by environment variable SIMPLE_BACKUP_SUFFIX.",
+   "flags": "--suffix"
+  },
+  {
+   "anchorId": "T",
+   "argument": "FILE",
+   "description": "Unless specified otherwise, the FILE must contain a list of names separated by ASCII LF (i.e. one name per line). The names read are handled the same way as command line arguments. They undergo quote removal and word splitting, and any string that starts with a - is handled as tar command line option. If this behavior is undesirable, it can be turned off using the --verbatim-files-from option. The --null option instructs tar that the names in FILE are separated by ASCII NUL character, instead of LF. It is useful if the list is generated by find(1) -print0 predicate.",
+   "flags": "-T, --files-from"
+  },
+  {
+   "anchorId": "unquote",
+   "argument": null,
+   "description": "Unquote file or member names (default).",
+   "flags": "--unquote"
+  },
+  {
+   "anchorId": "verbatim",
+   "argument": null,
+   "description": "This option affects all --files-from options that occur after it in the command line. Its effect is reverted by the --no-verbatim-files-from option. This option is implied by the --null option. See also --add-file.",
+   "flags": "--verbatim-files-from"
+  },
+  {
+   "anchorId": "X",
+   "argument": "FILE",
+   "description": "Exclude files matching patterns listed in FILE.",
+   "flags": "-X, --exclude-from"
+  },
+  {
+   "anchorId": "strip",
+   "argument": "NUMBER",
+   "description": "Strip NUMBER leading components from file names on extraction.",
+   "flags": "--strip-components"
+  },
+  {
+   "anchorId": "transform",
+   "argument": "EXPRESSION",
+   "description": "Use sed replace EXPRESSION to transform file names.",
+   "flags": "--transform=EXPRESSION, --xform"
+  },
+  {
    "anchorId": "anchored",
    "argument": null,
    "description": "Patterns match file name start.",
@@ -14246,6 +14534,108 @@
    "argument": null,
    "description": "Wildcards match / (default for exclusion).",
    "flags": "--wildcards-match-slash"
+  },
+  {
+   "anchorId": "checkpoint",
+   "argument": "[N]",
+   "description": "Display progress messages every Nth record (default 10).",
+   "flags": "--checkpoint"
+  },
+  {
+   "anchorId": "checkpoint~2",
+   "argument": "ACTION",
+   "description": "Run ACTION on each checkpoint.",
+   "flags": "--checkpoint-action"
+  },
+  {
+   "anchorId": "clamp",
+   "argument": null,
+   "description": "Only set time when the file is more recent than what was given with --mtime.",
+   "flags": "--clamp-mtime"
+  },
+  {
+   "anchorId": "full",
+   "argument": null,
+   "description": "Print file time to its full resolution.",
+   "flags": "--full-time"
+  },
+  {
+   "anchorId": "index",
+   "argument": "FILE",
+   "description": "Send verbose output to FILE.",
+   "flags": "--index-file"
+  },
+  {
+   "anchorId": "l",
+   "argument": null,
+   "description": "Print a message if not all links are dumped.",
+   "flags": "-l, --check-links"
+  },
+  {
+   "anchorId": "no~19",
+   "argument": "STRING",
+   "description": "Disable quoting for characters from STRING.",
+   "flags": "--no-quote-chars"
+  },
+  {
+   "anchorId": "quote",
+   "argument": "STRING",
+   "description": "Additionally quote characters from STRING.",
+   "flags": "--quote-chars"
+  },
+  {
+   "anchorId": "quoting",
+   "argument": "STYLE",
+   "description": "Set quoting style for file and member names. Valid values for STYLE are literal, shell, shell-always, c, c-maybe, escape, locale, clocale.",
+   "flags": "--quoting-style"
+  },
+  {
+   "anchorId": "R",
+   "argument": null,
+   "description": "Show block number within archive with each message.",
+   "flags": "-R, --block-number"
+  },
+  {
+   "anchorId": "show~2",
+   "argument": null,
+   "description": "When listing or extracting, list each directory that does not match search criteria.",
+   "flags": "--show-omitted-dirs"
+  },
+  {
+   "anchorId": "show~3",
+   "argument": null,
+   "description": "Show file or archive names after transformation by --strip and --transform options.",
+   "flags": "--show-transformed-names, --show-stored-names"
+  },
+  {
+   "anchorId": "totals",
+   "argument": "[SIGNAL]",
+   "description": "Print total bytes after processing the archive. If SIGNAL is given, print total bytes when this signal is delivered. Allowed signals are: SIGHUP, SIGQUIT, SIGINT, SIGUSR1, and SIGUSR2. The SIG prefix can be omitted.",
+   "flags": "--totals"
+  },
+  {
+   "anchorId": "utc",
+   "argument": null,
+   "description": "Print file modification times in UTC.",
+   "flags": "--utc"
+  },
+  {
+   "anchorId": "v",
+   "argument": null,
+   "description": "Verbosely list files processed. Each instance of this option on the command line increases the verbosity level by one. The maximum verbosity level is 3. For a detailed discussion of how various verbosity levels affect tar's output, please refer to GNU Tar Manual, subsection 2.5.2 \"The '--verbose' Option\".",
+   "flags": "-v, --verbose"
+  },
+  {
+   "anchorId": "warning",
+   "argument": "KEYWORD",
+   "description": "Multiple --warning options accumulate. Keywords controlling general tar operation:",
+   "flags": "--warning"
+  },
+  {
+   "anchorId": "w",
+   "argument": null,
+   "description": "Ask for confirmation for every action.",
+   "flags": "-w, --interactive, --confirmation"
   },
   {
    "anchorId": "o",

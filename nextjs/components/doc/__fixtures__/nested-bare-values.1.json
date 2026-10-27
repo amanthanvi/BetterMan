@@ -1,0 +1,389 @@
+{
+ "description": "nested argument values are not command options",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "nested-bare-values - nested argument values are not command options",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Protocol modifiers, as in Ubuntu curl:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "proto",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--proto",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Permit this protocol.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "+",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Remove this protocol.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "-",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        }
+       ],
+       "type": "definition_list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Field selection, as in numfmt:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "field",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--field",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "All fields.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-3",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "-",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        }
+       ],
+       "type": "definition_list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Compatibility entries, as in nsswitch.conf:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "compat",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--compat",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Include entries.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-4",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "+",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        }
+       ],
+       "type": "definition_list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Read standard input, as in su and shutdown.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-5",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Stop option processing, as in sudo.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-6",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Relative alarm time, as in leave.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-7",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "+",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "proto",
+   "argument": null,
+   "description": "Protocol modifiers, as in Ubuntu curl:",
+   "flags": "--proto"
+  },
+  {
+   "anchorId": "field",
+   "argument": null,
+   "description": "Field selection, as in numfmt:",
+   "flags": "--field"
+  },
+  {
+   "anchorId": "compat",
+   "argument": null,
+   "description": "Compatibility entries, as in nsswitch.conf:",
+   "flags": "--compat"
+  },
+  {
+   "anchorId": "def-5",
+   "argument": null,
+   "description": "Read standard input, as in su and shutdown.",
+   "flags": "-"
+  },
+  {
+   "anchorId": "def-6",
+   "argument": null,
+   "description": "Stop option processing, as in sudo.",
+   "flags": "--"
+  },
+  {
+   "anchorId": "def-7",
+   "argument": null,
+   "description": "Relative alarm time, as in leave.",
+   "flags": "+"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

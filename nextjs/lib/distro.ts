@@ -20,7 +20,7 @@ export const DISTRO_LABEL: Record<Distro, string> = {
   arch: 'Arch Linux',
   alpine: 'Alpine',
   freebsd: 'FreeBSD',
-  macos: 'macOS (BSD)',
+  macos: 'macOS (BSD-licensed subset)',
 }
 
 export function normalizeDistro(value: unknown): Distro | null {

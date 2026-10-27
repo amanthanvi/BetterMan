@@ -356,8 +356,15 @@ def test_resolve_aliases_follows_long_chains_and_drops_cycles() -> None:
 
 
 @pytest.mark.parametrize("with_alias_and_license", [False, True])
-def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_and_license):
-    pages = [_page("real", "1")]
+@pytest.mark.parametrize("missing_command", [False, True])
+@pytest.mark.parametrize("oversize_license", [False, True])
+@pytest.mark.parametrize("allow_missing", [False, True])
+def test_ingest_declares_uploaded_aliases_and_licenses(
+    monkeypatch, with_alias_and_license, missing_command, oversize_license, allow_missing
+):
+    monkeypatch.setenv("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES", "1" if allow_missing else "0")
+    pages = [_page("real" if missing_command else "tar", "1")]
+    monkeypatch.setattr(ingest_runner, "_content_packages", lambda **_kwargs: ["tar"])
     sources = [ManSource(path=pages[0].source_path, name="real", section="1")]
     if with_alias_and_license:
         sources.append(ManSource(path="/usr/share/man/man1/stub.1", name="stub", section="1"))
@@ -374,12 +381,16 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
     monkeypatch.setattr(
         ingest_runner,
         "_alias_for_source",
-        lambda source, _raw: _alias("stub", "real") if source.name == "stub" else None,
+        lambda source, _raw: _alias("stub", pages[0].name) if source.name == "stub" else None,
     )
     monkeypatch.setattr(
         ingest_runner,
         "_collect_licenses",
-        lambda **_kwargs: {"example": "Copyright example"} if with_alias_and_license else {},
+        lambda **_kwargs: (
+            {"example": "é" * (1024 * 1024)}
+            if oversize_license
+            else ({"example": "Copyright example"} if with_alias_and_license else {})
+        ),
     )
     calls = []
     events = []
@@ -400,6 +411,27 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
     monkeypatch.setattr(ingest_runner.ConvexIngestClient, "post", post)
     monkeypatch.setattr(ingest_runner.ConvexIngestClient, "activate_release", activate)
 
+    if (missing_command and not allow_missing) or oversize_license:
+        error = (
+            r"missing package-set command pages: tar\(1\)"
+            if missing_command and not allow_missing
+            else "license document exceeds Convex 1 MiB limit"
+        )
+        with pytest.raises(RuntimeError, match=error):
+            ingest_runner.ingest(
+                sample=True,
+                activate=True,
+                convex_url="https://example.convex.site",
+                ingest_secret="test-secret",
+                dataset_stage="staging",
+                image_ref="test",
+                image_digest="test",
+                git_sha="test",
+            )
+        assert calls == []
+        assert events == ["contract"]
+        return
+
     result = ingest_runner.ingest(
         sample=True,
         activate=True,
@@ -415,6 +447,14 @@ def test_ingest_declares_uploaded_aliases_and_licenses(monkeypatch, with_alias_a
     assert events.index("contract") < events.index("write")
     declaration = calls[0][1]
     assert calls[0][0] == "/ingest/release"
+    assert declaration["packageManifest"]["commandPageCheck"] == {
+        "allowMissingCommandPages": allow_missing,
+        "allowedMissingPages": (
+            [{"name": "tar", "section": "1", "package": "tar", "ownerPackage": "tar"}]
+            if missing_command
+            else []
+        ),
+    }
     assert declaration["pageCount"] == 1
     assert declaration["sectionTotals"] == [{"section": "1", "total": 1}]
     assert declaration["aliasCount"] == int(with_alias_and_license)
@@ -536,3 +576,237 @@ def test_ingest_fails_before_writing_when_convex_contract_is_missing(monkeypatch
         )
 
     assert calls == []
+
+
+@pytest.mark.parametrize("distro", ["fedora", "arch", "alpine"])
+def test_collect_linux_license_files(monkeypatch, tmp_path, distro) -> None:
+    if distro == "fedora":
+        monkeypatch.setattr(ingest_runner, "_rpm_license_files", lambda: {})
+    root = tmp_path / "licenses"
+    (root / "example" / "nested").mkdir(parents=True)
+    (root / "example" / "COPYING").write_text("Copyright example")
+    (root / "example" / "nested" / "NOTICE").write_text("Attribution example")
+    monkeypatch.setattr(ingest_runner, "_LICENSE_ROOT", root)
+    pkg = "example-doc" if distro == "alpine" else "example"
+    row = replace(_page("real", "1"), source_package=pkg)
+    licenses = ingest_runner._collect_licenses(pages=[row], distro=distro)
+    assert "Copyright example" in licenses[pkg]
+    assert "Attribution example" in licenses[pkg]
+
+
+def test_license_files_are_confined_to_license_root(monkeypatch, tmp_path) -> None:
+    root = tmp_path / "licenses"
+    (root / "example").mkdir(parents=True)
+    secret = tmp_path / "secret"
+    secret.write_text("must not publish")
+    (root / "example" / "COPYING").symlink_to(secret)
+    (root / "outside").symlink_to(tmp_path, target_is_directory=True)
+    monkeypatch.setattr(ingest_runner, "_LICENSE_ROOT", root)
+    for pkg in ["example", "outside", "../secret", "missing"]:
+        assert ingest_runner._read_package_licenses(pkg) is None
+
+
+@pytest.mark.parametrize("distro", ["arch", "alpine"])
+def test_collect_shared_spdx_licenses(monkeypatch, tmp_path, distro) -> None:
+    root = tmp_path / "licenses"
+    spdx = root / "spdx"
+    spdx.mkdir(parents=True)
+    (spdx / "GPL-3.0-or-later.txt").write_text("GNU General Public License")
+    monkeypatch.setattr(ingest_runner, "_LICENSE_ROOT", root)
+    monkeypatch.setattr(ingest_runner, "_ALPINE_SPDX_ROOT", spdx)
+    monkeypatch.setattr(
+        ingest_runner, "pacman_license_ids", lambda: {"example": "GPL-3.0-or-later"}
+    )
+    monkeypatch.setattr(ingest_runner, "apk_license_ids", lambda: {"example": "GPL-3.0-or-later"})
+    assert (
+        "GNU General Public License"
+        in ingest_runner._collect_licenses(
+            pages=[replace(_page("tar", "1"), source_package="example")], distro=distro
+        )["example"]
+    )
+
+
+def test_spdx_license_paths_are_confined(monkeypatch, tmp_path) -> None:
+    root = tmp_path / "licenses"
+    root.mkdir()
+    secret = tmp_path / "secret"
+    secret.write_text("must not publish")
+    (root / "MIT.txt").symlink_to(secret)
+    assert ingest_runner._read_spdx_licenses("MIT OR ../secret", root=root) is None
+
+
+@pytest.mark.parametrize("distro", ["freebsd", "macos"])
+def test_base_pages_record_version_and_provenance(monkeypatch, distro) -> None:
+    monkeypatch.setattr(
+        ingest_runner,
+        "render_html",
+        lambda _raw: type(
+            "HTML",
+            (),
+            {
+                "html": '<div class="manual-text"><h1>NAME</h1><p>example</p></div>',
+                "warnings": None,
+            },
+        )(),
+    )
+    package = f"{distro}-base"
+    context = _ParseContext(
+        distro=distro, arch="arm64", packages={package: "15.1"}, manpath_to_pkg={}
+    )
+    base = ingest_runner._parse_source(
+        ManSource(path=Path("/usr/share/man/man1/example.1"), name="example", section="1"),
+        b"source",
+        context,
+    )
+    assert base.source_package == package
+    assert base.source_package_version == "15.1"
+    license_text = ingest_runner._collect_licenses(pages=[base], distro=distro)[package]
+    assert "base-system" in license_text
+    assert "15.1" in license_text
+    assert "https://" in license_text
+    port = ingest_runner._parse_source(
+        ManSource(path=Path("/usr/local/share/man/man1/example.1"), name="example", section="1"),
+        b"source",
+        context,
+    )
+    assert port.source_package is None
+
+
+def test_command_page_check_accepts_resolved_aliases_and_limits_samples() -> None:
+    ingest_runner._require_command_pages(
+        distro="debian",
+        requested=["tar", "git", "manpages"],
+        pages=[_page("gtar", "1")],
+        aliases=[_alias("tar", "gtar")],
+        sample=True,
+    )
+    ingest_runner._require_command_pages(
+        distro="debian",
+        requested=["openssl"],
+        pages=[_page("openssl", "1ssl")],
+        aliases=[],
+        sample=False,
+    )
+    with pytest.raises(RuntimeError, match=r"git\(1\)"):
+        ingest_runner._require_command_pages(
+            distro="debian",
+            requested=["git"],
+            pages=[],
+            aliases=[],
+            sample=False,
+        )
+
+
+@pytest.mark.parametrize(
+    "package",
+    [
+        "python3",
+        "python",
+        "netcat-openbsd",
+        "httpd",
+        "systemd",
+        "iproute2",
+        "postgresql-client",
+    ],
+)
+def test_release_requires_each_command_package_page(package) -> None:
+    with pytest.raises(RuntimeError, match="missing package-set command pages"):
+        ingest_runner._require_command_pages(
+            distro="debian", requested=[package], pages=[], aliases=[], sample=False
+        )
+
+
+def test_package_sets_classify_commands_and_non_command_packages() -> None:
+    from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
+
+    for distro in FULL_PACKAGE_SET_BY_DISTRO:
+        requested = _content_packages(sample=False, distro=distro)
+        assert (
+            set(requested)
+            <= ingest_runner._COMMAND_PAGES.keys() | ingest_runner._NON_COMMAND_PACKAGES
+        )
+    with pytest.raises(RuntimeError, match="no command-page expectation"):
+        ingest_runner._require_command_pages(
+            distro="debian", requested=["new-package"], pages=[], aliases=[], sample=False
+        )
+
+
+@pytest.mark.parametrize(
+    ("distro", "command"), [("debian", "apache2"), ("ubuntu", "apache2"), ("alpine", "httpd")]
+)
+def test_apache_page_expectation_matches_distro(distro, command) -> None:
+    ingest_runner._require_command_pages(
+        distro=distro,
+        requested=["apache2"],
+        pages=[_page(command, "8")],
+        aliases=[],
+        sample=False,
+    )
+    with pytest.raises(RuntimeError, match=command):
+        ingest_runner._require_command_pages(
+            distro=distro,
+            requested=["apache2"],
+            pages=[],
+            aliases=[],
+            sample=False,
+        )
+
+
+def test_rpm_license_files_share_source_package_and_keep_mixed_case(monkeypatch, tmp_path):
+    root = tmp_path / "licenses"
+    doc = tmp_path / "doc"
+    (root / "perl").mkdir(parents=True)
+    doc.mkdir()
+    license = root / "perl" / "COPYING"
+    license.write_text("Perl license text")
+    output = (
+        f"perl-libs\tperl.src.rpm\t{license}\t128\n"
+        "perl-IO-Socket\tperl.src.rpm\t/usr/bin/example\t0\n"
+        "perl-doc\tperl.src.rpm\t/usr/share/man/perl.1\t2\n"
+        f"perl-libs\tperl.src.rpm\t{root / 'perl' / 'NOTICE'}\t2\n"
+    )
+    monkeypatch.setattr(ingest_runner.subprocess, "check_output", lambda *a, **kw: output)
+    monkeypatch.setattr(ingest_runner, "_LICENSE_ROOT", root)
+    monkeypatch.setattr(ingest_runner, "_DOC_ROOT", doc)
+    paths = ingest_runner._rpm_license_files()
+    assert license in paths["perl-IO-Socket"]
+    assert root / "perl" / "NOTICE" in paths["perl-IO-Socket"]
+    assert paths["perl-doc"] == paths["perl-IO-Socket"]
+    rows = [replace(_page("perl", "1"), source_package="perl-IO-Socket")]
+    assert (
+        "Perl license text"
+        in ingest_runner._collect_licenses(pages=rows, distro="fedora")["perl-IO-Socket"]
+    )
+    (root / "Mixed-Case").mkdir()
+    (root / "Mixed-Case" / "LICENSE").write_text("Mixed case license")
+    assert "Mixed case license" in ingest_runner._read_package_licenses("Mixed-Case")
+
+
+def test_rpm_license_paths_cannot_escape_roots(monkeypatch, tmp_path):
+    root = tmp_path / "licenses"
+    doc = tmp_path / "doc"
+    root.mkdir()
+    doc.mkdir()
+    outside = tmp_path / "secret"
+    outside.write_text("must not publish")
+    link = root / "COPYING"
+    link.symlink_to(outside)
+    allowed = doc / "LICENSE"
+    allowed.write_text("allowed license")
+    monkeypatch.setattr(ingest_runner, "_LICENSE_ROOT", root)
+    monkeypatch.setattr(ingest_runner, "_DOC_ROOT", doc)
+    text = ingest_runner._read_rpm_license_files([link, outside, root / "missing", allowed])
+    assert "allowed license" in text
+    assert "must not publish" not in text
+
+
+def test_license_items_measure_utf8_and_never_truncate():
+    text = "é" * 300_000
+    items = ingest_runner._license_items(
+        licenses={"example": text}, distro="fedora", dataset_release_id="r"
+    )
+    assert items[0]["licenseText"] == text
+    with pytest.raises(RuntimeError, match="package=example.*text is not truncated"):
+        ingest_runner._license_items(
+            licenses={"example": "é" * 600_000}, distro="fedora", dataset_release_id="r"
+        )

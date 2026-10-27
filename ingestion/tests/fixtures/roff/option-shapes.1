@@ -1,0 +1,47 @@
+.TH OPTION-SHAPES 1 "2026-10-26" "BetterMan regression fixture"
+.SH NAME
+option-shapes \- distinguish flags from range values, prose, and operators
+.SH OPTIONS
+.TP
+.B \-q
+A real command flag with nested values:
+.RS
+.TP
+.B "(-1, 2)"
+A numeric interval, as in ffmpeg.
+.TP
+\-<The address of a label is taken by means of the "gs" modifier>
+Multiword prose, as in GCC.
+.TP
+.B \-<digit>
+A real symbolic flag, as in git-archive.
+.TP
+.B \-<, \-\-less-than
+A real literal punctuation flag, as in msgcat and msgcomm.
+.TP
+.B \-/
+A real punctuation flag, as in git-p4.
+.TP
+.B \-^
+A real punctuation flag, as in gpg.
+.TP
+.B \-\-(heading|footing)-(left|center|right)
+A real grouped flag, as in gsbj.
+.TP
+.B [\-\-password app-specific-password]
+A real bracketed flag, as in notarytool.
+.RE
+.SH Operators
+.TP
+.B ++ \-\-
+Prefix and postfix increment and decrement, as in bc.
+.TP
+.B \-a
+A real command flag is still an option, even under this heading.
+.SH "Pathname Expansion"
+.TP
+.BR +( pattern-list )
+Matches one or more occurrences of the patterns, as in bash.
+.TP
+.B +O
+A real plus-prefixed flag is still an option.

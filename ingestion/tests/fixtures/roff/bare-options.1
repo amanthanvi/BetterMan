@@ -1,0 +1,23 @@
+.TH BARE-OPTIONS 1 "2026-10-26" "BetterMan regression fixture"
+.SH NAME
+bare-options \- bare options used by strings, lua, and sudo
+.SH OPTIONS
+.TP
+.B \-a
+Scan every byte, as in strings.
+.TP
+.B \-
+Read standard input, as in lua; scan every byte, as in strings.
+.TP
+.B \-\-
+Stop option processing, as in sudo, strings, and lua.
+.SH "Exit status:"
+.TP
+124
+The command timed out.
+.TP
+\-
+Otherwise, the exit status of the command, as in timeout.
+.SH NOTES
+.IP \- 2
+A bullet, not a command option.
