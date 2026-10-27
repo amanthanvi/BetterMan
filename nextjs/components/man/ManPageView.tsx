@@ -368,7 +368,7 @@ export function ManPageView({
           </aside>
         ) : null}
 
-        <article className="mx-auto min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
+        <article className="mx-auto w-full min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
           <ManPageExamples examples={examples} codeLanguage={codeLanguage} />
 
           <ManPageOptionsSection
