@@ -40,22 +40,32 @@ type HighlightCtx = {
   optionRegex?: RegExp
 }
 
+export type CodeLanguage = 'bash' | 'c' | 'makefile' | 'python'
+
+/** Sections 2, 3 and 9 document C interfaces, except Perl modules (3pm, 3perl); the rest show shell. */
+export function defaultCodeLanguage(section: string): CodeLanguage {
+  return /^[239](?!pm|perl)/i.test(section) ? 'c' : 'bash'
+}
+
 export function CodeBlock({
   id,
   text,
   languageHint,
+  defaultLanguage = 'bash',
   findQuery,
   optionRegex,
 }: {
   id?: string | null
   text: string
   languageHint?: string | null
+  /** Used when `languageHint` is missing or unknown. */
+  defaultLanguage?: CodeLanguage
   findQuery?: string
   optionRegex?: RegExp
 }) {
   const [copied, setCopied] = useState(false)
   const [isNearViewport, setIsNearViewport] = useState(false)
-  const language = normalizeLanguageHint(languageHint) ?? 'bash'
+  const language = normalizeLanguageHint(languageHint) ?? defaultLanguage
   const ctx = useMemo((): HighlightCtx => ({ findQuery, optionRegex }), [findQuery, optionRegex])
   const markedText = useMemo(() => buildMarkedText(text, ctx), [ctx, text])
   const fallbackHtml = useMemo(() => applyMarkers(escapeHtml(markedText)), [markedText])
@@ -161,7 +171,7 @@ export function CodeBlock({
   )
 }
 
-function normalizeLanguageHint(hint?: string | null): 'bash' | 'c' | 'makefile' | 'python' | null {
+function normalizeLanguageHint(hint?: string | null): CodeLanguage | null {
   if (!hint) return null
   const cleaned = hint.trim().toLowerCase()
   if (!cleaned) return null

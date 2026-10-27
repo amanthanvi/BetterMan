@@ -82,20 +82,28 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
     focusFindInput()
   }
 
-  const scrollToFind = (idx: number) => {
-    if (!matchCount) return
-    const clamped = ((idx % matchCount) + matchCount) % matchCount
-    const scrollBehavior = getScrollBehavior()
+  const scrollToFind = useCallback(
+    (idx: number) => {
+      if (!matchCount) return
+      const clamped = ((idx % matchCount) + matchCount) % matchCount
+      const scrollBehavior = getScrollBehavior()
 
-    const marks = Array.from(document.querySelectorAll<HTMLElement>('mark[data-bm-find]'))
-    if (!marks.length) return
-    const el = marks[Math.min(clamped, marks.length - 1)]
-    if (!el) return
-    scrollElementIntoView(el, { behavior: scrollBehavior, block: 'center' })
-    if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-    el.classList.add('bm-find-active')
-    activeMarkRef.current = el
-  }
+      const marks = Array.from(document.querySelectorAll<HTMLElement>('mark[data-bm-find]'))
+      if (!marks.length) return
+      const el = marks[Math.min(clamped, marks.length - 1)]
+      if (!el) return
+      scrollElementIntoView(el, { behavior: scrollBehavior, block: 'center' })
+      if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
+      el.classList.add('bm-find-active')
+      activeMarkRef.current = el
+    },
+    [matchCount],
+  )
+
+  // A settled query shows its first match, as browser find does.
+  useEffect(() => {
+    if (findEnabled) scrollToFind(0)
+  }, [effectiveFindQuery, findEnabled, scrollToFind])
 
   const goPrev = () => {
     if (!matchCount) return
@@ -106,7 +114,8 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
 
   const goNext = () => {
     if (!matchCount) return
-    const idx = (activeFindIndex + 1) % matchCount
+    // Until a match is on screen, Enter shows the current one instead of skipping it.
+    const idx = activeMarkRef.current?.isConnected ? (activeFindIndex + 1) % matchCount : displayIndex
     setActiveFindIndex(idx)
     scrollToFind(idx)
   }

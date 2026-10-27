@@ -7,6 +7,7 @@ import {
   fetchLicenses,
   fetchManByName,
   fetchManByNameAndSectionOrAlias,
+  fetchManDistros,
   fetchManMetaByNameAndSection,
   fetchRelated,
   fetchSeoReleases,
@@ -257,6 +258,15 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       if (distro instanceof Response) return distro
       const result = await measure(metrics, 'convex_related', () =>
         fetchRelated({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+      )
+      return cachedJson(result)
+    }
+
+    if (parts.length === 4 && parts[0] === 'man' && parts[3] === 'distros') {
+      const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'page'))
+      if (limited) return limited
+      const result = await measure(metrics, 'convex_man_distros', () =>
+        fetchManDistros({ name: parts[1].toLowerCase(), section: parts[2] }),
       )
       return cachedJson(result)
     }

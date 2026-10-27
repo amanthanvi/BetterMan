@@ -11,3 +11,6 @@ export function isTypingTarget(el: Element | null): boolean {
 export function singleKeyShortcutsBlocked(doc: Document): boolean {
   return isTypingTarget(doc.activeElement) || doc.querySelector('[aria-modal="true"]') !== null
 }
+
+/** Dispatched on window to open the man page find bar. */
+export const FIND_REQUEST_EVENT = 'bm:find-request'

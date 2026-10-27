@@ -4,6 +4,7 @@ import { HomeDashboardClient } from './HomeDashboardClient'
 import { fetchInfo, listSections, withDistroFallback } from '../../lib/api'
 import { isDefaultDistro, withDistro } from '../../lib/distro'
 import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { sectionsLabel } from '../../lib/sectionsLabel'
 import { ManSectionLabel, RunningHead } from '../../components/man/RunningHead'
 import { Kbd } from '../../components/ui/Kbd'
 import { LinkPendingHint } from '../../components/ui/LinkPendingHint'
@@ -71,7 +72,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <section aria-label="Browse sections" className="mt-10 mb-4">
         <div className="flex items-baseline justify-between gap-3">
           <ManSectionLabel as="h2">BROWSE</ManSectionLabel>
-          <div className="font-mono text-xs text-faint">Sections 1–9</div>
+          {visible.length ? (
+            <div className="font-mono text-xs text-faint">{sectionsLabel(visible.map((s) => s.section))}</div>
+          ) : null}
         </div>
         <div className="mt-3 grid gap-x-8 gap-y-1.5 pl-6 sm:grid-cols-2 sm:pl-8 lg:grid-cols-3">
           {visible.map((s) => (

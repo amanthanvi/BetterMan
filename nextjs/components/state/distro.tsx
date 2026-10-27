@@ -7,7 +7,11 @@ import type { Distro } from '../../lib/distro'
 import { DISTRO_COOKIE, DISTRO_STORAGE_KEY, normalizeDistro } from '../../lib/distro'
 
 type DistroContextValue = {
+  /** What the current URL shows: `?distro=`, else the stored default. */
   distro: Distro
+  /** The stored default distro. */
+  preferred: Distro
+  /** Make `distro` the stored default and show it. */
   setDistro: (distro: Distro) => void
 }
 
@@ -61,12 +65,14 @@ export function DistroProvider({
   const search = searchParams.toString()
   const urlDistro = normalizeDistro(searchParams.get('distro'))
 
-  const [distro, setDistroState] = useState<Distro>(() => urlDistro ?? initialCookieDistro ?? 'debian')
+  // `?distro=` overrides what this URL shows; only setDistro changes the stored default.
+  const [preferred, setPreferred] = useState<Distro>(() => initialCookieDistro ?? 'debian')
+  const distro = urlDistro ?? preferred
   const pendingUrlRef = useRef<string | null>(null)
 
   const setDistro = useCallback(
     (next: Distro) => {
-      setDistroState(next)
+      setPreferred(next)
       writeStoredDistro(next)
       writeCookie(next)
 
@@ -94,35 +100,13 @@ export function DistroProvider({
   }, [pathname, search])
 
   useEffect(() => {
-    if (!urlDistro) return
-
-    setDistroState((prev) => {
-      if (prev === urlDistro) return prev
-      writeStoredDistro(urlDistro)
-      writeCookie(urlDistro)
-      return urlDistro
-    })
-  }, [urlDistro])
-
-  useEffect(() => {
-    if (urlDistro) return
-
     const stored = readStoredDistro()
     if (!stored) return
+    setPreferred(stored)
+    writeCookie(stored)
+  }, [])
 
-    setDistroState((prev) => {
-      if (prev === stored) return prev
-      writeCookie(stored)
-      return stored
-    })
-  }, [urlDistro])
-
-  useEffect(() => {
-    writeStoredDistro(distro)
-    writeCookie(distro)
-  }, [distro])
-
-  const value = useMemo(() => ({ distro, setDistro }), [distro, setDistro])
+  const value = useMemo(() => ({ distro, preferred, setDistro }), [distro, preferred, setDistro])
   return <DistroContext.Provider value={value}>{children}</DistroContext.Provider>
 }
 

@@ -8,7 +8,9 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { distroValidator, publicStageCompatibilityValidator } from "./schema";
 import {
   deterministicSnippet,
+  DISTRO_ORDER,
   DISTROS,
+  type Distro,
   normalizeName,
   normalizeSection,
   prefixUpperBound,
@@ -347,8 +349,10 @@ export const getRelated = query({
         .take(MAX_RELATED),
     ]);
 
+    // The page renders SEE ALSO itself, so RELATED is only what the body cites beyond it.
+    const listed = new Set(seeAlso.map((link) => JSON.stringify([link.toName, link.toSection])));
     const items = await resolveRelatedItems(
-      [...seeAlso, ...xrefs],
+      xrefs.filter((link) => !listed.has(JSON.stringify([link.toName, link.toSection]))),
       (targetName, targetSection) =>
         pageByNameAndSection(ctx, {
           releaseId: release._id,
@@ -359,6 +363,41 @@ export const getRelated = query({
     );
 
     return { items };
+  },
+});
+
+/** Distros whose active release has this page or a `.so` alias for it, in picker order. */
+export const listManDistros = query({
+  args: {
+    name: v.string(),
+    section: v.string(),
+  },
+  returns: v.object({ distros: v.array(distroValidator) }),
+  handler: async (ctx, args) => {
+    const name = normalizeName(args.name);
+    const section = normalizeSection(args.section);
+    const active = await ctx.db
+      .query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", (q) =>
+        q.eq("stage", PUBLIC_DATASET_STAGE).eq("locale", "en"),
+      )
+      .take(DISTROS.length);
+
+    const found = await Promise.all(
+      active.map(async (item) => {
+        if (await pageByNameAndSection(ctx, { releaseId: item.releaseId, name, section })) return item.distro;
+        const alias = await ctx.db
+          .query("manPageAliases")
+          .withIndex("by_releaseId_and_name_and_section", (q) =>
+            q.eq("releaseId", item.releaseId).eq("name", name).eq("section", section),
+          )
+          .first();
+        return alias ? item.distro : null;
+      }),
+    );
+    const distros = found.filter((distro): distro is Distro => distro !== null);
+    distros.sort((a, b) => DISTRO_ORDER[a] - DISTRO_ORDER[b]);
+    return { distros };
   },
 });
 

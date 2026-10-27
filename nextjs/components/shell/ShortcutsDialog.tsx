@@ -49,6 +49,7 @@ export function ShortcutsDialog({
     groups.push({
       title: 'Man Page',
       items: [
+        { keys: ['F'], desc: 'Find in page' },
         { keys: ['M'], desc: 'Toggle bookmark' },
         { keys: ['P'], desc: 'Open reading preferences' },
         { keys: ['Enter'], desc: 'Next find match' },

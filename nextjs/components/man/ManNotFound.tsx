@@ -8,6 +8,7 @@ import type { SuggestApiResponse, Suggestion } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
 import { useDistro } from '../state/distro'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
+import { ManDistroAvailability } from './ManDistroAvailability'
 
 // Rendered by the `/man/[name]` not-found boundary, which Next passes to the
 // client router as a fallback on every request, so the lookup only runs once
@@ -54,6 +55,8 @@ export function ManNotFound() {
           We couldn&apos;t find <span className="font-mono">{label}</span> in the current dataset.
         </p>
       </header>
+
+      {section ? <ManDistroAvailability name={name} section={section} distro={distro} /> : null}
 
       {suggestions.length ? (
         <div className="mt-6 space-y-2 text-sm text-muted">

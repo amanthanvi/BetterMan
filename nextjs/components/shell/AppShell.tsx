@@ -5,7 +5,7 @@ import { type ComponentType, useCallback, useEffect, useRef, useState } from 're
 
 import type { InfoResponse } from '../../lib/api'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
-import { singleKeyShortcutsBlocked } from '../../lib/dom'
+import { FIND_REQUEST_EVENT, singleKeyShortcutsBlocked } from '../../lib/dom'
 import { withDistro } from '../../lib/distro'
 import { getScrollBehavior, READER_INPUT_EVENTS } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
@@ -322,6 +322,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (isManPage && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'p') {
         e.preventDefault()
         setPrefsOpen(true)
+        return
+      }
+
+      if (isManPage && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent(FIND_REQUEST_EVENT))
         return
       }
 

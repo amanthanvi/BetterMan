@@ -6,8 +6,10 @@ import type { SectionPage } from '../../lib/api'
 import type { Distro } from '../../lib/distro'
 import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
+import { FIND_REQUEST_EVENT } from '../../lib/dom'
 import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
+import { defaultCodeLanguage } from '../doc/CodeBlock'
 import { DocRenderer } from '../doc/DocRenderer'
 import { RecentPageRecorder } from '../recent/RecentPageRecorder'
 import { useDistro } from '../state/distro'
@@ -20,6 +22,7 @@ import { ManPageExamples } from './ManPageExamples'
 import { ManPageFooterSections } from './ManPageFooterSections'
 import { ManPageHeaderCard } from './ManPageHeaderCard'
 import { ManPageOptionsSection, OPTIONS_COLLAPSE_THRESHOLD } from './ManPageOptionsSection'
+import { collectBlockIds, optionRowIds } from './optionAnchors'
 import { ManSectionLabel } from './RunningHead'
 import { useManPageFind } from './useManPageFind'
 
@@ -104,12 +107,16 @@ export function ManPageView({
   const distro = useDistro()
 
   const examples = useMemo(() => extractExamples(content.blocks), [content.blocks])
+  const codeLanguage = defaultCodeLanguage(page.section)
 
   const body = useMemo(
     () => stripHeaderSections(content.blocks, content.toc ?? [], { hasSynopsis: Boolean(content.synopsis?.length) }),
     [content.blocks, content.synopsis, content.toc],
   )
+  const bodyIds = useMemo(() => collectBlockIds(body.blocks), [body.blocks])
+  const optionRows = useMemo(() => optionRowIds(content.options ?? [], bodyIds), [bodyIds, content.options])
   const manFind = useManPageFind({ blocks: body.blocks })
+  const { openFind } = manFind
 
   const [selectedOption, setSelectedOption] = useState<OptionItem | null>(null)
   const [flashAnchorId, setFlashAnchorId] = useState<string | null>(null)
@@ -188,26 +195,47 @@ export function ManPageView({
     const options = content.options ?? []
     if (!options.length) return
 
-    const byAnchor = new Map(options.map((o) => [o.anchorId, o]))
+    // `#<anchorId>` lands on the body definition (or the row, if the body has no
+    // such id); `#<row id>` lands on the options-index row. Both select the option.
+    const targets = new Map<string, { opt: OptionItem; targetId: string; isRow: boolean }>()
+    for (const opt of options) {
+      const rowId = optionRows.get(opt.anchorId)
+      if (!rowId) continue
+      targets.set(rowId, { opt, targetId: rowId, isRow: true })
+      if (!targets.has(opt.anchorId)) {
+        const inBody = bodyIds.has(opt.anchorId)
+        targets.set(opt.anchorId, { opt, targetId: inBody ? opt.anchorId : rowId, isRow: !inBody })
+      }
+    }
 
     const applyHash = () => {
-      const raw = window.location.hash
-      const anchorId = raw.startsWith('#') ? raw.slice(1) : raw
-      if (!anchorId) return
-      const opt = byAnchor.get(anchorId)
-      if (!opt) return
+      const raw = window.location.hash.replace(/^#/, '')
+      if (!raw) return
+      let decoded = raw
+      try {
+        decoded = decodeURIComponent(raw)
+      } catch {
+        // keep the raw fragment
+      }
+      const target = targets.get(raw) ?? targets.get(decoded)
+      if (!target) return
 
       setOptionsExpanded(true)
-      setSelectedOption(opt)
-      flashOption(opt.anchorId)
+      setSelectedOption(target.opt)
+      flashOption(target.opt.anchorId)
 
-      scrollToIdWhenRendered(opt.anchorId, { behavior: getScrollBehavior(), block: 'center' })
+      scrollToIdWhenRendered(target.targetId, { behavior: getScrollBehavior(), block: target.isRow ? 'center' : 'start' })
     }
 
     applyHash()
     window.addEventListener('hashchange', applyHash)
     return () => window.removeEventListener('hashchange', applyHash)
-  }, [content.options, page.id])
+  }, [bodyIds, content.options, optionRows, page.id])
+
+  useEffect(() => {
+    window.addEventListener(FIND_REQUEST_EVENT, openFind)
+    return () => window.removeEventListener(FIND_REQUEST_EVENT, openFind)
+  }, [openFind])
 
   const copyLink = async () => {
     try {
@@ -237,20 +265,21 @@ export function ManPageView({
     // pushState below is the navigation; native hash navigation would repeat it.
     event.preventDefault()
     const scrollBehavior = getScrollBehavior()
+    const rowId = event.currentTarget.id
     setSelectedOption((prev) => (prev?.anchorId === opt.anchorId ? null : opt))
 
     try {
-      window.history.pushState(null, '', `#${opt.anchorId}`)
+      window.history.pushState(null, '', `#${rowId}`)
     } catch {
       try {
-        window.location.hash = opt.anchorId
+        window.location.hash = rowId
       } catch {
         // ignore
       }
     }
 
     flashOption(opt.anchorId)
-    document.getElementById(opt.anchorId)?.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
+    event.currentTarget.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
   }
 
   const onFindKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -343,12 +372,13 @@ export function ManPageView({
         ) : null}
 
         <article className="mx-auto min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
-          <ManPageExamples examples={examples} />
+          <ManPageExamples examples={examples} codeLanguage={codeLanguage} />
 
           <ManPageOptionsSection
             optionTerms={optionTerms}
             onClearHighlight={() => setSelectedOption(null)}
             options={content.options}
+            rowIds={optionRows}
             optionsCount={optionsCount}
             optionsExpanded={optionsExpanded}
             onToggleOptionsExpanded={() => setOptionsExpanded((v) => !v)}
@@ -362,6 +392,7 @@ export function ManPageView({
             distro={distro.distro}
             findQuery={manFind.findEnabled ? manFind.findQuery : undefined}
             optionTerms={optionTerms}
+            codeLanguage={codeLanguage}
           />
 
           <ManPageFooterSections
