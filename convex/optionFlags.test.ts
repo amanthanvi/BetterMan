@@ -54,6 +54,24 @@ describe("option flag derivation", () => {
     expect(rows.some((row) => row.anchorId === "def-0-0-1")).toBe(false);
   });
 
+  it("indexes generated util-linux and systemd definitions without nested values", () => {
+    const fixtures = [
+      ["mount-options.8", "--options", "def-o-options-opts"],
+      ["su-options.1", "--command", "def-c-command-command"],
+      ["systemctl-options.1", "--type", "def-t-type"],
+      ["lsblk-options.8", "--output", "def-o-output-list"],
+    ];
+    for (const [name, flag, anchorId] of fixtures) {
+      const fixture = JSON.parse(readFileSync(resolve(`ingestion/tests/fixtures/golden/${name}.json`), "utf8")) as { options: Option[] };
+      const rows = optionFlagRows(fixture.options);
+      expect(rows.find((row) => row.flag === flag)).toMatchObject({ anchorId });
+      expect(rows.some((row) => ["-1", "+list", "ro", "service"].includes(row.flag))).toBe(false);
+    }
+    const su = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/su-options.1.json"), "utf8")) as { options: Option[] };
+    expect(optionFlagRows(su.options).find((row) => row.flag === "--command"))
+      .toMatchObject({ takesArgument: true });
+  });
+
   it("indexes corrected inline argument boundaries without inventing joined flag keys", () => {
     const fixture = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/parser-text-fidelity.1.json"), "utf8")) as { options: Option[] };
     const rows = optionFlagRows(fixture.options);

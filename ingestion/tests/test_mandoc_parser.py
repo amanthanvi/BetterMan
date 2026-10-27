@@ -7,6 +7,40 @@ from ingestion.mandoc_parser import parse_mandoc_html
 _FIXTURES = Path(__file__).parent / "fixtures" / "mandoc"
 
 
+def test_generated_option_structure_preserves_existing_ids_and_symbolic_flags() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><section>
+      <h1>POLICIES</h1><p class="Pp"><b>-o</b>, <b>--other</b></p>
+      <div class="Bd-indent">Use the default policy.</div>
+      <p class="Pp"><b>-^</b></p><div class="Bd-indent">Symbolic flag.</div>
+      <dl><dt id="def-o-other">--existing</dt><dd>Keep this anchor.</dd></dl>
+      <p class="Pp"><b>+</b></p><div class="Bd-indent">A real bare flag.</div>
+      </section><section><h1>DESCRIPTION</h1>
+      <p class="Pp"><b>-h</b>, <b>--help</b></p><div class="Bd-indent">Show help.</div>
+      <p class="Pp"><b>--cpu-list 0-2,6</b></p><div class="Bd-indent">Example values.</div>
+      </section><section><h1>CONSTANTS</h1>
+      <p class="Pp"><b>-E2BIG</b></p><div class="Bd-indent">An error number.</div>
+      </section></div>""")
+    assert [(o.flags, o.anchorId) for o in parsed.options or []] == [
+        ("-o, --other", "def-o-other-2"),
+        ("-^", "def"),
+        ("--existing", "def-o-other"),
+        ("+", "def-2"),
+        ("-h, --help", "def-h-help"),
+    ]
+
+
+def test_new_bare_option_cannot_rename_an_existing_docbook_anchor() -> None:
+    parsed = parse_mandoc_html("""<!-- Generator: DocBook XSL -->
+      <div class="manual-text"><section><h1>OPTIONS</h1>
+      <p class="Pp"><b>+</b></p><div class="Bd-indent">New bare flag.</div>
+      <p class="Pp"><b>-^</b></p><div class="Bd-indent">Existing symbolic flag.</div>
+      </section></div>""")
+    assert [(o.flags, o.anchorId) for o in parsed.options or []] == [
+        ("+", "def-2"),
+        ("-^", "def"),
+    ]
+
+
 def test_definition_keeps_inline_runs_around_blocks_without_duplicating_text() -> None:
     parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1><dl>
       <dt id="file"><b>-f</b> ARCHIVE</dt><dd><!-- not visible -->Use archive
@@ -570,7 +604,7 @@ def test_inline_boundary_whitespace_survives_in_paragraphs_and_option_descriptio
     assert " ".join(_blocks_to_text(parsed.doc.blocks).split()) == "OPTIONS --group " + description
 
 
-def test_docbook_indented_bullets_use_only_the_list_marker() -> None:
+def test_indented_bullets_use_only_the_list_marker_without_generator_detection() -> None:
     from ingestion.mandoc_parser import _blocks_to_text
 
     body = """<div class="manual-text"><h1>DESCRIPTION</h1>
@@ -583,7 +617,7 @@ def test_docbook_indented_bullets_use_only_the_list_marker() -> None:
         "DESCRIPTION •A literal bullet outside a list. --help, -? Show help. "
         "another item Keep an internal • bullet."
     )
-    assert "•--help" in _blocks_to_text(parse_mandoc_html(body).doc.blocks)
+    assert parsed.doc == parse_mandoc_html(body).doc
 
 
 def test_cross_reference_links_keep_visible_boundary_whitespace() -> None:

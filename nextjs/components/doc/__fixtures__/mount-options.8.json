@@ -1,0 +1,290 @@
+{
+ "description": "mount a filesystem",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "mount - mount a filesystem",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "command-line-options",
+    "level": 2,
+    "text": "COMMAND-LINE OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Mount all filesystems mentioned in fstab.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-a-all",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-a , --all",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use the specified user namespace.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-map-users-proc-pid-ns-user",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--map-users",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": " /proc/",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "PID",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": "/ns/user",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use the specified mount options.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "inlines": [
+           {
+            "text": "ro",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "Read-only value, not a command-line flag.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "the inode change time is updated.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       }
+      ],
+      "id": "def-o-options-opts",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-o , --options",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": " ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "opts",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "functions",
+    "level": 2,
+    "text": "FUNCTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Read or set the hardware epoch, using either flag.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-getepoch-setepoch",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--getepoch",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "; ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--setepoch",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "command-line-options",
+    "level": 2,
+    "title": "COMMAND-LINE OPTIONS"
+   },
+   {
+    "id": "functions",
+    "level": 2,
+    "title": "FUNCTIONS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-a-all",
+   "argument": null,
+   "description": "Mount all filesystems mentioned in fstab.",
+   "flags": "-a , --all"
+  },
+  {
+   "anchorId": "def-map-users-proc-pid-ns-user",
+   "argument": "/proc/PID/ns/user",
+   "description": "Use the specified user namespace.",
+   "flags": "--map-users"
+  },
+  {
+   "anchorId": "def-o-options-opts",
+   "argument": "opts",
+   "description": "Use the specified mount options. ro Read-only value, not a command-line flag. the inode change time is updated.",
+   "flags": "-o , --options"
+  },
+  {
+   "anchorId": "def-getepoch-setepoch",
+   "argument": null,
+   "description": "Read or set the hardware epoch, using either flag.",
+   "flags": "--getepoch; --setepoch"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

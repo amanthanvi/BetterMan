@@ -1,0 +1,37 @@
+.\" excerpt: util-linux lsblk(8), Debian trixie
+.TH LSBLK 8
+.SH NAME
+lsblk \- list block devices
+.SH OPTIONS
+.PP
+.B -a , --all
+.RS 4
+List all block devices.
+.RE
+.PP
+.B -o , --output
+.I list
+.RS 4
+Specify which output columns to print.
+.PP
+.B +list
+.RS 4
+Extend the default columns, not another option.
+.RE
+.RE
+.PP
+\fB--hyperlink\fR[\fB=\fR\fImode\fR]
+.RS 4
+Print mountpoint paths as terminal hyperlinks.
+.RE
+.\" numeric syntax from mkswap/setterm OPTIONS
+.PP
+\fB-v\fR, \fB--swapversion 1\fR
+.RS 4
+Specify swap-space version 1.
+.RE
+.PP
+\fB--blank\fR[\fB=0\fR-\fB60\fR|\fBforce\fR|\fBpoke\fR]
+.RS 4
+Set terminal blanking.
+.RE

@@ -172,10 +172,16 @@ def test_mixed_marker_definitions_remain_literal() -> None:
     assert result["normalized_markers"] == 0
 
 
-@pytest.mark.parametrize("opening", ["•<b>Opening</b>", "•Opening"])
-def test_docbook_bullet_syntax_is_normalized_but_prose_is_checked(opening: str) -> None:
+@pytest.mark.parametrize(
+    "opening", ["•<b>Opening</b>", "•Opening", "••<b>Opening</b>", "<b>•</b><i>•</i>Opening"]
+)
+@pytest.mark.parametrize("generator", ["DocBook XSL", "Asciidoctor", None])
+def test_indented_bullet_syntax_is_normalized_but_prose_is_checked(
+    opening: str, generator: str | None
+) -> None:
+    header = f"<!-- Generator: {generator} -->" if generator else ""
     html = (
-        '<!-- Generator: DocBook XSL --><div class="manual-text">'
+        f'{header}<div class="manual-text">'
         f'<div class="Bd-indent">{opening} prose.<p>Continuation.</p>After.</div></div>'
     )
     doc = parse_mandoc_html(html).doc.model_dump()
@@ -183,6 +189,21 @@ def test_docbook_bullet_syntax_is_normalized_but_prose_is_checked(opening: str) 
     assert result["page"]["equal"], result
     assert result["normalized_markers"] == 1
     doc["blocks"][0]["items"][0].pop()
+    assert not check_fidelity(html, doc)["page"]["equal"]
+
+
+def test_indented_marker_normalization_keeps_literal_and_nonleading_bullets() -> None:
+    html = (
+        '<div class="manual-text"><p>• Literal paragraph.</p>'
+        '<div class="Bd-indent"><p>Opening prose.</p><p>• Later bullet.</p></div>'
+        '<div class="Bd-indent"><pre>• Literal code.</pre></div></div>'
+    )
+    manual, removed, _, _ = source_body(html)
+    assert removed == 0
+    assert visible_text(manual).count("•") == 3
+    doc = parse_mandoc_html(html).doc.model_dump()
+    assert check_fidelity(html, doc)["page"]["equal"]
+    doc["blocks"][0]["inlines"][0]["text"] = "Literal paragraph."
     assert not check_fidelity(html, doc)["page"]["equal"]
 
 

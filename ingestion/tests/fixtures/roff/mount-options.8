@@ -1,0 +1,37 @@
+.\" excerpt: util-linux mount(8), Debian trixie; .PP/.RS generated layout
+.TH MOUNT 8
+.SH NAME
+mount \- mount a filesystem
+.SH COMMAND-LINE OPTIONS
+.PP
+.B -a , --all
+.RS 4
+Mount all filesystems mentioned in fstab.
+.RE
+.PP
+.B --map-users
+/proc/\fIPID\fR/ns/user
+.RS 4
+Use the specified user namespace.
+.RE
+.PP
+.B -o , --options
+.I opts
+.RS 4
+Use the specified mount options.
+.PP
+.B ro
+.RS 4
+Read-only value, not a command-line flag.
+.RE
+.PP
+.RS 4
+\(buthe inode change time is updated.
+.RE
+.RE
+.SH FUNCTIONS
+.PP
+\fB--getepoch\fR; \fB--setepoch\fR
+.RS 4
+Read or set the hardware epoch, using either flag.
+.RE

@@ -1,0 +1,292 @@
+{
+ "description": "control the system and service manager",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "systemctl - control the system and service manager",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "List units of the specified types.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "inlines": [
+           {
+            "text": "service",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "A unit type, not an option.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "inlines": [
+           {
+            "text": "-1",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "An argument example, not a top-level flag.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       }
+      ],
+      "id": "def-t-type",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-t , --type=",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Show units in the specified states.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-state",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--state=",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Print help.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-help",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--help",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "commands",
+    "level": 2,
+    "text": "COMMANDS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "list-units",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A command name, not a flag.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Print the version.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-version",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--version",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "commands",
+    "level": 2,
+    "title": "COMMANDS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-t-type",
+   "argument": null,
+   "description": "List units of the specified types. service A unit type, not an option. -1 An argument example, not a top-level flag.",
+   "flags": "-t , --type="
+  },
+  {
+   "anchorId": "def-state",
+   "argument": null,
+   "description": "Show units in the specified states.",
+   "flags": "--state="
+  },
+  {
+   "anchorId": "def-help",
+   "argument": null,
+   "description": "Print help.",
+   "flags": "--help"
+  },
+  {
+   "anchorId": "def-version",
+   "argument": null,
+   "description": "Print the version.",
+   "flags": "--version"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

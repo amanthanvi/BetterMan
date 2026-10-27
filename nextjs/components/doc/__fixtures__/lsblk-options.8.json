@@ -1,0 +1,363 @@
+{
+ "description": "list block devices",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "lsblk - list block devices",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "List all block devices.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-a-all",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-a , --all",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specify which output columns to print.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "inlines": [
+           {
+            "text": "+list",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "Extend the default columns, not another option.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       }
+      ],
+      "id": "def-o-output-list",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-o , --output",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": " ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "list",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Print mountpoint paths as terminal hyperlinks.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-hyperlink-mode",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--hyperlink",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "=",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "inlines": [
+         {
+          "text": "mode",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": "]",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Specify swap-space version 1.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-v-swapversion-1",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-v",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--swapversion 1",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Set terminal blanking.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-blank-0-60-force-poke",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--blank",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "=0",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "-",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "60",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "|",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "force",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "|",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "poke",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "]",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-a-all",
+   "argument": null,
+   "description": "List all block devices.",
+   "flags": "-a , --all"
+  },
+  {
+   "anchorId": "def-o-output-list",
+   "argument": "list",
+   "description": "Specify which output columns to print. +list Extend the default columns, not another option.",
+   "flags": "-o , --output"
+  },
+  {
+   "anchorId": "def-hyperlink-mode",
+   "argument": "[mode]",
+   "description": "Print mountpoint paths as terminal hyperlinks.",
+   "flags": "--hyperlink"
+  },
+  {
+   "anchorId": "def-v-swapversion-1",
+   "argument": "1",
+   "description": "Specify swap-space version 1.",
+   "flags": "-v, --swapversion"
+  },
+  {
+   "anchorId": "def-blank-0-60-force-poke",
+   "argument": "[0-60|force|poke]",
+   "description": "Set terminal blanking.",
+   "flags": "--blank"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

@@ -41,6 +41,7 @@ _bare_xref_re = re.compile(
 )
 _bullet_term_re = re.compile(r"^\s*(?:\*|\+|-|•)(?:\s+|$)")
 _options_heading_re = re.compile(r"\bOPTIONS?\b", re.IGNORECASE)
+_bare_option_prefix_re = re.compile(r"^\s*(?:--|-|\+)(?=\s*(?:,|$))")
 # Keep symbolic placeholders and grouped flags, not numeric ranges or shell operators.
 _option_term_re = re.compile(
     r"^\s*(?![\[(][+-]?\d+\s*,)[\[(]?"
@@ -69,18 +70,19 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
     if manual_text is None:
         raise ValueError("mandoc output missing manual text container")
 
-    converted_terms: set[int] = set()
-    deferred_ids: list[tuple[DefinitionListItem, str]] = []
+    converted_terms: dict[int, bool] = {}
+    deferred_ids: list[tuple[DefinitionListItem, str, bool]] = []
     bare_option_ids: set[str] = set()
-    # DocBook (git-commit) uses .PP + .RS instead of .TP for flag definitions.
+    # Generated manuals use .PP + .RS instead of .TP for flag definitions.
     docbook = any(
         re.search(r"^\s*Generator:\s*DocBook\b", comment, re.MULTILINE)
         for comment in soup.find_all(string=lambda node: isinstance(node, Comment))
     )
-    for paragraph in manual_text.select("p.Pp") if docbook else []:
+    for paragraph in manual_text.select("p.Pp"):
+        legacy_term = bool(docbook and _option_term_re.search(_compact_text(paragraph)))
         definition = paragraph.find_next_sibling()
         if (
-            _option_term_re.search(_compact_text(paragraph))
+            (legacy_term or _is_structural_option_term(paragraph))
             and definition is not None
             and definition.name == "div"
             and "Bd-indent" in (definition.get("class") or [])
@@ -106,7 +108,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             dl = soup.new_tag("dl")
             paragraph.insert_before(dl)
             paragraph.name = "dt"
-            converted_terms.add(id(paragraph))
+            converted_terms[id(paragraph)] = legacy_term
             definition.name = "dd"
             dl.append(paragraph.extract())
             dl.append(definition.extract())
@@ -309,7 +311,9 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             items: list[DefinitionListItem] = []
             children = [c for c in tag.children if isinstance(c, Tag)]
             term_pairs = _definition_list_pairs(children)
-            if _is_bullet_definition_list(term_pairs):
+            if _is_bullet_definition_list(term_pairs) and not any(
+                id(term) in converted_terms for term, _definitions in term_pairs
+            ):
                 list_items: list[list[object]] = []
                 for dt, dds in term_pairs:
                     term_inlines = _strip_bullet_marker(inlines_from_container(dt))
@@ -402,7 +406,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                 if item_id and _is_bare_option_term(dt, for_extraction=True):
                     bare_option_ids.add(item_id)
                 if id(dt) in converted_terms:
-                    deferred_ids.append((item, _compact_text(dt)))
+                    deferred_ids.append((item, _compact_text(dt), converted_terms[id(dt)]))
 
             if not items:
                 return []
@@ -445,8 +449,8 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                 # troff .RS: an indented region. Keep it as a one-item unordered
                 # list so the nesting survives in the document model.
                 inner = blocks_from_container(tag)
-                if docbook and inner and isinstance(inner[0], BlockParagraph):
-                    # DocBook emits a literal bullet inside an already bulleted .RS item.
+                if inner and isinstance(inner[0], BlockParagraph):
+                    # A literal bullet is redundant inside an already bulleted .RS item.
                     inner[0].inlines = _strip_bullet_marker(inner[0].inlines, literal_bullet=True)
                     if not _has_meaningful_inlines(inner[0].inlines):
                         inner.pop(0)
@@ -460,9 +464,11 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
 
     blocks = blocks_from_container(manual_text)
 
-    # Existing headings and dt elements keep first claim on their original IDs.
-    for item, term_text in deferred_ids:
+    # Existing headings, dt elements, and DocBook conversions keep their original IDs.
+    for item, term_text, _legacy in sorted(deferred_ids, key=lambda entry: not entry[2]):
         item.id = stable_unique_slug(f"def-{term_text}", used_ids)
+        if _bare_option_prefix_re.search(term_text):
+            bare_option_ids.add(item.id)
     doc = DocumentModel(toc=toc, blocks=blocks)  # validates node shapes
 
     description = _extract_description(manual_text) or ""
@@ -625,6 +631,61 @@ def _is_bullet_definition_list(term_pairs: list[tuple[Tag, list[Tag]]]) -> bool:
     )
 
 
+def _is_structural_option_term(paragraph: Tag) -> bool:
+    # Only section-level terms qualify; indented values/examples belong to their option.
+    if paragraph.parent.name != "section":
+        return False
+    if re.search(r"^\s*[\[(].*[\])]\s+\S", paragraph.get_text("")):
+        return False
+    headings = [
+        section.find(re.compile(r"^h[1-6]$"), recursive=False)
+        for section in paragraph.parents
+        if section.name == "section"
+    ]
+    titles = [_compact_text(heading) for heading in headings if heading is not None]
+    if not titles or any(
+        re.search(r"\bexamples?\b|\bconstants?\b|\boutput columns\b", title, re.IGNORECASE)
+        for title in titles
+    ):
+        return False
+    option_context = any(
+        re.search(r"\b(?:options?|commands?)\b", title, re.IGNORECASE) for title in titles
+    )
+    formatted = paragraph.find(["b", "code"])
+    if formatted is None:
+        return False
+    flag = normalize_ws(formatted.get_text(""))
+    if not (_bare_option_prefix_re.search(flag) or _option_term_re.search(flag)):
+        return False
+    _flags, argument = _split_option_argument(normalize_ws(paragraph.get_text("")))
+    if not option_context and argument and len(argument.split()) > 1:
+        return False
+    for child in paragraph.children:
+        if isinstance(child, Comment):
+            continue
+        if isinstance(child, NavigableString):
+            if re.fullmatch(r"(?:[\s,;.|/()[\]=:\-]+|_[\w-]+_|/[\w./-]*)*", str(child)) is None:
+                return False
+        elif child.name not in {"b", "i", "code", "var"}:
+            return False
+        elif child.name in {"b", "code"}:
+            text = normalize_ws(child.get_text(""))
+            if len(text.split()) > 1:
+                flags, _argument = _split_option_argument(text)
+                if _argument and (
+                    len(_argument.split()) > 1 or (_argument[0].isdigit() and not option_context)
+                ):
+                    return False
+                if any(
+                    token not in {"or", "|", "/", "-", "--", "+"}
+                    and not _option_term_re.search(token)
+                    for token in re.split(r"[\s,]+", flags)
+                    if token
+                ):
+                    return False
+    return True
+
+
 def _is_bare_option_term(term: Tag, *, for_extraction: bool = False) -> bool:
     if _compact_text(term) not in {"-", "--", "+"}:
         return False
@@ -657,7 +718,7 @@ def _is_bare_option_term(term: Tag, *, for_extraction: bool = False) -> bool:
 def _strip_bullet_marker(
     inlines: list[InlineNode], *, literal_bullet: bool = False
 ) -> list[InlineNode]:
-    pattern = re.compile(r"^\s*•\s*") if literal_bullet else _bullet_term_re
+    pattern = re.compile(r"^\s*(?:•\s*)+") if literal_bullet else _bullet_term_re
     match = pattern.match(_inlines_to_text(inlines))
     if match is None:
         return inlines

@@ -45,9 +45,10 @@ for loss, duplication, reordering, and glued words. The document model is unchan
 For a full local audit of cached mandoc HTML (no ingestion clients or uploads):
 
 ```bash
+git show <baseline-commit>:ingestion/ingestion/mandoc_parser.py > /path/to/baseline_parser.py
 PYTHONPATH=ingestion ingestion/.venv/bin/python ingestion/scripts/audit_fidelity.py \
-  --cache /tmp/issue416/out --baseline /tmp/issue416b/baseline_mandoc_parser.py \
-  --output /tmp/issue416b/final.jsonl
+  --cache /path/to/cached-html --baseline /path/to/baseline_parser.py \
+  --output /path/to/audit.jsonl
 ```
 
 Run this command from the repository root, using a baseline parser snapshot and
@@ -58,6 +59,13 @@ tokens, diagnostic alignment uses equal spans as anchors before refining smaller
 differences; any unresolved partition is reported explicitly. A nonzero exit means
 residual fidelity findings or read/parse errors, not a skipped corpus. Source
 normalization removes only recognized list markers; other differences remain visible.
+
+Generated util-linux/Asciidoctor and systemd option definitions use a formatted
+flag paragraph followed by an indented description. The parser recognizes that
+structure without a Generator comment, rejects prose/examples and nested argument
+values, and defers new anchors so existing IDs keep their names. The mount, su,
+systemctl, and lsblk excerpt fixtures cover these layouts. Literal bullet prefixes
+inside indented blocks are removed because those blocks already render a list marker.
 
 The curated command-page check runs after parsing and alias resolution, before any
 release upload. Arch reinstalls requested packages to restore man pages omitted

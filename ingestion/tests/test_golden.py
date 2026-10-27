@@ -88,6 +88,36 @@ def test_golden(name: str, request: pytest.FixtureRequest) -> None:
     assert payload == expected
 
 
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        (
+            "mount-options.8",
+            ["-a , --all", "--map-users", "-o , --options", "--getepoch; --setepoch"],
+        ),
+        ("su-options.1", ["-c , --command", "- , -l , --login", "--session-command", "--"]),
+        ("systemctl-options.1", ["-t , --type=", "--state=", "--help", "--version"]),
+        (
+            "lsblk-options.8",
+            ["-a , --all", "-o , --output", "--hyperlink", "-v, --swapversion", "--blank"],
+        ),
+        ("generated-options-negative.1", ["--format", "-/", "-"]),
+    ],
+)
+def test_generated_manual_option_terms_exclude_prose_and_nested_values(
+    name: str, expected: list[str]
+) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+    assert [option.flags for option in parsed.options or []] == expected
+    assert all(option.anchorId for option in parsed.options or [])
+    if name == "su-options.1":
+        assert parsed.options[2].argument == "command"
+    if name == "lsblk-options.8":
+        assert parsed.options[2].argument == "[mode]"
+        assert parsed.options[3].argument == "1"
+        assert parsed.options[4].argument == "[0-60|force|poke]"
+
+
 def test_man7_xrefs_link_and_see_also_is_populated() -> None:
     parsed = parse_mandoc_html(_render(_ROFF / "tar.1"))
     hrefs: list[str] = []
