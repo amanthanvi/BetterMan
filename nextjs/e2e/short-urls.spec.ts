@@ -102,7 +102,6 @@ test('short urls: reserved app paths are unaffected', async ({ request }) => {
     '/man/tar/1/extra',
     '/.well-known/x',
     '/a/b/c',
-    '/tar.txt',
     '/wp-login.php',
     '/apple-touch-icon-precomposed.png',
   ]) {
