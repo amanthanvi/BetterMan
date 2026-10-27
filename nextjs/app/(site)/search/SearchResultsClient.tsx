@@ -4,8 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { SearchResponse, SearchResult } from '../../../lib/api'
-import type { Distro } from '../../../lib/distro'
-import { manPageHref, withDistro } from '../../../lib/distro'
+import { manPageHref, withDistro, type Distro, type LinkDistro } from '../../../lib/distro'
 import { escapeRegExp } from '../../../lib/textRanges'
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
 
@@ -80,9 +79,9 @@ function buildSynopsisSnippet(r: SearchResult): string {
     .join('\n')
 }
 
-function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResult }) {
+function ResultCard({ link, q, r }: { link: LinkDistro; q: string; r: SearchResult }) {
   const anchorId = r.match === 'option' ? r.anchorId : undefined
-  const href = useMemo(() => manPageHref(r.name, r.section, distro, anchorId), [anchorId, distro, r.name, r.section])
+  const href = useMemo(() => manPageHref(r.name, r.section, link, anchorId), [anchorId, link, r.name, r.section])
   const synopsis = useMemo(() => buildSynopsisSnippet(r), [r])
 
   return (
@@ -136,16 +135,17 @@ function getSuggestions(initial: SearchResponse | null, q: string): string[] {
 }
 
 export function SearchResultsClient({
-  distro,
+  link,
   q,
   section,
   initial,
 }: {
-  distro: Distro
+  link: LinkDistro
   q: string
   section: string
   initial: SearchResponse | null
 }) {
+  const { distro } = link
   const [results, setResults] = useState<SearchResult[]>(() => initial?.results ?? [])
   const [hasMore, setHasMore] = useState<boolean>(() => initial?.hasMore ?? false)
   const [loading, setLoading] = useState(false)
@@ -198,21 +198,21 @@ export function SearchResultsClient({
       <div className="mt-8 text-sm text-muted">
         Search by command name or by what it does. Try{' '}
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent('tar')}`, distro)}
+          href={withDistro(`/search?q=${encodeURIComponent('tar')}`, link)}
           className="font-mono"
         >
           tar
         </Link>
         ,{' '}
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent('ssh')}`, distro)}
+          href={withDistro(`/search?q=${encodeURIComponent('ssh')}`, link)}
           className="font-mono"
         >
           ssh
         </Link>
         ,{' '}
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent('copy files')}`, distro)}
+          href={withDistro(`/search?q=${encodeURIComponent('copy files')}`, link)}
           className="font-mono"
         >
           copy files
@@ -241,7 +241,7 @@ export function SearchResultsClient({
               <span key={s}>
                 {idx ? ', ' : ''}
                 <Link
-                  href={withDistro(`/search?q=${encodeURIComponent(s)}`, distro)}
+                  href={withDistro(`/search?q=${encodeURIComponent(s)}`, link)}
                   className="font-mono"
                 >
                   {s}
@@ -264,7 +264,7 @@ export function SearchResultsClient({
             <span key={s}>
               {idx ? ', ' : ''}
               <Link
-                href={withDistro(`/search?q=${encodeURIComponent(s)}`, distro)}
+                href={withDistro(`/search?q=${encodeURIComponent(s)}`, link)}
                 className="font-mono"
               >
                 {s}
@@ -277,7 +277,7 @@ export function SearchResultsClient({
 
       <ol aria-label="Search results">
         {results.map((r) => (
-          <ResultCard key={`${r.name}:${r.section}`} distro={distro} q={q} r={r} />
+          <ResultCard key={`${r.name}:${r.section}`} link={link} q={q} r={r} />
         ))}
       </ol>
 

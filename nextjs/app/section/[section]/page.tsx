@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation'
 
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
 import { FastApiError, listSection, withDistroFallback } from '../../../lib/api'
-import { isDefaultDistro, withDistro, type Distro } from '../../../lib/distro'
-import { getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+import { distroParam, withDistro, type LinkDistro } from '../../../lib/distro'
+import { getFirst, resolvePreferredDistro, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
 function getGroupKey(name: string): string {
   const first = name.trim().charAt(0).toUpperCase()
@@ -33,12 +33,13 @@ function groupByLeadingChar<T extends { name: string }>(items: readonly T[]): Ar
   return groups
 }
 
-function buildSectionHref(opts: { section: string; distro: Distro; offset: number; cursor?: string | null; before?: string | null }) {
+function buildSectionHref(opts: { section: string; link: LinkDistro; offset: number; cursor?: string | null; before?: string | null }) {
   const params = new URLSearchParams()
   if (opts.offset > 0) params.set('offset', String(opts.offset))
   if (opts.cursor != null) params.set('cursor', opts.cursor)
   if (opts.before != null) params.set('before', opts.before)
-  if (!isDefaultDistro(opts.distro)) params.set('distro', opts.distro)
+  const distro = distroParam(opts.link)
+  if (distro) params.set('distro', distro)
   const qs = params.toString()
   return qs ? `/section/${encodeURIComponent(opts.section)}?${qs}` : `/section/${encodeURIComponent(opts.section)}`
 }
@@ -109,6 +110,8 @@ export default async function SectionPage({
     if (err instanceof FastApiError && err.status === 404) notFound()
     throw err
   })
+  const link = { distro, preferred: await resolvePreferredDistro() }
+  const linkParam = distroParam(link)
   const groups = groupByLeadingChar(data.results)
   const prevOffset = Math.max(0, data.offset - data.limit)
   const nextOffset = data.offset + data.results.length
@@ -128,7 +131,7 @@ export default async function SectionPage({
 
         <form className="mt-5" action="/search" method="get">
           <input type="hidden" name="section" value={data.section} />
-          {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
+          {linkParam ? <input type="hidden" name="distro" value={linkParam} /> : null}
           <div className="flex flex-wrap items-center gap-2">
             <input
               name="q"
@@ -173,7 +176,7 @@ export default async function SectionPage({
               {group.items.map((r) => (
                 <li key={`${r.name}:${r.section}`} className="border-b border-edge last:border-b-0">
                   <Link
-                    href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, distro)}
+                    href={withDistro(`/man/${encodeURIComponent(r.name)}/${encodeURIComponent(r.section)}`, link)}
                     className="group block px-1 py-3 transition-colors hover:no-underline sm:px-2"
                   >
                     <div className="flex items-baseline gap-3">
@@ -199,18 +202,18 @@ export default async function SectionPage({
         </div>
         <div className="flex items-center gap-2">
           {canRestart ? (
-            <PaginationControl href={buildSectionHref({ section: data.section, distro, offset: 0 })} disabled={false}>
+            <PaginationControl href={buildSectionHref({ section: data.section, link, offset: 0 })} disabled={false}>
               First page
             </PaginationControl>
           ) : null}
           <PaginationControl
-            href={buildSectionHref({ section: data.section, distro, offset: prevOffset, before: data.prevCursor })}
+            href={buildSectionHref({ section: data.section, link, offset: prevOffset, before: data.prevCursor })}
             disabled={!hasPrevPage}
           >
             Previous
           </PaginationControl>
           <PaginationControl
-            href={buildSectionHref({ section: data.section, distro, offset: nextOffset, cursor: data.nextCursor })}
+            href={buildSectionHref({ section: data.section, link, offset: nextOffset, cursor: data.nextCursor })}
             disabled={!hasNextPage}
           >
             Next

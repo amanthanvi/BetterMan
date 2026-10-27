@@ -11,6 +11,11 @@ export function getFirst(value: string | string[] | undefined): string | undefin
 
 /** `?distro=` wins over the distro cookie, which wins over the default. */
 export async function resolveRequestDistro(sp: SearchParams): Promise<Distro> {
+  return normalizeDistro(getFirst(sp.distro)) ?? (await resolvePreferredDistro())
+}
+
+/** The reader's stored default distro: the distro cookie, else Debian. */
+export async function resolvePreferredDistro(): Promise<Distro> {
   const cookieStore = await cookies()
-  return normalizeDistro(getFirst(sp.distro)) ?? normalizeDistro(cookieStore.get(DISTRO_COOKIE)?.value) ?? 'debian'
+  return normalizeDistro(cookieStore.get(DISTRO_COOKIE)?.value) ?? 'debian'
 }

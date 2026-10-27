@@ -3,8 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
-import type { Distro } from '../../lib/distro'
-import { withDistro } from '../../lib/distro'
+import { withDistro, type LinkDistro } from '../../lib/distro'
 import {
   BOOKMARKS_EVENT,
   BOOKMARKS_STORAGE_KEY,
@@ -33,12 +32,12 @@ function formatRelativeFromMs(ms: number): string {
   }
 }
 
-function ManLink({ distro, name, section, children }: { distro: Distro; name: string; section: string; children: React.ReactNode }) {
+function ManLink({ link, name, section, children }: { link: LinkDistro; name: string; section: string; children: React.ReactNode }) {
   const href = useMemo(() => {
     const encodedName = encodeURIComponent(name)
     const encodedSection = encodeURIComponent(section)
-    return withDistro(`/man/${encodedName}/${encodedSection}`, distro)
-  }, [distro, name, section])
+    return withDistro(`/man/${encodedName}/${encodedSection}`, link)
+  }, [link, name, section])
 
   return (
     <Link href={href} className="group min-w-0 flex-1 py-2.5 transition-colors hover:no-underline">
@@ -49,20 +48,20 @@ function ManLink({ distro, name, section, children }: { distro: Distro; name: st
 }
 
 function EntryRow({
-  distro,
+  link,
   name,
   section,
   description,
   timestamp,
 }: {
-  distro: Distro
+  link: LinkDistro
   name: string
   section: string
   description?: string
   timestamp: number
 }) {
   return (
-    <ManLink distro={distro} name={name} section={section}>
+    <ManLink link={link} name={name} section={section}>
       <div className="flex items-baseline justify-between gap-3">
         <div className="flex min-w-0 items-baseline gap-3">
           <span className="shrink-0 font-mono text-sm font-semibold text-fg group-hover:text-accent">
@@ -76,11 +75,7 @@ function EntryRow({
   )
 }
 
-export function HomeDashboardClient({
-  distro,
-}: {
-  distro: Distro
-}) {
+export function HomeDashboardClient({ link }: { link: LinkDistro }) {
   const [recentPages, setRecentPages] = useState<RecentPageItem[]>([])
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
 
@@ -124,7 +119,7 @@ export function HomeDashboardClient({
             <div className="mt-2">
               {recentPages.map((it) => (
                 <div key={`${it.name}:${it.section}:${it.at}`} className="flex items-stretch border-b border-edge last:border-b-0">
-                  <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
+                  <EntryRow link={link} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
                 </div>
               ))}
             </div>
@@ -144,7 +139,7 @@ export function HomeDashboardClient({
             <div className="mt-2">
               {bookmarks.map((it) => (
                 <div key={`${it.name}:${it.section}:${it.addedAt}`} className="group/row flex items-stretch border-b border-edge last:border-b-0">
-                  <EntryRow distro={distro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
+                  <EntryRow link={link} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
                   <button
                     type="button"
                     className="flex shrink-0 items-center justify-center px-3 text-xs text-muted opacity-100 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0"

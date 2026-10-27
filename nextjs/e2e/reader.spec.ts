@@ -116,6 +116,39 @@ test('reader: a shared ?distro= link keeps a chosen default', async ({ page }) =
   await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
 })
 
+test('reader: an explicit Debian link keeps Debian through links while the default stays Ubuntu', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('/man/tar/1')
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Reading preferences' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
+  await dialog.getByRole('radiogroup', { name: 'Default distro' }).getByRole('radio', { name: '@ubuntu' }).click()
+  await expect.poll(() => storedDistro(page)).toEqual({ cookie: 'ubuntu', local: 'ubuntu' })
+
+  await page.goto('/man/tar/1?distro=debian')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('tar')
+  await expect(page.getByText(UBUNTU_MARKER)).toHaveCount(0)
+  await waitForInteractiveShell(page)
+
+  await page.getByRole('button', { name: 'Copy link to clipboard' }).click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/man\/tar\/1\?distro=debian$/)
+
+  await expect(page.locator('article p').getByRole('link', { name: 'bash(1)' })).toHaveAttribute('href', '/man/bash/1?distro=debian')
+  await page.getByRole('complementary', { name: 'See also' }).getByRole('link', { name: 'gzip(1)' }).click()
+  await expect(page).toHaveURL(/\/man\/gzip\/1\?distro=debian$/)
+  const header = page.locator('header').filter({ has: page.getByRole('heading', { level: 1, name: /gzip\(1\)/i }) })
+  await expect(header.getByText('Debian', { exact: true })).toBeVisible()
+  expect(await storedDistro(page)).toEqual({ cookie: 'ubuntu', local: 'ubuntu' })
+
+  // A `.so` alias keeps the explicit distro too.
+  await page.goto('/man/gunzip/1?distro=debian')
+  await expect(page).toHaveURL(/\/man\/gzip\/1\?distro=debian$/)
+
+  // A bare URL still resolves on the stored default.
+  await page.goto('/man/tar/1')
+  await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
+})
+
 test('reader: a page missing from the active distro links to the distros that have it', async ({ page }) => {
   const res = await page.goto('/man/systemctl/1?distro=macos')
   expect(res?.status()).toBe(404)

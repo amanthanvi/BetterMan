@@ -39,20 +39,37 @@ export function normalizeDistro(value: unknown): Distro | null {
   return null
 }
 
-export function isDefaultDistro(distro: Distro): boolean {
-  return distro === 'debian'
+/**
+ * Who a link is for: the distro the current page shows, and the reader's stored
+ * default, which a URL without `?distro=` resolves to.
+ */
+export type LinkDistro = { distro: Distro; preferred: Distro }
+
+/** A reader with no stored default, such as a crawler or a share-card fetcher. */
+export function canonicalLinkDistro(distro: Distro): LinkDistro {
+  return { distro, preferred: 'debian' }
+}
+
+/**
+ * The `?distro=` a link needs to keep showing `distro`, or null when a bare URL
+ * already does: Debian for a reader whose default is Debian. Other distros keep
+ * the parameter even when they are the default, as they always have.
+ */
+export function distroParam({ distro, preferred }: LinkDistro): Distro | null {
+  return distro === 'debian' && preferred === 'debian' ? null : distro
 }
 
 /** Option anchors are appended as written (`sort=`, `no~2`), like the options table's own links. */
-export function manPageHref(name: string, section: string, distro: string, anchorId?: string): string {
-  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, distro)
+export function manPageHref(name: string, section: string, link: LinkDistro, anchorId?: string): string {
+  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, link)
   return anchorId ? `${href}#${anchorId}` : href
 }
 
-export function withDistro(loc: string, distro: string): string {
-  if (!distro || distro === 'debian') return loc
+export function withDistro(loc: string, link: LinkDistro): string {
+  const param = distroParam(link)
+  if (!param) return loc
   const isAbsolute = /^https?:\/\//.test(loc)
   const url = isAbsolute ? new URL(loc) : new URL(loc, 'https://example.invalid')
-  url.searchParams.set('distro', distro)
+  url.searchParams.set('distro', param)
   return isAbsolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`
 }

@@ -2,8 +2,8 @@ import Link from 'next/link'
 
 import { HomeDashboardClient } from './HomeDashboardClient'
 import { fetchInfo, listSections, withDistroFallback } from '../../lib/api'
-import { isDefaultDistro, withDistro } from '../../lib/distro'
-import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { distroParam, withDistro } from '../../lib/distro'
+import { resolvePreferredDistro, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { sectionsLabel } from '../../lib/sectionsLabel'
 import { ManSectionLabel, RunningHead } from '../../components/man/RunningHead'
 import { Kbd } from '../../components/ui/Kbd'
@@ -16,6 +16,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const { distro, data } = await withDistroFallback(requestedDistro, async (activeDistro) =>
     Promise.all([fetchInfo(activeDistro), listSections(activeDistro)]),
   )
+  const link = { distro, preferred: await resolvePreferredDistro() }
+  const linkParam = distroParam(link)
   const [info, sections] = data
   const visible = sections.filter((s) => /^\d+$/.test(s.section)).slice(0, 9)
 
@@ -47,7 +49,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 className="h-12 min-w-0 flex-1 border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
                 aria-label="Search man pages"
               />
-              {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
+              {linkParam ? <input type="hidden" name="distro" value={linkParam} /> : null}
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 pl-7 text-xs text-muted">
@@ -67,7 +69,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
       </section>
 
-      <HomeDashboardClient distro={distro} />
+      <HomeDashboardClient link={link} />
 
       <section aria-label="Browse sections" className="mt-10 mb-4">
         <div className="flex items-baseline justify-between gap-3">
@@ -80,7 +82,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           {visible.map((s) => (
             <Link
               key={s.section}
-              href={withDistro(`/section/${encodeURIComponent(s.section)}`, distro)}
+              href={withDistro(`/section/${encodeURIComponent(s.section)}`, link)}
               className="group font-mono text-sm hover:no-underline"
               title={s.label}
             >

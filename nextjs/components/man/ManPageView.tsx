@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
-import type { Distro } from '../../lib/distro'
+import { distroParam, type Distro } from '../../lib/distro'
 import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
 import { FIND_REQUEST_EVENT } from '../../lib/dom'
@@ -105,6 +105,7 @@ export function ManPageView({
   const toc = useToc()
   const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
   const distro = useDistro()
+  const link = useMemo(() => ({ distro: distro.distro, preferred: distro.preferred }), [distro.distro, distro.preferred])
 
   const examples = useMemo(() => extractExamples(content.blocks), [content.blocks])
   const codeLanguage = defaultCodeLanguage(page.section)
@@ -240,8 +241,9 @@ export function ManPageView({
   const copyLink = async () => {
     try {
       const url = new URL(window.location.href)
-      if (distro.distro === 'debian') url.searchParams.delete('distro')
-      else url.searchParams.set('distro', distro.distro)
+      const param = distroParam(link)
+      if (param) url.searchParams.set('distro', param)
+      else url.searchParams.delete('distro')
       await navigator.clipboard.writeText(url.toString())
       setCopiedLink(true)
       if (copyTimeoutRef.current != null) window.clearTimeout(copyTimeoutRef.current)
@@ -389,14 +391,14 @@ export function ManPageView({
 
           <DocRenderer
             blocks={body.blocks}
-            distro={distro.distro}
+            link={link}
             findQuery={manFind.findEnabled ? manFind.findQuery : undefined}
             optionTerms={optionTerms}
             codeLanguage={codeLanguage}
           />
 
           <ManPageFooterSections
-            distro={distro.distro}
+            link={link}
             seeAlso={content.seeAlso}
             relatedItems={relatedItems}
             hasParseWarnings={page.hasParseWarnings === true}

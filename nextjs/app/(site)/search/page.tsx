@@ -1,18 +1,18 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
-import type { Distro } from '../../../lib/distro'
 import { listSections, search, withDistroFallback } from '../../../lib/api'
-import { isDefaultDistro } from '../../../lib/distro'
-import { getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+import { distroParam, type LinkDistro } from '../../../lib/distro'
+import { getFirst, resolvePreferredDistro, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 import { SearchPageInput } from './SearchPageInput'
 import { SearchResultsClient } from './SearchResultsClient'
 
-function buildSearchHref(opts: { q: string; section: string; distro: Distro }) {
+function buildSearchHref(opts: { q: string; section: string; link: LinkDistro }) {
   const params = new URLSearchParams()
   if (opts.q) params.set('q', opts.q)
   if (opts.section) params.set('section', opts.section)
-  if (opts.distro !== 'debian') params.set('distro', opts.distro)
+  const distro = distroParam(opts.link)
+  if (distro) params.set('distro', distro)
   const qs = params.toString()
   return qs ? `/search?${qs}` : '/search'
 }
@@ -52,6 +52,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     return Promise.all([sectionsPromise, initialPromise])
   })
   const [sections, initial] = data
+  const link = { distro, preferred: await resolvePreferredDistro() }
+  const linkParam = distroParam(link)
   const sectionPills = sections
     .filter((s) => /^\d+$/.test(s.section))
     .map((s) => ({ section: s.section, n: Number.parseInt(s.section, 10), label: s.label }))
@@ -65,14 +67,14 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
 
         <form className="mt-4" action="/search" method="get" role="search" aria-label="Search man pages">
-          <SearchPageInput initialQ={q} section={section} distro={distro} />
+          <SearchPageInput initialQ={q} section={section} link={link} />
           {section ? <input type="hidden" name="section" value={section} /> : null}
-          {isDefaultDistro(distro) ? null : <input type="hidden" name="distro" value={distro} />}
+          {linkParam ? <input type="hidden" name="distro" value={linkParam} /> : null}
         </form>
 
         <nav aria-label="Section filter" className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
           <Link
-            href={buildSearchHref({ q, section: '', distro })}
+            href={buildSearchHref({ q, section: '', link })}
             aria-current={!section ? 'page' : undefined}
             className={`px-0.5 py-1 font-mono text-xs transition-colors ${
               !section
@@ -85,7 +87,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           {sectionPills.map((s) => (
             <Link
               key={s.section}
-              href={buildSearchHref({ q, section: s.section, distro })}
+              href={buildSearchHref({ q, section: s.section, link })}
               aria-current={section === s.section ? 'page' : undefined}
               className={`px-0.5 py-1 font-mono text-xs transition-colors ${
                 section === s.section
@@ -102,7 +104,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
       </header>
 
-      <SearchResultsClient distro={distro} q={q} section={section} initial={initial} />
+      <SearchResultsClient link={link} q={q} section={section} initial={initial} />
     </div>
   )
 }

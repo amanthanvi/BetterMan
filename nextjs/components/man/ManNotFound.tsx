@@ -15,7 +15,7 @@ import { ManDistroAvailability } from './ManDistroAvailability'
 // the 404 is actually shown.
 export function ManNotFound() {
   const { name, section } = useParams<{ name: string; section?: string }>()
-  const { distro } = useDistro()
+  const { distro, preferred } = useDistro()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   // Debian when the requested distro has no active release, as on the man page.
   const [suggestionsDistro, setSuggestionsDistro] = useState(distro)
@@ -65,7 +65,7 @@ export function ManNotFound() {
             {suggestions.map((s) => (
               <li key={`${s.name}:${s.section}`} className="flex flex-col">
                 <Link
-                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, suggestionsDistro)}
+                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, { distro: suggestionsDistro, preferred })}
                   className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
                 >
                   {s.name}({s.section})
@@ -80,7 +80,7 @@ export function ManNotFound() {
 
       <div className="mt-6">
         <Link
-          href={withDistro(`/search?q=${encodeURIComponent(name)}`, distro)}
+          href={withDistro(`/search?q=${encodeURIComponent(name)}`, { distro, preferred })}
           className="text-sm underline underline-offset-4"
         >
           Search for “{name}”
