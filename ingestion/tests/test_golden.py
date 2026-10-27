@@ -354,3 +354,17 @@ def test_flat_cli_operand_and_value_peers_keep_bare_options(
     assert [option.flags for option in parsed.options if option.flags in {"-", "--", "+"}] == (
         bare_flags
     )
+
+
+def test_fidelity_fixture_splits_spaced_arguments_but_keeps_joined_flags() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "parser-text-fidelity.1"))
+    options = {option.flags: option for option in parsed.options or []}
+    assert options["-f"].argument == "ARCHIVE"
+    assert options["-t"].argument == "format"
+    assert options["--format"].argument == "FORMAT"
+    assert options["-n10"].argument is None
+    strings = parse_mandoc_html(_render(_ROFF / "strings-mixed-peers.1"))
+    assert (
+        next(option for option in strings.options or [] if option.flags == "-t").argument
+        == "format"
+    )

@@ -54,6 +54,22 @@ describe("option flag derivation", () => {
     expect(rows.some((row) => row.anchorId === "def-0-0-1")).toBe(false);
   });
 
+  it("indexes corrected inline argument boundaries without inventing joined flag keys", () => {
+    const fixture = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/parser-text-fidelity.1.json"), "utf8")) as { options: Option[] };
+    const rows = optionFlagRows(fixture.options);
+    for (const flag of ["-f", "-t", "--format"]) {
+      expect(rows.find((row) => row.flag === flag)).toMatchObject({ flag, takesArgument: true });
+    }
+    expect(rows.some((row) => ["-fARCHIVE", "-tformat"].includes(row.flag))).toBe(false);
+    expect(rows.find((row) => row.flag === "-n10")).toMatchObject({ flag: "-n10" });
+    expect(rows.find((row) => row.flag === "-n10")?.takesArgument).toBeUndefined();
+    const strings = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/strings-mixed-peers.1.json"), "utf8")) as { options: Option[] };
+    expect(optionFlagRows(strings.options).find((row) => row.flag === "-t"))
+      .toMatchObject({ flags: "-t", anchorId: "t", takesArgument: true });
+    expect(optionFlagRows(tarGolden.options).find((row) => row.flag === "-f"))
+      .toMatchObject({ anchorId: "f", takesArgument: true });
+  });
+
   it("keeps only real flags and splits attached placeholders", () => {
     expect(keys([{ flags: "--color[=WHEN], --colour", anchorId: "color" }])).toEqual(["--color", "--colour"]);
     expect(keys([{ flags: "--[no-]color, -[no]x", anchorId: "color" }])).toEqual(["--color", "--no-color", "-x", "-nox"]);

@@ -34,6 +34,31 @@ survive in the matching definition body (or the visible page body for converted
 prose bullets). This guard ignores markup/whitespace differences and checks
 repeated terms in document order. Run it with `pnpm ingest:test`.
 
+`parser-text-fidelity.1` covers loose text after `.RE`, inline whitespace,
+and redundant DocBook list bullets. Correctly spaced option terms also restore
+flag/argument splitting (`-t format`, `-f ARCHIVE`) while joined spellings such as
+`-n10` stay joined and body/option anchors stay unchanged. `tests/test_fidelity.py`
+checks exact ordered source tokens against definitions and the complete document,
+with mutation cases
+for loss, duplication, reordering, and glued words. The document model is unchanged.
+
+For a full local audit of cached mandoc HTML (no ingestion clients or uploads):
+
+```bash
+PYTHONPATH=ingestion ingestion/.venv/bin/python ingestion/scripts/audit_fidelity.py \
+  --cache /tmp/issue416/out --baseline /tmp/issue416b/baseline_mandoc_parser.py \
+  --output /tmp/issue416b/final.jsonl
+```
+
+Run this command from the repository root, using a baseline parser snapshot and
+`<cache>/<distro>/html/*.html.gz`. JSONL records include source/body and per-definition
+findings, whitespace-boundary diagnostics, and baseline/candidate ID, TOC, option,
+and plain-text comparisons. Exact token equality covers every page. Above 40,000
+tokens, diagnostic alignment uses equal spans as anchors before refining smaller
+differences; any unresolved partition is reported explicitly. A nonzero exit means
+residual fidelity findings or read/parse errors, not a skipped corpus. Source
+normalization removes only recognized list markers; other differences remain visible.
+
 The curated command-page check runs after parsing and alias resolution, before any
 release upload. Arch reinstalls requested packages to restore man pages omitted
 by its container image; Alpine requires `tar-doc` alongside `tar`. Debian/Ubuntu

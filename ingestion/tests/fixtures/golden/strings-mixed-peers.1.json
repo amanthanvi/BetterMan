@@ -199,7 +199,7 @@
        {
         "inlines": [
          {
-          "text": "format",
+          "text": " format",
           "type": "text"
          }
         ],
@@ -355,7 +355,7 @@
        {
         "inlines": [
          {
-          "text": "number",
+          "text": " number",
           "type": "text"
          }
         ],
@@ -458,7 +458,7 @@
        {
         "inlines": [
          {
-          "text": "arch_type",
+          "text": " arch_type",
           "type": "text"
          }
         ],
@@ -505,9 +505,9 @@
   },
   {
    "anchorId": "t",
-   "argument": null,
+   "argument": "format",
    "description": "Write each string preceded by its byte offset from the start of the file. The format shall be dependent on the single character used as the format option-argument:",
-   "flags": "-tformat"
+   "flags": "-t"
   },
   {
    "anchorId": "def-number",
@@ -517,15 +517,15 @@
   },
   {
    "anchorId": "n",
-   "argument": null,
+   "argument": "number",
    "description": "Specify the minimum string length, where the number argument is a positive decimal integer. The default shall be 4.",
-   "flags": "-nnumber"
+   "flags": "-n"
   },
   {
    "anchorId": "arch",
-   "argument": null,
+   "argument": "arch_type",
    "description": "Specifies the architecture, arch_type, of the file for strings(1) to operate on when the file is a universal file. (See arch(3) for the currently know arch_types.) The arch_type can be \"all\" to operate on all architectures in the file.",
-   "flags": "-archarch_type"
+   "flags": "-arch"
   }
  ],
  "seeAlso": [],

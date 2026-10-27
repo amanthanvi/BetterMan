@@ -121,14 +121,10 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
         toc.append(TocItem(id=heading_id, title=text, level=level))
         return BlockHeading(id=heading_id, level=level, text=text)
 
-    def push_blocks(more: list[object]) -> None:
-        for b in more:
-            blocks.append(b)
+    def inlines_from_container(container: Tag, *, trim: bool = True) -> list[InlineNode]:
+        return inlines_from_nodes(list(container.children), trim=trim)
 
-    def inlines_from_container(container: Tag) -> list[InlineNode]:
-        return inlines_from_nodes(list(container.children))
-
-    def inlines_from_nodes(children: list[object]) -> list[InlineNode]:
+    def inlines_from_nodes(children: list[object], *, trim: bool = True) -> list[InlineNode]:
         out: list[InlineNode] = []
         index = 0
         while index < len(children):
@@ -144,7 +140,8 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                 continue
             out.extend(inlines_from_node(child))
             index += 1
-        return _trim_inline_ws(_merge_adjacent_text(out))
+        merged = _merge_adjacent_text(out)
+        return _trim_inline_ws(merged) if trim else merged
 
     def _man7_xref(node: object, nxt: object) -> tuple[InlineLink, str] | None:
         if not isinstance(node, Tag) or node.name.lower() not in {"b", "i"}:
@@ -164,7 +161,10 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             return None
         rest = str(nxt)[match.end() :]
         rest = re.sub(r"\s+", " ", rest)
-        return InlineLink(href=href, inlines=[InlineText(text=label)], linkType=link_type), rest
+        visible_label = re.sub(r"\s+", " ", node.get_text("")) + f"({section})"
+        return InlineLink(
+            href=href, inlines=[InlineText(text=visible_label)], linkType=link_type
+        ), rest
 
     def inlines_from_node(node: object) -> list[InlineNode]:
         if isinstance(node, Comment):
@@ -191,51 +191,57 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             if whole is not None:
                 return [whole]
             if name == "b":
-                return [InlineStrong(inlines=inlines_from_container(node))]
-            return [InlineEmphasis(inlines=inlines_from_container(node))]
+                return [InlineStrong(inlines=inlines_from_container(node, trim=False))]
+            return [InlineEmphasis(inlines=inlines_from_container(node, trim=False))]
 
         if name == "code":
-            return [InlineCode(text=_compact_text(node))]
+            return [InlineCode(text=re.sub(r"\s+", " ", node.get_text("")))]
 
         if name == "var":
-            return [InlineEmphasis(inlines=inlines_from_container(node))]
+            return [InlineEmphasis(inlines=inlines_from_container(node, trim=False))]
 
         if name == "span":
             if classes & _MDOC_CODE_CLASSES:
-                return [InlineCode(text=_compact_text(node))]
+                return [InlineCode(text=re.sub(r"\s+", " ", node.get_text("")))]
             if classes & _MDOC_EMPHASIS_CLASSES:
-                return [InlineEmphasis(inlines=inlines_from_container(node))]
+                return [InlineEmphasis(inlines=inlines_from_container(node, trim=False))]
             if classes & _MDOC_STRONG_CLASSES:
-                return [InlineStrong(inlines=inlines_from_container(node))]
-            return inlines_from_container(node)
+                return [InlineStrong(inlines=inlines_from_container(node, trim=False))]
+            return inlines_from_container(node, trim=False)
 
         if name == "a":
             if "permalink" in classes:
-                return inlines_from_container(node)
+                return inlines_from_container(node, trim=False)
 
             if "Xr" in classes:
                 label = _compact_text(node)
                 href, link_type = _xref_to_href(label)
                 if href is None:
                     return [InlineText(text=label)]
-                return [InlineLink(href=href, inlines=[InlineText(text=label)], linkType=link_type)]
+                return [
+                    InlineLink(
+                        href=href,
+                        inlines=[InlineText(text=re.sub(r"\s+", " ", node.get_text("")))],
+                        linkType=link_type,
+                    )
+                ]
 
             href_attr = node.get("href")
             if isinstance(href_attr, str) and href_attr:
                 href = href_attr.strip()
                 if href.startswith("#"):
-                    return inlines_from_container(node)
+                    return inlines_from_container(node, trim=False)
                 if href.startswith(("http://", "https://")):
                     return [
                         InlineLink(
                             href=href,
-                            inlines=inlines_from_container(node),
+                            inlines=inlines_from_container(node, trim=False),
                             linkType="external",
                         )
                     ]
-            return inlines_from_container(node)
+            return inlines_from_container(node, trim=False)
 
-        return inlines_from_container(node)
+        return inlines_from_container(node, trim=False)
 
     def is_block(node: object) -> bool:
         return isinstance(node, Tag) and (
@@ -439,12 +445,12 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                 # troff .RS: an indented region. Keep it as a one-item unordered
                 # list so the nesting survives in the document model.
                 inner = blocks_from_container(tag)
-                if not inner:
-                    inlines = inlines_from_container(tag)
-                    if not _has_meaningful_inlines(inlines):
-                        return []
-                    inner = [BlockParagraph(inlines=inlines)]
-                return [BlockList(ordered=False, items=[inner])]
+                if docbook and inner and isinstance(inner[0], BlockParagraph):
+                    # DocBook emits a literal bullet inside an already bulleted .RS item.
+                    inner[0].inlines = _strip_bullet_marker(inner[0].inlines, literal_bullet=True)
+                    if not _has_meaningful_inlines(inner[0].inlines):
+                        inner.pop(0)
+                return [BlockList(ordered=False, items=[inner])] if inner else []
             return blocks_from_container(tag)
 
         if tname == "section":
@@ -452,22 +458,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
 
         return []
 
-    for child in manual_text.children:
-        if isinstance(child, NavigableString):
-            continue
-        if not isinstance(child, Tag):
-            continue
-
-        if child.name.lower() == "section":
-            section_heading = child.find(re.compile(r"^h[1-6]$"), recursive=False)
-            if section_heading is not None:
-                heading_blocks = blocks_from_tag(section_heading)
-                push_blocks(heading_blocks)
-                for sibling in section_heading.find_next_siblings(recursive=False):
-                    push_blocks(blocks_from_tag(sibling))
-                continue
-
-        push_blocks(blocks_from_tag(child))
+    blocks = blocks_from_container(manual_text)
 
     # Existing headings and dt elements keep first claim on their original IDs.
     for item, term_text in deferred_ids:
@@ -539,7 +530,11 @@ def _whole_tag_xref(tag: Tag) -> InlineLink | None:
     href, link_type = _xref_to_href(text)
     if href is None:
         return None
-    return InlineLink(href=href, inlines=[InlineText(text=text)], linkType=link_type)
+    return InlineLink(
+        href=href,
+        inlines=[InlineText(text=re.sub(r"\s+", " ", tag.get_text("")))],
+        linkType=link_type,
+    )
 
 
 def _in_see_also(node: NavigableString) -> bool:
@@ -659,8 +654,11 @@ def _is_bare_option_term(term: Tag, *, for_extraction: bool = False) -> bool:
     )
 
 
-def _strip_bullet_marker(inlines: list[InlineNode]) -> list[InlineNode]:
-    match = _bullet_term_re.match(_inlines_to_text(inlines))
+def _strip_bullet_marker(
+    inlines: list[InlineNode], *, literal_bullet: bool = False
+) -> list[InlineNode]:
+    pattern = re.compile(r"^\s*•\s*") if literal_bullet else _bullet_term_re
+    match = pattern.match(_inlines_to_text(inlines))
     if match is None:
         return inlines
 

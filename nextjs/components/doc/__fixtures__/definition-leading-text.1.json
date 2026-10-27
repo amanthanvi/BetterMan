@@ -68,7 +68,7 @@
        {
         "inlines": [
          {
-          "text": "-f",
+          "text": "-f ",
           "type": "text"
          }
         ],
@@ -217,9 +217,9 @@
  "options": [
   {
    "anchorId": "f",
-   "argument": null,
+   "argument": "ARCHIVE",
    "description": "Use archive file or device ARCHIVE. If this option is not given, examine the environment variable TAPE.",
-   "flags": "-fARCHIVE"
+   "flags": "-f"
   },
   {
    "anchorId": "plain",

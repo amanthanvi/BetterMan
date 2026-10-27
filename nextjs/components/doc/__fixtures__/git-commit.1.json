@@ -2719,10 +2719,6 @@
           {
            "inlines": [
             {
-             "text": "•",
-             "type": "text"
-            },
-            {
              "inlines": [
               {
                "text": "no",
@@ -2749,10 +2745,6 @@
           {
            "inlines": [
             {
-             "text": "•",
-             "type": "text"
-            },
-            {
              "inlines": [
               {
                "text": "normal",
@@ -2778,10 +2770,6 @@
          [
           {
            "inlines": [
-            {
-             "text": "•",
-             "type": "text"
-            },
             {
              "inlines": [
               {
@@ -4345,7 +4333,7 @@
       {
        "inlines": [
         {
-         "text": "•The contents of the blob objects are uninterpreted sequences of bytes. There is no encoding translation at the core level.",
+         "text": "The contents of the blob objects are uninterpreted sequences of bytes. There is no encoding translation at the core level.",
          "type": "text"
         }
        ],
@@ -4362,7 +4350,7 @@
       {
        "inlines": [
         {
-         "text": "•Path names are encoded in UTF-8 normalization form C. This applies to tree objects, the index file, ref names, as well as path names in command line arguments, environment variables and config files (",
+         "text": "Path names are encoded in UTF-8 normalization form C. This applies to tree objects, the index file, ref names, as well as path names in command line arguments, environment variables and config files (",
          "type": "text"
         },
         {
@@ -4461,7 +4449,7 @@
       {
        "inlines": [
         {
-         "text": "•Commit log messages are typically encoded in UTF-8, but other extended ASCII encodings are also supported. This includes ISO-8859-x, CP125x and many others, but ",
+         "text": "Commit log messages are typically encoded in UTF-8, but other extended ASCII encodings are also supported. This includes ISO-8859-x, CP125x and many others, but ",
          "type": "text"
         },
         {
@@ -5612,7 +5600,7 @@
   {
    "anchorId": "def-u-mode-untracked-files-mode",
    "argument": "[<mode>]",
-   "description": "Show untracked files. The mode parameter is optional (defaults to all), and is used to specify the handling of untracked files; when -u is not used, the default is normal, i.e. show untracked files and directories. The possible options are: •no - Show no untracked files •normal - Shows untracked files and directories •all - Also shows individual files in untracked directories. All usual spellings for Boolean value true are taken as normal and false as no. The default can be changed using the status.showUntrackedFiles configuration variable documented in git-config(1).",
+   "description": "Show untracked files. The mode parameter is optional (defaults to all), and is used to specify the handling of untracked files; when -u is not used, the default is normal, i.e. show untracked files and directories. The possible options are: no - Show no untracked files normal - Shows untracked files and directories all - Also shows individual files in untracked directories. All usual spellings for Boolean value true are taken as normal and false as no. The default can be changed using the status.showUntrackedFiles configuration variable documented in git-config(1).",
    "flags": "-u[<mode>], --untracked-files"
   },
   {
