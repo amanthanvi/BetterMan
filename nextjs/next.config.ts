@@ -2,6 +2,7 @@ import type { NextConfig } from 'next'
 import path from 'node:path'
 
 import { reservedPathSegments } from './lib/reservedPathSegments'
+import { nonHtmlSecurityHeaders } from './lib/securityHeaders'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -11,6 +12,14 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: '/assets/:path*',
+        headers: Object.entries(nonHtmlSecurityHeaders()).map(([key, value]) => ({ key, value })),
+      },
+      {
+        source: '/assets/site.js',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=86400' }],
+      },
       {
         // Font file names carry no content hash, so cache long but not immutable.
         source: '/fonts/:path*',
@@ -26,7 +35,6 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        { source: '/assets/site.js', destination: '/api/measurement/script' },
         { source: '/assets/entry', destination: '/api/measurement/event' },
         {
           source: '/sitemap-:distro-:page.xml',

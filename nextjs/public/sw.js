@@ -60,6 +60,10 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys()
+      // Remove the unhashed tracker left by older workers without evicting offline pages.
+      await Promise.all(keys.filter((key) => key.startsWith(`${CACHE_PREFIX}-static-`)).map(async (key) => {
+        await (await caches.open(key)).delete('/assets/site.js')
+      })).catch(() => {})
       await Promise.all(
         keys.map((key) => {
           if (!key.startsWith(`${CACHE_PREFIX}-`)) return Promise.resolve()

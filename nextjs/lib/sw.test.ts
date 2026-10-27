@@ -17,9 +17,9 @@ function worker() {
     match: vi.fn(async (request: { url: string }) => entries.get(request.url)?.clone()),
     put: vi.fn(async (request: { url: string }, response: Response) => { entries.set(request.url, response) }),
     keys: vi.fn(async () => [...entries.keys()]),
-    delete: vi.fn(async (url: string) => entries.delete(url)),
+    delete: vi.fn(async (url: string) => entries.delete(new URL(url, origin).href)),
   }
-  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => []), delete: vi.fn() }
+  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async (): Promise<string[]> => []), delete: vi.fn() }
   const fetch = vi.fn<(request: { url: string }) => Promise<Response>>()
   const listeners = new Map<string, (event: unknown) => void>()
   const self = {
@@ -46,7 +46,7 @@ function worker() {
     await Promise.all(pending)
   }
 
-  return { entries, cache, fetch, self, request, activate }
+  return { entries, cache, caches, fetch, self, request, activate }
 }
 
 describe('service worker', () => {
@@ -56,6 +56,18 @@ describe('service worker', () => {
     expect(request.response).toBeUndefined()
     expect(w.cache.match).not.toHaveBeenCalled()
     expect(w.fetch).not.toHaveBeenCalled()
+  })
+
+  it('removes the tracker from an existing static cache on upgrade', async () => {
+    const w = worker()
+    // The currently retained cache name must also be cleaned, not just old versioned caches.
+    const sourceVersion = /const CACHE_VERSION = '([^']+)'/.exec(source)![1]
+    const cacheName = `bm-static-${sourceVersion}`
+    w.caches.keys.mockResolvedValue([cacheName])
+    w.entries.set(`${origin}/assets/site.js`, new Response('old tracker'))
+    await w.activate()
+    expect(w.cache.delete).toHaveBeenCalledWith('/assets/site.js')
+    expect(w.entries.has(`${origin}/assets/site.js`)).toBe(false)
   })
 
   it('responds without waiting for a slow cache write', async () => {
