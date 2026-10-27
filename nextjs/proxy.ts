@@ -6,11 +6,9 @@ function createNonce(): string {
 
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV === 'development'
-  const plausibleEnabled = Boolean(process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN?.trim())
   const sentryEnabled = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN?.trim())
 
   const connectSrc = [`'self'`]
-  if (plausibleEnabled) connectSrc.push('https://plausible.io')
   if (sentryEnabled) connectSrc.push('https://*.sentry.io')
 
   const csp = [
@@ -77,7 +75,7 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: '/((?!api(?:/|$)|_next/static|_next/image|favicon.ico).*)',
+      source: '/((?!api(?:/|$)|assets(?:/|$)|_next/static|_next/image|favicon.ico).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

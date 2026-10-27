@@ -1,6 +1,8 @@
 'use client'
 
 import { DISTRO_GROUPS, type Distro } from '../../lib/distro'
+import { PREFERENCE_AXES, trackEvent } from '../../lib/analytics'
+import { DEFAULT_PREFS, type ReadingPreferences } from '../../lib/readingPrefs'
 import { useDistro } from '../state/distro'
 import { useReadingPrefs } from '../state/readingPrefs'
 import { Button } from '../ui/Button'
@@ -81,6 +83,12 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
   const { prefs, updatePrefs, reset } = useReadingPrefs()
   const distro = useDistro()
 
+  const changePref = <K extends keyof Omit<ReadingPreferences, 'version'>>(axis: K, value: ReadingPreferences[K]) => {
+    if (prefs[axis] === value) return
+    updatePrefs({ [axis]: value })
+    trackEvent('pref changed', axis)
+  }
+
   const distroOptions: Array<SegOption<Distro>> = DISTRO_GROUPS.flatMap((g) => g.items.map((id) => ({ id, label: `@${id}` })))
 
   return (
@@ -119,7 +127,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             { id: 'large', label: 'L' },
             { id: 'xlarge', label: 'XL' },
           ]}
-          onChange={(fontSize) => updatePrefs({ fontSize })}
+          onChange={(fontSize) => changePref('fontSize', fontSize)}
         />
 
         <SegmentedRadioGroup
@@ -130,7 +138,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             { id: 'sans', label: 'Sans' },
             { id: 'mono', label: 'Mono' },
           ]}
-          onChange={(fontFamily) => updatePrefs({ fontFamily })}
+          onChange={(fontFamily) => changePref('fontFamily', fontFamily)}
         />
 
         <SegmentedRadioGroup
@@ -141,7 +149,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             { id: 'normal', label: 'Normal' },
             { id: 'relaxed', label: 'Relaxed' },
           ]}
-          onChange={(lineHeight) => updatePrefs({ lineHeight })}
+          onChange={(lineHeight) => changePref('lineHeight', lineHeight)}
         />
 
         <SegmentedRadioGroup
@@ -152,7 +160,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             { id: 'normal', label: 'Normal' },
             { id: 'wide', label: 'Wide' },
           ]}
-          onChange={(columnWidth) => updatePrefs({ columnWidth })}
+          onChange={(columnWidth) => changePref('columnWidth', columnWidth)}
         />
 
         <SegmentedRadioGroup
@@ -163,11 +171,16 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
             { id: 'light', label: 'Light' },
             { id: 'dark', label: 'Dark' },
           ]}
-          onChange={(codeTheme) => updatePrefs({ codeTheme })}
+          onChange={(codeTheme) => changePref('codeTheme', codeTheme)}
         />
 
         <div className="pt-2">
-          <Button variant="outline" className="font-mono" onClick={() => reset()}>
+          <Button variant="outline" className="font-mono" onClick={() => {
+            for (const axis of PREFERENCE_AXES) {
+              if (prefs[axis] !== DEFAULT_PREFS[axis]) trackEvent('pref changed', axis)
+            }
+            reset()
+          }}>
             Reset to defaults
           </Button>
         </div>

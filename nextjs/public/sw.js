@@ -60,6 +60,10 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys()
+      // Remove the unhashed tracker left by older workers without evicting offline pages.
+      await Promise.all(keys.filter((key) => key.startsWith(`${CACHE_PREFIX}-static-`)).map(async (key) => {
+        await (await caches.open(key)).delete('/assets/site.js')
+      })).catch(() => {})
       await Promise.all(
         keys.map((key) => {
           if (!key.startsWith(`${CACHE_PREFIX}-`)) return Promise.resolve()
@@ -157,6 +161,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+  // The upstream tracker has no content hash; let its HTTP TTL refresh it.
+  if (url.pathname === '/assets/site.js') return
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(event, HTML_CACHE, MAX_HTML_ENTRIES))

@@ -61,7 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </Providers>
         {plausibleDomain ? (
-          <script defer src="https://plausible.io/js/script.js" data-domain={plausibleDomain} nonce={nonce} />
+          <script defer src="/assets/site.js" data-api="/assets/entry" data-domain={plausibleDomain} nonce={nonce} />
         ) : null}
       </body>
     </html>

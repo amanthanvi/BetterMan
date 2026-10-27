@@ -19,5 +19,6 @@ export default defineConfig([
       'react-hooks/static-components': 'off',
     },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']),
+  // Unmodified, hash-pinned upstream tracker; provenance and behavior have separate tests.
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/assets/site.js']),
 ])
