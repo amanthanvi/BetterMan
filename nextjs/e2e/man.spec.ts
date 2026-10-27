@@ -419,7 +419,7 @@ test('man: distro variant selector keeps full supported ordering', async ({ page
     'Ubuntu',
     'Fedora',
     'FreeBSD',
-    'macOS (BSD)',
+    'macOS (BSD-licensed subset)',
   ])
 })
 
