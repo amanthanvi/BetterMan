@@ -1,0 +1,273 @@
+{
+ "description": "option index regression",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "reference - option index regression",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "command-line-options",
+    "level": 2,
+    "text": "COMMAND LINE OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "href": "/man/busctl/1",
+          "inlines": [
+           {
+            "text": "busctl(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "href": "/man/coredumpctl/1",
+          "inlines": [
+           {
+            "text": "coredumpctl(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "systemd-validatefs@.service",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": "(8)",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-no-legend",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--no-legend",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "href": "/man/foo/1",
+          "inlines": [
+           {
+            "text": "foo(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "href": "/man/bar/8",
+          "inlines": [
+           {
+            "text": "bar(8)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "cross-reference",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--cross-reference",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "See ",
+          "type": "text"
+         },
+         {
+          "href": "/man/foo/1",
+          "inlines": [
+           {
+            "text": "foo(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         },
+         {
+          "text": " for more details.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-real",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--real",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "href": "/man/foo/1",
+          "inlines": [
+           {
+            "text": "foo(1)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "href": "/man/bar/8",
+          "inlines": [
+           {
+            "text": "bar(8)",
+            "type": "text"
+           }
+          ],
+          "linkType": "internal",
+          "type": "link"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-paragraphs",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--paragraphs",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "command-line-options",
+    "level": 2,
+    "title": "COMMAND LINE OPTIONS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-real",
+   "argument": null,
+   "description": "See foo(1) for more details.",
+   "flags": "--real"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

@@ -41,11 +41,17 @@ _bare_xref_re = re.compile(
 )
 _bullet_term_re = re.compile(r"^\s*(?:\*|\+|-|•)(?:\s+|$)")
 _options_heading_re = re.compile(r"\bOPTIONS?\b", re.IGNORECASE)
+_bare_option_prefix_re = re.compile(r"^\s*(?:--|-|\+)(?=\s*(?:,|$))")
 # Keep symbolic placeholders and grouped flags, not numeric ranges or shell operators.
 _option_term_re = re.compile(
     r"^\s*(?![\[(][+-]?\d+\s*,)[\[(]?"
     r"(?:--?(?:<[^<>\s]+>|<(?=[\s,|]|$)|[^-\s,|\])<])|\+[^+\s,|\])(<])"
 )
+_option_argument_syntax_re = re.compile(
+    r"(?:[\s,;.|/()[\]=:\-]+|_[\w-]+_|/[\w./-]*|"
+    r"\[[\w=|.+/-]+\]|[\w-]+(?:\|[\w-]+)+|(?:\|[\w-]+)+|\d+-\d+|\*--[\w-]+)*"
+)
+
 # mdoc semantic classes that mandoc renders as bare <code>/<var>/<span>.
 _MDOC_CODE_CLASSES = {"Pa", "Fl", "Cm", "Nm", "Ev", "Ic", "Li", "Dv", "Fn", "Fd", "In", "Cd"}
 _MDOC_EMPHASIS_CLASSES = {"Ar", "Va", "Fa", "Ft", "Vt", "Em"}
@@ -69,18 +75,20 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
     if manual_text is None:
         raise ValueError("mandoc output missing manual text container")
 
-    converted_terms: set[int] = set()
-    deferred_ids: list[tuple[DefinitionListItem, str]] = []
+    converted_terms: dict[int, bool] = {}
+    deferred_ids: list[tuple[DefinitionListItem, str, bool]] = []
     bare_option_ids: set[str] = set()
-    # DocBook (git-commit) uses .PP + .RS instead of .TP for flag definitions.
+    see_also_sections: dict[int, bool] = {}
+    # Generated manuals use .PP + .RS instead of .TP for flag definitions.
     docbook = any(
         re.search(r"^\s*Generator:\s*DocBook\b", comment, re.MULTILINE)
         for comment in soup.find_all(string=lambda node: isinstance(node, Comment))
     )
-    for paragraph in manual_text.select("p.Pp") if docbook else []:
+    for paragraph in manual_text.find_all("p", class_="Pp"):
+        legacy_term = bool(docbook and _option_term_re.search(_compact_text(paragraph)))
         definition = paragraph.find_next_sibling()
         if (
-            _option_term_re.search(_compact_text(paragraph))
+            (legacy_term or _is_structural_option_term(paragraph))
             and definition is not None
             and definition.name == "div"
             and "Bd-indent" in (definition.get("class") or [])
@@ -106,7 +114,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             dl = soup.new_tag("dl")
             paragraph.insert_before(dl)
             paragraph.name = "dt"
-            converted_terms.add(id(paragraph))
+            converted_terms[id(paragraph)] = legacy_term
             definition.name = "dd"
             dl.append(paragraph.extract())
             dl.append(definition.extract())
@@ -173,7 +181,15 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             text = re.sub(r"\s+", " ", str(node))
             if not text:
                 return []
-            if _in_see_also(node):
+            section = next((parent for parent in node.parents if parent.name == "section"), None)
+            if section is not None:
+                section_id = id(section)
+                if section_id not in see_also_sections:
+                    see_also_sections[section_id] = _in_see_also(node)
+                in_see_also = see_also_sections[section_id]
+            else:
+                in_see_also = False
+            if in_see_also:
                 return _link_bare_xrefs(text)
             return [InlineText(text=text)]
 
@@ -309,7 +325,9 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             items: list[DefinitionListItem] = []
             children = [c for c in tag.children if isinstance(c, Tag)]
             term_pairs = _definition_list_pairs(children)
-            if _is_bullet_definition_list(term_pairs):
+            if _is_bullet_definition_list(term_pairs) and not any(
+                id(term) in converted_terms for term, _definitions in term_pairs
+            ):
                 list_items: list[list[object]] = []
                 for dt, dds in term_pairs:
                     term_inlines = _strip_bullet_marker(inlines_from_container(dt))
@@ -402,7 +420,7 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                 if item_id and _is_bare_option_term(dt, for_extraction=True):
                     bare_option_ids.add(item_id)
                 if id(dt) in converted_terms:
-                    deferred_ids.append((item, _compact_text(dt)))
+                    deferred_ids.append((item, _compact_text(dt), converted_terms[id(dt)]))
 
             if not items:
                 return []
@@ -445,8 +463,8 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
                 # troff .RS: an indented region. Keep it as a one-item unordered
                 # list so the nesting survives in the document model.
                 inner = blocks_from_container(tag)
-                if docbook and inner and isinstance(inner[0], BlockParagraph):
-                    # DocBook emits a literal bullet inside an already bulleted .RS item.
+                if inner and isinstance(inner[0], BlockParagraph):
+                    # A literal bullet is redundant inside an already bulleted .RS item.
                     inner[0].inlines = _strip_bullet_marker(inner[0].inlines, literal_bullet=True)
                     if not _has_meaningful_inlines(inner[0].inlines):
                         inner.pop(0)
@@ -460,9 +478,11 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
 
     blocks = blocks_from_container(manual_text)
 
-    # Existing headings and dt elements keep first claim on their original IDs.
-    for item, term_text in deferred_ids:
+    # Existing headings, dt elements, and DocBook conversions keep their original IDs.
+    for item, term_text, _legacy in sorted(deferred_ids, key=lambda entry: not entry[2]):
         item.id = stable_unique_slug(f"def-{term_text}", used_ids)
+        if _bare_option_prefix_re.search(term_text):
+            bare_option_ids.add(item.id)
     doc = DocumentModel(toc=toc, blocks=blocks)  # validates node shapes
 
     description = _extract_description(manual_text) or ""
@@ -625,6 +645,72 @@ def _is_bullet_definition_list(term_pairs: list[tuple[Tag, list[Tag]]]) -> bool:
     )
 
 
+def _is_structural_option_term(paragraph: Tag) -> bool:
+    # Only section-level terms qualify; indented values/examples belong to their option.
+    if paragraph.parent.name != "section":
+        return False
+    formatted = next(
+        (tag for tag in paragraph.find_all(["b", "code"]) if tag.get_text(strip=True)), None
+    )
+    if formatted is None:
+        formatted = next(
+            (tag for tag in paragraph.find_all(["i", "var"]) if tag.get_text(strip=True)), None
+        )
+    flag = normalize_ws(formatted.get_text("") if formatted else paragraph.get_text(""))
+    if not (_bare_option_prefix_re.search(flag) or _option_term_re.search(flag)):
+        return False
+    term = normalize_ws(paragraph.get_text(""))
+    if re.search(r"^[\[(].*[\])]\s+\S", term):
+        return False
+    headings = [
+        section.find(re.compile(r"^h[1-6]$"), recursive=False)
+        for section in paragraph.parents
+        if section.name == "section"
+    ]
+    titles = [_compact_text(heading) for heading in headings if heading is not None]
+    if not titles or any(
+        re.search(r"\bexamples?\b|\bconstants?\b|\boutput columns\b", title, re.IGNORECASE)
+        for title in titles
+    ):
+        return False
+    option_context = any(
+        re.search(r"\b(?:options?|commands?)\b", title, re.IGNORECASE) for title in titles
+    )
+    if formatted is None:
+        return option_context and term in {"-", "--", "+"}
+    if formatted.name in {"i", "var"} and not option_context:
+        return False
+    _flags, argument = _split_option_argument(term)
+    if not option_context and argument and len(argument.split()) > 1:
+        return False
+    for child in paragraph.children:
+        if isinstance(child, Comment):
+            continue
+        if isinstance(child, NavigableString):
+            if _option_argument_syntax_re.fullmatch(str(child)) is None:
+                return False
+        elif child.name == "span" and set(child.get("class") or []) == {"Li"}:
+            continue
+        elif child.name not in {"b", "i", "code", "var"}:
+            return False
+        elif child.name in {"b", "code"}:
+            text = normalize_ws(child.get_text(""))
+            if len(text.split()) > 1:
+                flags, _argument = _split_option_argument(text)
+                if _argument and (
+                    len(_argument.split()) > 1 or (_argument[0].isdigit() and not option_context)
+                ):
+                    return False
+                if any(
+                    token not in {"or", "|", "/", "-", "--", "+"}
+                    and not _option_term_re.search(token)
+                    for token in re.split(r"[\s,]+", flags)
+                    if token
+                ):
+                    return False
+    return True
+
+
 def _is_bare_option_term(term: Tag, *, for_extraction: bool = False) -> bool:
     if _compact_text(term) not in {"-", "--", "+"}:
         return False
@@ -657,7 +743,7 @@ def _is_bare_option_term(term: Tag, *, for_extraction: bool = False) -> bool:
 def _strip_bullet_marker(
     inlines: list[InlineNode], *, literal_bullet: bool = False
 ) -> list[InlineNode]:
-    pattern = re.compile(r"^\s*•\s*") if literal_bullet else _bullet_term_re
+    pattern = re.compile(r"^\s*(?:•\s*)+") if literal_bullet else _bullet_term_re
     match = pattern.match(_inlines_to_text(inlines))
     if match is None:
         return inlines
@@ -836,6 +922,7 @@ def _paragraph_lines(tag: Tag) -> str:
 _option_split_re = re.compile(
     r"^(?P<flags>.*(?:^|[\s,])(?:--?|\+)[^\s=\[<,]+)(?P<arg>(?:=|\[=|\s+)[^\s,-][^,]*)?$"
 )
+_reference_list_re = re.compile(r"(?:[A-Za-z0-9_][A-Za-z0-9_.+@:-]*\([1-9][a-z0-9]*\)[\s,;.]*)+")
 
 
 def _split_option_argument(flags: str) -> tuple[str, str | None]:
@@ -866,8 +953,18 @@ def _extract_options_from_doc(doc: DocumentModel, bare_option_ids: set[str]) -> 
         for item in block.items:
             flags_raw = normalize_ws(_inlines_to_text(item.termInlines))
             desc = normalize_ws(_blocks_to_text(item.definitionBlocks))
-            if not flags_raw or not desc:
+            if not flags_raw or not desc or _reference_list_re.fullmatch(desc):
                 continue
+            # Some generated terms pair a config assignment with its CLI spelling.
+            aliases = flags_raw.split(", ")
+            while len(aliases) > 1 and re.fullmatch(r"[A-Za-z_]\w*=\S+", aliases[0]):
+                aliases.pop(0)
+            if len(aliases) < len(flags_raw.split(", ")) and all(
+                _option_term_re.search(alias) for alias in aliases
+            ):
+                flags_raw = ", ".join(aliases)
+            flags_raw = re.sub(r",\s*\*(?=--[A-Za-z])", ", ", flags_raw)
+            flags_raw = re.sub(r"(?<=[\w-])=\s+(?=\[)", "=", flags_raw)
             bare_option = item.id in bare_option_ids
             if bare_option and under_definition:
                 continue

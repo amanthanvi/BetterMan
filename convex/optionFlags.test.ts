@@ -54,6 +54,39 @@ describe("option flag derivation", () => {
     expect(rows.some((row) => row.anchorId === "def-0-0-1")).toBe(false);
   });
 
+  it("indexes generated util-linux and systemd definitions without nested values", () => {
+    const fixtures = [
+      ["mount-options.8", "--options", "def-o-options-opts"],
+      ["su-options.1", "--command", "def-c-command-command"],
+      ["systemctl-options.1", "--type", "def-t-type"],
+      ["lsblk-options.8", "--output", "def-o-output-list"],
+    ];
+    for (const [name, flag, anchorId] of fixtures) {
+      const fixture = JSON.parse(readFileSync(resolve(`ingestion/tests/fixtures/golden/${name}.json`), "utf8")) as { options: Option[] };
+      const rows = optionFlagRows(fixture.options);
+      expect(rows.find((row) => row.flag === flag)).toMatchObject({ anchorId });
+      expect(rows.some((row) => ["-1", "+list", "ro", "service"].includes(row.flag))).toBe(false);
+    }
+    const su = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/su-options.1.json"), "utf8")) as { options: Option[] };
+    expect(optionFlagRows(su.options).find((row) => row.flag === "--command"))
+      .toMatchObject({ takesArgument: true });
+  });
+
+  it("indexes CLI aliases and optional arguments without config keys or reference indexes", () => {
+    const forms = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/generated-option-forms.1.json"), "utf8")) as { options: Option[] };
+    const rows = optionFlagRows(forms.options);
+    for (const flag of ["--bold", "--background", "--blank", "--split", "--linux", "--database", "--raw"]) {
+      expect(rows.find((row) => row.flag === flag)).toMatchObject({ takesArgument: true });
+    }
+    expect(rows.find((row) => row.flag === "--linux"))
+      .toMatchObject({ anchorId: "def-linux-linux-linux-linux", flags: "--linux" });
+    expect(rows.some((row) => row.flag.startsWith("Linux="))).toBe(false);
+    expect(rows.some((row) => ["-.slice", "-E2BIG", "-1"].includes(row.flag))).toBe(false);
+    expect(rows.find((row) => row.flag === "-b")).toBeDefined();
+    const index = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/generated-reference-index.7.json"), "utf8")) as { options: Option[] };
+    expect(keys(index.options)).toEqual(["--real"]);
+  });
+
   it("indexes corrected inline argument boundaries without inventing joined flag keys", () => {
     const fixture = JSON.parse(readFileSync(resolve("ingestion/tests/fixtures/golden/parser-text-fidelity.1.json"), "utf8")) as { options: Option[] };
     const rows = optionFlagRows(fixture.options);

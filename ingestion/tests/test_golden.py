@@ -88,6 +88,73 @@ def test_golden(name: str, request: pytest.FixtureRequest) -> None:
     assert payload == expected
 
 
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        (
+            "mount-options.8",
+            ["-a , --all", "--map-users", "-o , --options", "--getepoch; --setepoch"],
+        ),
+        ("su-options.1", ["-c , --command", "- , -l , --login", "--session-command", "--"]),
+        ("systemctl-options.1", ["-t , --type=", "--state=", "--help", "--version"]),
+        (
+            "lsblk-options.8",
+            ["-a , --all", "-o , --output", "--hyperlink", "-v, --swapversion", "--blank"],
+        ),
+        ("generated-options-negative.1", ["--format", "-/", "-"]),
+    ],
+)
+def test_generated_manual_option_terms_exclude_prose_and_nested_values(
+    name: str, expected: list[str]
+) -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / name))
+    assert [option.flags for option in parsed.options or []] == expected
+    assert all(option.anchorId for option in parsed.options or [])
+    if name == "su-options.1":
+        assert parsed.options[2].argument == "command"
+    if name == "lsblk-options.8":
+        assert parsed.options[2].argument == "[mode]"
+        assert parsed.options[3].argument == "1"
+        assert parsed.options[4].argument == "[0-60|force|poke]"
+
+
+def test_generated_index_reference_lists_are_not_options() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "generated-reference-index.7"))
+    assert [option.flags for option in parsed.options or []] == ["--real"]
+    assert "systemd-validatefs@.service(8)" in _blocks_to_text(parsed.doc.blocks)
+    assert "foo(1) bar(8)" in _blocks_to_text(parsed.doc.blocks)
+
+
+def test_generated_argument_and_mixed_config_alias_forms() -> None:
+    parsed = parse_mandoc_html(_render(_ROFF / "generated-option-forms.1"))
+    options = {option.flags: option for option in parsed.options or []}
+    assert set(options) == {
+        "--bold",
+        "--background",
+        "--blank",
+        "--split",
+        "--",
+        "-r, --remove",
+        "-i[4|6], --inet",
+        "--raw",
+        "-d, --database",
+        "--linux",
+        "-b, rd.emergency, emergency",
+    }
+    for flag, argument in {
+        "--bold": "on|off",
+        "--background": "8-color|default",
+        "--blank": "[0-60|force|poke]",
+        "--split": "[BOOL]",
+        "--raw": "[payload|packet]",
+        "-d, --database": "FILE",
+        "--linux": "LINUX",
+    }.items():
+        assert options[flag].argument == argument
+    assert options["--linux"].anchorId == "def-linux-linux-linux-linux"
+    assert "Linux=LINUX" in _blocks_to_text(parsed.doc.blocks)
+
+
 def test_man7_xrefs_link_and_see_also_is_populated() -> None:
     parsed = parse_mandoc_html(_render(_ROFF / "tar.1"))
     hrefs: list[str] = []
@@ -281,7 +348,8 @@ def test_bash_conditional_operators_are_not_command_options() -> None:
 
 def test_git_commit_docbook_options_are_preserved() -> None:
     parsed = parse_mandoc_html(_render(_ROFF / "git-commit.1"))
-    assert parsed.options and len(parsed.options) == 38
+    assert parsed.options and len(parsed.options) == 39
+    assert any(option.flags == "--" for option in parsed.options)
 
 
 def test_option_shapes_keep_symbolic_and_grouped_flags_but_not_values_or_operators() -> None:

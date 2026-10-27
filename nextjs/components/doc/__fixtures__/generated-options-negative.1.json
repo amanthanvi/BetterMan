@@ -1,0 +1,561 @@
+{
+ "description": "keep prose and values",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "negative - keep prose and values",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "-T",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " sets the client's key table; this is prose.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A prose continuation.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "-T sets the client's key table; this is prose.",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Still prose, even if bold.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Select a format.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
+          "inlines": [
+           {
+            "text": "+",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "A nested argument value.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       },
+       {
+        "inlines": [
+         {
+          "inlines": [
+           {
+            "text": "-",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "Another nested value.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       }
+      ],
+      "id": "def-format-format",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--format",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": " ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "FORMAT",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "A real symbolic flag.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-/",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Read standard input.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-2",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "commands",
+    "level": 2,
+    "text": "COMMANDS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "[",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "-N",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "partition-number",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": "] ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "device",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Default sfdisk invocation, not a flag definition.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "--foo",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "does something",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Formatted prose, not an argument placeholder.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "--cpu-list 0-2,6",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Numeric argument example outside OPTIONS.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "--split-prose",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     },
+     {
+      "text": " ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "does",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": " ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "something",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Separate inline tags still form prose.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "examples",
+    "level": 2,
+    "text": "EXAMPLES",
+    "type": "heading"
+   },
+   {
+    "id": "invocations",
+    "level": 3,
+    "text": "Invocations",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "--example",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "An example outside the option sections.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "commands",
+    "level": 2,
+    "title": "COMMANDS"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   },
+   {
+    "id": "examples",
+    "level": 2,
+    "title": "EXAMPLES"
+   },
+   {
+    "id": "invocations",
+    "level": 3,
+    "title": "Invocations"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-format-format",
+   "argument": "FORMAT",
+   "description": "Select a format. + A nested argument value. - Another nested value.",
+   "flags": "--format"
+  },
+  {
+   "anchorId": "def",
+   "argument": null,
+   "description": "A real symbolic flag.",
+   "flags": "-/"
+  },
+  {
+   "anchorId": "def-2",
+   "argument": null,
+   "description": "Read standard input.",
+   "flags": "-"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

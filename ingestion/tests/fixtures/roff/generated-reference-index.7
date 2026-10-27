@@ -1,0 +1,30 @@
+.\" reference-list index and real option controls
+.TH REFERENCE 7
+.SH NAME
+reference \- option index regression
+.SH COMMAND LINE OPTIONS
+.PP
+.B --no-legend
+.RS 4
+.BR busctl (1),
+.BR coredumpctl (1),
+.BR systemd-validatefs@.service (8)
+.RE
+.TP
+.B --cross-reference
+.BR foo (1),
+.BR bar (8).
+.PP
+.B --real
+.RS 4
+See
+.BR foo (1)
+for more details.
+.RE
+.PP
+.B --paragraphs
+.RS 4
+.BR foo (1)
+.PP
+.BR bar (8)
+.RE

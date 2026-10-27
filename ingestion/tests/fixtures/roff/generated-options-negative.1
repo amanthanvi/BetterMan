@@ -1,0 +1,71 @@
+.\" negative cases for generated paragraph definitions
+.TH NEGATIVE 1
+.SH NAME
+negative \- keep prose and values
+.SH OPTIONS
+.PP
+.B -T
+sets the client's key table; this is prose.
+.RS 4
+A prose continuation.
+.RE
+.PP
+.B "-T sets the client's key table; this is prose."
+.RS 4
+Still prose, even if bold.
+.RE
+.PP
+.B --format
+.I FORMAT
+.RS 4
+Select a format.
+.PP
+.B +
+.RS 4
+A nested argument value.
+.RE
+.PP
+.B -
+.RS 4
+Another nested value.
+.RE
+.RE
+.PP
+.B -/
+.RS 4
+A real symbolic flag.
+.RE
+.PP
+.B -
+.RS 4
+Read standard input.
+.RE
+.SH COMMANDS
+.PP
+[\fB-N\fR \fIpartition-number\fR] \fIdevice\fR
+.RS 4
+Default sfdisk invocation, not a flag definition.
+.RE
+.SH DESCRIPTION
+.PP
+\fB--foo\fR \fIdoes something\fR
+.RS 4
+Formatted prose, not an argument placeholder.
+.RE
+.PP
+\fB--cpu-list 0-2,6\fR
+.RS 4
+Numeric argument example outside OPTIONS.
+.RE
+.PP
+\fB--split-prose\fR \fIdoes\fR \fIsomething\fR
+.RS 4
+Separate inline tags still form prose.
+.RE
+.SH EXAMPLES
+.SS Invocations
+.PP
+.B --example
+.RS 4
+An example outside the option sections.
+.RE

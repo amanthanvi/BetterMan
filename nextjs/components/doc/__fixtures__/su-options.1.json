@@ -1,0 +1,227 @@
+{
+ "description": "run a command with substitute user",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "su - run a command with substitute user",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Pass command to the shell with the -c option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-c-command-command",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-c , --command",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": " ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "command",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Start a login shell.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "items": [
+         [
+          {
+           "inlines": [
+            {
+             "text": "clears all environment variables except TERM.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ]
+        ],
+        "ordered": false,
+        "type": "list"
+       }
+      ],
+      "id": "def-l-login",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "- , -l , --login",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Do not create a new session.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-session-command-command",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--session-command=",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "command",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "End the command-line options.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-c-command-command",
+   "argument": "command",
+   "description": "Pass command to the shell with the -c option.",
+   "flags": "-c , --command"
+  },
+  {
+   "anchorId": "def-l-login",
+   "argument": null,
+   "description": "Start a login shell. clears all environment variables except TERM.",
+   "flags": "- , -l , --login"
+  },
+  {
+   "anchorId": "def-session-command-command",
+   "argument": "command",
+   "description": "Do not create a new session.",
+   "flags": "--session-command"
+  },
+  {
+   "anchorId": "def",
+   "argument": null,
+   "description": "End the command-line options.",
+   "flags": "--"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

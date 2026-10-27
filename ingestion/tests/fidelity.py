@@ -141,17 +141,17 @@ def source_body(html: str) -> tuple[Tag, int, set[int], bool]:
         re.search(r"^\s*Generator:\s*DocBook\b", str(c), re.MULTILINE)
         for c in soup.find_all(string=lambda n: isinstance(n, Comment))
     )
-    if docbook:
-        for region in manual.select("div.Bd-indent"):
-            children = [c for c in region.children if visible_text(c).strip()]
-            if not children:
-                continue
-            first = children[0]
-            if isinstance(first, Tag) and first.name in BLOCK_TAGS and first.name != "p":
-                continue
-            paragraph = first if isinstance(first, Tag) and first.name == "p" else region
-            if strip_source_prefix(paragraph, re.compile(r"^\s*•\s*")):
-                removed += 1
+    # Bd-indent renders an unordered list regardless of the page generator.
+    for region in manual.select("div.Bd-indent"):
+        children = [c for c in region.children if visible_text(c).strip()]
+        if not children:
+            continue
+        first = children[0]
+        if isinstance(first, Tag) and first.name in BLOCK_TAGS and first.name != "p":
+            continue
+        paragraph = first if isinstance(first, Tag) and first.name == "p" else region
+        if strip_source_prefix(paragraph, re.compile(r"^\s*(?:•\s*)+")):
+            removed += 1
     return manual, removed, converted, docbook
 
 

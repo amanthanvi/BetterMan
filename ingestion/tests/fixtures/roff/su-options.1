@@ -1,0 +1,30 @@
+.\" excerpt: util-linux su(1), Debian trixie; no Generator line
+.TH SU 1
+.SH NAME
+su \- run a command with substitute user
+.SH OPTIONS
+.PP
+.B -c , --command
+.I command
+.RS 4
+Pass command to the shell with the -c option.
+.RE
+.PP
+.B - , -l , --login
+.RS 4
+Start a login shell.
+.PP
+.RS 4
+\(buclears all environment variables except TERM.
+.RE
+.RE
+.PP
+.B --session-command=\fIcommand\fR
+.RS 4
+Do not create a new session.
+.RE
+.PP
+.B --
+.RS 4
+End the command-line options.
+.RE
