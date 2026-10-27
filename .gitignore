@@ -5,6 +5,7 @@ node_modules/
 dist/
 .vite/
 .next/
+.perf-results/
 
 # Python
 __pycache__/

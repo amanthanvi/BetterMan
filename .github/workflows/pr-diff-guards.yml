@@ -2,10 +2,9 @@ name: pr-diff-guards
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
 
-# A body edit must not cancel these jobs. The Proof check lives in pr-proof.yml
-# and is the workflow that runs on edited.
+# Body edits rerun the Budget explanation check; Proof lives in pr-proof.yml.
 concurrency:
   group: pr-diff-guards-${{ github.ref }}
   cancel-in-progress: true
@@ -35,3 +34,11 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: node scripts/check-mixed-test-config.mjs
+
+      - name: Performance budget changes
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/check-perf-budget-changes.mjs

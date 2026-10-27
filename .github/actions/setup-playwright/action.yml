@@ -1,0 +1,43 @@
+name: Set up Chromium
+description: Cached browser and bounded dependency preparation shared by browser checks
+runs:
+  using: composite
+  steps:
+    - name: Resolve Playwright version
+      id: playwright-version
+      shell: bash
+      # Key on the installed version, not the requested semver range.
+      run: |
+        echo "version=$(node -p "require('./nextjs/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+    # The .deb files the prefetch below downloads, so most runs never wait on
+    # the Ubuntu mirror. apt still fetches any package whose version changed.
+    - name: Cache Playwright system packages
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/playwright-apt
+        key: ${{ runner.os }}-${{ steps.playwright-version.outputs.image }}-playwright-apt-${{ steps.playwright-version.outputs.version }}
+
+    # Download the system packages Playwright's install-deps adds before the
+    # installer runs. apt-get --download-only never runs dpkg, so this step can
+    # wait out a slow Ubuntu mirror (it has served them at about 45 KB/s) and be
+    # stopped at any point; the installer then installs from apt's cache inside
+    # its 165-second dpkg budget.
+    - name: Prefetch Playwright system packages
+      continue-on-error: true
+      shell: bash
+      run: |
+        source scripts/install-playwright-ci.sh
+        timeout_command="$(resolve_gnu_timeout)" || { echo 'GNU timeout is required for package prefetch.' >&2; exit 127; }
+        "$timeout_command" --kill-after=15s 900s bash scripts/prefetch-playwright-ci.sh
+
+    - name: Install Playwright browsers
+      shell: bash
+      run: bash scripts/install-playwright-ci.sh

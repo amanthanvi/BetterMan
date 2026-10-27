@@ -143,6 +143,39 @@ jobs:
       - run: cd ingestion && uv run ruff format --check .
       - run: cd ingestion && uv run python -m pytest
 
+  performance_budgets:
+    runs-on: ubuntu-latest
+    # Same bounded mirror prefetch/install allowance as E2E; measurements take about a minute.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.34.4
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: ./.github/actions/setup-playwright
+
+      - run: pnpm ops:test
+      - run: pnpm perf:check
+
+      - name: Upload budget measurements
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: performance-budgets
+          path: .perf-results/measurements.json
+          if-no-files-found: ignore
+
 
   container_build:
     runs-on: ubuntu-latest
@@ -187,75 +220,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Resolve Playwright version
-        id: playwright-version
-        shell: bash
-        # Key on the installed version, not the requested semver range.
-        run: |
-          echo "version=$(node -p "require('./nextjs/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
-
-      # The .deb files the prefetch below downloads, so most runs never wait on
-      # the Ubuntu mirror. apt still fetches any package whose version changed.
-      - name: Cache Playwright system packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/playwright-apt
-          key: ${{ runner.os }}-${{ steps.playwright-version.outputs.image }}-playwright-apt-${{ steps.playwright-version.outputs.version }}
-
-      # Download the system packages Playwright's install-deps adds before the
-      # installer runs. apt-get --download-only never runs dpkg, so this step can
-      # wait out a slow Ubuntu mirror (it has served them at about 45 KB/s) and be
-      # stopped at any point; the installer then installs from apt's cache inside
-      # its 165-second dpkg budget.
-      - name: Prefetch Playwright system packages
-        continue-on-error: true
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -euo pipefail
-          cache_dir="$HOME/.cache/playwright-apt"
-          mkdir -p "$cache_dir"
-          sudo apt-get update -qq
-          if compgen -G "$cache_dir/*.deb" >/dev/null; then
-            sudo cp "$cache_dir"/*.deb /var/cache/apt/archives/
-          fi
-          # The dry run exits 1 when packages are missing, so its status is not
-          # an error signal; its output is.
-          dry_run="$(pnpm -C nextjs exec playwright install-deps --dry-run chromium 2>&1)" || true
-          packages=()
-          while IFS= read -r package; do
-            packages+=("$package")
-          done < <(sed -n 's/^  \([a-z0-9][a-z0-9.+:-]*\)$/\1/p' <<<"$dry_run")
-          if ((${#packages[@]} == 0)); then
-            if [[ "$dry_run" == *"All system dependencies are installed."* ]]; then
-              echo "No Playwright system packages to fetch."
-            else
-              echo "::warning::Playwright's dependency dry run listed no packages, so nothing was prefetched."
-              tail -n 20 <<<"$dry_run"
-            fi
-            exit 0
-          fi
-          echo "Fetching ${#packages[@]} packages: ${packages[*]}"
-          for attempt in 1 2 3; do
-            if sudo apt-get install --download-only -y -q --no-install-recommends "${packages[@]}"; then
-              cp /var/cache/apt/archives/*.deb "$cache_dir"/ 2>/dev/null || true
-              exit 0
-            fi
-            echo "Package prefetch attempt ${attempt}/3 failed." >&2
-            sleep 5
-          done
-          exit 1
-
-      - name: Install Playwright browsers
-        shell: bash
-        run: bash scripts/install-playwright-ci.sh
+      - uses: ./.github/actions/setup-playwright
 
       - name: Provision local Convex + seed E2E data
         env:
