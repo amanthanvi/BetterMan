@@ -22,6 +22,33 @@ contains measurements, individual samples, versions, platform, CI run URL,
 requested chunks, and page-load API requests. CI uploads it as the
 `performance-budgets` artifact even when a budget comparison fails.
 
+For the man-page paint regression loop, run `pnpm perf:check --stress`. After
+the normal five-sample measurement it runs two more five-sample batches at
+16× CPU slowdown, five with both font responses delayed by 650 ms, and five
+with a deliberately large paragraph inserted by client JavaScript after load.
+The first three batches must keep median LCP−FCP ≤100 ms; the client-only
+control must exceed it. Every sample uses a fresh browser context, the same
+production build and font files, and the same viewport. Normal CI does not run
+these extra batches, so its runtime is unchanged.
+
+Samples include LCP candidates (element, text, computed font, size and time),
+layout-shift source nodes and rectangles, font resource/completion timing and
+TTFB. `shellTimeAtFcp` is a diagnostic snapshot of React's `$RT` shell timer,
+not an input to any budget. Stress samples live in `details.man.stress` in the
+same artifact. They do not alter byte/read baselines or ordinary lab samples.
+
+The October 2026 bimodality came from the whole-document Suspense boundary:
+when the shell painted first, React delayed its completed boundary reveal by
+300 ms. LCP changed from the header wordmark to a document paragraph, and the
+footer moved offscreen as the short skeleton was replaced. The route now
+awaits the document before returning its HTML. This trades earlier skeleton
+delivery for a stable first document paint; slow data reads can increase TTFB.
+The 100 ms gate, font preloads, font-display policy and CSP stay unchanged;
+there is no retry, sample rejection or higher allowance hiding a late paint.
+The [captured before/after samples](performance-budget-flake-evidence.json)
+include two slow-mode reproductions, ten fixed-route samples at 16× CPU,
+delayed-font controls and five correctly failing client-only controls.
+
 ## Measurements and limits
 
 - **First-load JS:** raw and gzip-9 bytes of unique production `.next/static`

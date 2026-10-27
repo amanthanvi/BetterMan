@@ -21,8 +21,8 @@ const budgetPath = resolve(root, 'perf-budgets.json')
 const output = resolve(root, '.perf-results')
 const routes = { home: '/', man: '/man/bash/1', search: '/search?q=tar', section: '/section/1' }
 const args = process.argv.slice(2)
-assert.ok(args.length === 0 || (args.length === 1 && args[0] === '--record') ||
-  (args.length === 2 && args[0] === '--record-from'), 'Usage: pnpm perf:check [--record | --record-from measurements.json]')
+assert.ok(args.length === 0 || (args.length === 1 && ['--record', '--stress'].includes(args[0])) ||
+  (args.length === 2 && args[0] === '--record-from'), 'Usage: pnpm perf:check [--record | --record-from measurements.json | --stress]')
 const record = args[0] === '--record'
 const budget = JSON.parse(await readFile(budgetPath, 'utf8'))
 assert.equal(budget.schemaVersion, 1, 'Unsupported budget schema')
@@ -98,7 +98,7 @@ async function ready(url) {
   throw new Error('Next did not become ready in 10 seconds')
 }
 
-async function sample(url, name, { cost = false } = {}) {
+async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, clientLcp = false } = {}) {
   const context = await browser.newContext({
     viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1,
     colorScheme: 'light', reducedMotion: 'reduce', serviceWorkers: 'block',
@@ -110,6 +110,7 @@ async function sample(url, name, { cost = false } = {}) {
     const request = route.request()
     if (request.headers()['next-router-prefetch']) return route.fulfill({ status: 204 })
     assert.equal(new URL(request.url()).origin, new URL(url).origin, 'Unexpected external request')
+    if (request.resourceType() === 'font' && fontDelayMs) await sleep(fontDelayMs)
     return route.continue()
   })
   page.on('pageerror', () => errors.push('Browser page error'))
@@ -128,8 +129,17 @@ async function sample(url, name, { cost = false } = {}) {
     if (new URL(request.url()).pathname.startsWith('/api/v1/')) errors.push('Page-load API request failed')
   })
   const cdp = await context.newCDPSession(page)
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpuRate })
   await page.addInitScript(installVitalObservers)
+  if (clientLcp) await page.addInitScript(() => {
+    addEventListener('load', () => setTimeout(() => {
+      const paragraph = document.createElement('p')
+      paragraph.id = 'perf-client-lcp'
+      paragraph.className = 'text-3xl'
+      paragraph.textContent = 'Client-rendered primary content. '.repeat(80)
+      document.querySelector('article').prepend(paragraph)
+    }, 1200), { once: true })
+  })
   try {
     const infoReady = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/info', { timeout: 30_000 })
     const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 })
@@ -142,11 +152,16 @@ async function sample(url, name, { cost = false } = {}) {
     await page.evaluate(() => document.fonts.ready)
     if (!cost) await page.waitForTimeout(5000)
     await page.waitForLoadState('networkidle')
-    const vitals = await page.evaluate(() => window.__perf)
+    const vitals = await page.evaluate(() => ({
+      ...window.__perf,
+      navigation: { ttfb: performance.getEntriesByType('navigation')[0].responseStart },
+      resources: performance.getEntriesByType('resource').filter(r => r.name.includes('/fonts/'))
+        .map(r => ({ path: new URL(r.name).pathname, start: r.startTime, end: r.responseEnd })),
+    }))
     assert.ok(vitals.lcp > 0 && vitals.fcp > 0, 'Paint observers did not produce measurements')
     assert.deepEqual(errors, [], `${name} browser errors`)
     assert.ok(scripts.size > 0, 'No production scripts loaded')
-    return { ...vitals, scripts: [...scripts].sort(), apiRequests,
+    return { ...vitals, cpuRate, fontDelayMs, scripts: [...scripts].sort(), apiRequests,
       ...(cost ? { html: (await response.body()).toString('utf8'), costs: { ...metrics } } : {}),
     }
   } finally {
@@ -250,6 +265,18 @@ try {
       actual[`${name}.lcpAfterFcpMs`] = median(samples.map(s => Math.max(0, s.lcp - s.fcp)))
     }
     details[name] = { path, chunks, pageView: { costs, apiRequests: pageView.apiRequests }, samples }
+    if (name === 'man' && args[0] === '--stress') {
+      details[name].stress = []
+      for (const profile of [
+        { cpuRate: 16 }, { cpuRate: 16 }, { fontDelayMs: 650 }, { clientLcp: true },
+      ]) {
+        const stressSamples = []
+        for (let i = 0; i < 5; i++) stressSamples.push(await sample(`${baseUrl}${path}`, name, profile))
+        const lag = median(stressSamples.map(s => Math.max(0, s.lcp - s.fcp)))
+        details[name].stress.push({ profile, lag, samples: stressSamples })
+        console.log(`Man stress ${JSON.stringify(profile)}: median LCP minus FCP ${lag} ms`)
+      }
+    }
     assert.equal(backendErrors, 0, 'Convex fixture error (including errors swallowed by the app)')
     console.log(`${name}: ${JSON.stringify(Object.fromEntries(Object.entries(actual).filter(([k]) => k.startsWith(`${name}.`))))}`)
   }
@@ -301,6 +328,14 @@ try {
     comparison: compareBudgets(actual, budget.metrics),
   }
   await writeFile(resolve(output, 'measurements.json'), `${JSON.stringify(report, null, 2)}\n`)
+  if (args[0] === '--stress') {
+    for (const { profile, lag } of details.man.stress) {
+      const metric = 'man.lcpAfterFcpMs'
+      const failed = compareBudgets({ [metric]: lag }, { [metric]: budget.metrics[metric] }).failures.length > 0
+      assert.ok(profile.clientLcp ? failed : !failed, `Unexpected stress-gate result: ${JSON.stringify(profile)} lag ${lag}`)
+    }
+    console.log('Stress profiles passed; the delayed client-rendered LCP control was correctly rejected by the unchanged 100 ms gate.')
+  }
   if (record) {
     await writeFile(budgetPath, `${JSON.stringify(recordBaseline(budget, report), null, 2)}\n`)
     console.log('Recorded baseline with existing tolerances preserved. Local recordings preserve Linux lab baselines. Review the guarded budget diff.')

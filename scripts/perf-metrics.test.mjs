@@ -86,6 +86,36 @@ test('lab limits use the capped max formula and warn while machine-independent p
   assert.equal(compareBudgets({ cls: 0, lag: 101 }, policies).failures.length, 1, 'Recording a nonzero lag cannot move the fixed 100ms ceiling')
 })
 
+test('vital attribution handles text-node shift sources and records candidate and font timing', () => {
+  const keys = ['window', 'document', 'PerformanceObserver', 'getComputedStyle']
+  const saved = keys.map(key => [key, globalThis[key]])
+  const callbacks = {}, fonts = {}
+  globalThis.window = { $RT: 100 }
+  globalThis.document = { fonts: { addEventListener: (type, callback) => { fonts[type] = callback } } }
+  globalThis.getComputedStyle = () => ({ font: '15px Geist Sans' })
+  globalThis.PerformanceObserver = class {
+    constructor(callback) { this.callback = callback }
+    observe({ type }) { callbacks[type] = this.callback }
+  }
+  try {
+    installVitalObservers()
+    const node = { tagName: 'P', id: 'fixture', className: 'text-fg', textContent: 'manual paragraph' }
+    callbacks.paint({ getEntries: () => [{ name: 'first-contentful-paint', startTime: 104 }] })
+    callbacks['largest-contentful-paint']({ getEntries: () => [{ startTime: 420, size: 1000, element: node }] })
+    callbacks['layout-shift']({ getEntries: () => [{ startTime: 410, value: 0.1, sources: [{ node: { nodeType: 3, parentElement: node } }] }] })
+    fonts.loadingdone({ fontfaces: [{ family: 'Geist Sans', status: 'loaded' }] })
+    assert.equal(window.__perf.shellTimeAtFcp, 100)
+    assert.equal(window.__perf.candidates[0].element.id, 'fixture')
+    assert.equal(window.__perf.shifts[0].sources[0].node.tag, 'P')
+    assert.equal(window.__perf.fonts[0].faces[0].status, 'loaded')
+  } finally {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete globalThis[key]
+      else globalThis[key] = value
+    }
+  }
+})
+
 test('record preserves tolerances/reporting, local lab reference, and metric membership', () => {
   const budget = { metrics: {
     'home.lcpMs': { baseline: 172, relative: 1.5, absolute: 250, cap: 1000, combine: 'max', reportOnly: true },
