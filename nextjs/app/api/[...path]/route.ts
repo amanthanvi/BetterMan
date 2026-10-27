@@ -295,7 +295,10 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
         return apiError(422, 'INVALID_QUERY_PARAM', 'Invalid format')
       }
       const typos = first(req.nextUrl.searchParams.get('typos'))
-      if (typos !== undefined && typos !== '1') return apiError(422, 'INVALID_QUERY_PARAM', 'Invalid typos')
+      // OpenSearch asks on every keystroke, so it never pays for the typo read.
+      if (typos !== undefined && (typos !== '1' || format === 'opensearch')) {
+        return apiError(422, 'INVALID_QUERY_PARAM', 'Invalid typos')
+      }
       if (!isManName(name)) {
         const empty = format === 'opensearch' ? [raw, []] : { query: name.toLowerCase(), suggestions: [], distro }
         return cachedJson(empty, NO_SUGGESTIONS_CACHE_SECONDS, format === 'opensearch' ? OPENSEARCH_JSON : undefined)

@@ -17,7 +17,7 @@ function fields(href: string) {
 }
 
 describe('reportProblemHref', () => {
-  it('prefills the bug report form with the page, distro, release, package and canonical URL', () => {
+  it('prefills the bug report form with the page, distro, release, package and page URL', () => {
     const params = fields(reportProblemHref({ page: tar, distro: 'debian', origin: 'https://betterman.sh' }))
     expect(params.get('template')).toBe('bug_report.yml')
     expect(params.get('title')).toBe('[Bug]: tar(1) on Debian')
@@ -26,13 +26,13 @@ describe('reportProblemHref', () => {
     expect(body).toContain('Distro: Debian\n')
     expect(body).toContain('Package: tar 1.35+dfsg-3\n')
     expect(body).toContain('Dataset release: debian-2026-10-01+a1b2c3\n')
-    expect(body).toContain('URL: https://betterman.sh/man/tar/1')
-    expect(params.get('repro')).toBe('1. Open https://betterman.sh/man/tar/1\n2. ')
+    expect(body).toContain('URL: https://betterman.sh/man/tar/1?distro=debian')
+    expect(params.get('repro')).toBe('1. Open https://betterman.sh/man/tar/1?distro=debian\n2. ')
     expect(params.get('version')).toBe('Dataset release debian-2026-10-01+a1b2c3')
     expect(params.has('body')).toBe(false)
   })
 
-  it('keeps Debian canonical URLs bare and names other distros', () => {
+  it('names other distros in the title and URL', () => {
     const params = fields(reportProblemHref({ page: tar, distro: 'macos', origin: 'https://betterman.sh' }))
     expect(params.get('title')).toBe('[Bug]: tar(1) on macOS (BSD-licensed subset)')
     expect(params.get('what-happened')).toContain('URL: https://betterman.sh/man/tar/1?distro=macos')
@@ -45,12 +45,7 @@ describe('reportProblemHref', () => {
     const params = fields(href)
     expect(params.get('title')).toBe('[Bug]: a&b=c#d+e(3pm) on Debian')
     expect(params.get('what-happened')).toContain('Package: unknown\n')
-    expect(params.get('what-happened')).toContain('URL: https://betterman.sh/man/a%26b%3Dc%23d%2Be/3pm')
-  })
-
-  it('leaves a path while server rendering', () => {
-    const params = fields(reportProblemHref({ page: tar, distro: 'ubuntu', origin: null }))
-    expect(params.get('what-happened')).toContain('URL: /man/tar/1?distro=ubuntu')
+    expect(params.get('what-happened')).toContain('URL: https://betterman.sh/man/a%26b%3Dc%23d%2Be/3pm?distro=debian')
   })
 
   it('stays under the URL limit for oversized metadata', () => {

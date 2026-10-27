@@ -230,12 +230,15 @@ test('reader: a page missing everywhere lists no other distributions', async ({ 
   await expect(page.getByRole('region', { name: 'Other distributions' })).toHaveCount(0)
 })
 
-test('reader: report a problem opens a prefilled bug report for the served page', async ({ page, baseURL }) => {
+test('reader: report a problem opens a prefilled bug report for the served page', async ({ page, request, baseURL }) => {
   const origin = new URL(baseURL!).origin
-  for (const [path, distro, label, canonical] of [
-    ['/man/tar/1', 'debian', 'Debian', '/man/tar/1'],
+  // The URL names the served distro, Debian included, so the report reproduces on any default.
+  for (const [path, distro, label, served] of [
+    ['/man/tar/1', 'debian', 'Debian', '/man/tar/1?distro=debian'],
     ['/man/tar/1?distro=ubuntu', 'ubuntu', 'Ubuntu', '/man/tar/1?distro=ubuntu'],
   ]) {
+    // Built on the server: the HTML has the absolute URL before hydration.
+    expect(await (await request.get(path)).text(), path).toContain(encodeURIComponent(`${origin}${served}`))
     await page.goto(path)
     const link = page.getByRole('link', { name: 'Report a problem' })
     await expect(link).toHaveAttribute('target', '_blank')
@@ -248,7 +251,7 @@ test('reader: report a problem opens a prefilled bug report for the served page'
     expect(body, path).toContain(`Distro: ${label}\n`)
     expect(body, path).toContain('Package: tar 1.35+dfsg-3\n')
     expect(body, path).toMatch(new RegExp(`Dataset release: e2e-${distro}-\\d+\\n`))
-    expect(body, path).toContain(`URL: ${origin}${canonical}`)
+    expect(body, path).toContain(`URL: ${origin}${served}`)
   }
 })
 

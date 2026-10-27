@@ -1,12 +1,7 @@
-'use client'
-
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
 
-import type { SuggestApiResponse, Suggestion } from '../../lib/api'
 import { manPageHref, withDistro } from '../../lib/distro'
-import { useDistro } from '../state/distro'
+import type { ManMiss } from '../../lib/manLookup'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
 import { ManDistroAvailability } from './ManDistroAvailability'
 import { ManSectionLabel } from './RunningHead'
@@ -18,38 +13,8 @@ export function manMiss(name: string, section: string | null): { command: string
     : { command: `man ${name}`, message: `No manual entry for ${name}` }
 }
 
-// Rendered by the `/man/[name]` not-found boundary, which Next passes to the
-// client router as a fallback on every request, so the lookups only run once
-// the 404 is actually shown.
-export function ManNotFound() {
-  const params = useParams<{ name: string; section?: string }>()
-  const name = params.name
-  const section = params.section ?? null
-  const { distro, urlDistro } = useDistro()
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    const query = new URLSearchParams({ name, typos: '1' })
-    if (distro !== 'debian') query.set('distro', distro)
-
-    void fetch(`/api/v1/suggest?${query.toString()}`, {
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return (await res.json()) as SuggestApiResponse
-      })
-      .then((payload) => setSuggestions(payload.suggestions))
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === 'AbortError') return
-        setSuggestions([])
-      })
-
-    return () => controller.abort()
-  }, [name, distro])
-
+export function ManNotFound({ miss }: { miss: ManMiss }) {
+  const { name, section, distro, urlDistro, suggestions } = miss
   const { command, message } = manMiss(name, section)
 
   return (
@@ -68,7 +33,7 @@ export function ManNotFound() {
         </p>
       ) : null}
 
-      <ManDistroAvailability name={name} section={section} distro={distro} />
+      <ManDistroAvailability name={name} section={section} distro={distro} available={miss.distros} />
 
       {suggestions.length ? (
         <section aria-label="Did you mean" className="mt-8">

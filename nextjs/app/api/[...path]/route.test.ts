@@ -259,6 +259,8 @@ describe('suggest API', () => {
 
     const invalid = await GET(request('/api/v1/suggest?name=tarr&typos=yes'), context(['v1', 'suggest']))
     expect(invalid.status).toBe(422)
+    const openSearch = await GET(request('/api/v1/suggest?q=tarr&format=opensearch&typos=1'), context(['v1', 'suggest']))
+    expect(openSearch.status).toBe(422)
     expect(apiMocks.suggest).toHaveBeenCalledTimes(1)
   })
 

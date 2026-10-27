@@ -1,4 +1,4 @@
-import { canonicalWithDistro, DISTRO_LABEL, type Distro } from './distro'
+import { DISTRO_LABEL, manPageHref, type Distro } from './distro'
 import type { ManPage } from './docModel'
 
 export const ISSUES_NEW_URL = 'https://github.com/amanthanvi/BetterMan/issues/new'
@@ -17,12 +17,12 @@ function clip(value: string): string {
 
 /**
  * A new bug report prefilled with what triage needs to find the page again.
- * `origin` is null while server rendering, which leaves a path for the URL.
+ * The URL names the served distro even when it is Debian: a bare URL resolves
+ * on whoever opens it, by cookie, and the default distro can change.
  */
-export function reportProblemHref({ page, distro, origin }: { page: ReportedPage; distro: Distro; origin: string | null }): string {
+export function reportProblemHref({ page, distro, origin }: { page: ReportedPage; distro: Distro; origin: string }): string {
   const citation = `${clip(page.name)}(${clip(page.section)})`
-  const path = `/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`
-  const url = `${origin ?? ''}${canonicalWithDistro(path, distro)}`
+  const url = `${origin}${manPageHref(page.name, page.section, distro)}`
   const pkg = page.sourcePackage ? clip(`${page.sourcePackage} ${page.sourcePackageVersion ?? ''}`) : 'unknown'
   const release = clip(page.datasetReleaseId)
   const title = `[Bug]: ${citation} on ${DISTRO_LABEL[distro]}`

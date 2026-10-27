@@ -2,28 +2,12 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
-import { cache } from 'react'
 
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
-import { FastApiError, fetchManResolve, withDistroFallback, type ManResolveResult } from '../../../lib/api'
-import { canonicalWithDistro, withDistro, type Distro } from '../../../lib/distro'
+import { canonicalWithDistro, withDistro } from '../../../lib/distro'
+import { MISSING_MAN_METADATA, resolveManName } from '../../../lib/manLookup'
 import { getPublicOrigin } from '../../../lib/public-origin'
 import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
-
-// Runs before anything streams, so an unknown name is an HTTP 404 and a single
-// match an HTTP redirect instead of a 200 that falls back on the client.
-// cache() shares one lookup between generateMetadata and the page per request.
-const resolveName = cache(async (name: string, requestedDistro: Distro): Promise<{ distro: Distro; result: ManResolveResult }> => {
-  try {
-    const { distro, data } = await withDistroFallback(requestedDistro, (distro) =>
-      fetchManResolve({ distro, name: name.toLowerCase() }),
-    )
-    return { distro, result: data }
-  } catch (err) {
-    if (err instanceof FastApiError && err.status === 404) notFound()
-    throw err
-  }
-})
 
 export async function generateMetadata({
   params,
@@ -34,7 +18,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { name } = await params
   const sp = await searchParams
-  const { distro, result } = await resolveName(name, await resolveRequestDistro(sp))
+  const resolved = await resolveManName(name, await resolveRequestDistro(sp))
+  if (!resolved) return MISSING_MAN_METADATA
+  const { distro, result } = resolved
   // A single match redirects, so only the section picker has metadata to send.
   if (result.kind !== 'ambiguous') return {}
 
@@ -59,7 +45,9 @@ export default async function ManByNamePage({
 }) {
   const { name } = await params
   const sp = await searchParams
-  const { result } = await resolveName(name, await resolveRequestDistro(sp))
+  const resolved = await resolveManName(name, await resolveRequestDistro(sp))
+  if (!resolved) notFound()
+  const { result } = resolved
   const urlDistro = explicitDistro(sp)
   if (result.kind !== 'ambiguous') {
     // 307, not 308: the target depends on the distro cookie and on which sections

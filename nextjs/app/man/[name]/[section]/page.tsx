@@ -1,48 +1,19 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
-import { cache } from 'react'
 
 import { ManPageView } from '../../../../components/man/ManPageView'
 import { JsonLdHead } from '../../../../components/seo/JsonLdHead'
-import {
-  FastApiError,
-  fetchManByNameAndSectionOrAlias,
-  fetchManMetaByNameAndSection,
-  fetchRelated,
-  withDistroFallback,
-  type ManAlias,
-} from '../../../../lib/api'
-import type { ManPage } from '../../../../lib/docModel'
+import { fetchManByNameAndSectionOrAlias, fetchRelated } from '../../../../lib/api'
 import { canonicalWithDistro, withDistro, type Distro } from '../../../../lib/distro'
+import { locateManPage, MISSING_MAN_METADATA } from '../../../../lib/manLookup'
 import { OG_SIZE } from '../../../../lib/og/card'
 import { getPublicOrigin } from '../../../../lib/public-origin'
+import { reportProblemHref } from '../../../../lib/reportProblem'
 import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../../../lib/requestContext'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
 type Lookup = { distro: Distro; name: string; section: string }
-type Located = { distro: Distro; data: { kind: 'page'; page: ManPage } | ManAlias }
-
-// Settles the status code before anything streams: page metadata proves a page
-// exists, and a `.so` stub, which has no metadata row, loads its alias target.
-// cache() shares one lookup between generateMetadata and the page per request.
-const locate = cache(async (name: string, section: string, requestedDistro: Distro): Promise<Located> => {
-  try {
-    return await withDistroFallback(requestedDistro, async (distro) => {
-      const opts = { distro, name: name.toLowerCase(), section }
-      try {
-        return { kind: 'page' as const, page: (await fetchManMetaByNameAndSection(opts)).page }
-      } catch (err) {
-        if (!(err instanceof FastApiError) || err.code !== 'PAGE_NOT_FOUND') throw err
-      }
-      const result = await fetchManByNameAndSectionOrAlias(opts)
-      return result.kind === 'alias' ? result : { kind: 'page' as const, page: result.data.page }
-    })
-  } catch (err) {
-    if (err instanceof FastApiError && err.status === 404) notFound()
-    throw err
-  }
-})
 
 export async function generateMetadata({
   params,
@@ -53,7 +24,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { name, section } = await params
   const sp = await searchParams
-  const { distro, data } = await locate(name, section, await resolveRequestDistro(sp))
+  const located = await locateManPage(name, section, await resolveRequestDistro(sp))
+  if (!located) return MISSING_MAN_METADATA
+  const { distro, data } = located
   // An alias redirects, so there is no metadata to send.
   if (data.kind === 'alias') return {}
 
@@ -91,7 +64,9 @@ export default async function ManByNameAndSectionPage({
 }) {
   const { name, section } = await params
   const sp = await searchParams
-  const { distro, data } = await locate(name, section, await resolveRequestDistro(sp))
+  const located = await locateManPage(name, section, await resolveRequestDistro(sp))
+  if (!located) notFound()
+  const { distro, data } = located
   if (data.kind === 'alias') {
     const urlDistro = explicitDistro(sp)
     const target = withDistro(`/man/${encodeURIComponent(data.name)}/${encodeURIComponent(data.section)}`, urlDistro)
@@ -101,7 +76,9 @@ export default async function ManByNameAndSectionPage({
     redirect(target)
   }
 
-  const nonce = (await headers()).get('x-nonce') ?? undefined
+  const requestHeaders = await headers()
+  const nonce = requestHeaders.get('x-nonce') ?? undefined
+  const origin = getPublicOrigin({ headers: requestHeaders })
   const jsonLd = safeJsonLdStringify({
     '@context': 'https://schema.org',
     '@type': 'TechArticle',
@@ -118,13 +95,13 @@ export default async function ManByNameAndSectionPage({
   return (
     <>
       <JsonLdHead id={`bm-jsonld:${data.page.id}`} nonce={nonce} jsonLd={jsonLd} />
-      {await ManPageBody({ distro, name: name.toLowerCase(), section })}
+      {await ManPageBody({ distro, name: name.toLowerCase(), section }, origin)}
     </>
   )
 }
 
 // Await the document before returning the page: a painted shell delays React's reveal by 300 ms.
-async function ManPageBody(opts: Lookup) {
+async function ManPageBody(opts: Lookup, origin: string) {
   const [result, related] = await Promise.all([
     fetchManByNameAndSectionOrAlias(opts),
     fetchRelated(opts).catch(() => ({ items: [] })),
@@ -141,6 +118,7 @@ async function ManPageBody(opts: Lookup) {
       variants={pageData.variants}
       servedDistro={opts.distro}
       relatedItems={related.items}
+      reportHref={reportProblemHref({ page: pageData.page, distro: opts.distro, origin })}
     />
   )
 }

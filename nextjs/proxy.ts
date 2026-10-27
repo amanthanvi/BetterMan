@@ -31,9 +31,12 @@ function buildCsp(nonce: string): string {
 
 export function proxy(request: NextRequest) {
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
+  const requestHeaders = new Headers(request.headers)
+  // The `/man/[name]` not-found boundary gets no params; it reads the path here.
+  requestHeaders.set('x-bm-path', `${request.nextUrl.pathname}${request.nextUrl.search}`)
 
   if (!cspEnabled) {
-    const response = NextResponse.next()
+    const response = NextResponse.next({ request: { headers: requestHeaders } })
     response.headers.set('x-content-type-options', 'nosniff')
     response.headers.set('referrer-policy', 'strict-origin-when-cross-origin')
     response.headers.set('x-frame-options', 'DENY')
@@ -49,7 +52,6 @@ export function proxy(request: NextRequest) {
   const nonce = createNonce()
   const csp = buildCsp(nonce)
 
-  const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('Content-Security-Policy', csp)
 

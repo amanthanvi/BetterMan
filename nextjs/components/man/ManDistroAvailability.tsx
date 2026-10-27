@@ -1,8 +1,3 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-
-import type { ManDistrosResponse } from '../../lib/api'
 import { DISTRO_LABEL, type Distro } from '../../lib/distro'
 
 /**
@@ -11,30 +6,20 @@ import { DISTRO_LABEL, type Distro } from '../../lib/distro'
  * included: a bare URL would resolve on the reader's default distro, which is
  * where the page was just missing.
  */
-export function ManDistroAvailability({ name, section, distro }: { name: string; section: string | null; distro: Distro }) {
-  const [available, setAvailable] = useState<Distro[]>([])
-  const path = `/man/${encodeURIComponent(name)}${section ? `/${encodeURIComponent(section)}` : ''}`
-
-  useEffect(() => {
-    const controller = new AbortController()
-    void fetch(`/api/v1${path}/distros`, {
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return (await res.json()) as ManDistrosResponse
-      })
-      .then((payload) => setAvailable(payload.distros))
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === 'AbortError') return
-        setAvailable([])
-      })
-    return () => controller.abort()
-  }, [path])
-
+export function ManDistroAvailability({
+  name,
+  section,
+  distro,
+  available,
+}: {
+  name: string
+  section: string | null
+  distro: Distro
+  available: Distro[]
+}) {
   const others = available.filter((d) => d !== distro)
   if (!others.length) return null
+  const path = `/man/${encodeURIComponent(name)}${section ? `/${encodeURIComponent(section)}` : ''}`
 
   return (
     <section aria-label="Other distributions" className="mt-6 text-sm text-muted">
