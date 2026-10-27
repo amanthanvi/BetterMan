@@ -1971,6 +1971,41 @@
         "items": [
          [
           {
+           "inlines": [
+            {
+             "text": "Same as ",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "whitespace",
+               "type": "text"
+              }
+             ],
+             "type": "strong"
+            },
+            {
+             "text": " except that everything from (and including) the line found below is truncated, if the message is to be edited. \"",
+             "type": "text"
+            },
+            {
+             "inlines": [
+              {
+               "text": "#",
+               "type": "text"
+              }
+             ],
+             "type": "strong"
+            },
+            {
+             "text": "\" can be customized with core.commentChar.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          },
+          {
            "items": [
             [
              {
@@ -3179,6 +3214,15 @@
       {
        "inlines": [
         {
+         "text": "When pathspec is given on the command line, commit the contents of the files that match the pathspec without recording the changes already added to the index. The contents of these files are also staged for the next commit on top of what have been staged before.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
+      {
+       "inlines": [
+        {
          "text": "For more details, see the ",
          "type": "text"
         },
@@ -4104,6 +4148,67 @@
     "items": [
      [
       {
+       "inlines": [
+        {
+         "text": "Time and date specified by the ISO 8601 standard, for example ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "2005-04-07T22:13:13",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ". The parser accepts a space instead of the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "T",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " character as well. Fractional parts of a second will be ignored, for example ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "2005-04-07T22:13:13.019",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " will be treated as ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "2005-04-07T22:13:13",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ".",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
+      {
        "items": [
         [
          {
@@ -4257,6 +4362,88 @@
       {
        "inlines": [
         {
+         "text": "•Path names are encoded in UTF-8 normalization form C. This applies to tree objects, the index file, ref names, as well as path names in command line arguments, environment variables and config files (",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": ".git/config",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " (see ",
+         "type": "text"
+        },
+        {
+         "href": "/man/git-config/1",
+         "inlines": [
+          {
+           "text": "git-config(1)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": "), ",
+         "type": "text"
+        },
+        {
+         "href": "/man/gitignore/5",
+         "inlines": [
+          {
+           "text": "gitignore(5)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": ", ",
+         "type": "text"
+        },
+        {
+         "href": "/man/gitattributes/5",
+         "inlines": [
+          {
+           "text": "gitattributes(5)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": " and ",
+         "type": "text"
+        },
+        {
+         "href": "/man/gitmodules/5",
+         "inlines": [
+          {
+           "text": "gitmodules(5)",
+           "type": "text"
+          }
+         ],
+         "linkType": "internal",
+         "type": "link"
+        },
+        {
+         "text": ").",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
+      {
+       "inlines": [
+        {
          "text": "Note that Git at the core level treats path names simply as sequences of non-NUL bytes, there are no path name encoding conversions (except on Mac and Windows). Therefore, using non-ASCII path names will mostly work even on platforms and file systems that use legacy extended ASCII encodings. However, repositories created on such systems will not work properly on UTF-8-based systems (e.g. Linux, Mac, Windows) and vice versa. Additionally, many Git-based tools simply assume path names to be UTF-8 and will fail to display other encodings correctly.",
          "type": "text"
         }
@@ -4310,6 +4497,67 @@
    {
     "items": [
      [
+      {
+       "inlines": [
+        {
+         "text": "1.",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git commit",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " and ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git commit-tree",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " issue a warning if the commit log message given to it does not look like a valid UTF-8 string, unless you explicitly say your project uses a legacy encoding. The way to say this is to have ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "i18n.commitEncoding",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " in ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": ".git/config",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " file, like this:",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
       {
        "items": [
         [
@@ -4367,6 +4615,93 @@
    {
     "items": [
      [
+      {
+       "inlines": [
+        {
+         "text": "2.",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git log",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": ", ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git show",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": ", ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "git blame",
+           "type": "text"
+          }
+         ],
+         "type": "emphasis"
+        },
+        {
+         "text": " and friends look at the ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "encoding",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " header of a commit object, and try to re-code the log message into UTF-8 unless otherwise specified. You can specify the desired output encoding with ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "i18n.logOutputEncoding",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " in ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": ".git/config",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " file, like this:",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
       {
        "items": [
         [
@@ -5223,7 +5558,7 @@
   {
    "anchorId": "def-cleanup-mode",
    "argument": "<mode>",
-   "description": "This option determines how the supplied commit message should be cleaned up before committing. The <mode> can be strip, whitespace, verbatim, scissors or default. strip Strip leading and trailing empty lines, trailing whitespace, commentary and collapse consecutive empty lines. whitespace Same as strip except #commentary is not removed. verbatim Do not change the message at all. scissors # ------------------------ >8 ------------------------ default Same as strip if the message is to be edited. Otherwise whitespace. The default can be changed by the commit.cleanup configuration variable (see git-config(1)).",
+   "description": "This option determines how the supplied commit message should be cleaned up before committing. The <mode> can be strip, whitespace, verbatim, scissors or default. strip Strip leading and trailing empty lines, trailing whitespace, commentary and collapse consecutive empty lines. whitespace Same as strip except #commentary is not removed. verbatim Do not change the message at all. scissors Same as whitespace except that everything from (and including) the line found below is truncated, if the message is to be edited. \"#\" can be customized with core.commentChar. # ------------------------ >8 ------------------------ default Same as strip if the message is to be edited. Otherwise whitespace. The default can be changed by the commit.cleanup configuration variable (see git-config(1)).",
    "flags": "--cleanup"
   },
   {

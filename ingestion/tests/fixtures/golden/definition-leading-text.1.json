@@ -1,0 +1,233 @@
+{
+ "description": "preserve definition paragraphs",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "leading - preserve definition paragraphs",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use archive file or device ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "ARCHIVE",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ". If this option is not given, examine the environment variable ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "TAPE",
+            "type": "text"
+           }
+          ],
+          "type": "strong"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "f",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-f",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "inlines": [
+         {
+          "text": "ARCHIVE",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "An archive name with a colon specifies a remote file.",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A nested ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "inline",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": " paragraph before a block.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
+      {
+       "inlines": [
+        {
+         "text": "A nested continuation.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Only one paragraph.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "plain",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--plain",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "examples",
+    "level": 2,
+    "text": "EXAMPLES",
+    "type": "heading"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Search for files which are executable but not readable.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "$ find /sbin -executable ! -readable -print",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "examples",
+    "level": 2,
+    "title": "EXAMPLES"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "f",
+   "argument": null,
+   "description": "Use archive file or device ARCHIVE. If this option is not given, examine the environment variable TAPE.",
+   "flags": "-fARCHIVE"
+  },
+  {
+   "anchorId": "plain",
+   "argument": null,
+   "description": "Only one paragraph.",
+   "flags": "--plain"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

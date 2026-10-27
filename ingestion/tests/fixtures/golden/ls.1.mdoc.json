@@ -894,6 +894,52 @@
        {
         "inlines": [
          {
+          "text": "Output colored escape sequences based on ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "when",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ", which may be set to either ",
+          "type": "text"
+         },
+         {
+          "text": "always",
+          "type": "code"
+         },
+         {
+          "text": ", ",
+          "type": "text"
+         },
+         {
+          "text": "auto",
+          "type": "code"
+         },
+         {
+          "text": ", or ",
+          "type": "text"
+         },
+         {
+          "text": "never",
+          "type": "code"
+         },
+         {
+          "text": ".",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
+       {
+        "inlines": [
+         {
           "text": "always",
           "type": "code"
          },
@@ -1621,6 +1667,23 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Sort by descending time modified (most recently modified first). If two files have the same modification timestamp, sort their names in ascending lexicographical order. The ",
+          "type": "text"
+         },
+         {
+          "text": "-r",
+          "type": "code"
+         },
+         {
+          "text": " option reverses both of these sort orders.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -2549,7 +2612,33 @@
       {
        "inlines": [
         {
-         "text": "If r , the file is readable; if - , it is not readable.",
+         "text": "If ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "r",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ", the file is readable; if ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "-",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ", it is not readable.",
          "type": "text"
         }
        ],
@@ -2560,7 +2649,33 @@
       {
        "inlines": [
         {
-         "text": "If w , the file is writable; if - , it is not writable.",
+         "text": "If ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "w",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ", the file is writable; if ",
+         "type": "text"
+        },
+        {
+         "inlines": [
+          {
+           "text": "-",
+           "type": "text"
+          }
+         ],
+         "type": "strong"
+        },
+        {
+         "text": ", it is not writable.",
          "type": "text"
         }
        ],
@@ -2568,6 +2683,15 @@
       }
      ],
      [
+      {
+       "inlines": [
+        {
+         "text": "The first of the following that applies:",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      },
       {
        "items": [
         [
@@ -3195,6 +3319,79 @@
      },
      {
       "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The value of this variable describes what color to use for which attribute when colors are enabled with ",
+          "type": "text"
+         },
+         {
+          "text": "CLICOLOR",
+          "type": "code"
+         },
+         {
+          "text": " or ",
+          "type": "text"
+         },
+         {
+          "text": "COLORTERM",
+          "type": "code"
+         },
+         {
+          "text": ". This string is a concatenation of pairs of the format ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "f",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "inlines": [
+           {
+            "text": "b",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": ", where ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "f",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is the foreground color and ",
+          "type": "text"
+         },
+         {
+          "inlines": [
+           {
+            "text": "b",
+            "type": "text"
+           }
+          ],
+          "type": "emphasis"
+         },
+         {
+          "text": " is the background color.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       },
        {
         "inlines": [
          {
@@ -4839,7 +5036,7 @@
   {
    "anchorId": "color",
    "argument": "when",
-   "description": "always will make ls always output color. If TERM is unset or set to an invalid terminal, then ls will fall back to explicit ANSI escape sequences without the help of termcap(5). always is the default if --color is specified without an argument. auto will make ls output escape sequences based on termcap(5), but only if stdout is a tty and either the -G flag is specified or the COLORTERM environment variable is set and not empty. never will disable color regardless of environment variables. never is the default when neither --color nor -G is specified. For compatibility with GNU coreutils, ls supports yes or force as equivalent to always, no or none as equivalent to never, and tty or if-tty as equivalent to auto.",
+   "description": "Output colored escape sequences based on when, which may be set to either always, auto, or never. always will make ls always output color. If TERM is unset or set to an invalid terminal, then ls will fall back to explicit ANSI escape sequences without the help of termcap(5). always is the default if --color is specified without an argument. auto will make ls output escape sequences based on termcap(5), but only if stdout is a tty and either the -G flag is specified or the COLORTERM environment variable is set and not empty. never will disable color regardless of environment variables. never is the default when neither --color nor -G is specified. For compatibility with GNU coreutils, ls supports yes or force as equivalent to always, no or none as equivalent to never, and tty or if-tty as equivalent to auto.",
    "flags": "--color"
   },
   {
@@ -4935,7 +5132,7 @@
   {
    "anchorId": "t",
    "argument": null,
-   "description": "Note that these sort orders are contradictory: the time sequence is in descending order, the lexicographical sort is in ascending order. This behavior is mandated by IEEE Std 1003.2 (“POSIX.2”). This feature can cause problems listing files stored with sequential names on FAT file systems, such as from digital cameras, where it is possible to have more than one image with the same timestamp. In such a case, the photos cannot be listed in the sequence in which they were taken. To ensure the same sort order for time and for lexicographical sorting, set the environment variable LS_SAMESORT or use the -y option. This causes ls to reverse the lexicographical sort order when sorting files with the same modification timestamp.",
+   "description": "Sort by descending time modified (most recently modified first). If two files have the same modification timestamp, sort their names in ascending lexicographical order. The -r option reverses both of these sort orders. Note that these sort orders are contradictory: the time sequence is in descending order, the lexicographical sort is in ascending order. This behavior is mandated by IEEE Std 1003.2 (“POSIX.2”). This feature can cause problems listing files stored with sequential names on FAT file systems, such as from digital cameras, where it is possible to have more than one image with the same timestamp. In such a case, the photos cannot be listed in the sequence in which they were taken. To ensure the same sort order for time and for lexicographical sorting, set the environment variable LS_SAMESORT or use the -y option. This causes ls to reverse the lexicographical sort order when sorting files with the same modification timestamp.",
    "flags": "-t"
   },
   {

@@ -7,6 +7,54 @@ from ingestion.mandoc_parser import parse_mandoc_html
 _FIXTURES = Path(__file__).parent / "fixtures" / "mandoc"
 
 
+def test_definition_keeps_inline_runs_around_blocks_without_duplicating_text() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1><dl>
+      <dt id="file"><b>-f</b> ARCHIVE</dt><dd><!-- not visible -->Use archive
+      <i>ARCHIVE</i>. See <b>tar</b>(1).<p>Later paragraph.</p>
+      Between <code>TAPE</code> and a list.<ul><li>A nested item.</li></ul>
+      Final <a href="https://example.com">link</a>.</dd>
+      <dt id="plain"><b>--plain</b></dt><dd>Only <b>one</b> paragraph.</dd>
+      </dl></div>""")
+    definitions = parsed.doc.blocks[1].items
+    assert [item.id for item in definitions] == ["file", "plain"]
+    blocks = definitions[0].definitionBlocks
+    assert [block.type for block in blocks] == [
+        "paragraph",
+        "paragraph",
+        "paragraph",
+        "list",
+        "paragraph",
+    ]
+    assert [inline.type for inline in blocks[0].inlines] == [
+        "text",
+        "emphasis",
+        "text",
+        "link",
+        "text",
+    ]
+    assert blocks[0].inlines[3].href == "/man/tar/1"
+    assert blocks[2].inlines[1].type == "code"
+    assert blocks[-1].inlines[1].href == "https://example.com"
+    assert len(definitions[1].definitionBlocks) == 1
+    assert parsed.options
+    assert parsed.options[0].anchorId == "file"
+    assert parsed.options[0].description == (
+        "Use archive ARCHIVE. See tar(1). Later paragraph. "
+        "Between TAPE and a list. A nested item. Final link."
+    )
+    assert parsed.options[1].description == "Only one paragraph."
+
+
+def test_bullet_preserves_prose_before_a_single_line_example() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><dl><dt>•</dt>
+      <dd>Search for files which are executable but not readable.
+      <pre>$ find /sbin -executable ! -readable -print</pre></dd></dl></div>""")
+    blocks = parsed.doc.blocks[0].items[0]
+    assert [block.type for block in blocks] == ["paragraph", "code_block"]
+    assert blocks[0].inlines[0].text == ("Search for files which are executable but not readable.")
+    assert blocks[1].text == "$ find /sbin -executable ! -readable -print"
+
+
 def test_parse_mandoc_html_extracts_core_fields() -> None:
     html = """<!doctype html>
 <html>
@@ -284,7 +332,8 @@ def test_nested_options_keep_body_ids_and_exclude_dash_prose() -> None:
     ]
     outer = parsed.doc.blocks[1].items[0][0].items[0]
     assert outer.id == "all"
-    assert outer.definitionBlocks[0].items[0].id == "nested"
+    assert outer.definitionBlocks[0].inlines[0].text == "All entries."
+    assert outer.definitionBlocks[1].items[0].id == "nested"
 
 
 def test_docbook_option_paragraphs_become_anchored_definitions() -> None:
