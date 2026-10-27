@@ -24,62 +24,59 @@
 
 ## Non-browser reads and Vercel challenges (#388)
 
-`429` plus `x-vercel-mitigated: challenge` is a Vercel challenge, not the app's
-rate-limit response. Anonymous GET probes from the implementation environment on
-2026-10-26 observed it on `/man/tar/1`, `/tar.txt`, `/man/tar/1.txt`,
-`/opensearch.xml`, and `/api/v1/suggest?name=ta`; HEAD probes also observed it on
-`/robots.txt`. The header does not identify its source.
-In the project's **Firewall → Observability/Events**, inspect a matching request's
-action and rule/ruleset; then check custom rules, the Bot Protection managed
-ruleset, and **Bot Management → Attack Mode**. Record the source before changing
-protection. No production setting was inspected or changed for this implementation.
+`429` plus `x-vercel-mitigated: challenge` identifies a Vercel challenge, not an
+app rate-limit response. **Identify the challenge source in Firewall events
+before applying exemptions**: inspect the matched custom rule, managed ruleset,
+or Attack Mode setting. No production settings were inspected or changed here.
 
-Vercel runs this protection before Next.js. Neither Next config nor `vercel.json`
-can express the required exemption: Vercel's [custom rule documentation](https://vercel.com/docs/vercel-firewall/vercel-waf/custom-rules)
-explicitly excludes `bypass` from the Firewall actions supported in `vercel.json`.
-An authorized operator must apply the following in **Firewall → Configure →
-Add New… → Rule**, above custom challenge rules. Each row is one rule with its
-method and path conditions combined with **AND**, and action **Bypass**:
+Vercel's [Attack Mode](https://vercel.com/docs/vercel-firewall/attack-mode) and
+[bot protection](https://vercel.com/docs/bot-management) already let verified bots
+through automatically. This includes verified answer/search agents such as
+GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot, Claude-User,
+PerplexityBot, Perplexity-User and Google-Extended; a claimed User-Agent alone is
+not verification. Keep Bytespider and CCBot disallowed in robots.txt. Answer
+engines and other crawlers retain the public policy with `/api/` disallowed.
 
-| Rule | Method | Request Path |
-| --- | --- | --- |
-| Manual reads | Is any of `GET`, `HEAD` | Starts with `/man/` |
-| Root text reads | Is any of `GET`, `HEAD` | Matches expression `^/[^/]+\.txt$` |
-| OpenSearch descriptor | Is any of `GET`, `HEAD` | Equals `/opensearch.xml` |
-| OpenSearch suggestions | Is any of `GET`, `HEAD` | Equals `/api/v1/suggest` |
+The minimal exemption set is four custom Firewall **Bypass** rules. Combine each
+path condition with **Method is any of GET, HEAD**. Keep abusive-IP blocks first,
+then these rules before challenge rules; bypass skips subsequent custom and
+managed WAF rules:
 
-The text expression matches one root segment, including `/robots.txt`, not
-`/a/b.txt`. The `/man/` rule includes nested manual routes such as OG images.
-Do not exempt all of `/api/`, or select clients by a spoofable User-Agent.
-Custom bypass skips subsequent custom and managed WAF rules, so retain separate
-abusive-IP blocks **before** these rules. Review and publish only after checking
-the affected source; see [rule conditions](https://vercel.com/docs/vercel-firewall/vercel-waf/rule-configuration)
-and [managed ruleset ordering](https://vercel.com/docs/vercel-firewall/vercel-waf/managed-rulesets).
+| Rule | Request Path |
+| --- | --- |
+| Root text, including robots.txt | Matches expression `^/[^/]+\.txt$` |
+| Canonical text manuals | Matches expression `^/man/[^/]+/[^/]+\.txt$` |
+| OpenSearch descriptor | Equals `/opensearch.xml` |
+| OpenSearch suggestions | Equals `/api/v1/suggest` |
 
-If **Attack Mode** produces the challenge, the [Attack Mode documentation](https://vercel.com/docs/vercel-firewall/attack-mode)
-does not establish that a custom WAF bypass overrides it. Confirm path-exemption
-support with Vercel before relying on these rules; retain request IDs and
-timestamps for Support if attribution is unclear. Do not turn off global
-protection as a substitute for a verified path exemption.
+Apply through **Firewall → Configure → Add New… → Rule**. [Custom rule docs](https://vercel.com/docs/vercel-firewall/vercel-waf/custom-rules)
+exclude `bypass` from `vercel.json`; Next config cannot exempt traffic challenged
+before Next runs. If Attack Mode is the source, confirm the narrow exemptions
+work before relying on them; do not disable global protection as a workaround.
 
-Keep application limits enabled: manual HTML, plain text, OG images and the
-descriptor use the shared `page` bucket (300 requests/IP/minute); suggestions use
-`search` (60/IP/minute). Vercel must control ingress and overwrite
-`x-vercel-forwarded-for`: the app trusts that header wherever it runs. Ordinary
-forwarding headers are ignored; without the Vercel header, requests share the
-anonymous bucket. Do not expose a direct origin that lets clients supply it.
-The text response is `private, no-cache` so an edge cache cannot bypass its limit; its document
-payload uses the same one-hour cache as HTML. The robots API disallow remains.
+Do **not** add a broad `/man/` HTML bypass. HTML retains per-request CSP nonces;
+an HTML bypass plus edge rate limiting is deferred until the man-page redesign
+brings edge caching. Text shares the HTML section payload cache and the page
+API's public response caching (one-hour shared TTL), with the existing page
+limit at origin (300/IP/minute). Suggestions keep their search limit
+(60/IP/minute). The static OpenSearch descriptor needs no Convex rate-limit call.
+Vercel must overwrite `x-vercel-forwarded-for` at ingress; the app trusts it.
+Without it, requests share the anonymous bucket.
 
-After publishing, verify anonymous GET **and** HEAD without challenge cookies on
-`/man/tar/1`, `/tar.txt`, `/man/tar/1.txt`, `/opensearch.xml`, and
-`/api/v1/suggest?q=ta&format=opensearch`. Expect no mitigation header, text/plain
-for `.txt`, and a suggestion list containing `tar`. Check a missing manual is 404
-and app limits still return 429 without `x-vercel-mitigated`. Finally, in real
-Chrome and Firefox on production, add BetterMan as a search engine from its
-OpenSearch descriptor and type `ta` to verify suggestions. Local E2E covers the
-descriptor and suggestion HTTP contract; it does not prove browser registration
-or a production Firewall exemption.
+Sitemap discovery remains in robots.txt: `/sitemap.xml` indexes per-distro and
+chunk sitemaps (`/sitemap-debian.xml`, `/sitemap-debian-1.xml`, and peers). Verified
+search bots retain access through existing bot protection. Sitemaps are outside
+this minimal anonymous Bypass set; investigate any verified-bot failures in
+Firewall events rather than widening the rules.
+
+After publishing, check anonymous GET/HEAD on `/tar.txt`, `/tar.1.txt`,
+`/man/tar/1.txt`, `/opensearch.xml`, and
+`/api/v1/suggest?q=ta&format=opensearch` without challenge cookies. Check text
+content type/nosniff, missing-page 404s, origin rate limits and their security
+headers, and suggestion results containing `tar`. Verify HTML and sitemaps using
+a verified-bot request, not just a spoofed User-Agent. Finally add BetterMan as a
+search engine in real Chrome and Firefox on production and type `ta`. Local E2E
+proves the HTTP contract, not production exemptions or browser registration.
 
 ## Search index cost
 

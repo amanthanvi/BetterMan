@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const notFound = vi.hoisted(() =>
   vi.fn(() => {
@@ -67,6 +67,7 @@ beforeEach(() => {
   }))
   apiMocks.fetchManMetaByNameAndSection.mockResolvedValue(page())
 })
+afterEach(() => vi.unstubAllEnvs())
 
 describe('man page share image route', () => {
   it('does not render invalid path parameters', async () => {
@@ -77,10 +78,14 @@ describe('man page share image route', () => {
   })
 
   it('returns a private uncached 429 without rendering', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
     isRateLimited.mockResolvedValueOnce(true)
     const response = await get('bash', '1')
     expect(response.status).toBe(429)
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(response.headers.get('content-security-policy')).toBeTruthy()
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(response.headers.get('strict-transport-security')).toContain('max-age=31536000')
     expect(ogCard).not.toHaveBeenCalled()
   })
 

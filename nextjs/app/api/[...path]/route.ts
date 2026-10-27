@@ -21,6 +21,7 @@ import {
 import { normalizeDistro, withDistro, type Distro } from '@/lib/distro'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
+import { nonHtmlSecurityHeaders } from '@/lib/securityHeaders'
 import { isManName, manPath } from '@/lib/shortUrl'
 
 export const runtime = 'nodejs'
@@ -135,7 +136,10 @@ function intParam(
 
 async function enforceRateLimit(req: NextRequest, kind: 'search' | 'page'): Promise<Response | null> {
   if (!(await isRateLimited(req.headers, kind))) return null
-  return apiError(429, 'RATE_LIMITED', 'Too many requests')
+  return json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, {
+    status: 429,
+    headers: { ...nonHtmlSecurityHeaders(), 'Cache-Control': 'private, no-store' },
+  })
 }
 
 async function handleGet(req: NextRequest, path: string[], metrics: ServerTimingMetric[]): Promise<Response> {

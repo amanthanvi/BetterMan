@@ -39,5 +39,7 @@ export function renderManText({ page, content }: ManPageResponse): string {
     sections.push(`OPTIONS\n${content.options.map((option) => `${option.flags}${option.argument ? ` ${option.argument}` : ''}\n${indent(option.description)}`).join('\n\n')}`)
   }
   sections.push(blocksText(content.blocks))
+  // Terminals must never interpret corpus text as C0/C1 control sequences.
   return `${title}        ${sectionLabel(page.section)}        ${title}\n\n${sections.filter(Boolean).join('\n\n')}\n`
+    .replace(/\p{Cc}/gu, (character) => character === '\n' || character === '\t' ? character : '')
 }

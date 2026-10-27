@@ -50,3 +50,17 @@ it('keeps upstream NAME, SYNOPSIS and OPTIONS without adding extracted duplicate
   expect(text).not.toContain('tar [OPTION]')
   expect(text).not.toContain('--create')
 })
+
+it('strips terminal controls from metadata and document text, preserving tabs and newlines', () => {
+  const controls = Array.from({ length: 160 }, (_, index) => String.fromCharCode(index))
+    .filter((character) => /\p{Cc}/u.test(character) && character !== '\n' && character !== '\t').join('')
+  const text = renderManText({
+    ...manual,
+    page: { ...manual.page, description: `archive${controls}` },
+    content: { ...manual.content, blocks: [{ type: 'code_block', text: `tar${controls}\t-c\nfiles` }] },
+  })
+  expect(text).toContain('tar - archive\n')
+  expect(text).toContain('tar\t-c\nfiles')
+  expect([...text].filter((character) => /\p{Cc}/u.test(character))).toEqual(expect.arrayContaining(['\n', '\t']))
+  expect(text.replaceAll('\n', '').replaceAll('\t', '')).not.toMatch(/\p{Cc}/u)
+})

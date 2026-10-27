@@ -5,6 +5,10 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   const origin = getPublicOrigin(request)
   const body = [
+    'User-agent: Bytespider',
+    'User-agent: CCBot',
+    'Disallow: /',
+    '',
     'User-agent: GPTBot',
     'User-agent: ChatGPT-User',
     'User-agent: OAI-SearchBot',
@@ -12,11 +16,9 @@ export async function GET(request: Request) {
     'User-agent: Claude-SearchBot',
     'User-agent: Claude-User',
     'User-agent: anthropic-ai',
-    'User-agent: CCBot',
     'User-agent: Google-Extended',
     'User-agent: PerplexityBot',
     'User-agent: Perplexity-User',
-    'User-agent: Bytespider',
     'User-agent: *',
     'Allow: /',
     'Disallow: /api/',

@@ -10,10 +10,10 @@ it('gives answer engines the public crawl policy while keeping APIs disallowed a
     for (const agent of ['GPTBot', 'ChatGPT-User', 'OAI-SearchBot', 'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', '*']) {
       expect(body).toContain(`User-agent: ${agent}\n`)
     }
-    // One group applies equally to named agents and the wildcard, including .txt URLs.
-    expect(body.split('\n\n')).toHaveLength(1)
-    expect(body).toContain('Allow: /\nDisallow: /api/\nSitemap: https://betterman.sh/sitemap.xml\n')
-    expect(body).not.toContain('Disallow: /\n')
+    const [training, publicPolicy] = body.split('\n\n')
+    expect(training).toBe('User-agent: Bytespider\nUser-agent: CCBot\nDisallow: /')
+    expect(publicPolicy).toContain('Allow: /\nDisallow: /api/\nSitemap: https://betterman.sh/sitemap.xml\n')
+    expect(publicPolicy).not.toContain('Disallow: /\n')
   } finally {
     vi.unstubAllEnvs()
   }

@@ -1,6 +1,6 @@
 import {
   FastApiError,
-  fetchManByName,
+  fetchManResolve,
   fetchManByNameAndSectionOrAlias,
   withDistroFallback,
 } from '@/lib/api'
@@ -8,7 +8,8 @@ import { normalizeDistro, withDistro } from '@/lib/distro'
 import { renderManText } from '@/lib/manText'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
-import { isManName, manPath } from '@/lib/shortUrl'
+import { nonHtmlSecurityHeaders } from '@/lib/securityHeaders'
+import { isManName, manPath, parseShortUrl } from '@/lib/shortUrl'
 
 export const runtime = 'nodejs'
 
@@ -19,8 +20,9 @@ function text(body: string, status = 200, headers?: HeadersInit): Response {
     status,
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
-      // Keep the payload cache in lib/api; every request must pass the IP limit.
-      'Cache-Control': 'private, no-cache',
+      ...nonHtmlSecurityHeaders(),
+      // Match the page API: cache public content at the edge, limit origin reads.
+      'Cache-Control': status < 400 ? 'public, max-age=60, s-maxage=3600, stale-while-revalidate=3600' : 'private, no-store',
       ...headers,
     },
   })
@@ -28,9 +30,15 @@ function text(body: string, status = 200, headers?: HeadersInit): Response {
 
 export async function GET(request: Request, ctx: Context): Promise<Response> {
   const { page } = await ctx.params
-  const [name, section] = page
+  let [name, section] = page
   if (!name || page.length > 2 || !isManName(name) || (section !== undefined && !/^\d[a-z]{0,9}$/i.test(section))) {
     return text('Page not found\n', 404)
+  }
+  if (section === undefined) {
+    const target = parseShortUrl([name], new Set())
+    if (!target || target.kind === 'option') return text('Page not found\n', 404)
+    name = target.name
+    if (target.kind === 'page') section = target.section
   }
   const rawDistro = new URL(request.url).searchParams.get('distro')?.trim()
   const requestedDistro = rawDistro ? normalizeDistro(rawDistro) : 'debian'
@@ -38,15 +46,15 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
   if (await isRateLimited(request.headers, 'page')) return text('Too many requests\n', 429)
 
   try {
-    const { distro, data } = await withDistroFallback(requestedDistro, (distro) =>
+    const { distro, data } = await withDistroFallback(requestedDistro, async (distro) =>
       section === undefined
-        ? fetchManByName({ distro, name: name.toLowerCase() })
-        : fetchManByNameAndSectionOrAlias({ distro, name: name.toLowerCase(), section: section.toLowerCase() }),
+        ? await fetchManResolve({ distro, name: name.toLowerCase() })
+        : await fetchManByNameAndSectionOrAlias({ distro, name: name.toLowerCase(), section: section.toLowerCase() }),
     )
     if (data.kind === 'ambiguous') {
       return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => withDistro(`${manPath(name, option.section)}.txt`, distro)).join('\n')}\n`, 409)
     }
-    if (data.kind === 'alias') {
+    if (data.kind === 'alias' || !('data' in data)) {
       return text('', 308, { Location: withDistro(`${manPath(data.name, data.section)}.txt`, distro) })
     }
     const canonical = `${getPublicOrigin(request)}${withDistro(manPath(data.data.page.name, data.data.page.section), distro)}`

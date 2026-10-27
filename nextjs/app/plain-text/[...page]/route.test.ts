@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-import { FastApiError, fetchManByName, fetchManByNameAndSectionOrAlias } from '@/lib/api'
+import { FastApiError, fetchManResolve, fetchManByNameAndSectionOrAlias } from '@/lib/api'
 import { isRateLimited } from '@/lib/rateLimit'
 import type { ManPageResponse } from '@/lib/docModel'
 import { GET, HEAD } from './route'
 
 vi.mock('@/lib/api', async (original) => ({
   ...await original<typeof import('@/lib/api')>(),
-  fetchManByName: vi.fn(),
+  fetchManResolve: vi.fn(),
   fetchManByNameAndSectionOrAlias: vi.fn(),
 }))
 vi.mock('@/lib/rateLimit', () => ({ isRateLimited: vi.fn() }))
@@ -25,36 +25,43 @@ beforeEach(() => {
   vi.stubEnv('PUBLIC_BASE_URL', 'https://betterman.sh')
   vi.mocked(isRateLimited).mockResolvedValue(false)
   vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: manual })
-  vi.mocked(fetchManByName).mockResolvedValue({ kind: 'page', data: manual })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'tar', section: '1', title: 'tar(1)', description: 'archive' })
 })
 afterEach(() => vi.unstubAllEnvs())
 
-it('uses the existing section payload, with a canonical HTML pointer and non-shared caching', async () => {
+it('uses the existing section payload, with a canonical HTML pointer and page-API caching', async () => {
   const request = req('?distro=ubuntu')
   const res = await GET(request, ctx())
   expect(res.status).toBe(200)
   expect(res.headers.get('content-type')).toBe('text/plain; charset=utf-8')
-  expect(res.headers.get('cache-control')).toBe('private, no-cache')
+  expect(res.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=3600, stale-while-revalidate=3600')
+  expect(res.headers.get('x-content-type-options')).toBe('nosniff')
   expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?distro=ubuntu>; rel="canonical"')
   expect(await res.text()).toContain('TAR(1)')
   expect(isRateLimited).toHaveBeenCalledWith(request.headers, 'page')
   expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledExactlyOnceWith({ distro: 'ubuntu', name: 'tar', section: '1' })
-  expect(fetchManByName).not.toHaveBeenCalled()
+  expect(fetchManResolve).not.toHaveBeenCalled()
 })
 
-it('uses the existing name payload for the short form and ignores browser distro cookies', async () => {
+it('resolves the short form to the HTML section cache and ignores browser distro cookies', async () => {
   const request = req()
   request.headers.set('cookie', 'bm-distro=ubuntu')
   const res = await GET(request, ctx(['TAR']))
-  expect(res.status).toBe(200)
-  expect(fetchManByName).toHaveBeenCalledExactlyOnceWith({ distro: 'debian', name: 'tar' })
+  expect(res.status).toBe(308)
+  expect(res.headers.get('location')).toBe('/man/tar/1.txt')
+  expect(fetchManResolve).toHaveBeenCalledExactlyOnceWith({ distro: 'debian', name: 'tar' })
   expect(fetchManByNameAndSectionOrAlias).not.toHaveBeenCalled()
 })
 
 it('fails closed at the page limit before fetching a payload', async () => {
+  vi.stubEnv('NODE_ENV', 'production')
   vi.mocked(isRateLimited).mockResolvedValue(true)
   const res = await GET(req(), ctx())
   expect(res.status).toBe(429)
+  expect(res.headers.get('content-security-policy')).toBe("default-src 'none'; frame-ancestors 'none'")
+  expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+  expect(res.headers.get('strict-transport-security')).toContain('max-age=31536000')
+  expect(res.headers.get('cache-control')).toBe('private, no-store')
   expect(await res.text()).toBe('Too many requests\n')
   expect(fetchManByNameAndSectionOrAlias).not.toHaveBeenCalled()
 })
@@ -85,14 +92,14 @@ it('falls back only for an unavailable release and uses its canonical distro', a
 })
 
 it('offers explicit text URLs for ambiguous names', async () => {
-  vi.mocked(fetchManByName).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }] })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }] })
   const res = await GET(req('?distro=ubuntu'), ctx(['printf']))
   expect(res.status).toBe(409)
   expect(await res.text()).toContain('/man/printf/3.txt?distro=ubuntu')
 })
 
 it('keeps aliases in plain text and honors distro', async () => {
-  vi.mocked(fetchManByName).mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1' })
   const res = await GET(req('?distro=ubuntu'), ctx(['gunzip']))
   expect(res.status).toBe(308)
   expect(res.headers.get('location')).toBe('/man/gzip/1.txt?distro=ubuntu')
@@ -104,4 +111,24 @@ it('HEAD has the same headers and rate limit, with no body', async () => {
   expect(res.headers.get('link')).toContain('/man/tar/1>')
   expect(await res.text()).toBe('')
   expect(isRateLimited).toHaveBeenCalledOnce()
+})
+
+it('loads tar.1.txt from the same section payload used by HTML', async () => {
+  const res = await GET(req(), ctx(['tar.1']))
+  expect(res.status).toBe(200)
+  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledExactlyOnceWith({ distro: 'debian', name: 'tar', section: '1' })
+  expect(fetchManResolve).not.toHaveBeenCalled()
+})
+
+it('keeps security headers on denied HEAD requests even when prefetch skips the proxy', async () => {
+  vi.stubEnv('NODE_ENV', 'production')
+  vi.mocked(isRateLimited).mockResolvedValue(true)
+  const request = req()
+  request.headers.set('purpose', 'prefetch')
+  const res = await HEAD(request, ctx())
+  expect(res.status).toBe(429)
+  expect(await res.text()).toBe('')
+  expect(res.headers.get('content-security-policy')).toBeTruthy()
+  expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+  expect(res.headers.get('strict-transport-security')).toContain('max-age=31536000')
 })

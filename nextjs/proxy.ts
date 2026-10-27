@@ -1,7 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { isRateLimited } from './lib/rateLimit'
-
 function createNonce(): string {
   return btoa(crypto.randomUUID())
 }
@@ -33,19 +31,7 @@ function buildCsp(nonce: string): string {
   return csp.join('; ')
 }
 
-export async function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname
-  // Text and OG route handlers enforce their own page limit.
-  if (
-    (request.method === 'GET' || request.method === 'HEAD') &&
-    /^\/man\/[^/]+(?:\/[^/]+)?\/?$/.test(pathname) && !/^\/man\/[^/]+\/[^/]+\.txt\/?$/i.test(pathname) &&
-    await isRateLimited(request.headers, 'page')
-  ) {
-    return new NextResponse(request.method === 'HEAD' ? null : 'Too many requests\n', {
-      status: 429,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' },
-    })
-  }
+export function proxy(request: NextRequest) {
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
 
   if (!cspEnabled) {
@@ -90,8 +76,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Prefetch headers must not bypass the HTML page limit.
-    '/man/:path*',
     {
       source: '/((?!api(?:/|$)|_next/static|_next/image|favicon.ico).*)',
       missing: [

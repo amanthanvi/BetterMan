@@ -43,7 +43,7 @@ vi.mock('@/lib/convexClient', () => ({
 }))
 
 import { FastApiError } from '@/lib/api'
-import { GET } from './route'
+import { GET, HEAD } from './route'
 
 function request(path: string): NextRequest {
   return new NextRequest(`https://betterman.test${path}`, {
@@ -62,6 +62,20 @@ beforeEach(() => {
 })
 
 afterEach(() => vi.unstubAllEnvs())
+
+it.each([GET, HEAD])('keeps security headers on rate-limited API reads', async (handler) => {
+  vi.stubEnv('NODE_ENV', 'production')
+  convexMocks.mutation.mockResolvedValue({ allowed: false })
+  const req = request('/api/v1/suggest?q=ta')
+  req.headers.set('purpose', 'prefetch')
+  const res = await handler(req, context(['v1', 'suggest']))
+  expect(res.status).toBe(429)
+  expect(res.headers.get('content-security-policy')).toBe("default-src 'none'; frame-ancestors 'none'")
+  expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+  expect(res.headers.get('strict-transport-security')).toContain('max-age=31536000')
+  expect(res.headers.get('cache-control')).toBe('private, no-store')
+  if (handler === HEAD) expect(await res.text()).toBe('')
+})
 
 describe('public API timing and metadata', () => {
   it('serves metadata without loading full page content', async () => {

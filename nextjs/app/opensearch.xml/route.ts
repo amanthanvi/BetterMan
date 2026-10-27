@@ -1,5 +1,4 @@
 import { getPublicOrigin } from '../../lib/public-origin'
-import { isRateLimited } from '../../lib/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,12 +7,6 @@ function escapeXml(value: string): string {
 }
 
 export async function GET(request: Request) {
-  if (await isRateLimited(request.headers, 'page')) {
-    return new Response('Too many requests\n', {
-      status: 429,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' },
-    })
-  }
   const origin = escapeXml(getPublicOrigin(request))
   const body = [
     '<?xml version="1.0" encoding="UTF-8"?>',
