@@ -42,7 +42,10 @@ function stableSha(value) {
   return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')
 }
 
-function page({ name, section, title, description, toc, blocks, synopsis = null, options = null, seeAlso = null }) {
+function page({
+  name, section, title, description, toc, blocks, synopsis = null, options = null, seeAlso = null,
+  sourcePackage = null, sourcePackageVersion = null,
+}) {
   const doc = { toc, blocks }
   const plainText = [name, description, JSON.stringify(doc)].join(' ')
   return {
@@ -53,8 +56,8 @@ function page({ name, section, title, description, toc, blocks, synopsis = null,
     title,
     description,
     sourcePath: `/e2e/${name}.${section}`,
-    sourcePackage: null,
-    sourcePackageVersion: null,
+    sourcePackage,
+    sourcePackageVersion,
     contentSha256: stableSha(doc),
     hasParseWarnings: false,
     doc,
@@ -151,6 +154,8 @@ function makePages(distro) {
     synopsis: ['tar [OPTION]... [FILE]...'],
     options: [{ flags: '-c, --create', argument: null, description: 'Create a new archive.', anchorId: tarOptAnchor }],
     seeAlso: [{ name: 'gzip', section: '1', resolvedPageId: gzip.externalId }, { name: 'cpio', section: '1', resolvedPageId: null }],
+    sourcePackage: 'tar',
+    sourcePackageVersion: '1.35+dfsg-3',
   })
   tar.links.push({ toExternalId: gzip.externalId, toName: 'gzip', toSection: '1', linkType: 'see_also' })
   // The SEE ALSO paragraph links gzip(1) again, as ingestion records it.

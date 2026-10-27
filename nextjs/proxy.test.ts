@@ -22,6 +22,12 @@ it('keeps production CSP self-only for analytics and issues a fresh nonce per re
   expect(first.headers.get('x-content-type-options')).toBe('nosniff')
 })
 
+it.each(['true', 'false'])('forwards the request path, not a client-sent one, with CSP_ENABLED=%s', (enabled) => {
+  vi.stubEnv('CSP_ENABLED', enabled)
+  const request = new NextRequest('https://betterman.sh/man/gizp?distro=macos', { headers: { 'x-bm-path': '/man/tar/1' } })
+  expect(proxy(request).headers.get('x-middleware-request-x-bm-path')).toBe('/man/gizp?distro=macos')
+})
+
 it.each(['/api', '/api/v1/info', '/api/v1/man/tar/1', '/assets', '/assets/site.js', '/assets/entry'])('skips API and asset routes: %s', (url) => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false)
 })

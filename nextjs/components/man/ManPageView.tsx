@@ -94,6 +94,7 @@ export function ManPageView({
   variants,
   servedDistro,
   relatedItems,
+  reportHref,
 }: {
   page: ManPage
   content: ManPageContent
@@ -101,6 +102,8 @@ export function ManPageView({
   /** The distro the server rendered, which differs from the preference after a fallback. */
   servedDistro: Distro
   relatedItems: SectionPage[]
+  /** A prefilled GitHub issue for this page, built on the server with the public origin. */
+  reportHref: string
 }) {
   const toc = useToc()
   const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
@@ -393,6 +396,7 @@ export function ManPageView({
           />
 
           <ManPageFooterSections
+            reportHref={reportHref}
             urlDistro={distro.urlDistro}
             seeAlso={content.seeAlso}
             relatedItems={relatedItems}

@@ -9,11 +9,13 @@ import { ManSectionLabel } from './RunningHead'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
 
 export function ManPageFooterSections({
+  reportHref,
   urlDistro,
   seeAlso,
   relatedItems,
   hasParseWarnings = false,
 }: {
+  reportHref: string
   urlDistro: Distro | null
   seeAlso?: ManPageContent['seeAlso']
   relatedItems: SectionPage[]
@@ -82,11 +84,20 @@ export function ManPageFooterSections({
         </aside>
       ) : null}
 
-      {hasParseWarnings ? (
-        <p className="mt-10 border-t border-edge pt-4 font-mono text-xs text-faint">
-          mandoc reported formatting warnings for this page. Some structure may be lost.
+      <div className="mt-10 space-y-2 border-t border-edge pt-4 font-mono text-xs text-faint">
+        {hasParseWarnings ? <p>mandoc reported formatting warnings for this page. Some structure may be lost.</p> : null}
+        <p>
+          <a
+            href={reportHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted underline decoration-edge-strong underline-offset-4 transition-colors hover:text-fg hover:decoration-accent"
+          >
+            Report a problem
+          </a>{' '}
+          with this page on GitHub.
         </p>
-      ) : null}
+      </div>
     </>
   )
 }
