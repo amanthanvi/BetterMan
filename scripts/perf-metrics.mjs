@@ -46,7 +46,6 @@ export function installVitalObservers() {
   new PerformanceObserver(list => {
     for (const entry of list.getEntries()) if (entry.name === 'first-contentful-paint') {
       window.__perf.fcp = entry.startTime
-      window.__perf.shellTimeAtFcp = window.$RT ?? null
     }
   }).observe({ type: 'paint', buffered: true })
   new PerformanceObserver(list => {
@@ -70,6 +69,11 @@ export function installVitalObservers() {
       window.__perf.cls = Math.max(window.__perf.cls, score)
     }
   }).observe({ type: 'layout-shift', buffered: true })
+}
+
+export function assertNoManStreaming(html) {
+  assert.doesNotMatch(html, /\$RC|\$RT|\bid=["']B:|<!--\$(?:\?|~)-->/,
+    'Man page must ship visible document HTML without pending Suspense boundaries')
 }
 
 export function compareBudgets(actual, budgets) {

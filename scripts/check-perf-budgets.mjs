@@ -11,7 +11,7 @@ import { createHash, createHmac } from 'node:crypto'
 import { createServer as createViteServer } from 'vite'
 import { convexToJson, jsonToConvex } from 'convex/values'
 import { makeFunctionReference } from 'convex/server'
-import { checkQueryShape, compareBudgets, installVitalObservers, median, recordBaseline, recordSyscall } from './perf-metrics.mjs'
+import { assertNoManStreaming, checkQueryShape, compareBudgets, installVitalObservers, median, recordBaseline, recordSyscall } from './perf-metrics.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const require = createRequire(resolve(root, 'nextjs/package.json'))
@@ -57,6 +57,7 @@ Object.assign(env, {
   NEXT_PUBLIC_PLAUSIBLE_DOMAIN: '', NEXT_PUBLIC_SENTRY_DSN: '', SENTRY_DSN: '',
 })
 let metrics = { calls: 0, documents: 0, storageReads: 0 }
+let delayManFixture = false
 let backendErrors = 0
 let next, browser, backend, vite
 const previousRateLimitKey = process.env.RATE_LIMIT_TAG_KEY
@@ -210,6 +211,8 @@ try {
       for await (const chunk of req) chunks.push(chunk)
       const { path, args, format } = JSON.parse(Buffer.concat(chunks).toString())
       assert.equal(format, 'convex_encoded_json')
+      // Force any future loading/Suspense fallback to flush during the cold HTML guard.
+      if (delayManFixture) await sleep(150)
       const value = await fixture[method](makeFunctionReference(path), jsonToConvex(args[0]))
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ status: 'success', value: convexToJson(value), logLines: [] }))
@@ -238,8 +241,11 @@ try {
     await ready(baseUrl)
     fixture = await createFixture(() => metrics.calls++)
     metrics = { calls: 0, documents: 0, storageReads: 0 }
+    delayManFixture = name === 'man'
     const pageView = await sample(`${baseUrl}${path}`, name, { cost: true })
+    delayManFixture = false
     const { html, costs } = pageView
+    if (name === 'man') assertNoManStreaming(html)
     assert.ok(html.includes(name === 'man' ? 'GNU Bourne-Again SHell' : name === 'home' ? 'Unix manual pages' : 'tar01'), `${name} fixture was not rendered`)
     assert.ok(!html.includes('NEXT_HTTP_ERROR_FALLBACK') && !html.includes('"digest"'), `${name} streamed an error`)
     assert.ok(costs.calls > 0 && costs.documents > 0, `${name} must exercise cold Convex reads`)

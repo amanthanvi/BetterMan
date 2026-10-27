@@ -33,9 +33,14 @@ these extra batches, so its runtime is unchanged.
 
 Samples include LCP candidates (element, text, computed font, size and time),
 layout-shift source nodes and rectangles, font resource/completion timing and
-TTFB. `shellTimeAtFcp` is a diagnostic snapshot of React's `$RT` shell timer,
-not an input to any budget. Stress samples live in `details.man.stress` in the
-same artifact. They do not alter byte/read baselines or ordinary lab samples.
+TTFB. Stress samples live in `details.man.stress` in the same artifact. They
+do not alter byte/read baselines or ordinary lab samples.
+
+The cold man-page HTML check delays fixture responses by 150 ms to force any
+future `loading.tsx` or pending Suspense fallback to flush. It rejects `$RC`,
+`$RT`, pending-boundary comments and `B:` templates even if the final document
+is also present. The delay applies only to this initial cost/HTML navigation;
+lab samples retain their normal warm-data conditions.
 
 The October 2026 bimodality came from the whole-document Suspense boundary:
 when the shell painted first, React delayed its completed boundary reveal by
