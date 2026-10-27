@@ -3162,30 +3162,29 @@
     "type": "definition_list"
    },
    {
-    "inlines": [
+    "items": [
      {
-      "text": "--",
-      "type": "text"
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Do not interpret any more arguments as options.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "text": "--",
+        "type": "text"
+       }
+      ]
      }
     ],
-    "type": "paragraph"
-   },
-   {
-    "items": [
-     [
-      {
-       "inlines": [
-        {
-         "text": "Do not interpret any more arguments as options.",
-         "type": "text"
-        }
-       ],
-       "type": "paragraph"
-      }
-     ]
-    ],
-    "ordered": false,
-    "type": "list"
+    "type": "definition_list"
    },
    {
     "inlines": [
@@ -5638,6 +5637,12 @@
    "argument": null,
    "description": "GPG-sign commits. The keyid argument is optional and defaults to the committer identity; if specified, it must be stuck to the option without a space. --no-gpg-sign is useful to countermand both commit.gpgSign configuration variable, and earlier --gpg-sign.",
    "flags": "-S[<keyid>], --gpg-sign[=<keyid>], --no-gpg-sign"
+  },
+  {
+   "anchorId": "def",
+   "argument": null,
+   "description": "Do not interpret any more arguments as options.",
+   "flags": "--"
   }
  ],
  "seeAlso": [

@@ -66,6 +66,10 @@ structure without a Generator comment, rejects prose/examples and nested argumen
 values, and defers new anchors so existing IDs keep their names. The mount, su,
 systemctl, and lsblk excerpt fixtures cover these layouts. Literal bullet prefixes
 inside indented blocks are removed because those blocks already render a list marker.
+Reference-only definition bodies are cross-reference indexes, not option descriptions.
+The generated reference-index and option-forms fixtures cover that exclusion, raw
+enum/optional arguments, bare separators, and config entries paired with CLI aliases;
+only the CLI spelling is indexed for mixed terms.
 
 The curated command-page check runs after parsing and alias resolution, before any
 release upload. Arch reinstalls requested packages to restore man pages omitted

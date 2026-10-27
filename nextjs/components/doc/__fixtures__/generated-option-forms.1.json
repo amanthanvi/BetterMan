@@ -1,0 +1,799 @@
+{
+ "description": "generated option spelling regressions",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "forms - generated option spelling regressions",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Turn bold mode on or off.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-bold-on-off",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--bold",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": " on|off",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Set the background color.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-background-8-color-default",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--background",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": " ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "8-color",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": "|default",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Set blanking behavior.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-blank-0-60-force-poke",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--blank",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[=0-60|force|poke]",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Enable split artifacts.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-split-bool",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--split=",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": " [BOOL]",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Do not interpret further arguments as options.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "text": "--",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Remove a module.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-r-remove",
+      "termInlines": [
+       {
+        "inlines": [],
+        "type": "strong"
+       },
+       {
+        "inlines": [
+         {
+          "text": "-r",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--remove",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "List IPv4 or IPv6 sockets.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-i-4-6-inet-4-6",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-i",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[4|6], ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--inet",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[=4|=6]",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Dump binary answer records.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-raw-payload-packet",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--raw",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "[=payload|packet]",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Select the database file.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-d-database-file",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-d",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": ", *--database ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "FILE",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Path to the kernel binary.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-linux-linux-linux-linux",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "Linux=",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "inlines": [
+         {
+          "text": "LINUX",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "--linux=",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "inlines": [
+         {
+          "text": "LINUX",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "Linux=",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "inlines": [
+       {
+        "text": "LINUX",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Pure configuration entry, not a CLI option.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "core-os-command-line-arguments",
+    "level": 2,
+    "text": "CORE OS COMMAND LINE ARGUMENTS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Boot compatibility aliases.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-b-rd-emergency-emergency",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-b",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "rd.emergency",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       },
+       {
+        "text": ", ",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": "emergency",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "keys",
+    "level": 2,
+    "text": "KEYS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "+",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": ", ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "-",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Interactive keys, not CLI flags.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "arguments",
+    "level": 2,
+    "text": "ARGUMENTS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "-1",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A process selector, not an option.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "constants",
+    "level": 2,
+    "text": "CONSTANTS",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "inlines": [
+       {
+        "text": "-E2BIG",
+        "type": "text"
+       }
+      ],
+      "type": "strong"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Error constant.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "special-slice-units",
+    "level": 2,
+    "text": "Special Slice Units",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "-.slice",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "Unit name, not a flag.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "core-os-command-line-arguments",
+    "level": 2,
+    "title": "CORE OS COMMAND LINE ARGUMENTS"
+   },
+   {
+    "id": "keys",
+    "level": 2,
+    "title": "KEYS"
+   },
+   {
+    "id": "arguments",
+    "level": 2,
+    "title": "ARGUMENTS"
+   },
+   {
+    "id": "constants",
+    "level": 2,
+    "title": "CONSTANTS"
+   },
+   {
+    "id": "special-slice-units",
+    "level": 2,
+    "title": "Special Slice Units"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "def-bold-on-off",
+   "argument": "on|off",
+   "description": "Turn bold mode on or off.",
+   "flags": "--bold"
+  },
+  {
+   "anchorId": "def-background-8-color-default",
+   "argument": "8-color|default",
+   "description": "Set the background color.",
+   "flags": "--background"
+  },
+  {
+   "anchorId": "def-blank-0-60-force-poke",
+   "argument": "[0-60|force|poke]",
+   "description": "Set blanking behavior.",
+   "flags": "--blank"
+  },
+  {
+   "anchorId": "def-split-bool",
+   "argument": "[BOOL]",
+   "description": "Enable split artifacts.",
+   "flags": "--split"
+  },
+  {
+   "anchorId": "def",
+   "argument": null,
+   "description": "Do not interpret further arguments as options.",
+   "flags": "--"
+  },
+  {
+   "anchorId": "def-r-remove",
+   "argument": null,
+   "description": "Remove a module.",
+   "flags": "-r, --remove"
+  },
+  {
+   "anchorId": "def-i-4-6-inet-4-6",
+   "argument": "[4|=6]",
+   "description": "List IPv4 or IPv6 sockets.",
+   "flags": "-i[4|6], --inet"
+  },
+  {
+   "anchorId": "def-raw-payload-packet",
+   "argument": "[payload|packet]",
+   "description": "Dump binary answer records.",
+   "flags": "--raw"
+  },
+  {
+   "anchorId": "def-d-database-file",
+   "argument": "FILE",
+   "description": "Select the database file.",
+   "flags": "-d, --database"
+  },
+  {
+   "anchorId": "def-linux-linux-linux-linux",
+   "argument": "LINUX",
+   "description": "Path to the kernel binary.",
+   "flags": "--linux"
+  },
+  {
+   "anchorId": "def-b-rd-emergency-emergency",
+   "argument": null,
+   "description": "Boot compatibility aliases.",
+   "flags": "-b, rd.emergency, emergency"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

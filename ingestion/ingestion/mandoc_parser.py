@@ -47,6 +47,11 @@ _option_term_re = re.compile(
     r"^\s*(?![\[(][+-]?\d+\s*,)[\[(]?"
     r"(?:--?(?:<[^<>\s]+>|<(?=[\s,|]|$)|[^-\s,|\])<])|\+[^+\s,|\])(<])"
 )
+_option_argument_syntax_re = re.compile(
+    r"(?:[\s,;.|/()[\]=:\-]+|_[\w-]+_|/[\w./-]*|"
+    r"\[[\w=|.+/-]+\]|[\w-]+(?:\|[\w-]+)+|(?:\|[\w-]+)+|\d+-\d+|\*--[\w-]+)*"
+)
+
 # mdoc semantic classes that mandoc renders as bare <code>/<var>/<span>.
 _MDOC_CODE_CLASSES = {"Pa", "Fl", "Cm", "Nm", "Ev", "Ic", "Li", "Dv", "Fn", "Fd", "In", "Cd"}
 _MDOC_EMPHASIS_CLASSES = {"Ar", "Va", "Fa", "Ft", "Vt", "Em"}
@@ -73,12 +78,13 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
     converted_terms: dict[int, bool] = {}
     deferred_ids: list[tuple[DefinitionListItem, str, bool]] = []
     bare_option_ids: set[str] = set()
+    see_also_sections: dict[int, bool] = {}
     # Generated manuals use .PP + .RS instead of .TP for flag definitions.
     docbook = any(
         re.search(r"^\s*Generator:\s*DocBook\b", comment, re.MULTILINE)
         for comment in soup.find_all(string=lambda node: isinstance(node, Comment))
     )
-    for paragraph in manual_text.select("p.Pp"):
+    for paragraph in manual_text.find_all("p", class_="Pp"):
         legacy_term = bool(docbook and _option_term_re.search(_compact_text(paragraph)))
         definition = paragraph.find_next_sibling()
         if (
@@ -175,7 +181,15 @@ def parse_mandoc_html(html: str) -> ParsedManPage:
             text = re.sub(r"\s+", " ", str(node))
             if not text:
                 return []
-            if _in_see_also(node):
+            section = next((parent for parent in node.parents if parent.name == "section"), None)
+            if section is not None:
+                section_id = id(section)
+                if section_id not in see_also_sections:
+                    see_also_sections[section_id] = _in_see_also(node)
+                in_see_also = see_also_sections[section_id]
+            else:
+                in_see_also = False
+            if in_see_also:
                 return _link_bare_xrefs(text)
             return [InlineText(text=text)]
 
@@ -635,7 +649,18 @@ def _is_structural_option_term(paragraph: Tag) -> bool:
     # Only section-level terms qualify; indented values/examples belong to their option.
     if paragraph.parent.name != "section":
         return False
-    if re.search(r"^\s*[\[(].*[\])]\s+\S", paragraph.get_text("")):
+    formatted = next(
+        (tag for tag in paragraph.find_all(["b", "code"]) if tag.get_text(strip=True)), None
+    )
+    if formatted is None:
+        formatted = next(
+            (tag for tag in paragraph.find_all(["i", "var"]) if tag.get_text(strip=True)), None
+        )
+    flag = normalize_ws(formatted.get_text("") if formatted else paragraph.get_text(""))
+    if not (_bare_option_prefix_re.search(flag) or _option_term_re.search(flag)):
+        return False
+    term = normalize_ws(paragraph.get_text(""))
+    if re.search(r"^[\[(].*[\])]\s+\S", term):
         return False
     headings = [
         section.find(re.compile(r"^h[1-6]$"), recursive=False)
@@ -651,21 +676,21 @@ def _is_structural_option_term(paragraph: Tag) -> bool:
     option_context = any(
         re.search(r"\b(?:options?|commands?)\b", title, re.IGNORECASE) for title in titles
     )
-    formatted = paragraph.find(["b", "code"])
     if formatted is None:
+        return option_context and term in {"-", "--", "+"}
+    if formatted.name in {"i", "var"} and not option_context:
         return False
-    flag = normalize_ws(formatted.get_text(""))
-    if not (_bare_option_prefix_re.search(flag) or _option_term_re.search(flag)):
-        return False
-    _flags, argument = _split_option_argument(normalize_ws(paragraph.get_text("")))
+    _flags, argument = _split_option_argument(term)
     if not option_context and argument and len(argument.split()) > 1:
         return False
     for child in paragraph.children:
         if isinstance(child, Comment):
             continue
         if isinstance(child, NavigableString):
-            if re.fullmatch(r"(?:[\s,;.|/()[\]=:\-]+|_[\w-]+_|/[\w./-]*)*", str(child)) is None:
+            if _option_argument_syntax_re.fullmatch(str(child)) is None:
                 return False
+        elif child.name == "span" and set(child.get("class") or []) == {"Li"}:
+            continue
         elif child.name not in {"b", "i", "code", "var"}:
             return False
         elif child.name in {"b", "code"}:
@@ -897,6 +922,7 @@ def _paragraph_lines(tag: Tag) -> str:
 _option_split_re = re.compile(
     r"^(?P<flags>.*(?:^|[\s,])(?:--?|\+)[^\s=\[<,]+)(?P<arg>(?:=|\[=|\s+)[^\s,-][^,]*)?$"
 )
+_reference_list_re = re.compile(r"(?:[A-Za-z0-9_][A-Za-z0-9_.+@:-]*\([1-9][a-z0-9]*\)[\s,;.]*)+")
 
 
 def _split_option_argument(flags: str) -> tuple[str, str | None]:
@@ -927,8 +953,18 @@ def _extract_options_from_doc(doc: DocumentModel, bare_option_ids: set[str]) -> 
         for item in block.items:
             flags_raw = normalize_ws(_inlines_to_text(item.termInlines))
             desc = normalize_ws(_blocks_to_text(item.definitionBlocks))
-            if not flags_raw or not desc:
+            if not flags_raw or not desc or _reference_list_re.fullmatch(desc):
                 continue
+            # Some generated terms pair a config assignment with its CLI spelling.
+            aliases = flags_raw.split(", ")
+            while len(aliases) > 1 and re.fullmatch(r"[A-Za-z_]\w*=\S+", aliases[0]):
+                aliases.pop(0)
+            if len(aliases) < len(flags_raw.split(", ")) and all(
+                _option_term_re.search(alias) for alias in aliases
+            ):
+                flags_raw = ", ".join(aliases)
+            flags_raw = re.sub(r",\s*\*(?=--[A-Za-z])", ", ", flags_raw)
+            flags_raw = re.sub(r"(?<=[\w-])=\s+(?=\[)", "=", flags_raw)
             bare_option = item.id in bare_option_ids
             if bare_option and under_definition:
                 continue

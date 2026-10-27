@@ -41,6 +41,35 @@ def test_new_bare_option_cannot_rename_an_existing_docbook_anchor() -> None:
     ]
 
 
+def test_generated_terms_keep_empty_formatting_and_literal_argument_fragments() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><section><h1>OPTIONS</h1>
+      <p class="Pp"><b></b><b>-r</b>, <b>--remove</b></p>
+      <div class="Bd-indent">Remove a module.</div>
+      <p class="Pp"><b>-l</b>, <b>--list</b>
+      [<i>number</i>|<span class="Li">0x</span><i>sigmask</i>]</p>
+      <div class="Bd-indent">List signal names.</div></section></div>""")
+    assert [(o.flags, o.argument) for o in parsed.options or []] == [
+        ("-r, --remove", None),
+        ("-l, --list", "[number|0xsigmask]"),
+    ]
+
+
+def test_see_also_classification_uses_nearest_section_and_stays_per_parse() -> None:
+    html = """<div class="manual-text"><section><h1>SEE ALSO</h1>
+      <p>foo(1), bar(8).</p><section><h2>DETAILS</h2><p>plain(1).</p></section>
+      <p>baz(5).</p></section><section><h1>DESCRIPTION</h1><p>text(1).</p>
+      </section></div>"""
+    for _ in range(2):
+        parsed = parse_mandoc_html(html)
+        blocks = parsed.doc.blocks
+        assert blocks[1].inlines[0].href == "/man/foo/1"
+        assert blocks[3].inlines[0].type == "text"
+        assert blocks[4].inlines[0].href == "/man/baz/5"
+        assert blocks[-1].inlines[0].type == "text"
+        other = parse_mandoc_html('<div class="manual-text"><p>foo(1).</p></div>')
+        assert other.doc.blocks[0].inlines[0].type == "text"
+
+
 def test_definition_keeps_inline_runs_around_blocks_without_duplicating_text() -> None:
     parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1><dl>
       <dt id="file"><b>-f</b> ARCHIVE</dt><dd><!-- not visible -->Use archive
