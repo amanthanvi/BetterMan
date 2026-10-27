@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -56,14 +57,14 @@ def selection():
     sample = dispatch and os.environ["BETTERMAN_INGEST_SAMPLE"] == "true"
     distros = []
     if ingest:
-        for group, key in ((LINUX, "LINUX"), (BSD, "BSD")):
+        for group, key in ((BSD, "BSD"), (LINUX, "LINUX")):
             if not dispatch or os.environ[f"BETTERMAN_{key}_ENABLED"] == "true":
                 target = os.environ.get(f"BETTERMAN_{key}_DISTRO", "all")
                 if target != "all" and target not in group:
                     raise ValueError(f"Unsupported {key} distro target")
                 distros.extend(group if not dispatch or target == "all" else [target])
     elif promote and not sample:
-        distros = LINUX + BSD
+        distros = BSD + LINUX
     matrix = {
         "include": [
             {
@@ -141,13 +142,31 @@ def run(distro, stage, command):
     return code
 
 
+def request_json(request):
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            if not 500 <= error.code < 600 or attempt == 2:
+                raise
+            error.close()
+        except (OSError, http.client.HTTPException):
+            if attempt == 2:
+                raise
+        delay = 2 ** (attempt + 1)
+        print(f"[dataset] Transient request failure; retry {attempt + 2}/3 in {delay}s", flush=True)
+        time.sleep(delay)
+
+
 def promote(distro):
     record = load(distro)
-    if os.environ["BETTERMAN_INGEST_ENABLED"] == "true" and (
-        record["result"] != "success" or record.get("stagingVerified") is not True
-    ):
+    _, ingest, enabled = selection()
+    if not enabled:
+        raise ValueError("Refusing to promote when promotion is disabled or this is a sample")
+    if ingest and (record["result"] != "success" or record.get("stagingVerified") is not True):
         raise ValueError("Refusing to promote without this run's completed staging activation")
-    record.update(stage="promote", result="pending", error="")
+    record.update(stage="read previous prod", result="pending", error="")
     save(distro, record)
     payload = {
         "fromStage": "staging",
@@ -165,8 +184,26 @@ def promote(distro):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            result = json.load(response)
+        info = request_json(
+            urllib.request.Request(
+                f"{os.environ['CONVEX_URL'].rstrip('/')}/api/query",
+                data=json.dumps(
+                    {
+                        "path": "queries:getInfo",
+                        "args": [{"distro": distro}],
+                        "format": "convex_encoded_json",
+                    }
+                ).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+        )
+        previous_id = info["value"]["datasetReleaseId"]
+        if info["status"] != "success" or not isinstance(previous_id, str) or not previous_id:
+            raise ValueError("Missing valid previous production release ID")
+        record.update(previousProdReleaseId=previous_id, stage="promote")
+        save(distro, record)
+        result = request_json(request)
         promoted = result["promoted"]
         if (
             len(promoted) != 1
@@ -258,11 +295,16 @@ def summary():
     table = [
         "## Dataset results",
         "",
-        "| Distro | Stage reached | Result | Error excerpt |",
-        "| --- | --- | --- | --- |",
+        "| Distro | Stage reached | Result | Previous prod release | Error excerpt |",
+        "| --- | --- | --- | --- | --- |",
     ]
     table.extend(
-        "| " + " | ".join(cell(row[key]) for key in ("distro", "stage", "result", "error")) + " |"
+        "| "
+        + " | ".join(
+            cell(row.get(key, "not recorded"))
+            for key in ("distro", "stage", "result", "previousProdReleaseId", "error")
+        )
+        + " |"
         for row in rows
     )
     if os.environ["BETTERMAN_MATRIX_RESULT"] != "success":
@@ -276,6 +318,7 @@ def summary():
         [
             "",
             "Failed ingests retain their previous production pointer. Production smoke checks run after promotion. See each distro job for full logs.",
+            "Promote-stage failures may already have changed prod (for example, a lost response after commit). Recover with a promote-only dispatch, or use the previous prod release ID above and the [one-command manual rollback](https://github.com/amanthanvi/BetterMan/blob/main/docs/runbooks/bad-ingestion-release.md#manual-rollback-command). Rollback is never automatic.",
         ]
     )
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:

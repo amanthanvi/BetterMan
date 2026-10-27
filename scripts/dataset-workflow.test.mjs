@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 
@@ -17,7 +18,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 spec = importlib.util.spec_from_file_location('workflow', 'scripts/dataset-workflow.py')
 w = importlib.util.module_from_spec(spec)
@@ -37,10 +38,13 @@ class WorkflowTest(unittest.TestCase):
             'BETTERMAN_BSD_ENABLED': 'true', 'BETTERMAN_BSD_DISTRO': 'all',
             'BETTERMAN_INGEST_SAMPLE': 'false', 'BETTERMAN_MATRIX_RESULT': 'success',
             'CONVEX_HTTP_URL': 'https://never-contact.invalid',
+            'CONVEX_URL': 'https://public-never-contact.invalid',
             'CONVEX_INGEST_SECRET': 'test-secret-do-not-print',
         })
         self.env.start()
         self.addCleanup(self.env.stop)
+        self.sleep = patch.object(w.time, 'sleep').start()
+        self.addCleanup(patch.stopall)
         # Every test fails immediately if a real HTTP request escapes its mock.
         self.no_network = patch.object(w.urllib.request, 'urlopen', side_effect=AssertionError('Network forbidden'))
         self.no_network.start()
@@ -64,18 +68,31 @@ class WorkflowTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             return w.run(distro, 'ingest', [sys.executable, '-c', script])
 
+    def post_mock(self, handler):
+        def open_request(request, **kwargs):
+            if request.full_url.endswith('/api/query'):
+                payload = json.loads(request.data)
+                self.assertEqual(payload['path'], 'queries:getInfo')
+                self.assertEqual(payload['format'], 'convex_encoded_json')
+                self.assertNotIn('Authorization', request.headers)
+                previous = 'previous-' + payload['args'][0]['distro']
+                return io.BytesIO(json.dumps({'status': 'success', 'value': {'datasetReleaseId': previous}}).encode())
+            return handler(request, **kwargs)
+        return patch.object(w.urllib.request, 'urlopen', side_effect=open_request)
+
     def promote(self, distro, release=None):
         response = io.BytesIO(json.dumps({'promoted': [{'distro': distro, 'datasetReleaseId': release or 'release-' + distro}]}).encode())
-        with patch.object(w.urllib.request, 'urlopen', return_value=response) as post:
+        with self.post_mock(lambda *args, **kwargs: response) as post:
             result = w.promote(distro)
         self.assertEqual(json.loads(post.call_args.args[0].data)['distros'], [distro])
+        self.assertEqual(w.load(distro)['previousProdReleaseId'], 'previous-' + distro)
         return result
 
     def test_selection(self):
         values, rows = self.plan(BETTERMAN_WORKFLOW_EVENT='schedule')
-        self.assertEqual([r['distro'] for r in rows], w.LINUX + w.BSD)
+        self.assertEqual([r['distro'] for r in rows], w.BSD + w.LINUX)
         self.assertEqual(values['promote'], 'true')
-        self.assertEqual([(r['runner'], r['timeout']) for r in rows][-2:], [('ubuntu-latest', 90), ('macos-latest', 60)])
+        self.assertEqual([(r['runner'], r['timeout']) for r in rows][:2], [('ubuntu-latest', 90), ('macos-latest', 60)])
         _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT='workflow_dispatch', BETTERMAN_LINUX_DISTRO='arch', BETTERMAN_BSD_ENABLED='false')
         self.assertEqual([r['distro'] for r in rows], ['arch'])
         _, rows = self.plan(BETTERMAN_LINUX_ENABLED='false', BETTERMAN_BSD_ENABLED='true', BETTERMAN_BSD_DISTRO='freebsd')
@@ -98,9 +115,6 @@ class WorkflowTest(unittest.TestCase):
                             w.promote(distro)
                     else:
                         self.assertEqual(code, 0)
-                        # Dependency setup after activation must retain eligibility.
-                        with contextlib.redirect_stdout(io.StringIO()):
-                            self.assertEqual(w.run(distro, 'verification-setup', [sys.executable, '-c', 'pass']), 0)
                         self.assertEqual(self.promote(distro), 0)
                 os.environ['BETTERMAN_MATRIX'] = json.dumps({'include': [{'distro': d} for d in w.LINUX]})
                 self.assertEqual(w.summary(), 1)
@@ -142,7 +156,9 @@ class WorkflowTest(unittest.TestCase):
 
     def test_promote_only_and_server_failure_do_not_block_siblings(self):
         os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
-        with patch.object(w.urllib.request, 'urlopen', side_effect=w.urllib.error.HTTPError('unused', 409, 'Conflict', {}, io.BytesIO(b'RELEASE_NOT_SEALED'))):
+        def rejected(*args, **kwargs):
+            raise w.urllib.error.HTTPError('unused', 409, 'Conflict', {}, io.BytesIO(b'RELEASE_NOT_SEALED'))
+        with self.post_mock(rejected):
             self.assertEqual(w.promote('debian'), 1)
         self.assertIn('RELEASE_NOT_SEALED', w.load('debian')['error'])
         self.assertEqual(self.promote('arch'), 0)
@@ -169,37 +185,126 @@ class WorkflowTest(unittest.TestCase):
             class BrokenRead(io.BytesIO):
                 def read(self, *args):
                     raise error
-            with patch.object(w.urllib.request, 'urlopen', return_value=BrokenRead()):
+            with self.post_mock(lambda *args, **kwargs: BrokenRead()):
                 self.assertEqual(w.promote('debian'), 1)
             self.assertTrue(w.load('debian')['error'])
             http_error = w.urllib.error.HTTPError('unused', 409, 'Conflict', {}, BrokenRead())
-            with patch.object(w.urllib.request, 'urlopen', side_effect=http_error):
+            def rejected(*args, **kwargs):
+                raise http_error
+            with self.post_mock(rejected):
                 self.assertEqual(w.promote('debian'), 1)
             self.assertIn('409', w.load('debian')['error'])
+
+    def test_scheduled_default_env_cannot_bypass_failed_staging_evidence(self):
+        os.environ.update(BETTERMAN_WORKFLOW_EVENT='schedule', BETTERMAN_INGEST_ENABLED='false')
+        self.assertNotEqual(self.ingest('debian', code=2), 0)
+        with self.assertRaisesRegex(ValueError, 'Refusing'):
+            w.promote('debian')
+
+    def test_promote_retries_only_transient_failures_and_snapshots_before_writing(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        requests = []
+        def transient(request, **kwargs):
+            requests.append(request)
+            self.assertEqual(w.load('arch')['previousProdReleaseId'], 'previous-arch')
+            if len(requests) == 1:
+                raise w.urllib.error.URLError('network unavailable')
+            if len(requests) == 2:
+                raise w.urllib.error.HTTPError('unused', 503, 'Unavailable', {}, io.BytesIO(b'transient'))
+            return io.BytesIO(json.dumps({'promoted': [{'distro': 'arch', 'datasetReleaseId': 'release-arch'}]}).encode())
+        with self.post_mock(transient):
+            self.assertEqual(w.promote('arch'), 0)
+        self.assertEqual(len(requests), 3)
+        self.assertTrue(all(request is requests[0] for request in requests))
+        self.assertEqual(self.sleep.call_args_list, [call(2), call(4)])
+        for status in (400, 409, 429):
+            self.sleep.reset_mock()
+            def rejected(*args, **kwargs):
+                raise w.urllib.error.HTTPError('unused', status, 'Rejected', {}, io.BytesIO(b'rejected'))
+            with self.post_mock(rejected) as http:
+                self.assertEqual(w.promote('arch'), 1)
+            self.assertEqual(http.call_count, 2) # One public snapshot, one promotion.
+            self.sleep.assert_not_called()
+        self.sleep.reset_mock()
+        def unavailable(*args, **kwargs):
+            raise w.urllib.error.HTTPError('unused', 503, 'Unavailable', {}, io.BytesIO(b'test-secret-do-not-print'))
+        with self.post_mock(unavailable) as http:
+            self.assertEqual(w.promote('arch'), 1)
+        self.assertEqual(http.call_count, 4) # Snapshot plus exactly three attempts.
+        self.assertEqual(self.sleep.call_args_list, [call(2), call(4)])
+        self.assertNotIn('test-secret-do-not-print', w.load('arch')['error'])
+        os.environ['BETTERMAN_MATRIX'] = json.dumps({'include': [{'distro': 'arch'}]})
+        self.assertEqual(w.summary(), 1)
+        self.assertIn('previous-arch', Path('summary').read_text())
+        self.assertIn('may already have changed prod', Path('summary').read_text())
+
+    def test_previous_prod_read_failure_prevents_promotion(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        with patch.object(w.urllib.request, 'urlopen', return_value=io.BytesIO(b'{"status":"error"}')) as http:
+            self.assertEqual(w.promote('arch'), 1)
+        self.assertEqual(http.call_count, 1)
+        self.assertEqual(w.load('arch')['stage'], 'read previous prod')
 
 unittest.main(verbosity=2)
 `], { encoding: 'utf8' })
   assert.equal(result.status, 0, result.stderr + result.stdout)
 })
 
-test('monthly workflow keeps failure isolation, bounded runners and unconditional reporting', () => {
-  const workflow = readFileSync(new URL('../.github/workflows/update-docs.yml', import.meta.url), 'utf8')
-  assert.match(workflow, /fail-fast: false/)
-  assert.match(workflow, /max-parallel: 2/)
-  assert.match(workflow, /group: update-dataset\n  cancel-in-progress: false/)
-  assert.match(workflow, /name: Record distro result\n        if: \$\{\{ always\(\) \}\}/)
-  assert.match(workflow, /needs: \[preflight, plan, ingest\]\n    if: \$\{\{ always\(\)/)
-  assert.match(workflow, /BETTERMAN_EXPECTED_RELEASE_IDS: \$\{\{ steps.promote.outputs.release_ids \}\}/)
-  assert.match(workflow, /name: Select distros\n    runs-on:/)
-  assert.match(workflow, /needs: \[preflight, plan\]/)
-  assert.match(workflow, /needs.plan.result == 'failure'/)
+// Reuse the YAML parser already installed with Vercel's Python tooling.
+const fromVercel = createRequire(import.meta.resolve('vercel/package.json'))
+const fromPython = createRequire(fromVercel.resolve('@vercel/python'))
+const yaml = createRequire(fromPython.resolve('@vercel/python-analysis'))('js-yaml')
+const readWorkflow = () => yaml.load(readFileSync(new URL('../.github/workflows/update-docs.yml', import.meta.url), 'utf8'))
+
+function assertWorkflowWiring(workflow) {
+  const { plan, ingest, summary } = workflow.jobs
+  assert.equal(ingest.strategy['fail-fast'], false)
+  assert.equal(ingest.strategy['max-parallel'], 2)
+  assert.deepEqual(workflow.concurrency, { group: 'update-dataset', 'cancel-in-progress': false })
+  assert.equal(plan.needs, undefined)
+  assert.deepEqual(ingest.needs, ['preflight', 'plan'])
+  const steps = ingest.steps
+  const step = id => steps.find(value => value.id === id)
+  const index = id => steps.findIndex(value => value.id === id)
+  const promotion = "${{ needs.plan.outputs.promote == 'true' }}"
+  for (const id of ['promote', 'verify_prod']) assert.equal(step(id).if, promotion)
+  assert.equal(step('promote').env.BETTERMAN_INGEST_ENABLED, '${{ needs.plan.outputs.ingest }}')
+  assert.equal(step('promote').env.CONVEX_URL, '${{ vars.CONVEX_URL }}')
+  assert.equal(step('verify_prod').env.BETTERMAN_EXPECTED_RELEASE_IDS, '${{ steps.promote.outputs.release_ids }}')
+  assert.equal(step('freebsd_result').run.trim(), 'python3 scripts/dataset-workflow.py check freebsd')
+  assert.equal(step('freebsd_result').if, "${{ needs.plan.outputs.ingest == 'true' && matrix.distro == 'freebsd' }}")
+  assert.ok(index('freebsd_result') > index('freebsd') && index('freebsd_result') < index('promote'))
+  assert.ok(index('verification_dependencies') < index('staging') && index('verification_dependencies') < index('freebsd'))
+  assert.equal(step('verification_dependencies').if, promotion)
+  assert.match(step('verification_dependencies').run, /pnpm install --frozen-lockfile --ignore-scripts$/)
+  assert.equal(steps.find(value => value.name === 'Record distro result').if, '${{ always() }}')
+  assert.deepEqual(summary.needs, ['preflight', 'plan', 'ingest'])
+  assert.equal(summary.if, "${{ always() && (needs.plan.outputs.enabled == 'true' || needs.plan.result == 'failure' || needs.plan.result == 'cancelled') }}")
+  assert.equal(summary.steps.at(-1).if, '${{ always() }}')
+}
+
+test('parsed monthly workflow preserves success gates, recovery ordering and unconditional reporting', () => {
+  assertWorkflowWiring(readWorkflow())
+})
+
+test('workflow wiring tests reject unsafe promotion, FreeBSD and summary mutations', () => {
+  const mutations = [
+    workflow => { delete workflow.jobs.ingest.steps.find(step => step.id === 'promote').env.BETTERMAN_INGEST_ENABLED },
+    ...['promote', 'verify_prod'].map(id => workflow => { workflow.jobs.ingest.steps.find(step => step.id === id).if = '${{ always() }}' }),
+    workflow => { workflow.jobs.ingest.steps.find(step => step.id === 'freebsd_result').run = 'echo success' },
+    workflow => { workflow.jobs.summary.if = "${{ always() && needs.ingest.result == 'success' }}" },
+    workflow => { workflow.jobs.ingest.steps.push(workflow.jobs.ingest.steps.splice(workflow.jobs.ingest.steps.findIndex(step => step.id === 'verification_dependencies'), 1)[0]) },
+  ]
+  for (const mutate of mutations) {
+    const workflow = readWorkflow()
+    mutate(workflow)
+    assert.throws(() => assertWorkflowWiring(workflow))
+  }
 })
 
 test('FreeBSD VM script copies failure evidence back and host rejects it', () => {
-  const workflow = readFileSync(new URL('../.github/workflows/update-docs.yml', import.meta.url), 'utf8')
-  const vm = workflow.slice(workflow.indexOf('        uses: vmactions/freebsd-vm@'))
-  const script = vm.slice(vm.indexOf('          run: |\n') + '          run: |\n'.length, vm.indexOf('\n        env:'))
-    .split('\n').map(line => line.replace(/^ {12}/, '')).join('\n')
+  const vm = readWorkflow().jobs.ingest.steps.find(step => step.id === 'freebsd')
+  const script = vm.with.run
   const python = spawnSync('python3', ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf8' }).stdout.trim()
   assert.ok(python)
   const root = mkdtempSync(join(tmpdir(), 'bm419-vm-'))

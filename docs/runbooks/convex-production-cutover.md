@@ -72,11 +72,11 @@ pnpm ingest:run -- --distro freebsd
 pnpm ingest:run -- --distro macos
 ```
 
-Scheduled production imports should continue to use `.github/workflows/update-docs.yml`; it imports to `staging` and only promotes after explicit `promote=true`.
+Scheduled production imports should continue to use `.github/workflows/update-docs.yml`; scheduled runs import to `staging` and promote successful distros. Manual ingest dispatches require explicit `promote=true` to promote.
 
 ## Verify staging import
 
-Staging is intentionally absent from the anonymous Convex API. Before promotion, require successful ingest output for every selected distro, including its release ID, declared page/section/alias/license totals, parse-quality gates, and activation result. Activation verifies the manifest and hydration before publication. Then run the read-only stats query with deployment-admin credentials:
+Staging is intentionally absent from the anonymous Convex API. For each distro being promoted, require its successful ingest output, including its release ID, declared page/section/alias/license totals, parse-quality gates, and activation result. A failed sibling does not block that distro's promotion. Activation verifies the manifest and hydration before publication. Then run the read-only stats query with deployment-admin credentials:
 
 ```bash
 npx convex run maintenance:releaseStats '{"stage":"staging"}' --prod
@@ -87,6 +87,8 @@ It reports, per active staging release, the sampled page count, alias count, and
 ## Promote staging to prod
 
 Promotion copies manifest-verified, sealed, hydrated active release pointers from `staging` to `prod`; it does not re-import pages. A legacy pointer with no original alias declaration cannot pass by adopting the observed alias count. Recover original ingestion evidence and validate it explicitly, or complete a fresh staging import under a new release ID first.
+
+Before promotion, record each affected distro's current prod `datasetReleaseId` through public `getInfo` (exposed at `/api/v1/info?distro=…`). Keep these IDs for [manual rollback](bad-ingestion-release.md).
 
 ```bash
 python - <<'PY' > promote.json
@@ -114,6 +116,8 @@ Or use the workflow:
 gh workflow run update-dataset -f ingest=false -f promote=true
 ```
 
+Promote-only intentionally ignores distro selectors and attempts all active staging pointers, so inspect all of them before dispatching. If the promote stage fails after successful staging activation, use this promote-only dispatch rather than re-running the failed matrix leg. Re-running the leg re-ingests for 20–50 minutes and creates another release that may displace the previous month's rollback candidate under `keep_per_distro=1`. A lost response can report failure after prod changed; check public `getInfo` before retrying. Neither promotion failures nor later smoke-check failures automatically roll back prod.
+
 ## Verify prod and app runtime
 
 ```bash
@@ -135,4 +139,4 @@ curl -fsS https://betterman.sh/api/v1/man/tar/1
 
 ## Rollback
 
-If prod verification fails after promotion, restore a previous known-good release through `/ingest/activate` and, when restoring staging first, `/ingest/promote`. The selected release must still exist, have a verified manifest, be sealed, and have complete related metadata. Do not bypass these checks with direct pointer edits. Do not delete releases during incident response; leave old documents available for rollback. Once the incident is closed, remove superseded releases with the `prune-releases` workflow (see `docs/runbooks/multi-distro-ops.md`), which retains the newest verified inactive release per distro.
+If prod verification fails after promotion, follow [Bad ingestion release published](bad-ingestion-release.md) to manually activate the saved previous prod release directly on `prod`, preserving manifest, seal, and hydration checks. Do not delete releases during incident response; leave old documents available for rollback. Once the incident is closed, remove superseded releases with the `prune-releases` workflow (see `docs/runbooks/multi-distro-ops.md`), which retains the newest verified inactive release per distro.
