@@ -1,9 +1,14 @@
 import type { NextConfig } from 'next'
 import path from 'node:path'
 
+import { reservedPathSegments } from './lib/reservedPathSegments'
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, '..'),
+  env: {
+    BM_RESERVED_PATH_SEGMENTS: reservedPathSegments(__dirname).join('/'),
+  },
   async headers() {
     return [
       {

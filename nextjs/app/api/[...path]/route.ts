@@ -16,13 +16,19 @@ import {
   search,
   suggest,
   withDistroFallback,
+  type Suggestion,
 } from '@/lib/api'
-import { normalizeDistro, type Distro } from '@/lib/distro'
+import { normalizeDistro, withDistro, type Distro } from '@/lib/distro'
+import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
+import { isManName, manPath } from '@/lib/shortUrl'
 
 export const runtime = 'nodejs'
 const PUBLIC_CACHE_SECONDS = 60 * 60
 const SEARCH_CACHE_SECONDS = 5 * 60
+// Text that cannot be a man page name never has suggestions, in any release.
+const NO_SUGGESTIONS_CACHE_SECONDS = 24 * 60 * 60
+const OPENSEARCH_JSON = { headers: { 'Content-Type': 'application/x-suggestions+json; charset=utf-8' } }
 
 type ServerTimingMetric = {
   name: string
@@ -48,7 +54,7 @@ function attachServerTiming(response: Response, metrics: ServerTimingMetric[]): 
 
 function json(value: unknown, init?: ResponseInit): Response {
   const headers = new Headers(init?.headers)
-  headers.set('Content-Type', 'application/json; charset=utf-8')
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json; charset=utf-8')
   return new Response(JSON.stringify(value), { ...init, headers })
 }
 
@@ -71,6 +77,26 @@ function aliasRedirect(req: Request, distro: string, name: string, section: stri
     status: 308,
     headers: { Location: `${url.pathname}${url.search}`, 'Cache-Control': `public, max-age=${PUBLIC_CACHE_SECONDS}` },
   })
+}
+
+// OpenSearch suggestions: [query, completions, descriptions, URLs], one row per name.
+function openSearchSuggestions(req: NextRequest, query: string, suggestions: Suggestion[], distro: Distro): Response {
+  const origin = getPublicOrigin(req)
+  const byName = new Map<string, Suggestion[]>()
+  for (const suggestion of suggestions) {
+    const key = suggestion.name.toLowerCase()
+    byName.set(key, [...(byName.get(key) ?? []), suggestion])
+  }
+  const rows = [...byName.entries()].map(([name, pages]) => ({
+    name: pages[0].name,
+    description: pages[0].description,
+    url: `${origin}${withDistro(manPath(name, pages.length === 1 ? pages[0].section : null), distro)}`,
+  }))
+  return cachedJson(
+    [query, rows.map((row) => row.name), rows.map((row) => row.description), rows.map((row) => row.url)],
+    SEARCH_CACHE_SECONDS,
+    OPENSEARCH_JSON,
+  )
 }
 
 function apiError(status: number, code: string, message: string): Response {
@@ -232,17 +258,30 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
     }
 
     if (parts.length === 1 && parts[0] === 'suggest') {
-      const limited = await enforceRateLimit(req, 'search')
-      if (limited) return limited
+      // Input is settled before the rate limit, which is itself a Convex call.
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
-      const name = first(req.nextUrl.searchParams.get('name'))
+      // `q` is the spelling the OpenSearch descriptor uses. OpenSearch clients
+      // drop a response whose query is not their raw text, trailing space included.
+      const raw = req.nextUrl.searchParams.get('name') ?? req.nextUrl.searchParams.get('q') ?? ''
+      const name = raw.trim()
       if (!name || name.length > 200) return apiError(400, 'INVALID_NAME', 'Name is required')
+      const format = first(req.nextUrl.searchParams.get('format'))
+      if (format !== undefined && format !== 'opensearch') {
+        return apiError(422, 'INVALID_QUERY_PARAM', 'Invalid format')
+      }
+      if (!isManName(name)) {
+        const empty = format === 'opensearch' ? [raw, []] : { query: name.toLowerCase(), suggestions: [], distro }
+        return cachedJson(empty, NO_SUGGESTIONS_CACHE_SECONDS, format === 'opensearch' ? OPENSEARCH_JSON : undefined)
+      }
+      const limited = await enforceRateLimit(req, 'search')
+      if (limited) return limited
       // Like the man page, fall back to Debian without an active release, and say
       // so, so the caller does not label Debian rows as the requested distro.
       const { distro: resolved, data } = await withDistroFallback(distro, (activeDistro) =>
         suggest({ distro: activeDistro, name }),
       )
+      if (format === 'opensearch') return openSearchSuggestions(req, raw, data.suggestions, resolved)
       return cachedJson({ ...data, distro: resolved }, SEARCH_CACHE_SECONDS)
     }
 

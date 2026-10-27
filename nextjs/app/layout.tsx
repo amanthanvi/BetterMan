@@ -47,6 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           type="font/woff2"
           crossOrigin="anonymous"
         />
+        <link rel="search" type="application/opensearchdescription+xml" title="BetterMan" href="/opensearch.xml" />
       </head>
       <body
         data-bm-font-size={readingPrefs.fontSize}

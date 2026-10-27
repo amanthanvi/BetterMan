@@ -1,5 +1,5 @@
 import fc from 'fast-check'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import type * as Api from '@/lib/api'
 
@@ -60,6 +60,8 @@ beforeEach(() => {
   vi.stubEnv('RATE_LIMIT_TAG_KEY', 'route-test-key')
   convexMocks.mutation.mockResolvedValue({ allowed: true })
 })
+
+afterEach(() => vi.unstubAllEnvs())
 
 describe('public API timing and metadata', () => {
   it('serves metadata without loading full page content', async () => {
@@ -234,6 +236,112 @@ describe('suggest API', () => {
 
     expect(apiMocks.suggest.mock.calls.map(([opts]) => opts.distro)).toEqual(['freebsd', 'debian'])
     await expect(res.json()).resolves.toEqual({ query: 'ta', suggestions, distro: 'debian' })
+  })
+
+  it.each(['q=t', 'q=ta', 'name=t'])('answers a short prefix: %s', async (params) => {
+    apiMocks.suggest.mockResolvedValueOnce({ query: 't', suggestions })
+
+    const res = await GET(request(`/api/v1/suggest?${params}`), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(200)
+    expect(apiMocks.suggest).toHaveBeenCalledWith({ distro: 'debian', name: params.split('=')[1] })
+    await expect(res.json()).resolves.toEqual({ query: 't', suggestions, distro: 'debian' })
+  })
+
+  it.each(['', 'q=', 'q=%20', `q=${'a'.repeat(201)}`])('rejects a missing or oversized query: %s', async (params) => {
+    const res = await GET(request(`/api/v1/suggest?${params}`), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(400)
+    expect(apiMocks.suggest).not.toHaveBeenCalled()
+  })
+
+  it('answers in the OpenSearch suggestions format, one row per name', async () => {
+    vi.stubEnv('PUBLIC_BASE_URL', 'https://betterman.sh')
+    apiMocks.suggest.mockResolvedValueOnce({
+      query: 'ta',
+      suggestions: [
+        { name: 'tar', section: '1', description: 'an archiving utility' },
+        { name: 'tar', section: '5', description: 'format of tape archive files' },
+        { name: 'tail', section: '1', description: 'output the last part of files' },
+      ],
+    })
+
+    const res = await GET(request('/api/v1/suggest?q=Ta&format=opensearch&distro=ubuntu'), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/x-suggestions+json; charset=utf-8')
+    expect(res.headers.get('cache-control')).toContain('s-maxage=300')
+    await expect(res.json()).resolves.toEqual([
+      'Ta',
+      ['tar', 'tail'],
+      ['an archiving utility', 'output the last part of files'],
+      ['https://betterman.sh/man/tar?distro=ubuntu', 'https://betterman.sh/man/tail/1?distro=ubuntu'],
+    ])
+  })
+
+  it('keeps the rate limit for OpenSearch suggestions', async () => {
+    convexMocks.mutation.mockResolvedValueOnce({ allowed: false })
+
+    const res = await GET(request('/api/v1/suggest?q=ta&format=opensearch'), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(429)
+    expect(apiMocks.suggest).not.toHaveBeenCalled()
+  })
+
+  it('echoes the raw OpenSearch query, trailing space included, and looks up the trimmed name', async () => {
+    apiMocks.suggest.mockResolvedValueOnce({ query: 'tar', suggestions })
+
+    const res = await GET(request('/api/v1/suggest?q=tar%20&format=opensearch'), context(['v1', 'suggest']))
+
+    expect(apiMocks.suggest).toHaveBeenCalledWith({ distro: 'debian', name: 'tar' })
+    const body = (await res.json()) as unknown[]
+    expect(body[0]).toBe('tar ')
+  })
+
+  it.each([
+    ['/api/v1/suggest?q=ta&format=xml', 422],
+    ['/api/v1/suggest?q=ta&distro=plan9', 400],
+    ['/api/v1/suggest?q=', 400],
+    [`/api/v1/suggest?q=${'a'.repeat(201)}`, 400],
+  ])('rejects %s before the rate limit or a lookup', async (path, status) => {
+    const res = await GET(request(path), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(status)
+    expect(convexMocks.mutation).not.toHaveBeenCalled()
+    expect(apiMocks.suggest).not.toHaveBeenCalled()
+  })
+
+  it.each(['tar -x', 'how do i extract', 'a/b', '../etc', '-x', '<script>', '%2541'])(
+    'answers %j, which cannot be a name, with no suggestions and no Convex call',
+    async (q) => {
+      const params = new URLSearchParams({ q, format: 'opensearch' })
+      const res = await GET(request(`/api/v1/suggest?${params}`), context(['v1', 'suggest']))
+
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('application/x-suggestions+json; charset=utf-8')
+      expect(res.headers.get('cache-control')).toContain('s-maxage=86400')
+      await expect(res.json()).resolves.toEqual([q, []])
+      expect(convexMocks.mutation).not.toHaveBeenCalled()
+      expect(apiMocks.suggest).not.toHaveBeenCalled()
+    },
+  )
+
+  it('answers an implausible name in the JSON format the same way', async () => {
+    const res = await GET(request('/api/v1/suggest?name=Tar%20-x&distro=ubuntu'), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ query: 'tar -x', suggestions: [], distro: 'ubuntu' })
+    expect(convexMocks.mutation).not.toHaveBeenCalled()
+    expect(apiMocks.suggest).not.toHaveBeenCalled()
+  })
+
+  it('spends the rate limit before the lookup for a plausible name', async () => {
+    apiMocks.suggest.mockResolvedValueOnce({ query: 'ta', suggestions })
+
+    await GET(request('/api/v1/suggest?q=ta'), context(['v1', 'suggest']))
+
+    expect(convexMocks.mutation).toHaveBeenCalledOnce()
+    expect(convexMocks.mutation.mock.invocationCallOrder[0]).toBeLessThan(apiMocks.suggest.mock.invocationCallOrder[0])
   })
 
   it('does not fall back for an error that only carries the missing-release code', async () => {

@@ -31,7 +31,7 @@ test('navigation: a link into a man page dims while its payload is pending', asy
 
 test('navigation: a link to the home page shows its prefetched skeleton while the payload is pending', async ({ page }) => {
   const prefetched = page.waitForResponse((res) => new URL(res.url()).pathname === '/' && isPrefetch(res.request()))
-  await page.goto('/definitely-not-a-route')
+  await page.goto('/definitely/not/a-route')
   await prefetched
   // A still in-flight prefetch would complete the navigation without the skeleton.
   await page.waitForLoadState('networkidle')
