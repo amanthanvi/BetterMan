@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { api, internal } from "./_generated/api";
-import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, parseOptionQuery } from "./_optionFlags";
+import { flagTakesArgument, MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, parseOptionQuery } from "./_optionFlags";
 import { nameEditDistance } from "./_searchTypos";
 import schema from "./schema";
 
@@ -116,6 +116,80 @@ function search(t: Harness, q: string, section: string | null = null) {
 }
 
 describe("option search", () => {
+  it("uses golden argument metadata and stops before attached argument letters", async () => {
+    // #414 supplies the missing operation/common options; keep the real parser
+    // shape and existing golden -f/-z rows until that fixture lands.
+    const options = [...tarGolden.options,
+      { flags: "-x, --extract", anchorId: "extract", argument: null },
+      { flags: "-c, --create", anchorId: "create", argument: null },
+      { flags: "-C, --directory", anchorId: "directory", argument: "DIR" },
+      { flags: "-o", anchorId: "o", argument: null },
+    ];
+    const t = await seeded([page("tar", options), page("mysql", [
+      { flags: "-u, --user=USER", anchorId: "user" },
+      ...["r", "o", "t"].map((letter) => ({ flags: `-${letter}`, anchorId: letter })),
+    ])], 66);
+    expect((await search(t, "tar -xzf")).results[0]).toMatchObject({
+      anchorId: "extract", highlights: ["-x, --extract", "-z, --gzip, --gunzip, --ungzip", "-f, --file"],
+    });
+    expect((await search(t, "tar -Cfoo")).results[0]).toMatchObject({ anchorId: "directory", highlights: ["-C, --directory"] });
+    expect((await search(t, "tar -gf")).results[0]).toMatchObject({ anchorId: "g", highlights: ["-g, --listed-incremental"] });
+    expect((await search(t, "mysql -uroot")).results[0]).toMatchObject({ anchorId: "user", highlights: ["-u, --user=USER"] });
+    const rows = await t.run(async (ctx) => {
+      const release = await ctx.db.query("datasetReleases").first();
+      return await Promise.all(["-f", "-C", "-u"].map((flag) => ctx.db.query("manPageOptionFlags")
+        .withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", release!._id).eq("flag", flag)).first()));
+    });
+    expect(rows[0]).toMatchObject({ takesArgument: true });
+    expect(rows[1]).toMatchObject({ takesArgument: true });
+    // Older rows have only flags text; argument syntax still stops the cluster.
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("manPageOptionFlags").withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q
+        .eq("releaseId", rows[0]!.releaseId).eq("flag", "-u")).first();
+      await ctx.db.patch(row!._id, { takesArgument: undefined });
+    });
+    expect((await search(t, "mysql -uroot")).results[0].highlights).toEqual(["-u, --user=USER"]);
+    for (const flags of ["-u USER", "-n N", "-u <user>", "-u, --user=USER", "-ePATTERNS"]) expect(flagTakesArgument(flags)).toBe(true);
+    expect(flagTakesArgument("-fPIC")).toBe(false);
+  });
+
+  it("groups section-8 clusters by page and preserves real flag command prefixes", async () => {
+    const flags = (letters: string) => [...letters].map((letter) => ({ flags: `-${letter}`, anchorId: letter }));
+    const t = await seeded([
+      page("iptables", flags("nvL"), { section: "8" }),
+      page("ss", flags("tlnp"), { section: "8" }),
+      page("netstat", flags("tulpn"), { section: "8" }),
+      page("ip", [{ flags: "-br, -brief", anchorId: "brief" }], { section: "8" }),
+      page("find", [{ flags: "-name", anchorId: "name", argument: "PATTERN" }]),
+      page("mixed", flags("n")), page("mixed", flags("v"), { section: "8" }),
+    ], 66);
+    for (const [name, cluster] of [["iptables", "nvL"], ["ss", "tlnp"], ["netstat", "tulpn"]]) {
+      expect((await search(t, `${name} -${cluster}`)).results).toEqual([expect.objectContaining({
+        name, section: "8", highlights: [...cluster].map((letter) => `-${letter}`),
+      })]);
+      expect((await search(t, `${name} -${cluster}`, "1")).results).toEqual([]);
+    }
+    expect((await search(t, "ip -br")).results[0]).toMatchObject({ name: "ip", section: "8", anchorId: "brief" });
+    for (const q of ["find -name", "fin -name"]) expect((await search(t, q)).results[0], q).toMatchObject({ name: "find", anchorId: "name" });
+    expect((await search(t, "mixed -nv")).results.every((hit) => hit.match !== "option")).toBe(true);
+  });
+
+  it("keeps the longest cluster miss and deepest name fallback within 303 reads", async () => {
+    const flags = [..."abcdefg"].map((letter) => ({ flags: `-${letter}`, anchorId: letter }));
+    const t = await seeded(["1", "5", "8"].map((section) => page("tool", flags, { section })), 303);
+    await t.run(async (ctx) => {
+      const source = await ctx.db.query("manPageSearchDocuments").first();
+      const { _id, _creationTime, ...fields } = source!;
+      void _id; void _creationTime;
+      for (let i = 0; i < 300; i += 1) {
+        const name = `tool${String(i).padStart(3, "0")}`;
+        await ctx.db.insert("manPageSearchDocuments", { ...fields, name, nameNorm: name });
+      }
+    });
+    const result = await t.query(api.queries.search, { distro: "debian", q: "tool -abcdefgh", section: null, limit: 50, offset: 200 });
+    expect(result.results.every((hit) => hit.match !== "option")).toBe(true);
+  });
+
   it("splits missing short clusters, keeps real multi-letter flags, and links the first option", async () => {
     const t = await seeded([
       page("tar", tarOptions),
@@ -263,6 +337,42 @@ describe("option search", () => {
 });
 
 describe("search correctness", () => {
+  it("retains realistic description recall for multi-word queries", async () => {
+    const t = await seeded([
+      page("du", null, { description: "estimate file space usage" }),
+      page("df", null, { description: "report file system disk space usage" }),
+      page("fdisk", null, { description: "manipulate disk partition table" }),
+      page("git-log", null, { description: "Show commit logs" }),
+      page("chmod", null, { description: "change file mode bits" }),
+      page("rm", null, { description: "remove files or directories" }),
+      page("ls", null, { description: "list directory contents" }),
+      page("true", null, { description: "do nothing, successfully" }),
+    ], 66);
+    for (const [q, names] of [
+      ["disk usage", ["du", "df", "fdisk"]], ["git log", ["git-log"]],
+      ["change file permissions", ["chmod"]], ["remove a file", ["rm"]], ["list files", ["ls"]],
+    ] as const) {
+      const result = await search(t, q);
+      expect(result.results.map((hit) => hit.name), q).toEqual(expect.arrayContaining([...names]));
+      expect(result.results.map((hit) => hit.name), q).not.toContain("true");
+      expect(result.suggestions).toEqual([]);
+    }
+  });
+
+  it("falls back from citation sections to suffixed sections, preferring exact sections", async () => {
+    const t = await seeded([
+      page("openssl", null, { section: "1ssl" }), page("file::spec", null, { section: "3perl" }),
+      page("printf", null, { section: "3" }), page("printf", null, { section: "3p" }),
+      page("stdint.h", null, { section: "0p" }),
+    ], 66);
+    for (const [q, name, section] of [
+      ["openssl(1)", "openssl", "1ssl"], ["File::Spec(3)", "file::spec", "3perl"],
+      ["stdint.h(0p)", "stdint.h", "0p"], ["printf(3p)", "printf", "3p"], ["printf(3)", "printf", "3"],
+    ]) expect((await search(t, q)).results[0], q).toMatchObject({ name, section });
+    expect((await search(t, "printf(3)")).results.map((hit) => hit.section)).toEqual(["3"]);
+    expect((await search(t, "openssl(2)")).results).toEqual([]);
+  });
+
   it("finds citation aliases such as Linux man(7) without losing their URL", async () => {
     const t = await seeded([page("groff_man", null, { section: "7" })], 66);
     await t.run(async (ctx) => {
@@ -294,12 +404,14 @@ describe("search correctness", () => {
   it("corrects transpositions, insertions, deletions and substitutions only after zero ordinary hits", async () => {
     const t = await seeded([
       page("grep", null), page("chmod", null), page("tar", null), page("tarsnap", null),
+      page("git", null), page("echo", null), page("cat", null),
       page("cp", null, { description: "copy files and directories" }),
     ], 66);
-    for (const [q, expected] of [["grpe", "grep"], ["chmdo", "chmod"], ["greep", "grep"], ["grp", "grep"], ["grap", "grep"], ["tarr", "tar"]]) {
+    for (const [q, expected] of [["grpe", "grep"], ["chmdo", "chmod"], ["greep", "grep"], ["grp", "grep"], ["grap", "grep"], ["tarr", "tar"], ["gti", "git"], ["ehco", "echo"], ["cta", "cat"], ["rgep", "grep"]]) {
       const result = await search(t, q);
       expect(result.suggestions, q).toContain(expected);
       expect(result.results[0], q).toMatchObject({ name: expected });
+      expect(result.correctedQuery, q).toBe(expected);
     }
     expect((await search(t, "tar")).suggestions).toEqual([]);
     expect((await search(t, "copy files")).suggestions).toEqual([]);
@@ -337,6 +449,22 @@ describe("search correctness", () => {
     expect(result.results.every((hit) => hit.name <= "g0063")).toBe(true);
     // Unrelated g* names cannot crowd grep out of its gr* bucket.
     expect((await search(t, "grpe")).results[0]).toMatchObject({ name: "grep" });
+  });
+
+  it("finds a crowded dotted-name typo in a focused bucket within 66 reads", async () => {
+    const t = await seeded([page("systemd.service", null)], 66);
+    await t.run(async (ctx) => {
+      const source = await ctx.db.query("manPageSearchDocuments").first();
+      const { _id, _creationTime, ...fields } = source!;
+      void _id; void _creationTime;
+      for (let i = 0; i < 150; i += 1) {
+        const name = `systemd-${i}`;
+        await ctx.db.insert("manPageSearchDocuments", { ...fields, name, nameNorm: name });
+      }
+    });
+    const result = await search(t, "systemd.servcie");
+    expect(result.results[0]).toMatchObject({ name: "systemd.service" });
+    expect(result.correctedQuery).toBe("systemd.service");
   });
 
   it("counts adjacent transpositions as one edit and rejects distant names", () => {

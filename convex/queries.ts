@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { resolveRelatedItems } from "./_relatedLinks";
-import { parseOptionQuery } from "./_optionFlags";
+import { flagTakesArgument, parseOptionQuery } from "./_optionFlags";
 import { nameEditDistance } from "./_searchTypos";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -32,6 +32,7 @@ const MAX_SECTION_OFFSET = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
 const MAX_RELATED = 50;
 const MAX_DESCRIPTION_HITS = 24;
+const SEARCH_STOP_WORDS = new Set("a an and are as at be by can do does for from how i in is it of on or the to what when where which with".split(" "));
 
 function boundedInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -394,7 +395,7 @@ function compareHits(a: RankedHit, b: RankedHit): number {
   return a.section.localeCompare(b.section);
 }
 
-/** Option rows in name order; possible clusters need the exact command spelling. */
+/** Option rows in name order, optionally scoped to an exact name or prefix. */
 async function optionFlagRowsFor(
   ctx: QueryCtx,
   args: {
@@ -402,12 +403,13 @@ async function optionFlagRowsFor(
     section: string | null;
     flag: string;
     namePrefix: string | null;
+    exactName?: boolean;
     take: number;
   },
 ): Promise<Array<Doc<"manPageOptionFlags">>> {
   const { releaseId, section, flag, namePrefix } = args;
   const upper = namePrefix === null ? null : prefixUpperBound(namePrefix);
-  const exactName = namePrefix !== null && /^-[a-zA-Z0-9]{2,8}$/.test(flag);
+  const exactName = namePrefix !== null && args.exactName;
   if (section !== null) {
     return await ctx.db
       .query("manPageOptionFlags")
@@ -441,6 +443,35 @@ async function optionHit(ctx: QueryCtx, row: Doc<"manPageOptionFlags">, rank: nu
     anchorId: row.anchorId,
     rank,
   };
+}
+
+/** At most eight flag ranges of three rows; group sections by page, never mix them. */
+async function clusterHits(ctx: QueryCtx, releaseId: Id<"datasetReleases">, name: string, flag: string, section: string | null): Promise<RankedHit[]> {
+  const groups = new Map<Id<"manPages">, { rows: Array<Doc<"manPageOptionFlags">>; done: boolean }>();
+  const cached = new Map<string, Array<Doc<"manPageOptionFlags">>>();
+  for (const [index, letter] of [...flag.slice(1)].entries()) {
+    if (index > 0 && [...groups.values()].every((group) => group.done)) break;
+    const part = `-${letter}`;
+    let rows = cached.get(part);
+    if (!rows) {
+      rows = await optionFlagRowsFor(ctx, { releaseId, section, flag: part, namePrefix: name, exactName: true, take: 3 });
+      cached.set(part, rows);
+    }
+    if (index === 0) for (const row of rows) groups.set(row.pageId, { rows: [], done: false });
+    for (const [pageId, group] of groups) {
+      if (group.done) continue;
+      const row = rows.find((candidate) => candidate.pageId === pageId);
+      if (!row) { groups.delete(pageId); continue; }
+      group.rows.push(row);
+      group.done = row.takesArgument ?? flagTakesArgument(row.flags);
+    }
+  }
+  const hits: RankedHit[] = [];
+  for (const { rows } of groups.values()) {
+    const hit = await optionHit(ctx, rows[0], 0);
+    if (hit) { hit.highlights = [...new Set(rows.map((row) => row.flags))]; hits.push(hit); }
+  }
+  return hits;
 }
 
 function rankSearchDocument(
@@ -503,6 +534,7 @@ async function textHits(
   // Always merge the same description candidates so every offset slices one
   // stable ranked set. The index read is bounded by MAX_DESCRIPTION_HITS.
   const descriptionDocs = await searchDocsByDescription(ctx, { releaseId, section, queryNorm });
+  const contentWords = queryNorm.split(/[^a-z0-9_]+/).filter((word) => word && !SEARCH_STOP_WORDS.has(word));
 
   const ranked = new Map<Id<"manPages">, RankedHit>();
   prefixDocs.forEach((doc, index) => {
@@ -512,9 +544,12 @@ async function textHits(
   });
   descriptionDocs.forEach((doc, index) => {
     if (ranked.has(doc.pageId)) return;
-    // The text index drops stop words; do not answer a sentence with true(1).
-    if (queryNorm.includes(" ") && !queryNorm.split(" ").every((word) => doc.descNorm.includes(word))) return;
-    ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rankDescriptionDocument(doc, queryNorm, index)));
+    // Convex returns ranked any-term matches. Keep content-word overlap, not
+    // stop-word-only answers such as true(1) for "how do I extract a tarball".
+    const words = `${doc.nameNorm} ${doc.descNorm}`.split(/[^a-z0-9_]+/);
+    const overlap = contentWords.filter((word) => words.some((candidate) => candidate.startsWith(word))).length;
+    if (queryNorm.includes(" ") && overlap === 0) return;
+    ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rankDescriptionDocument(doc, queryNorm, index) + overlap * 50));
   });
   return [...ranked.values()].sort(compareHits);
 }
@@ -536,6 +571,7 @@ export const search = query({
       match: v.optional(v.literal("option")), anchorId: v.optional(v.string()),
     })),
     suggestions: v.array(v.string()),
+    correctedQuery: v.optional(v.string()),
     hasMore: v.boolean(), nextOffset: v.union(v.number(), v.null()),
   }),
   handler: async (ctx, args) => {
@@ -543,7 +579,7 @@ export const search = query({
     if (!queryText) {
       return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
     }
-    const citation = /^([^\s()]+)\(([1-9][a-z0-9]*)\)$/i.exec(queryText);
+    const citation = /^([^\s()]+)\(([0-9][a-z0-9]*)\)$/i.exec(queryText);
     const section = citation ? normalizeSection(citation[2]) : args.section ? normalizeSection(args.section) : null;
     const limit = boundedInt(args.limit, 1, MAX_SEARCH_LIMIT);
     const offset = boundedInt(args.offset, 0, MAX_SEARCH_OFFSET);
@@ -553,17 +589,8 @@ export const search = query({
     });
     const takeCount = Math.min(offset + limit + 5, MAX_SEARCH_OFFSET + MAX_SEARCH_LIMIT);
 
-    // One flag with at most one word reads the option index; the word scopes
-    // the page name by prefix (`tar -c`). Rows come in name order, read up to
-    // offset + limit + 1 so "Load more" pages like the name-prefix search, and
-    // only the visible slice fetches its page. Budget: 2 release rows +
-    // (offset + limit + 1) option rows + limit pages, so 43 documents for a
-    // 20-result first page and at most 303 at the offset cap. A `--Create`
-    // miss retries the lowercase spelling once; single-dash flags stay
-    // case-sensitive (`-c` is not `-C`). Missing flags fall back to the name,
-    // including releases without option rows. Missing short clusters for a
-    // named command try up to eight exact flag rows before that fallback.
-    // Several flags or several words are an ordinary text query.
+    // Single flags retain the existing 43-read first page / 303-read maximum.
+    // Missing clusters use at most 24 option rows and three pages across sections.
     const optionQuery = parseOptionQuery(queryText);
     const isOptionQuery = optionQuery.flags.length === 1 && optionQuery.words.length <= 1;
     let textQuery = citation ? citation[1] : queryText;
@@ -571,16 +598,28 @@ export const search = query({
     let hasMore = false;
     if (isOptionQuery) {
       const [flag] = optionQuery.flags;
+      const name = optionQuery.words.length ? normalizeName(optionQuery.words[0]) : null;
+      const isNamedCluster = name !== null && /^-[a-zA-Z0-9]{2,8}$/.test(flag);
       const lookup = {
-        releaseId: release._id,
-        section,
-        namePrefix: optionQuery.words.length ? normalizeName(optionQuery.words[0]) : null,
-        take: offset + limit + 1,
+        releaseId: release._id, section, namePrefix: name,
+        exactName: isNamedCluster, take: offset + limit + 1,
       };
       let rows = await optionFlagRowsFor(ctx, { ...lookup, flag });
-      const isNamedCluster = optionQuery.words.length === 1 && /^-[a-zA-Z0-9]{2,8}$/.test(flag);
       if (!rows.length && flag.startsWith("--") && flag !== flag.toLowerCase()) {
         rows = await optionFlagRowsFor(ctx, { ...lookup, flag: flag.toLowerCase() });
+      }
+      if (!rows.length && isNamedCluster) {
+        const hits = await clusterHits(ctx, release._id, name!, flag, section);
+        if (hits.length) {
+          visible = hits.slice(offset, offset + limit);
+          hasMore = hits.length > offset + limit;
+        } else {
+          const exactCommand = await ctx.db.query("manPages")
+            .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", release._id).eq("name", name!))
+            .first();
+          // A command prefix such as `fin -name` still finds find's real flag.
+          if (!exactCommand) rows = await optionFlagRowsFor(ctx, { ...lookup, exactName: false, flag });
+        }
       }
       if (rows.length) {
         visible = [];
@@ -589,30 +628,9 @@ export const search = query({
           if (hit) visible.push(hit);
         }
         hasMore = rows.length > offset + limit;
-      } else {
-        // A real multi-letter flag (such as -fPIC) wins above. Only split a
-        // missing cluster for a named command, with at most eight flag probes.
-        if (isNamedCluster) {
-          const name = normalizeName(optionQuery.words[0]);
-          const commandSection = section ?? "1";
-          const parts = [...new Set([...flag.slice(1)].map((letter) => `-${letter}`))];
-          const matches = await Promise.all(parts.map((part) => ctx.db
-            .query("manPageOptionFlags")
-            .withIndex("by_releaseId_and_section_and_flag_and_nameNorm", (q) => q
-              .eq("releaseId", release._id).eq("section", commandSection).eq("flag", part).eq("nameNorm", name))
-            .first()));
-          if (matches.every((row) => row !== null)) {
-            const hit = await optionHit(ctx, matches[0]!, 0);
-            if (hit) {
-              hit.highlights = [...new Set(matches.map((row) => row!.flags))];
-              visible = offset === 0 ? [hit] : [];
-            }
-          }
-        }
-        if (!optionQuery.words.length) {
-          return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
-        }
-        textQuery = optionQuery.words.join(" ");
+      } else if (visible === null) {
+        if (!name) return { query: queryText, results: [], suggestions: [], hasMore: false, nextOffset: null };
+        textQuery = name;
       }
     }
     let ordered: RankedHit[] = [];
@@ -641,14 +659,36 @@ export const search = query({
           });
         }
       }
-      // shortcut: the first 64 names sharing the first two characters, add an
-      // ingest-time deletion index if broader typo recall becomes necessary.
+      if (citation && !ordered.some((hit) => normalizeName(hit.name) === normalizeName(textQuery))) {
+        const name = normalizeName(textQuery);
+        const pages = await ctx.db.query("manPages")
+          .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", release._id).eq("name", name)
+            .gte("section", section!).lt("section", prefixUpperBound(section!)))
+          .take(8);
+        if (pages.length) ordered = pages.map((page) => ({
+          name: page.name, section: page.section, title: page.title,
+          description: page.description, highlights: [], rank: 20_000,
+        }));
+      }
+      // shortcut: 64 total reads across focused, transposed and first-letter
+      // buckets; use an ingest-time deletion index if recall beyond this cap is needed.
       const textNorm = textQuery.toLowerCase();
       if (!ordered.length && !optionQuery.flags.length && /^[a-z0-9_.+-]{3,64}$/.test(textNorm)) {
-        const candidates = await searchDocsByNamePrefix(ctx, {
-          releaseId: release._id, section, prefix: textNorm.slice(0, 2), takeCount: 64,
-        });
-        ordered = candidates
+        const prefixes = [...new Set([
+          textNorm.slice(0, Math.max(2, textNorm.length - 4)), textNorm.slice(0, 2),
+          textNorm[1] + textNorm[0], textNorm[0] + textNorm[2], textNorm[0],
+        ])];
+        const candidates = new Map<Id<"manPageSearchDocuments">, Doc<"manPageSearchDocuments">>();
+        let remaining = 64;
+        for (const prefix of prefixes) {
+          if (remaining === 0) break;
+          const docs = await searchDocsByNamePrefix(ctx, {
+            releaseId: release._id, section, prefix, takeCount: Math.min(16, remaining),
+          });
+          remaining -= docs.length;
+          for (const doc of docs) candidates.set(doc._id, doc);
+        }
+        ordered = [...candidates.values()]
           .filter((doc) => doc.nameNorm.length <= 64)
           .map((doc) => ({ doc, distance: nameEditDistance(textNorm, doc.nameNorm) }))
           .filter(({ distance }) => distance > 0 && distance <= 2)
@@ -674,6 +714,7 @@ export const search = query({
         ...(hit.anchorId ? { match: "option" as const, anchorId: hit.anchorId } : {}),
       })),
       suggestions,
+      ...(suggestions.length ? { correctedQuery: suggestions[0] } : {}),
       hasMore: nextOffset !== null,
       nextOffset,
     };

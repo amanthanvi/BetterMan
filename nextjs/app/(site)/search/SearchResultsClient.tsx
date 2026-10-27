@@ -116,6 +116,7 @@ function ResultCard({ distro, q, r }: { distro: Distro; q: string; r: SearchResu
 }
 
 function getSuggestions(initial: SearchResponse | null, q: string): string[] {
+  if (initial?.results.length && !initial.correctedQuery) return []
   const wanted = (initial?.suggestions ?? []).map((s) => s.trim()).filter(Boolean)
   if (!wanted.length) return []
 

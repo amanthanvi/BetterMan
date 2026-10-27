@@ -22,10 +22,22 @@ describe('search result copy', () => {
   })
 
   it('does not advertise corrections on ordinary successful lookups', () => {
-    const html = render('tar', { results: [{ name: 'tar', section: '1', title: 'tar(1)', description: 'archive files', highlights: [] }] })
+    const html = render('tar', {
+      results: [{ name: 'tar', section: '1', title: 'tar(1)', description: 'archive files', highlights: [] }],
+      suggestions: ['tarsnap', 'tac'],
+    })
     expect(html).toContain('tar(1)')
     expect(html).not.toContain('Did you mean')
     expect(html).not.toContain('not supported yet')
+  })
+
+  it('advertises an explicit spelling correction alongside corrected results', () => {
+    const html = render('gti', {
+      results: [{ name: 'git', section: '1', title: 'git(1)', description: 'content tracker', highlights: [] }],
+      suggestions: ['git'], correctedQuery: 'git',
+    })
+    expect(html).toContain('Did you mean:')
+    expect(html).toContain('href="/search?q=git"')
   })
 
   it('links real spelling corrections and deduplicates their names', () => {
