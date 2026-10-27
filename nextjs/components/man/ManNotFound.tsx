@@ -5,25 +5,35 @@ import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 import type { SuggestApiResponse, Suggestion } from '../../lib/api'
-import { withDistro } from '../../lib/distro'
+import { manPageHref, withDistro } from '../../lib/distro'
 import { useDistro } from '../state/distro'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
 import { ManDistroAvailability } from './ManDistroAvailability'
+import { ManSectionLabel } from './RunningHead'
+
+/** What man-db prints for a miss, and the command that would print it. */
+export function manMiss(name: string, section: string | null): { command: string; message: string } {
+  return section
+    ? { command: `man ${section} ${name}`, message: `No manual entry for ${name} in section ${section}` }
+    : { command: `man ${name}`, message: `No manual entry for ${name}` }
+}
 
 // Rendered by the `/man/[name]` not-found boundary, which Next passes to the
-// client router as a fallback on every request, so the lookup only runs once
+// client router as a fallback on every request, so the lookups only run once
 // the 404 is actually shown.
 export function ManNotFound() {
-  const { name, section } = useParams<{ name: string; section?: string }>()
+  const params = useParams<{ name: string; section?: string }>()
+  const name = params.name
+  const section = params.section ?? null
   const { distro, urlDistro } = useDistro()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
 
   useEffect(() => {
     const controller = new AbortController()
-    const params = new URLSearchParams({ name })
-    if (distro !== 'debian') params.set('distro', distro)
+    const query = new URLSearchParams({ name, typos: '1' })
+    if (distro !== 'debian') query.set('distro', distro)
 
-    void fetch(`/api/v1/suggest?${params.toString()}`, {
+    void fetch(`/api/v1/suggest?${query.toString()}`, {
       headers: { Accept: 'application/json' },
       signal: controller.signal,
     })
@@ -40,27 +50,34 @@ export function ManNotFound() {
     return () => controller.abort()
   }, [name, distro])
 
-  const label = section ? `${name}(${section})` : name
+  const { command, message } = manMiss(name, section)
 
   return (
     <div className="mx-auto max-w-5xl">
       <header className="border-b border-edge pb-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Not found</h1>
-        <p className="mt-2 text-sm text-muted">
-          We couldn&apos;t find <span className="font-mono">{label}</span> in the current dataset.
+        <p aria-hidden="true" className="font-mono text-xs text-muted">
+          $ {command}
         </p>
+        <h1 className="mt-2 break-words font-mono text-2xl font-semibold leading-tight tracking-tight">{message}</h1>
       </header>
 
-      {section ? <ManDistroAvailability name={name} section={section} distro={distro} /> : null}
+      {distro === 'macos' ? (
+        <p className="mt-6 max-w-[70ch] text-sm text-muted">
+          BetterMan carries only the BSD-licensed subset of the manual pages macOS ships, so a page your Mac has may
+          be missing here.
+        </p>
+      ) : null}
+
+      <ManDistroAvailability name={name} section={section} distro={distro} />
 
       {suggestions.length ? (
-        <div className="mt-6 space-y-2 text-sm text-muted">
-          <div>Did you mean:</div>
-          <ul className="space-y-2">
+        <section aria-label="Did you mean" className="mt-8">
+          <ManSectionLabel as="h2">DID YOU MEAN</ManSectionLabel>
+          <ul className="mt-3 space-y-2 pl-6 sm:pl-8">
             {suggestions.map((s) => (
               <li key={`${s.name}:${s.section}`} className="flex flex-col">
                 <Link
-                  href={withDistro(`/man/${encodeURIComponent(s.name)}/${encodeURIComponent(s.section)}`, urlDistro)}
+                  href={manPageHref(s.name, s.section, urlDistro)}
                   className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
                 >
                   {s.name}({s.section})
@@ -70,22 +87,18 @@ export function ManNotFound() {
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       ) : null}
 
-      <div className="mt-6">
+      <p className="mt-8 text-sm text-muted">
         <Link
           href={withDistro(`/search?q=${encodeURIComponent(name)}`, urlDistro)}
-          className="text-sm underline underline-offset-4"
+          className="underline underline-offset-4"
         >
           Search for “{name}”
-        </Link>
-        .
-      </div>
-
-      <div className="mt-10 text-xs text-muted">
-        <span className="font-mono">{label} — Not found — BetterMan</span>
-      </div>
+        </Link>{' '}
+        in page names and descriptions.
+      </p>
     </div>
   )
 }

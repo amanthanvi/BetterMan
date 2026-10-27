@@ -63,7 +63,7 @@ test('short urls: an unknown name lands on the man page 404', async ({ page }) =
   const res = await page.goto('/tarx')
   expect(res?.status()).toBe(404)
   await expect(page).toHaveURL(/\/man\/tarx$/)
-  await expect(page.getByRole('heading', { name: 'Not found' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No manual entry for tarx' })).toBeVisible()
 })
 
 test('short urls: an unknown flag still lands on the page', async ({ request }) => {

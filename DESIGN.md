@@ -115,10 +115,13 @@ combinator (no merge — primitives own their recipes).
   "Find in page" / "Previous|Next match" / "Expand|Collapse sidebar" /
   "Load more results", table "Command-line options" (flags as separate exact
   texts), select "Select distribution variant" (a real `<select>`), regions
-  "Recent" / "Bookmarks" / "Quick examples" / "Other distributions" (man page
-  404), complementaries "See also" / "Related commands", heading "Browse", TOC active link
-  `aria-current="location"`. Section labels may render uppercase — accessible
+  "Recent" / "Bookmarks" / "Quick examples" / "Other distributions" / "Did you
+  mean" (man page 404), complementaries "See also" / "Related commands", heading "Browse", TOC active link
+  `aria-current="location"`, link "Report a problem" (man page footer). Section labels may render uppercase — accessible
   name matching is case-insensitive.
+- **404 voice:** a missing man page's `h1` is man-db's message, "No manual
+  entry for <name>" or "No manual entry for <name> in section <section>";
+  every other 404's `h1` is "No such file or directory".
 - **Keyboard map:** ⌘K palette · `/` search · `?` shortcuts · `d` theme ·
   `b` sidebar/TOC · `t` top · `h` home · `p` prefs · `m` bookmark · `f` find
   (man pages) · Enter/Shift+Enter find navigation. Single-key shortcuts are ignored while

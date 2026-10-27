@@ -393,6 +393,8 @@ export function ManPageView({
           />
 
           <ManPageFooterSections
+            page={page}
+            servedDistro={servedDistro}
             urlDistro={distro.urlDistro}
             seeAlso={content.seeAlso}
             relatedItems={relatedItems}

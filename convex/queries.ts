@@ -370,12 +370,13 @@ export const getRelated = query({
 export const listManDistros = query({
   args: {
     name: v.string(),
-    section: v.string(),
+    // Without a section, any section of the name counts.
+    section: v.optional(v.string()),
   },
   returns: v.object({ distros: v.array(distroValidator) }),
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
-    const section = normalizeSection(args.section);
+    const section = args.section === undefined ? null : normalizeSection(args.section);
     const active = await ctx.db
       .query("activeReleases")
       .withIndex("by_stage_and_locale_and_distro", (q) =>
@@ -385,12 +386,20 @@ export const listManDistros = query({
 
     const found = await Promise.all(
       active.map(async (item) => {
-        if (await pageByNameAndSection(ctx, { releaseId: item.releaseId, name, section })) return item.distro;
+        const page = await ctx.db
+          .query("manPages")
+          .withIndex("by_releaseId_and_name_and_section", (q) => {
+            const byName = q.eq("releaseId", item.releaseId).eq("name", name);
+            return section === null ? byName : byName.eq("section", section);
+          })
+          .first();
+        if (page) return item.distro;
         const alias = await ctx.db
           .query("manPageAliases")
-          .withIndex("by_releaseId_and_name_and_section", (q) =>
-            q.eq("releaseId", item.releaseId).eq("name", name).eq("section", section),
-          )
+          .withIndex("by_releaseId_and_name_and_section", (q) => {
+            const byName = q.eq("releaseId", item.releaseId).eq("name", name);
+            return section === null ? byName : byName.eq("section", section);
+          })
           .first();
         return alias ? item.distro : null;
       }),
@@ -593,6 +602,37 @@ async function textHits(
   return [...ranked.values()].sort(compareHits);
 }
 
+// Names within two edits of `queryText`, for a lookup that found nothing.
+// shortcut: 64 total reads across focused, transposed and first-letter
+// buckets; use an ingest-time deletion index if recall beyond this cap is needed.
+async function typoHits(
+  ctx: QueryCtx,
+  args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string },
+): Promise<RankedHit[]> {
+  const textNorm = args.queryText.toLowerCase();
+  if (!/^[a-z0-9_.+-]{3,64}$/.test(textNorm)) return [];
+  const prefixes = [...new Set([
+    textNorm.slice(0, Math.max(2, textNorm.length - 4)), textNorm.slice(0, 2),
+    textNorm[1] + textNorm[0], textNorm[0] + textNorm[2], textNorm[0],
+  ])];
+  const candidates = new Map<Id<"manPageSearchDocuments">, Doc<"manPageSearchDocuments">>();
+  let remaining = 64;
+  for (const prefix of prefixes) {
+    if (remaining === 0) break;
+    const docs = await searchDocsByNamePrefix(ctx, {
+      releaseId: args.releaseId, section: args.section, prefix, takeCount: Math.min(16, remaining),
+    });
+    remaining -= docs.length;
+    for (const doc of docs) candidates.set(doc._id, doc);
+  }
+  return [...candidates.values()]
+    .filter((doc) => doc.nameNorm.length <= 64)
+    .map((doc) => ({ doc, distance: nameEditDistance(textNorm, doc.nameNorm) }))
+    .filter(({ distance }) => distance > 0 && distance <= 2)
+    .map(({ doc, distance }) => searchDocumentHit(doc, args.queryText, 100 - distance))
+    .sort(compareHits);
+}
+
 export const search = query({
   args: {
     stage: publicStageCompatibilityValidator,
@@ -709,30 +749,8 @@ export const search = query({
           description: page.description, highlights: [], rank: 20_000,
         }));
       }
-      // shortcut: 64 total reads across focused, transposed and first-letter
-      // buckets; use an ingest-time deletion index if recall beyond this cap is needed.
-      const textNorm = textQuery.toLowerCase();
-      if (!ordered.length && !optionQuery.flags.length && /^[a-z0-9_.+-]{3,64}$/.test(textNorm)) {
-        const prefixes = [...new Set([
-          textNorm.slice(0, Math.max(2, textNorm.length - 4)), textNorm.slice(0, 2),
-          textNorm[1] + textNorm[0], textNorm[0] + textNorm[2], textNorm[0],
-        ])];
-        const candidates = new Map<Id<"manPageSearchDocuments">, Doc<"manPageSearchDocuments">>();
-        let remaining = 64;
-        for (const prefix of prefixes) {
-          if (remaining === 0) break;
-          const docs = await searchDocsByNamePrefix(ctx, {
-            releaseId: release._id, section, prefix, takeCount: Math.min(16, remaining),
-          });
-          remaining -= docs.length;
-          for (const doc of docs) candidates.set(doc._id, doc);
-        }
-        ordered = [...candidates.values()]
-          .filter((doc) => doc.nameNorm.length <= 64)
-          .map((doc) => ({ doc, distance: nameEditDistance(textNorm, doc.nameNorm) }))
-          .filter(({ distance }) => distance > 0 && distance <= 2)
-          .map(({ doc, distance }) => searchDocumentHit(doc, textQuery, 100 - distance))
-          .sort(compareHits);
+      if (!ordered.length && !optionQuery.flags.length) {
+        ordered = await typoHits(ctx, { releaseId: release._id, section, queryText: textQuery });
         suggestions = [...new Set(ordered.map((hit) => hit.name))].slice(0, 5);
       }
       visible = ordered.slice(offset, offset + limit);
@@ -765,6 +783,9 @@ export const suggest = query({
     stage: publicStageCompatibilityValidator,
     distro: distroValidator,
     name: v.string(),
+    // The man page 404 asks for spelling corrections when no name has this prefix.
+    // Type-ahead callers leave it off, so a keystroke never pays for them.
+    typos: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
@@ -778,13 +799,16 @@ export const suggest = query({
       prefix: name,
       takeCount: 10,
     });
+    const hits = docs.length || !args.typos
+      ? docs
+      : (await typoHits(ctx, { releaseId: release._id, section: null, queryText: name })).slice(0, 10);
 
     return {
       query: name,
-      suggestions: docs.map((doc) => ({
-        name: doc.name,
-        section: doc.section,
-        description: doc.description,
+      suggestions: hits.map((hit) => ({
+        name: hit.name,
+        section: hit.section,
+        description: hit.description,
       })),
     };
   },

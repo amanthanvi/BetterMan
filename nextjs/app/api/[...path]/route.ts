@@ -228,6 +228,16 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       return cachedJson(result.data)
     }
 
+    // No section is named `distros`, so this cannot shadow a page.
+    if (parts.length === 3 && parts[0] === 'man' && parts[2] === 'distros') {
+      const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'page'))
+      if (limited) return limited
+      const result = await measure(metrics, 'convex_man_distros', () =>
+        fetchManDistros({ name: parts[1].toLowerCase(), section: null }),
+      )
+      return cachedJson(result)
+    }
+
     if (parts.length === 3 && parts[0] === 'man') {
       const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'page'))
       if (limited) return limited
@@ -284,6 +294,8 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       if (format !== undefined && format !== 'opensearch') {
         return apiError(422, 'INVALID_QUERY_PARAM', 'Invalid format')
       }
+      const typos = first(req.nextUrl.searchParams.get('typos'))
+      if (typos !== undefined && typos !== '1') return apiError(422, 'INVALID_QUERY_PARAM', 'Invalid typos')
       if (!isManName(name)) {
         const empty = format === 'opensearch' ? [raw, []] : { query: name.toLowerCase(), suggestions: [], distro }
         return cachedJson(empty, NO_SUGGESTIONS_CACHE_SECONDS, format === 'opensearch' ? OPENSEARCH_JSON : undefined)
@@ -293,7 +305,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       // Like the man page, fall back to Debian without an active release, and say
       // so, so the caller does not label Debian rows as the requested distro.
       const { distro: resolved, data } = await withDistroFallback(distro, (activeDistro) =>
-        suggest({ distro: activeDistro, name }),
+        suggest({ distro: activeDistro, name, ...(typos ? { typos: true } : {}) }),
       )
       if (format === 'opensearch') return openSearchSuggestions(req, raw, data.suggestions, resolved)
       return cachedJson({ ...data, distro: resolved }, SEARCH_CACHE_SECONDS)

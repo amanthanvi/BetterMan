@@ -24,11 +24,15 @@ test('status: a .so alias redirects to its target, permanently only for an expli
 })
 
 test('status: missing pages and sections answer 404', async ({ request }) => {
-  for (const path of ['/man/definitely-not-a-page-xyz', '/man/tar/9', '/section/zzz']) {
+  // The man page 404 body renders in the browser (not-found.spec.ts covers it).
+  for (const path of ['/man/definitely-not-a-page-xyz', '/man/tar/9', '/section/zzz', '/definitely/not/a-route']) {
     const res = await request.get(path)
     expect(res.status(), path).toBe(404)
-    expect(await res.text(), path).toContain('Not found')
+    const html = await res.text()
+    expect(html, path).toContain('<title>Not found — BetterMan</title>')
+    expect(html, path).toMatch(/<meta name="robots" content="noindex"/)
   }
+  expect(await (await request.get('/section/zzz')).text()).toContain('No such file or directory')
 })
 
 test('status: found and ambiguous names answer 200', async ({ request }) => {

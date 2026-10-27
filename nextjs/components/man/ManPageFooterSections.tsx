@@ -5,15 +5,21 @@ import Link from 'next/link'
 import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
 import { withDistro, type Distro } from '../../lib/distro'
+import type { ReportedPage } from '../../lib/reportProblem'
+import { ManPageReportLink } from './ManPageReportLink'
 import { ManSectionLabel } from './RunningHead'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
 
 export function ManPageFooterSections({
+  page,
+  servedDistro,
   urlDistro,
   seeAlso,
   relatedItems,
   hasParseWarnings = false,
 }: {
+  page: ReportedPage
+  servedDistro: Distro
   urlDistro: Distro | null
   seeAlso?: ManPageContent['seeAlso']
   relatedItems: SectionPage[]
@@ -82,11 +88,10 @@ export function ManPageFooterSections({
         </aside>
       ) : null}
 
-      {hasParseWarnings ? (
-        <p className="mt-10 border-t border-edge pt-4 font-mono text-xs text-faint">
-          mandoc reported formatting warnings for this page. Some structure may be lost.
-        </p>
-      ) : null}
+      <div className="mt-10 space-y-2 border-t border-edge pt-4 font-mono text-xs text-faint">
+        {hasParseWarnings ? <p>mandoc reported formatting warnings for this page. Some structure may be lost.</p> : null}
+        <ManPageReportLink page={page} distro={servedDistro} />
+      </div>
     </>
   )
 }

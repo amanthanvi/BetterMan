@@ -234,10 +234,33 @@ describe('man page distros API', () => {
     expect(await res.json()).toEqual({ distros: ['debian', 'ubuntu'] })
     expect(apiMocks.fetchManDistros).toHaveBeenCalledWith({ name: 'systemctl', section: '1' })
   })
+
+  it('lists the distros that have a name in any section', async () => {
+    apiMocks.fetchManDistros.mockResolvedValueOnce({ distros: ['debian'] })
+
+    const res = await GET(request('/api/v1/man/SystemCTL/distros'), context(['v1', 'man', 'SystemCTL', 'distros']))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ distros: ['debian'] })
+    expect(apiMocks.fetchManDistros).toHaveBeenCalledWith({ name: 'systemctl', section: null })
+  })
 })
 
 describe('suggest API', () => {
   const suggestions = [{ name: 'tar', section: '1', description: 'archive' }]
+
+  it('asks for spelling corrections only with typos=1', async () => {
+    apiMocks.suggest.mockResolvedValueOnce({ query: 'tarr', suggestions })
+
+    const res = await GET(request('/api/v1/suggest?name=tarr&typos=1'), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(200)
+    expect(apiMocks.suggest).toHaveBeenCalledWith({ distro: 'debian', name: 'tarr', typos: true })
+
+    const invalid = await GET(request('/api/v1/suggest?name=tarr&typos=yes'), context(['v1', 'suggest']))
+    expect(invalid.status).toBe(422)
+    expect(apiMocks.suggest).toHaveBeenCalledTimes(1)
+  })
 
   it('answers for the requested distro and names it', async () => {
     apiMocks.suggest.mockResolvedValueOnce({ query: 'ta', suggestions })

@@ -221,14 +221,15 @@ const cachedRelated = unstable_cache(
 )
 
 const cachedManDistros = unstable_cache(
-  async (name: string, section: string) => await convex().query(api.queries.listManDistros, { name, section }),
+  async (name: string, section: string | null) =>
+    await convex().query(api.queries.listManDistros, section === null ? { name } : { name, section }),
   ['betterman', 'convex', 'man-distros'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedSuggest = unstable_cache(
-  async (distro: Distro, name: string) =>
-    await convex().query(api.queries.suggest, { distro, name }),
+  async (distro: Distro, name: string, typos: boolean) =>
+    await convex().query(api.queries.suggest, typos ? { distro, name, typos } : { distro, name }),
   ['betterman', 'convex', 'suggest'],
   { revalidate: SEARCH_REVALIDATE_SECONDS },
 )
@@ -368,7 +369,8 @@ export type ManPageMetaResponse = { page: ManPage }
 
 export type ManDistrosResponse = { distros: Distro[] }
 
-export async function fetchManDistros(opts: { name: string; section: string }): Promise<ManDistrosResponse> {
+/** Without a section, a distro counts when it has the name in any section. */
+export async function fetchManDistros(opts: { name: string; section: string | null }): Promise<ManDistrosResponse> {
   return await cachedManDistros(opts.name, opts.section)
 }
 
@@ -394,8 +396,9 @@ export async function fetchManMetaByNameAndSection(opts: {
   return result
 }
 
-export async function suggest(opts: { distro: Distro; name: string }): Promise<SuggestResponse> {
-  return await mapConvexError(() => cachedSuggest(opts.distro, opts.name))
+/** `typos` adds bounded spelling corrections when no name has the prefix. */
+export async function suggest(opts: { distro: Distro; name: string; typos?: boolean }): Promise<SuggestResponse> {
+  return await mapConvexError(() => cachedSuggest(opts.distro, opts.name, opts.typos === true))
 }
 
 export async function fetchLicenses(opts: { distro: Distro }): Promise<LicensesResponse> {

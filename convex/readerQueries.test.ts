@@ -53,6 +53,38 @@ describe("getRelated", () => {
   });
 });
 
+describe("suggest", () => {
+  async function seeded() {
+    const t = convexTest(schema, modules);
+    await t.run(async (ctx) => {
+      const releaseId = await activeRelease(ctx, "debian");
+      for (const [name, section] of [["grep", "1"], ["tar", "1"], ["tar", "5"], ["tarsnap", "1"]]) {
+        const pageId = await page(ctx, releaseId, "debian", name, section);
+        await ctx.db.insert("manPageSearchDocuments", {
+          releaseId, pageId, datasetReleaseId: "debian-prod", name, nameNorm: name, section,
+          title: `${name}(${section})`, description: `${name} description`, descNorm: `${name} description`,
+          searchText: name, snippetText: name,
+        });
+      }
+    });
+    return t;
+  }
+
+  it("answers name prefixes, and spelling corrections only when asked", async () => {
+    const t = await seeded();
+    const names = async (name: string, typos?: boolean) =>
+      (await t.query(api.queries.suggest, { distro: "debian", name, ...(typos === undefined ? {} : { typos }) }))
+        .suggestions.map((s) => `${s.name}(${s.section})`);
+    expect(await names("tar")).toEqual(["tar(1)", "tar(5)", "tarsnap(1)"]);
+    expect(await names("grpe")).toEqual([]);
+    expect(await names("grpe", true)).toEqual(["grep(1)"]);
+    expect(await names("tarr", true)).toEqual(["tar(1)", "tar(5)"]);
+    // A prefix match wins: corrections never displace real completions.
+    expect(await names("tars", true)).toEqual(["tarsnap(1)"]);
+    expect(await names("zzzz", true)).toEqual([]);
+  });
+});
+
 describe("listManDistros", () => {
   it("lists the prod distros that have the page or an alias for it, in picker order", async () => {
     const t = convexTest(schema, modules);
@@ -73,6 +105,11 @@ describe("listManDistros", () => {
       distros: ["debian", "ubuntu"],
     });
     expect(await t.query(api.queries.listManDistros, { name: "missing", section: "1" })).toEqual({ distros: [] });
+    // A bare name counts any section of the page or its aliases.
+    expect(await t.query(api.queries.listManDistros, { name: "systemctl" })).toEqual({
+      distros: ["debian", "ubuntu", "macos"],
+    });
+    expect(await t.query(api.queries.listManDistros, { name: "missing" })).toEqual({ distros: [] });
   });
 
   it("does not accept a caller-chosen stage", async () => {
