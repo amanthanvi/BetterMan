@@ -23,7 +23,7 @@ on:
         type: choice
         required: false
         default: all
-        # Keep choices aligned with BETTERMAN_BSD_DISTROS below; GitHub Actions
+        # Keep choices aligned with BSD in scripts/dataset-workflow.py; GitHub Actions
         # does not allow expressions in workflow_dispatch option lists.
         options:
           - all
@@ -34,7 +34,7 @@ on:
         type: choice
         required: false
         default: all
-        # Keep choices aligned with BETTERMAN_LINUX_DISTROS below; GitHub Actions
+        # Keep choices aligned with LINUX in scripts/dataset-workflow.py; GitHub Actions
         # does not allow expressions in workflow_dispatch option lists.
         options:
           - all
@@ -64,11 +64,18 @@ concurrency:
 permissions:
   contents: read
 
-# Canonical full-ingestion and promotion sets. The workflow_dispatch choices
-# above must remain literal because GitHub does not support expressions there.
+# Distro selection lives in scripts/dataset-workflow.py; keep the literal
+# workflow_dispatch choices above aligned with its LINUX and BSD lists.
+
 env:
-  BETTERMAN_LINUX_DISTROS: debian,ubuntu,fedora,arch,alpine
-  BETTERMAN_BSD_DISTROS: freebsd,macos
+  BETTERMAN_WORKFLOW_EVENT: ${{ github.event_name }}
+  BETTERMAN_INGEST_ENABLED: ${{ inputs.ingest && 'true' || 'false' }}
+  BETTERMAN_PROMOTE_ENABLED: ${{ inputs.promote && 'true' || 'false' }}
+  BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
+  BETTERMAN_LINUX_ENABLED: ${{ inputs.linux && 'true' || 'false' }}
+  BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
+  BETTERMAN_BSD_ENABLED: ${{ inputs.bsd && 'true' || 'false' }}
+  BETTERMAN_BSD_DISTRO: ${{ inputs.bsd_distro || 'all' }}
 
 jobs:
   preflight:
@@ -82,22 +89,45 @@ jobs:
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+          CONVEX_URL: ${{ vars.CONVEX_URL }}
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ -z "${CONVEX_HTTP_URL:-}" || -z "${CONVEX_INGEST_SECRET:-}" ]]; then
-            echo "Missing protected production environment secrets: BETTERMAN_CONVEX_HTTP_URL / BETTERMAN_CONVEX_INGEST_SECRET." >&2
+          if [[ -z "${CONVEX_HTTP_URL:-}" || -z "${CONVEX_INGEST_SECRET:-}" || -z "${CONVEX_URL:-}" ]]; then
+            echo "Missing production environment secrets BETTERMAN_CONVEX_HTTP_URL / BETTERMAN_CONVEX_INGEST_SECRET or CONVEX_URL variable." >&2
             exit 1
           fi
 
-  ingest_linux:
-    name: Ingest Linux
-    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.linux) }}
-    needs: [preflight]
+  plan:
+    name: Select distros
     runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      enabled: ${{ steps.plan.outputs.enabled }}
+      ingest: ${{ steps.plan.outputs.ingest }}
+      promote: ${{ steps.plan.outputs.promote }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select requested distros and operations
+        id: plan
+        run: python3 scripts/dataset-workflow.py plan
+
+  ingest:
+    name: Dataset (${{ matrix.distro }})
+    needs: [preflight, plan]
+    if: ${{ needs.plan.outputs.enabled == 'true' }}
+    strategy:
+      fail-fast: false
+      # Bound Docker/VM load and production upload concurrency.
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
     environment: production
-    timeout-minutes: 300
+    timeout-minutes: ${{ matrix.timeout }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,139 +137,89 @@ jobs:
         with:
           python-version: 3.14
 
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: ${{ needs.plan.outputs.promote == 'true' }}
+        with:
+          version: 10.34.4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        if: ${{ needs.plan.outputs.promote == 'true' }}
+        with:
+          node-version: 26
+          cache: pnpm
+      # Preserve the promotion job's no-lifecycle-scripts install policy.
+      - name: Install verification dependencies
+        id: verification_dependencies
+        if: ${{ needs.plan.outputs.promote == 'true' }}
+        run: python3 scripts/dataset-workflow.py run "${DISTRO}" verification-setup pnpm install --frozen-lockfile --ignore-scripts
+        env:
+          DISTRO: ${{ matrix.distro }}
+
       # Secret-bearing job: 'auto' would enable the cache here.
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro != 'freebsd' }}
         with:
           enable-cache: false
-      - run: cd ingestion && uv sync --frozen
+      - name: Install ingestion dependencies
+        id: dependencies
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro != 'freebsd' }}
+        run: python3 scripts/dataset-workflow.py run "${DISTRO}" setup uv sync --frozen --project ingestion
+        env:
+          DISTRO: ${{ matrix.distro }}
 
       - name: Ingest to Convex staging
+        id: staging
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro != 'freebsd' }}
         env:
+          DISTRO: ${{ matrix.distro }}
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
           BETTERMAN_DATASET_STAGE: staging
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
-          BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
+          BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
-
-          cd ingestion
-
           ingest_args=(--activate)
           if [[ "${BETTERMAN_INGEST_SAMPLE}" == "true" ]]; then
             ingest_args=(--sample --no-activate)
           fi
-
-          IFS=',' read -r -a available_distros <<< "${BETTERMAN_LINUX_DISTROS}"
-          target="${BETTERMAN_LINUX_DISTRO:-all}"
-          if [[ "${target}" == "all" ]]; then
-            selected_distros=("${available_distros[@]}")
-          elif [[ ",${BETTERMAN_LINUX_DISTROS}," == *",${target},"* ]]; then
-            selected_distros=("${target}")
-          else
-            echo "Unsupported Linux distro target: ${target}" >&2
-            exit 2
-          fi
-
-          for distro in "${selected_distros[@]}"; do
-            echo "Ingesting ${distro}…"
-            uv run python -m ingestion.cli ingest --distro "${distro}" "${ingest_args[@]}"
-          done
-
-  ingest_macos:
-    name: Ingest macOS
-    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.bsd && (inputs.bsd_distro == 'all' || inputs.bsd_distro == 'macos')) }}
-    needs: [preflight]
-    runs-on: macos-latest
-    environment: production
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: 3.14
-
-      # Secret-bearing job: 'auto' would enable the cache here.
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-        with:
-          enable-cache: false
-      - run: cd ingestion && uv sync --frozen
-
-      - name: Ingest macOS (BSD) to Convex staging
-        env:
-          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
-          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
-          BETTERMAN_DATASET_STAGE: staging
-          BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          cd ingestion
-
-          ingest_args=(--activate)
-          if [[ "${BETTERMAN_INGEST_SAMPLE}" == "true" ]]; then
-            ingest_args=(--sample --no-activate)
-          fi
-
-          echo "Ingesting macOS (BSD)…"
-          uv run python -m ingestion.cli ingest --distro macos "${ingest_args[@]}"
-
-  ingest_freebsd:
-    name: Ingest FreeBSD
-    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.ingest && inputs.bsd && (inputs.bsd_distro == 'all' || inputs.bsd_distro == 'freebsd')) }}
-    needs: [preflight]
-    runs-on: ubuntu-latest
-    environment: production
-    timeout-minutes: 90
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+          python3 scripts/dataset-workflow.py run "${DISTRO}" ingest \
+            uv run --directory ingestion python -m ingestion.cli ingest --distro "${DISTRO}" "${ingest_args[@]}"
 
       - name: Ingest FreeBSD to Convex staging
+        id: freebsd
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro == 'freebsd' }}
         uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1
         with:
-          # pkg builds the FreeBSD:15 repository for the newest 15.x minor and
-          # rejects an older userland, so bump this when a new minor ships.
+          # pkg builds for the newest 15.x minor; bump when a new minor ships.
           release: "15.1"
           envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA BETTERMAN_INGEST_SAMPLE"
           usesh: true
           run: |
             set -euo pipefail
-
             cd "$GITHUB_WORKSPACE"
-
+            mkdir -p dataset-results
+            # Copyback only runs after a zero VM exit; the host checks this record.
+            printf '%s\n' '{"distro":"freebsd","stage":"setup","result":"failure","error":"FreeBSD pkg/Python/Rust bootstrap failed; see VM log"}' > dataset-results/freebsd.json
+            trap 'exit 0' EXIT
             pkg update -f
             pkg install -y python3
-
             py="python3"
             if ! $py -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)'; then
-              echo "python3 is < 3.12; installing python312…"
               pkg install -y python312
               py="python3.12"
             fi
-
             if ! command -v cargo >/dev/null 2>&1; then
-              echo "cargo not found; installing Rust toolchain (required to build pydantic-core)…"
               pkg install -y rust
             fi
-
             $py -m ensurepip --upgrade
             $py -m pip install --upgrade pip
-            $py -m pip install ./ingestion
-
+            $py scripts/dataset-workflow.py run freebsd setup $py -m pip install ./ingestion
             set -- --activate
             if [ "${BETTERMAN_INGEST_SAMPLE}" = "true" ]; then
               set -- --sample --no-activate
             fi
-
-            echo "Ingesting FreeBSD…"
-            $py -m ingestion.cli ingest --distro freebsd "$@"
+            $py scripts/dataset-workflow.py run freebsd ingest $py -m ingestion.cli ingest --distro freebsd "$@"
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
@@ -247,123 +227,76 @@ jobs:
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
 
-  promote:
-    name: Promote dataset
-    runs-on: ubuntu-latest
-    environment: production
-    timeout-minutes: 10
-    needs: [preflight, ingest_linux, ingest_macos, ingest_freebsd]
-    # Unselected jobs and an explicit promote-only dispatch are skipped. Any
-    # selected failure/cancellation blocks promotion, and samples never promote.
-    if: >-
-      ${{
-        always() &&
-        (github.event_name != 'workflow_dispatch' || inputs.promote) &&
-        (github.event_name != 'workflow_dispatch' || !inputs.sample) &&
-        needs.preflight.result == 'success' &&
-        (needs.ingest_linux.result == 'success' || needs.ingest_linux.result == 'skipped') &&
-        (needs.ingest_macos.result == 'success' || needs.ingest_macos.result == 'skipped') &&
-        (needs.ingest_freebsd.result == 'success' || needs.ingest_freebsd.result == 'skipped')
-      }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+      - name: Require copied-back FreeBSD result
+        id: freebsd_result
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro == 'freebsd' }}
+        run: python3 scripts/dataset-workflow.py check freebsd
 
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10.34.4
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
-        with:
-          node-version: 26
-          cache: pnpm
-
-      # Lifecycle scripts must not run before the secret-bearing step; the check
-      # script needs only convex/browser, not esbuild's postinstall.
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Promote active Convex staging releases to prod
+      - name: Promote this distro's verified staging release
         id: promote
+        if: ${{ needs.plan.outputs.promote == 'true' }}
         env:
+          DISTRO: ${{ matrix.distro }}
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
           CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
-          BETTERMAN_WORKFLOW_EVENT: ${{ github.event_name }}
-          BETTERMAN_INGEST_ENABLED: ${{ inputs.ingest && 'true' || 'false' }}
-          BETTERMAN_LINUX_ENABLED: ${{ inputs.linux && 'true' || 'false' }}
-          BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
-          BETTERMAN_BSD_ENABLED: ${{ inputs.bsd && 'true' || 'false' }}
-          BETTERMAN_BSD_DISTRO: ${{ inputs.bsd_distro || 'all' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -z "${CONVEX_HTTP_URL:-}" || -z "${CONVEX_INGEST_SECRET:-}" ]]; then
-            echo "Missing BETTERMAN_CONVEX_HTTP_URL / BETTERMAN_CONVEX_INGEST_SECRET secrets."
-            exit 1
-          fi
-
-          python - <<'PY' > promote.json
-          import datetime
-          import json
-          import os
-
-          linux_distros = os.environ["BETTERMAN_LINUX_DISTROS"].split(",")
-          bsd_distros = os.environ["BETTERMAN_BSD_DISTROS"].split(",")
-
-          is_dispatch = os.environ["BETTERMAN_WORKFLOW_EVENT"] == "workflow_dispatch"
-          is_promote_only = is_dispatch and os.environ["BETTERMAN_INGEST_ENABLED"] != "true"
-
-          if not is_dispatch or is_promote_only:
-              distros = linux_distros + bsd_distros
-          else:
-              distros = []
-              if os.environ["BETTERMAN_LINUX_ENABLED"] == "true":
-                  target = os.environ["BETTERMAN_LINUX_DISTRO"]
-                  distros.extend(linux_distros if target == "all" else [target])
-              if os.environ["BETTERMAN_BSD_ENABLED"] == "true":
-                  target = os.environ["BETTERMAN_BSD_DISTRO"]
-                  distros.extend(bsd_distros if target == "all" else [target])
-
-          if not distros:
-              raise SystemExit("Refusing to promote without a selected distro")
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
-              fh.write(f"distros={','.join(distros)}\n")
-
-          print(json.dumps({
-              "fromStage": "staging",
-              "toStage": "prod",
-              "distros": distros,
-              "activatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
-          }))
-          PY
-
-          curl -fsS \
-            -X POST \
-            -H "Authorization: Bearer ${CONVEX_INGEST_SECRET}" \
-            -H "Content-Type: application/json" \
-            --data @promote.json \
-            -o promoted.json \
-            "${CONVEX_HTTP_URL%/}/ingest/promote"
-          cat promoted.json
-          echo
-
-          release_ids="$(jq -ce '.promoted | map({key: .distro, value: .datasetReleaseId}) | from_entries' promoted.json)"
-          echo "release_ids=${release_ids}" >> "$GITHUB_OUTPUT"
-
-      - name: Verify promoted production releases
-        env:
+          BETTERMAN_INGEST_ENABLED: ${{ needs.plan.outputs.ingest }}
           CONVEX_URL: ${{ vars.CONVEX_URL }}
-          BETTERMAN_CHECK_DISTROS: ${{ steps.promote.outputs.distros }}
+        run: python3 scripts/dataset-workflow.py promote "${DISTRO}"
+
+      - name: Verify promoted production release
+        id: verify_prod
+        if: ${{ needs.plan.outputs.promote == 'true' }}
+        env:
+          DISTRO: ${{ matrix.distro }}
+          CONVEX_URL: ${{ vars.CONVEX_URL }}
+          BETTERMAN_CHECK_DISTROS: ${{ matrix.distro }}
           BETTERMAN_EXPECTED_RELEASE_IDS: ${{ steps.promote.outputs.release_ids }}
         shell: bash
         run: |
           set -euo pipefail
+          test -n "${BETTERMAN_EXPECTED_RELEASE_IDS}"
+          python3 scripts/dataset-workflow.py run "${DISTRO}" prod-verified pnpm convex:prod-check
 
-          # The script skips the id comparison when this is empty; never let that happen here.
-          if [[ -z "${BETTERMAN_EXPECTED_RELEASE_IDS}" ]]; then
-            echo "Promote produced no release ids to verify." >&2
-            exit 1
-          fi
-          pnpm convex:prod-check
+      - name: Record distro result
+        if: ${{ always() }}
+        env:
+          DISTRO: ${{ matrix.distro }}
+          BETTERMAN_JOB_STATUS: ${{ job.status }}
+          BETTERMAN_STEPS: ${{ toJSON(steps) }}
+        run: python3 scripts/dataset-workflow.py finish "${DISTRO}"
+      - name: Upload sanitized distro result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dataset-result-${{ matrix.distro }}
+          path: dataset-results/${{ matrix.distro }}.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 14
+
+  summary:
+    name: Dataset summary
+    needs: [preflight, plan, ingest]
+    if: ${{ always() && (needs.plan.outputs.enabled == 'true' || needs.plan.result == 'failure' || needs.plan.result == 'cancelled') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download distro results
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: dataset-result-*
+          path: dataset-results
+          merge-multiple: true
+      - name: Report all selected distros and fail on any failure
+        if: ${{ always() }}
+        env:
+          BETTERMAN_MATRIX: ${{ needs.plan.outputs.matrix }}
+          BETTERMAN_MATRIX_RESULT: ${{ needs.ingest.result }}
+          BETTERMAN_PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          BETTERMAN_PLAN_RESULT: ${{ needs.plan.result }}
+        run: python3 scripts/dataset-workflow.py summary
