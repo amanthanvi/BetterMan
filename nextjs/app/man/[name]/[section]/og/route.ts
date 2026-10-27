@@ -6,6 +6,7 @@ import { sectionLabel } from '../../../../../components/man/RunningHead'
 import { normalizeDistro } from '../../../../../lib/distro'
 import { isValidManImageParams } from '../../../../../lib/og/input'
 import { isRateLimited } from '../../../../../lib/rateLimit'
+import { nonHtmlSecurityHeaders } from '../../../../../lib/securityHeaders'
 
 /*
  * A route handler rather than opengraph-image.tsx: metadata image routes only
@@ -15,7 +16,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
   const { name, section } = await ctx.params
   if (!isValidManImageParams(name, section)) notFound()
   if (await isRateLimited(request.headers, 'page')) {
-    return new Response(null, { status: 429, headers: { 'Cache-Control': 'private, no-store' } })
+    return new Response(null, { status: 429, headers: { ...nonHtmlSecurityHeaders(), 'Cache-Control': 'private, no-store' } })
   }
 
   const requestedDistro = normalizeDistro(new URL(request.url).searchParams.get('distro')) ?? 'debian'

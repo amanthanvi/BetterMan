@@ -8,7 +8,7 @@ const NAME = /^[a-z0-9_+[][\w.+:@[\]-]{0,199}$/i
 const SECTION = /^\d[a-z]{0,9}$/i
 const FLAG = /^--?[^\s/-][^\s/]{0,79}$/
 // A name without a section that ends in one of these is a scanner probe or an
-// asset, not a man page. `.txt` is kept free for plain-text pages (#388).
+// asset, not an HTML man page. `.txt` is handled by the plain-text rewrites.
 // `package.json.5` still works: the section suffix says it is a man page.
 const NOT_A_PAGE = new Set([
   'txt',

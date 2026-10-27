@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
           destination: '/sitemaps-internal/:distro',
         },
       ],
+      // Concrete routes (notably robots.txt) win; these run before the short-URL catch-all.
+      afterFiles: [
+        { source: '/man/:name/:section.txt', destination: '/plain-text/:name/:section' },
+        { source: '/:name.txt', destination: '/plain-text/:name' },
+      ],
     }
   },
 }
