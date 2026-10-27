@@ -1893,7 +1893,7 @@
      {
       "inlines": [
        {
-        "text": "UNIX",
+        "text": "UNIX ",
         "type": "text"
        }
       ],
@@ -1906,7 +1906,7 @@
      {
       "inlines": [
        {
-        "text": "short-option style",
+        "text": " short-option style",
         "type": "text"
        }
       ],
@@ -2032,7 +2032,7 @@
      {
       "inlines": [
        {
-        "text": "GNU",
+        "text": "GNU ",
         "type": "text"
        }
       ],
@@ -2045,7 +2045,7 @@
      {
       "inlines": [
        {
-        "text": "long-option style",
+        "text": " long-option style",
         "type": "text"
        }
       ],

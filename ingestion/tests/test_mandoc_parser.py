@@ -530,3 +530,71 @@ def test_compatibility_entry_peers_do_not_make_a_bare_plus_an_option() -> None:
     assert parsed.options and "allusers" not in [option.anchorId for option in parsed.options]
     entries = parsed.doc.blocks[2].items[0][1].items[0][0].items
     assert [item.id for item in entries] == ["user", "netgroup", "allusers"]
+
+
+def test_top_level_loose_text_preserves_source_order_and_ids() -> None:
+    from ingestion.mandoc_parser import _blocks_to_text
+
+    parsed = parse_mandoc_html("""<div class="manual-text">Before section.
+      <section><h1>DESCRIPTION</h1>Opening <b>inline</b> run.
+      <div class="Bd-indent">Indented.<p>Second.</p></div>
+      General topics about the package are discussed at the mailing list:
+      <p>Last paragraph.</p>After paragraph.</section>After section.
+      <section><h1>OPTIONS</h1><dl><dt id="group"><b>--group</b></dt>
+      <dd>Group description.</dd></dl></section></div>""")
+    assert _blocks_to_text(parsed.doc.blocks) == (
+        "Before section. DESCRIPTION Opening inline run. Indented. Second. "
+        "General topics about the package are discussed at the mailing list: "
+        "Last paragraph. After paragraph. After section. OPTIONS --group Group description."
+    )
+    assert [item.id for item in parsed.doc.toc] == ["description", "options"]
+    assert [(opt.flags, opt.anchorId) for opt in parsed.options or []] == [("--group", "group")]
+
+
+def test_inline_boundary_whitespace_survives_in_paragraphs_and_option_descriptions() -> None:
+    from ingestion.mandoc_parser import _blocks_to_text
+
+    html = """<div class="manual-text"><h1>OPTIONS</h1><dl>
+      <dt id="group"><b>--group</b></dt><dd>The<b> effective</b> group has
+      <b>fragmented </b>and <i>bundled </i>packets.<p>Use <b>-d\n </b><b></b><i>db_name</i>.
+      <b>link </b><i>DEVICE</i><b> name </b><i>NAME</i>.
+      x<b>y</b>z; <span><i> nested </i></span>words;
+      <code> code </code>then <var> value </var>and
+      <a href="https://example.com"> link </a>end.</p></dd></dl></div>"""
+    parsed = parse_mandoc_html(html)
+    description = (
+        "The effective group has fragmented and bundled packets. Use -d db_name. "
+        "link DEVICE name NAME. xyz; nested words; code then value and link end."
+    )
+    assert parsed.options and parsed.options[0].description == description
+    assert " ".join(_blocks_to_text(parsed.doc.blocks).split()) == "OPTIONS --group " + description
+
+
+def test_docbook_indented_bullets_use_only_the_list_marker() -> None:
+    from ingestion.mandoc_parser import _blocks_to_text
+
+    body = """<div class="manual-text"><h1>DESCRIPTION</h1>
+      <p>•A literal bullet outside a list.</p>
+      <div class="Bd-indent">•<b>--help, -?</b><p>Show help.</p></div>
+      <div class="Bd-indent"><p><b>•</b><i>another item</i></p></div>
+      <div class="Bd-indent"><p>Keep an internal • bullet.</p></div></div>"""
+    parsed = parse_mandoc_html("<!-- Generator: DocBook XSL Stylesheets -->" + body)
+    assert _blocks_to_text(parsed.doc.blocks) == (
+        "DESCRIPTION •A literal bullet outside a list. --help, -? Show help. "
+        "another item Keep an internal • bullet."
+    )
+    assert "•--help" in _blocks_to_text(parse_mandoc_html(body).doc.blocks)
+
+
+def test_cross_reference_links_keep_visible_boundary_whitespace() -> None:
+    from ingestion.mandoc_parser import _blocks_to_text
+
+    parsed = parse_mandoc_html("""<div class="manual-text"><p>See<b> tar</b>(1).
+      Use <b>tar(1) </b>next; <a class="Xr">tar(1) </a>then
+      <i>tar </i>(1).</p></div>""")
+    assert _blocks_to_text(parsed.doc.blocks) == (
+        "See tar(1). Use tar(1) next; tar(1) then tar (1)."
+    )
+    links = [inline for inline in parsed.doc.blocks[0].inlines if inline.type == "link"]
+    assert len(links) == 4
+    assert all(link.href == "/man/tar/1" for link in links)
