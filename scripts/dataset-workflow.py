@@ -119,7 +119,8 @@ def run(distro, stage, command):
                 if isinstance(event, dict) and event.get("event") == "ingest_error":
                     record["error"] = clean(str(event.get("error", "Ingest failed")))[:1200]
             except json.JSONDecodeError:
-                pass
+                # Package-manager output is plain text; it remains in the diagnostic tail.
+                continue
         code = process.wait()
     if stage == "ingest" and code == 0:
         sample = os.environ.get("BETTERMAN_INGEST_SAMPLE") == "true"
@@ -157,6 +158,7 @@ def request_json(request):
         delay = 2 ** (attempt + 1)
         print(f"[dataset] Transient request failure; retry {attempt + 2}/3 in {delay}s", flush=True)
         time.sleep(delay)
+    raise RuntimeError("Request retry loop exhausted without a response")
 
 
 def promote(distro):

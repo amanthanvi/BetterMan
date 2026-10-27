@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 
@@ -250,11 +249,99 @@ unittest.main(verbosity=2)
   assert.equal(result.status, 0, result.stderr + result.stdout)
 })
 
-// Reuse the YAML parser already installed with Vercel's Python tooling.
-const fromVercel = createRequire(import.meta.resolve('vercel/package.json'))
-const fromPython = createRequire(fromVercel.resolve('@vercel/python'))
-const yaml = createRequire(fromPython.resolve('@vercel/python-analysis'))('js-yaml')
-const readWorkflow = () => yaml.load(readFileSync(new URL('../.github/workflows/update-docs.yml', import.meta.url), 'utf8'))
+// shortcut: only the workflow's maps, lists, scalars and literal blocks; extend if its syntax changes.
+function parseWorkflow(source) {
+  const lines = source.split('\n')
+  let index = 0
+  const indent = line => line.match(/^ */)[0].length
+  const skip = () => { while (index < lines.length && /^\s*(#.*)?$/.test(lines[index])) index++ }
+  function scalar(value) {
+    const text = value.replace(/\s+#.*$/, '').trim()
+    if (text.startsWith('"')) return JSON.parse(text)
+    if (text.startsWith("'")) {
+      assert.ok(text.endsWith("'"), 'Unterminated workflow scalar')
+      return text.slice(1, -1).replaceAll("''", "'")
+    }
+    if (text.startsWith('[')) {
+      assert.ok(text.endsWith(']'), 'Unsupported workflow list')
+      return text.slice(1, -1).split(',').filter(item => item.trim()).map(scalar)
+    }
+    assert.ok(!/^[>&*!{]|[|>]$/.test(text), `Unsupported workflow scalar: ${text}`)
+    if (text === 'true' || text === 'false') return text === 'true'
+    if (/^\d+(\.\d+)?$/.test(text)) return Number(text)
+    return text
+  }
+  function entry(target, text, level) {
+    const match = /^([\w-]+):(?:\s+(.*))?$/.exec(text)
+    assert.ok(match, `Unsupported workflow mapping: ${text}`)
+    const [, key, value] = match
+    assert.ok(!Object.hasOwn(target, key), `Duplicate workflow key: ${key}`)
+    if (value === '|') {
+      const start = index
+      while (index < lines.length && (!lines[index].trim() || indent(lines[index]) > level)) index++
+      const content = lines.slice(start, index)
+      const width = content.find(line => line.trim())?.match(/^ */)[0].length ?? level + 2
+      target[key] = content.map(line => line.slice(width)).join('\n') + '\n'
+    } else if (value !== undefined) {
+      target[key] = scalar(value)
+    } else {
+      skip()
+      target[key] = index < lines.length && indent(lines[index]) > level ? block(indent(lines[index])) : {}
+    }
+  }
+  function mapping(target, level) {
+    skip()
+    while (index < lines.length && indent(lines[index]) === level) {
+      entry(target, lines[index++].trim(), level)
+      skip()
+    }
+    return target
+  }
+  function block(level) {
+    if (!lines[index].trimStart().startsWith('- ')) return mapping({}, level)
+    const items = []
+    skip()
+    while (index < lines.length && indent(lines[index]) === level) {
+      assert.ok(lines[index].trimStart().startsWith('- '), 'Mixed workflow map and list')
+      const text = lines[index++].trimStart().slice(2)
+      if (/^[\w-]+:(?:\s|$)/.test(text)) {
+        const item = {}
+        entry(item, text, level + 2)
+        items.push(mapping(item, level + 2))
+      } else {
+        items.push(scalar(text))
+      }
+      skip()
+    }
+    return items
+  }
+  skip()
+  const workflow = block(0)
+  skip()
+  assert.equal(index, lines.length, 'Unsupported workflow indentation')
+  return workflow
+}
+
+const readWorkflow = () => parseWorkflow(readFileSync(new URL('../.github/workflows/update-docs.yml', import.meta.url), 'utf8'))
+
+test('dependency-free workflow parser preserves structure and literal shell commands', () => {
+  assert.deepEqual(parseWorkflow(`jobs:
+  ingest:
+    needs: [preflight, plan]
+    enabled: false
+    steps:
+      - name: 'Run it'
+        run: |
+          # shell comment
+          echo 'literal: text'
+      - uses: example/action@sha # pin
+`), { jobs: { ingest: { needs: ['preflight', 'plan'], enabled: false, steps: [
+    { name: 'Run it', run: "# shell comment\necho 'literal: text'\n" },
+    { uses: 'example/action@sha' },
+  ] } } })
+  assert.throws(() => parseWorkflow('jobs: &alias\n'), /Unsupported workflow scalar/)
+  assert.throws(() => parseWorkflow('jobs: {}\njobs: {}\n'), /Unsupported workflow scalar|Duplicate/)
+})
 
 function assertWorkflowWiring(workflow) {
   const { plan, ingest, summary } = workflow.jobs
