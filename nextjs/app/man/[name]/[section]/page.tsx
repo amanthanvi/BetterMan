@@ -1,9 +1,8 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
-import { Suspense, cache } from 'react'
+import { cache } from 'react'
 
-import { ManPageSkeleton } from '../../../../components/man/ManPageSkeleton'
 import { ManPageView } from '../../../../components/man/ManPageView'
 import { JsonLdHead } from '../../../../components/seo/JsonLdHead'
 import {
@@ -119,14 +118,12 @@ export default async function ManByNameAndSectionPage({
   return (
     <>
       <JsonLdHead id={`bm-jsonld:${data.page.id}`} nonce={nonce} jsonLd={jsonLd} />
-      <Suspense fallback={<ManPageSkeleton />}>
-        <ManPageBody distro={distro} name={name.toLowerCase()} section={section} />
-      </Suspense>
+      {await ManPageBody({ distro, name: name.toLowerCase(), section })}
     </>
   )
 }
 
-// The document streams in behind the skeleton once the status code is settled.
+// Await the document before returning the page: a painted shell delays React's reveal by 300 ms.
 async function ManPageBody(opts: Lookup) {
   const [result, related] = await Promise.all([
     fetchManByNameAndSectionOrAlias(opts),

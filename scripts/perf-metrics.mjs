@@ -29,17 +29,37 @@ export function checkQueryShape(op, args) {
 
 // Self-contained so Playwright can install this exact function before navigation.
 export function installVitalObservers() {
-  window.__perf = { fcp: 0, lcp: 0, cls: 0 }
+  window.__perf = { fcp: 0, lcp: 0, cls: 0, candidates: [], shifts: [], fonts: [] }
+  const describe = source => {
+    const node = source?.nodeType === 3 ? source.parentElement : source
+    return node ? {
+      tag: node.tagName, id: node.id, className: String(node.className).slice(0, 160),
+      text: node.textContent?.slice(0, 120), font: getComputedStyle(node).font,
+    } : null
+  }
+  if (typeof document !== 'undefined') {
+    for (const type of ['loading', 'loadingdone', 'loadingerror']) document.fonts.addEventListener(type, event => {
+      window.__perf.fonts.push({ type, time: performance.now(), faces: [...(event.fontfaces ?? [])].map(face => ({ family: face.family, status: face.status })) })
+    })
+  }
   let windowStart = null, lastShift = 0, score = 0
   new PerformanceObserver(list => {
-    for (const entry of list.getEntries()) if (entry.name === 'first-contentful-paint') window.__perf.fcp = entry.startTime
+    for (const entry of list.getEntries()) if (entry.name === 'first-contentful-paint') {
+      window.__perf.fcp = entry.startTime
+    }
   }).observe({ type: 'paint', buffered: true })
   new PerformanceObserver(list => {
-    for (const entry of list.getEntries()) window.__perf.lcp = entry.startTime
+    for (const entry of list.getEntries()) {
+      window.__perf.lcp = entry.startTime
+      window.__perf.candidates.push({ time: entry.startTime, size: entry.size, element: describe(entry.element) })
+    }
   }).observe({ type: 'largest-contentful-paint', buffered: true })
   new PerformanceObserver(list => {
     for (const entry of list.getEntries()) {
       if (entry.hadRecentInput) continue
+      window.__perf.shifts.push({ time: entry.startTime, value: entry.value,
+        sources: (entry.sources ?? []).map(source => ({ node: describe(source.node), previous: source.previousRect, current: source.currentRect })),
+      })
       if (windowStart === null || entry.startTime - lastShift >= 1000 || entry.startTime - windowStart >= 5000) {
         windowStart = entry.startTime
         score = 0
@@ -49,6 +69,11 @@ export function installVitalObservers() {
       window.__perf.cls = Math.max(window.__perf.cls, score)
     }
   }).observe({ type: 'layout-shift', buffered: true })
+}
+
+export function assertNoManStreaming(html) {
+  assert.doesNotMatch(html, /\$RC|\$RT|\bid=["']B:|<!--\$(?:\?|~)-->/,
+    'Man page must ship visible document HTML without pending Suspense boundaries')
 }
 
 export function compareBudgets(actual, budgets) {

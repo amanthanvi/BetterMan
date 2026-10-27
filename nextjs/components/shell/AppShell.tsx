@@ -423,6 +423,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div aria-live="polite" className="sr-only">
             {overlayNotice}
           </div>
+          <span role="status" aria-label="Navigation" className={distro.isNavigating ? 'font-mono text-xs text-muted' : 'sr-only'}>
+            {distro.isNavigating ? 'Loading…' : ''}
+          </span>
 
           <div className="ml-auto flex items-center gap-4">
             <button

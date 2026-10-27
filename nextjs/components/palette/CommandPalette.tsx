@@ -215,7 +215,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     const query = q.trim()
     if (!query) return
     recordRecentSearch(query)
-    router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, distroOverride ?? linkDistro))
+    distro.startNavigation(() => router.push(withDistro(`/search?q=${encodeURIComponent(query)}`, distroOverride ?? linkDistro)))
     close()
   }
 
@@ -231,7 +231,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       if (window.location.hash === `#${anchorId}`) window.dispatchEvent(new HashChangeEvent('hashchange'))
       else window.location.hash = anchorId
     } else {
-      router.push(manPageHref(name, section, targetDistro, anchorId))
+      distro.startNavigation(() => router.push(manPageHref(name, section, targetDistro, anchorId)))
     }
     close()
   }
@@ -304,7 +304,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     id: `action-section-${s}`,
     label: `Go to section ${s}`,
     run: () => {
-      router.push(withDistro(`/section/${encodeURIComponent(s)}`, linkDistro))
+      distro.startNavigation(() => router.push(withDistro(`/section/${encodeURIComponent(s)}`, linkDistro)))
       close()
     },
   }))
@@ -322,7 +322,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       id: 'action-home',
       label: 'Go home',
       run: () => {
-        router.push(withDistro('/', linkDistro))
+        distro.startNavigation(() => router.push(withDistro('/', linkDistro)))
         close()
       },
     },

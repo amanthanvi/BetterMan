@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import type { Distro } from '../../lib/distro'
@@ -15,6 +15,8 @@ type DistroContextValue = {
   preferred: Distro
   /** Make `distro` the stored default and show it. */
   setDistro: (distro: Distro) => void
+  isNavigating: boolean
+  startNavigation: (action: () => void) => void
 }
 
 function writeCookie(distro: Distro) {
@@ -63,6 +65,7 @@ export function DistroProvider({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isNavigating, startNavigation] = useTransition()
 
   const search = searchParams.toString()
   const urlDistro = normalizeDistro(searchParams.get('distro'))
@@ -84,9 +87,9 @@ export function DistroProvider({
         distro: next,
       })
       pendingUrlRef.current = url
-      router.replace(url, { scroll: false })
+      startNavigation(() => router.replace(url, { scroll: false }))
     },
-    [pathname, router, search],
+    [pathname, router, search, startNavigation],
   )
 
   // Next 16.4 caches the first page's hash in that route's URL and appends the
@@ -108,7 +111,10 @@ export function DistroProvider({
     writeCookie(stored)
   }, [])
 
-  const value = useMemo(() => ({ distro, urlDistro, preferred, setDistro }), [distro, urlDistro, preferred, setDistro])
+  const value = useMemo(
+    () => ({ distro, urlDistro, preferred, setDistro, isNavigating, startNavigation }),
+    [distro, urlDistro, preferred, setDistro, isNavigating, startNavigation],
+  )
   return <DistroContext.Provider value={value}>{children}</DistroContext.Provider>
 }
 

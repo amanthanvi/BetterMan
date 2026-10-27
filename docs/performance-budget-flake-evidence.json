@@ -1,0 +1,598 @@
+{
+  "baseHead": "be49a8586202ccfcbab168c9fc4009d1532bac7b",
+  "platform": "darwin",
+  "node": "v26.5.0",
+  "chromium": "156.0.8078.4",
+  "command": "pnpm perf:check --stress",
+  "sampleColumns": [
+    "fcpMs",
+    "lcpMs",
+    "cls",
+    "lcpAfterFcpMs",
+    "finalLcpTag",
+    "finalLcpId"
+  ],
+  "before": {
+    "condition": "original streamed route, 16x CPU (temporary diagnostic PERF_CPU_RATE=16)",
+    "samples": [
+      [
+        248,
+        248,
+        0.0399150146484375,
+        0,
+        "P",
+        ""
+      ],
+      [
+        240,
+        240,
+        0.0399150146484375,
+        0,
+        "P",
+        ""
+      ],
+      [
+        172,
+        540,
+        0.14241501464843748,
+        368,
+        "P",
+        ""
+      ],
+      [
+        268,
+        268,
+        0.0399150146484375,
+        0,
+        "P",
+        ""
+      ],
+      [
+        168,
+        540,
+        0.14241501464843748,
+        372,
+        "P",
+        ""
+      ]
+    ],
+    "representativeCaptures": [
+      {
+        "fcp": 248,
+        "lcp": 248,
+        "cls": 0.0399150146484375,
+        "candidates": [
+          {
+            "time": 248,
+            "size": 35508,
+            "element": {
+              "tag": "P",
+              "id": "",
+              "className": "text-fg",
+              "text": "bash manual paragraph 2. The shell reads commands from standard input or a file and executes them. Use the options below",
+              "font": "15px / 24.75px \"Geist Sans\", ui-sans-serif, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+            }
+          }
+        ],
+        "shifts": [
+          {
+            "time": 232.89999997615814,
+            "value": 0.0399150146484375,
+            "sources": [
+              {
+                "node": {
+                  "tag": "ARTICLE",
+                  "id": "",
+                  "className": "mx-auto min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-rea",
+                  "text": "EXAMPLESif [ -n \"$1\" ]; then\n  printf \"%s\\n\" \"$1\"\nfiDESCRIPTION#bash manual paragraph 1. The shell reads commands from s",
+                  "font": "15px / 24.75px \"Geist Sans\", ui-sans-serif, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+                },
+                "previous": {
+                  "x": 532,
+                  "y": 392.984375,
+                  "width": 512,
+                  "height": 407.015625,
+                  "top": 392.984375,
+                  "right": 1044,
+                  "bottom": 800,
+                  "left": 532
+                },
+                "current": {
+                  "x": 376,
+                  "y": 392.984375,
+                  "width": 824,
+                  "height": 407.015625,
+                  "top": 392.984375,
+                  "right": 1200,
+                  "bottom": 800,
+                  "left": 376
+                }
+              }
+            ]
+          }
+        ],
+        "fonts": [
+          {
+            "type": "loading",
+            "time": 516.7000000476837,
+            "faces": []
+          },
+          {
+            "type": "loadingdone",
+            "time": 534.7999999523163,
+            "faces": [
+              {
+                "family": "Geist Sans",
+                "status": "loaded"
+              },
+              {
+                "family": "JetBrains Mono",
+                "status": "loaded"
+              }
+            ]
+          }
+        ],
+        "resources": [
+          {
+            "path": "/fonts/geist/GeistSans-Variable.woff2",
+            "start": 30.700000047683716,
+            "end": 61.700000047683716
+          },
+          {
+            "path": "/fonts/jetbrains-mono/jetbrainsmono-roman.woff2",
+            "start": 32.799999952316284,
+            "end": 61.89999997615814
+          }
+        ]
+      },
+      {
+        "fcp": 172,
+        "lcp": 540,
+        "cls": 0.14241501464843748,
+        "candidates": [
+          {
+            "time": 172,
+            "size": 1206,
+            "element": {
+              "tag": "SPAN",
+              "id": "",
+              "className": "text-sm font-semibold tracking-tight",
+              "text": "BetterMan",
+              "font": "600 13.5px / 19.575px \"Geist Sans\", ui-sans-serif, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+            }
+          },
+          {
+            "time": 540,
+            "size": 35508,
+            "element": {
+              "tag": "P",
+              "id": "",
+              "className": "text-fg",
+              "text": "bash manual paragraph 2. The shell reads commands from standard input or a file and executes them. Use the options below",
+              "font": "15px / 24.75px \"Geist Sans\", ui-sans-serif, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+            }
+          }
+        ],
+        "shifts": [
+          {
+            "time": 506.89999997615814,
+            "value": 0.1025,
+            "sources": [
+              {
+                "node": {
+                  "tag": "FOOTER",
+                  "id": "",
+                  "className": "border-t border-edge",
+                  "text": ">_BetterManLicensesGitHub",
+                  "font": "15px / 22.5px \"Geist Sans\", ui-sans-serif, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+                },
+                "previous": {
+                  "x": 0,
+                  "y": 529,
+                  "width": 1280,
+                  "height": 81.796875,
+                  "top": 529,
+                  "right": 1280,
+                  "bottom": 610.796875,
+                  "left": 0
+                },
+                "current": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 0,
+                  "height": 0,
+                  "top": 0,
+                  "right": 0,
+                  "bottom": 0,
+                  "left": 0
+                }
+              }
+            ]
+          },
+          {
+            "time": 522.2000000476837,
+            "value": 0.0399150146484375,
+            "sources": [
+              {
+                "node": {
+                  "tag": "ARTICLE",
+                  "id": "",
+                  "className": "mx-auto min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-rea",
+                  "text": "EXAMPLESif [ -n \"$1\" ]; then\n  printf \"%s\\n\" \"$1\"\nfiDESCRIPTION#bash manual paragraph 1. The shell reads commands from s",
+                  "font": "15px / 24.75px \"Geist Sans\", ui-sans-serif, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+                },
+                "previous": {
+                  "x": 532,
+                  "y": 392.984375,
+                  "width": 512,
+                  "height": 407.015625,
+                  "top": 392.984375,
+                  "right": 1044,
+                  "bottom": 800,
+                  "left": 532
+                },
+                "current": {
+                  "x": 376,
+                  "y": 392.984375,
+                  "width": 824,
+                  "height": 407.015625,
+                  "top": 392.984375,
+                  "right": 1200,
+                  "bottom": 800,
+                  "left": 376
+                }
+              }
+            ]
+          }
+        ],
+        "fonts": [
+          {
+            "type": "loading",
+            "time": 200.30000007152557,
+            "faces": []
+          },
+          {
+            "type": "loadingdone",
+            "time": 451.3000000715256,
+            "faces": [
+              {
+                "family": "Geist Sans",
+                "status": "loaded"
+              },
+              {
+                "family": "JetBrains Mono",
+                "status": "loaded"
+              }
+            ]
+          }
+        ],
+        "resources": [
+          {
+            "path": "/fonts/geist/GeistSans-Variable.woff2",
+            "start": 32.5,
+            "end": 62.5
+          },
+          {
+            "path": "/fonts/jetbrains-mono/jetbrainsmono-roman.woff2",
+            "start": 34.700000047683716,
+            "end": 62.800000071525574
+          }
+        ]
+      }
+    ]
+  },
+  "beforeDelayedFonts": {
+    "condition": "original streamed route, 4x CPU, fonts delayed 650ms (temporary diagnostic PERF_FONT_DELAY_MS=650)",
+    "samples": [
+      [
+        184,
+        184,
+        0.03918627834320068,
+        0,
+        "P",
+        ""
+      ],
+      [
+        176,
+        176,
+        0.03918627834320068,
+        0,
+        "P",
+        ""
+      ],
+      [
+        172,
+        172,
+        0.03918627834320068,
+        0,
+        "P",
+        ""
+      ],
+      [
+        168,
+        168,
+        0.03918627834320068,
+        0,
+        "P",
+        ""
+      ],
+      [
+        176,
+        176,
+        0.03918627834320068,
+        0,
+        "P",
+        ""
+      ]
+    ],
+    "fontResponseEnds": [
+      [
+        674.9,
+        674.9
+      ],
+      [
+        675.3,
+        675.4
+      ],
+      [
+        671.9,
+        671.9
+      ],
+      [
+        673.2,
+        673.2
+      ],
+      [
+        672.5,
+        672.5
+      ]
+    ]
+  },
+  "after": {
+    "condition": "awaited document, default 4x CPU",
+    "samples": [
+      [
+        68,
+        68,
+        0.0399150146484375,
+        0,
+        "P",
+        ""
+      ],
+      [
+        68,
+        68,
+        0.0399150146484375,
+        0,
+        "P",
+        ""
+      ],
+      [
+        60,
+        60,
+        0.0399150146484375,
+        0,
+        "P",
+        ""
+      ],
+      [
+        64,
+        64,
+        0.0399150146484375,
+        0,
+        "P",
+        ""
+      ],
+      [
+        60,
+        60,
+        0.0399150146484375,
+        0,
+        "P",
+        ""
+      ]
+    ],
+    "ttfbMs": [
+      8.9,
+      8.2,
+      7.2,
+      8,
+      7.1
+    ]
+  },
+  "stress": [
+    {
+      "profile": {
+        "cpuRate": 16
+      },
+      "medianLag": 0,
+      "samples": [
+        [
+          252,
+          252,
+          0.0761559609413147,
+          0,
+          "P",
+          ""
+        ],
+        [
+          256,
+          256,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ],
+        [
+          272,
+          272,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ],
+        [
+          252,
+          252,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ],
+        [
+          276,
+          276,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ]
+      ]
+    },
+    {
+      "profile": {
+        "cpuRate": 16
+      },
+      "medianLag": 0,
+      "samples": [
+        [
+          248,
+          248,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ],
+        [
+          248,
+          248,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ],
+        [
+          224,
+          224,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ],
+        [
+          276,
+          276,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ],
+        [
+          252,
+          252,
+          0.0399150146484375,
+          0,
+          "P",
+          ""
+        ]
+      ]
+    },
+    {
+      "profile": {
+        "fontDelayMs": 650
+      },
+      "medianLag": 0,
+      "samples": [
+        [
+          168,
+          168,
+          0.03918627834320068,
+          0,
+          "P",
+          ""
+        ],
+        [
+          168,
+          168,
+          0.03918627834320068,
+          0,
+          "P",
+          ""
+        ],
+        [
+          172,
+          172,
+          0.03918627834320068,
+          0,
+          "P",
+          ""
+        ],
+        [
+          176,
+          176,
+          0.03918627834320068,
+          0,
+          "P",
+          ""
+        ],
+        [
+          172,
+          172,
+          0.03918627834320068,
+          0,
+          "P",
+          ""
+        ]
+      ]
+    },
+    {
+      "profile": {
+        "clientLcp": true
+      },
+      "medianLag": 1276,
+      "samples": [
+        [
+          68,
+          1356,
+          0.2985390625,
+          1288,
+          "P",
+          "perf-client-lcp"
+        ],
+        [
+          64,
+          1340,
+          0.2985390625,
+          1276,
+          "P",
+          "perf-client-lcp"
+        ],
+        [
+          108,
+          1404,
+          0.2985390625,
+          1296,
+          "P",
+          "perf-client-lcp"
+        ],
+        [
+          76,
+          1352,
+          0.2985390625,
+          1276,
+          "P",
+          "perf-client-lcp"
+        ],
+        [
+          64,
+          1340,
+          0.2985390625,
+          1276,
+          "P",
+          "perf-client-lcp"
+        ]
+      ]
+    }
+  ],
+  "afterHead": "f4dc162d963a995552ec3f947669fa8162681304"
+}

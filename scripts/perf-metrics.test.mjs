@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { checkQueryShape, compareBudgets, installVitalObservers, instrumentModules, median, recordBaseline, recordSyscall } from './perf-metrics.mjs'
+import { assertNoManStreaming, checkQueryShape, compareBudgets, installVitalObservers, instrumentModules, median, recordBaseline, recordSyscall } from './perf-metrics.mjs'
 
 test('counts repeated gets, streamed and paginated documents and blobs', () => {
   const m = { documents: 0, storageReads: 0 }
@@ -84,6 +84,43 @@ test('lab limits use the capped max formula and warn while machine-independent p
   assert.equal(compareBudgets({ cls: 0.5, lag: 101 }, policies).failures.length, 1)
   policies.lag.baseline = 50
   assert.equal(compareBudgets({ cls: 0, lag: 101 }, policies).failures.length, 1, 'Recording a nonzero lag cannot move the fixed 100ms ceiling')
+})
+
+test('vital attribution handles text-node shift sources and records candidate and font timing', () => {
+  const keys = ['window', 'document', 'PerformanceObserver', 'getComputedStyle']
+  const saved = keys.map(key => [key, globalThis[key]])
+  const callbacks = {}, fonts = {}
+  globalThis.window = {}
+  globalThis.document = { fonts: { addEventListener: (type, callback) => { fonts[type] = callback } } }
+  globalThis.getComputedStyle = () => ({ font: '15px Geist Sans' })
+  globalThis.PerformanceObserver = class {
+    constructor(callback) { this.callback = callback }
+    observe({ type }) { callbacks[type] = this.callback }
+  }
+  try {
+    installVitalObservers()
+    const node = { tagName: 'P', id: 'fixture', className: 'text-fg', textContent: 'manual paragraph' }
+    callbacks.paint({ getEntries: () => [{ name: 'first-contentful-paint', startTime: 104 }] })
+    callbacks['largest-contentful-paint']({ getEntries: () => [{ startTime: 420, size: 1000, element: node }] })
+    callbacks['layout-shift']({ getEntries: () => [{ startTime: 410, value: 0.1, sources: [{ node: { nodeType: 3, parentElement: node } }] }] })
+    fonts.loadingdone({ fontfaces: [{ family: 'Geist Sans', status: 'loaded' }] })
+    assert.equal(window.__perf.candidates[0].element.id, 'fixture')
+    assert.equal(window.__perf.shifts[0].sources[0].node.tag, 'P')
+    assert.equal(window.__perf.fonts[0].faces[0].status, 'loaded')
+  } finally {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete globalThis[key]
+      else globalThis[key] = value
+    }
+  }
+})
+
+test('man HTML rejects pending boundary and reveal markers even if the final document is present', () => {
+  assertNoManStreaming('<main><article>Complete manual</article></main>')
+  for (const marker of ['<script>$RC("B:0","S:0")</script>', '<script>$RT=performance.now()</script>',
+    '<template id="B:0"></template>', '<!--$?-->', '<!--$~-->']) {
+    assert.throws(() => assertNoManStreaming(`${marker}<article>Complete manual</article>`), /without pending Suspense/)
+  }
 })
 
 test('record preserves tolerances/reporting, local lab reference, and metric membership', () => {
