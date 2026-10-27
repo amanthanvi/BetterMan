@@ -1,10 +1,18 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { SearchResponse } from '../../../lib/api'
+import type { Distro } from '../../../lib/distro'
 import { SearchResultsClient } from './SearchResultsClient'
 
+const distroState = vi.hoisted(() => ({ urlDistro: null as Distro | null }))
+
 vi.mock('../../../components/ui/LinkPendingHint', () => ({ LinkPendingHint: () => null }))
+vi.mock('../../../components/state/distro', () => ({ useDistro: () => ({ urlDistro: distroState.urlDistro }) }))
+
+afterEach(() => {
+  distroState.urlDistro = null
+})
 
 function render(q: string, overrides: Partial<SearchResponse> = {}) {
   return renderToStaticMarkup(<SearchResultsClient distro="debian" q={q} section="" initial={{
@@ -53,5 +61,15 @@ describe('search result copy', () => {
     expect(html).toContain('-x, --extract')
     expect(html).toContain('-z, --gzip')
     expect(html).toContain('-f, --file')
+  })
+
+  it("carries the URL's explicit distro into result and correction links", () => {
+    distroState.urlDistro = 'debian'
+    const html = render('gti', {
+      results: [{ name: 'git', section: '1', title: 'git(1)', description: 'content tracker', highlights: [], match: 'option', anchorId: 'version' }],
+      suggestions: ['git'], correctedQuery: 'git',
+    })
+    expect(html).toContain('href="/man/git/1?distro=debian#version"')
+    expect(html).toContain('href="/search?q=git&amp;distro=debian"')
   })
 })
