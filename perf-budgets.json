@@ -4,7 +4,7 @@
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
-      "baseline": 29894,
+      "baseline": 30147,
       "relative": 0.02,
       "absolute": 0
     },
@@ -48,7 +48,7 @@
       "reportOnly": true
     },
     "man.htmlBytes": {
-      "baseline": 108694,
+      "baseline": 108947,
       "relative": 0.02,
       "absolute": 0
     },
@@ -92,7 +92,7 @@
       "reportOnly": true
     },
     "search.htmlBytes": {
-      "baseline": 44086,
+      "baseline": 44339,
       "relative": 0.02,
       "absolute": 0
     },
@@ -122,7 +122,7 @@
       "absolute": 0
     },
     "section.htmlBytes": {
-      "baseline": 58955,
+      "baseline": 59208,
       "relative": 0.02,
       "absolute": 0
     },
@@ -164,7 +164,7 @@
       "cap": 100
     }
   },
-  "sourceHead": "62bf08aa711e2385937452e6772b54003ab22594",
+  "sourceHead": "f19e63b3488dded33c7d52b42ef9791c69f7cd0e",
   "toolchain": {
     "next": "16.4.2",
     "playwright": "1.64.1",
