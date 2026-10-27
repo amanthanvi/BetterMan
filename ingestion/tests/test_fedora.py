@@ -98,3 +98,26 @@ def test_dnf_install_skips_backfill_when_nothing_is_preinstalled(monkeypatch) ->
     fedora.dnf_install(["bash"])
 
     assert [cmd[3] for cmd in calls if cmd[0] == "dnf"] == ["install"]
+
+
+def test_dnf_install_restores_preinstalled_split_manpage_owners(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    owners = ["coreutils-common", "util-linux-core"]
+
+    def fake_run(cmd: list[str], **kwargs: object):
+        calls.append(cmd)
+        if cmd[:2] == ["rpm", "-q"]:
+            return SimpleNamespace(returncode=0 if cmd[-1] in owners else 1)
+        assert kwargs["check"] is True
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(fedora.subprocess, "run", fake_run)
+    requested = ["coreutils", "util-linux"]
+    fedora.dnf_install(requested)
+
+    assert requested == ["coreutils", "util-linux"]
+    dnf = [cmd for cmd in calls if cmd[0] == "dnf"]
+    assert dnf[0][-4:] == [*requested, *owners]
+    assert [cmd[3] for cmd in dnf] == ["install", "distro-sync", "reinstall"]
+    assert all(cmd[-2:] == owners for cmd in dnf[1:])
+    assert all("--setopt=tsflags=" in cmd for cmd in dnf)

@@ -1,0 +1,87 @@
+{
+ "description": "flag prose followed by an indented example is not a DocBook definition",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "tmux-prose",
+      "type": "code"
+     },
+     {
+      "text": " — flag prose followed by an indented example is not a DocBook definition",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "-T",
+      "type": "code"
+     },
+     {
+      "text": " sets the client's key table; the next key will be looked up using ",
+      "type": "text"
+     },
+     {
+      "inlines": [
+       {
+        "text": "key-table",
+        "type": "text"
+       }
+      ],
+      "type": "emphasis"
+     },
+     {
+      "text": ". For example:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     [
+      {
+       "id": null,
+       "languageHint": null,
+       "text": "bind-key -Ttable2 c list-keys\nbind-key -Troot a switch-client -Ttable2",
+       "type": "code_block"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   }
+  ]
+ },
+ "options": [],
+ "seeAlso": [],
+ "synopsis": null
+}

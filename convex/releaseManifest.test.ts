@@ -16,7 +16,7 @@ const declaration = (datasetReleaseId = "candidate") => ({
 });
 const page = (name = "page", section = "1") => ({
   externalId: `${name}-${section}`, name, section, sitemapPage: 0, title: name, description: name,
-  sourcePath: `${name}.${section}`, sourcePackage: null, sourcePackageVersion: null,
+  sourcePath: `${name}.${section}`, sourcePackage: null as string | null, sourcePackageVersion: null as string | null,
   contentSha256: "same-source", hasParseWarnings: false, doc: { text: name },
   synopsis: null, options: null, seeAlso: null, searchText: name, snippetText: name, links: [],
 });
@@ -112,6 +112,25 @@ describe("declared release manifests", () => {
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     expect(await t.mutation(internal.ingest.activateRelease, activation())).toMatchObject({ pending: false });
     expect(await t.query(internal.related.activeMetadataStatus, {})).toMatchObject({ complete: true, releases: [{ manifestVerified: true }] });
+  });
+
+  it.each(["freebsd", "macos"] as const)("verifies %s synthetic base provenance and license declarations", async (distro) => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const name = `${distro}-base`;
+    const packages = [{ name, version: "15.1", hasLicenseText: true }];
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, {
+      ...declaration(), distro, licenseCount: 1,
+      packageManifest: { packages: [{ name, version: "15.1" }] }, licensePackages: packages,
+    });
+    await upload(t, "inline", [{ ...page(), sourcePackage: name, sourcePackageVersion: "15.1" }]);
+    await t.mutation(internal.ingest.insertLicenses, {
+      datasetReleaseId: "candidate", licenses: [{ ...license, packageName: name, licenseId: `pkg:${name}` }],
+    });
+    expect(await t.mutation(internal.ingest.activateRelease, activation())).toMatchObject({ pending: true });
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    expect(await t.mutation(internal.ingest.activateRelease, activation())).toMatchObject({ pending: false });
+    expect(await t.run((ctx) => ctx.db.get(releaseId))).toMatchObject({ manifestVerified: true });
   });
 
   it.each(["inline", "storage"] as const)("rolls back excess sections and route collisions for %s batches", async (mode) => {

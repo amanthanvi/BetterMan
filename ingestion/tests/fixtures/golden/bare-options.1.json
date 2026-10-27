@@ -1,0 +1,226 @@
+{
+ "description": "bare options used by strings, lua, and sudo",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "bare-options - bare options used by strings, lua, and sudo",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Scan every byte, as in strings.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "a",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-a",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Read standard input, as in lua; scan every byte, as in strings.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Stop option processing, as in sudo, strings, and lua.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-2",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "--",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "exit-status",
+    "level": 2,
+    "text": "Exit status:",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "The command timed out.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-124",
+      "termInlines": [
+       {
+        "text": "124",
+        "type": "text"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Otherwise, the exit status of the command, as in timeout.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-3",
+      "termInlines": [
+       {
+        "text": "-",
+        "type": "text"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "notes",
+    "level": 2,
+    "text": "NOTES",
+    "type": "heading"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A bullet, not a command option.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "exit-status",
+    "level": 2,
+    "title": "Exit status:"
+   },
+   {
+    "id": "notes",
+    "level": 2,
+    "title": "NOTES"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "a",
+   "argument": null,
+   "description": "Scan every byte, as in strings.",
+   "flags": "-a"
+  },
+  {
+   "anchorId": "def",
+   "argument": null,
+   "description": "Read standard input, as in lua; scan every byte, as in strings.",
+   "flags": "-"
+  },
+  {
+   "anchorId": "def-2",
+   "argument": null,
+   "description": "Stop option processing, as in sudo, strings, and lua.",
+   "flags": "--"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

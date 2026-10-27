@@ -1,0 +1,16 @@
+.Dd October 26, 2026
+.Dt TMUX-PROSE 1
+.Os
+.Sh NAME
+.Nm tmux-prose
+.Nd flag prose followed by an indented example is not a DocBook definition
+.Sh DESCRIPTION
+.Pp
+.Fl T
+sets the client's key table; the next key will be looked up using
+.Ar key-table .
+For example:
+.Bd -literal -offset indent
+bind-key -Ttable2 c list-keys
+bind-key -Troot a switch-client -Ttable2
+.Ed

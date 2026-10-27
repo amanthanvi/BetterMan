@@ -288,7 +288,8 @@ def test_nested_options_keep_body_ids_and_exclude_dash_prose() -> None:
 
 
 def test_docbook_option_paragraphs_become_anchored_definitions() -> None:
-    parsed = parse_mandoc_html("""<div class="manual-text">
+    parsed = parse_mandoc_html("""<!-- Generator: DocBook XSL Stylesheets -->
+      <div class="manual-text">
       <h1>OPTIONS</h1><p class="Pp">-a, --all</p>
       <div class="Bd-indent">Stage all changes.<p>Keep this paragraph.</p></div>
       <p class="Pp">- first observation</p><div class="Bd-indent">Prose.</div>
@@ -311,7 +312,8 @@ def test_nested_options_exclude_mixed_dash_prose() -> None:
 
 
 def test_converted_option_cannot_claim_an_existing_body_id() -> None:
-    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+    parsed = parse_mandoc_html("""<!-- Generator: DocBook XSL Stylesheets -->
+      <div class="manual-text"><h1>OPTIONS</h1>
       <p class="Pp">-a</p><div class="Bd-indent">New definition.</div>
       <dl><dt id="def-a">--existing</dt><dd>Existing explicit ID.</dd>
         <dt>-b</dt><dd>Existing generated ID.</dd></dl>
@@ -324,3 +326,94 @@ def test_converted_option_cannot_claim_an_existing_body_id() -> None:
         ("-b", "def-b"),
         ("-b", "def-b-2"),
     ]
+
+
+def test_docbook_word_in_prose_does_not_authorize_paragraph_conversion() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <p class="Pp">-T sets the key table, even in a DocBook viewer.</p>
+      <div class="Bd-indent"><pre>bind-key -Troot a list-keys</pre></div>
+      </div>""")
+    assert parsed.options is None
+    assert parsed.doc.blocks[1].type == "paragraph"
+    assert parsed.doc.blocks[2].type == "list"
+
+
+def test_nested_values_are_not_options_but_nested_flags_keep_their_ids() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <dl><dt id="format">--format=FORMAT</dt><dd><dl>
+        <dt id="gnu">gnu</dt><dd>GNU format.</dd>
+        <dt id="nested">-x</dt><dd>Extract.</dd>
+        <dt id="env">TAR_FORMAT</dt><dd>Current format.</dd>
+      </dl></dd></dl></div>""")
+    assert parsed.options
+    assert [(o.flags, o.anchorId) for o in parsed.options] == [
+        ("--format", "format"),
+        ("-x", "nested"),
+    ]
+    values = parsed.doc.blocks[1].items[0].definitionBlocks[0].items
+    assert [item.id for item in values] == ["gnu", "nested", "env"]
+
+
+def test_conditional_operators_stay_in_body_and_real_command_flags_stay_indexed() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text">
+      <h1>OPTIONS</h1><dl><dt id="real-a">-a</dt><dd>Shell flag.</dd></dl>
+      <h1>CONDITIONAL EXPRESSIONS</h1><dl>
+        <dt id="test-a">-a file</dt><dd>File exists.</dd>
+        <dt id="test-z">-z string</dt><dd>String is empty.</dd>
+      </dl><h1>BUILTINS</h1><dl>
+        <dt id="real-z">-z</dt><dd>Real builtin flag.</dd>
+      </dl></div>""")
+    assert parsed.options
+    assert [(o.flags, o.anchorId) for o in parsed.options] == [("-a", "real-a"), ("-z", "real-z")]
+    assert [item.id for item in parsed.doc.blocks[3].items] == ["test-a", "test-z"]
+
+
+def test_option_shapes_reject_ranges_prose_and_operators_without_changing_body_ids() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>OPTIONS</h1>
+      <dl><dt id="real">--real</dt><dd><dl>
+        <dt id="range">(-1, 2)</dt><dd>Numeric interval.</dd>
+        <dt id="prose">-&lt;The address of a label is taken&gt;</dt><dd>Prose.</dd>
+        <dt id="digit">-&lt;digit&gt;</dt><dd>Symbolic flag.</dd>
+        <dt id="less">-&lt;, --less-than</dt><dd>Literal punctuation flag.</dd>
+        <dt id="slash">-/</dt><dd>Punctuation flag.</dd>
+        <dt id="caret">-^</dt><dd>Punctuation flag.</dd>
+        <dt id="group">--(heading|footing)-(left|right)</dt><dd>Grouped flag.</dd>
+      </dl></dd></dl><h1>Operators</h1><dl>
+        <dt id="increment">++ --</dt><dd>Increment and decrement.</dd>
+        <dt id="pattern">+(pattern-list)</dt><dd>Shell globbing.</dd>
+        <dt id="all">-a</dt><dd>Real flag.</dd>
+      </dl></div>""")
+    assert parsed.options
+    assert [option.anchorId for option in parsed.options] == [
+        "real",
+        "digit",
+        "less",
+        "slash",
+        "caret",
+        "group",
+        "all",
+    ]
+    nested = parsed.doc.blocks[1].items[0].definitionBlocks[0]
+    assert [item.id for item in nested.items] == [
+        "range",
+        "prose",
+        "digit",
+        "less",
+        "slash",
+        "caret",
+        "group",
+    ]
+    assert [item.id for item in parsed.doc.blocks[3].items] == ["increment", "pattern", "all"]
+
+
+def test_mdoc_command_markup_needs_option_context_for_bare_tokens() -> None:
+    parsed = parse_mandoc_html("""<div class="manual-text"><h1>DESCRIPTION</h1>
+      <dl><dt id="hash"><code class="Cm">#</code></dt><dd>Alternate format.</dd>
+        <dt id="left"><code class="Cm">-</code></dt><dd>Left-adjust.</dd>
+        <dt id="plus"><code class="Cm">+</code></dt><dd>Always show a sign.</dd>
+      </dl><p class="Pp">The following options are available:</p>
+      <dl><dt id="time">hhmm</dt><dd>Alarm time.</dd>
+        <dt id="relative"><code class="Cm">+</code></dt><dd>Relative alarm time.</dd>
+      </dl></div>""")
+    assert parsed.options and [(o.flags, o.anchorId) for o in parsed.options] == [("+", "relative")]
+    assert [item.id for item in parsed.doc.blocks[1].items] == ["hash", "left", "plus"]

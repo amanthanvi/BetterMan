@@ -82,6 +82,7 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
     for name in (
         "BETTERMAN_INGEST_PAGE_BATCH_ITEMS",
         "BETTERMAN_INGEST_PAGE_BATCH_BYTES",
+        "BETTERMAN_ALLOW_MISSING_COMMAND_PAGES",
     ):
         if os.environ.get(name):
             cmd.extend(["-e", name])

@@ -357,8 +357,9 @@ def test_resolve_aliases_follows_long_chains_and_drops_cycles() -> None:
 
 @pytest.mark.parametrize("with_alias_and_license", [False, True])
 @pytest.mark.parametrize("missing_command", [False, True])
+@pytest.mark.parametrize("oversize_license", [False, True])
 def test_ingest_declares_uploaded_aliases_and_licenses(
-    monkeypatch, with_alias_and_license, missing_command
+    monkeypatch, with_alias_and_license, missing_command, oversize_license
 ):
     pages = [_page("real" if missing_command else "tar", "1")]
     monkeypatch.setattr(ingest_runner, "_content_packages", lambda **_kwargs: ["tar"])
@@ -383,7 +384,11 @@ def test_ingest_declares_uploaded_aliases_and_licenses(
     monkeypatch.setattr(
         ingest_runner,
         "_collect_licenses",
-        lambda **_kwargs: {"example": "Copyright example"} if with_alias_and_license else {},
+        lambda **_kwargs: (
+            {"example": "é" * (1024 * 1024)}
+            if oversize_license
+            else ({"example": "Copyright example"} if with_alias_and_license else {})
+        ),
     )
     calls = []
     events = []
@@ -404,8 +409,13 @@ def test_ingest_declares_uploaded_aliases_and_licenses(
     monkeypatch.setattr(ingest_runner.ConvexIngestClient, "post", post)
     monkeypatch.setattr(ingest_runner.ConvexIngestClient, "activate_release", activate)
 
-    if missing_command:
-        with pytest.raises(RuntimeError, match=r"missing package-set command pages: tar\(1\)"):
+    if missing_command or oversize_license:
+        error = (
+            r"missing package-set command pages: tar\(1\)"
+            if missing_command
+            else "license document exceeds Convex 1 MiB limit"
+        )
+        with pytest.raises(RuntimeError, match=error):
             ingest_runner.ingest(
                 sample=True,
                 activate=True,
@@ -560,6 +570,8 @@ def test_ingest_fails_before_writing_when_convex_contract_is_missing(monkeypatch
 
 @pytest.mark.parametrize("distro", ["fedora", "arch", "alpine"])
 def test_collect_linux_license_files(monkeypatch, tmp_path, distro) -> None:
+    if distro == "fedora":
+        monkeypatch.setattr(ingest_runner, "_rpm_license_files", lambda: {})
     root = tmp_path / "licenses"
     (root / "example" / "nested").mkdir(parents=True)
     (root / "example" / "COPYING").write_text("Copyright example")
@@ -727,4 +739,64 @@ def test_apache_page_expectation_matches_distro(distro, command) -> None:
             pages=[],
             aliases=[],
             sample=False,
+        )
+
+
+def test_rpm_license_files_share_source_package_and_keep_mixed_case(monkeypatch, tmp_path):
+    root = tmp_path / "licenses"
+    doc = tmp_path / "doc"
+    (root / "perl").mkdir(parents=True)
+    doc.mkdir()
+    license = root / "perl" / "COPYING"
+    license.write_text("Perl license text")
+    output = (
+        f"perl-libs\tperl.src.rpm\t{license}\t128\n"
+        "perl-IO-Socket\tperl.src.rpm\t/usr/bin/example\t0\n"
+        "perl-doc\tperl.src.rpm\t/usr/share/man/perl.1\t2\n"
+        f"perl-libs\tperl.src.rpm\t{root / 'perl' / 'NOTICE'}\t2\n"
+    )
+    monkeypatch.setattr(ingest_runner.subprocess, "check_output", lambda *a, **kw: output)
+    monkeypatch.setattr(ingest_runner, "_LICENSE_ROOT", root)
+    monkeypatch.setattr(ingest_runner, "_DOC_ROOT", doc)
+    paths = ingest_runner._rpm_license_files()
+    assert license in paths["perl-IO-Socket"]
+    assert root / "perl" / "NOTICE" in paths["perl-IO-Socket"]
+    assert paths["perl-doc"] == paths["perl-IO-Socket"]
+    rows = [replace(_page("perl", "1"), source_package="perl-IO-Socket")]
+    assert (
+        "Perl license text"
+        in ingest_runner._collect_licenses(pages=rows, distro="fedora")["perl-IO-Socket"]
+    )
+    (root / "Mixed-Case").mkdir()
+    (root / "Mixed-Case" / "LICENSE").write_text("Mixed case license")
+    assert "Mixed case license" in ingest_runner._read_package_licenses("Mixed-Case")
+
+
+def test_rpm_license_paths_cannot_escape_roots(monkeypatch, tmp_path):
+    root = tmp_path / "licenses"
+    doc = tmp_path / "doc"
+    root.mkdir()
+    doc.mkdir()
+    outside = tmp_path / "secret"
+    outside.write_text("must not publish")
+    link = root / "COPYING"
+    link.symlink_to(outside)
+    allowed = doc / "LICENSE"
+    allowed.write_text("allowed license")
+    monkeypatch.setattr(ingest_runner, "_LICENSE_ROOT", root)
+    monkeypatch.setattr(ingest_runner, "_DOC_ROOT", doc)
+    text = ingest_runner._read_rpm_license_files([link, outside, root / "missing", allowed])
+    assert "allowed license" in text
+    assert "must not publish" not in text
+
+
+def test_license_items_measure_utf8_and_never_truncate():
+    text = "é" * 300_000
+    items = ingest_runner._license_items(
+        licenses={"example": text}, distro="fedora", dataset_release_id="r"
+    )
+    assert items[0]["licenseText"] == text
+    with pytest.raises(RuntimeError, match="package=example.*text is not truncated"):
+        ingest_runner._license_items(
+            licenses={"example": "é" * 600_000}, distro="fedora", dataset_release_id="r"
         )

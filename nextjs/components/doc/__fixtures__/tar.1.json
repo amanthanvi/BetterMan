@@ -13960,114 +13960,6 @@
    "flags": "--to-command"
   },
   {
-   "anchorId": "TAR_FILETYPE",
-   "argument": null,
-   "description": "f Regular file d Directory l Symbolic link h Hard link b Block device c Character device Currently only regular files are supported.",
-   "flags": "TAR_FILETYPE"
-  },
-  {
-   "anchorId": "TAR_MODE",
-   "argument": null,
-   "description": "File mode, an octal number.",
-   "flags": "TAR_MODE"
-  },
-  {
-   "anchorId": "TAR_FILENAME",
-   "argument": null,
-   "description": "The name of the file.",
-   "flags": "TAR_FILENAME"
-  },
-  {
-   "anchorId": "TAR_REALNAME",
-   "argument": null,
-   "description": "Name of the file as stored in the archive.",
-   "flags": "TAR_REALNAME"
-  },
-  {
-   "anchorId": "TAR_UNAME",
-   "argument": null,
-   "description": "Name of the file owner.",
-   "flags": "TAR_UNAME"
-  },
-  {
-   "anchorId": "TAR_GNAME",
-   "argument": null,
-   "description": "Name of the file owner group.",
-   "flags": "TAR_GNAME"
-  },
-  {
-   "anchorId": "TAR_ATIME",
-   "argument": null,
-   "description": "Time of last access. It is a decimal number, representing seconds since the Epoch. If the archive provides times with nanosecond precision, the nanoseconds are appended to the timestamp after a decimal point.",
-   "flags": "TAR_ATIME"
-  },
-  {
-   "anchorId": "TAR_MTIME",
-   "argument": null,
-   "description": "Time of last modification.",
-   "flags": "TAR_MTIME"
-  },
-  {
-   "anchorId": "TAR_CTIME",
-   "argument": null,
-   "description": "Time of last status change.",
-   "flags": "TAR_CTIME"
-  },
-  {
-   "anchorId": "TAR_SIZE",
-   "argument": null,
-   "description": "Size of the file.",
-   "flags": "TAR_SIZE"
-  },
-  {
-   "anchorId": "TAR_UID",
-   "argument": null,
-   "description": "UID of the file owner.",
-   "flags": "TAR_UID"
-  },
-  {
-   "anchorId": "TAR_GID",
-   "argument": null,
-   "description": "GID of the file owner.",
-   "flags": "TAR_GID"
-  },
-  {
-   "anchorId": "TAR_VERSION",
-   "argument": null,
-   "description": "GNU tar version number.",
-   "flags": "TAR_VERSION"
-  },
-  {
-   "anchorId": "TAR_ARCHIVE",
-   "argument": null,
-   "description": "The name of the archive tar is processing.",
-   "flags": "TAR_ARCHIVE"
-  },
-  {
-   "anchorId": "TAR_BLOCKING_FACTOR",
-   "argument": null,
-   "description": "Current blocking factor, i.e. number of 512-byte blocks in a record.",
-   "flags": "TAR_BLOCKING_FACTOR"
-  },
-  {
-   "anchorId": "TAR_VOLUME",
-   "argument": null,
-   "description": "Ordinal number of the volume tar is processing (set if reading a multi-volume archive).",
-   "flags": "TAR_VOLUME"
-  },
-  {
-   "anchorId": "TAR_FORMAT",
-   "argument": null,
-   "description": "Format of the archive being processed. One of: gnu, oldgnu, posix, ustar, v7.",
-   "flags": "TAR_FORMAT"
-  },
-  {
-   "anchorId": "TAR_SUBCOMMAND",
-   "argument": null,
-   "description": "A short option (with a leading dash) describing the operation tar is executing.",
-   "flags": "TAR_SUBCOMMAND"
-  },
-  {
    "anchorId": "atime",
    "argument": "[METHOD]",
    "description": "Preserve access times on dumped files, either by restoring the times after reading (METHOD=replace, this is the default) or by not setting the times in the first place (METHOD=system).",
@@ -14236,48 +14128,6 @@
    "flags": "-F, --info-script=COMMAND, --new-volume-script"
   },
   {
-   "anchorId": "TAR_VERSION~2",
-   "argument": null,
-   "description": "GNU tar version number.",
-   "flags": "TAR_VERSION"
-  },
-  {
-   "anchorId": "TAR_ARCHIVE~2",
-   "argument": null,
-   "description": "The name of the archive tar is processing.",
-   "flags": "TAR_ARCHIVE"
-  },
-  {
-   "anchorId": "TAR_BLOCKING_FACTOR~2",
-   "argument": null,
-   "description": "Current blocking factor, i.e. number of 512-byte blocks in a record.",
-   "flags": "TAR_BLOCKING_FACTOR"
-  },
-  {
-   "anchorId": "TAR_VOLUME~2",
-   "argument": null,
-   "description": "Ordinal number of the volume tar is processing (set if reading a multi-volume archive).",
-   "flags": "TAR_VOLUME"
-  },
-  {
-   "anchorId": "TAR_FORMAT~2",
-   "argument": null,
-   "description": "Format of the archive being processed. One of: gnu, oldgnu, posix, ustar, v7.",
-   "flags": "TAR_FORMAT"
-  },
-  {
-   "anchorId": "TAR_SUBCOMMAND~2",
-   "argument": null,
-   "description": "A short option (with a leading dash) describing the operation tar is executing.",
-   "flags": "TAR_SUBCOMMAND"
-  },
-  {
-   "anchorId": "TAR_FD",
-   "argument": null,
-   "description": "File descriptor which can be used to communicate the new volume name to tar.",
-   "flags": "TAR_FD"
-  },
-  {
    "anchorId": "L",
    "argument": "N",
    "description": "This option implies -M.",
@@ -14336,36 +14186,6 @@
    "argument": "FORMAT",
    "description": "Create archive of the given format. Valid formats are:",
    "flags": "-H, --format"
-  },
-  {
-   "anchorId": "gnu",
-   "argument": null,
-   "description": "GNU tar 1.13.x format",
-   "flags": "gnu"
-  },
-  {
-   "anchorId": "oldgnu",
-   "argument": null,
-   "description": "GNU format as per tar <= 1.12.",
-   "flags": "oldgnu"
-  },
-  {
-   "anchorId": "pax",
-   "argument": null,
-   "description": "POSIX 1003.1-2001 (pax) format.",
-   "flags": "pax, posix"
-  },
-  {
-   "anchorId": "ustar",
-   "argument": null,
-   "description": "POSIX 1003.1-1988 (ustar) format.",
-   "flags": "ustar"
-  },
-  {
-   "anchorId": "v7",
-   "argument": null,
-   "description": "Old V7 tar format.",
-   "flags": "v7"
   },
   {
    "anchorId": "old",

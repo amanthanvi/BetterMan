@@ -1,0 +1,169 @@
+{
+ "description": "nested range examples must not own command flags",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "curl-options - nested range examples must not own command flags",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Retrieve a byte range. Examples:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "r,",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-r, --range <range>",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "The first and last byte only.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-0-0-1",
+         "termInlines": [
+          {
+           "text": "0-0,-1",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Bytes from offset 500 to 999.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-500-999",
+         "termInlines": [
+          {
+           "text": "500-999",
+           "type": "text"
+          }
+         ]
+        }
+       ],
+       "type": "definition_list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Use TLS version 1.x.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-1-tlsv1",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-1, --tlsv1",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "r,",
+   "argument": "<range>",
+   "description": "Retrieve a byte range. Examples:",
+   "flags": "-r, --range"
+  },
+  {
+   "anchorId": "def-1-tlsv1",
+   "argument": null,
+   "description": "Use TLS version 1.x.",
+   "flags": "-1, --tlsv1"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

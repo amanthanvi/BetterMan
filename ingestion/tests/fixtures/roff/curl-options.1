@@ -1,0 +1,18 @@
+.TH CURL-OPTIONS 1 "2026-10-26" "BetterMan regression fixture"
+.SH NAME
+curl-options \- nested range examples must not own command flags
+.SH OPTIONS
+.TP
+.B \-r, \-\-range <range>
+Retrieve a byte range. Examples:
+.RS
+.TP
+0-0,-1
+The first and last byte only.
+.TP
+500-999
+Bytes from offset 500 to 999.
+.RE
+.TP
+.B \-1, \-\-tlsv1
+Use TLS version 1.x.

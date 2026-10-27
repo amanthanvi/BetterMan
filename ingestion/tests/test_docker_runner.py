@@ -20,6 +20,7 @@ def test_run_ingest_container_builds_debian_command(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_DEBIAN_IMAGE_REF", "debian:custom")
     monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
     monkeypatch.setenv("CONVEX_INGEST_SECRET", "s3cr3t-value")
+    monkeypatch.setenv("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES", "1")
     monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: True)
 
     calls: list[list[str]] = []
@@ -52,6 +53,7 @@ def test_run_ingest_container_builds_debian_command(monkeypatch) -> None:
     assert "CONVEX_INGEST_SECRET" in docker_run
     assert not any("s3cr3t-value" in part for part in docker_run)
     assert "BETTERMAN_INGEST_WORKERS" in docker_run
+    assert _named_env(docker_run, "BETTERMAN_ALLOW_MISSING_COMMAND_PAGES")
     assert any(part.startswith("BETTERMAN_IMAGE_DIGEST=") for part in docker_run)
 
     inner = docker_run[-1]

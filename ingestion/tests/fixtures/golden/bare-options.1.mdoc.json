@@ -1,0 +1,209 @@
+{
+ "description": "bare options used by su, shutdown, and leave",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "bare-options",
+      "type": "code"
+     },
+     {
+      "text": " — bare options used by su, shutdown, and leave",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "text": "DESCRIPTION",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Start a login shell, as in su.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "l",
+      "termInlines": [
+       {
+        "text": "-l",
+        "type": "code"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "A login shell, as in su; read a shutdown time from standard input, as in shutdown.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def",
+      "termInlines": [
+       {
+        "text": "-",
+        "type": "code"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "inlines": [
+     {
+      "text": "The following options are available:",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "An absolute alarm time.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-hhmm",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "hhmm",
+          "type": "text"
+         }
+        ],
+        "type": "emphasis"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "An alarm time relative to now, as in leave.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "+",
+      "termInlines": [
+       {
+        "text": "+",
+        "type": "code"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "formats",
+    "level": 2,
+    "text": "Formats",
+    "type": "heading"
+   },
+   {
+    "items": [
+     [
+      {
+       "inlines": [
+        {
+         "text": "A numeric formatting modifier, as in stat.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ],
+     [
+      {
+       "inlines": [
+        {
+         "text": "Left-align a field, as in stat.",
+         "type": "text"
+        }
+       ],
+       "type": "paragraph"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "description",
+    "level": 2,
+    "title": "DESCRIPTION"
+   },
+   {
+    "id": "formats",
+    "level": 2,
+    "title": "Formats"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "l",
+   "argument": null,
+   "description": "Start a login shell, as in su.",
+   "flags": "-l"
+  },
+  {
+   "anchorId": "def",
+   "argument": null,
+   "description": "A login shell, as in su; read a shutdown time from standard input, as in shutdown.",
+   "flags": "-"
+  },
+  {
+   "anchorId": "+",
+   "argument": null,
+   "description": "An alarm time relative to now, as in leave.",
+   "flags": "+"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

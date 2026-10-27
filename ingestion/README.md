@@ -27,16 +27,46 @@ The Next.js test `components/doc/DocRenderer.golden.test.tsx` renders the same J
 
 The curated command-page check runs after parsing and alias resolution, before any
 release upload. Arch reinstalls requested packages to restore man pages omitted
-by its container image; Alpine requires `tar-doc` alongside `tar`. New package
-sets should extend the representative command expectations in `ingest_runner.py`.
+by its container image; Alpine requires `tar-doc` alongside `tar`. Debian/Ubuntu
+also reinstall the `mount` owner, and Fedora restores `coreutils-common` and
+`util-linux-core`, whose pages the base image strips. New package sets must
+extend the representative command expectations in `ingest_runner.py`.
+
+Expectations are distro-specific: Debian trixie excludes `gcc(1)` and `gdb(1)`
+because their documentation requires non-free packages; Ubuntu 24.04 excludes
+`perl(1)` and `python3(1)` because the selected main packages do not ship them.
+Each exclusion logs its reason. Missing-page errors name the requested package
+and expected owner. Alpine's best-effort `docs` install can now block the release
+if it leaves a required page absent. For an intentional exception, set
+`BETTERMAN_ALLOW_MISSING_COMMAND_PAGES=1` on the host ingestion command; Docker
+forwards it by name. The override logs every missing page as
+`command_pages_missing_allowed` and never bypasses unclassified packages.
 
 Fedora, Arch, and Alpine collect package notices from `/usr/share/licenses`.
-Arch also resolves declared SPDX licenses there; Alpine installs
-`spdx-licenses-text` and resolves declarations from `/usr/share/spdx/text` because
-many `-doc` packages ship no license copy. FreeBSD and the filtered macOS corpus
-record base-system package/version provenance and upstream source links.
+Fedora also resolves RPM-marked license files and named license documents in
+`/usr/share/doc` through packages built from the same source RPM, including
+mixed-case package names. Python's RPM license lives under `/usr/lib[64]`.
+Arch resolves declared SPDX licenses; Alpine installs `spdx-licenses-text` and
+resolves declarations from `/usr/share/spdx/text` because many `-doc` packages
+ship no license copy. Packages without discoverable license text remain declared
+with `hasLicenseText: false`; license expressions alone are not published as text.
+
+License records are size-checked before creating a release or uploading pages.
+The encoded stored record must fit below Convex's 1 MiB limit with 1 KiB reserved
+for system fields and serialization overhead. Oversized text fails the run and
+is never truncated. FreeBSD and the filtered macOS corpus record synthetic base
+package/version provenance and upstream source links; those entries are
+provenance records, not a blanket license for every source file.
 These dataset corrections take effect at the next monthly ingest.
 
 `git-commit.1` was captured from
 <https://manpages.debian.org/trixie/git-man/git-commit.1.en.gz> (Git 2.47.3).
 `dash-prose.1` is a synthetic negative fixture for option extraction.
+
+`curl-options.1` covers nested argument values and `-1` ownership; `tmux-prose.1`
+keeps non-DocBook prose out of definition conversion. The paired `bare-options`
+man/mdoc fixtures retain real `-`, `--`, and `+` options without promoting bullets
+or date/stat/printf format modifiers. The `option-shapes` fixture rejects numeric
+ranges, compiler prose, and shell operators while retaining symbolic/grouped
+flags. Tar's golden excludes environment names and format values, and parser
+tests exclude bash's conditional-expression operators.

@@ -48,6 +48,9 @@ def _installed_packages(packages: list[str], *, env: dict[str, str]) -> list[str
 
 
 def apt_install(packages: list[str]) -> None:
+    # mount(8) belongs to mount, not util-linux, and Ubuntu's base strips its docs.
+    if "util-linux" in packages and "mount" not in packages:
+        packages = [*packages, "mount"]
     env = os.environ | {"DEBIAN_FRONTEND": "noninteractive"}
 
     reinstall: list[str] = []

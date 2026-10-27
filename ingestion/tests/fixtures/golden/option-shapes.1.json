@@ -1,0 +1,481 @@
+{
+ "description": "distinguish flags from range values, prose, and operators",
+ "doc": {
+  "blocks": [
+   {
+    "id": "name",
+    "level": 2,
+    "text": "NAME",
+    "type": "heading"
+   },
+   {
+    "inlines": [
+     {
+      "text": "option-shapes - distinguish flags from range values, prose, and operators",
+      "type": "text"
+     }
+    ],
+    "type": "paragraph"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "text": "OPTIONS",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "A real command flag with nested values:",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "q",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-q",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "items": [
+     [
+      {
+       "items": [
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A numeric interval, as in ffmpeg.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-1-2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "(-1, 2)",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "Multiword prose, as in GCC.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-the-address-of-a-label-is-taken-by-means-of-the-gs-modifier",
+         "termInlines": [
+          {
+           "text": "-<The address of a label is taken by means of the \"gs\" modifier>",
+           "type": "text"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A real symbolic flag, as in git-archive.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-digit",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "-<digit>",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A real literal punctuation flag, as in msgcat and msgcomm.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-less-than",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "-<, --less-than",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A real punctuation flag, as in git-p4.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "-/",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A real punctuation flag, as in gpg.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-2",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "-^",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A real grouped flag, as in gsbj.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-heading-footing-left-center-right",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "--(heading|footing)-(left|center|right)",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        },
+        {
+         "definitionBlocks": [
+          {
+           "inlines": [
+            {
+             "text": "A real bracketed flag, as in notarytool.",
+             "type": "text"
+            }
+           ],
+           "type": "paragraph"
+          }
+         ],
+         "id": "def-password-app-specific-password",
+         "termInlines": [
+          {
+           "inlines": [
+            {
+             "text": "[--password app-specific-password]",
+             "type": "text"
+            }
+           ],
+           "type": "strong"
+          }
+         ]
+        }
+       ],
+       "type": "definition_list"
+      }
+     ]
+    ],
+    "ordered": false,
+    "type": "list"
+   },
+   {
+    "id": "operators",
+    "level": 2,
+    "text": "Operators",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Prefix and postfix increment and decrement, as in bc.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-3",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "++ --",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "A real command flag is still an option, even under this heading.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "a",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "-a",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   },
+   {
+    "id": "pathname-expansion",
+    "level": 2,
+    "text": "Pathname Expansion",
+    "type": "heading"
+   },
+   {
+    "items": [
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "Matches one or more occurrences of the patterns, as in bash.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-pattern-list",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "+(",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       },
+       {
+        "text": "pattern-list",
+        "type": "text"
+       },
+       {
+        "inlines": [
+         {
+          "text": ")",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     },
+     {
+      "definitionBlocks": [
+       {
+        "inlines": [
+         {
+          "text": "A real plus-prefixed flag is still an option.",
+          "type": "text"
+         }
+        ],
+        "type": "paragraph"
+       }
+      ],
+      "id": "def-o",
+      "termInlines": [
+       {
+        "inlines": [
+         {
+          "text": "+O",
+          "type": "text"
+         }
+        ],
+        "type": "strong"
+       }
+      ]
+     }
+    ],
+    "type": "definition_list"
+   }
+  ],
+  "toc": [
+   {
+    "id": "name",
+    "level": 2,
+    "title": "NAME"
+   },
+   {
+    "id": "options",
+    "level": 2,
+    "title": "OPTIONS"
+   },
+   {
+    "id": "operators",
+    "level": 2,
+    "title": "Operators"
+   },
+   {
+    "id": "pathname-expansion",
+    "level": 2,
+    "title": "Pathname Expansion"
+   }
+  ]
+ },
+ "options": [
+  {
+   "anchorId": "q",
+   "argument": null,
+   "description": "A real command flag with nested values:",
+   "flags": "-q"
+  },
+  {
+   "anchorId": "def-digit",
+   "argument": null,
+   "description": "A real symbolic flag, as in git-archive.",
+   "flags": "-<digit>"
+  },
+  {
+   "anchorId": "def-less-than",
+   "argument": null,
+   "description": "A real literal punctuation flag, as in msgcat and msgcomm.",
+   "flags": "-<, --less-than"
+  },
+  {
+   "anchorId": "def",
+   "argument": null,
+   "description": "A real punctuation flag, as in git-p4.",
+   "flags": "-/"
+  },
+  {
+   "anchorId": "def-2",
+   "argument": null,
+   "description": "A real punctuation flag, as in gpg.",
+   "flags": "-^"
+  },
+  {
+   "anchorId": "def-heading-footing-left-center-right",
+   "argument": null,
+   "description": "A real grouped flag, as in gsbj.",
+   "flags": "--(heading|footing)-(left|center|right)"
+  },
+  {
+   "anchorId": "def-password-app-specific-password",
+   "argument": null,
+   "description": "A real bracketed flag, as in notarytool.",
+   "flags": "[--password app-specific-password]"
+  },
+  {
+   "anchorId": "a",
+   "argument": null,
+   "description": "A real command flag is still an option, even under this heading.",
+   "flags": "-a"
+  },
+  {
+   "anchorId": "def-o",
+   "argument": null,
+   "description": "A real plus-prefixed flag is still an option.",
+   "flags": "+O"
+  }
+ ],
+ "seeAlso": [],
+ "synopsis": null
+}

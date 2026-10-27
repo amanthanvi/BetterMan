@@ -4,6 +4,7 @@ import logging
 import os
 import platform
 import re
+import subprocess
 from collections import Counter
 from collections.abc import Iterator
 from concurrent.futures import ProcessPoolExecutor
@@ -75,7 +76,7 @@ from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]*$")
-_PKG_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9.+-]+$")
+_PKG_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
 _DOC_ROOT = Path("/usr/share/doc")
 _LICENSE_ROOT = Path("/usr/share/licenses")
 _ALPINE_SPDX_ROOT = Path("/usr/share/spdx/text")
@@ -97,6 +98,8 @@ _MAN_HREF_RE = re.compile(
 
 logger = logging.getLogger("betterman.ingestion")
 _PAGE_BATCH_FAILURE_LIMIT = 3
+# Reserve 1 KiB for Convex system fields and serialization overhead.
+_LICENSE_DOCUMENT_MAX_BYTES = 1024 * 1024 - 1024
 
 
 def _log(event: str, **fields: object) -> None:
@@ -246,6 +249,9 @@ def ingest(
     page_links = _build_page_links(pages=parsed_pages)
     sitemap_pages = _build_sitemap_page_map(pages=parsed_pages)
     licenses = _collect_licenses(pages=parsed_pages, distro=distro)
+    license_items = _license_items(
+        licenses=licenses, distro=distro, dataset_release_id=dataset_release_id
+    )
     license_packages = _build_license_packages(
         package_manifest=package_manifest,
         packages_with_text=set(licenses),
@@ -287,16 +293,6 @@ def ingest(
     )
 
     if licenses:
-        license_items = [
-            {
-                "packageName": package_name,
-                "licenseId": f"pkg:{package_name}",
-                "licenseName": package_name,
-                "licenseText": text,
-                "sourceUrl": (_BASE_PROVENANCE[distro][2] if distro in _BASE_PROVENANCE else None),
-            }
-            for package_name, text in sorted(licenses.items())
-        ]
         for start in range(0, len(license_items), 10):
             client.post(
                 "/ingest/licenses",
@@ -750,6 +746,24 @@ _NON_COMMAND_PACKAGES = {
     "spdx-licenses-text",
 }
 _SAMPLE_PAGES = {("bash", "1"), ("ls", "1"), ("curl", "1"), ("tar", "1"), ("ssh_config", "5")}
+# Verified against Debian trixie and Ubuntu 24.04's selected main/free packages.
+# Keep these distro-specific: Ubuntu ships gcc/gdb pages; Debian ships perl/python3.
+_COMMAND_PAGE_EXCLUSIONS = {
+    "debian": {
+        "gcc": "gcc(1) is in gcc-14-doc in non-free, outside the selected main packages",
+        "gdb": "gdb(1) is in gdb-doc in non-free, outside the selected main packages",
+    },
+    "ubuntu": {
+        "perl": "perl(1) is not shipped by the selected Ubuntu 24.04 main packages",
+        "python3": "python3(1) is not shipped by the selected Ubuntu 24.04 main packages",
+    },
+}
+_COMMAND_PAGE_OWNERS = {
+    "debian": {"util-linux": "mount", "git": "git-man"},
+    "ubuntu": {"util-linux": "mount", "git": "git-man"},
+    "fedora": {"coreutils": "coreutils-common", "util-linux": "util-linux-core"},
+    "alpine": {"tar": "tar-doc"},
+}
 
 
 def _require_command_pages(
@@ -760,23 +774,53 @@ def _require_command_pages(
     aliases: list[_AliasRow],
     sample: bool,
 ) -> None:
+    """Block uploads with missing representative pages after alias resolution.
+
+    BETTERMAN_ALLOW_MISSING_COMMAND_PAGES=1 in the ingestion process explicitly
+    bypasses missing pages with a command_pages_missing_allowed log. It never
+    bypasses unclassified packages. Distro exclusions are individually logged.
+    """
     unclassified = sorted(set(requested) - _COMMAND_PAGES.keys() - _NON_COMMAND_PACKAGES)
     if unclassified:
         raise RuntimeError("no command-page expectation for packages: " + ", ".join(unclassified))
     expected = {
-        ("httpd", "8") if distro == "alpine" and pkg == "apache2" else _COMMAND_PAGES[pkg]
+        pkg: ("httpd", "8") if distro == "alpine" and pkg == "apache2" else _COMMAND_PAGES[pkg]
         for pkg in requested
         if pkg in _COMMAND_PAGES
     }
     if sample:
-        expected &= _SAMPLE_PAGES
+        expected = {pkg: page for pkg, page in expected.items() if page in _SAMPLE_PAGES}
+    for pkg, reason in _COMMAND_PAGE_EXCLUSIONS.get(distro, {}).items():
+        if pkg in expected:
+            name, section = expected.pop(pkg)
+            _log(
+                "command_page_excluded",
+                distro=distro,
+                package=pkg,
+                name=name,
+                section=section,
+                reason=reason,
+            )
     # Distros use section suffixes such as openssl(1ssl) and openssl(1ossl).
     present = {(p.name, p.section[:1]) for p in pages} | {(a.name, a.section[:1]) for a in aliases}
-    missing = sorted(expected - present)
+    owners = _COMMAND_PAGE_OWNERS.get(distro, {})
+    missing = [
+        {"name": name, "section": section, "package": pkg, "ownerPackage": owners.get(pkg, pkg)}
+        for pkg, (name, section) in sorted(expected.items())
+        if (name, section) not in present
+    ]
     if missing:
+        if os.environ.get("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES") == "1":
+            _log("command_pages_missing_allowed", distro=distro, missing=missing)
+            return
         raise RuntimeError(
             "publish blocked: missing package-set command pages: "
-            + ", ".join(f"{name}({section})" for name, section in missing)
+            + ", ".join(
+                f"{page['name']}({page['section']}) "
+                f"(package {page['package']}; expected owner {page['ownerPackage']})"
+                for page in missing
+            )
+            + "; set BETTERMAN_ALLOW_MISSING_COMMAND_PAGES=1 to override (logged)"
         )
 
 
@@ -954,6 +998,7 @@ def _collect_licenses(*, pages: list[_PageRow], distro: str) -> dict[str, str]:
             f"{label}\nOS version: {version or 'unknown'}\nSource: {url}\n"
             "Provenance record; individual source files retain their own license notices."
         )
+    rpm_licenses = _rpm_license_files() if distro == "fedora" else {}
     license_ids = {}
     if distro == "arch":
         license_ids = pacman_license_ids()
@@ -964,6 +1009,8 @@ def _collect_licenses(*, pages: list[_PageRow], distro: str) -> dict[str, str]:
             text = _read_debian_copyright(pkg)
         else:
             text = _read_package_licenses(pkg)
+            if distro == "fedora":
+                text = _read_rpm_license_files(rpm_licenses.get(pkg, [])) or text
             if not text and distro == "alpine" and pkg.endswith("-doc"):
                 text = _read_package_licenses(pkg.removesuffix("-doc"))
         shared = _read_spdx_licenses(
@@ -973,6 +1020,78 @@ def _collect_licenses(*, pages: list[_PageRow], distro: str) -> dict[str, str]:
         if text or shared:
             licenses[pkg] = "\n\n".join(part for part in (text, shared) if part)
     return licenses
+
+
+def _license_items(*, licenses: dict[str, str], distro: str, dataset_release_id: str) -> list[dict]:
+    items: list[dict] = []
+    for package, text in sorted(licenses.items()):
+        base = _BASE_PROVENANCE.get(distro)
+        item = {
+            "packageName": package,
+            "licenseId": f"pkg:{package}",
+            "licenseName": package,
+            "licenseText": text,
+            "sourceUrl": base[2] if base and package == base[0] else None,
+        }
+        # Check the full stored record before creating a release or uploading pages.
+        size = len(
+            encode_json({**item, "datasetReleaseId": dataset_release_id, "releaseId": "x" * 32})
+        )
+        if size > _LICENSE_DOCUMENT_MAX_BYTES:
+            raise RuntimeError(
+                f"license document exceeds Convex 1 MiB limit: package={package}, "
+                f"encodedBytes={size}, budget={_LICENSE_DOCUMENT_MAX_BYTES}; text is not truncated"
+            )
+        items.append(item)
+    return items
+
+
+def _rpm_license_files() -> dict[str, list[Path]]:
+    # Subpackages often keep license files in a sibling built from the same source RPM.
+    output = subprocess.check_output(
+        [
+            "rpm",
+            "-qa",
+            "--qf",
+            "[%{=NAME}\t%{=SOURCERPM}\t%{FILENAMES}\t%{FILEFLAGS}\n]",
+        ],
+        text=True,
+    )
+    sources: dict[str, str] = {}
+    by_source: dict[str, set[Path]] = {}
+    for line in output.splitlines():
+        fields = line.split("\t")
+        if len(fields) != 4:
+            continue
+        package, source, path, flags = fields
+        source = source if source != "(none)" else package
+        sources[package] = source
+        if flags.isdigit() and (
+            int(flags) & 128  # RPMFILE_LICENSE
+            or (
+                int(flags) & 2
+                and re.fullmatch(
+                    r"(?i)(copying|copyright|licen[cs]e|notice)([._-].*)?", Path(path).name
+                )
+            )
+        ):
+            by_source.setdefault(source, set()).add(Path(path))
+    return {pkg: sorted(by_source.get(source, set())) for pkg, source in sources.items()}
+
+
+def _read_rpm_license_files(paths: list[Path]) -> str | None:
+    roots = [_LICENSE_ROOT.resolve(), _DOC_ROOT.resolve(), Path("/usr/lib"), Path("/usr/lib64")]
+    texts: list[str] = []
+    for path in paths:
+        try:
+            resolved = path.resolve(strict=True)
+            if resolved.is_file() and any(resolved.is_relative_to(root) for root in roots):
+                text = resolved.read_text(encoding="utf-8", errors="replace")
+                if text.strip():
+                    texts.append(f"{path}\n{text}")
+        except OSError:
+            continue
+    return "\n\n".join(texts) or None
 
 
 def _read_spdx_licenses(expression: str, *, root: Path) -> str | None:
