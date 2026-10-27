@@ -93,7 +93,19 @@ test('short urls: reserved app paths are unaffected', async ({ request }) => {
     expect(res.headers()['location'] ?? '', path).not.toMatch(/\/man\//)
   }
 
-  for (const path of ['/man', '/api', '/section', '/fonts', '/search/-x', '/man/tar/1/extra', '/.well-known/x', '/a/b/c']) {
+  for (const path of [
+    '/man',
+    '/api',
+    '/section',
+    '/fonts',
+    '/search/-x',
+    '/man/tar/1/extra',
+    '/.well-known/x',
+    '/a/b/c',
+    '/tar.txt',
+    '/wp-login.php',
+    '/apple-touch-icon-precomposed.png',
+  ]) {
     const res = await request.get(path, { maxRedirects: 0 })
     expect(res.status(), path).toBe(404)
   }
@@ -115,12 +127,13 @@ test('short urls: browsers can register BetterMan as a search engine with sugges
   expect(search).toMatch(/\/search\?q=\{searchTerms\}$/)
   expect(suggest).toMatch(/\/api\/v1\/suggest\?q=\{searchTerms\}&amp;format=opensearch$/)
 
-  const suggestUrl = new URL(suggest.replace('{searchTerms}', 'ta').replace('&amp;', '&'))
+  // Firefox drops a response whose query is not the raw text it sent.
+  const suggestUrl = new URL(suggest.replace('{searchTerms}', 'ta%20').replace('&amp;', '&'))
   const suggestions = await request.get(`${suggestUrl.pathname}${suggestUrl.search}`)
   expect(suggestions.status()).toBe(200)
   expect(suggestions.headers()['content-type']).toContain('application/x-suggestions+json')
   const [query, names, , urls] = (await suggestions.json()) as [string, string[], string[], string[]]
-  expect(query).toBe('ta')
+  expect(query).toBe('ta ')
   expect(names).toContain('tar')
   expect(urls[names.indexOf('tar')]).toMatch(/\/man\/tar\/1$/)
 

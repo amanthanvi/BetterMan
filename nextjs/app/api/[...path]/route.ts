@@ -21,11 +21,14 @@ import {
 import { normalizeDistro, withDistro, type Distro } from '@/lib/distro'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
-import { manPath } from '@/lib/shortUrl'
+import { isManName, manPath } from '@/lib/shortUrl'
 
 export const runtime = 'nodejs'
 const PUBLIC_CACHE_SECONDS = 60 * 60
 const SEARCH_CACHE_SECONDS = 5 * 60
+// Text that cannot be a man page name never has suggestions, in any release.
+const NO_SUGGESTIONS_CACHE_SECONDS = 24 * 60 * 60
+const OPENSEARCH_JSON = { headers: { 'Content-Type': 'application/x-suggestions+json; charset=utf-8' } }
 
 type ServerTimingMetric = {
   name: string
@@ -92,7 +95,7 @@ function openSearchSuggestions(req: NextRequest, query: string, suggestions: Sug
   return cachedJson(
     [query, rows.map((row) => row.name), rows.map((row) => row.description), rows.map((row) => row.url)],
     SEARCH_CACHE_SECONDS,
-    { headers: { 'Content-Type': 'application/x-suggestions+json; charset=utf-8' } },
+    OPENSEARCH_JSON,
   )
 }
 
@@ -255,23 +258,30 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
     }
 
     if (parts.length === 1 && parts[0] === 'suggest') {
-      const limited = await enforceRateLimit(req, 'search')
-      if (limited) return limited
+      // Input is settled before the rate limit, which is itself a Convex call.
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
-      // `q` is the spelling the OpenSearch descriptor uses.
-      const name = first(req.nextUrl.searchParams.get('name')) ?? first(req.nextUrl.searchParams.get('q'))
+      // `q` is the spelling the OpenSearch descriptor uses. OpenSearch clients
+      // drop a response whose query is not their raw text, trailing space included.
+      const raw = req.nextUrl.searchParams.get('name') ?? req.nextUrl.searchParams.get('q') ?? ''
+      const name = raw.trim()
       if (!name || name.length > 200) return apiError(400, 'INVALID_NAME', 'Name is required')
       const format = first(req.nextUrl.searchParams.get('format'))
       if (format !== undefined && format !== 'opensearch') {
         return apiError(422, 'INVALID_QUERY_PARAM', 'Invalid format')
       }
+      if (!isManName(name)) {
+        const empty = format === 'opensearch' ? [raw, []] : { query: name.toLowerCase(), suggestions: [], distro }
+        return cachedJson(empty, NO_SUGGESTIONS_CACHE_SECONDS, format === 'opensearch' ? OPENSEARCH_JSON : undefined)
+      }
+      const limited = await enforceRateLimit(req, 'search')
+      if (limited) return limited
       // Like the man page, fall back to Debian without an active release, and say
       // so, so the caller does not label Debian rows as the requested distro.
       const { distro: resolved, data } = await withDistroFallback(distro, (activeDistro) =>
         suggest({ distro: activeDistro, name }),
       )
-      if (format === 'opensearch') return openSearchSuggestions(req, name, data.suggestions, resolved)
+      if (format === 'opensearch') return openSearchSuggestions(req, raw, data.suggestions, resolved)
       return cachedJson({ ...data, distro: resolved }, SEARCH_CACHE_SECONDS)
     }
 

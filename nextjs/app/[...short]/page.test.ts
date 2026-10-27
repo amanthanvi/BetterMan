@@ -70,10 +70,14 @@ describe('short URL redirects', () => {
     expect(mocks.search).not.toHaveBeenCalled()
   })
 
-  it.each(['/man', '/api', '/search/-x', '/tar/x', '/a/b/c', '/tar%E0%A4'])('leaves %s to the 404 page', async (path) => {
-    await expect(visit(path)).rejects.toHaveProperty('message', 'notFound')
-    expect(navigation.permanentRedirect).not.toHaveBeenCalled()
-  })
+  it.each(['/man', '/api', '/search/-x', '/tar/x', '/a/b/c', '/tar%E0%A4', '/tar.txt', '/wp-login.php', '/x.png/-x'])(
+    'leaves %s to the 404 page without a lookup',
+    async (path) => {
+      await expect(visit(path)).rejects.toHaveProperty('message', 'notFound')
+      expect(navigation.permanentRedirect).not.toHaveBeenCalled()
+      expect(mocks.search).not.toHaveBeenCalled()
+    },
+  )
 
   it('fails loudly when the build did not inline the reserved segments', async () => {
     vi.stubEnv('BM_RESERVED_PATH_SEGMENTS', '')
@@ -112,6 +116,14 @@ describe('short URL options', () => {
     mocks.search.mockResolvedValue(results({ match: 'option', anchorId: 'x' }))
     await expect(visit('/tar/-x', { distro: 'arch' })).rejects.toHaveProperty('message', '307 /man/tar/1#x')
     expect(mocks.search).toHaveBeenCalledWith(expect.objectContaining({ distro: 'debian' }))
+  })
+
+  it.each([
+    ['/tar/-x', {}, '307 /man/tar'],
+    ['/tar.1/-x', { distro: 'ubuntu' }, '307 /man/tar/1?distro=ubuntu'],
+  ])('lands %s %j on the page when the option search fails', async (path, sp, expected) => {
+    mocks.search.mockRejectedValue(new Error('Convex unavailable'))
+    await expect(visit(path, sp)).rejects.toHaveProperty('message', expected)
   })
 
   it.each([

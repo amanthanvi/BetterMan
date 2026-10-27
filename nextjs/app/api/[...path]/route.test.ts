@@ -288,11 +288,60 @@ describe('suggest API', () => {
     expect(apiMocks.suggest).not.toHaveBeenCalled()
   })
 
-  it('rejects an unknown format', async () => {
-    const res = await GET(request('/api/v1/suggest?q=ta&format=xml'), context(['v1', 'suggest']))
+  it('echoes the raw OpenSearch query, trailing space included, and looks up the trimmed name', async () => {
+    apiMocks.suggest.mockResolvedValueOnce({ query: 'tar', suggestions })
 
-    expect(res.status).toBe(422)
+    const res = await GET(request('/api/v1/suggest?q=tar%20&format=opensearch'), context(['v1', 'suggest']))
+
+    expect(apiMocks.suggest).toHaveBeenCalledWith({ distro: 'debian', name: 'tar' })
+    const body = (await res.json()) as unknown[]
+    expect(body[0]).toBe('tar ')
+  })
+
+  it.each([
+    ['/api/v1/suggest?q=ta&format=xml', 422],
+    ['/api/v1/suggest?q=ta&distro=plan9', 400],
+    ['/api/v1/suggest?q=', 400],
+    [`/api/v1/suggest?q=${'a'.repeat(201)}`, 400],
+  ])('rejects %s before the rate limit or a lookup', async (path, status) => {
+    const res = await GET(request(path), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(status)
+    expect(convexMocks.mutation).not.toHaveBeenCalled()
     expect(apiMocks.suggest).not.toHaveBeenCalled()
+  })
+
+  it.each(['tar -x', 'how do i extract', 'a/b', '../etc', '-x', '<script>', '%2541'])(
+    'answers %j, which cannot be a name, with no suggestions and no Convex call',
+    async (q) => {
+      const params = new URLSearchParams({ q, format: 'opensearch' })
+      const res = await GET(request(`/api/v1/suggest?${params}`), context(['v1', 'suggest']))
+
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('application/x-suggestions+json; charset=utf-8')
+      expect(res.headers.get('cache-control')).toContain('s-maxage=86400')
+      await expect(res.json()).resolves.toEqual([q, []])
+      expect(convexMocks.mutation).not.toHaveBeenCalled()
+      expect(apiMocks.suggest).not.toHaveBeenCalled()
+    },
+  )
+
+  it('answers an implausible name in the JSON format the same way', async () => {
+    const res = await GET(request('/api/v1/suggest?name=Tar%20-x&distro=ubuntu'), context(['v1', 'suggest']))
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ query: 'tar -x', suggestions: [], distro: 'ubuntu' })
+    expect(convexMocks.mutation).not.toHaveBeenCalled()
+    expect(apiMocks.suggest).not.toHaveBeenCalled()
+  })
+
+  it('spends the rate limit before the lookup for a plausible name', async () => {
+    apiMocks.suggest.mockResolvedValueOnce({ query: 'ta', suggestions })
+
+    await GET(request('/api/v1/suggest?q=ta'), context(['v1', 'suggest']))
+
+    expect(convexMocks.mutation).toHaveBeenCalledOnce()
+    expect(convexMocks.mutation.mock.invocationCallOrder[0]).toBeLessThan(apiMocks.suggest.mock.invocationCallOrder[0])
   })
 
   it('does not fall back for an error that only carries the missing-release code', async () => {

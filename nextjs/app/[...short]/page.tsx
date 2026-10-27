@@ -1,7 +1,7 @@
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
 
 import { search, withDistroFallback } from '../../lib/api'
-import { withDistro } from '../../lib/distro'
+import { withDistro, type Distro } from '../../lib/distro'
 import { resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { manPath, parseShortUrl, type ShortUrl } from '../../lib/shortUrl'
 
@@ -31,21 +31,26 @@ function queryString(sp: SearchParams): string {
 }
 
 // The option index, as search reads it for `tar -x`, maps a flag to its row.
-// Without a match the reader still lands on the page (or its section picker).
+// Without a match, or when the search fails, the reader still lands on the
+// page (or its section picker), which settles its own status.
 async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: SearchParams): Promise<string> {
-  const { distro, data } = await withDistroFallback(await resolveRequestDistro(sp), (activeDistro) =>
+  const requestedDistro = await resolveRequestDistro(sp)
+  const pageHref = (distro: Distro) => withDistro(manPath(target.name, target.section), distro)
+  const found = await withDistroFallback(requestedDistro, (activeDistro) =>
     search({
       distro: activeDistro,
       q: `${target.name} ${target.flag}`,
       section: target.section ?? undefined,
       limit: 10,
     }),
-  )
-  const hit = data.results.find(
+  ).catch(() => null)
+  if (!found) return pageHref(requestedDistro)
+
+  const hit = found.data.results.find(
     (result) => result.match === 'option' && result.anchorId && result.name.toLowerCase() === target.name,
   )
-  if (hit) return `${withDistro(manPath(target.name, hit.section), distro)}#${hit.anchorId}`
-  return withDistro(manPath(target.name, target.section), distro)
+  if (hit) return `${withDistro(manPath(target.name, hit.section), found.distro)}#${hit.anchorId}`
+  return pageHref(found.distro)
 }
 
 export default async function ShortUrlPage({
