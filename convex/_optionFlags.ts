@@ -15,11 +15,24 @@ const FLAG_RE = /^(?:-{1,2}|\+)[A-Za-z0-9?#@%:!][A-Za-z0-9_.+:#-]*$/;
 const ATTACHED_PLACEHOLDER_RE =
   /^(-[A-Za-z])(?:NUM|N|FILE|FILES|PATTERN|PATTERNS|ACTION|DIR|DIRECTORY|STRING|COMMAND|TYPE|LEVEL|SIZE|LIST|GLOB|FORMAT|WHEN|MODE|NAME|ARG|ARGS|VALUE|KEY|PATH|COUNT|WIDTH|SEP|SECS|SECONDS|TIME|DATE|CHARS|LINES|BYTES|DEPTH)$/;
 
-export type OptionFlagRow = { flag: string; anchorId: string; flags: string; takesArgument?: boolean; excerpt?: string };
+export type OptionFlagRow = { flag: string; anchorId: string; flags: string; takesArgument?: boolean; argumentOptional?: boolean; excerpt?: string };
 
 export function flagTakesArgument(flags: string): boolean {
   return /[=<]|(?:^|[\s,|])\[?[A-Z][A-Z_]*\b/.test(flags) ||
     flags.split(/[\s,|/]+/).some((part) => ATTACHED_PLACEHOLDER_RE.test(part));
+}
+
+/** Optional arguments are never taken from the following word. */
+export function flagArgumentOptional(flags: string): boolean {
+  return /\[(?:=[A-Za-z_][A-Za-z0-9_-]*|[A-Z][A-Z0-9_]*|<[^>]+>)\]/.test(flags);
+}
+// Legacy index rows lack the argument-column metadata. These exact GNU forms
+// are optional independently of how the old ingest rendered their flag text.
+export function optionArgumentOptional(row: {flag:string; flags:string; argumentOptional?:boolean}, command: string): boolean {
+  return row.argumentOptional ?? (flagArgumentOptional(row.flags) || (command==='rm' && row.flag==='--interactive') || (command==='xargs' && ['-i','--replace'].includes(row.flag)));
+}
+export function flagAllowsShortEquals(flags: string, flag: string): boolean {
+  return flags.split(/[\s,|]+/).some(form => form.startsWith(`${flag}=`) || form.startsWith(`${flag}[=`));
 }
 
 /** `--sort=ORDER` and `--color[=WHEN]` key as `--sort` and `--color`; case is kept. */
@@ -62,7 +75,8 @@ export function optionFlagRows(options: unknown): OptionFlagRow[] {
       if (seen.has(flag)) continue;
       seen.add(flag);
       const takesArgument = (typeof argument === "string" && argument.trim().length > 0) || flagTakesArgument(flags);
-      rows.push({ flag, anchorId, flags: flags.trim().slice(0, MAX_FLAG_CHARS), ...(takesArgument ? { takesArgument: true } : {}), ...(typeof description === 'string' && description ? { excerpt: description.slice(0, 160) } : {}) });
+      const argumentOptional = flagArgumentOptional(flags) || (typeof argument === 'string' && /^\[.*\]$/.test(argument.trim()));
+      rows.push({ flag, anchorId, ...(argumentOptional ? {argumentOptional:true} : {}), flags: flags.trim().slice(0, MAX_FLAG_CHARS), ...(takesArgument ? { takesArgument: true } : {}), ...(typeof description === 'string' && description ? { excerpt: description.slice(0, 160) } : {}) });
       if (rows.length >= MAX_OPTION_FLAG_ROWS_PER_PAGE) return rows;
     }
   }

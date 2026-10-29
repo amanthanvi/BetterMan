@@ -63,35 +63,55 @@ command arguments (`sudo`, `env`, `xargs`, `timeout`, `nice`, `nohup`, `time`,
 `command`, `exec`, `doas`) are separate child stages, including `find -exec` /
 `-execdir` / `-ok` / `-okdir`.
 
-Destructive entries have `{description, dryRun}`. They describe literal
-operations requested by the line, not runtime success or certain data loss.
-The independent semantic allowlist in `convex/_destructive.ts` is stricter
-than the manual option index. Every option/predicate on the command and each
-wrapper ancestor must be modeled; a recognized but unmodeled manual option
-still suppresses the note. Dynamic/unknown syntax and resolution exhaustion
-also suppress it. The supported set is deliberately small:
+The stage `destructive` arrays now contain **command-level facts**, not
+per-invocation predictions. Facts are deduplicated across the entire response;
+consumers should render the collected facts after the explanation. No note
+names input targets, predicts prompting, counts affected objects, or asserts
+that the submitted line successfully performs the operation.
 
-| Operation | Modeled forms and exclusions | Inspection hint |
+| Resolved command/syntax | Fact | Optional inspection hint |
 | --- | --- | --- |
-| rm | Basic force/recursive/ordered interactive switches; dot/dot-dot/root operands excluded; literal operands or explicitly modeled find/xargs replacements | Replace rm with `ls -d` |
-| find -delete | Literal roots after -H/-L/-P/-O/-D globals; conjunction-only name/type/age/depth predicates; -delete must be the last primary; no branching/pruning | Replace -delete with -print |
-| git clean | One literal global -C; -f/-d/-x/-X, with -n/-i suppressing; -e, pathspecs and other global options unmodeled | Replace -f with -n |
-| mkfs.ext4 / mke2fs | One literal filesystem target, no flags; -n/-V suppress; aliases resolve to mke2fs | Add -n |
-| truncate | Exactly one size option of zero and literal non-device-path operands | null |
-| echo redirection | One truncating output redirect to a literal non-device path; no options or other redirects | null |
+| rm | rm deletes files. | Run it with `ls -d` in place of `rm` first to see what it would act on. |
+| find with a real -delete action | find -delete deletes the files it matches. | Run it with `-print` in place of `-delete` first. |
+| git clean | git clean deletes files from the working tree. | Run `git clean -n` first. |
+| mkfs variants / mke2fs | mkfs creates a new filesystem, erasing what the device held. | Add `-n` to see what it would do. (mkfs.ext4/mke2fs only) |
+| truncate with a size option | truncate changes file sizes; a size of 0 empties a file. | none |
+| literal file output using >, >| or &> | > replaces the contents of the file it writes to. | none |
 
-No notes or hints are emitted for dd, rsync, shred or tar in this revision.
-Their operands, copy layout, predicate/mode interactions and file-type effects
-need a separate model before adding them to the allowlist. Output redirects
-never make device-truncation claims. sudo listing/validation/timestamp/edit
-and shell modes are opaque. xargs interactive mode is unmodeled, so it cannot
-support a no-prompt claim. Wrapper children appear directly after their parent;
-list terminators stay with the containing stage. Unknown lexical tokens keep
-kind `unknown` throughout resolution.
+Hints are deliberately narrower than facts. Unknown/invalid lines never receive
+a hint. rm previews require ls-compatible switches and a replacement marker
+that cannot alter the inserted command; find previews use a known simple
+expression; git previews exclude existing dry-run, global options, wrappers
+and runtime substitutions; mkfs previews exclude existing dry-run and markers
+that would rewrite -n. These are suggestions, never executable rewrites or
+whole-line guarantees. dd, rsync, shred and tar remain silent.
 
-Hints inspect only the named operation: other stages can still have side
-effects. Runtime aliases/functions, executable identities, file existence and
-noclobber state are not inspected. Absence of a note never establishes safety.
+Facts require a resolved command position through known executing wrapper
+modes (find -exec/-execdir, xargs, sudo/doas/env/nice/timeout/nohup/time/command/
+exec). Listing, shell-string, help/version and other opaque modes do not
+establish execution. Command text inside echo/printf, comments or a quoted
+sentence is not a command stage. Local/relative executable paths such as
+./rm or ./sudo remain unknown; standard absolute system binary paths can map
+to their manuals. Runtime program identity is not inspected.
+
+Replacement templates retain their exact source text and spans. find {} and
+xargs -I/-i/--replace substitutions inside operands or option values appear as
+`expansion` tokens with a runtime-replacement excerpt, not invented paths.
+They reference the find/xargs option (or their own containing option value),
+not a bash parameter-expansion section.
+When replacement changes a command/option identity, it stays unknown.
+-I={} means the literal replacement string ={}, not {}. xargs appending
+unknown arguments to a find expression is explicitly unsupported. find's +
+execution form requires exactly one trailing {} argument, and an unescaped
+shell semicolon is not an execution terminator.
+
+Optional arguments documented in [WHEN], [=WHEN] or [ARG] are not consumed
+from the next word. The index now preserves optionality from the separate
+argument column; exact legacy rm --interactive/xargs replace forms also have
+fallbacks. Short = syntax is unsupported unless that short form is documented;
+xargs -I retains its literal attached = replacement string. Redirect targets
+that expand as globs remain glob tokens; append redirects and explicit special
+device-directory spellings do not produce the file-overwrite fact.
 
 Limits are 4,096 characters, 128 lexical tokens, 24 stages and nesting depth 8.
 The resolver performs at most 64 indexed lookups and shares a 64-document

@@ -1,15 +1,16 @@
+import { manualCommandName } from './_commandConventions';
 export class ShellParseError extends Error {
   constructor(readonly code: string) { super(code); }
 }
 /** Static shell inspection only: no expansion, filesystem access or execution. */
 export const EXPLAIN_LIMITS = { characters: 4096, tokens: 128, stages: 24, depth: 8 } as const;
 export type ShellKind = 'command' | 'word' | 'assignment' | 'operator' | 'redirect' | 'redirectTarget' | 'glob' | 'expansion' | 'comment' | 'unknown';
-export type ShellToken = { kind: ShellKind; text: string; value: string; start: number; end: number; dynamic: boolean };
+export type ShellToken = { kind: ShellKind; text: string; value: string; start: number; end: number; dynamic: boolean; replacement?: {marker: string; source: 'find' | 'xargs'} };
 export type ShellStage = { id: number; parent: number | null; relation: 'list' | 'subshell' | 'substitution' | 'wrapper' | 'exec'; tokens: ShellToken[] };
 export type ShellParse = { stages: ShellStage[]; diagnostics: string[] };
 const OPERATORS = ['&&', '||', '|&', '>>', '<<-', '<<<', '<<', '<>', '>&', '<&', '>|', '&>', '&>>', '|', ';', '&', '(', ')', '>', '<', '\n'];
 const WRAPPER_ARGUMENTS: Record<string, Set<string>> = {
-  sudo: new Set(['-u', '--user', '-g', '--group', '-h', '--host', '-p', '--prompt', '-C', '-T', '-R', '-D']),
+  sudo: new Set(['-u', '--user', '-g', '--group', '-h', '--host', '-p', '--prompt', '-C', '-T', '-R', '-D', '-r', '--role', '-t', '--type']),
   env: new Set(['-u', '--unset', '-C', '--chdir', '-a', '--argv0']),
   timeout: new Set(['-s','--signal','-k','--kill-after']),
   nice: new Set(['-n','--adjustment']), nohup: new Set(),
@@ -133,7 +134,7 @@ export function parseShell(input: string): ShellParse {
       if (i === a) { i++; add('unknown', a, i); continue; }
       if (!value && /^(?:\\\n)+$/.test(input.slice(a, i))) continue;
       const previous = stage.tokens.at(-1);
-      const kind: ShellKind = previous?.kind === 'redirect' ? 'redirectTarget' : dynamic ? 'expansion' : glob ? 'glob' : 'word';
+      const kind: ShellKind = glob ? 'glob' : previous?.kind === 'redirect' ? 'redirectTarget' : dynamic ? 'expansion' : 'word';
       add(kind, a, i, value, dynamic);
     }
     return i;
@@ -146,16 +147,16 @@ export function parseShell(input: string): ShellParse {
       if (!next?.tokens.length) result.diagnostics.push(`Missing command after ${last.value}`);
     }
     stage.tokens.forEach((token, index) => {
-      if (token.kind === 'redirect' && stage.tokens[index + 1]?.kind !== 'redirectTarget') result.diagnostics.push(`Missing redirection target for ${token.text}`);
+      if (token.kind === 'redirect' && !['redirectTarget','glob'].includes(stage.tokens[index + 1]?.kind)) result.diagnostics.push(`Missing redirection target for ${token.text}`);
     });
   }
   for (let index = 0; index < result.stages.length; index++) {
     const stage = result.stages[index];
     // Remove lexer-created empty list stages while keeping stable IDs/parent references.
-    let command = stage.tokens.findIndex(token => !['operator', 'redirect', 'redirectTarget', 'comment'].includes(token.kind));
-    while (command >= 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(stage.tokens[command].text)) {
+    let command = stage.tokens.findIndex((token,i) => !['operator', 'redirect', 'redirectTarget', 'comment'].includes(token.kind) && stage.tokens[i-1]?.kind !== 'redirect');
+    while (command >= 0 && stage.tokens[command].kind !== 'unknown' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(stage.tokens[command].text)) {
       stage.tokens[command].kind = 'assignment'; command++;
-      while (command < stage.tokens.length && ['redirect', 'redirectTarget'].includes(stage.tokens[command].kind)) command++;
+      while (command < stage.tokens.length && (['redirect', 'redirectTarget'].includes(stage.tokens[command].kind) || stage.tokens[command-1]?.kind === 'redirect')) command++;
       if (command >= stage.tokens.length) { command = -1; break; }
     }
     if (command < 0 || !stage.tokens[command] || ['operator', 'redirect', 'redirectTarget', 'comment'].includes(stage.tokens[command].kind)) continue;
@@ -163,18 +164,26 @@ export function parseShell(input: string): ShellParse {
     if (token.kind === 'unknown') continue;
     if (token.dynamic || token.kind === 'glob') { token.kind = 'unknown'; continue; }
     token.kind = 'command';
-    const name = token.value.split('/').at(-1)!;
+    const name = manualCommandName(token.value);
+    if (!name) {token.kind = 'unknown'; continue;}
     if (['if', 'then', 'else', 'elif', 'fi', 'for', 'while', 'until', 'do', 'done', 'case', 'esac', 'function', '{', '}'].includes(name)) {
       token.kind = 'unknown'; result.diagnostics.push('Shell control structures are not interpreted'); continue;
     }
     if (WRAPPER_ARGUMENTS[name]) {
       let end = command + 1;
+      let replacement: string | null = null;
       while (end < stage.tokens.length) {
         const t = stage.tokens[end];
+        if (t.dynamic) {result.diagnostics.push(`Cannot statically unwrap ${name} with runtime options`); end=stage.tokens.length; break;}
         if (t.kind === 'operator' || t.kind === 'redirect') break;
         if (t.value === '--') { end++; break; }
         if (name === 'env' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(t.value)) { t.kind = 'assignment'; end++; continue; }
         if (!t.value.startsWith('-')) break;
+        if (name === 'xargs' && /^(?:-I|-i|--replace(?:=|$))/.test(t.value)) {
+          const marker = t.value === '-I' ? stage.tokens[end+1] : null;
+          if(marker?.dynamic) {result.diagnostics.push('Runtime xargs replacement string is unknown');end=stage.tokens.length;break;}
+          replacement = marker ? marker.value : t.value.startsWith('--replace=') ? t.value.slice(10) : t.value === '--replace' || t.value === '-i' ? '{}' : t.value.slice(2);
+        }
         // Parse clusters before interpreting argument boundaries (sudo -iu root).
         const parts = t.value.startsWith('--') ? [t.value.split('=', 1)[0]] : [...t.value.slice(1)].map(letter => `-${letter}`);
         let consumes = false, opaque = false;
@@ -193,6 +202,10 @@ export function parseShell(input: string): ShellParse {
       if (end < stage.tokens.length && !['operator', 'redirect', 'comment'].includes(stage.tokens[end].kind)) {
         const boundary = stage.tokens.findIndex((token, i) => i >= end && token.kind === 'operator');
         const child = create(stage.id, 'wrapper'); child.tokens = stage.tokens.splice(end, (boundary < 0 ? stage.tokens.length : boundary) - end);
+        if(replacement==='') {result.diagnostics.push('Unsupported empty xargs replacement string');child.tokens.forEach(token=>{token.kind='unknown';});}
+        if (replacement) for(const token of child.tokens) {
+          if(token.kind!=='unknown' && token.value.includes(replacement)) {token.replacement={marker:replacement,source:'xargs'};token.dynamic=true;token.kind='expansion';}
+        }
       }
     } else if (name === 'find') {
       let after = command;
@@ -200,8 +213,14 @@ export function parseShell(input: string): ShellParse {
         const exec = stage.tokens.findIndex((t, n) => n > after && ['-exec', '-execdir', '-ok', '-okdir'].includes(t.value));
         if (exec < 0) break;
         const end = stage.tokens.findIndex((t, n) => n > exec && [';', '+'].includes(t.value));
-        if (end > exec + 1) {
+        if (end > exec + 1 && stage.tokens[end].kind !== 'operator') {
+          const argv = stage.tokens.slice(exec+1,end);
+          if(stage.tokens[end].value === '+' && (argv.at(-1)?.value !== '{}' || argv.filter(t=>t.value.includes('{}')).length !== 1)) {
+            result.diagnostics.push('Unsupported find execution: + requires one trailing {} argument');
+            stage.tokens[exec].kind='unknown'; break;
+          }
           const child = create(stage.id, 'exec'); child.tokens = stage.tokens.splice(exec + 1, end - exec - 1);
+          for(const token of child.tokens) if(token.kind!=='unknown' && token.value.includes('{}')) {token.replacement={marker:'{}',source:'find'};token.dynamic=true;token.kind='expansion';}
           after = exec + 1;
         } else { result.diagnostics.push('Unterminated find execution expression'); break; }
       }

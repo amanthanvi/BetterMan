@@ -3,6 +3,7 @@ import { convexTest } from 'convex-test';
 import { describe, it, expect } from 'vitest';
 import { makeFunctionReference } from 'convex/server';
 import schema from './schema';
+import reviewFixture from './fixtures/explain-review.json';
 import symbolLayouts from '../ingestion/tests/fixtures/symbol-layouts.json';
 import { optionFlagRows } from './_optionFlags';
 import { insertSymbols, type SymbolInput } from './_symbols';
@@ -17,7 +18,7 @@ const tar = [
   { flags: '-f, --file', anchorId: 'file', argument: 'ARCHIVE', description: 'Use archive file ARCHIVE.' },
   { flags: '-C, --directory', anchorId: 'directory', argument: 'DIR', description: 'Change to directory DIR.' },
 ];
-export async function explainFixture(documentsRead = 258) {
+export async function explainFixture(documentsRead = 258, review = false) {
   const t = convexTest({ schema, modules, transactionLimits: { documentsRead } });
   await t.run(async ctx => {
     for (const distro of ['debian', 'freebsd'] as const) {
@@ -54,11 +55,14 @@ export async function explainFixture(documentsRead = 258) {
         { name: 'errno', section: '3', options: [] },
         { name: 'bounded', section: '1', options: Array.from({length: 100}, (_, i) => ({ flags: `--limit${i}`, anchorId: `limit${i}` })) },
       ];
+      if(review) for(const page of reviewFixture.pages) {
+        if(!specs.some(spec=>spec.name===page.name && spec.section===page.section)) specs.push({...page,options:page.options.map(row=>({...row,argument:row.argument ?? undefined}))});
+      }
       const release = (await ctx.db.get(releaseId))!;
       for (const spec of specs) {
         const pageId = await ctx.db.insert('manPages', { name: spec.name, section: spec.section, releaseId, datasetReleaseId: distro, externalId: spec.name, locale: 'en', distro, sitemapPage: 1, title: `${spec.name}(${spec.section})`, description: `Manual for ${spec.name}`, sourcePath: spec.name, contentSha256: spec.name, hasParseWarnings: false });
         await ctx.db.insert('manPageSearchDocuments', { pageId, releaseId, datasetReleaseId: distro, name: spec.name, nameNorm: spec.name, section: spec.section, title: `${spec.name}(${spec.section})`, description: `Manual for ${spec.name}`, descNorm: '', searchText: '', snippetText: '' });
-        for (const row of optionFlagRows(spec.options)) await ctx.db.insert('manPageOptionFlags', { ...row, releaseId, pageId, nameNorm: spec.name, section: spec.section, anchorId: `${distro}-${row.anchorId}` });
+        for (const row of optionFlagRows((review ? reviewFixture.pages.find(page=>page.name===spec.name && page.section===spec.section)?.options : null) ?? spec.options)) await ctx.db.insert('manPageOptionFlags', { ...row, releaseId, pageId, nameNorm: spec.name, section: spec.section, anchorId: `${distro}-${row.anchorId}` });
         const symbols: SymbolInput[] = [];
         if (/^(git|ip|openssl)-/.test(spec.name)) symbols.push({ term: spec.name.replace('-', ' '), anchorId: '', excerpt: `Subcommand ${spec.name}`, kind: 'subcommand' });
         if(spec.name==='git') symbols.push({term:'git commit',anchorId:'commands',excerpt:'Parent command definition',kind:'subcommand'});
@@ -85,7 +89,7 @@ describe('bounded explain resolution', () => {
     const pipeline = await explain(t, "find . -name '*.log' -mtime +7 -print0 | xargs -0 rm -f");
     expect(pipeline.stages.map((s: {tokens: {kind: string;value: string}[]}) => s.tokens.find(t => t.kind === 'command')?.value)).toEqual(['find', 'xargs', 'rm']);
     expect(pipeline.stages[0].tokens.find((t: {value: string}) => t.value === '|').shell.anchor).toBe('real-pipeline');
-    expect(pipeline.stages[2].destructive[0].description).toContain('requests removal of the paths supplied by xargs without prompting');
+    expect(pipeline.stages[2].destructive[0].description).toContain('rm deletes files.');
     expect(pipeline.shareUrl).toBe(`/explain?cmd=${encodeURIComponent(pipeline.input)}`);
     expect(pipeline.diagnostics).toEqual([]);
   });
@@ -233,41 +237,7 @@ describe('review regressions: explanation semantics', () => {
     expect((await explain(t,'git rebas')).stages[0].tokens.at(-1).kind).toBe('unknown');
     expect((await explain(t,'ssh add')).stages[0].tokens.at(-1)).toMatchObject({kind:'argument',page:null});
   });
-  it.each([
-    ['rm -rf build/','requests removal of build/ with recursive directory traversal without prompting','ls -d'],
-    ['rm -i -f x','requests removal of x without prompting','ls -d'], ['rm f','requests removal of f.','ls -d'], ['find . | xargs rm','paths supplied by xargs','ls -d'],
-    ['find . -exec rm {} +','each path substituted for {}','ls -d'],
-    ['git -C dir clean -fd','in dir.','-n'], ['git clean -fX','ignored files','-n'],['git clean -fx','including ignored','-n'],
-    ['rm {}','removal of {}.', 'ls -d'],['xargs rm {}','{} and the paths supplied by xargs','ls -d'], ['xargs -I % rm %','each input line substituted for %','ls -d'],
-    ['find -L /srv -name x -delete','tree rooted at /srv.','-print'], ['find -P /data -delete','tree rooted at /data.','-print'],
-    ['find . -delete','requests deletion of matching files','-print'],
-    ['truncate -s 0 f','zero bytes',null],
-    ['mkfs.ext4 /dev/sdb1','creation of a filesystem on /dev/sdb1','add `-n`'],
-    ['git clean -fd','non-ignored untracked files and directories','-n'],
-    ['echo text &> f','requests output to f with truncation',null],
-    ['echo text >| f','requests output to f with truncation',null],
-    ['echo text >& f','requests output to f with truncation',null],
-  ])('describes literal operation %s accurately',async(cmd,wording,dryRun)=>{
-    const result=await explain(await explainFixture(),cmd);
-    const notes=result.stages.flatMap((s:{destructive:{description:string;dryRun:string|null}[]})=>s.destructive);
-    expect(notes.some((n:{description:string})=>n.description.includes(wording))).toBe(true);
-    expect(notes.every((n:{description:string})=>!(/\bmay\b|\bcan\b/.test(n.description)))).toBe(true);
-    if(dryRun) expect(notes.some((n:{dryRun:string|null})=>n.dryRun?.includes(dryRun))).toBe(true);
-  });
-  it.each([
-    'dd if=a of=b','dd if=a of=b count=0','dd if=a of=b seek=1','dd if=a of=b conv=notrunc','shred f','tar --remove-files f','rsync -a --delete a b','rsync --delete a b',
-    'rm -rf --one-file-system build/','rm -rf a{b,c}','mkfs.ext4 -L label /dev/sdb1','sudo -l rm -rf /','sudo -v rm -rf /','sudo -k rm -rf /','sudo -K rm -rf /','sudo -e rm -rf /',
-    'env - rm -f f','xargs -p rm -f','find . -delete -name x','git clean -fe pattern','rm -rf /','rm -rf .','rm -rf ..','rm -rf folder/.','echo > /dev/sda',
-    'dd if=/dev/zero of=/dev/null','dd if=input of=/dev/stdout','dd if=input of=/dev/fd/2',
-    'rm -rfi x','rm -f -i x','rm -f -I x','rm -f --interactive=always x',
-    'truncate -s 0 -s +1G f','truncate -s +1G f',"truncate -s '>1G' f",'mkfs.ext4 -n /dev/sdb1','mkfs.ext4 -L label',
-    'rsync --delete --dry-run source/ dest/','git clean -fn',
-    'echo x &> /dev/null','echo x >| /dev/tty','echo x >& 2',
-    'echo \\$(rm -rf /)','"FOO=bar" rm -rf /',
-  ])('makes no destructive assertion for %s',async cmd=>{
-    const result=await explain(await explainFixture(),cmd);
-    expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
-  });
+
 });
 
 it('clips astral symbol excerpts in UTF-16 without failing an ingest batch', async () => {
@@ -311,13 +281,103 @@ it('resolves parent-page COMMANDS definitions to their real section anchors', as
  expect(search.results[0]).toMatchObject({name:'systemctl',symbolKind:'subcommand',anchorId:'unit-commands-introspection-and-modification'});
 });
 
-it.each([
- ['git clean -fd','git clean requests removal of non-ignored untracked files and directories in the current directory.'],
- ['git clean -fX','git clean requests removal of ignored files in the current directory.'],
- ['git clean -fx','git clean requests removal of untracked, including ignored files in the current directory.'],
- ['git -C dir clean -fd','git clean requests removal of non-ignored untracked files and directories in dir.'],
- ['find . -delete','find -delete requests deletion of matching files and empty directories in the tree rooted at the current directory.'],
-])('pins modeled wording exactly: %s',async(cmd,description)=>{
- const result=await explain(await explainFixture(),cmd);
- expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).map((n:{description:string})=>n.description)).toEqual([description]);
+
+const factDescriptions = new Set([
+ 'rm deletes files.', 'find -delete deletes the files it matches.',
+ 'git clean deletes files from the working tree.', 'mkfs creates a new filesystem, erasing what the device held.',
+ 'truncate changes file sizes; a size of 0 empties a file.', '> replaces the contents of the file it writes to.',
+]);
+const hints = new Set([
+ 'Run it with `ls -d` in place of `rm` first to see what it would act on.',
+ 'Run it with `-print` in place of `-delete` first.', 'Run `git clean -n` first.', 'Add `-n` to see what it would do.',
+]);
+let reviewHarness: ReturnType<typeof explainFixture> | undefined;
+const reviewed = () => reviewHarness ??= explainFixture(66,true);
+describe('round-3 real-metadata review corpus',()=>{
+ it.each(reviewFixture.cases)('$distro: $cmd (previous note: $hadNote)',async({distro,cmd})=>{
+  const result=await explain(await reviewed(),cmd,distro);
+  const notes=result.stages.flatMap((stage:{destructive:{description:string;dryRun:string|null}[]})=>stage.destructive);
+  expect(notes.every((note:{description:string})=>factDescriptions.has(note.description))).toBe(true);
+  expect(new Set(notes.map((note:{description:string})=>note.description)).size).toBe(notes.length);
+  expect(notes.every((note:{dryRun:string|null})=>note.dryRun===null || hints.has(note.dryRun))).toBe(true);
+  if(result.diagnostics.length || result.stages.some((stage:{tokens:{kind:string}[]})=>stage.tokens.some(t=>t.kind==='unknown'))) expect(notes.every((note:{dryRun:string|null})=>note.dryRun===null)).toBe(true);
+ });
+ it.each([
+  ['rm file','rm deletes files.','ls -d'],
+  ['find . -delete','find -delete deletes the files it matches.','-print'],
+  ['git clean -f','git clean deletes files from the working tree.','git clean -n'],
+  ['mkfs.ext4 /dev/sdb1','mkfs creates a new filesystem, erasing what the device held.','Add `-n`'],
+  ['truncate -s 0 file','truncate changes file sizes; a size of 0 empties a file.',null],
+  ['echo new > file','> replaces the contents of the file it writes to.',null],
+  ['find . -exec rm {} \\;','rm deletes files.','ls -d'],
+  ['find . -execdir rm {} \\;','rm deletes files.','ls -d'],
+  ['find . -exec truncate -s 0 {} \\;','truncate changes file sizes; a size of 0 empties a file.',null],
+  ['find . -exec mkfs.ext4 {} \\;','mkfs creates a new filesystem, erasing what the device held.','Add `-n`'],
+  ['find . -exec find {} -delete \\;','find -delete deletes the files it matches.',null],
+  ['xargs -I % git -C % clean -f','git clean deletes files from the working tree.',null],
+  ['xargs rm','rm deletes files.','ls -d'],
+  ['xargs -I % rm %','rm deletes files.','ls -d'],
+ ])('emits an exact command fact and supported hint: %s',async(cmd,description,hint)=>{
+  const result=await explain(await reviewed(),cmd);
+  const note=result.stages.flatMap((stage:{destructive:{description:string;dryRun:string|null}[]})=>stage.destructive).find((note:{description:string})=>note.description===description);
+  expect(note).toBeDefined();
+  if(hint) expect(note.dryRun).toContain(hint); else expect(note.dryRun).toBeNull();
+ });
+ it.each(['sudo rm file','doas rm file','env rm file','nice rm file','timeout 5 rm file','nohup rm file','time rm file','command rm file','exec rm file'])('recognizes real wrapper command positions: %s',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).some((n:{description:string})=>n.description==='rm deletes files.')).toBe(true);
+ });
+ it.each(['sudo -l rm -f file','sudo -v rm file','command -v rm','command -V rm','type rm','which rm','echo "rm -f file"','printf "rm file"','# rm file','"rm file"','rm --help','rm --version','./rm -f file','./sudo rm file'])('does not infer execution from text or non-executing modes: %s',async cmd=>{
+  expect((await explain(await reviewed(),cmd)).stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+ });
+ it('deduplicates command facts and suppresses hints on unknown lines',async()=>{
+  const result=await explain(await reviewed(),'rm a; rm b; missing');
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([{description:'rm deletes files.',dryRun:null}]);
+ });
+ it.each(['truncate -s=0 f','git -C=foo clean -f','find . -exec rm -f x +','find . -exec rm {} {} +','find . -exec rm {} ;'])('marks invalid or unsupported syntax: %s',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(result.diagnostics.length).toBeGreaterThan(0);
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+ });
+ it('keeps optional values, replacement templates and redirect globs honest',async()=>{
+  const optional=await explain(await reviewed(),'rm --interactive never -rf build');
+  expect(optional.stages[0].tokens.find((t:{value:string})=>t.value==='never').kind).toBe('argument');
+  for(const cmd of ['find . -exec truncate -s 0 {} \\;','find . -exec rm {}.bak \\;','find . -exec rm ./{} \\;','xargs -I % git -C % clean -f','find . -exec truncate -s{} f \\;','xargs -I={} rm ={}']) {
+   const result=await explain(await reviewed(),cmd);
+   expect(result.stages.flatMap((s:{tokens:{kind:string}[]})=>s.tokens).some((t:{kind:string})=>t.kind==='expansion')).toBe(true);
+  }
+  for(const cmd of ['git -Cfoo clean -f','find . -exec git -C{} clean -f \\;']) {
+    const result=await explain(await reviewed(),cmd);
+    expect(result.stages.flatMap((stage:{tokens:{kind:string;value:string}[]})=>stage.tokens).some((t:{kind:string;value:string})=>t.kind==='subcommand' && t.value==='clean')).toBe(true);
+  }
+  const marker=await explain(await reviewed(),'xargs -I={} rm ={}');
+  expect(marker.stages[1].tokens.at(-1)).toMatchObject({kind:'expansion',page:{name:'xargs'},anchor:`debian-${reviewFixture.pages.find(page=>page.name==='xargs')!.options.find(row=>row.flags.startsWith('-I'))!.anchorId}`,shell:null});
+  expect(marker.stages[0].tokens.find((t:{kind:string})=>t.kind==='optionArgument').value).toBe('={}');
+  const option=await explain(await reviewed(),'xargs -I f rm -f f');
+  expect(option.stages.at(-1).tokens.find((t:{text:string})=>t.text==='-f').kind).toBe('unknown');
+  const redirect=await explain(await reviewed(),'echo new > *.txt');
+  expect(redirect.stages[0].tokens.at(-1).kind).toBe('glob');
+  expect(redirect.stages[0].destructive).toEqual([]);
+ });
+});
+
+it('accepts short equals only when documented and preserves legacy optional metadata',async()=>{
+ const t=await explainFixture(66);
+ await t.run(async ctx=>{
+  const active=await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro',q=>q.eq('stage','prod').eq('locale','en').eq('distro','debian')).unique();
+  const size=await ctx.db.query('manPageOptionFlags').withIndex('by_releaseId_and_flag_and_nameNorm',q=>q.eq('releaseId',active!.releaseId).eq('flag','-s').eq('nameNorm','truncate')).first();
+  const interactive=await ctx.db.query('manPageOptionFlags').withIndex('by_releaseId_and_flag_and_nameNorm',q=>q.eq('releaseId',active!.releaseId).eq('flag','--interactive').eq('nameNorm','rm')).first();
+  await ctx.db.patch(size!._id,{flags:'-s=SIZE'});
+  await ctx.db.patch(interactive!._id,{flags:'--interactive',argumentOptional:undefined});
+ });
+ const documented=await explain(t,'truncate -s=0 file');
+ expect(documented.diagnostics).toEqual([]);
+ expect(documented.stages[0].tokens[2]).toMatchObject({kind:'optionArgument',value:'0'});
+ const optional=await explain(t,'rm --interactive never -f file');
+ expect(optional.stages[0].tokens.find((t:{value:string})=>t.value==='never').kind).toBe('argument');
+});
+
+it.each(['find . -mtime 7d -delete','find . -type q -delete','xargs -n nonsense rm file','xargs -I "" rm file','rm $UNKNOWN'])('does not offer a preview for an unmodeled or runtime form: %s',async cmd=>{
+ const result=await explain(await reviewed(),cmd);
+ expect(result.stages.flatMap((s:{destructive:{dryRun:string|null}[]})=>s.destructive).every((n:{dryRun:string|null})=>n.dryRun===null)).toBe(true);
 });

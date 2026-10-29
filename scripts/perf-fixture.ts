@@ -198,9 +198,11 @@ export async function createExplainFixture(onCall: () => void) {
     const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q => q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique()
     const { releaseId, datasetReleaseId } = active!
     const specs = [
-      { name: 'find', section: '1', options: [{ flags: '-name', anchorId: 'name', argument: 'PATTERN' }, { flags: '-mtime', anchorId: 'mtime', argument: 'N' }, { flags: '-print0', anchorId: 'print0' }] },
-      { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' }] },
-      { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' }] },
+      { name: 'find', section: '1', options: [{ flags: '-name', anchorId: 'name', argument: 'PATTERN' }, { flags: '-mtime', anchorId: 'mtime', argument: 'N' }, { flags: '-print0', anchorId: 'print0' }, {flags:'-exec',anchorId:'exec',argument:'COMMAND'}] },
+      { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' },{flags:'-I',anchorId:'replace',argument:'REPLACE'}] },
+      { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' },{flags:'--interactive',anchorId:'interactive',argument:'[WHEN]'}] },
+      { name: 'truncate', section: '1', options: [{flags:'-s, --size',anchorId:'size',argument:'SIZE'}] },
+      {name:'echo',section:'1',options:[]},
       { name: 'git', section: '1', options: [] },
       { name: 'git-commit', section: '1', options: [{ flags: '-m', anchorId: 'message', argument: 'MESSAGE' }] },
       { name: 'systemctl', section: '1', options: [] },

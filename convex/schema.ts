@@ -252,6 +252,7 @@ export default defineSchema({
     // The option's flag text as written, for the result snippet.
     flags: v.string(),
     takesArgument: v.optional(v.boolean()),
+    argumentOptional: v.optional(v.boolean()),
     excerpt: v.optional(v.string()),
   })
     .index("by_releaseId_and_flag_and_nameNorm", ["releaseId", "flag", "nameNorm"])

@@ -200,8 +200,8 @@
     {
       "destructive": [
         {
-          "description": "rm requests removal of the paths supplied by xargs without prompting.",
-          "dryRun": "run the line with `ls -d` in place of `rm` first"
+          "description": "rm deletes files.",
+          "dryRun": "Run it with `ls -d` in place of `rm` first to see what it would act on."
         }
       ],
       "id": 2,

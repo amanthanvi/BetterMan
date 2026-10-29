@@ -421,6 +421,66 @@
       "baseline": 0,
       "relative": 0,
       "absolute": 0
+    },
+    "explainExecTemplate.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainExecTemplate.documents": {
+      "baseline": 7,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainExecTemplate.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptional.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptional.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptional.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainReplace.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainReplace.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainReplace.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainRedirectGlob.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainRedirectGlob.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainRedirectGlob.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
     }
   },
   "sourceHead": "90f087485dfa33bbcd4cf3ab729143ffc7d871fc",

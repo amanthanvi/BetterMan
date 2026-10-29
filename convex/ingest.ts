@@ -66,6 +66,7 @@ const optionFlagInput = v.object({
   anchorId: v.string(),
   flags: v.string(),
   takesArgument: v.optional(v.boolean()),
+  argumentOptional: v.optional(v.boolean()),
   excerpt: v.optional(v.string()),
 });
 
@@ -169,6 +170,7 @@ async function insertOptionFlags(
       anchorId: row.anchorId,
       flags: row.flags,
       ...(row.takesArgument ? { takesArgument: true } : {}),
+      ...(row.argumentOptional ? {argumentOptional:true} : {}),
       ...(row.excerpt ? { excerpt: row.excerpt } : {}),
     });
   }

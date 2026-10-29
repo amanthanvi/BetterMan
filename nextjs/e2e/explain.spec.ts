@@ -39,3 +39,17 @@ test('explain: wrapper order and unsupported lexical kinds survive HTTP resoluti
     expect((await response.json()).stages[0].tokens.at(-1).kind).toBe('unknown')
   }
 })
+
+test('explain: facts are target-free, deduplicated and omit redirect globs', async ({ request }) => {
+  const response=await request.get('/api/v1/explain',{params:{cmd:'> first; > second'}})
+  expect(response.status()).toBe(200)
+  const result=await response.json()
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([{description:'> replaces the contents of the file it writes to.',dryRun:null}])
+  const glob=await request.get('/api/v1/explain',{params:{cmd:'> *.txt'}})
+  expect(glob.status()).toBe(200)
+  const expanded=await glob.json()
+  expect(expanded.stages[0].tokens.at(-1).kind).toBe('glob')
+  expect(expanded.stages[0].destructive).toEqual([])
+  const local=await request.get('/api/v1/explain',{params:{cmd:'./sudo rm -rf /'}})
+  expect((await local.json()).stages[0].tokens[0].kind).toBe('unknown')
+})

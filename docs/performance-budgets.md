@@ -202,3 +202,11 @@ mke2fs alias (4). Both make one call and zero blob reads. Assertions pin the
 parent section anchor and alias-specific inspection hint. Prior descriptors,
 tolerances and document counts remain unchanged; these cases also share the
 66-document whole-request ceiling.
+
+The round-3 supplement measures find-exec replacement templates (7 reads),
+optional --interactive arguments (5), xargs -I={} replacement (5) and redirect
+globs (5). Each is one call and zero blob reads. Assertions pin expansion,
+operand and glob kinds rather than accepting an unrelated lookup. Existing
+metric descriptors, tolerances and read counts remain unchanged. The stored
+option index carries optional-argument metadata; legacy inline flag syntax
+and exact known optional forms remain supported without additional reads.

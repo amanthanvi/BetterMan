@@ -216,3 +216,41 @@ def test_explicit_heading_synonyms_and_prose_exclusions():
         )
         == []
     )
+
+
+def test_excludes_kernel_fields_and_unapproved_multiword_prose():
+    for name in (
+        "proc",
+        "proc_pid_stat",
+        "proc_sys_kernel",
+        "sysfs",
+        "sysctl",
+        "elf",
+        "slabinfo",
+        "core",
+        "procfs",
+    ):
+        assert (
+            symbol_rows(
+                name,
+                "5",
+                {"blocks": [heading("DESCRIPTION", "description"), definitions("field_name")]},
+            )
+            == []
+        )
+    for term in ("hashed database", "directory tree", "isolated nodes", "settime flags"):
+        item = definitions(term)
+        item["items"][0]["termInlines"] = [
+            {"type": "strong", "inlines": [{"type": "text", "text": term}]}
+        ]
+        assert symbol_rows("example", "5", {"blocks": [item]}) == []
+    item = definitions("motd file")
+    item["items"][0]["termInlines"] = [
+        {"type": "strong", "inlines": [{"type": "text", "text": "motd file"}]}
+    ]
+    assert (
+        symbol_rows("rsyncd.conf", "5", {"blocks": [heading("GLOBAL PARAMETERS", "global"), item]})[
+            0
+        ]["term"]
+        == "motd file"
+    )

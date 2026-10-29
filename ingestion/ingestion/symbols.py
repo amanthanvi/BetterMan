@@ -34,13 +34,23 @@ CONFIG_HEADINGS = {
 }
 
 
+# These pages define kernel/file-format fields, not configuration directives.
+NON_DIRECTIVE_PAGES = {"elf", "slabinfo", "core", "utmp", "wtmp", "acct", "lastlog"}
+
+
+def _directive_page(name: str) -> bool:
+    return name not in NON_DIRECTIVE_PAGES and not re.match(
+        r"^(?:(?:lin)?proc(?:fs)?(?:_|$)|sysfs(?:_|$)|sysctl(?:_|$))", name
+    )
+
+
 def _formatted_lead(inlines: list) -> str:
     if inlines and inlines[0].get("type") in ("strong", "emphasis", "code"):
         return _text(inlines[0]).strip()
     return ""
 
 
-def _config_terms(inlines: list) -> list[str]:
+def _config_terms(inlines: list, *, multiword: bool = False) -> list[str]:
     term = "".join(_text(inline) for inline in inlines).strip()
     # Assignment placeholders are values, never part of a directive identity.
     if "=" in term:
@@ -56,7 +66,9 @@ def _config_terms(inlines: list) -> list[str]:
     # Real resolv.conf terms begin with a styled keyword followed by prose;
     # rsyncd.conf has complete styled multi-word parameter names.
     lead = _formatted_lead(inlines)
-    if re.fullmatch(r"[a-z][a-z0-9_-]*(?: [a-z][a-z0-9_-]*){0,3}", lead):
+    if re.fullmatch(r"[a-z][a-z0-9_-]*", lead) or (
+        multiword and re.fullmatch(r"[a-z][a-z0-9_-]*(?: [a-z][a-z0-9_-]*){1,3}", lead)
+    ):
         return [lead]
     return []
 
@@ -139,7 +151,13 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
                     target = item.get("id") or anchor
                     if kind and target and not nested:
                         if kind == "config":
-                            terms = _config_terms(item.get("termInlines", []))
+                            terms = (
+                                []
+                                if not _directive_page(name)
+                                else _config_terms(
+                                    item.get("termInlines", []), multiword=name == "rsyncd.conf"
+                                )
+                            )
                         elif kind == "subcommand":
                             lead = (
                                 _formatted_lead(item.get("termInlines", []))
@@ -173,6 +191,7 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
                 if (
                     section.startswith("5")
                     and heading in CONFIG_HEADINGS
+                    and _directive_page(name)
                     and re.fullmatch(r"[A-Za-z_][\w.-]+=(?:, [A-Za-z_][\w.-]+=)*", term)
                 ):
                     for directive in term.split(", "):

@@ -361,6 +361,10 @@ try {
     ['explainSubcommand', 'explain:explain', { distro: 'debian', cmd: 'git commit -m "message"' }],
     ['explainParentCommand','explain:explain',{distro:'debian',cmd:'systemctl restart nginx'}],
     ['explainMkfsAlias','explain:explain',{distro:'debian',cmd:'mkfs.ext4 /dev/sdb1'}],
+    ['explainExecTemplate','explain:explain',{distro:'debian',cmd:'find . -exec truncate -s 0 {} \\;'}],
+    ['explainOptional','explain:explain',{distro:'debian',cmd:'rm --interactive never -f file'}],
+    ['explainReplace','explain:explain',{distro:'debian',cmd:'xargs -I={} rm ={}'}],
+    ['explainRedirectGlob','explain:explain',{distro:'debian',cmd:'echo > *.txt'}],
     ['explainMulti', 'explain:explain', { distro: 'debian', cmd: [...'abcdefghijklmnopqrstuvwx'].map(verb=>`git ${verb}`).join('|') }],
     ['explainBounded', 'explain:explain', { distro: 'debian', cmd: 'bounded ' + Array.from({ length: 100 }, (_, i) => `--limit${i}`).join(' ') }],
   ]) {
@@ -393,7 +397,14 @@ try {
         assert.equal(tokens.find(token=>token.kind==='subcommand').anchor,'unit-commands-introspection-and-modification')
         assert.equal(tokens.find(token=>token.kind==='subcommand').page.name,'systemctl')
       }
-      if(name === 'explainMkfsAlias') assert.equal(result.stages[0].destructive[0].dryRun,'add `-n`')
+      if(name === 'explainMkfsAlias') assert.equal(result.stages[0].destructive[0].dryRun,'Add `-n` to see what it would do.')
+      if(name === 'explainExecTemplate' || name === 'explainReplace') {
+        const expansion=tokens.find(token=>token.kind==='expansion')
+        assert.equal(expansion.page.name,name === 'explainExecTemplate' ? 'find' : 'xargs')
+        assert.equal(expansion.shell,null)
+      }
+      if(name === 'explainOptional') assert.equal(tokens.find(token=>token.value==='never').kind,'argument')
+      if(name === 'explainRedirectGlob') {assert.equal(tokens.at(-1).kind,'glob');assert.deepEqual(result.stages[0].destructive,[])}
       if (name === 'explainSubcommand') assert.equal(tokens.find(token => token.kind === 'subcommand').page.name, 'git-commit')
     }
     for (const [metric, value] of Object.entries(metrics)) actual[`${name}.${metric}`] = value

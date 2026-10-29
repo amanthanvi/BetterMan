@@ -50,3 +50,23 @@ Compared `7981298` with the round-2 extractor on the identical 18,529-page corpu
 Totals: Debian **6,321 → 7,523**, Ubuntu **5,910 → 7,217**, Fedora **4,216 → 5,204** (all **16,447 → 19,944**). Debian environment symbols are **747**, above the original 714 reference. Targeted checks retain the round-1 exclusions (`The`, `f`, `pre`, `commit`, nested ssh_config values and single-letter config terms).
 
 Real Debian layout results: systemd.service(5) **41** symbols including ExecStart=; errno(3) **127** including ENOSPC; environ(7) **11** including HOME; systemctl(1) **72** parent-page command terms including restart; resolv.conf(5) includes nameserver/search; tmpfs(5) includes size; rsyncd.conf(5) includes motd file/path. Definition-item IDs are retained when present; paragraph/list definitions use actual section IDs, rather than inventing per-term anchors. Environment regressions cover less, python3, rsync RSYNC_RSH, ps, and find POSIXLY_CORRECT. The regression fixture is selected from actual parsed blocks, not a synthetic definition-list substitute.
+
+## Round 3: file fields and prose are not directives
+
+Compared 082738d with the same 18,529 cached pages, with zero parse failures.
+Config extraction excludes proc/procfs/sysfs/sysctl field pages and known ELF,
+slabinfo and accounting-format pages. Multi-word terms are rejected outside
+rsyncd.conf's documented parameter-name layout; the sampled prose phrases
+`hashed database`, `directory tree`, `isolated nodes` and `settime flags` do
+not become directives. Other symbol categories are unchanged.
+
+| Distro | Config before | Config after | Total symbols after |
+| --- | ---: | ---: | ---: |
+| Debian | 1,551 | 1,061 | 7,033 |
+| Ubuntu | 1,631 | 1,145 | 6,731 |
+| Fedora | 1,346 | 859 | 4,717 |
+
+This deliberately trades unsupported multi-word recall for precision. Existing
+real fixtures still retain rsyncd.conf's `motd file`, resolv.conf's nameserver/
+search, tmpfs size, systemd directives and parent-page commands. Debian
+environment recall remains 747. Total symbols: **19,944 → 18,481**.
