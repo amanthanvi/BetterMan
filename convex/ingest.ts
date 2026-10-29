@@ -5,6 +5,7 @@ import { internalMutation, internalQuery, type MutationCtx } from "./_generated/
 import { contentChunks, splitContentFields, type ContentField, type ContentJsonKind } from "./_legacyContent";
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
+import { scheduleTaskPhraseBackfill } from "./taskPhrases";
 import { scheduleDerivedBuild } from "./derived";
 import { fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { insertProvider, recordProviderUploads } from "./_providers";
@@ -859,6 +860,11 @@ export const activateRelease = internalMutation({
     }
 
     if (args.stage === "prod") await scheduleDerivedBuild(ctx, release.locale);
+    // Task-phrase rows do not gate activation: until they finish, worded queries
+    // match fewer pages, and a stopped backfill shows in convex:task-check.
+    await scheduleTaskPhraseBackfill(ctx, release).catch((error: unknown) => {
+      if (!(error instanceof Error) || error.message !== "TASK_PHRASE_BACKFILL_FAILED") throw error;
+    });
 
     return result;
   },

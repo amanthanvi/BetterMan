@@ -650,59 +650,40 @@ async function textHits(
 }
 
 /**
- * A worded query reads at most 24 generated rows, then at most 40 pages to
- * place them in the active release, and keeps at most three task hits. Every
- * distro variant of a page has its own content hash with the same phrases, so
- * rows are grouped by their phrases: each group's hashes are tried in turn
- * until one is in the active release, and other groups are not crowded out.
+ * A worded query reads at most eight task rows from the active release (and
+ * section) through `manPageTaskPhrases`' filtered search index, and keeps at
+ * most three hits. Rows are denormalized, so no page read follows.
  */
-const MAX_TASK_ROWS = 24;
-const MAX_TASK_PAGE_READS = 40;
-const MAX_TASK_PAGES_PER_ROW = 8;
+const MAX_TASK_ROWS = 8;
 const MAX_TASK_HITS = 3;
 
 async function taskHits(
   ctx: QueryCtx,
   args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string; contentWords: string[] },
 ): Promise<RankedHit[]> {
-  const rows = await ctx.db.query("manPageGenerated")
-    .withSearchIndex("search_taskText", (q) => q.search("taskText", args.queryText))
+  const rows = await ctx.db.query("manPageTaskPhrases")
+    .withSearchIndex("search_taskText", (q) => {
+      const base = q.search("taskText", args.queryText).eq("releaseId", args.releaseId);
+      return args.section === null ? base : base.eq("section", args.section);
+    })
     .take(MAX_TASK_ROWS);
-  const groups = new Map<string, typeof rows>();
-  for (const row of rows) groups.set(row.taskText ?? "", [...(groups.get(row.taskText ?? "") ?? []), row]);
   const hits: RankedHit[] = [];
-  const seen = new Set<Id<"manPages">>();
-  let remaining = MAX_TASK_PAGE_READS;
-  for (const [index, group] of [...groups.values()].entries()) {
-    if (hits.length >= MAX_TASK_HITS || remaining === 0) break;
+  for (const [index, row] of rows.entries()) {
+    if (hits.length >= MAX_TASK_HITS) break;
     // The phrase sharing the most content words with the query is the evidence;
     // a phrase sharing none (only stop words matched) is not a task match.
     let best: { phrase: string; overlap: number } | null = null;
-    for (const phrase of group[0].generated?.taskPhrases ?? []) {
+    for (const phrase of row.taskText.split("\n")) {
       const words = phrase.toLowerCase().split(/[^a-z0-9_]+/);
       const overlap = args.contentWords.filter((word) => words.some((candidate) => candidate.startsWith(word))).length;
       if (overlap && (!best || overlap > best.overlap)) best = { phrase, overlap };
     }
     if (!best) continue;
-    for (const row of group) {
-      if (remaining === 0 || hits.length >= MAX_TASK_HITS) break;
-      // Pages sharing this content hash across releases, newest first, where the
-      // active release usually is; keep only the active release's.
-      const pages = await ctx.db.query("manPages")
-        .withIndex("by_contentSha256", (q) => q.eq("contentSha256", row.contentSha256))
-        .order("desc")
-        .take(Math.min(MAX_TASK_PAGES_PER_ROW, remaining));
-      remaining -= pages.length;
-      const page = pages.find((candidate) => candidate.releaseId === args.releaseId && !seen.has(candidate._id) && (args.section === null || candidate.section === args.section));
-      if (!page) continue;
-      seen.add(page._id);
-      hits.push({
-        name: page.name, section: page.section, title: page.title, description: page.description,
-        highlights: [], match: "task", taskPhrase: best.phrase, pageId: page._id,
-        rank: 2_000 + best.overlap * 100 - index,
-      });
-      break;
-    }
+    hits.push({
+      name: row.name, section: row.section, title: row.title, description: row.description,
+      highlights: [], match: "task", taskPhrase: best.phrase, pageId: row.pageId,
+      rank: 2_000 + best.overlap * 100 - index,
+    });
   }
   return hits;
 }

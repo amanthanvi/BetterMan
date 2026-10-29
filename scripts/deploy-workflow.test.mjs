@@ -127,7 +127,10 @@ test('only a manual deploy may confirm indexes on large Convex tables', () => {
   // A workflow_run event has no inputs, so the expression renders empty.
   assert.doesNotMatch(deployArgs('')[0], /--skip-large-indexes-check/)
 
-  const [confirmed, backfill] = deployArgs('true')
+  const [confirmed, backfill, tasks] = deployArgs('true')
   assert.match(confirmed, /^exec convex deploy --typecheck enable --codegen disable --skip-large-indexes-check --message /)
   assert.equal(backfill, "exec convex run --prod related:backfillActiveReleases {}")
+  // After every Convex deploy, automatic or manual: an idempotent entrypoint.
+  assert.equal(tasks, "exec convex run --prod taskPhrases:backfillActiveReleases {}")
+  assert.equal(deployArgs('false')[2], tasks)
 })

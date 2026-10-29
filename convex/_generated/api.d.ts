@@ -48,6 +48,7 @@ import type * as portability from "../portability.js";
 import type * as queries from "../queries.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as related from "../related.js";
+import type * as taskPhrases from "../taskPhrases.js";
 
 import type {
   ApiFromModules,
@@ -96,6 +97,7 @@ declare const fullApi: ApiFromModules<{
   queries: typeof queries;
   rateLimit: typeof rateLimit;
   related: typeof related;
+  taskPhrases: typeof taskPhrases;
 }>;
 
 /**

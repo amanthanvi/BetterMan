@@ -46,3 +46,10 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: pnpm convex:derived-check --prod
+
+      - name: Task phrase status
+        # Task-phrase search rows per active release; also nonzero until complete.
+        if: always()
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: pnpm convex:task-check --prod

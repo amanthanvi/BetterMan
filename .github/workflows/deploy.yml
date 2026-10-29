@@ -189,6 +189,9 @@ jobs:
             ${large_indexes:+"$large_indexes"} \
             --message "GitHub Actions ${BETTERMAN_DEPLOY_SHA}"
           pnpm exec convex run --prod related:backfillActiveReleases '{}'
+          # Idempotent: schedules or joins each active release's task-phrase backfill.
+          # It completes asynchronously; pnpm convex:task-check reports its state.
+          pnpm exec convex run --prod taskPhrases:backfillActiveReleases '{}'
 
       - name: Verify active related metadata backfills completed
         if: needs.resolve_revision.outputs.require_current_main == 'true'
