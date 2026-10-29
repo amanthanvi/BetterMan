@@ -1,9 +1,8 @@
-'use client'
-
 import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 import type { OptionItem } from '../../lib/docModel'
 
 import { parseOptionTerms } from './find'
+import { OPTION_LINK_CLASS, OPTION_LINK_IDLE } from './optionRowClasses'
 import { PortabilityGlyph } from './PortabilityGlyph'
 
 function splitFlags(flags: string): string[] {
@@ -20,9 +19,6 @@ export function OptionsTable({
   rowIds,
   locators,
   portability,
-  selectedAnchorId,
-  flashAnchorId,
-  onSelect,
 }: {
   options: OptionItem[]
   /** Row anchor per `anchorId`, distinct from the body definition's id. */
@@ -31,9 +27,6 @@ export function OptionsTable({
   locators?: ReadonlyMap<string, string>
   /** Per `anchorId`; a glyph is drawn only beside flags that are not portable. */
   portability?: PageDerivedResponse['portability']
-  selectedAnchorId?: string | null
-  flashAnchorId?: string | null
-  onSelect?: (opt: OptionItem, event: React.MouseEvent<HTMLAnchorElement>) => void
 }) {
   const portabilityByAnchor = new Map(portability?.rows ?? [])
   return (
@@ -47,27 +40,25 @@ export function OptionsTable({
       </thead>
       <tbody>
         {options.map((opt) => {
-          const selected = selectedAnchorId === opt.anchorId
           const rowId = rowIds.get(opt.anchorId) ?? `opt-${opt.anchorId}`
           const codes = portability ? portabilityByAnchor.get(opt.anchorId) ?? 'lll' : null
 
           return (
-            <tr key={opt.anchorId} className={flashAnchorId === opt.anchorId ? 'bm-option-flash' : undefined}>
+            <tr key={opt.anchorId} data-bm-option-row>
               <td className="w-[45%] py-1 pr-4 align-baseline sm:w-[18rem]">
                 <a
                   href={`#${rowId}`}
                   id={rowId}
-                  className={`group scroll-mt-24 font-mono text-[0.8125rem] font-bold no-underline [overflow-wrap:anywhere] ${
-                    selected ? 'text-accent underline decoration-2 underline-offset-4' : 'text-ink hover:text-accent'
-                  }`}
-                  onClick={(e) => onSelect?.(opt, e)}
+                  data-bm-anchor={opt.anchorId}
+                  data-bm-flags={opt.flags}
+                  className={`${OPTION_LINK_CLASS} ${OPTION_LINK_IDLE}`}
                 >
                   {splitFlags(opt.flags).map((flag) => (
                     <span key={flag} className="bm-flag">
                       {flag}
                     </span>
                   ))}
-                  {opt.argument ? <i className="font-normal text-ink-2"> {opt.argument}</i> : null}
+                  {opt.argument ? <i data-bm-option-argument className="font-normal text-ink-2"> {opt.argument}</i> : null}
                 </a>
                 {portability && codes ? (
                   <>
@@ -76,7 +67,7 @@ export function OptionsTable({
                   </>
                 ) : null}
               </td>
-              <td className="py-1 pr-4 align-baseline text-sm text-ink-2">{opt.description}</td>
+              <td data-bm-option-description className="py-1 pr-4 align-baseline text-sm text-ink-2">{opt.description}</td>
               <td className="w-10 py-1 text-right align-baseline font-serif text-sm text-ink-3 oldstyle-nums">
                 {locators?.get(opt.anchorId)}
               </td>

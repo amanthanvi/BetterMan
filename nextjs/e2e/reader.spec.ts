@@ -166,21 +166,36 @@ test('reader: an explicit Debian link keeps Debian through links while the defau
   await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
 })
 
-test('reader: a bare URL keeps its links bare, so they resolve on the stored default', async ({ page, context }) => {
+test('reader: a bare URL sends a reader with another default to its explicit URL, whose links keep it', async ({ page, context, request }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await chooseUbuntuDefault(page)
 
-  await page.goto('/man/tar/1')
+  // Man pages are cached at the edge, so the bare URL never varies by cookie: the
+  // proxy answers this reader privately with the explicit URL (#389).
+  const redirect = await page.request.get('/man/tar/1', { maxRedirects: 0 })
+  expect(redirect.status()).toBe(307)
+  expect(redirect.headers()['location']).toBe('/man/tar/1?distro=ubuntu')
+  expect(redirect.headers()['cache-control']).toBe('private, no-store')
+
+  await page.goto('/man/tar/1#synopsis')
+  await expect(page).toHaveURL(/\/man\/tar\/1\?distro=ubuntu#synopsis$/)
   await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
   await waitForInteractiveShell(page)
   await page.getByRole('button', { name: 'Copy link to clipboard' }).click()
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/man\/tar\/1$/)
-  await expect(page.getByRole('banner', { name: 'Site header' }).getByRole('link', { name: /BetterMan/ })).toHaveAttribute('href', '/')
-  await expect(page.locator('article p').getByRole('link', { name: 'bash(1)' })).toHaveAttribute('href', '/man/bash/1')
-  await expect(page.getByRole('complementary', { name: 'See also' }).getByRole('link', { name: 'gzip(1)' })).toHaveAttribute('href', '/man/gzip/1')
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/man\/tar\/1\?distro=ubuntu#synopsis$/)
+  await expect(page.getByRole('banner', { name: 'Site header' }).getByRole('link', { name: /BetterMan/ })).toHaveAttribute('href', '/?distro=ubuntu')
+  await expect(page.locator('article p').getByRole('link', { name: 'bash(1)' })).toHaveAttribute('href', '/man/bash/1?distro=ubuntu')
+
+  // Without such a default the bare URL is the shared, cacheable Debian page, and its links stay bare.
+  const bare = await request.get('/man/tar/1', { maxRedirects: 0 })
+  expect(bare.status()).toBe(200)
+  const html = await bare.text()
+  expect(html).not.toContain(UBUNTU_MARKER)
+  expect(html).toContain('href="/man/gzip/1"')
+  expect(html).not.toMatch(/href="[^"]*distro=/)
 })
 
-test('reader: links from a server snapshot taken before the stored default reached the cookie stay bare', async ({ page }) => {
+test('reader: a stored default that has not reached the cookie yet still picks the distro', async ({ page }) => {
   await page.addInitScript(() => {
     if (!sessionStorage.getItem('bm-e2e-seeded')) {
       localStorage.setItem('bm-distro', 'ubuntu')
@@ -193,7 +208,7 @@ test('reader: links from a server snapshot taken before the stored default reach
   const result = page.getByRole('link', { name: /tar\(1\)/i }).first()
   await expect(result).toHaveAttribute('href', '/man/tar/1')
   await result.click()
-  await expect(page).toHaveURL(/\/man\/tar\/1$/)
+  await expect(page).toHaveURL(/\/man\/tar\/1\?distro=ubuntu$/)
   await expect(page.getByText(UBUNTU_MARKER)).toBeVisible()
 })
 

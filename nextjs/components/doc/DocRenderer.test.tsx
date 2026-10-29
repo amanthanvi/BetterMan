@@ -6,8 +6,7 @@ import { DocRenderer } from './DocRenderer'
 
 const paragraph = (...inlines: InlineNode[]): BlockNode[] => [{ type: 'paragraph', inlines }]
 const text = (value: string): InlineNode => ({ type: 'text', text: value })
-const render = (blocks: BlockNode[], props: { findQuery?: string; optionTerms?: string[] } = {}) =>
-  renderToStaticMarkup(<DocRenderer blocks={blocks} urlDistro={null} {...props} />)
+const render = (blocks: BlockNode[]) => renderToStaticMarkup(<DocRenderer blocks={blocks} urlDistro={null} />)
 
 describe('DocRenderer plain-text URLs', () => {
   it('links validated URLs in text and table cells as external links', () => {
@@ -30,12 +29,6 @@ describe('DocRenderer plain-text URLs', () => {
     )
     expect(html.match(/<a /g)).toHaveLength(2)
   })
-
-  it('keeps find marks inside a linked URL', () => {
-    const html = render(paragraph(text('Docs: https://www.gnu.org/software/tar/ for tar.')), { findQuery: 'tar' })
-    expect(html).toMatch(/<a href="https:\/\/www\.gnu\.org\/software\/tar\/"[^>]*><span>https:\/\/www\.gnu\.org\/software\/<\/span><mark data-bm-find/)
-    expect(html.match(/data-bm-find/g)).toHaveLength(2)
-  })
 })
 
 describe('DocRenderer cross-references', () => {
@@ -47,16 +40,5 @@ describe('DocRenderer cross-references', () => {
     expect(hrefFor(null)).toBe('/man/gzip/1')
     expect(hrefFor('debian')).toBe('/man/gzip/1?distro=debian')
     expect(hrefFor('ubuntu')).toBe('/man/gzip/1?distro=ubuntu')
-  })
-})
-
-describe('DocRenderer option marks', () => {
-  it('marks a selected flag only at token boundaries', () => {
-    const html = render(paragraph(text('Use -e here; a non-existent file, --exclude and -exec are other things.')), {
-      optionTerms: ['-e'],
-    })
-    expect([...html.matchAll(/<mark data-bm-opt[^>]*>([^<]*)<\/mark>/g)].map((m) => m[1])).toEqual(['-e'])
-    expect(html).toContain('non-existent')
-    expect(html).toContain('--exclude')
   })
 })

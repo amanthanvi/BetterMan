@@ -1,4 +1,6 @@
 import type { NextConfig } from 'next'
+import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from 'next/constants'
+import { randomBytes } from 'node:crypto'
 import path from 'node:path'
 
 import { reservedPathSegments } from './lib/reservedPathSegments'
@@ -11,10 +13,22 @@ const nextConfig: NextConfig = {
     BM_RESERVED_PATH_SEGMENTS: reservedPathSegments(__dirname).join('/'),
   },
   async headers() {
+    const securityHeaders = Object.entries(nonHtmlSecurityHeaders()).map(([key, value]) => ({ key, value }))
     return [
       {
         source: '/assets/:path*',
-        headers: Object.entries(nonHtmlSecurityHeaders()).map(([key, value]) => ({ key, value })),
+        headers: securityHeaders,
+      },
+      {
+        // The man page script; production names carry a content hash (scripts/build-man-client.mjs).
+        source: '/_bm/:path*',
+        headers: [
+          ...securityHeaders,
+          {
+            key: 'Cache-Control',
+            value: process.env.NODE_ENV === 'production' ? 'public, max-age=31536000, immutable' : 'no-store',
+          },
+        ],
       },
       {
         source: '/assets/site.js',
@@ -54,4 +68,15 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+/** The man pages (pages/man) load a static script that Next does not build; bundle it with the app. */
+export default async function config(phase: string): Promise<NextConfig> {
+  if (phase !== PHASE_PRODUCTION_BUILD && phase !== PHASE_DEVELOPMENT_SERVER) return nextConfig
+  const { buildManClient, watchManClient } = await import('./scripts/build-man-client.mjs')
+  const script = phase === PHASE_PRODUCTION_BUILD ? await buildManClient(__dirname) : await watchManClient(__dirname)
+  // A per-build secret the proxy hands the man page renderer with the release (lib/manRelease.ts).
+  // Only server code reads it, so it is never part of a client bundle.
+  const releaseToken = randomBytes(32).toString('base64url')
+  return { ...nextConfig, env: { ...nextConfig.env, BM_MAN_SCRIPT: script, BM_RELEASE_TOKEN: releaseToken } }
+}
+
+export { nextConfig }

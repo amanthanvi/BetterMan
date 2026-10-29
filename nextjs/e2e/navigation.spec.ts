@@ -97,20 +97,22 @@ test('navigation: palette search shows feedback for a query-only navigation and 
   await expect(page).toHaveURL(/\/search\?q=tar$/)
 })
 
-test('navigation: distro replacement shows feedback until its query-only payload arrives and keeps the hash', async ({ page }) => {
+test('navigation: distro replacement shows feedback as the new page loads and keeps the hash', async ({ page }) => {
   await page.goto('/man/tar/1#synopsis')
   await waitForInteractiveShell(page)
   const pending = page.getByRole('status', { name: 'Navigation', exact: true })
-  const navigation = await interceptRSC(page, '/man/tar/1')
-  try {
-    await page.getByLabel('Select distribution variant').selectOption('freebsd')
-    await navigation.requested
-    await expect(pending).toHaveText('Loading…')
-    await expect(pending).toBeVisible()
-    await expect(page).toHaveURL(/\/man\/tar\/1#synopsis$/)
-  } finally {
-    navigation.release()
-  }
+
+  // Man pages are plain HTML, so choosing a system loads that variant's document;
+  // the header says so the moment the choice is made, before the old page goes.
+  const shown = await page.evaluate(() => {
+    const select = document.querySelector<HTMLSelectElement>('select[aria-label="Select distribution variant"]')!
+    select.value = 'freebsd'
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+    const status = document.querySelector('[role="status"][aria-label="Navigation"]')!
+    return { text: status.textContent, hidden: status.classList.contains('sr-only') }
+  })
+  expect(shown).toEqual({ text: 'Loading…', hidden: false })
+
   await expect(page).toHaveURL(/\/man\/tar\/1\?distro=freebsd#synopsis$/)
   await expect(page.getByText('FreeBSD variant: this page is intentionally different for E2E testing.')).toBeVisible()
   await expect(pending).toBeEmpty()

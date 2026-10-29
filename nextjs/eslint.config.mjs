@@ -17,8 +17,15 @@ export default defineConfig([
       'react-hooks/refs': 'off',
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/static-components': 'off',
+      // Cache-key-only parameters (lib/api.ts) are named `_x`.
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    // The man page script runs on plain-HTML pages with no Next router; it navigates the document.
+    files: ['man-client/**'],
+    rules: { '@next/next/no-location-assign-relative-destination': 'off' },
+  },
   // Unmodified, hash-pinned upstream tracker; provenance and behavior have separate tests.
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/assets/site.js']),
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/assets/site.js', 'public/_bm/**']),
 ])

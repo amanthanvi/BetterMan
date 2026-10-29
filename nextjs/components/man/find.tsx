@@ -1,5 +1,3 @@
-'use client'
-
 import { escapeRegExp } from '../../lib/textRanges'
 
 function cutFlagArgumentSyntax(token: string): string {

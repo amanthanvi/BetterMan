@@ -1,44 +1,15 @@
-'use client'
+import hljs from 'highlight.js/lib/core'
+import bash from 'highlight.js/lib/languages/bash'
+import c from 'highlight.js/lib/languages/c'
+import makefile from 'highlight.js/lib/languages/makefile'
+import python from 'highlight.js/lib/languages/python'
 
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { CopyIcon } from '../icons'
 
-import { CheckIcon, CopyIcon } from '../icons'
-import { escapeRegExp, getRanges, overlapsAny } from '../../lib/textRanges'
-
-let hljsPromise: Promise<unknown> | null = null
-
-async function loadHljs(): Promise<unknown> {
-  if (!hljsPromise) {
-    hljsPromise = Promise.all([
-      import('highlight.js/lib/core'),
-      import('highlight.js/lib/languages/bash'),
-      import('highlight.js/lib/languages/c'),
-      import('highlight.js/lib/languages/makefile'),
-      import('highlight.js/lib/languages/python'),
-    ]).then(([core, bash, c, makefile, python]) => {
-      core.default.registerLanguage('bash', bash.default)
-      core.default.registerLanguage('shell', bash.default)
-      core.default.registerLanguage('sh', bash.default)
-      core.default.registerLanguage('zsh', bash.default)
-
-      core.default.registerLanguage('c', c.default)
-      core.default.registerLanguage('makefile', makefile.default)
-      core.default.registerLanguage('python', python.default)
-      return core.default
-    }).catch((err: unknown) => {
-      // A failed chunk load would otherwise stick; let the next block retry.
-      hljsPromise = null
-      throw err
-    })
-  }
-
-  return hljsPromise
-}
-
-type HighlightCtx = {
-  findQuery?: string
-  optionRegex?: RegExp
-}
+hljs.registerLanguage('bash', bash)
+hljs.registerLanguage('c', c)
+hljs.registerLanguage('makefile', makefile)
+hljs.registerLanguage('python', python)
 
 export type CodeLanguage = 'bash' | 'c' | 'makefile' | 'python'
 
@@ -47,13 +18,16 @@ export function defaultCodeLanguage(section: string): CodeLanguage {
   return /^[239](?!pm|perl)/i.test(section) ? 'c' : 'bash'
 }
 
+/**
+ * A code block, highlighted on the server. The copy button and any find or
+ * option marks are the man page script's (man-client/); while marks are shown,
+ * it swaps the block to plain text, as the highlighter's spans would split them.
+ */
 export function CodeBlock({
   id,
   text,
   languageHint,
   defaultLanguage = 'bash',
-  findQuery,
-  optionRegex,
   label = 'Code',
 }: {
   id?: string | null
@@ -63,107 +37,29 @@ export function CodeBlock({
   languageHint?: string | null
   /** Used when `languageHint` is missing or unknown. */
   defaultLanguage?: CodeLanguage
-  findQuery?: string
-  optionRegex?: RegExp
 }) {
-  const [copied, setCopied] = useState(false)
-  const [isNearViewport, setIsNearViewport] = useState(false)
   const language = normalizeLanguageHint(languageHint) ?? defaultLanguage
-  const ctx = useMemo((): HighlightCtx => ({ findQuery, optionRegex }), [findQuery, optionRegex])
-  const markedText = useMemo(() => buildMarkedText(text, ctx), [ctx, text])
-  const fallbackHtml = useMemo(() => applyMarkers(escapeHtml(markedText)), [markedText])
-  const [highlighted, setHighlighted] = useState<{ source: string; html: string } | null>(null)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const timeoutRef = useRef<number | null>(null)
-
-  const allowSyntaxHighlight = shouldHighlight(text) && !ctx.findQuery && !ctx.optionRegex && text.length <= 20_000
-  const shouldSyntaxHighlight = allowSyntaxHighlight && isNearViewport
-
-  useEffect(() => {
-    if (allowSyntaxHighlight) return
-    setHighlighted(null)
-  }, [allowSyntaxHighlight])
-
-  useEffect(() => {
-    if (!allowSyntaxHighlight) {
-      setIsNearViewport(false)
-      return
-    }
-    if (isNearViewport) return
-
-    const el = containerRef.current
-    if (!el) return
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsNearViewport(true)
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return
-        setIsNearViewport(true)
-        observer.disconnect()
-      },
-      { root: null, rootMargin: '600px 0px' },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [allowSyntaxHighlight, isNearViewport])
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current != null) window.clearTimeout(timeoutRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!shouldSyntaxHighlight) return
-
-    let cancelled = false
-    loadHljs()
-      .then((hljs) => {
-        if (cancelled) return
-        const next = (hljs as { highlight: (t: string, o: unknown) => { value: string } }).highlight(markedText, {
-          language,
-          ignoreIllegals: true,
-        }).value
-        startTransition(() => {
-          setHighlighted({ source: markedText, html: applyMarkers(next) })
-        })
-      })
-      .catch(() => {
-        // keep fallback
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [language, markedText, shouldSyntaxHighlight])
-
-  const html = highlighted?.source === markedText ? highlighted.html : fallbackHtml
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      if (timeoutRef.current != null) window.clearTimeout(timeoutRef.current)
-      timeoutRef.current = window.setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // ignore
-    }
-  }
-
   return (
-    <div id={id ?? undefined} ref={containerRef} className="bm-code">
-      <button type="button" className="bm-copy" onClick={copy} aria-label="Copy code block" title={copied ? 'Copied' : 'Copy'}>
-        {copied ? <CheckIcon /> : <CopyIcon />}
+    <div id={id ?? undefined} className="bm-code">
+      <button type="button" className="bm-copy bm-js" data-bm-action="copy-code" aria-label="Copy code block" title="Copy">
+        <CopyIcon />
       </button>
       {/* Long lines scroll sideways rather than wrap, so the block takes keyboard focus. */}
       <pre tabIndex={0} role="group" aria-label={label}>
-        <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: html }} />
+        <code className={`hljs language-${language}`} dangerouslySetInnerHTML={{ __html: highlightCode(text, language) }} />
       </pre>
     </div>
   )
+}
+
+/** Highlighter HTML, or the escaped text for diagrams (box drawing) and very long blocks. */
+export function highlightCode(text: string, language: CodeLanguage): string {
+  if (!shouldHighlight(text) || text.length > 20_000) return escapeHtml(text)
+  try {
+    return hljs.highlight(text, { language, ignoreIllegals: true }).value
+  } catch {
+    return escapeHtml(text)
+  }
 }
 
 function normalizeLanguageHint(hint?: string | null): CodeLanguage | null {
@@ -186,56 +82,6 @@ function escapeHtml(text: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
-}
-
-// applyMarkers() turns these sentinels into real <mark> elements after
-// escaping, so a man page containing one literally would render as a
-// highlight it did not earn. Man page text is ingested from distro archives,
-// so strip them from the input first.
-const MARKER_SENTINEL_RE = /__BM_(?:FIND|OPT)_(?:START|END)__/g
-
-function buildMarkedText(rawText: string, ctx: HighlightCtx) {
-  const text = rawText.replace(MARKER_SENTINEL_RE, '')
-  const findQuery = ctx.findQuery?.trim()
-  const hasFind = Boolean(findQuery && findQuery.length >= 2)
-  const hasOpt = Boolean(ctx.optionRegex)
-
-  if (!hasFind && !hasOpt) return text
-
-  const findRanges = hasFind ? getRanges(text, new RegExp(escapeRegExp(findQuery!), 'gi')) : []
-  const optRanges = hasOpt ? getRanges(text, ctx.optionRegex!) : []
-  const optFiltered = optRanges.filter((r) => !overlapsAny(r, findRanges))
-
-  const merged = [
-    ...findRanges.map((r) => ({ ...r, kind: 'find' as const })),
-    ...optFiltered.map((r) => ({ ...r, kind: 'opt' as const })),
-  ].sort((a, b) => a.start - b.start)
-
-  if (!merged.length) return text
-
-  let out = ''
-  let cursor = 0
-  for (const m of merged) {
-    if (m.start > cursor) out += text.slice(cursor, m.start)
-    const chunk = text.slice(m.start, m.end)
-    if (m.kind === 'find') out += `__BM_FIND_START__${chunk}__BM_FIND_END__`
-    else out += `__BM_OPT_START__${chunk}__BM_OPT_END__`
-    cursor = m.end
-  }
-  if (cursor < text.length) out += text.slice(cursor)
-  return out
-}
-
-function applyMarkers(html: string) {
-  let out = html
-
-  out = out.replaceAll('__BM_OPT_START__', '<mark data-bm-opt class="bm-mark bm-opt">')
-  out = out.replaceAll('__BM_OPT_END__', '</mark>')
-
-  out = out.replaceAll('__BM_FIND_START__', '<mark data-bm-find class="bm-mark bm-find">')
-  out = out.replaceAll('__BM_FIND_END__', '</mark>')
-
-  return out
 }
 
 function shouldHighlight(text: string) {

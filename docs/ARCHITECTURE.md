@@ -21,11 +21,18 @@ GitHub Actions (ingestion/)
 
 ## Requests
 
-A man page request hits `nextjs/app/man/[name]/[section]/page.tsx`, which calls `fetchManPage` in `nextjs/lib/api.ts`. That resolves the `prod` pointer inside Convex, loads metadata and content, and renders through `components/doc/DocRenderer.tsx`. Search works the same way through `convex/queries.ts`. Public Convex functions cannot be pointed at `staging`; CI checks this.
+A man page request (`/man/<name>/<section>`, and `/man/<name>` for the section picker) is served by the Pages Router, not the App Router: `nextjs/pages/man/`. Its `getServerSideProps` calls `lookupManPage` in `nextjs/lib/manLookup.ts`, which loads the page and its related pages through `nextjs/lib/api.ts`, and renders `components/man/ManPageDocument.tsx` (the manual through `components/doc/DocRenderer.tsx`, code highlighted on the server). The page sets `unstable_runtimeJS: false`, so the response is plain HTML with no Next runtime and no inline RSC payload. Its only scripts are one inline boot script in `<head>` (`nextjs/lib/manBoot.ts`: theme, reading preferences and the distro cookie, before first paint) and a small static bundle, `nextjs/man-client/`, which `next.config.ts` builds with esbuild into `public/_bm/man.<hash>.js` (find, the pager keys, option selection, the palette, contents, preferences, bookmarks and history). The page is complete without either. Misses answer a real 404 with man's voice in the markup. Search and every other page stay on the App Router; public Convex functions cannot be pointed at `staging`, and CI checks this.
 
-Personalization (theme, distro, bookmarks, history, reading preferences) lives in the browser. Theme and distro are mirrored into cookies so the server can render the right first paint.
+Personalization (theme, distro, bookmarks, history, reading preferences) lives in the browser. On App Router pages theme and reading preferences are mirrored into cookies so the server can render the right first paint; man pages apply them from the boot script instead.
 
-Every HTML response is rendered per request. The proxy issues a fresh CSP nonce, Next.js can only apply it during server rendering, and the root layout reads cookies, so page-level `revalidate` has no effect. Caching happens one layer down: `nextjs/lib/api.ts` wraps each Convex read, including sitemap pages, in `unstable_cache`.
+App Router HTML is rendered per request: the proxy issues a fresh CSP nonce, Next.js can only apply it during server rendering, and the root layout reads cookies, so page-level `revalidate` has no effect. Man pages are different, so the CDN can cache them (#389, #406):
+
+- **CSP.** `nextjs/proxy.ts` serves man pages a hash-only policy, `script-src 'self' 'sha256-…'` for the boot script, with no nonce and no `'unsafe-inline'`.
+- **No cookie dependence.** The renderer never reads a cookie: a bare URL is Debian. A reader whose `bm-distro` cookie names another distro gets a `307` to the explicit `?distro=` URL with `Cache-Control: private, no-store`, from the proxy, which runs before the CDN.
+- **Keyed per release.** The proxy reads the active release for the URL's distro (`nextjs/lib/manRelease.ts`, one Convex query per distro per instance per minute) and rewrites the request with `__bm_release=<id>`, so a promotion changes the cache key. It forwards the release to the renderer (`x-bm-release`) for the footer and the data-cache keys. Loopback hosts skip the URL key, because Next normalises them in middleware rewrites.
+- **Cache headers.** Pages and redirects send `CDN-Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` (misses: 600/3600), and browsers get `Cache-Control: public, max-age=0, must-revalidate`. Rate-limited misses and responses without a release key are `private, no-store`.
+
+Caching one layer down still applies everywhere: `nextjs/lib/api.ts` wraps each Convex read, including sitemap pages, in `unstable_cache`, and the man page reads include the release in their keys.
 
 ## Data
 

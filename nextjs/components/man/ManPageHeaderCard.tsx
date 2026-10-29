@@ -1,10 +1,6 @@
-'use client'
-
 import type { Distro } from '../../lib/distro'
 import { DISTRO_LABEL, DISTRO_ORDER, normalizeDistro } from '../../lib/distro'
 import type { ManPage, ManPageVariant } from '../../lib/docModel'
-import { BookmarkButton } from '../bookmarks/BookmarkButton'
-import { useDistro } from '../state/distro'
 import { ACTION_CLASS } from '../ui/action'
 import { ManSectionLabel } from './RunningHead'
 
@@ -18,31 +14,26 @@ function buildVariantPicker(variants: ManPageVariant[]): { ordered: ManPageVaria
   return { ordered }
 }
 
+/**
+ * Title, lede, system picker, source package and page actions, then SYNOPSIS.
+ * Plain server HTML: the man page script (man-client/) binds the actions by
+ * their `data-bm-action` and the picker by `data-bm-distro-select`.
+ */
 export function ManPageHeaderCard({
   page,
   synopsis,
   variants,
   distro,
   hasToc,
-  onOpenContents,
-  onOpenFind,
-  onOpenPrefs,
-  onCopyLink,
-  copiedLink,
 }: {
   page: ManPage
   synopsis?: string[] | null
   variants: ManPageVariant[]
   distro: Distro
   hasToc: boolean
-  onOpenContents: () => void
-  onOpenFind: () => void
-  onOpenPrefs: () => void
-  onCopyLink: () => void
-  copiedLink: boolean
 }) {
   const variantPicker = buildVariantPicker(variants)
-  const { setDistro } = useDistro()
+  const bookmarkKey = `${page.name}(${page.section})`
 
   return (
     <header>
@@ -60,19 +51,15 @@ export function ManPageHeaderCard({
         {variantPicker ? (
           <label className="inline-flex items-baseline gap-2">
             <span className="text-ink-3">System</span>
-            {/* Uncontrolled so the choice stays visible while the server renders it; the key
-                resets it to whatever distro was actually served.
+            {/* Choosing a system loads that variant's URL; without JavaScript the select shows what is served.
                 bg-paper, not bg-transparent: Chromium draws the dropdown as its own page with a
                 white body and copies this element's computed background-color and color onto
                 the list, so a transparent select shows dark-theme ink on white. */}
             <select
-              key={distro}
               name="distro"
               defaultValue={distro}
-              onChange={(e) => {
-                const next = normalizeDistro(e.target.value)
-                if (next) setDistro(next)
-              }}
+              data-bm-distro-select
+              autoComplete="off"
               className="border-0 border-b border-rule-2 bg-paper py-0.5 text-sm text-ink hover:border-accent"
               aria-label="Select distribution variant"
             >
@@ -101,27 +88,39 @@ export function ManPageHeaderCard({
         {/* Inline and balanced, so a narrow screen wraps the actions evenly rather than orphaning the last. */}
         <div className="bm-js leading-7 text-balance md:ml-auto [&>*:not(:last-child)]:mr-5">
           {hasToc ? (
-            <button type="button" onClick={onOpenContents} aria-label="Open contents" title="Contents (b)" className={`${ACTION_CLASS} lg:hidden`}>
+            <button type="button" data-bm-action="contents" aria-label="Open contents" title="Contents (b)" className={`${ACTION_CLASS} lg:hidden`}>
               Contents
             </button>
           ) : null}
-          <button type="button" onClick={onOpenFind} aria-label="Find in page" title="Find in page (f)" className={ACTION_CLASS}>
+          <button type="button" data-bm-action="find" aria-label="Find in page" title="Find in page (f)" className={ACTION_CLASS}>
             Find
           </button>
-          <button type="button" onClick={onOpenPrefs} aria-label="Reading preferences" title="Reading preferences (p)" className={ACTION_CLASS}>
+          <button type="button" data-bm-action="prefs" aria-label="Reading preferences" title="Reading preferences (p)" className={ACTION_CLASS}>
             Preferences
           </button>
-          <BookmarkButton name={page.name} section={page.section} description={page.description || page.title} />
-          <button type="button" onClick={onCopyLink} aria-label="Copy link to clipboard" title={copiedLink ? 'Copied' : 'Copy link'} className={ACTION_CLASS}>
-            Copy link
-            {copiedLink ? (
-              <span aria-hidden="true" className="bm-pop-in ml-1 inline-block text-accent no-underline motion-reduce:animate-none">
-                ✓
-              </span>
-            ) : null}
-            <span aria-live="polite" className="sr-only">
-              {copiedLink ? 'Link copied' : ''}
+          <button
+            type="button"
+            data-bm-action="bookmark"
+            data-bm-bookmark-name={page.name}
+            data-bm-bookmark-section={page.section}
+            data-bm-bookmark-description={page.description || page.title}
+            aria-pressed="false"
+            aria-label={`Bookmark ${bookmarkKey}`}
+            title={`Bookmark: ${bookmarkKey} (m)`}
+            className={ACTION_CLASS}
+          >
+            Bookmark
+            <span aria-hidden="true" data-bm-pressed-mark hidden className="ml-1 inline-block no-underline">
+              ✓
             </span>
+            <span aria-live="polite" className="sr-only" />
+          </button>
+          <button type="button" data-bm-action="copy-link" aria-label="Copy link to clipboard" title="Copy link" className={ACTION_CLASS}>
+            Copy link
+            <span aria-hidden="true" data-bm-pressed-mark hidden className="bm-pop-in ml-1 inline-block text-accent no-underline motion-reduce:animate-none">
+              ✓
+            </span>
+            <span aria-live="polite" className="sr-only" />
           </button>
         </div>
       </div>

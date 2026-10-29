@@ -85,6 +85,7 @@ export function Toc({
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
+                  data-bm-level={item.level}
                   aria-current={active ? 'location' : undefined}
                   title={truncated ? item.title : undefined}
                   onClick={(e) => {

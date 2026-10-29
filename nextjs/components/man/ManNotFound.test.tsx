@@ -1,12 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import type { ManMiss } from '../../lib/manLookup'
 import { ManNotFound, manMiss } from './ManNotFound'
 
-vi.mock('../ui/LinkPendingHint', () => ({ LinkPendingHint: () => null }))
-
-const miss: ManMiss = { name: 'ta', section: null, distro: 'debian', urlDistro: null, suggestions: [], distros: [] }
+const miss: ManMiss = { name: 'ta', section: null, distro: 'debian', urlDistro: null, suggestions: [], distros: [], limited: false }
 
 describe('manMiss', () => {
   it('says what man-db says', () => {

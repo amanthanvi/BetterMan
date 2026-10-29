@@ -10,7 +10,7 @@ import { BOOKMARKS_EVENT, BOOKMARKS_STORAGE_KEY, getBookmarks } from '../../lib/
 import { clearRecent, getRecent, recordRecentSearch, type RecentItem } from '../../lib/recent'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useFocusTrap } from '../../lib/useFocusTrap'
-import { manPageHref, normalizeDistro, withDistro, type Distro } from '../../lib/distro'
+import { manPageHref, withDistro, type Distro } from '../../lib/distro'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { isTypingTarget } from '../../lib/dom'
 import { getScrollBehavior } from '../../lib/scroll'
@@ -18,8 +18,7 @@ import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
 import { Kbd } from '../ui/Kbd'
-
-type PaletteMode = 'search' | 'actions' | 'headings'
+import { parsePaletteInput, parseSearchText } from '../../lib/paletteInput'
 
 type PaletteItem =
   | {
@@ -60,28 +59,7 @@ type PaletteItem =
 
 type ActionItem = Extract<PaletteItem, { kind: 'action' }>
 
-type ParsedSearch = { distro?: Distro; text: string }
-
-export function parsePaletteInput(raw: string): { mode: PaletteMode; text: string } {
-  if (raw.startsWith('\\>')) return { mode: 'search', text: raw.slice(2) }
-  if (raw.startsWith('\\#')) return { mode: 'search', text: raw.slice(2) }
-  if (raw.startsWith('>')) return { mode: 'actions', text: raw.slice(1) }
-  if (raw.startsWith('#')) return { mode: 'headings', text: raw.slice(1) }
-  return { mode: 'search', text: raw }
-}
-
-export function parseSearchText(raw: string): ParsedSearch {
-  const trimmed = raw.trim()
-  if (!trimmed.startsWith('@')) return { text: trimmed }
-
-  const spaceIdx = trimmed.indexOf(' ')
-  const token = (spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)).slice(1)
-  const distro = normalizeDistro(token)
-  if (!distro) return { text: trimmed }
-
-  const rest = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx + 1)
-  return { distro, text: rest.trim() }
-}
+export { parsePaletteInput, parseSearchText }
 
 function recentToItems(
   recent: RecentItem[],

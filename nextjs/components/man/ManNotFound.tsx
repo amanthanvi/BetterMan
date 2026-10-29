@@ -1,8 +1,5 @@
-import Link from 'next/link'
-
 import { manPageHref, withDistro } from '../../lib/distro'
 import type { ManMiss } from '../../lib/manLookup'
-import { LinkPendingHint } from '../ui/LinkPendingHint'
 import { ManDistroAvailability } from './ManDistroAvailability'
 import { ManSectionLabel, RunningHead } from './RunningHead'
 
@@ -33,13 +30,12 @@ export function ManNotFound({ miss }: { miss: ManMiss }) {
           <ul className="mt-1.5 font-serif text-lg">
             {suggestions.map((s) => (
               <li key={`${s.name}:${s.section}`} className="py-0.5">
-                <Link
+                <a
                   href={manPageHref(s.name, s.section, urlDistro)}
                   className="underline decoration-rule-2 underline-offset-4 hover:decoration-accent"
                 >
                   <b className="font-semibold">{s.name}</b>({s.section})
-                  <LinkPendingHint />
-                </Link>
+                </a>
                 {s.description ? <span className="text-ink-2">, {s.description}</span> : null}
               </li>
             ))}
@@ -57,9 +53,9 @@ export function ManNotFound({ miss }: { miss: ManMiss }) {
       <ManDistroAvailability name={name} section={section} distro={distro} available={miss.distros} />
 
       <p className="mt-10 text-sm text-ink-3">
-        <Link href={withDistro(`/search?q=${encodeURIComponent(name)}`, urlDistro)} className="underline">
+        <a href={withDistro(`/search?q=${encodeURIComponent(name)}`, urlDistro)} className="underline">
           Search for “{name}”
-        </Link>{' '}
+        </a>{' '}
         in page names and descriptions: it may exist on another system, in another section, or under another name.
       </p>
     </div>

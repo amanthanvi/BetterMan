@@ -1,84 +1,42 @@
-'use client'
-
-import Link from 'next/link'
-import { Fragment, memo, useEffect, useMemo, type ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 
 import { withDistro, type Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
 import { findExternalUrls } from '../../lib/externalUrls'
-import { cancelScrollPin, scrollToIdWhenRendered } from '../../lib/scroll'
-import { escapeRegExp, getRanges, overlapsAny, type TextRange } from '../../lib/textRanges'
-import { buildOptionRegex } from '../man/find'
 import { CodeBlock, type CodeLanguage } from './CodeBlock'
-import { LinkPendingHint } from '../ui/LinkPendingHint'
 
-type HighlightCtx = {
-  findQuery?: string
-  findRegex?: RegExp
-  optionRegex?: RegExp
+type RenderCtx = {
   codeLanguage?: CodeLanguage
   sectionNumbers?: ReadonlyMap<string, string>
 }
 
-// The whole document re-renders on any prop change, so skip the man page's
-// unrelated state updates (find keystrokes before the debounce settles, the
-// active heading, copy feedback).
-export const DocRenderer = memo(function DocRenderer({
+/**
+ * The manual as plain server HTML. Find and option highlighting are applied to
+ * this markup in the browser (man-client/marks.ts), so the server output is the
+ * same for every reader and can be cached.
+ */
+export function DocRenderer({
   blocks,
   urlDistro,
-  findQuery,
-  optionTerms,
   codeLanguage,
   sectionNumbers,
 }: {
   blocks: BlockNode[]
   /** The page URL's own `?distro=`, which internal links carry; null for a bare URL. */
   urlDistro: Distro | null
-  findQuery?: string
-  optionTerms?: string[]
   /** Highlighting for code blocks the parser gave no language. */
   codeLanguage?: CodeLanguage
   /** Hanging numbers per heading id, from `sectionNumbers()`. */
   sectionNumbers?: ReadonlyMap<string, string>
 }) {
-  const find = findQuery?.trim()
-  const stableFind = find && find.length >= 2 ? find : undefined
-  const optionRegex = useMemo(() => buildOptionRegex(optionTerms), [optionTerms])
-  const findRegex = useMemo(() => {
-    if (!stableFind) return undefined
-    return new RegExp(escapeRegExp(stableFind), 'gi')
-  }, [stableFind])
-
-  const ctx = useMemo(
-    (): HighlightCtx => ({ findQuery: stableFind, findRegex, optionRegex, codeLanguage, sectionNumbers }),
-    [codeLanguage, findRegex, optionRegex, sectionNumbers, stableFind],
-  )
-
-  useEffect(() => {
-    const onHash = () => {
-      const raw = window.location.hash.replace(/^#/, '')
-      if (!raw) return
-      try {
-        scrollToIdWhenRendered(decodeURIComponent(raw), { behavior: 'auto', block: 'start' })
-      } catch {
-        // ignore bad URI sequences
-      }
-    }
-
-    onHash()
-    window.addEventListener('hashchange', onHash)
-    return () => {
-      window.removeEventListener('hashchange', onHash)
-      cancelScrollPin()
-    }
-  }, [])
+  const ctx: RenderCtx = { codeLanguage, sectionNumbers }
 
   // The typography is `.bm-manual` in globals.css; blocks render as plain elements.
   // Long pages only: `.bm-doc > *` in globals.css gives each top-level block
   // `content-visibility: auto`, and the estimate stands in for its height until
   // it has rendered once. Short pages keep the plain block list.
   const skipOffscreen = blocks.length > SKIP_OFFSCREEN_MIN_BLOCKS
-  const estimates = useMemo(() => (skipOffscreen ? blocks.map((block) => estimateBlockHeight(block)) : null), [blocks, skipOffscreen])
+  const estimates = skipOffscreen ? blocks.map((block) => estimateBlockHeight(block)) : null
 
   if (!estimates) {
     return (
@@ -99,7 +57,7 @@ export const DocRenderer = memo(function DocRenderer({
       ))}
     </div>
   )
-})
+}
 
 function blockKey(block: BlockNode, fallbackIdx: number) {
   if (block.type === 'heading') return `h:${block.id}`
@@ -143,14 +101,14 @@ function inlinesLength(inlines: InlineNode[]): number {
   return inlines.reduce((sum, inline) => sum + (inline.type === 'text' || inline.type === 'code' ? inline.text.length : inlinesLength(inline.inlines)), 0)
 }
 
-const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: BlockNode; ctx: HighlightCtx; urlDistro: Distro | null }) {
+function BlockView({ block, ctx, urlDistro }: { block: BlockNode; ctx: RenderCtx; urlDistro: Distro | null }) {
   switch (block.type) {
     case 'heading': {
       const level = clamp(block.level, 2, 6)
       const Tag = (`h${level}` as unknown) as 'h2'
       return (
         <Tag id={block.id} data-n={ctx.sectionNumbers?.get(block.id)}>
-          <a href={`#${block.id}`}>{highlightText(block.text, ctx)}</a>
+          <a href={`#${block.id}`}>{block.text}</a>
         </Tag>
       )
     }
@@ -197,8 +155,6 @@ const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: Bl
           text={block.text}
           languageHint={block.languageHint ?? undefined}
           defaultLanguage={ctx.codeLanguage}
-          findQuery={ctx.findQuery}
-          optionRegex={ctx.optionRegex}
         />
       )
 
@@ -210,7 +166,7 @@ const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: Bl
             <thead>
               <tr>
                 {block.headers.map((h, idx) => (
-                  <th key={idx}>{highlightText(h, ctx)}</th>
+                  <th key={idx}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -218,7 +174,7 @@ const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: Bl
               {block.rows.map((row, rowIdx) => (
                 <tr key={rowIdx}>
                   {row.map((cell, cellIdx) => (
-                    <td key={cellIdx}>{highlightText(cell, ctx, true)}</td>
+                    <td key={cellIdx}>{linkifyText(cell)}</td>
                   ))}
                 </tr>
               ))}
@@ -230,17 +186,17 @@ const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: Bl
     case 'horizontal_rule':
       return <hr />
   }
-})
+}
 
 /** `linkify` turns plain-text URLs into links; it is off inside an existing link. */
-function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, urlDistro: Distro | null, linkify = true): ReactNode[] {
+function renderInlines(inlines: InlineNode[], ctx: RenderCtx, urlDistro: Distro | null, linkify = true): ReactNode[] {
   return inlines.map((inline, idx) => {
     switch (inline.type) {
       case 'text':
-        return <span key={idx}>{highlightText(inline.text, ctx, linkify)}</span>
+        return <span key={idx}>{linkify ? linkifyText(inline.text) : inline.text}</span>
       case 'code':
         /* troff bold: "type this literally". Bold serif in prose, bold mono in option terms. */
-        return <code key={idx}>{highlightText(inline.text, ctx)}</code>
+        return <code key={idx}>{inline.text}</code>
       case 'emphasis':
         return (
           <em key={idx}>
@@ -270,10 +226,9 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, urlDistro: Dist
           )
         }
         return (
-          <Link key={idx} href={inline.href.startsWith('/') ? withDistro(inline.href, urlDistro) : inline.href}>
+          <a key={idx} href={inline.href.startsWith('/') ? withDistro(inline.href, urlDistro) : inline.href}>
             {renderInlines(inline.inlines, ctx, urlDistro, false)}
-            <LinkPendingHint />
-          </Link>
+          </a>
         )
     }
   })
@@ -292,60 +247,21 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
 }
 
-type Mark = TextRange & { kind: 'find' | 'opt' }
-
-function highlightText(text: string, ctx: HighlightCtx, linkify = false): ReactNode {
-  const findRanges = ctx.findRegex ? getRanges(text, ctx.findRegex) : []
-  const optionRanges = ctx.optionRegex ? getRanges(text, ctx.optionRegex).filter((r) => !overlapsAny(r, findRanges)) : []
-  const marks: Mark[] = [
-    ...findRanges.map((r) => ({ ...r, kind: 'find' as const })),
-    ...optionRanges.map((r) => ({ ...r, kind: 'opt' as const })),
-  ].sort((a, b) => a.start - b.start)
-
-  // A mark that straddles a URL's edge keeps the URL as text, so every match the
-  // find count includes stays one <mark>.
-  const urls = linkify
-    ? findExternalUrls(text).filter((u) => marks.every((m) => m.end <= u.start || m.start >= u.end || (m.start >= u.start && m.end <= u.end)))
-    : []
-
-  if (!marks.length && !urls.length) return text
-
+/** Plain-text URLs in a text run become external links; the rest stays text. */
+function linkifyText(text: string): ReactNode {
+  const urls = findExternalUrls(text)
+  if (!urls.length) return text
   const out: ReactNode[] = []
   let cursor = 0
   for (const url of urls) {
-    out.push(...renderMarks(text, cursor, url.start, marks))
+    if (url.start > cursor) out.push(<span key={`t:${cursor}`}>{text.slice(cursor, url.start)}</span>)
     out.push(
       <ExternalLink key={`u:${url.start}`} href={url.href}>
-        {renderMarks(text, url.start, url.end, marks)}
+        <span>{text.slice(url.start, url.end)}</span>
       </ExternalLink>,
     )
     cursor = url.end
   }
-  out.push(...renderMarks(text, cursor, text.length, marks))
-  return out
-}
-
-/** `text[from, to)` with the marks that fall inside it. */
-function renderMarks(text: string, from: number, to: number, marks: Mark[]): ReactNode[] {
-  const out: ReactNode[] = []
-  let cursor = from
-  for (const m of marks) {
-    if (m.start < from || m.end > to) continue
-    if (m.start > cursor) out.push(<span key={`t:${cursor}`}>{text.slice(cursor, m.start)}</span>)
-    const chunk = text.slice(m.start, m.end)
-    out.push(
-      m.kind === 'find' ? (
-        <mark key={`f:${m.start}`} data-bm-find className="bm-mark bm-find">
-          {chunk}
-        </mark>
-      ) : (
-        <mark key={`o:${m.start}`} data-bm-opt className="bm-mark bm-opt">
-          {chunk}
-        </mark>
-      ),
-    )
-    cursor = m.end
-  }
-  if (cursor < to) out.push(<span key={`t:${cursor}`}>{text.slice(cursor, to)}</span>)
+  if (cursor < text.length) out.push(<span key={`t:${cursor}`}>{text.slice(cursor)}</span>)
   return out
 }

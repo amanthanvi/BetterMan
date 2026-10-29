@@ -1,12 +1,7 @@
-'use client'
-
-import Link from 'next/link'
-
 import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
 import { withDistro, type Distro } from '../../lib/distro'
-import { LinkPendingHint } from '../ui/LinkPendingHint'
 
 export function ManPageFooterSections({
   reportHref,
@@ -54,11 +49,10 @@ export function ManPageFooterSections({
 
                   return (
                     <li key={key}>
-                      <Link href={href} className="underline">
+                      <a href={href} className="underline">
                         <b className="font-semibold">{ref.name}</b>
                         {ref.section ? `(${ref.section})` : null}
-                        <LinkPendingHint />
-                      </Link>
+                      </a>
                     </li>
                   )
                 })}
@@ -72,7 +66,7 @@ export function ManPageFooterSections({
               <ul className="grid gap-y-1 sm:grid-cols-2 sm:gap-x-6">
                 {related.map((item) => (
                   <li key={`${item.name}:${item.section}`} className="min-w-0 truncate">
-                    <Link
+                    <a
                       href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, urlDistro)}
                       className="no-underline"
                     >
@@ -80,8 +74,7 @@ export function ManPageFooterSections({
                         <b className="font-semibold">{item.name}</b>({item.section})
                       </span>{' '}
                       <span className="text-ink-2">{item.description}</span>
-                      <LinkPendingHint />
-                    </Link>
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -97,16 +90,15 @@ export function ManPageFooterSections({
                 <ul className="flex flex-wrap gap-x-4 gap-y-1 font-serif text-base">
                   {data.items.map((item) => (
                     <li key={`${item.name}:${item.section}`}>
-                      <Link href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, urlDistro)} className="underline">
+                      <a href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, urlDistro)} className="underline">
                         <b className="font-semibold">{item.name}</b>({item.section})
-                        <LinkPendingHint />
-                      </Link>
+                      </a>
                     </li>
                   ))}
                 </ul>
                 {data.hasMore ? <p className="mt-1 text-xs text-ink-3">
                   Showing the first {data.items.length}; additional pages are omitted.{' '}
-                  {label === 'Command family' && derived?.family ? <Link className="underline" href={withDistro(`/search?q=${encodeURIComponent(`${derived.family.name}-`)}`, urlDistro)}>Browse the family</Link> : null}
+                  {label === 'Command family' && derived?.family ? <a className="underline" href={withDistro(`/search?q=${encodeURIComponent(`${derived.family.name}-`)}`, urlDistro)}>Browse the family</a> : null}
                 </p> : null}
               </div>
             </aside>
@@ -114,9 +106,9 @@ export function ManPageFooterSections({
           {derived?.package ? (
             <p className={ROW}>
               <span className={LABEL}>Package</span>
-              <Link className="w-fit font-mono underline" href={withDistro(`/pkg/${encodeURIComponent(derived.package.name)}`, urlDistro)}>
+              <a className="w-fit font-mono underline" href={withDistro(`/pkg/${encodeURIComponent(derived.package.name)}`, urlDistro)}>
                 {derived.package.name}{derived.package.version ? ` ${derived.package.version}` : ''}
-              </Link>
+              </a>
             </p>
           ) : null}
         </div>

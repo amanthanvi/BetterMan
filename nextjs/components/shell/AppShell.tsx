@@ -102,7 +102,8 @@ function dashboardHref(section: 'recent' | 'bookmarks', urlDistro: Distro | null
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const pathname = usePathname()
+  // Nullable only because a pages/ route exists; App Router pages always have both.
+  const pathname = usePathname() ?? '/'
   const searchParams = useSearchParams()
   const distro = useDistro()
   const theme = useTheme()
@@ -133,7 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // route effect, so a boolean would stay set and mislabel the next push as a pop.
   const popRouteKeyRef = useRef<string | null>(null)
 
-  const routeKey = `${pathname}?${searchParams.toString()}`
+  const routeKey = `${pathname}?${searchParams?.toString() ?? ''}`
   const routeParts = pathname.split('/').filter(Boolean)
   // A rendered manual, not the URL: /man/ta/9 is a 404 with no find bar or bookmark.
   const isManPage = toc.manualRendered
@@ -227,10 +228,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setTocOpen(false)
     window.scrollTo({ top: nextY, left: 0, behavior: 'auto' })
 
-    // Push navigations to `/#recent` and similar land on the hash target. The new
-    // page may still be behind a loading boundary, so wait briefly for the element.
-    // Pop navigations restore the saved scroll, including zero, and must not jump.
-    if (wasPop || !prevKey || window.location.hash.length < 2) return
+    // Push navigations to `/#recent` and similar land on the hash target, and so does
+    // a document load (the plain-HTML man pages link here with a full navigation),
+    // since the scroll above undoes the browser's own. The new page may still be
+    // behind a loading boundary, so wait briefly for the element. Pop navigations
+    // restore the saved scroll, including zero, and must not jump.
+    if (wasPop || window.location.hash.length < 2) return
     let id: string
     try {
       id = decodeURIComponent(window.location.hash.slice(1))

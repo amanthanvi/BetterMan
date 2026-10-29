@@ -162,8 +162,10 @@ combinator.
 - **Identity.** The name is BetterMan. The wordmark is set like a command,
   **betterman**(1), in the serif; its link is named "BetterMan home". The home
   page sets the wordmark as its title, so the header hides its own there.
-- **Reading prefs:** `body[data-bm-font-size|font-family|line-height|column-width|code-theme]`
-  → `--bm-reading-*` custom properties consumed by `.bm-manual`. Defaults:
+- **Reading prefs:** `data-bm-font-size|font-family|line-height|column-width|code-theme`
+  on `<body>` (App Router pages, from the cookie) or `<html>` (man pages, set by
+  the hashed boot script before first paint, since their HTML is cached for every
+  reader) → `--bm-reading-*` custom properties consumed by `.bm-manual`. Defaults:
   serif, 18px (17px on phones), 1.62, 42.5rem. A light or dark code theme
   sets code blocks on their own plate in that scheme.
 - **Highlights:** `mark[data-bm-find]`, `mark[data-bm-opt]`, `.bm-mark`,
@@ -199,8 +201,8 @@ combinator.
   - Everywhere: ⌘K / Ctrl+K palette · `/` focuses the page's search field (home,
     search) or opens the palette · `?` shortcuts · `d` cycle theme · `t` top ·
     `h` home's recent pages.
-  - On a rendered man page (ManPageView sets `manualRendered`; a man-page 404
-    is not one, so `/` stays search there), the pager keys work as in less:
+  - On a rendered man page (`[data-bm-manual]`; a man-page 404 has none, so `/`
+    stays search there), the pager keys work as in less:
     `/` or `f` find in page · `n` / `N` next / previous match, resuming from the
     last match shown even after the find bar closes · `j` / `k` scroll about
     three lines · `g` / `G` jump to the top / bottom at once (`G` holds the true end while a long
@@ -210,6 +212,11 @@ combinator.
   - In the contents, `j` / `k` and the arrow keys move between entries.
   - Single-key shortcuts are ignored while typing in a field or while any modal
     (`aria-modal="true"`) is open.
+- **Man pages are plain HTML** (`nextjs/pages/man/`, `nextjs/man-client/`):
+  no Next runtime, one hashed inline boot script, one static bundle that sets
+  `data-bm-hydrated` when its handlers attach. JSON-LD is a data block with no
+  nonce. A bare man page URL is Debian; a reader whose default distro is another
+  one is redirected to the explicit `?distro=` URL, whose links keep it.
 - Print forces light monochrome through the colour tokens and renders every
   block. A full print stylesheet is later work.
 

@@ -1,6 +1,6 @@
 # CSP violations debugging
 
-BetterMan uses CSP with strict script nonces and relaxed styles.
+BetterMan uses CSP with strict script nonces and relaxed styles. Man pages (`/man/…`) are the exception: their HTML is cached at the edge, so they carry no nonce and allow exactly one inline script, the boot script in `nextjs/lib/manBoot.ts`, by its SHA-256 hash.
 
 ## Symptoms
 
@@ -13,6 +13,7 @@ BetterMan uses CSP with strict script nonces and relaxed styles.
    - `Content-Security-Policy: …`
 2. Confirm scripts are nonce-protected:
    - `script-src 'self' 'nonce-…'`
+   - on man pages, `script-src 'self' 'sha256-…'` instead. The hash is computed from `MAN_BOOT_SCRIPT` at run time, so editing that string cannot desynchronise it; any other inline script on a man page is a bug.
 3. Confirm inline styles are allowed (React `style` props such as the contents marker):
    - `style-src 'self' 'unsafe-inline'`
 

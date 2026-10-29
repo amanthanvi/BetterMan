@@ -1,27 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  path: '/man/gizp' as string | null,
   limited: false,
-  fetchManMetaByNameAndSection: vi.fn(),
   fetchManByNameAndSectionOrAlias: vi.fn(),
+  fetchRelated: vi.fn(),
   fetchManResolve: vi.fn(),
   fetchManDistros: vi.fn(),
   suggest: vi.fn(),
 }))
 
-vi.mock('next/headers', () => ({
-  headers: async () => new Headers(mocks.path ? { 'x-bm-path': mocks.path } : {}),
-  cookies: async () => ({ get: () => undefined }),
-}))
 vi.mock('./rateLimit', () => ({ isRateLimited: async () => mocks.limited }))
 vi.mock('./api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./api')>()
   return {
     FastApiError: actual.FastApiError,
     withDistroFallback: actual.withDistroFallback,
-    fetchManMetaByNameAndSection: mocks.fetchManMetaByNameAndSection,
     fetchManByNameAndSectionOrAlias: mocks.fetchManByNameAndSectionOrAlias,
+    fetchRelated: mocks.fetchRelated,
     fetchManResolve: mocks.fetchManResolve,
     fetchManDistros: mocks.fetchManDistros,
     suggest: mocks.suggest,
@@ -29,65 +24,87 @@ vi.mock('./api', async (importOriginal) => {
 })
 
 import { FastApiError } from './api'
-import { requestedManMiss } from './manLookup'
+import { lookupManPage, manMiss, resolveManName } from './manLookup'
 
 const pageNotFound = () => new FastApiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+const releaseNotFound = () => new FastApiError(404, 'RELEASE_NOT_FOUND', 'Dataset release not found')
+const page = { kind: 'page', data: { page: { name: 'tar', section: '1' } } }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mocks.path = '/man/gizp'
   mocks.limited = false
+  mocks.fetchManByNameAndSectionOrAlias.mockResolvedValue(page)
+  mocks.fetchRelated.mockImplementation(async ({ distro }: { distro: string }) => ({ items: [{ name: `related-${distro}` }] }))
   mocks.fetchManResolve.mockRejectedValue(pageNotFound())
-  mocks.fetchManMetaByNameAndSection.mockRejectedValue(pageNotFound())
-  mocks.fetchManByNameAndSectionOrAlias.mockRejectedValue(pageNotFound())
   mocks.suggest.mockResolvedValue({ query: 'gizp', suggestions: [{ name: 'gzip', section: '1', description: '' }] })
   mocks.fetchManDistros.mockResolvedValue({ distros: ['ubuntu'] })
 })
 
-describe('requestedManMiss', () => {
-  it('reads nothing more when the requested page exists', async () => {
-    mocks.path = '/man/tar/1'
-    mocks.fetchManMetaByNameAndSection.mockResolvedValue({ page: { name: 'tar', section: '1' } })
-    await expect(requestedManMiss()).resolves.toBeNull()
-    expect(mocks.suggest).not.toHaveBeenCalled()
-    expect(mocks.fetchManDistros).not.toHaveBeenCalled()
+describe('lookupManPage', () => {
+  it('reads the document and related pages together, keyed on the release', async () => {
+    await expect(lookupManPage({ name: 'tar', section: '1', distro: 'debian', release: 'r1' })).resolves.toEqual({
+      kind: 'page',
+      distro: 'debian',
+      data: page.data,
+      related: [{ name: 'related-debian' }],
+    })
+    expect(mocks.fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', release: 'r1' })
+    expect(mocks.fetchRelated).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', release: 'r1' })
   })
 
-  it('returns suggestions and distros for a bare-name miss', async () => {
-    await expect(requestedManMiss()).resolves.toEqual({
-      name: 'gizp',
-      section: null,
-      distro: 'debian',
-      urlDistro: null,
+  it('falls back to Debian for a distro without a release, related pages included', async () => {
+    mocks.fetchManByNameAndSectionOrAlias.mockImplementation(async ({ distro }: { distro: string }) => {
+      if (distro === 'arch') throw releaseNotFound()
+      return page
+    })
+    await expect(lookupManPage({ name: 'tar', section: '1', distro: 'arch' })).resolves.toMatchObject({ distro: 'debian', related: [{ name: 'related-debian' }] })
+  })
+
+  it('reports an alias target and a miss', async () => {
+    mocks.fetchManByNameAndSectionOrAlias.mockResolvedValueOnce({ kind: 'alias', name: 'gzip', section: '1' })
+    await expect(lookupManPage({ name: 'gunzip', section: '1', distro: 'debian' })).resolves.toEqual({ kind: 'alias', name: 'gzip', section: '1', distro: 'debian' })
+    mocks.fetchManByNameAndSectionOrAlias.mockRejectedValueOnce(pageNotFound())
+    await expect(lookupManPage({ name: 'ta', section: '9', distro: 'debian' })).resolves.toBeNull()
+  })
+
+  it('passes other failures through, so they are errors, not 404s', async () => {
+    mocks.fetchManByNameAndSectionOrAlias.mockRejectedValueOnce(new Error('Convex down'))
+    await expect(lookupManPage({ name: 'tar', section: '1', distro: 'debian' })).rejects.toThrow('Convex down')
+  })
+})
+
+describe('resolveManName', () => {
+  it('resolves a lowercased name and returns null for a miss', async () => {
+    mocks.fetchManResolve.mockResolvedValueOnce({ kind: 'page', name: 'tar', section: '1' })
+    await expect(resolveManName('TAR', 'debian', 'r1')).resolves.toEqual({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' } })
+    expect(mocks.fetchManResolve).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', release: 'r1' })
+    await expect(resolveManName('gizp', 'debian')).resolves.toBeNull()
+  })
+})
+
+describe('manMiss', () => {
+  const headers = new Headers()
+
+  it('returns suggestions and the distros that have the page', async () => {
+    await expect(manMiss({ name: 'Systemctl', section: '1', distro: 'macos', urlDistro: 'macos', headers })).resolves.toEqual({
+      name: 'Systemctl',
+      section: '1',
+      distro: 'macos',
+      urlDistro: 'macos',
       suggestions: [{ name: 'gzip', section: '1', description: '' }],
       distros: ['ubuntu'],
+      limited: false,
     })
-    expect(mocks.suggest).toHaveBeenCalledWith({ distro: 'debian', name: 'gizp', typos: true })
-    expect(mocks.fetchManDistros).toHaveBeenCalledWith({ name: 'gizp', section: null })
-  })
-
-  it('takes the section and distro from the forwarded path', async () => {
-    mocks.path = '/man/Systemctl/1?distro=macos'
-    const miss = await requestedManMiss()
-    expect(miss).toMatchObject({ name: 'Systemctl', section: '1', distro: 'macos', urlDistro: 'macos' })
+    expect(mocks.suggest).toHaveBeenCalledWith({ distro: 'macos', name: 'systemctl', typos: true })
     expect(mocks.fetchManDistros).toHaveBeenCalledWith({ name: 'systemctl', section: '1' })
   })
 
-  it('skips the assistance reads when rate limited or the name cannot be a page', async () => {
+  it('marks a rate-limited miss and skips the reads for a name that cannot be a page', async () => {
     mocks.limited = true
-    await expect(requestedManMiss()).resolves.toMatchObject({ suggestions: [], distros: [] })
+    await expect(manMiss({ name: 'gizp', section: null, distro: 'debian', urlDistro: null, headers })).resolves.toMatchObject({ suggestions: [], distros: [], limited: true })
     mocks.limited = false
-    mocks.path = '/man/%3Cscript%3E'
-    await expect(requestedManMiss()).resolves.toMatchObject({ name: '<script>', suggestions: [], distros: [] })
+    await expect(manMiss({ name: '<script>', section: null, distro: 'debian', urlDistro: null, headers })).resolves.toMatchObject({ suggestions: [], limited: false })
     expect(mocks.suggest).not.toHaveBeenCalled()
     expect(mocks.fetchManDistros).not.toHaveBeenCalled()
-  })
-
-  it('renders nothing without a forwarded man path', async () => {
-    mocks.path = null
-    await expect(requestedManMiss()).resolves.toBeNull()
-    mocks.path = '/man/tar/1/og'
-    await expect(requestedManMiss()).resolves.toBeNull()
-    expect(mocks.fetchManResolve).not.toHaveBeenCalled()
   })
 })
