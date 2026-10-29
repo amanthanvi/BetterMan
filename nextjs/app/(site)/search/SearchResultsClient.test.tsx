@@ -32,12 +32,50 @@ describe('search result copy', () => {
     expect(html).toContain(`>${label}</span>`)
     expect(html).not.toContain('>options</span>')
   })
-  it('gives honest guidance for unsupported multi-word queries', () => {
-    const html = render('how do I extract a tarball')
+  it('gives honest guidance when a worded query finds nothing', () => {
+    const html = render('how do I unzip a moon')
     expect(html).toContain('No results for')
-    expect(html).toContain('Search command names, flags, or words from a page’s description.')
-    expect(html).toContain('natural-language questions are not supported yet')
+    expect(html).toContain('or a task in plain words')
     expect(html).not.toContain('Did you mean')
+    expect(html).not.toContain('token by token')
+  })
+
+  it('cites the task phrase as the one line of evidence, under a small-caps task label', () => {
+    const html = render('how do I extract a tarball', { results: [{ name: 'tar', section: '1', title: 'tar(1)', description: 'archive files', highlights: [], match: 'task', taskPhrase: 'extract a <b>tar.gz</b> file' }] })
+    expect(html).toContain('>task</span>')
+    expect(html).toContain('Task match: “extract a &lt;b&gt;tar.gz&lt;/b&gt; file”')
+    expect(html).toContain('read as a task')
+  })
+
+  it('leads the first hit with its sourced example, an explain link, then the key flags', () => {
+    const html = render('tar', {
+      results: [{ name: 'tar', section: '1', title: 'tar(1)', description: 'archive files', highlights: [] }, { name: 'tarcat', section: '1', title: 'tarcat(1)', description: 'join', highlights: [] }],
+      top: { name: 'tar', section: '1', package: 'tar',
+        example: { command: 'tar xzf source.tar.gz', description: 'Extract a gzipped archive', source: 'tldr', attribution: { name: 'tldr-pages', url: 'https://github.com/tldr-pages/tldr/blob/abc/pages/common/tar.md', license: 'CC-BY-4.0', licenseUrl: 'https://creativecommons.org/licenses/by/4.0/', modified: 'Adapted' } },
+        flags: [{ flag: '-x', anchorId: 'extract', excerpt: 'Extract files from an archive.' }] },
+    })
+    expect(html.match(/data-bm-top-hit/g)).toHaveLength(1)
+    const example = html.indexOf('tar xzf source.tar.gz'), flags = html.indexOf('href="/man/tar/1#extract"')
+    expect(example).toBeGreaterThan(-1)
+    expect(flags).toBeGreaterThan(example)
+    expect(html).toContain('href="/explain?cmd=tar%20xzf%20source.tar.gz"')
+    expect(html).toContain('>tldr-pages</a>')
+    expect(html).toContain('CC BY 4.0')
+    expect(html).toContain('href="/pkg/tar"')
+  })
+
+  it('never puts a brief on a hit it was not built for', () => {
+    const html = render('tar', {
+      results: [{ name: 'tarcat', section: '1', title: 'tarcat(1)', description: 'join', highlights: [] }],
+      top: { name: 'tar', section: '1', package: null, example: null, flags: [{ flag: '-x', anchorId: 'extract', excerpt: 'Extract.' }] },
+    })
+    expect(html).not.toContain('data-bm-top-hit')
+  })
+
+  it('offers to explain a pasted command line', () => {
+    const html = render('tar -xzvf a.tgz', { results: [{ name: 'tar', section: '1', title: 'tar(1)', description: 'archive files', highlights: ['-x, --extract'], match: 'option', anchorId: 'extract' }] })
+    expect(html).toContain('href="/explain?cmd=tar%20-xzvf%20a.tgz"')
+    expect(html).toContain('token by token')
   })
 
   it('does not advertise corrections on ordinary successful lookups', () => {

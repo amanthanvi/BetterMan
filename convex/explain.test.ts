@@ -12,7 +12,7 @@ import reviewFixture from './fixtures/explain-review.json';
 import symbolLayouts from '../ingestion/tests/fixtures/symbol-layouts.json';
 import { optionFlagRows } from './_optionFlags';
 import { insertSymbols, type SymbolInput } from './_symbols';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 const modules = import.meta.glob('./**/*.ts');
 const reference = makeFunctionReference<'query'>('explain:explain');
 
@@ -512,4 +512,100 @@ it.each(['xargs -p rm x','xargs --interactive rm x','xargs xargs -r rm x','env -
  const result=await explain(await explainFixture(),cmd);
  expect(result.diagnostics.length).toBeGreaterThan(0);
  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+});
+
+// C5: task-phrase search, the top-hit brief and the task-text backfill.
+const NEW_SHA = 'a'.repeat(64);
+const generated = {
+  provider: 'fixture', model: 'fixture', promptVersion: 'b6-v1', generatedAt: '2026-10-28',
+  summary: 'Creates and extracts archives.', examples: [], rejected: 0,
+  taskPhrases: ['extract a tar.gz file', 'create a tar archive', 'list archive contents'],
+};
+
+async function withTarLayer() {
+  const t = await explainFixture();
+  await t.run(async (ctx) => {
+    await ctx.db.insert('manPageGenerated', {
+      contentSha256: 'tar', updatedAt: '2026-10-28', generated, taskText: generated.taskPhrases.join('\n'),
+      tldr: { commit: 'abc', path: 'common/tar.md', rejected: 0, flagUsage: [], examples: [{ description: 'Extract a gzipped archive', command: 'tar xzf source.tar.gz' }] },
+    });
+    for (const page of await ctx.db.query('manPages').withIndex('by_contentSha256', (q) => q.eq('contentSha256', 'tar')).take(4)) {
+      await ctx.db.patch(page._id, { verifiedFlagUsage: [{ flag: '-f', count: 2, source: 'tldr' }, { flag: '-x', count: 3, source: 'tldr' }, { flag: '-Q', count: 9, source: 'tldr' }] });
+    }
+  });
+  return t;
+}
+
+const search = (q: string, extra: { distro?: 'debian' | 'freebsd'; section?: string | null; brief?: boolean } = {}) =>
+  ({ distro: extra.distro ?? 'debian', q, section: extra.section ?? null, limit: 20, offset: 0, ...(extra.brief ? { brief: true } : {}) });
+
+describe('task-phrase search (C5)', () => {
+  it('answers a worded question with the page whose task phrase matches, citing the phrase', async () => {
+    const t = await withTarLayer();
+    const result = await t.query(api.queries.search, search('how do I extract a tarball'));
+    expect(result.results[0]).toMatchObject({ name: 'tar', section: '1', match: 'task', taskPhrase: 'extract a tar.gz file' });
+    // Only the active release of the requested distro, even though the hash is shared.
+    const bsd = await t.query(api.queries.search, search('how do I extract a tarball', { distro: 'freebsd' }));
+    expect(bsd.results.filter((hit) => hit.name === 'tar')).toHaveLength(1);
+    expect((await t.query(api.queries.search, search('extract archive', { section: '8' }))).results.filter((hit) => hit.match === 'task')).toEqual([]);
+  });
+
+  it('keeps at most three task hits when many page variants share the phrases', async () => {
+    const t = await withTarLayer();
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 12; i++) {
+        const sha = `variant${i}`.padEnd(64, '0');
+        await ctx.db.insert('manPageGenerated', { contentSha256: sha, updatedAt: 'x', generated, taskText: generated.taskPhrases.join('\n') });
+      }
+    });
+    const result = await t.query(api.queries.search, search('how do I extract a tarball'));
+    expect(result.results.filter((hit) => hit.match === 'task').length).toBeLessThanOrEqual(3);
+  });
+
+  it('never matches on stop words alone, and leaves one-word queries to names', async () => {
+    const t = await withTarLayer();
+    expect((await t.query(api.queries.search, search('how do I'))).results.filter((hit) => hit.match === 'task')).toEqual([]);
+    expect((await t.query(api.queries.search, search('extract'))).results.filter((hit) => hit.match === 'task')).toEqual([]);
+  });
+});
+
+describe('top-hit brief (C5)', () => {
+  it('leads with the first sourced example, then verified key flags by use', async () => {
+    const t = await withTarLayer();
+    const result = await t.query(api.queries.search, search('tar', { brief: true }));
+    expect(result.top).toMatchObject({
+      name: 'tar', section: '1', package: null,
+      example: { command: 'tar xzf source.tar.gz', description: 'Extract a gzipped archive', source: 'tldr', attribution: { name: 'tldr-pages', license: 'CC-BY-4.0' } },
+      // -Q is counted but is not one of this manual's options, so it is not shown.
+      flags: [{ flag: '-x', anchorId: 'debian-extract' }, { flag: '-f', anchorId: 'debian-file' }],
+    });
+    // Type-ahead and later pages pay nothing for it.
+    expect('top' in (await t.query(api.queries.search, search('tar')))).toBe(false);
+    expect((await t.query(api.queries.search, { ...search('tar', { brief: true }), offset: 1 })).top).toBeNull();
+    // A page without examples or usage has no brief.
+    expect((await t.query(api.queries.search, search('rsync', { brief: true }))).top).toBeNull();
+  });
+});
+
+describe('task text', () => {
+  it('is written with the generated part and cleared when an operator suppresses it', async () => {
+    const t = await explainFixture();
+    await t.mutation(internal.generated.upsertRecords, { records: [{ contentSha256: NEW_SHA, generated }], updatedAt: '2026-10-29' });
+    const read = () => t.run(async (ctx) => await ctx.db.query('manPageGenerated').withIndex('by_contentSha256', (q) => q.eq('contentSha256', NEW_SHA)).unique());
+    expect((await read())?.taskText).toBe('extract a tar.gz file\ncreate a tar archive\nlist archive contents');
+    await t.mutation(internal.generated.suppressParts, { contentSha256: NEW_SHA, parts: ['generated'] });
+    expect((await read())?.taskText).toBeUndefined();
+  });
+
+  it('fills rows written before task search and clears suppressed ones', async () => {
+    const t = await explainFixture();
+    await t.run(async (ctx) => {
+      await ctx.db.insert('manPageGenerated', { contentSha256: 'old', updatedAt: 'x', generated });
+      await ctx.db.insert('manPageGenerated', { contentSha256: 'gone', updatedAt: 'x', generated, suppressed: ['generated'], taskText: 'stale' });
+    });
+    await t.mutation(internal.generated.backfillTaskText, {});
+    const rows = await t.run(async (ctx) => await ctx.db.query('manPageGenerated').take(10));
+    expect(rows.find((row) => row.contentSha256 === 'old')?.taskText).toBe(generated.taskPhrases.join('\n'));
+    expect(rows.find((row) => row.contentSha256 === 'gone')?.taskText).toBeUndefined();
+  });
 });

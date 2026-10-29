@@ -4,6 +4,7 @@ import { MAX_MANIFEST_SECTIONS } from "./_releaseManifest";
 import { resolveRelatedItems } from "./_relatedLinks";
 import { flagTakesArgument, parseOptionQuery } from "./_optionFlags";
 import { symbolInput } from './_symbols';
+import { briefFromRecord } from "./_generatedLayer";
 import { nameEditDistance } from "./_searchTypos";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -431,12 +432,15 @@ type SearchHit = {
   title: string;
   description: string;
   highlights: string[];
-  match?: "option";
+  match?: "option" | "task";
   anchorId?: string;
   symbolKind?: 'environment' | 'files' | 'errors' | 'config' | 'subcommand' | 'shell';
+  /** The generated task phrase a task match came from. */
+  taskPhrase?: string;
 };
 
-type RankedHit = SearchHit & { rank: number };
+// pageId is internal: the top-hit brief reads the page it ranked.
+type RankedHit = SearchHit & { rank: number; pageId?: Id<"manPages"> };
 
 function searchDocumentHit(doc: Doc<"manPageSearchDocuments">, queryText: string, rank: number): RankedHit {
   return {
@@ -446,6 +450,7 @@ function searchDocumentHit(doc: Doc<"manPageSearchDocuments">, queryText: string
     description: doc.description,
     highlights: [deterministicSnippet(doc.snippetText, queryText)].filter(Boolean),
     rank,
+    pageId: doc.pageId,
   };
 }
 
@@ -509,6 +514,7 @@ async function optionHit(ctx: QueryCtx, row: Doc<"manPageOptionFlags">, rank: nu
     match: "option",
     anchorId: row.anchorId,
     rank,
+    pageId: page._id,
   };
 }
 
@@ -629,9 +635,67 @@ async function textHits(
     const existing = ranked.get(symbol.pageId);
     if (existing?.name.toLowerCase() === queryNorm) continue;
     ranked.set(symbol.pageId, { name: symbol.name, section: symbol.section, title: symbol.title, description: symbol.description,
-      symbolKind: symbol.kind, highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, rank: Math.max(existing?.rank ?? 0, symbol.kind === 'subcommand' && symbol.name.toLowerCase() === queryNorm.replace(' ', '-') ? 2_600 : 2_500) });
+      symbolKind: symbol.kind, highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, pageId: symbol.pageId, rank: Math.max(existing?.rank ?? 0, symbol.kind === 'subcommand' && symbol.name.toLowerCase() === queryNorm.replace(' ', '-') ? 2_600 : 2_500) });
+  }
+  // Task phrases (B6) answer questions in words, such as "how do I extract a tarball".
+  if (queryNorm.includes(" ") && contentWords.length) {
+    for (const hit of await taskHits(ctx, { releaseId, section, queryText, contentWords })) {
+      const existing = ranked.get(hit.pageId!);
+      if (!existing || existing.rank < hit.rank) ranked.set(hit.pageId!, hit);
+    }
   }
   return [...ranked.values()].sort(compareHits);
+}
+
+/**
+ * A worded query reads at most eight generated rows, then at most 40 pages to
+ * place them in the active release, and keeps at most three task hits. Every
+ * distro variant of a page has its own content hash with the same phrases, so
+ * several rows can belong to other releases.
+ */
+const MAX_TASK_ROWS = 8;
+const MAX_TASK_PAGE_READS = 40;
+const MAX_TASK_PAGES_PER_ROW = 8;
+const MAX_TASK_HITS = 3;
+
+async function taskHits(
+  ctx: QueryCtx,
+  args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string; contentWords: string[] },
+): Promise<RankedHit[]> {
+  const rows = await ctx.db.query("manPageGenerated")
+    .withSearchIndex("search_taskText", (q) => q.search("taskText", args.queryText))
+    .take(MAX_TASK_ROWS);
+  const hits: RankedHit[] = [];
+  let remaining = MAX_TASK_PAGE_READS;
+  for (const [index, row] of rows.entries()) {
+    if (hits.length >= MAX_TASK_HITS || remaining === 0) break;
+    // The phrase sharing the most content words with the query is the evidence;
+    // a phrase sharing none (only stop words matched) is not a task match.
+    let best: { phrase: string; overlap: number } | null = null;
+    for (const phrase of row.generated?.taskPhrases ?? []) {
+      const words = phrase.toLowerCase().split(/[^a-z0-9_]+/);
+      const overlap = args.contentWords.filter((word) => words.some((candidate) => candidate.startsWith(word))).length;
+      if (overlap && (!best || overlap > best.overlap)) best = { phrase, overlap };
+    }
+    if (!best) continue;
+    // Pages sharing this content hash across releases, newest first, where the
+    // active release usually is; keep only the active release's.
+    const pages = await ctx.db.query("manPages")
+      .withIndex("by_contentSha256", (q) => q.eq("contentSha256", row.contentSha256))
+      .order("desc")
+      .take(Math.min(MAX_TASK_PAGES_PER_ROW, remaining));
+    remaining -= pages.length;
+    for (const page of pages) {
+      if (hits.length >= MAX_TASK_HITS) break;
+      if (page.releaseId !== args.releaseId || (args.section !== null && page.section !== args.section)) continue;
+      hits.push({
+        name: page.name, section: page.section, title: page.title, description: page.description,
+        highlights: [], match: "task", taskPhrase: best.phrase, pageId: page._id,
+        rank: 2_000 + best.overlap * 100 - index,
+      });
+    }
+  }
+  return hits;
 }
 
 // Names within two edits of `queryText`, for a lookup that found nothing.
@@ -669,6 +733,44 @@ async function typoHits(
     .sort(compareHits);
 }
 
+const MAX_TOP_FLAGS = 6;
+
+const topHitValidator = v.union(v.null(), v.object({
+  name: v.string(), section: v.string(),
+  example: v.union(v.null(), v.object({
+    command: v.string(), description: v.string(), source: v.union(v.literal("page"), v.literal("tldr"), v.literal("generated")),
+    attribution: v.optional(v.object({ name: v.literal("tldr-pages"), url: v.string(), license: v.literal("CC-BY-4.0"), licenseUrl: v.string(), modified: v.string() })),
+  })),
+  flags: v.array(v.object({ flag: v.string(), anchorId: v.string(), excerpt: v.string() })),
+  package: v.union(v.null(), v.string()),
+}));
+
+/**
+ * The first hit's worked example and key flags (C5, fix 13). One page read, one
+ * generated-layer read, and one option read per key flag (at most six). Key
+ * flags are the page's verified example usage (B6 → B7), most used first;
+ * without usage there are none rather than a guess.
+ */
+async function topHit(ctx: QueryCtx, pageId: Id<"manPages">) {
+  const page = await ctx.db.get(pageId);
+  if (!page) return null;
+  const row = await ctx.db.query("manPageGenerated").withIndex("by_contentSha256", (q) => q.eq("contentSha256", page.contentSha256)).unique();
+  const first = briefFromRecord(row)?.examples[0];
+  const counts = new Map<string, number>();
+  for (const usage of page.verifiedFlagUsage ?? []) counts.set(usage.flag, (counts.get(usage.flag) ?? 0) + usage.count);
+  const ranked = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, MAX_TOP_FLAGS);
+  const flags: Array<{ flag: string; anchorId: string; excerpt: string }> = [];
+  for (const [flag] of ranked) {
+    const option = await ctx.db.query("manPageOptionFlags").withIndex("by_pageId_and_flag", (q) => q.eq("pageId", page._id).eq("flag", flag)).first();
+    if (option) flags.push({ flag, anchorId: option.anchorId, excerpt: option.excerpt ?? option.flags });
+  }
+  const example = first
+    ? { command: first.command, description: first.description, source: first.source, ...(first.attribution ? { attribution: first.attribution } : {}) }
+    : null;
+  if (!example && !flags.length) return null;
+  return { name: page.name, section: page.section, example, flags, package: page.sourcePackage ?? null };
+}
+
 export const search = query({
   args: {
     stage: publicStageCompatibilityValidator,
@@ -677,17 +779,21 @@ export const search = query({
     section: v.union(v.string(), v.null()),
     limit: v.number(),
     offset: v.number(),
+    // The search page and home ask for the first hit's brief; type-ahead does not.
+    brief: v.optional(v.boolean()),
   },
   returns: v.object({
     query: v.string(),
     results: v.array(v.object({
       name: v.string(), section: v.string(), title: v.string(), description: v.string(),
       highlights: v.array(v.string()),
-      match: v.optional(v.literal("option")), anchorId: v.optional(v.string()), symbolKind: v.optional(symbolInput.fields.kind),
+      match: v.optional(v.union(v.literal("option"), v.literal("task"))), anchorId: v.optional(v.string()), symbolKind: v.optional(symbolInput.fields.kind),
+      taskPhrase: v.optional(v.string()),
     })),
     suggestions: v.array(v.string()),
     correctedQuery: v.optional(v.string()),
     hasMore: v.boolean(), nextOffset: v.union(v.number(), v.null()),
+    top: v.optional(topHitValidator),
   }),
   handler: async (ctx, args) => {
     const queryText = args.q.trim().replace(/\s+/g, " ").slice(0, 120).trim();
@@ -782,7 +888,7 @@ export const search = query({
           .take(8);
         if (pages.length) ordered = pages.map((page) => ({
           name: page.name, section: page.section, title: page.title,
-          description: page.description, highlights: [], rank: 20_000,
+          description: page.description, highlights: [], rank: 20_000, pageId: page._id,
         }));
       }
       if (!ordered.length && !optionQuery.flags.length) {
@@ -795,6 +901,7 @@ export const search = query({
     // Never advertise an offset the handler will clamp backward (MAX_SEARCH_OFFSET).
     const nextOffset =
       hasMore && offset < MAX_SEARCH_OFFSET ? Math.min(offset + visible.length, MAX_SEARCH_OFFSET) : null;
+    const top = args.brief && offset === 0 && visible[0]?.pageId ? await topHit(ctx, visible[0].pageId) : null;
 
     return {
       query: queryText,
@@ -806,11 +913,13 @@ export const search = query({
         highlights: hit.highlights,
         ...(hit.symbolKind ? {symbolKind: hit.symbolKind} : {}),
         ...(hit.anchorId ? { anchorId: hit.anchorId, ...(hit.match === 'option' ? { match: 'option' as const } : {}) } : {}),
+        ...(hit.match === 'task' && hit.taskPhrase ? { match: 'task' as const, taskPhrase: hit.taskPhrase } : {}),
       })),
       suggestions,
       ...(suggestions.length ? { correctedQuery: suggestions[0] } : {}),
       hasMore: nextOffset !== null,
       nextOffset,
+      ...(args.brief ? { top } : {}),
     };
   },
 });

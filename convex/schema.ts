@@ -432,7 +432,11 @@ export default defineSchema({
     generated: v.optional(generatedPartValidator),
     // Parts an operator removed; uploads skip them until the page changes.
     suppressed: v.optional(v.array(generatedPartNameValidator)),
-  }).index("by_contentSha256", ["contentSha256"]),
+    // The generated task phrases, one per line, for task-phrase search (C5).
+    // Written with `generated`; `generated.backfillTaskText` fills older rows.
+    taskText: v.optional(v.string()),
+  }).index("by_contentSha256", ["contentSha256"])
+    .searchIndex("search_taskText", { searchField: "taskText" }),
 
   rateLimitBuckets: defineTable({
     key: v.string(),

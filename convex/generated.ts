@@ -14,6 +14,33 @@ import { contentPointer } from "./content";
 import { pageByNameAndSection, requireActiveRelease } from "./_releaseLookups";
 import { datasetStageValidator, distroValidator } from "./schema";
 
+/** Task phrases as one searchable string; undefined when there are none. */
+export function taskTextFor(generated: { taskPhrases: string[] } | undefined): string | undefined {
+  const phrases = generated?.taskPhrases ?? [];
+  return phrases.length ? phrases.join("\n") : undefined;
+}
+
+/**
+ * Fill `taskText` on rows written before task-phrase search. Run once by an
+ * operator after deploy: `npx convex run generated:backfillTaskText '{}'`. Each
+ * run patches one page of rows and schedules the next from its cursor.
+ */
+export const backfillTaskText = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, args) => {
+    const result = await ctx.db.query("manPageGenerated").paginate({ cursor: args.cursor ?? null, numItems: 200 });
+    let patched = 0;
+    for (const row of result.page) {
+      const taskText = row.suppressed?.includes("generated") ? undefined : taskTextFor(row.generated);
+      if (row.taskText === taskText) continue;
+      await ctx.db.patch(row._id, { taskText });
+      patched += 1;
+    }
+    if (!result.isDone) await ctx.scheduler.runAfter(0, internal.generated.backfillTaskText, { cursor: result.continueCursor });
+    return { patched, isDone: result.isDone };
+  },
+});
+
 /**
  * Insert or update generated-layer rows by content hash. Each part present in
  * a record replaces the stored part; absent parts are kept, so a tldr refresh
@@ -43,7 +70,9 @@ export const upsertRecords = internalMutation({
         ...(record.page && !suppressed.has("page") ? { page: record.page } : {}),
         ...(record.tldr && !suppressed.has("tldr") ? { tldr: record.tldr } : {}),
         ...(record.tldrCommit ? { tldrCommit: record.tldrCommit } : {}),
-        ...(record.generated && !suppressed.has("generated") ? { generated: record.generated } : {}),
+        ...(record.generated && !suppressed.has("generated")
+          ? { generated: record.generated, taskText: taskTextFor(record.generated) }
+          : {}),
         updatedAt: args.updatedAt,
       };
       if (existing) {
@@ -205,7 +234,10 @@ export const suppressParts = internalMutation({
       .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.contentSha256))
       .unique();
     const suppressed = [...new Set([...(row?.suppressed ?? []), ...args.parts])].sort();
-    const cleared = Object.fromEntries(args.parts.map((part) => [part, undefined]));
+    const cleared = {
+      ...Object.fromEntries(args.parts.map((part) => [part, undefined])),
+      ...(args.parts.includes("generated") ? { taskText: undefined } : {}),
+    };
     if (row) {
       await ctx.db.patch(row._id, { ...cleared, suppressed, updatedAt: new Date().toISOString() });
     } else {

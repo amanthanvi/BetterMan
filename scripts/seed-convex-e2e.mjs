@@ -259,9 +259,31 @@ function makePages(distro) {
   return pages
 }
 
+// B6 generated layer for tar(1): a tldr example, its flag count, and task phrases,
+// so search can match "how do I extract a tarball" and lead with a worked example.
+function tarGenerated(contentSha256) {
+  const commit = '0123456789abcdef0123456789abcdef01234567'
+  const command = 'tar -cf target.tar path/to/directory'
+  return {
+    contentSha256,
+    tldrCommit: commit,
+    tldr: {
+      commit, path: 'common/tar.md', rejected: 0, flagUsage: [{ flag: '-c', count: 2 }],
+      examples: [{ description: 'Create an archive from a directory', command, placeholders: [[7, 17], [18, command.length]] }],
+    },
+    generated: {
+      provider: 'e2e', model: 'e2e', promptVersion: 'b6-v1', generatedAt: '2026-10-28', rejected: 0,
+      summary: 'Creates, lists and extracts archive files.', examples: [],
+      taskPhrases: ['extract a tar.gz file', 'create a tar archive', 'list archive contents'],
+    },
+  }
+}
+
 const now = new Date().toISOString()
+const tarHashes = new Set()
 for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
   const pages = makePages(distro)
+  tarHashes.add(pages.find((p) => p.name === 'tar').contentSha256)
   pages.push(page({ name: 'tnftp', section: '1', title: 'tnftp(1)', description: 'Terminal FTP fixture',
     sourcePackage: 'tnftp', toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Terminal FTP documentation.' }] }],
   }))
@@ -378,3 +400,4 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     await sleep(200)
   }
 }
+await post('/ingest/generated', { records: [...tarHashes].map(tarGenerated) })

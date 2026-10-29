@@ -29,9 +29,15 @@ export type SearchResult = {
   highlights: string[]
   /** Set when the page's OPTIONS defined the queried flag; anchorId is the option row. */
   symbolKind?: 'environment' | 'files' | 'errors' | 'config' | 'subcommand' | 'shell'
-  match?: 'option'
+  /** `option`: the page's OPTIONS defined the queried flag. `task`: a generated task phrase matched. */
+  match?: 'option' | 'task'
   anchorId?: string
+  /** The generated task phrase a task match came from (render as text). */
+  taskPhrase?: string
 }
+
+/** The first hit's worked example and key flags; present only when the page has them. */
+export type TopHit = NonNullable<NonNullable<FunctionReturnType<typeof api.queries.search>['top']>>
 
 export type SearchResponse = {
   query: string
@@ -40,6 +46,7 @@ export type SearchResponse = {
   correctedQuery?: string
   hasMore: boolean
   nextOffset?: number | null
+  top?: TopHit | null
 }
 
 export type SectionPage = { name: string; section: string; title: string; description: string }
@@ -195,6 +202,7 @@ const cachedSearch = unstable_cache(
     section: string | null,
     limit: number,
     offset: number,
+    brief: boolean,
   ) =>
     await convex().query(api.queries.search, {
       distro,
@@ -202,8 +210,9 @@ const cachedSearch = unstable_cache(
       section,
       limit,
       offset,
+      ...(brief ? { brief } : {}),
     }),
-  ['betterman', 'convex', 'search'],
+  ['betterman', 'convex', 'search', 'v2'],
   { revalidate: SEARCH_REVALIDATE_SECONDS },
 )
 
@@ -356,6 +365,8 @@ export async function search(opts: {
   section?: string
   limit?: number
   offset?: number
+  /** The first hit's example and key flags: the search page and home only. */
+  brief?: boolean
 }): Promise<SearchResponse> {
   return await mapConvexError(() =>
     cachedSearch(
@@ -364,6 +375,7 @@ export async function search(opts: {
       opts.section ?? null,
       opts.limit ?? 20,
       opts.offset ?? 0,
+      opts.brief === true,
     ),
   )
 }

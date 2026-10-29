@@ -19,8 +19,6 @@ import {
 } from '../../lib/recent'
 import { useDistro } from '../../components/state/distro'
 import { ManSectionLabel } from '../../components/man/RunningHead'
-import { EmptyState } from '../../components/ui/EmptyState'
-import { Kbd } from '../../components/ui/Kbd'
 import { LinkPendingHint } from '../../components/ui/LinkPendingHint'
 import { formatRelativeTime } from '../../lib/time'
 
@@ -98,11 +96,14 @@ export function HomeDashboardClient() {
     }
   }, [])
 
+  // Recents and bookmarks appear once they exist; an empty home has no empty sections.
+  if (!recentPages.length && !bookmarks.length) return null
+
   return (
     <div className="mt-14 grid gap-10 sm:grid-cols-2 sm:gap-8">
-      <section id="recent" aria-label="Recent" className="min-w-0">
-        <ManSectionLabel as="h2">Recent</ManSectionLabel>
-        {recentPages.length ? (
+      {recentPages.length ? (
+        <section id="recent" aria-label="Recent" className="min-w-0">
+          <ManSectionLabel as="h2">Recent</ManSectionLabel>
           <ul className={LIST}>
             {recentPages.map((it) => (
               <li key={`${it.name}:${it.section}:${it.at}`} className={ROW}>
@@ -110,16 +111,12 @@ export function HomeDashboardClient() {
               </li>
             ))}
           </ul>
-        ) : (
-          <EmptyState title="No recent pages" className="mt-1">
-            Pages you open are listed here.
-          </EmptyState>
-        )}
-      </section>
+        </section>
+      ) : null}
 
-      <section id="bookmarks" aria-label="Bookmarks" className="min-w-0">
-        <ManSectionLabel as="h2">Bookmarks</ManSectionLabel>
-        {bookmarks.length ? (
+      {bookmarks.length ? (
+        <section id="bookmarks" aria-label="Bookmarks" className="min-w-0">
+          <ManSectionLabel as="h2">Bookmarks</ManSectionLabel>
           <ul className={LIST}>
             {bookmarks.map((it) => (
               <li key={`${it.name}:${it.section}:${it.addedAt}`} className={`group/row ${ROW}`}>
@@ -135,12 +132,8 @@ export function HomeDashboardClient() {
               </li>
             ))}
           </ul>
-        ) : (
-          <EmptyState title="No bookmarks yet" className="mt-1">
-            Press <Kbd>m</Kbd> on a page to keep it here.
-          </EmptyState>
-        )}
-      </section>
+        </section>
+      ) : null}
     </div>
   )
 }

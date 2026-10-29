@@ -9,14 +9,25 @@ import { useDebouncedValue } from '../../../lib/useDebouncedValue'
 /**
  * Progressive enhancement over the GET form: typing debounces into
  * router.replace, so results re-render live while the URL stays shareable
- * and the plain form submit keeps working without JS.
+ * and the plain form submit keeps working without JS. Home uses it too, with
+ * `path="/"` so its results render inline, and a living placeholder.
  */
 export function SearchPageInput({
   initialQ,
   section,
+  path = '/search',
+  home = false,
+  placeholders,
+  className = 'bm-field pt-1.5 pb-2 text-lg placeholder:font-serif placeholder:italic',
 }: {
   initialQ: string
   section: string
+  path?: '/search' | '/'
+  /** Marks the home field (`data-bm-home-search`) instead of the page field. */
+  home?: boolean
+  /** Cycled while the field is empty; the first stays put under reduced motion. */
+  placeholders?: readonly string[]
+  className?: string
 }) {
   const router = useRouter()
   const [value, setValue] = useState(initialQ)
@@ -27,6 +38,7 @@ export function SearchPageInput({
   const restoreFocusRef = useRef(false)
   const isExternalNavigation = initialQuery !== lastPushedRef.current
   const { urlDistro: distro } = useDistro()
+  const placeholder = useLivingPlaceholder(placeholders, value === '')
 
   useEffect(() => {
     const cancelFocusRestore = () => {
@@ -82,8 +94,8 @@ export function SearchPageInput({
     if (distro) params.set('distro', distro)
     const qs = params.toString()
     restoreFocusRef.current = document.activeElement === inputRef.current
-    router.replace(qs ? `/search?${qs}` : '/search', { scroll: false })
-  }, [debounced, distro, isExternalNavigation, router, section, value])
+    router.replace(qs ? `${path}?${qs}` : path, { scroll: false })
+  }, [debounced, distro, isExternalNavigation, path, router, section, value])
 
   return (
     <input
@@ -92,12 +104,28 @@ export function SearchPageInput({
       type="search"
       value={value}
       onChange={(e) => setValue(e.target.value.slice(0, 120))}
-      placeholder="search man pages…"
-      data-bm-page-search
+      placeholder={placeholder ?? 'search man pages…'}
+      {...(home ? { 'data-bm-home-search': '' } : { 'data-bm-page-search': '' })}
       autoComplete="off"
+      spellCheck={false}
       autoFocus={!initialQ}
-      className="bm-field pt-1.5 pb-2 text-lg placeholder:font-serif placeholder:italic"
+      className={className}
       aria-label="Search man pages"
     />
   )
+}
+
+const PLACEHOLDER_MS = 3200
+
+/** Rotates through example queries while the field is empty and motion is welcome. */
+function useLivingPlaceholder(placeholders: readonly string[] | undefined, empty: boolean) {
+  const [index, setIndex] = useState(0)
+  useEffect(() => {
+    if (!placeholders || placeholders.length < 2 || !empty) return
+    const motion = window.matchMedia('(prefers-reduced-motion: no-preference)')
+    if (!motion.matches) return
+    const timer = window.setInterval(() => setIndex((i) => (i + 1) % placeholders.length), PLACEHOLDER_MS)
+    return () => window.clearInterval(timer)
+  }, [empty, placeholders])
+  return placeholders?.[index]
 }
