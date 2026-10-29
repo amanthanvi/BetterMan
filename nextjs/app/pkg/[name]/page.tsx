@@ -3,7 +3,8 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { FastApiError, fetchPackage, withDistroFallback } from '../../../lib/api'
-import { canonicalWithDistro, withDistro } from '../../../lib/distro'
+import { ManSectionLabel, RunningHead } from '../../../components/man/RunningHead'
+import { canonicalWithDistro, DISTRO_LABEL, withDistro } from '../../../lib/distro'
 import { getPublicOrigin } from '../../../lib/public-origin'
 import { getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
@@ -45,21 +46,45 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
   if (!data.pages.length && !cursor) notFound()
   const next = new URLSearchParams({ distro, ...(data.nextCursor ? { cursor: data.nextCursor } : {}) })
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="font-mono text-2xl font-semibold">{data.name}</h1>
-      <p className="mt-2 text-sm text-ink-3">{distro}{data.version ? ` · ${data.version}` : ''}</p>
-      <ul className="mt-6 space-y-3">
-        {data.pages.map((page) => (
-          <li key={`${page.name}.${page.section}`}>
-            <Link className="font-mono underline underline-offset-4" href={withDistro(`/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`, distro)}>
-              {page.name}({page.section})
+    <div className="mx-auto max-w-[46rem]">
+      <RunningHead title="Package" label={data.name} end={DISTRO_LABEL[distro]} />
+      <header className="pt-9">
+        <h1 className="font-mono text-2xl font-semibold md:text-3xl">{data.name}</h1>
+        <p className="mt-2.5 font-serif text-lg italic text-ink-2">
+          {DISTRO_LABEL[distro]} package
+          {data.version ? (
+            <>
+              {' '}
+              <span className="font-mono text-md not-italic">{data.version}</span>
+            </>
+          ) : null}
+        </p>
+      </header>
+      <section aria-labelledby="pkg-pages" className="mt-10">
+        <ManSectionLabel as="h2" id="pkg-pages">
+          Manual pages in this package
+        </ManSectionLabel>
+        <ul className="mt-2 border-b border-rule font-serif text-[1.0625rem] leading-[1.5]">
+          {data.pages.map((page) => (
+            <li key={`${page.name}.${page.section}`} className="border-t border-rule py-2">
+              <Link className="group no-underline" href={withDistro(`/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`, distro)}>
+                <span className="group-hover:text-accent">
+                  <b className="font-semibold">{page.name}</b>({page.section})
+                </span>
+              </Link>
+              {/* title is the citation itself (rmt(8)); the NAME line's description says what the page is. */}
+              {page.description ? <span className="text-ink-2"> {page.description}</span> : null}
+            </li>
+          ))}
+        </ul>
+        {data.hasMore ? (
+          <p className="mt-4 text-sm">
+            <Link className="underline decoration-rule-2 underline-offset-[3px] hover:text-accent" href={`/pkg/${encodeURIComponent(data.name)}?${next}`}>
+              More pages
             </Link>
-            {/* title is the citation itself (rmt(8)); the NAME line's description says what the page is. */}
-            {page.description ? <span className="ml-3 text-sm text-ink-3">{page.description}</span> : null}
-          </li>
-        ))}
-      </ul>
-      {data.hasMore ? <Link className="mt-6 inline-block underline underline-offset-4" href={`/pkg/${encodeURIComponent(data.name)}?${next}`}>More pages</Link> : null}
+          </p>
+        ) : null}
+      </section>
     </div>
   )
 }

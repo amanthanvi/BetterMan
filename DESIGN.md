@@ -195,6 +195,28 @@ tldr-pages link and CC BY 4.0, or "from EXAMPLES" / "generated · verified"),
 first, each linked to its definition) and the package. A query that reads as a
 command line is offered to explain token by token.
 
+## Section browse and packages
+
+`/section/<n>` keeps its running head, then the section's number and name, an
+italic lede (the page count, and which names this page lists), and a nav
+"Sections" of the nine sections. A sticky bar holds one field, "Filter section
+<n>": without JavaScript it searches the whole section (a GET to `/search`); with
+it, typing also narrows this page's rows (by their text) and hides empty letter
+groups (`[data-bm-letter]`), with a live "N of M on this page" count, and Enter
+still searches. The nav "Jump to letter" always lists A–Z: a letter on this page
+jumps to `#letter-<x>`; any other starts a page there (`?from=<x>`, a single
+letter or digit, read as `name >= x` on the section's name index). Both work
+without JavaScript. After a letter jump the position in the section is unknown,
+so the footer names the range ("Showing make to man") instead of numbering it,
+and a new page remounts the filter, clearing it. A jump past the section's last
+name says no names start there and links "Last page"; an empty section says it
+has no pages.
+
+`/pkg/<name>` has a running head (Package · name · distro), the package name in
+mono as its `h1`, the distro and version as an italic lede, and "Manual pages in
+this package" as a ruled list of citations with their NAME lines. It is linked
+from a man page's package line and from the search top hit ("Package <name>").
+
 ## Explain
 
 `/explain?cmd=…` (`app/explain/page.tsx`) is server-rendered and complete
