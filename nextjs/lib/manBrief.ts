@@ -17,8 +17,16 @@ export type BriefView = {
   generated: ManPageBrief['generated']
 }
 
-// Headings under which a page defines its modes: tar's "Operation mode", git's "Commands".
-const MODE_HEADING = /\b(operation mode|modes?|operations?|commands?|functions?|actions?)\b/i
+/**
+ * Headings that list mutually exclusive modes: tar's "Operation mode", pacman's
+ * "Operations". Only the whole heading counts, and only these, so tar's
+ * "Operation modifiers", find's combinable "ACTIONS", gpg's "COMMANDS" (sign and
+ * encrypt combine) and systemctl's verbs are not modes. When unsure, not a mode:
+ * a missed conflict warning costs less than a false one.
+ */
+export function isModeHeading(heading: string): boolean {
+  return /^(?:(?:main )?operation modes?|modes? of operation|operations)$/i.test(heading.trim().replace(/:$/, ''))
+}
 const GLOSS_MAX = 80
 
 /** The heading text each definition sits under, keyed by the definition's id. */
@@ -58,7 +66,7 @@ export function briefFlagGroups(mostUsed: PageDerivedResponse['mostUsed'] | unde
   const headings = definitionHeadings(blocks)
   const flags = mostUsed.flags.map(({ flag, anchorId }) => {
     const option = byAnchor.get(anchorId)
-    return { flag, anchorId, argument: option?.argument ?? null, gloss: option ? gloss(option.description) : '', mode: MODE_HEADING.test(headings.get(anchorId) ?? '') }
+    return { flag, anchorId, argument: option?.argument ?? null, gloss: option ? gloss(option.description) : '', mode: isModeHeading(headings.get(anchorId) ?? '') }
   })
   const strip = ({ mode: _mode, ...flag }: (typeof flags)[number]): BriefFlag => flag
   const modes = flags.filter((f) => f.mode)
