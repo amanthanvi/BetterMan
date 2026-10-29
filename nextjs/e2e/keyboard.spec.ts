@@ -131,6 +131,35 @@ test('man: pager keys find, step through matches, scroll and move between sectio
     .toBe(true)
 })
 
+test('man: g and G jump at once even when motion is allowed', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.goto('/man/bash/1')
+  await waitForInteractiveShell(page)
+  // Record the behavior of every programmatic scroll the keys ask for.
+  await page.evaluate(() => {
+    const calls: string[] = []
+    ;(window as unknown as { bmScrolls: string[] }).bmScrolls = calls
+    const record = (arg: unknown) => {
+      if (arg && typeof arg === 'object') calls.push(String((arg as ScrollOptions).behavior ?? 'auto'))
+    }
+    const scrollTo = window.scrollTo.bind(window) as (...args: unknown[]) => void
+    window.scrollTo = ((...args: unknown[]) => (record(args[0]), scrollTo(...args))) as typeof window.scrollTo
+    const intoView = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = function (arg?: boolean | ScrollIntoViewOptions) {
+      record(arg)
+      return intoView.call(this, arg)
+    }
+  })
+  const scrolls = () => page.evaluate(() => (window as unknown as { bmScrolls: string[] }).bmScrolls)
+
+  await page.locator('h1').first().click()
+  await page.keyboard.press('G')
+  await expect.poll(scrolls).not.toEqual([])
+  await page.keyboard.press('g')
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
+  expect(await scrolls()).not.toContain('smooth')
+})
+
 test('man 404: / falls back to search, since no manual is rendered to find in', async ({ page }) => {
   const response = await page.goto('/man/ta/9')
   expect(response?.status()).toBe(404)
