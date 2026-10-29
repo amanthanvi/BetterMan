@@ -15,7 +15,8 @@ Convex (convex/)
   └─ rate-limit buckets
 
 GitHub Actions (ingestion/)
-  └─ builds a release per distro and uploads it through Convex HTTP actions
+  ├─ builds a release per distro and uploads it through Convex HTTP actions
+  └─ builds the generated layer per page content hash (generate-layer.yml)
 ```
 
 ## Requests
@@ -61,6 +62,8 @@ outside frequently read release records.
 [Derived data](derived-data.md) documents matching semantics, limits, recovery,
 verified example frequency inputs and the package index. Derived completion/provenance fields
 are metadata exceptions to sealing; source content and shared blobs stay immutable.
+
+Man pages also carry a generated layer: a summary, sourced examples and task phrases built after ingest by the `generated-layer` workflow and stored once per page content hash (`docs/generated-layer.md`). The page read adds one indexed lookup for it. No model runs at request time.
 
 ## Deploy
 

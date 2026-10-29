@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as _generatedLayer from "../_generatedLayer.js";
 import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
 import type * as _manifestStorage from "../_manifestStorage.js";
@@ -25,6 +26,7 @@ import type * as derivedSignatures from "../derivedSignatures.js";
 import type * as derived from "../derived.js";
 import type * as content from "../content.js";
 import type * as crons from "../crons.js";
+import type * as generated from "../generated.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as ingestContract from "../ingestContract.js";
@@ -42,6 +44,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  _generatedLayer: typeof _generatedLayer;
   _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
   _manifestStorage: typeof _manifestStorage;
@@ -59,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   derived: typeof derived;
   content: typeof content;
   crons: typeof crons;
+  generated: typeof generated;
   http: typeof http;
   ingest: typeof ingest;
   ingestContract: typeof ingestContract;

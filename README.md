@@ -63,4 +63,4 @@ Pushes to `main` that pass CI deploy to Vercel through `.github/workflows/deploy
 
 See `CONTRIBUTING.md`. Report security issues as described in `SECURITY.md`.
 
-MIT licensed. See `LICENSE`.
+MIT licensed. See `LICENSE`. Examples from tldr-pages are CC BY 4.0; see `docs/vendor/tldr-pages.md`.

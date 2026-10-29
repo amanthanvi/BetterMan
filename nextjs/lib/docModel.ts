@@ -68,10 +68,42 @@ export type ManPageContent = {
 }
 
 export type ManPageVariant = { distro: string; datasetReleaseId: string; contentSha256: string }
+
+/**
+ * Answer-first data built at ingest (convex/_generatedLayer.ts). Examples are
+ * ordered page EXAMPLES, tldr-pages, then generated, five at most. Omit any
+ * part that is missing. `placeholders` are [start, end) spans of `command`.
+ * Every string is plain text: render it as React text, never through
+ * dangerouslySetInnerHTML or a markdown renderer (docs/generated-layer.md).
+ */
+export type BriefExampleSource = 'page' | 'tldr' | 'generated'
+export type BriefExample = {
+  source: BriefExampleSource
+  description: string
+  command: string
+  placeholders?: number[][]
+  /** tldr-pages items: show the source link and CC BY 4.0 with the change notice. */
+  attribution?: { name: 'tldr-pages'; url: string; license: 'CC-BY-4.0'; licenseUrl: string; modified: string }
+}
+export type ManPageBrief = {
+  summary: string | null
+  examples: BriefExample[]
+  taskPhrases: string[]
+  tldr: { path: string; commit: string; url: string; license: 'CC-BY-4.0' } | null
+  generated: { provider: string; model: string; promptVersion: string; generatedAt: string } | null
+}
+/** Short source labels the reader shows beside each example. */
+export const BRIEF_SOURCE_LABELS: Record<BriefExampleSource, string> = {
+  page: 'from EXAMPLES',
+  tldr: 'tldr-pages',
+  generated: 'generated · verified',
+}
+
 // Response enrichment is separate from the upstream Python/TS document model.
 export type ManPageResponse = {
   page: ManPage; content: ManPageContent; variants: ManPageVariant[]
   derived?: import('../../convex/_derivedEncoding').PageDerivedResponse
+  brief?: ManPageBrief | null
 }
 
 export type ErrorDetail = { code: string; message: string }

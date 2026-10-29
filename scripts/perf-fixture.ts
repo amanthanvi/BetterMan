@@ -70,6 +70,28 @@ export async function createFixture(onCall: () => void) {
         const blobId = await ctx.db.insert('manPageContentBlobs', { contentSha256, storageId })
         await ctx.db.insert('manPageContents', { pageId, blobId, contentSha256 })
       }
+      if (distro === 'debian') {
+        // One generated-layer row per content hash; every distro's bash shares it.
+        await ctx.db.insert('manPageGenerated', {
+          contentSha256: 'fixture-bash', updatedAt: '2026-10-28T00:00:00Z',
+          page: { examples: [{ description: '', command: 'if [ -n "$1" ]; then\n  printf "%s\\n" "$1"\nfi' }], flagUsage: [] },
+          tldr: {
+            commit: 'f4566462f5996e13a4f3523f21dc2a863aec53c1', path: 'common/bash.md', rejected: 0,
+            examples: [
+              { description: 'Execute a command and then exit', command: 'bash -c "command"', placeholders: [[9, 16]] },
+              { description: 'Execute a script', command: 'bash path/to/script.sh', placeholders: [[5, 22]] },
+            ],
+            flagUsage: [{ flag: '-c', count: 1 }],
+          },
+          generated: {
+            provider: 'opencode-go', model: 'deepseek-v4.1-flash', promptVersion: 'b6-v1', generatedAt: '2026-10-28',
+            summary: 'Runs an interactive shell or executes commands from a script or string.',
+            examples: [{ description: 'Check a script for syntax errors without running it', command: 'bash -n path/to/script.sh' }],
+            taskPhrases: ['run a shell script', 'check script syntax', 'start a login shell'],
+            rejected: 0,
+          },
+        })
+      }
       await ctx.db.insert('manPageLinks', {
         releaseId, fromPageId: pages[0].pageId, fromExternalId: `${distro}-bash`,
         toName: pages[1].name, toSection: '1', toExternalId: `${distro}-${pages[1].name}`,

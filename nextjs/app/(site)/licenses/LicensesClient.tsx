@@ -75,6 +75,18 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
           </a>
           .
         </p>
+        <p className="mt-2 text-sm text-ink-3">
+          Examples marked tldr-pages come from{' '}
+          <a href="https://github.com/tldr-pages/tldr" className="underline">
+            tldr-pages
+          </a>
+          , &copy; the tldr-pages team and contributors, under{' '}
+          <a href="https://creativecommons.org/licenses/by/4.0/" className="underline">
+            CC BY 4.0
+          </a>
+          . BetterMan converts their placeholders, showing the first of alternative values, and keeps only examples whose flags it verifies
+          against the manual shown; each example links to its source file.
+        </p>
 
         <details className="mt-4">
           <summary className="w-fit cursor-pointer text-sm text-ink-2 underline decoration-rule-2 underline-offset-[3px] hover:text-accent">

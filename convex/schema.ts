@@ -1,5 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import {
+  generatedPartNameValidator,
+  generatedPartValidator,
+  pageExamplesPartValidator,
+  tldrPartValidator,
+} from "./_generatedLayer";
 
 export const distroValidator = v.union(
   v.literal("debian"),
@@ -379,6 +385,19 @@ export default defineSchema({
     detailBytes: v.optional(v.number()), detailChunkCount: v.optional(v.number()), cleanupPending: v.optional(v.boolean()),
   }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
     .index("by_locale_and_distro_and_name_and_section", ["locale", "distro", "name", "section"]),
+
+  // Generated layer (B6), one row per page content hash. Not owned by a
+  // release: identical pages share it and pruning a release leaves it alone.
+  manPageGenerated: defineTable({
+    contentSha256: v.string(),
+    updatedAt: v.string(),
+    page: v.optional(pageExamplesPartValidator),
+    tldr: v.optional(tldrPartValidator),
+    tldrCommit: v.optional(v.string()),
+    generated: v.optional(generatedPartValidator),
+    // Parts an operator removed; uploads skip them until the page changes.
+    suppressed: v.optional(v.array(generatedPartNameValidator)),
+  }).index("by_contentSha256", ["contentSha256"]),
 
   rateLimitBuckets: defineTable({
     key: v.string(),

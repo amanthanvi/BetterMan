@@ -61,6 +61,7 @@ const storageStatsTableValidator = v.union(
   v.literal("manPageContentChunks"),
   v.literal("manPageContents"),
   v.literal("manPageAliases"),
+  v.literal("manPageGenerated"),
   v.literal("manPageLinks"),
   v.literal("manPageOptionFlags"),
   v.literal("manPageSearchDocuments"),
@@ -96,6 +97,8 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   manPageContentChunks: ["chunk"],
   manPageContents: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageAliases: ["name", "section", "targetName", "targetSection"],
+  // Content-hash rows, not release-owned; parts are bounded objects.
+  manPageGenerated: ["contentSha256", "updatedAt", "tldrCommit"],
   manPageLinks: ["fromExternalId", "toName", "toSection", "toTitle", "toDescription", "linkType"],
   manPageOptionFlags: ["nameNorm", "section", "flag", "anchorId", "flags"],
   manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
