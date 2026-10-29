@@ -3,7 +3,8 @@ import { spawn, spawnSync, execFileSync } from 'node:child_process'
 import { createServer } from 'node:net'
 import { once } from 'node:events'
 import { createHash, randomBytes } from 'node:crypto'
-import { readFile, writeFile, mkdir, rm, access, readdir, chmod } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, mkdtemp, rename, rm, readdir } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { basename, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { ConvexHttpClient } from 'convex/browser'
@@ -16,17 +17,20 @@ const option = (name, fallback) => {
   return i < 0 ? fallback : args[i + 1]
 }
 const pagesPerDistro = Number(option('--pages-per-distro', '6000'))
-const output = resolve(option('--output', '/tmp/issue399-r2/scale'))
+const outputArg = option('--output', null)
 const binary = resolve(option('--backend', `${process.env.HOME}/.cache/convex/binaries/precompiled-2026-10-22-1447815/convex-local-backend`))
 assert.equal(process.cwd(), root, 'Run pnpm/Node from this worktree')
 assert.equal(Number(process.versions.node.split('.')[0]), 26, 'Use Node26')
 assert.ok(Number.isSafeInteger(pagesPerDistro) && pagesPerDistro >= 10, 'Invalid page count')
 assert.ok(args.every((arg, i) => i % 2 === 1 || ['--pages-per-distro', '--output', '--backend'].includes(arg)), 'Unknown benchmark argument')
-await mkdir(output, { recursive: true, mode: 0o700 })
-await chmod(output, 0o700)
-try { await access(resolve(output, 'backend.sqlite3')); throw new Error('Benchmark output already has a database; choose a fresh --output path') } catch (e) { if (e.code !== 'ENOENT') throw e }
+// Every run gets a fresh private directory; an explicit --output must not exist yet.
+const output = outputArg === null ? await mkdtemp(resolve(tmpdir(), 'betterman-derived-scale-')) : resolve(outputArg)
+if (outputArg !== null) {
+  await mkdir(output, { mode: 0o700 }).catch(e => Promise.reject(e.code === 'EEXIST' ? new Error('Benchmark output already exists; choose a fresh --output path') : e))
+}
 const fixturePath = resolve(root, 'convex/derivedBenchmark.ts')
-try { await access(fixturePath); throw new Error('Temporary benchmark module already exists; preserve it and choose a clean run') } catch (e) { if (e.code !== 'ENOENT') throw e }
+// The deployed module moves into the output directory afterwards, so cleanup never deletes a concurrent edit.
+const deployedFixturePath = resolve(output, 'derivedBenchmark.ts')
 const fixture = (await readFile(resolve(root, 'scripts/derived-scale-fixture.ts'), 'utf8')).replaceAll('../convex/', './')
 const hash = value => createHash('sha256').update(value).digest('hex')
 const fixtureHash = hash(fixture)
@@ -39,7 +43,7 @@ for (const name of configPaths) {
   before.set(name, bytes)
   if (bytes) await writeFile(resolve(output, `backup-${basename(name)}`), bytes, { mode: 0o600 })
 }
-let backend, adminKey, url, envCreated = false, runSucceeded = false
+let backend, adminKey, url, envCreated = false, fixtureCreated = false, runSucceeded = false
 const report = {
   schemaVersion: 1, node: process.version, backend: basename(resolve(binary, '..')),
   sourceHead: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
@@ -106,16 +110,18 @@ try {
   const envPath = resolve(output, 'local.env')
   await writeFile(envPath, `CONVEX_SELF_HOSTED_URL=${url}\nCONVEX_SELF_HOSTED_ADMIN_KEY=${adminKey}\n`, { mode: 0o600, flag: 'wx' })
   envCreated = true
-  await writeFile(fixturePath, fixture, { flag: 'wx' })
-  progress({ phase: 'deploy', localUrl: url })
+  await writeFile(fixturePath, fixture, { flag: 'wx' }).catch(e => Promise.reject(e.code === 'EEXIST' ? new Error('Temporary benchmark module already exists; preserve it and choose a clean run') : e))
+  fixtureCreated = true
+  progress({ phase: 'deploy', localUrl: url, output })
   const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
   const deployment = spawnSync(pnpm, ['--use-node-version=26.5.1', 'exec', 'convex', 'deploy', '--yes', '--env-file', envPath, '--codegen', 'disable', '--typecheck', 'disable'], { cwd: root, env: { ...childEnv, CONVEX_AGENT_MODE: 'anonymous' }, encoding: 'utf8', maxBuffer: 5_000_000 })
   // Store only redacted CLI diagnostics; admin credentials never enter public output.
   const cliText = `${deployment.stdout ?? ''}\n${deployment.stderr ?? ''}`.replaceAll(adminKey, '[redacted]').replaceAll(secret, '[redacted]')
   await writeFile(resolve(output, 'deploy.log'), cliText)
   assert.equal(deployment.status, 0, 'Loopback-only local deployment failed; inspect redacted deploy.log')
-  assert.equal(hash(await readFile(fixturePath)), fixtureHash, 'Benchmark fixture changed concurrently')
-  await rm(fixturePath)
+  await rename(fixturePath, deployedFixturePath)
+  fixtureCreated = false
+  assert.equal(hash(await readFile(deployedFixturePath)), fixtureHash, 'Benchmark fixture changed concurrently; the deployed copy is in the output directory')
   const client = new ConvexHttpClient(url, { logger: false })
   client.setAdminAuth(adminKey)
   let calls = 0
@@ -217,8 +223,7 @@ try {
   report.failure = [adminKey, secret].reduce((text, value) => value ? text.replaceAll(value, '[redacted]') : text, String(error))
   throw error
 } finally {
-  const fixtureNow = await readFile(fixturePath).catch(e => e.code === 'ENOENT' ? null : Promise.reject(e))
-  if (fixtureNow && hash(fixtureNow) === fixtureHash) await rm(fixturePath)
+  if (fixtureCreated) await rename(fixturePath, deployedFixturePath).catch(e => e.code === 'ENOENT' ? null : Promise.reject(e))
   if (backend && backend.exitCode === null && backend.signalCode === null) {
     const fields = execFileSync('ps', ['-p', String(backend.pid), '-o', 'ppid=,comm='], { encoding: 'utf8' }).trim().split(/\s+/)
     assert.equal(Number(fields[0]), process.pid, 'Owned backend parent changed; refusing cleanup')
