@@ -16,7 +16,8 @@ async function delayNavigations(page: Page, ms: number) {
     if (request.headers()['rsc'] === '1' && !isPrefetch(request)) {
       await new Promise((resolve) => setTimeout(resolve, ms))
     }
-    await route.continue()
+    // Fall back so earlier handlers (such as a test's prefetch abort) still apply.
+    await route.fallback()
   })
 }
 
@@ -39,8 +40,6 @@ async function interceptRSC(page: Page, pathname: string) {
 test('navigation: palette page navigation shows feedback after closing until the payload arrives', async ({ page }) => {
   await page.goto('/')
   await waitForInteractiveShell(page)
-  // Fresh contexts get this attribute after React attaches the shell listeners.
-  await expect(page.locator('html')).toHaveAttribute('data-theme', /^(light|dark)$/)
   await page.getByRole('button', { name: 'Search' }).click()
   await page.getByRole('combobox', { name: 'Command palette input' }).fill('tar --create')
   const option = page.getByRole('option', { name: /tar\(1\)/i })
@@ -68,8 +67,6 @@ test('navigation: palette page navigation shows feedback after closing until the
 test('navigation: palette search shows feedback for a query-only navigation and clears on a repeated search', async ({ page }) => {
   await page.goto('/search?q=grep')
   await waitForInteractiveShell(page)
-  // Fresh contexts get this attribute after React attaches the shell listeners.
-  await expect(page.locator('html')).toHaveAttribute('data-theme', /^(light|dark)$/)
   await page.evaluate((key) => {
     localStorage.setItem(key, JSON.stringify({ version: 1, items: [{ kind: 'search', query: 'tar', at: Date.now() }] }))
   }, RECENT_STORAGE_KEY)
@@ -103,8 +100,6 @@ test('navigation: palette search shows feedback for a query-only navigation and 
 test('navigation: distro replacement shows feedback until its query-only payload arrives and keeps the hash', async ({ page }) => {
   await page.goto('/man/tar/1#synopsis')
   await waitForInteractiveShell(page)
-  // Fresh contexts get this attribute after React attaches the shell listeners.
-  await expect(page.locator('html')).toHaveAttribute('data-theme', /^(light|dark)$/)
   const pending = page.getByRole('status', { name: 'Navigation', exact: true })
   const navigation = await interceptRSC(page, '/man/tar/1')
   try {
@@ -127,6 +122,11 @@ test('navigation: distro replacement shows feedback until its query-only payload
 })
 
 test('navigation: a link into a man page dims while its payload is pending', async ({ page }) => {
+  // A completed prefetch can satisfy the navigation before the pending state appears.
+  await page.route('**/*', async (route) => {
+    if (new URL(route.request().url()).pathname === '/man/tar/1' && isPrefetch(route.request())) await route.abort()
+    else await route.continue()
+  })
   await page.goto('/section/1')
   await waitForInteractiveShell(page)
   const link = page.getByRole('link', { name: /^tar\(1\)/ })

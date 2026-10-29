@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 
-import { pressShortcutUntilVisible, waitForInteractiveShell } from './shortcuts'
+import { waitForInteractiveShell } from './shortcuts'
 
 function storedTheme(page: Page) {
   return page.evaluate(() => localStorage.getItem('bm-theme'))
@@ -20,7 +20,8 @@ test('shortcuts: single-key shortcuts are ignored while the shortcuts dialog has
 
   const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
   const closeButton = page.getByRole('button', { name: 'Close keyboard shortcuts' })
-  await pressShortcutUntilVisible(page, '?', dialog)
+  await page.keyboard.press('?')
+  await expect(dialog).toBeVisible()
   await expect(closeButton).toBeFocused()
 
   for (const key of ['d', 'h', 't', '/']) await page.keyboard.press(key)
@@ -95,7 +96,8 @@ test('man: pager keys find, step through matches, scroll and move between sectio
   await waitForInteractiveShell(page)
 
   const findInput = page.locator('[data-bm-findbar]').getByRole('textbox', { name: 'Find in page' })
-  await pressShortcutUntilVisible(page, '/', findInput)
+  await page.keyboard.press('/')
+  await expect(findInput).toBeVisible()
   await expect(findInput).toBeFocused()
   await findInput.fill('filler block')
   const count = page.locator('[data-bm-findbar]').getByText(/^\d+\/\d+$/)
@@ -164,6 +166,7 @@ test('man 404: / falls back to search, since no manual is rendered to find in', 
   const response = await page.goto('/man/ta/9')
   expect(response?.status()).toBe(404)
   await waitForInteractiveShell(page)
-  await pressShortcutUntilVisible(page, '/', page.getByRole('combobox', { name: 'Command palette input' }))
+  await page.keyboard.press('/')
+  await expect(page.getByRole('combobox', { name: 'Command palette input' })).toBeVisible()
   await expect(page.locator('[data-bm-findbar]')).toHaveCount(0)
 })

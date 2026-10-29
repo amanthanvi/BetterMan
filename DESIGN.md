@@ -171,7 +171,7 @@ combinator.
 - **Option anchors:** the body definition keeps the parser's id, so
   `#<anchorId>` lands there; the options-index row is `#opt-<anchorId>`
   (`~2`, `~3`, … if taken). Both select the option. No id repeats on a page.
-- **Data hooks:** `data-bm-app-header/app-footer/sidebar/findbar/home-search/page-search`.
+- **Data hooks:** `data-bm-app-header/app-footer/sidebar/findbar/home-search/page-search`, and `html[data-bm-hydrated="true"]`, set once per document load after the shell's handlers attach (see `docs/runbooks/e2e-debug.md`).
 - **Accessible names asserted by `nextjs/e2e/`:** banner "Site header",
   contentinfo "Site footer", header link /BetterMan/, searchbox "Search man
   pages", combobox "Command palette input", textbox "Find in page", nav "On

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
-import { pressShortcutUntilVisible, selectOptionUntilURL, waitForInteractiveShell } from './shortcuts'
+import { waitForInteractiveShell } from './shortcuts'
 
 test('man: sticky sidebar renders TOC; find opens from the title bar (desktop)', async ({ page }) => {
   await page.goto('/man/tar/1')
@@ -102,9 +102,11 @@ test('man: sidebar collapses and expands with b', async ({ page }) => {
   const expandButton = sidebar.getByRole('button', { name: 'Expand sidebar' })
   await expect(tocNav).toBeVisible()
 
-  await pressShortcutUntilVisible(page, 'b', expandButton)
+  await page.keyboard.press('b')
+  await expect(expandButton).toBeVisible()
 
-  await pressShortcutUntilVisible(page, 'b', tocNav)
+  await page.keyboard.press('b')
+  await expect(tocNav).toBeVisible()
 })
 
 test('man: reading preferences drawer applies settings', async ({ page }) => {
@@ -157,8 +159,10 @@ test('man: switching distro twice keeps a single URL hash', async ({ page }) => 
   await waitForInteractiveShell(page)
 
   const variantSelect = page.getByLabel('Select distribution variant')
-  await selectOptionUntilURL(page, variantSelect, 'ubuntu', /\/man\/tar\/1\?distro=ubuntu#synopsis$/)
-  await selectOptionUntilURL(page, variantSelect, 'debian', /\/man\/tar\/1#synopsis$/)
+  await variantSelect.selectOption('ubuntu')
+  await expect(page).toHaveURL(/\/man\/tar\/1\?distro=ubuntu#synopsis$/)
+  await variantSelect.selectOption('debian')
+  await expect(page).toHaveURL(/\/man\/tar\/1#synopsis$/)
 
   await page.getByRole('button', { name: 'Reading preferences' }).click()
   const dialog = page.getByRole('dialog', { name: 'Reading preferences' })
@@ -395,7 +399,8 @@ test('man: distro variant selector swaps content', async ({ page }) => {
   const variantSelect = page.getByLabel('Select distribution variant')
   await expect(variantSelect).toBeVisible()
 
-  await selectOptionUntilURL(page, variantSelect, 'ubuntu', /distro=ubuntu/)
+  await variantSelect.selectOption('ubuntu')
+  await expect(page).toHaveURL(/distro=ubuntu/)
   await expect(marker).toBeVisible()
 })
 
