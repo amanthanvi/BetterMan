@@ -4,8 +4,11 @@ import { restoreReadingPrefs } from '../lib/readingPrefs'
 import { cancelScrollPin, getScrollBehavior, scrollElementIntoView } from '../lib/scroll'
 import { formatRelativeTime } from '../lib/time'
 import { initActions, initBookmark } from './actions'
+import { initComposer } from './composer'
 import { initFind, openFind } from './find'
 import { initOptions } from './options'
+import { initPreviews } from './previews'
+import { initTables } from './tables'
 import { openPalette } from './palette'
 import { openPrefs } from './prefs'
 import { openShortcuts } from './shortcuts'
@@ -171,6 +174,9 @@ function init() {
     initToc()
     initFind()
     initOptions()
+    initComposer()
+    initPreviews()
+    initTables()
   }
   bindKeys(isManPage, isManPage ? initBookmark() : null)
   if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {

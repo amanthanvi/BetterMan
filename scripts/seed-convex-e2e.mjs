@@ -294,6 +294,17 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       options: flags.map(([flag, id, description]) => ({ flags: flag, anchorId: `opt-${id}`, description })),
     }))
   }
+  // ascii(7): a reference table for the man page's row lookup and column sort.
+  const asciiRows = [['060', '48', '30', '0'], ['061', '49', '31', '1'], ['062', '50', '32', '2'], ['101', '65', '41', 'A'], ['102', '66', '42', 'B'], ['103', '67', '43', 'C'], ['141', '97', '61', 'a'], ['142', '98', '62', 'b'], ['143', '99', '63', 'c'], ['040', '32', '20', 'SPACE']]
+  pages.push(page({
+    name: 'ascii', section: '7', title: 'ascii(7)', description: 'ASCII character set encoded in octal, decimal, and hexadecimal',
+    toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }],
+    blocks: [
+      { type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' },
+      { type: 'paragraph', inlines: [{ type: 'text', text: 'ASCII is the American Standard Code for Information Interchange.' }] },
+      { type: 'table', headers: ['Oct', 'Dec', 'Hex', 'Char'], rows: asciiRows },
+    ],
+  }))
   const datasetReleaseId = `e2e-${distro}-${Date.now()}`
   const sectionTotals = Object.entries(
     pages.reduce((acc, p) => {

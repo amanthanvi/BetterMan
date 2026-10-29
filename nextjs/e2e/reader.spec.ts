@@ -302,5 +302,6 @@ test('reader: the home browse label names the sections it lists', async ({ page 
   const browse = page.getByRole('region', { name: 'Browse sections' })
   await expect(browse.getByRole('link', { name: /^1\s/ })).toBeVisible()
   await expect(browse.getByRole('link', { name: /^3\s/ })).toBeVisible()
-  await expect(browse.getByText('Sections 1, 3', { exact: true })).toBeVisible()
+  // The seed lists sections 1, 3 and 7 (ascii(7), for the man page's live tables).
+  await expect(browse.getByText('Sections 1, 3, 7', { exact: true })).toBeVisible()
 })
