@@ -8,7 +8,7 @@ import type { TocItem } from '../../lib/docModel'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { FIND_REQUEST_EVENT, singleKeyShortcutsBlocked } from '../../lib/dom'
 import { withDistro, type Distro } from '../../lib/distro'
-import { getScrollBehavior, READER_INPUT_EVENTS } from '../../lib/scroll'
+import { cancelScrollPin, getScrollBehavior, READER_INPUT_EVENTS, scrollElementIntoView } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
 import { parseReleaseId } from '../../lib/release'
 import { useDistro } from '../state/distro'
@@ -299,15 +299,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           window.dispatchEvent(new CustomEvent(FIND_REQUEST_EVENT))
           return
         }
+        // A pin from an earlier jump (a section, a find match) attaches its stop-on-input
+        // listeners a frame late; under load this key may arrive first, so end it here.
         if (pagerKey === 'j' || pagerKey === 'k') {
           e.preventDefault()
+          cancelScrollPin()
           window.scrollBy({ top: pagerKey === 'j' ? PAGER_LINE_PX : -PAGER_LINE_PX, behavior: 'auto' })
           return
         }
-        if (pagerKey === 'g' || pagerKey === 'G') {
+        if (pagerKey === 'g') {
           e.preventDefault()
-          const top = pagerKey === 'g' ? 0 : document.documentElement.scrollHeight
-          window.scrollTo({ top, left: 0, behavior: getScrollBehavior() })
+          cancelScrollPin()
+          window.scrollTo({ top: 0, left: 0, behavior: getScrollBehavior() })
+          return
+        }
+        if (pagerKey === 'G') {
+          e.preventDefault()
+          // Off-screen blocks take their real height only as they render near the
+          // viewport, so the page grows after a single scroll to its end. Pin the footer
+          // to the bottom instead; the pin re-scrolls as heights settle, until the reader
+          // takes over.
+          const end = document.querySelector('[data-bm-app-footer]')
+          if (end) scrollElementIntoView(end, { behavior: getScrollBehavior(), block: 'end' })
           return
         }
         if ((pagerKey === '[' || pagerKey === ']') && toc.items.length) {
