@@ -78,12 +78,16 @@ indicates a prefix; it is rejected, not stripped. These are bounded categories:
 never log model text, reasoning, page text, or arbitrary provider values. The old
 run had none of these diagnostics, so its causes cannot be reconstructed.
 
-To refresh existing page examples without model calls, run the generated-layer
-CLI with `--refresh-page --no-llm` for the intended stage, distro and selection.
-Normal unchanged-row skipping otherwise leaves existing examples as stored.
-For a sample of pages,
-open the man page API response (`/api/v1/man/<name>/<section>`) and read
-`brief`.
+For a sample of pages, open the man page API response
+(`/api/v1/man/<name>/<section>`) and read `brief`.
+
+## Refreshing page examples
+
+Unchanged rows are skipped, so a fix to page-example or tldr extraction
+reaches stored rows only through a refresh. Run the workflow with
+`refresh_page` on, `llm` off and `dry_run` off: it rebuilds page and tldr
+examples on existing rows, keeps their model text and makes no model calls.
+Locally, the CLI flags are `--refresh-page --no-llm`.
 
 ## Pausing and resuming
 
