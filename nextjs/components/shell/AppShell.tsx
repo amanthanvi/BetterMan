@@ -307,10 +307,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           window.scrollBy({ top: pagerKey === 'j' ? PAGER_LINE_PX : -PAGER_LINE_PX, behavior: 'auto' })
           return
         }
+        // Like less, g and G jump at once: a smooth scroll down a long page such as
+        // tar(1) takes seconds.
         if (pagerKey === 'g') {
           e.preventDefault()
           cancelScrollPin()
-          window.scrollTo({ top: 0, left: 0, behavior: getScrollBehavior() })
+          window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
           return
         }
         if (pagerKey === 'G') {
@@ -320,7 +322,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           // to the bottom instead; the pin re-scrolls as heights settle, until the reader
           // takes over.
           const end = document.querySelector('[data-bm-app-footer]')
-          if (end) scrollElementIntoView(end, { behavior: getScrollBehavior(), block: 'end' })
+          if (end) scrollElementIntoView(end, { behavior: 'auto', block: 'end' })
           return
         }
         if ((pagerKey === '[' || pagerKey === ']') && toc.items.length) {
