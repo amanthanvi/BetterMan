@@ -21,3 +21,7 @@ Follow the exact Convex seed + Next.js startup sequence in CI’s `e2e` job. Aft
 - Duplicate accessible names (strict mode selector collisions).
 - Deferred UI updates (find-in-page) not awaited.
 - Seed data drift (test expects a page that isn’t in the deterministic seed).
+
+## Interactive shell contract
+
+The site sets `data-bm-hydrated="true"` on the document element once per document load, after the shell's client runtime has attached its keyboard and click handlers (shortcuts, palette, find bar, theme). It is not reset on client-side navigation, and it does not cover page content under a loading boundary (`(site)/loading.tsx`), which can hydrate later: wait on that content itself before clicking it. E2E tests wait for this signal with `waitForInteractiveShell`; server HTML must not include it. Any future client runtime, including the standalone man-page bundle, must set the same attribute after attaching its handlers.

@@ -420,6 +420,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [distro, isManPage, router, theme, toc])
 
   useEffect(() => {
+    document.documentElement.setAttribute('data-bm-hydrated', 'true')
+    return () => document.documentElement.removeAttribute('data-bm-hydrated')
+  }, [])
+
+  useEffect(() => {
     if (!themeAnnouncementMountedRef.current) {
       themeAnnouncementMountedRef.current = true
       return
