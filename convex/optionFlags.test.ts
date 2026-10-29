@@ -508,6 +508,27 @@ describe("search correctness", () => {
     expect((await search(t, "grpe")).results[0]).toMatchObject({ name: "grep" });
   });
 
+  it("finds short-name typos when the two-letter bucket is crowded", async () => {
+    // Production gate: Debian has more than 16 ta* names before tar.
+    const t = await seeded([page("tar", null), page("tr", null), page("grep", null)], 66);
+    await t.run(async (ctx) => {
+      const source = await ctx.db.query("manPageSearchDocuments").first();
+      const { _id, _creationTime, ...fields } = source!;
+      void _id; void _creationTime;
+      for (const prefix of ["ta", "gr"]) {
+        for (let i = 0; i < 40; i += 1) {
+          const name = `${prefix}a${String(i).padStart(2, "0")}`;
+          await ctx.db.insert("manPageSearchDocuments", { ...fields, name, nameNorm: name });
+        }
+      }
+    });
+    for (const [q, expected] of [["tarr", "tar"], ["greep", "grep"], ["grepp", "grep"]]) {
+      const result = await search(t, q);
+      expect(result.results[0], q).toMatchObject({ name: expected });
+      expect(result.correctedQuery, q).toBe(expected);
+    }
+  });
+
   it("finds a crowded dotted-name typo in a focused bucket within 66 reads", async () => {
     const t = await seeded([page("systemd.service", null)], 66);
     await t.run(async (ctx) => {
