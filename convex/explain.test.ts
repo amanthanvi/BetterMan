@@ -3,6 +3,7 @@ import { convexTest } from 'convex-test';
 import { describe, it, expect } from 'vitest';
 import { makeFunctionReference } from 'convex/server';
 import schema from './schema';
+import reviewR5 from './fixtures/explain-review-r5.json';
 import reviewR4 from './fixtures/explain-review-r4.json';
 import UNSUPPORTED_FORMS from './fixtures/unsupported-shell.json';
 import {explanationBytes,EXPLAIN_OUTPUT_LIMITS} from './_explainBounds';
@@ -427,5 +428,32 @@ describe('round 4: whole-line admission and response bounds',()=>{
   const result=await explain(await reviewed(),'rm\r item');
   expect(result.diagnostics.join(' ')).toContain('control character');
   expect(result.stages[0].tokens[0].kind).toBe('unknown');
+ });
+});
+
+describe('round 5: grammar and wrapper admission',()=>{
+ it.each(reviewR5)('round-5 review $group: $cmd',async({cmd,errorCode})=>{
+  if(errorCode) {await expect(explain(await reviewed(),cmd)).rejects.toThrow(errorCode);return;}
+  const result=await explain(await reviewed(),cmd);
+  const notes=result.stages.flatMap((s:{destructive:{description:string;dryRun:string|null}[]})=>s.destructive);
+  expect(notes.every((n:{description:string;dryRun:string|null})=>factDescriptions.has(n.description) && (n.dryRun===null || hints.has(n.dryRun)))).toBe(true);
+  if(result.diagnostics.length || result.stages.some((s:{tokens:{kind:string}[]})=>s.tokens.some(t=>t.kind==='unknown'))) expect(notes).toEqual([]);
+  expect(explanationBytes(result)).toBeLessThanOrEqual(65536);
+ });
+ it.each(['|','&&','||'])('rejects comment-only boundary after %s',async op=>{
+  const result=await explain(await reviewed(),`rm x ${op} # hi`);
+  expect(result.diagnostics.length).toBeGreaterThan(0);
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+ });
+ it.each(["rm x{,''}",'rm x{,""}','timeout invalid rm x','nice -n invalid rm x'])('suppresses facts and hints for %s',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(result.diagnostics.length).toBeGreaterThan(0);
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+ });
+ it.each(['env >out rm x','sudo -u root >out rm x','timeout >out 5 rm x','nice -n >out 1 rm x','env -u >out HOME rm x'])('resolves interleaved redirects for %s',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(result.diagnostics).toEqual([]);
+  expect(result.stages[1].tokens[0]).toMatchObject({kind:'command',value:'rm'});
+  expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).map((n:{description:string})=>n.description)).toEqual(['> replaces the contents of the file it writes to.','rm deletes files.']);
  });
 });

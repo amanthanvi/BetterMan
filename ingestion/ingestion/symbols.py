@@ -208,7 +208,8 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
                             terms = _environment_terms(item.get("termInlines", []))
                         else:
                             terms = re.findall(
-                                r"(?:\$(?:[A-Z_][A-Z0-9_]*|\{[^}]+\})|~)?/[^\s,;]+", term
+                                r"(?:\$(?:[A-Z_][A-Z0-9_]*|\{[^}]+\})|~)?/(?:\{[^{}\s]+\}|[^\s,;{}])+",
+                                term,
                             )
                         for symbol in terms:
                             add(symbol, str(target), _text(item.get("definitionBlocks", [])), kind)

@@ -304,3 +304,31 @@ def test_real_login_defs_typed_directives_and_less_platform_labels():
     terms = {row["term"] for row in symbol_rows("less", "1", less["doc"])}
     assert not {"MS", "DOS", "OS"} & terms
     assert "LESS" in terms
+
+
+def test_file_symbols_preserve_brace_commas_and_separate_paths():
+    rows = symbol_rows(
+        "ld.so",
+        "8",
+        {
+            "blocks": [
+                heading("FILES", "files"),
+                definitions("/lib/ld-linux.so.{1,2}, /lib64/ld-linux-x86-64.so.2"),
+            ]
+        },
+    )
+    assert [row["term"] for row in rows] == [
+        "/lib/ld-linux.so.{1,2}",
+        "/lib64/ld-linux-x86-64.so.2",
+    ]
+    assert all(row["anchorId"] == "term" for row in rows)
+
+
+def test_real_ld_so_file_brace_term_retains_its_renderer_anchor():
+    import json
+    from pathlib import Path
+
+    case = json.loads((Path(__file__).parent / "fixtures/symbol-file-braces.json").read_text())
+    rows = symbol_rows(case["name"], case["section"], case["doc"])
+    term = next(row for row in rows if row["term"] == "/lib/ld-linux.so.{1,2}")
+    assert term["anchorId"] == case["doc"]["blocks"][1]["items"][0]["id"]

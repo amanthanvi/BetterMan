@@ -27,6 +27,7 @@ import type * as _releaseManifest from "../_releaseManifest.js";
 import type * as _searchTypos from "../_searchTypos.js";
 import type * as _shellGrammar from "../_shellGrammar.js";
 import type * as _shellParser from "../_shellParser.js";
+import type * as _shellWrappers from "../_shellWrappers.js";
 import type * as _storedPayload from "../_storedPayload.js";
 import type * as content from "../content.js";
 import type * as crons from "../crons.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   _searchTypos: typeof _searchTypos;
   _shellGrammar: typeof _shellGrammar;
   _shellParser: typeof _shellParser;
+  _shellWrappers: typeof _shellWrappers;
   _storedPayload: typeof _storedPayload;
   content: typeof content;
   crons: typeof crons;

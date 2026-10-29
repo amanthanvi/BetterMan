@@ -75,3 +75,23 @@ test('explain: decoded cluster and serialized byte limits survive HTTP transport
     expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([])
   }
 })
+
+test('explain: comment-only boundaries, partly quoted braces and invalid wrapper values fail closed', async ({request})=>{
+  for(const cmd of ['tar item | # hi','tar item && # hi','tar item || # hi',"tar x{,''}",'timeout invalid tar item','nice -n invalid tar item']) {
+    const response=await request.get('/api/v1/explain',{params:{cmd}})
+    expect(response.status()).toBe(200)
+    const result=await response.json()
+    expect(result.diagnostics.length,cmd).toBeGreaterThan(0)
+    expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([])
+  }
+})
+
+test('explain: interleaved wrapper redirects preserve the child option anchor', async ({request})=>{
+  const response=await request.get('/api/v1/explain',{params:{cmd:'env >out tar -c item'}})
+  expect(response.status()).toBe(200)
+  const result=await response.json()
+  expect(result.diagnostics).toEqual([])
+  expect(result.stages[0].tokens.some((t:{kind:string})=>t.kind==='redirect')).toBe(true)
+  expect(result.stages[1].tokens[0]).toMatchObject({kind:'command',page:{name:'tar'}})
+  expect(result.stages[1].tokens.find((t:{kind:string})=>t.kind==='option').anchor).toBe('opt-create')
+})

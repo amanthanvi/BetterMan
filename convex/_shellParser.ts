@@ -1,4 +1,5 @@
-import { SUPPORTED_SHELL_GRAMMAR, shellGrammarDiagnostics, isUnsupportedShellKeyword } from './_shellGrammar';
+import { SUPPORTED_SHELL_GRAMMAR, shellGrammarDiagnostics, isUnsupportedShellKeyword, hasUnquotedBrace, hasUnquotedTilde } from './_shellGrammar';
+import {wrapperBoundary} from './_shellWrappers';
 import { manualCommandName } from './_commandConventions';
 export class ShellParseError extends Error {
   constructor(readonly code: string) { super(code); }
@@ -137,7 +138,7 @@ export function parseShell(input: string): ShellParse {
     const last = stage.tokens.at(-1);
     if (last?.kind === 'operator' && ['|', '|&', '&&', '||'].includes(last.value)) {
       const next = result.stages.find(candidate => candidate.id > stage.id && candidate.parent === stage.parent);
-      if (!next?.tokens.length) result.diagnostics.push(`Missing command after ${last.value}`);
+      if (!next?.tokens.some(token=>token.kind!=='comment')) result.diagnostics.push(`Missing command after ${last.value}`);
     }
     stage.tokens.forEach((token, index) => {
       if (token.kind === 'redirect' && !['redirectTarget','glob'].includes(stage.tokens[index + 1]?.kind)) result.diagnostics.push(`Missing redirection target for ${token.text}`);
@@ -146,6 +147,19 @@ export function parseShell(input: string): ShellParse {
   result.diagnostics.push(...shellGrammarDiagnostics(input,result.stages));
   if(result.diagnostics.some(message=>message.includes('control character'))) {
     for(const stage of result.stages) for(const token of stage.tokens) if(!['operator','redirect','redirectTarget','comment'].includes(token.kind)) token.kind='unknown';
+  }
+  // Shell redirects belong to the simple command even between wrapper options
+  // and their values. Keep source spans, but lift pairs out of the argv view.
+  for(const stage of result.stages) {
+    const argv:ShellToken[]=[],redirects:ShellToken[]=[];
+    for(let i=0;i<stage.tokens.length;i++) {
+      const token=stage.tokens[i];
+      if(token.kind==='redirect' && stage.tokens[i+1] && ['redirectTarget','glob'].includes(stage.tokens[i+1].kind)) {redirects.push(token,stage.tokens[++i]);}
+      else argv.push(token);
+    }
+    const boundary=argv.findIndex(t=>['operator','comment'].includes(t.kind));
+    argv.splice(boundary<0 ? argv.length : boundary,0,...redirects);
+    stage.tokens=argv;
   }
   for (let index = 0; index < result.stages.length; index++) {
     const stage = result.stages[index];
@@ -167,35 +181,9 @@ export function parseShell(input: string): ShellParse {
       token.kind = 'unknown'; result.diagnostics.push('Shell control structures are not interpreted'); continue;
     }
     if (WRAPPER_ARGUMENTS[name]) {
-      let end = command + 1;
-      let replacement: string | null = null;
-      while (end < stage.tokens.length) {
-        const t = stage.tokens[end];
-        if (t.dynamic) {result.diagnostics.push(`Cannot statically unwrap ${name} with runtime options`); end=stage.tokens.length; break;}
-        if (t.kind === 'operator' || t.kind === 'redirect') break;
-        if (t.value === '--') { end++; break; }
-        if (name === 'env' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(t.value)) { t.kind = 'assignment'; end++; continue; }
-        if (!t.value.startsWith('-')) break;
-        if (name === 'xargs' && /^(?:-I|-i|--replace(?:=|$))/.test(t.value)) {
-          const marker = t.value === '-I' ? stage.tokens[end+1] : null;
-          if(marker?.dynamic) {result.diagnostics.push('Runtime xargs replacement string is unknown');end=stage.tokens.length;break;}
-          replacement = marker ? marker.value : t.value.startsWith('--replace=') ? t.value.slice(10) : t.value === '--replace' || t.value === '-i' ? '{}' : t.value.slice(2);
-        }
-        // Parse clusters before interpreting argument boundaries (sudo -iu root).
-        const parts = t.value.startsWith('--') ? [t.value.split('=', 1)[0]] : [...t.value.slice(1)].map(letter => `-${letter}`);
-        let consumes = false, opaque = false;
-        for (const [n, part] of parts.entries()) {
-          if ((name === 'env' && ['-S','--split-string'].includes(part)) || (name === 'sudo' && ['-s','-i','--shell','--login','-l','--list','-v','--validate','-k','--reset-timestamp','-K','--remove-timestamp','-e','--edit'].includes(part)) || (name === 'doas' && ['-s','-C'].includes(part)) || (name === 'command' && ['-v','-V'].includes(part)) || ['--help','--version'].includes(part)) opaque = true;
-          if (!(SUPPORTED_SHELL_GRAMMAR.optionalWrapperArguments[name] ?? []).includes(part) && WRAPPER_ARGUMENTS[name].has(part)) {
-            consumes = t.value.startsWith('--') ? !t.value.includes('=') : n === parts.length - 1;
-            break;
-          }
-        }
-        if (opaque) { result.diagnostics.push(`Cannot statically unwrap ${name} ${t.value}`); end = stage.tokens.length; break; }
-        end += consumes ? 2 : 1;
-
-      }
-      if (name === 'timeout' && end < stage.tokens.length) end++;
+      const boundaryResult=wrapperBoundary(stage.tokens,command,name);
+      const {end,replacement,diagnostic}=boundaryResult;
+      if(diagnostic) {result.diagnostics.push(diagnostic);continue;}
       if (end < stage.tokens.length && !['operator', 'redirect', 'comment'].includes(stage.tokens[end].kind)) {
         const boundary = stage.tokens.findIndex((token, i) => i >= end && ['operator','redirect'].includes(token.kind));
         const child = create(stage.id, 'wrapper'); child.tokens = stage.tokens.splice(end, (boundary < 0 ? stage.tokens.length : boundary) - end);
@@ -222,6 +210,15 @@ export function parseShell(input: string): ShellParse {
         } else { result.diagnostics.push('Unterminated find execution expression'); break; }
       }
     }
+  }
+  for(const stage of result.stages) for(let i=0;i<stage.tokens.length;i++) {
+    const token=stage.tokens[i];
+    if(token.kind==='comment') continue;
+    if(hasUnquotedTilde(token.text)) result.diagnostics.push('Unsupported shell grammar: unquoted tilde');
+    if(!hasUnquotedBrace(token.text)) continue;
+    const declaration=stage.tokens.some(t=>t.kind==='command' && manualCommandName(t.value)==='xargs') && ['-I','-i','--replace'].includes(stage.tokens[i-1]?.value);
+    if(token.text==='{}' && (token.replacement || declaration)) continue;
+    result.diagnostics.push('Unsupported shell grammar: unquoted opening brace');
   }
   const ordered: ShellStage[] = [];
   const visit = (stage: ShellStage) => {

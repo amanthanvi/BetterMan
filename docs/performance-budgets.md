@@ -217,3 +217,12 @@ uses one call and zero storage reads. Assertions enforce 256 decoded tokens,
 65,536 UTF-8 JSON bytes, a truncated diagnostic and no facts on truncated
 responses; individual cluster flags cannot copy the full cluster source text.
 All previous budget descriptors, tolerances and read counts are preserved.
+
+Round 5 adds interleaved-wrapper redirect resolution (`env >out rm item`,
+5 document reads) and invalid wrapper-duration admission (`timeout invalid rm
+item`, 3 reads), one call and zero storage reads each. Assertions pin the rm
+child and both facts for the valid form, and a diagnostic with no facts for the
+invalid form. Every prior metric descriptor and document count is unchanged.
+The earlier unquoted attached-brace replacement case retains safe token
+resolution at five reads but now diagnoses unsupported brace syntax; it cannot
+authorize facts or hints.

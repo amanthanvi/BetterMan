@@ -526,6 +526,36 @@
       "baseline": 0,
       "relative": 0,
       "absolute": 0
+    },
+    "explainInterleaved.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInterleaved.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInterleaved.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInvalidWrapper.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInvalidWrapper.documents": {
+      "baseline": 3,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInvalidWrapper.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
     }
   },
   "sourceHead": "90f087485dfa33bbcd4cf3ab729143ffc7d871fc",

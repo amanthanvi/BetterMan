@@ -1,0 +1,75 @@
+{
+  "name": "ld.so",
+  "section": "8",
+  "sourceHtmlSha256": "64f12e0d8f29726ecb7becb6e9746c43050a26ed469ad136af7aad9f468e8475",
+  "doc": {
+    "blocks": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "FILES",
+        "id": "files"
+      },
+      {
+        "type": "definition_list",
+        "items": [
+          {
+            "id": "def-lib-ld-linux-so-1-2",
+            "termInlines": [
+              {
+                "type": "emphasis",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "/lib/ld-linux.so."
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "{"
+              },
+              {
+                "type": "emphasis",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "1"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": ","
+              },
+              {
+                "type": "emphasis",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "2"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "}"
+              }
+            ],
+            "definitionBlocks": [
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "ELF dynamic linker/loader"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

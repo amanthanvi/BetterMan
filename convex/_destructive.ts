@@ -1,3 +1,4 @@
+import {executingWrapperOptions} from './_shellWrappers';
 import type { ShellStage } from './_shellParser';
 
 export type DestructiveSignal = { description: string; dryRun: string | null };
@@ -13,14 +14,6 @@ export const COMMAND_FACTS = {
   redirect: '> replaces the contents of the file it writes to.',
 } as const;
 const RM_HINT = 'Run it with `ls -d` in place of `rm` first to see what it would act on.';
-const WRAPPER_OPTIONS: Record<string, readonly string[]> = {
-  sudo: ['-u','--user','-g','--group','-n','--non-interactive','-E','--preserve-env','-H','--set-home','-A','--askpass','-S','--stdin','-h','--host','-r','--role','-t','--type'],
-  doas: ['-u','-n'], env: ['-i','--ignore-environment','-u','--unset','-C','--chdir','-a','--argv0'],
-  nice: ['-n','--adjustment'], timeout: ['-s','--signal','-k','--kill-after','--foreground','--preserve-status','-v','--verbose'],
-  nohup: [], time: ['-p','--portability','-f','--format','-o','--output','-a','--append','-v','--verbose','-q','--quiet'],
-  command: ['-p'], exec: ['-a','-c','-l'],
-  xargs: ['-0','--null','-r','--no-run-if-empty','-I','-i','--replace','-n','--max-args','-P','--max-procs','-d','--delimiter','-s','--max-chars','-E','-e','--eof','-L','-l','--max-lines','-a','--arg-file','-p','--interactive','-t','--verbose','-x','--exit'],
-};
 const options = (tokens: Token[]) => tokens.filter(t=>t.kind==='option');
 const has = (tokens: Token[], ...flags: string[]) => options(tokens).some(t=>flags.includes(t.value));
 
@@ -34,7 +27,7 @@ export function destructiveSignals(stage: ShellStage, tokens: Token[], command: 
     if(relation==='exec') {
       if(parent.command!=='find' || !has(parent.tokens,'-exec','-execdir')) return [];
     } else if(relation==='wrapper') {
-      const allowed=WRAPPER_OPTIONS[parent.command];
+      const allowed=executingWrapperOptions(parent.command);
       if(!allowed || options(parent.tokens).some(t=>!allowed.includes(t.value))) return [];
     }
   }

@@ -48,7 +48,8 @@ The admitted grammar is defined once in `convex/_shellGrammar.ts`:
 - Literal simple commands, literal environment assignments, quoted/escaped words,
   argument globs and comments; single, double and ANSI-C quotes.
 - Pipelines and `&&`, `||`, `;` lists with nonempty, well-formed boundaries.
-  A final semicolon is allowed; trailing pipelines/conditionals are unsupported.
+  A final semicolon is allowed; trailing pipelines/conditionals, including those
+  followed only by a comment, are unsupported.
 - `>`, `>|`, `>>`, `&>`, `<` and numeric descriptor duplication such as `2>&1`.
 - The explicitly modeled executing wrapper forms listed below, including find's
   validated conjunction-only expression and exec argument boundaries.
@@ -94,6 +95,23 @@ that the submitted line successfully performs the operation.
 | mkfs variants / mke2fs | mkfs creates a new filesystem, erasing what the device held. | Add `-n` to see what it would do. (mkfs.ext4/mke2fs only) |
 | truncate with a size option | truncate changes file sizes; a size of 0 empties a file. | none |
 | literal file output using >, >| or &> | > replaces the contents of the file it writes to. | none |
+
+Wrapper resolution first lifts shell redirect pairs out of argv while retaining
+source spans and attaching them to the whole simple command. Redirects can
+precede the executable or appear between wrapper switches and their values.
+A shared execution-option catalog rejects unknown/opaque wrapper modes and
+validates required/attached/optional values before a child stage is created:
+timeout durations/signals, signed nice adjustments, sudo/doas user/group forms,
+env unset names, numeric xargs limits/delimiters and literal path/string values.
+Unsupported values diagnose the entire line. These checks establish syntax,
+not user existence, path existence or runtime success.
+
+Brace checks retain each raw word's quote/escape provenance. Any unquoted
+opening brace is unsupported, including partly quoted words; only standalone
+`{}` markers in modeled find/xargs replacement positions are admitted. Quoted
+or escaped literal braces remain supported. Unquoted tildes are also diagnosed
+as unsupported runtime expansion, including partly quoted words. Attached unquoted replacement
+markers can still receive safe token explanations but no facts/hints.
 
 Hints are deliberately narrower than facts. They require zero diagnostics and
 unknown tokens across the line. find must have a valid modeled expression with

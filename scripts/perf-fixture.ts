@@ -203,6 +203,7 @@ export async function createExplainFixture(onCall: () => void) {
       { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' },{flags:'-r, --recursive',anchorId:'recursive'},{flags:'--interactive',anchorId:'interactive',argument:'[WHEN]'}] },
       { name: 'truncate', section: '1', options: [{flags:'-s, --size',anchorId:'size',argument:'SIZE'}] },
       {name:'echo',section:'1',options:[]},
+      {name:'env',section:'1',options:[]}, {name:'timeout',section:'1',options:[]},
       { name: 'git', section: '1', options: [] },
       { name: 'git-commit', section: '1', options: [{ flags: '-m', anchorId: 'message', argument: 'MESSAGE' }] },
       { name: 'systemctl', section: '1', options: [] },

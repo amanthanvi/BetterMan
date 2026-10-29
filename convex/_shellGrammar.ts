@@ -44,7 +44,7 @@ export function shellGrammarDiagnostics(input: string, stages: ShellStage[]): st
         if(!before) unsupported('empty list or pipeline element');
         if(token.value!==';' && i===stage.tokens.length-1) {
           const next=stages.find(next=>next.parent===stage.parent && next.id>stage.id);
-          if(!next?.tokens.length) unsupported('trailing pipeline or conditional operator');
+          if(!next?.tokens.some(token=>token.kind!=='comment')) unsupported('trailing pipeline or conditional operator');
         }
       }
       if(token.kind==='redirect') {
@@ -54,7 +54,6 @@ export function shellGrammarDiagnostics(input: string, stages: ShellStage[]): st
       }
       if(i===stage.tokens.findIndex((t,n)=>!['operator','redirect','redirectTarget','comment'].includes(t.kind) && stage.tokens[n-1]?.kind!=='redirect') && token.text===token.value && KEYWORDS.has(token.value)) unsupported('control structure or reserved word');
       if(token.dynamic && !token.replacement) unsupported('runtime shell expansion');
-      if(token.kind!=='comment' && !/['"\\]/.test(token.text) && /\{[^{}]*(?:,|\.\.)[^{}]*\}/.test(token.text)) unsupported('brace expansion');
     }
   }
   return [...new Set(diagnostics)];
@@ -90,3 +89,20 @@ export function findExpressionDiagnostic(tokens: ShellToken[]): string | null {
   }
   return null;
 }
+
+/** Keep quote provenance: decoded words cannot distinguish x{,""} from literals. */
+function unquotedWordHas(text: string, special: string): boolean {
+  let quote = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '\\' && quote !== "'") { i++; continue; }
+    if (quote) { if (ch === (quote === 'ansi' ? "'" : quote)) quote = ''; continue; }
+    if (text.startsWith("$'", i)) { quote = 'ansi'; i++; continue; }
+    if (ch === "'" || ch === '"') { quote = ch; continue; }
+    if (ch === special) return true;
+  }
+  return false;
+}
+
+export const hasUnquotedBrace = (text: string) => unquotedWordHas(text, '{');
+export const hasUnquotedTilde = (text: string) => unquotedWordHas(text, '~');

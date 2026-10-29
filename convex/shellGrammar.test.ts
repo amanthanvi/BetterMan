@@ -12,3 +12,11 @@ describe('explicit supported shell grammar',()=>{
 });
 
 it.each(UNSUPPORTED_FORMS)('fails closed for %s',cmd=>expect(parseShell(cmd).diagnostics.length).toBeGreaterThan(0));
+
+it.each(['|','&&','||'])('rejects a comment-only operand of %s',op=>{
+ for(const suffix of ['', ' # hi',' # hi; rm y']) expect(parseShell(`rm x ${op}${suffix}`).diagnostics.length).toBeGreaterThan(0);
+});
+it('admits a comment after a complete list',()=>expect(parseShell('rm x; # hi').diagnostics).toEqual([]));
+it.each(["rm x{,''}","rm x{,\"\"}","rm x'{literal}'{,a}","rm x{1,'2'}",'rm a{b}'])('rejects unquoted braces even in partly quoted words: %s',cmd=>expect(parseShell(cmd).diagnostics.length).toBeGreaterThan(0));
+it.each(["rm 'x{,}'",'rm "x{,}"','rm x\\{,\\}',"find . -exec rm {} \\;",'xargs -I {} rm {}'])('retains literal braces or modeled standalone placeholders: %s',cmd=>expect(parseShell(cmd).diagnostics).toEqual([]));
+it.each(['rm pre"$HOME"','rm pre$(echo x)"suffix"','rm pre`echo x`\'suffix\'','rm "x"${NAME}'])('rejects partially quoted runtime expansions: %s',cmd=>expect(parseShell(cmd).diagnostics.length).toBeGreaterThan(0));
