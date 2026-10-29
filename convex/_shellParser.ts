@@ -165,7 +165,7 @@ export function parseShell(input: string): ShellParse {
     const stage = result.stages[index];
     // Remove lexer-created empty list stages while keeping stable IDs/parent references.
     let command = stage.tokens.findIndex((token,i) => !['operator', 'redirect', 'redirectTarget', 'comment'].includes(token.kind) && stage.tokens[i-1]?.kind !== 'redirect');
-    while (command >= 0 && stage.relation!=='exec' && !(stage.relation==='wrapper' && result.stages.find(parent=>parent.id===stage.parent)?.tokens.some(t=>t.kind==='command' && manualCommandName(t.value)==='xargs')) && stage.tokens[command].kind !== 'unknown' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(stage.tokens[command].text)) {
+    while (command >= 0 && stage.parent===null && stage.relation==='list' && stage.tokens[command].kind !== 'unknown' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(stage.tokens[command].text)) {
       stage.tokens[command].kind = 'assignment'; command++;
       while (command < stage.tokens.length && (['redirect', 'redirectTarget'].includes(stage.tokens[command].kind) || stage.tokens[command-1]?.kind === 'redirect')) command++;
       if (command >= stage.tokens.length) { command = -1; break; }
@@ -173,6 +173,9 @@ export function parseShell(input: string): ShellParse {
     if (command < 0 || !stage.tokens[command] || ['operator', 'redirect', 'redirectTarget', 'comment'].includes(stage.tokens[command].kind)) continue;
     const token = stage.tokens[command];
     if (token.kind === 'unknown') continue;
+    if(stage.parent!==null && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(token.value) || token.value.startsWith('-'))) {
+      token.kind='unknown';result.diagnostics.push('Unsupported wrapper executable: assignment or option-like program name');continue;
+    }
     if (token.dynamic || token.kind === 'glob') { token.kind = 'unknown'; continue; }
     token.kind = 'command';
     const name = manualCommandName(token.value);

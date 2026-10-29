@@ -96,6 +96,15 @@ that the submitted line successfully performs the operation.
 | truncate with a size option | truncate changes file sizes; a size of 0 empties a file. | none |
 | literal file output using >, >| or &> | > replaces the contents of the file it writes to. | none |
 
+Shell assignment prefixes apply only at the start of top-level simple commands.
+Wrapper children receive argv, not a new shell: an assignment-shaped executable
+is unknown and diagnosed. env and sudo consume their own documented assignment
+prefixes; after env's first assignment, options are finished and the next word
+is its executable (including an option-like word, which remains unknown).
+Xargs delimiters accept one literal byte or a complete GNU C escape: octal
+values must be at most 377, hex has one or two digits, and only the documented
+C escapes are admitted. Other wrapper strings are not escape-decoded.
+
 Wrapper resolution first lifts shell redirect pairs out of argv while retaining
 source spans and attaching them to the whole simple command. Redirects can
 precede the executable or appear between wrapper switches and their values.

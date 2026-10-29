@@ -1,0 +1,102 @@
+[
+  {
+    "value": "a",
+    "accepted": true
+  },
+  {
+    "value": "\\",
+    "accepted": true
+  },
+  {
+    "value": "\\\\",
+    "accepted": true
+  },
+  {
+    "value": "\\a",
+    "accepted": true
+  },
+  {
+    "value": "\\b",
+    "accepted": true
+  },
+  {
+    "value": "\\f",
+    "accepted": true
+  },
+  {
+    "value": "\\n",
+    "accepted": true
+  },
+  {
+    "value": "\\r",
+    "accepted": true
+  },
+  {
+    "value": "\\t",
+    "accepted": true
+  },
+  {
+    "value": "\\v",
+    "accepted": true
+  },
+  {
+    "value": "\\e",
+    "accepted": false
+  },
+  {
+    "value": "\\'",
+    "accepted": false
+  },
+  {
+    "value": "\\\"",
+    "accepted": false
+  },
+  {
+    "value": "\\?",
+    "accepted": false
+  },
+  {
+    "value": "\\0",
+    "accepted": true
+  },
+  {
+    "value": "\\000",
+    "accepted": true
+  },
+  {
+    "value": "\\377",
+    "accepted": true
+  },
+  {
+    "value": "\\400",
+    "accepted": false
+  },
+  {
+    "value": "\\777",
+    "accepted": false
+  },
+  {
+    "value": "\\x0",
+    "accepted": true
+  },
+  {
+    "value": "\\xff",
+    "accepted": true
+  },
+  {
+    "value": "\\xFF",
+    "accepted": true
+  },
+  {
+    "value": "\\XFF",
+    "accepted": false
+  },
+  {
+    "value": "\\x100",
+    "accepted": false
+  },
+  {
+    "value": "\u00e9",
+    "accepted": false
+  }
+]

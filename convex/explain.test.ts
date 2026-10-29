@@ -3,6 +3,7 @@ import { convexTest } from 'convex-test';
 import { describe, it, expect } from 'vitest';
 import { makeFunctionReference } from 'convex/server';
 import schema from './schema';
+import reviewR6 from './fixtures/explain-review-r6.json';
 import reviewR5 from './fixtures/explain-review-r5.json';
 import reviewR4 from './fixtures/explain-review-r4.json';
 import UNSUPPORTED_FORMS from './fixtures/unsupported-shell.json';
@@ -455,5 +456,28 @@ describe('round 5: grammar and wrapper admission',()=>{
   expect(result.diagnostics).toEqual([]);
   expect(result.stages[1].tokens[0]).toMatchObject({kind:'command',value:'rm'});
   expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).map((n:{description:string})=>n.description)).toEqual(['> replaces the contents of the file it writes to.','rm deletes files.']);
+ });
+});
+
+
+describe('round 6 wrapper argv admission',()=>{
+ it.each(reviewR6)('fresh review $group: $cmd',async({cmd,errorCode})=>{
+  if(errorCode) {await expect(explain(await reviewed(),cmd)).rejects.toThrow(errorCode);return;}
+  const result=await explain(await reviewed(),cmd);
+  const notes=result.stages.flatMap((s:{destructive:{description:string;dryRun:string|null}[]})=>s.destructive);
+  expect(notes.every((n:{description:string;dryRun:string|null})=>factDescriptions.has(n.description) && (n.dryRun===null || hints.has(n.dryRun)))).toBe(true);
+  if(result.diagnostics.length || result.stages.some((s:{tokens:{kind:string}[]})=>s.tokens.some(t=>t.kind==='unknown'))) expect(notes).toEqual([]);
+  expect(explanationBytes(result)).toBeLessThanOrEqual(65536);
+  expect(result.stages.flatMap((s:{tokens:unknown[]})=>s.tokens).length).toBeLessThanOrEqual(256);
+ });
+ it.each(['timeout 1 VAR=value rm x','nice VAR=value rm x','nohup VAR=value rm x','command VAR=value rm x','exec VAR=value rm x','doas VAR=value rm x','/usr/bin/time VAR=value rm x','xargs VAR=value rm x','env VAR=value -- rm x','env VAR=value -u VAR rm x',"xargs -d '\\400' rm x","xargs -d '\\777' rm x"])('suppresses facts for %s',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(result.diagnostics.length).toBeGreaterThan(0);
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+ });
+ it.each(['VAR=value rm x','env VAR=value rm x','sudo VAR=value rm x'])('retains valid assignment resolution for %s',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(result.diagnostics).toEqual([]);
+  expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).map((n:{description:string})=>n.description)).toContain('rm deletes files.');
  });
 });

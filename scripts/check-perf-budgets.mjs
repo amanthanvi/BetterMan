@@ -370,6 +370,9 @@ try {
     ['explainOptionalWrapper','explain:explain',{distro:'debian',cmd:'xargs --max-lines rm item'}],
     ['explainInterleaved','explain:explain',{distro:'debian',cmd:'env >out rm item'}],
     ['explainInvalidWrapper','explain:explain',{distro:'debian',cmd:'timeout invalid rm item'}],
+    ['explainArgvAssignment','explain:explain',{distro:'debian',cmd:'timeout 1 VAR=value rm item'}],
+    ['explainEnvOptions','explain:explain',{distro:'debian',cmd:'env VAR=value -- rm item'}],
+    ['explainDelimiter','explain:explain',{distro:'debian',cmd:"xargs -d '\\400' rm item"}],
     ['explainMulti', 'explain:explain', { distro: 'debian', cmd: [...'abcdefghijklmnopqrstuvwx'].map(verb=>`git ${verb}`).join('|') }],
     ['explainBounded', 'explain:explain', { distro: 'debian', cmd: 'bounded ' + Array.from({ length: 100 }, (_, i) => `--limit${i}`).join(' ') }],
   ]) {
@@ -382,7 +385,7 @@ try {
       assert.equal(result.results[0].anchorId, 'ForwardAgent')
       assert.equal(result.results[0].name, 'ssh_config')
     } else {
-      assert.deepEqual(result.diagnostics, ['explainBounded','explainMulti','explainClusterBounded'].includes(name) ? ['Resolution lookup limit reached','Explanation truncated: lookup limit reached'] : name==='explainByteBounded' ? ['Explanation truncated: output limit reached'] : name==='explainReplace' ? ['Unsupported shell grammar: unquoted opening brace','Unsupported shell grammar: unquoted opening brace'] : name==='explainInvalidWrapper' ? ['Cannot statically unwrap timeout: invalid or missing duration'] : [])
+      assert.deepEqual(result.diagnostics, ['explainBounded','explainMulti','explainClusterBounded'].includes(name) ? ['Resolution lookup limit reached','Explanation truncated: lookup limit reached'] : name==='explainByteBounded' ? ['Explanation truncated: output limit reached'] : name==='explainReplace' ? ['Unsupported shell grammar: unquoted opening brace','Unsupported shell grammar: unquoted opening brace'] : name==='explainInvalidWrapper' ? ['Cannot statically unwrap timeout: invalid or missing duration'] : ['explainArgvAssignment','explainEnvOptions'].includes(name) ? ['Unsupported wrapper executable: assignment or option-like program name'] : name==='explainDelimiter' ? ['Cannot statically unwrap xargs: invalid value for -d'] : [])
       const tokens = result.stages.flatMap(stage => stage.tokens)
       if (name === 'explainBounded') {
         assert.equal(tokens.filter(token => token.kind === 'option').length, 63)
@@ -397,11 +400,15 @@ try {
         assert.ok(tokens.length<=256,'Decoded output exceeded 256 tokens')
         assert.ok(result.stages.every(stage=>stage.destructive.length===0))
         if(name==='explainClusterBounded') assert.ok(tokens.filter(token=>token.kind==='option').every(token=>token.text.length<=2))
+      } else if(['explainArgvAssignment','explainEnvOptions'].includes(name)) {
+        assert.ok(tokens.some(token=>token.kind==='unknown'))
+        assert.equal(result.stages.flatMap(s=>s.destructive).length,0)
       } else assert.ok(tokens.every(token => token.kind !== 'unknown'))
       if(name==='explainInterleaved') {
         assert.equal(result.stages[1].tokens[0].value,'rm')
         assert.deepEqual(result.stages.flatMap(s=>s.destructive).map(n=>n.description),['> replaces the contents of the file it writes to.','rm deletes files.'])
       }
+      if(name==='explainDelimiter') assert.equal(result.stages.flatMap(s=>s.destructive).length,0)
       if(name==='explainInvalidWrapper') assert.equal(result.stages.flatMap(s=>s.destructive).length,0)
       if (name === 'explainArchive') assert.deepEqual(tokens.filter(token => token.kind === 'option').map(token => token.anchor), ['extract', 'gzip', 'verbose', 'file', 'directory'])
       if (name === 'explainPipeline') {

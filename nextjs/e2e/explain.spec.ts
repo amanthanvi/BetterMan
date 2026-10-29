@@ -95,3 +95,19 @@ test('explain: interleaved wrapper redirects preserve the child option anchor', 
   expect(result.stages[1].tokens[0]).toMatchObject({kind:'command',page:{name:'tar'}})
   expect(result.stages[1].tokens.find((t:{kind:string})=>t.kind==='option').anchor).toBe('opt-create')
 })
+
+
+test('explain: wrapper assignment and delimiter admission survives HTTP',async({request})=>{
+ for(const cmd of ['timeout 1 VAR=value rm x','nice VAR=value rm x','nohup VAR=value rm x','command VAR=value rm x','exec VAR=value rm x','doas VAR=value rm x','/usr/bin/time VAR=value rm x','xargs VAR=value rm x','env VAR=value -- rm x','env VAR=value -u VAR rm x',"xargs -d '\\400' rm x","xargs --delimiter='\\777' rm x"]) {
+  const response=await request.get('/api/v1/explain',{params:{cmd}});
+  expect(response.status()).toBe(200);
+  const result=await response.json();
+  expect(result.diagnostics.length,cmd).toBeGreaterThan(0);
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+ }
+ const valid=await request.get('/api/v1/explain',{params:{cmd:'env VAR=value tar -c item'}});
+ const result=await valid.json();
+ expect(result.diagnostics).toEqual([]);
+ expect(result.stages[1].tokens[0]).toMatchObject({kind:'command',page:{name:'tar'}});
+ expect(result.stages[1].tokens.find((t:{kind:string})=>t.kind==='option').anchor).toBe('opt-create');
+});

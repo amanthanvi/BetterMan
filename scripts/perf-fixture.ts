@@ -199,7 +199,7 @@ export async function createExplainFixture(onCall: () => void) {
     const { releaseId, datasetReleaseId } = active!
     const specs = [
       { name: 'find', section: '1', options: [{ flags: '-name', anchorId: 'name', argument: 'PATTERN' }, { flags: '-mtime', anchorId: 'mtime', argument: 'N' }, { flags: '-print0', anchorId: 'print0' }, {flags:'-exec',anchorId:'exec',argument:'COMMAND'}] },
-      { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' },{flags:'-I',anchorId:'replace',argument:'REPLACE'},{flags:'--max-lines',anchorId:'max-lines',argument:'[N]'}] },
+      { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' },{flags:'-I',anchorId:'replace',argument:'REPLACE'},{flags:'--max-lines',anchorId:'max-lines',argument:'[N]'},{flags:'-d, --delimiter',anchorId:'delimiter',argument:'CHAR'}] },
       { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' },{flags:'-r, --recursive',anchorId:'recursive'},{flags:'--interactive',anchorId:'interactive',argument:'[WHEN]'}] },
       { name: 'truncate', section: '1', options: [{flags:'-s, --size',anchorId:'size',argument:'SIZE'}] },
       {name:'echo',section:'1',options:[]},

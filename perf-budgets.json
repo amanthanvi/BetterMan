@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v9: ready derived snapshots, bounded symbol/explain queries and wrapper admission",
+  "fixture": "scripts/perf-fixture.ts v10: wrapper argv assignments, env boundaries and delimiter escapes",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -553,6 +553,51 @@
       "absolute": 0
     },
     "explainInvalidWrapper.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArgvAssignment.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArgvAssignment.documents": {
+      "baseline": 3,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArgvAssignment.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainEnvOptions.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainEnvOptions.documents": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainEnvOptions.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainDelimiter.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainDelimiter.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainDelimiter.storageReads": {
       "baseline": 0,
       "relative": 0,
       "absolute": 0

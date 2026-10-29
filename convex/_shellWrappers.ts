@@ -19,6 +19,13 @@ const integer=(v:string,min:number,max=2147483647)=>/^[+-]?\d+$/.test(v) && Numb
 const user=(v:string)=>/^(?:[A-Za-z_][A-Za-z0-9_.-]*\$?|\d+|#\d+)$/.test(v);
 const literal=(v:string)=>v.length>0 && !/[\x00-\x1f\x7f]/.test(v);
 const SIGNALS=new Set('HUP INT QUIT ILL TRAP ABRT IOT BUS FPE KILL USR1 SEGV USR2 PIPE ALRM TERM STKFLT CHLD CLD CONT STOP TSTP TTIN TTOU URG XCPU XFSZ VTALRM PROF WINCH IO POLL PWR SYS'.split(' '));
+/** GNU xargs delimiters are one byte, or one complete documented C escape. */
+export function validXargsDelimiter(value:string):boolean {
+  if(value.length===1 && value.charCodeAt(0)>0 && value.charCodeAt(0)<=127) return true;
+  if(/^\\[abfnrtv\\]$/.test(value)) return true;
+  if(/^\\x[0-9a-fA-F]{1,2}$/.test(value)) return true;
+  return /^\\[0-7]{1,3}$/.test(value) && Number.parseInt(value.slice(1),8)<=255;
+}
 function validValue(name:string,flag:string,value:string):boolean {
   if(name==='timeout') return ['-s','--signal'].includes(flag) ? integer(value,0,64) || SIGNALS.has(value.replace(/^SIG/,'')) : duration(value);
   if(name==='nice') return integer(value,-2147483648);
@@ -33,7 +40,7 @@ function validValue(name:string,flag:string,value:string):boolean {
   if(name==='xargs') {
     if(['-n','--max-args','-L','--max-lines','-l','-s','--max-chars'].includes(flag)) return integer(value,1);
     if(['-P','--max-procs'].includes(flag)) return integer(value,0);
-    if(['-d','--delimiter'].includes(flag)) return value.length===1 || /^\\(?:[abfnrtv\\]|[0-7]{1,3}|x[0-9a-fA-F]{1,2})$/.test(value);
+    if(['-d','--delimiter'].includes(flag)) return validXargsDelimiter(value);
     if(['-E','-e','--eof'].includes(flag)) return !/[\x00-\x1f\x7f]/.test(value);
     return literal(value);
   }
@@ -51,7 +58,7 @@ export function wrapperBoundary(tokens:ShellToken[],command:number,name:string):
     const token=tokens[end],word=token.value;
     if(token.dynamic || token.kind==='glob') return fail('runtime option or argument');
     if(word==='--') {end++;break;}
-    if(name==='env' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) {token.kind='assignment';end++;continue;}
+    if(['env','sudo'].includes(name) && /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) break;
     if(!word.startsWith('-') || word==='-') break;
     let consumed=false;
     const parts=word.startsWith('--') ? [word.split('=',1)[0]] : [...word.slice(1)].map(c=>`-${c}`);
@@ -74,6 +81,14 @@ export function wrapperBoundary(tokens:ShellToken[],command:number,name:string):
       end+=argument ? 2 : 1;consumed=true;break;
     }
     if(!consumed) end++;
+  }
+  // env/sudo assignments belong to these wrappers, never to child shell syntax.
+  // Once assignments begin, the next non-assignment word is the executable.
+  if(name==='env' || name==='sudo') {
+    while(end<tokens.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[end].value)) {
+      if(tokens[end].dynamic || tokens[end].kind==='glob') return fail('runtime assignment');
+      tokens[end].kind='assignment';end++;
+    }
   }
   if(name==='timeout') {
     if(!tokens[end] || tokens[end].dynamic || !duration(tokens[end].value)) return fail('invalid or missing duration');

@@ -1,4 +1,6 @@
 import {describe,it,expect} from 'vitest';
+import {validXargsDelimiter} from './_shellWrappers';
+import delimiters from './fixtures/xargs-delimiters.json';
 import {parseShell} from './_shellParser';
 import {SUPPORTED_SHELL_GRAMMAR} from './_shellGrammar';
 
@@ -53,5 +55,39 @@ it('validates every required wrapper option, including missing values',()=>{
   const tail=wrapper==='timeout' ? '5 rm x' : 'rm x';
   expect(parseShell(`${wrapper} ${flag} ${validValue} ${tail}`).diagnostics,`${wrapper} ${flag}`).toEqual([]);
   expect(parseShell(`${wrapper} ${flag}`).diagnostics.length,`${wrapper} ${flag} missing`).toBeGreaterThan(0);
+ }
+});
+
+
+it.each(delimiters)('matches GNU delimiter admission for $value',({value,accepted})=>{
+ expect(validXargsDelimiter(value)).toBe(accepted);
+ for(const argument of [`-d ${JSON.stringify(value)}`,`--delimiter=${JSON.stringify(value)}`,`-d${JSON.stringify(value)}`]) expect(parseShell(`xargs ${argument} rm x`).diagnostics.length===0).toBe(accepted);
+});
+it.each(WRAPPER_FORMS)('keeps assignment syntax at its real argv level under %s',wrapper=>{
+  const acceptsAssignment=['sudo','env'].includes(wrapper.split(' ')[0]);
+  for(const prefix of ['', 'OUTER=1 ']) for(const assignment of ['VAR=value', "'VAR=value'", 'VAR=one OTHER=two']) {
+    const result=parseShell(`${prefix}${wrapper} ${assignment} rm x`);
+    expect(result.diagnostics.length===0).toBe(acceptsAssignment);
+    expect(result.stages.some(s=>s.tokens.some(t=>t.kind==='command' && t.value==='rm'))).toBe(acceptsAssignment);
+    if(!acceptsAssignment) expect(result.stages.flatMap(s=>s.tokens).some(t=>t.kind==='unknown' && t.value.startsWith('VAR='))).toBe(true);
+  }
+});
+it.each(WRAPPER_FORMS)('applies nested env boundaries and delimiter ranges under %s',wrapper=>{
+  for(const program of ['--','-u VAR','--unset=VAR']) {
+    const result=parseShell(`${wrapper} env VAR=value ${program} rm x`);
+    expect(result.diagnostics.length).toBeGreaterThan(0);
+    expect(result.stages.some(s=>s.tokens.some(t=>t.kind==='command' && t.value==='rm'))).toBe(false);
+  }
+  for(const delimiter of ['\\400','\\777','\\x100','\\q']) expect(parseShell(`${wrapper} xargs -d '${delimiter}' rm x`).diagnostics.length).toBeGreaterThan(0);
+});
+it.each(['timeout 1','nice','nohup','command','exec','doas','/usr/bin/time','xargs'])('does not skip assignment-shaped executables after %s',wrapper=>{
+ const result=parseShell(`${wrapper} VAR=value rm x`);
+ expect(result.diagnostics.length).toBeGreaterThan(0);
+ expect(result.stages.at(-1)?.tokens[0]).toMatchObject({kind:'unknown',value:'VAR=value'});
+});
+it('retains top-level and documented wrapper assignments',()=>{
+ for(const cmd of ['VAR=value rm x','env VAR=value rm x','env -- VAR=value rm x','sudo VAR=value rm x','sudo -u root VAR=value rm x','env A=1 sudo B=2 env C=3 rm x']) {
+  const result=parseShell(cmd);expect(result.diagnostics).toEqual([]);
+  expect(result.stages.some(s=>s.tokens.some(t=>t.kind==='command' && t.value==='rm'))).toBe(true);
  }
 });
