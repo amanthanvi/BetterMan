@@ -36,6 +36,60 @@ function deployArgs(confirm) {
   }
 }
 
+function stepScript(name) {
+  const step = workflow.split(`      - name: ${name}\n`)[1]?.split('\n      - ')[0].split('\n  deploy_production:')[0]
+  assert.ok(step, `${name} step must exist`)
+  const run = step.split('        run: |\n')[1]
+  assert.ok(run, `${name} step must run a script`)
+  return run.split('\n').map((line) => line.replace(/^ {10}/, '')).join('\n')
+}
+
+// Run the revision step against a scratch repository whose origin/main has two commits.
+function resolveRevision({ event = 'workflow_dispatch', pick, confirm = 'false' }) {
+  const dir = mkdtempSync(join(tmpdir(), 'betterman-resolve-revision-'))
+  try {
+    const git = (...args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim()
+    git('init', '-q')
+    for (const message of ['older', 'head']) {
+      git('-c', 'user.name=t', '-c', 'user.email=t@example.invalid', 'commit', '-q', '--allow-empty', '-m', message)
+    }
+    git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+    const shas = { older: git('rev-parse', 'HEAD~1'), head: git('rev-parse', 'HEAD') }
+    const output = join(dir, 'github-output')
+    writeFileSync(output, '')
+    let status = 0
+    try {
+      execFileSync('bash', ['-c', stepScript('Resolve and validate deployment revision')], {
+        cwd: dir,
+        stdio: 'pipe',
+        env: {
+          PATH: process.env.PATH,
+          GITHUB_OUTPUT: output,
+          EVENT_NAME: event,
+          MANUAL_SHA: event === 'workflow_dispatch' ? shas[pick] : '',
+          WORKFLOW_SHA: event === 'workflow_run' ? shas[pick] : '',
+          CONFIRM_LARGE_INDEXES: confirm,
+        },
+      })
+    } catch (error) {
+      status = error.status
+    }
+    const outputs = Object.fromEntries(readFileSync(output, 'utf8').trim().split('\n').filter(Boolean).map((line) => line.split('=')))
+    return { status, requireCurrentMain: outputs.require_current_main }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+test('a manual deploy of the main head ships its Convex functions; older revisions do not', () => {
+  assert.deepEqual(resolveRevision({ event: 'workflow_run', pick: 'head' }), { status: 0, requireCurrentMain: 'true' })
+  assert.deepEqual(resolveRevision({ pick: 'head' }), { status: 0, requireCurrentMain: 'true' })
+  assert.deepEqual(resolveRevision({ pick: 'head', confirm: 'true' }), { status: 0, requireCurrentMain: 'true' })
+  // A rollback keeps production's Convex functions, so it cannot confirm indexes.
+  assert.deepEqual(resolveRevision({ pick: 'older' }), { status: 0, requireCurrentMain: 'false' })
+  assert.equal(resolveRevision({ pick: 'older', confirm: 'true' }).status, 1)
+})
+
 test('only a manual deploy may confirm indexes on large Convex tables', () => {
   assert.match(workflow, /\n      confirm_large_indexes:\n[^\n]*\n        required: false\n        type: boolean\n        default: false\n/)
   assert.ok(workflow.includes("BETTERMAN_CONFIRM_LARGE_INDEXES: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_large_indexes }}"))
