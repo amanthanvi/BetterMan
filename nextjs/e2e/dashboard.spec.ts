@@ -122,3 +122,11 @@ test('home lists no recents or bookmarks until they exist, then only the ones th
   await expect(page.getByRole('region', { name: 'Recent' })).toContainText('gzip(1)')
   await expect(page.getByRole('region', { name: 'Bookmarks' })).toHaveCount(0)
 })
+
+test('an asked-for empty section explains how to fill it', async ({ page }) => {
+  await page.goto('/bookmarks')
+  await expect(page).toHaveURL(/\/#bookmarks$/)
+  const bookmarks = page.getByRole('region', { name: 'Bookmarks' })
+  await expect(bookmarks).toContainText('No bookmarks yet')
+  await expect(page.getByRole('region', { name: 'Recent' })).toHaveCount(0)
+})

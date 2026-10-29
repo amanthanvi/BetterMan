@@ -175,10 +175,14 @@ Light is paper; dark is the same plate in warm ink on black.
 Home is the search box. Typing replaces the URL with `/?q=…` (noindex) and the
 server renders up to eight results under the box, with the top hit and a link
 to all results; the tagline, Browse and the dashboard step aside. Without
-JavaScript the box submits to `/search`. The placeholder cycles through one of
+JavaScript the box submits to `/search`, and a full page load of `/?q=…` (a
+shared link) is sent there by the proxy (307), since home's loading skeleton
+would hide streamed results. The placeholder cycles through one of
 each thing the box takes, every 3.2s while the field is empty, and stays on the
 first under reduced motion. Recent and Bookmarks render only once they hold
-entries; an empty home has no empty sections.
+entries; an empty home has no empty sections. `/#recent` and `/#bookmarks` (the
+`h` key, `/history`, `/bookmarks`) still show the asked-for section, with a line
+saying how to fill it.
 
 Search has no display heading (the `h1` is visually hidden) and no running
 head. Like explain, `/search` sits outside the `(site)` group with no loading

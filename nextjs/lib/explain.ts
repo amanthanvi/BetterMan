@@ -114,10 +114,14 @@ export function codeSpans(text: string): Array<{ code: boolean; text: string }> 
   )
 }
 
+const QUESTION_WORDS = new Set(['how', 'what', 'why', 'where', 'when', 'which', 'who', 'can', 'do', 'does', 'is', 'i', 'use', 'show'])
+
 /** A search query that reads as a command line rather than words: it has a flag or shell syntax. */
 export function looksLikeCommandLine(q: string): boolean {
   const words = q.trim().split(/\s+/)
   if (words.length < 2 || !/^[A-Za-z0-9_./+-]+$/.test(words[0]) || words[0].startsWith('-')) return false
+  // "how do I use tar -x" is a question about a command, not one to explain.
+  if (QUESTION_WORDS.has(words[0].toLowerCase())) return false
   return words.slice(1).some((word) => /^-/.test(word)) || /[|;&<>]/.test(q)
 }
 

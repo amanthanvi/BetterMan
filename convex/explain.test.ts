@@ -550,6 +550,17 @@ describe('task-phrase search (C5)', () => {
     expect((await t.query(api.queries.search, search('extract archive', { section: '8' }))).results.filter((hit) => hit.match === 'task')).toEqual([]);
   });
 
+  it('finds the active page through many variants with the same phrases', async () => {
+    const t = await withTarLayer();
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 12; i++) {
+        await ctx.db.insert('manPageGenerated', { contentSha256: `variant${i}`.padEnd(64, '0'), updatedAt: 'x', generated, taskText: generated.taskPhrases.join('\n') });
+      }
+    });
+    const result = await t.query(api.queries.search, search('how do I extract a tarball'));
+    expect(result.results.find((hit) => hit.match === 'task')).toMatchObject({ name: 'tar', taskPhrase: 'extract a tar.gz file' });
+  });
+
   it('keeps at most three task hits when many page variants share the phrases', async () => {
     const t = await withTarLayer();
     await t.run(async (ctx) => {
@@ -566,6 +577,18 @@ describe('task-phrase search (C5)', () => {
     const t = await withTarLayer();
     expect((await t.query(api.queries.search, search('how do I'))).results.filter((hit) => hit.match === 'task')).toEqual([]);
     expect((await t.query(api.queries.search, search('extract'))).results.filter((hit) => hit.match === 'task')).toEqual([]);
+  });
+});
+
+describe('top-hit key flags (C5)', () => {
+  it('counts spellings of one option together and shows its most used spelling once', async () => {
+    const t = await withTarLayer();
+    await t.run(async (ctx) => {
+      const page = await ctx.db.query('manPages').withIndex('by_contentSha256', (q) => q.eq('contentSha256', 'tar')).first();
+      await ctx.db.patch(page!._id, { verifiedFlagUsage: [{ flag: '-f', count: 4, source: 'tldr' }, { flag: '-x', count: 3, source: 'tldr' }, { flag: '--extract', count: 2, source: 'examples' }] });
+    });
+    const top = (await t.query(api.queries.search, search('tar', { brief: true }))).top!;
+    expect(top.flags.map((flag) => [flag.flag, flag.anchorId])).toEqual([['-x', 'debian-extract'], ['-f', 'debian-file']]);
   });
 });
 

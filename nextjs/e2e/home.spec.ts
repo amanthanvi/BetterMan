@@ -61,6 +61,12 @@ test('home: the placeholder is living, and static under reduced motion', async (
 test.describe('home without JavaScript', () => {
   test.use({ javaScriptEnabled: false })
 
+  test('home: a shared /?q= link opens the search page, which renders without JavaScript', async ({ page }) => {
+    await page.goto('/?q=tar')
+    await expect(page).toHaveURL(/\/search\?q=tar$/)
+    await expect(page.getByRole('list', { name: 'Search results' }).getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
+  })
+
   test('home: the box submits to the search page', async ({ page }) => {
     await page.goto('/')
     const box = page.getByRole('searchbox', { name: 'Search man pages' })

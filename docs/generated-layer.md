@@ -67,13 +67,15 @@ per line, under the `search_taskText` search index. `upsertRecords` writes it
 with the `generated` part and `suppressParts` clears it. Rows written earlier
 need one operator run after deploy: `npx convex run generated:backfillTaskText
 '{}'` (200 rows per transaction, self-scheduling). Search queries the index
-only for worded, non-flag queries: at most eight rows, then at most 40 pages to
-place them in the active release (newest first, since every distro variant has
-its own hash), keeping at most three hits. A phrase must share a content word
-with the query, not only stop words. The hit cites the phrase it matched.
+only for worded, non-flag queries: at most 24 rows, grouped by their phrases
+(every distro variant has its own hash with the same phrases), then at most 40
+pages to place each group in the active release (newest first), keeping at most
+three hits. A phrase must share a content word of two letters or more with the
+query, not only stop words. The hit cites the phrase it matched.
 With `brief: true` (the search page and home only), search also returns the
 first hit's first brief example and up to six key flags from the page's
-verified flag usage: one page, one generated-layer and one option read per flag.
+verified flag usage, with spellings of one option merged: one page, one
+generated-layer and at most twelve option reads.
 
 ## Provenance
 

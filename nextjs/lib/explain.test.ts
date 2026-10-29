@@ -74,5 +74,6 @@ describe('explain view model', () => {
     expect(looksLikeCommandLine('extract a tarball')).toBe(false)
     expect(looksLikeCommandLine('--gzip')).toBe(false)
     expect(looksLikeCommandLine('tar')).toBe(false)
+    expect(looksLikeCommandLine('how do I use tar -x')).toBe(false)
   })
 })

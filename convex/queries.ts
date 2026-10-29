@@ -638,8 +638,10 @@ async function textHits(
       symbolKind: symbol.kind, highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, pageId: symbol.pageId, rank: Math.max(existing?.rank ?? 0, symbol.kind === 'subcommand' && symbol.name.toLowerCase() === queryNorm.replace(' ', '-') ? 2_600 : 2_500) });
   }
   // Task phrases (B6) answer questions in words, such as "how do I extract a tarball".
-  if (queryNorm.includes(" ") && contentWords.length) {
-    for (const hit of await taskHits(ctx, { releaseId, section, queryText, contentWords })) {
+  // One-letter words ("ls -l") would prefix-match most phrases.
+  const taskWords = contentWords.filter((word) => word.length > 1);
+  if (queryNorm.includes(" ") && taskWords.length) {
+    for (const hit of await taskHits(ctx, { releaseId, section, queryText, contentWords: taskWords })) {
       const existing = ranked.get(hit.pageId!);
       if (!existing || existing.rank < hit.rank) ranked.set(hit.pageId!, hit);
     }
@@ -648,12 +650,13 @@ async function textHits(
 }
 
 /**
- * A worded query reads at most eight generated rows, then at most 40 pages to
+ * A worded query reads at most 24 generated rows, then at most 40 pages to
  * place them in the active release, and keeps at most three task hits. Every
  * distro variant of a page has its own content hash with the same phrases, so
- * several rows can belong to other releases.
+ * rows are grouped by their phrases: each group's hashes are tried in turn
+ * until one is in the active release, and other groups are not crowded out.
  */
-const MAX_TASK_ROWS = 8;
+const MAX_TASK_ROWS = 24;
 const MAX_TASK_PAGE_READS = 40;
 const MAX_TASK_PAGES_PER_ROW = 8;
 const MAX_TASK_HITS = 3;
@@ -665,34 +668,40 @@ async function taskHits(
   const rows = await ctx.db.query("manPageGenerated")
     .withSearchIndex("search_taskText", (q) => q.search("taskText", args.queryText))
     .take(MAX_TASK_ROWS);
+  const groups = new Map<string, typeof rows>();
+  for (const row of rows) groups.set(row.taskText ?? "", [...(groups.get(row.taskText ?? "") ?? []), row]);
   const hits: RankedHit[] = [];
+  const seen = new Set<Id<"manPages">>();
   let remaining = MAX_TASK_PAGE_READS;
-  for (const [index, row] of rows.entries()) {
+  for (const [index, group] of [...groups.values()].entries()) {
     if (hits.length >= MAX_TASK_HITS || remaining === 0) break;
     // The phrase sharing the most content words with the query is the evidence;
     // a phrase sharing none (only stop words matched) is not a task match.
     let best: { phrase: string; overlap: number } | null = null;
-    for (const phrase of row.generated?.taskPhrases ?? []) {
+    for (const phrase of group[0].generated?.taskPhrases ?? []) {
       const words = phrase.toLowerCase().split(/[^a-z0-9_]+/);
       const overlap = args.contentWords.filter((word) => words.some((candidate) => candidate.startsWith(word))).length;
       if (overlap && (!best || overlap > best.overlap)) best = { phrase, overlap };
     }
     if (!best) continue;
-    // Pages sharing this content hash across releases, newest first, where the
-    // active release usually is; keep only the active release's.
-    const pages = await ctx.db.query("manPages")
-      .withIndex("by_contentSha256", (q) => q.eq("contentSha256", row.contentSha256))
-      .order("desc")
-      .take(Math.min(MAX_TASK_PAGES_PER_ROW, remaining));
-    remaining -= pages.length;
-    for (const page of pages) {
-      if (hits.length >= MAX_TASK_HITS) break;
-      if (page.releaseId !== args.releaseId || (args.section !== null && page.section !== args.section)) continue;
+    for (const row of group) {
+      if (remaining === 0 || hits.length >= MAX_TASK_HITS) break;
+      // Pages sharing this content hash across releases, newest first, where the
+      // active release usually is; keep only the active release's.
+      const pages = await ctx.db.query("manPages")
+        .withIndex("by_contentSha256", (q) => q.eq("contentSha256", row.contentSha256))
+        .order("desc")
+        .take(Math.min(MAX_TASK_PAGES_PER_ROW, remaining));
+      remaining -= pages.length;
+      const page = pages.find((candidate) => candidate.releaseId === args.releaseId && !seen.has(candidate._id) && (args.section === null || candidate.section === args.section));
+      if (!page) continue;
+      seen.add(page._id);
       hits.push({
         name: page.name, section: page.section, title: page.title, description: page.description,
         highlights: [], match: "task", taskPhrase: best.phrase, pageId: page._id,
         rank: 2_000 + best.overlap * 100 - index,
       });
+      break;
     }
   }
   return hits;
@@ -734,6 +743,8 @@ async function typoHits(
 }
 
 const MAX_TOP_FLAGS = 6;
+/** Flag spellings looked up for the top hit; spellings of one option merge. */
+const MAX_TOP_FLAG_LOOKUPS = 12;
 
 const topHitValidator = v.union(v.null(), v.object({
   name: v.string(), section: v.string(),
@@ -747,7 +758,7 @@ const topHitValidator = v.union(v.null(), v.object({
 
 /**
  * The first hit's worked example and key flags (C5, fix 13). One page read, one
- * generated-layer read, and one option read per key flag (at most six). Key
+ * generated-layer read, and one option read per flag spelling (at most twelve). Key
  * flags are the page's verified example usage (B6 → B7), most used first;
  * without usage there are none rather than a guess.
  */
@@ -758,12 +769,19 @@ async function topHit(ctx: QueryCtx, pageId: Id<"manPages">) {
   const first = briefFromRecord(row)?.examples[0];
   const counts = new Map<string, number>();
   for (const usage of page.verifiedFlagUsage ?? []) counts.set(usage.flag, (counts.get(usage.flag) ?? 0) + usage.count);
-  const ranked = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, MAX_TOP_FLAGS);
-  const flags: Array<{ flag: string; anchorId: string; excerpt: string }> = [];
-  for (const [flag] of ranked) {
+  const spellings = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, MAX_TOP_FLAG_LOOKUPS);
+  // Spellings of one option (-x, --extract) count together and show once, by
+  // their most used spelling; a spelling the manual does not define is dropped.
+  const byOption = new Map<string, { flag: string; anchorId: string; excerpt: string; count: number }>();
+  for (const [flag, count] of spellings) {
     const option = await ctx.db.query("manPageOptionFlags").withIndex("by_pageId_and_flag", (q) => q.eq("pageId", page._id).eq("flag", flag)).first();
-    if (option) flags.push({ flag, anchorId: option.anchorId, excerpt: option.excerpt ?? option.flags });
+    if (!option) continue;
+    const entry = byOption.get(option.anchorId);
+    if (entry) entry.count += count;
+    else byOption.set(option.anchorId, { flag, anchorId: option.anchorId, excerpt: option.excerpt ?? option.flags, count });
   }
+  const flags = [...byOption.values()].sort((a, b) => b.count - a.count).slice(0, MAX_TOP_FLAGS)
+    .map(({ flag, anchorId, excerpt }) => ({ flag, anchorId, excerpt }));
   const example = first
     ? { command: first.command, description: first.description, source: first.source, ...(first.attribution ? { attribution: first.attribution } : {}) }
     : null;
