@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const releases = await fetchSeoReleases()
 
   const etag = weakEtag([
-    'sitemap-index-b4-v1',
+    'sitemap-index-b4-v2',
     ...releases.items.flatMap((r: (typeof releases.items)[number]) => [
       r.distro,
       r.datasetReleaseId,

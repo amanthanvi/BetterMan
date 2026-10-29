@@ -1,3 +1,4 @@
+import { pageIsIndexable, sitemapPageCount } from "./_indexPolicy";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { MAX_MANIFEST_SECTIONS } from "./_releaseManifest";
@@ -177,7 +178,7 @@ export const getManMetaByNameAndSection = query({
         description: page.description,
         sourcePackage: page.sourcePackage ?? null,
         sourcePackageVersion: page.sourcePackageVersion ?? null,
-        indexable: page.indexable === true,
+        indexable: pageIsIndexable(release, page),
         datasetReleaseId: release.datasetReleaseId,
       },
     };
@@ -1067,7 +1068,7 @@ export const listSeoReleases = query({
           distro,
           datasetReleaseId: release.datasetReleaseId,
           ingestedAt: release.ingestedAt,
-          pageCount: release.indexablePageCount ?? 0,
+          pageCount: sitemapPageCount(release),
         };
       }),
     );
@@ -1097,7 +1098,7 @@ export const listSitemapPageChunk = query({
     });
     if (!release) return null;
     if (!Number.isSafeInteger(args.page) || args.page < 1 ||
-        args.page > Math.ceil((release.indexablePageCount ?? 0) / SITEMAP_URLS_PER_FILE)) return null;
+        args.page > Math.ceil(sitemapPageCount(release) / SITEMAP_URLS_PER_FILE)) return null;
     const paginationOpts = {
       ...args.paginationOpts,
       numItems: boundedInt(args.paginationOpts.numItems, 1, SITEMAP_CHUNK_ITEMS),
@@ -1111,7 +1112,7 @@ export const listSitemapPageChunk = query({
     if (!result.page.length && args.paginationOpts.cursor === null) return null;
     return {
       datasetReleaseId: release.datasetReleaseId,
-      items: result.page.filter((page) => page.indexable === true).map((page) => ({ name: page.name, section: page.section })),
+      items: result.page.filter((page) => pageIsIndexable(release, page)).map((page) => ({ name: page.name, section: page.section })),
       page: args.page,
       isDone: result.isDone,
       continueCursor: result.continueCursor,

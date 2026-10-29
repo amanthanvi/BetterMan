@@ -75,6 +75,12 @@ function cachedJson(value: unknown, seconds = PUBLIC_CACHE_SECONDS, init?: Respo
   })
 }
 
+function cachedManJson(value: { page: { indexable?: boolean } }): Response {
+  return cachedJson(value, PUBLIC_CACHE_SECONDS, {
+    headers: value.page.indexable === false ? { 'X-Robots-Tag': 'noindex, follow' } : {},
+  })
+}
+
 function aliasRedirect(req: Request, distro: string, name: string, section: string, pkg?: string): Response {
   const url = new URL(req.url)
   url.searchParams.delete('pkg')
@@ -381,8 +387,6 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
   const started = performance.now()
   const response = await handleGet(req, path, metrics)
   metrics.push({ name: 'total', durationMs: performance.now() - started })
-  // JSON and metadata endpoints are alternate representations, never search landings.
-  response.headers.set('X-Robots-Tag', 'noindex, follow')
   return attachServerTiming(response, metrics)
 }
 

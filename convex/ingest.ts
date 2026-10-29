@@ -7,7 +7,7 @@ import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { scheduleTaskPhraseBackfill } from "./taskPhrases";
 import { scheduleDerivedBuild } from "./derived";
-import { fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
+import { fullDebianTierMissing, fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { insertProvider, recordProviderUploads, refreshProviderPackages } from "./_providers";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
@@ -850,6 +850,7 @@ export const activateRelease = internalMutation({
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (release.pruning) throw new Error("RELEASE_PRUNING");
 
+    if (fullDebianTierMissing(release, args.stage)) throw new Error("FULL_DEBIAN_TIER_REQUIRED");
     if (fullDebianPromotionHeld(release, args.stage, args.allowFullDebian)) throw new Error("FULL_DEBIAN_PROMOTION_HELD");
 
     await verifyDeclaredManifest(ctx, release);
@@ -986,6 +987,7 @@ export const promoteActiveReleases = internalMutation({
       if (!release) throw new Error("RELEASE_NOT_FOUND");
       // Check persisted acquisition identity in the pointer transaction; a
       // preflight read or mirror URL would not enforce the release's hold.
+      if (fullDebianTierMissing(release, args.toStage)) throw new Error("FULL_DEBIAN_TIER_REQUIRED");
       if (fullDebianPromotionHeld(release, args.toStage, args.allowFullDebian)) {
         skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
         continue;

@@ -464,3 +464,9 @@ Every release computes demand scores and tier membership from pinned popcon
 and optional aggregate pageviews. See the [B4 runbook](../docs/roadmap/b4-index-by-demand.md)
 for thresholds, monthly evaluation, `BETTERMAN_PLAUSIBLE_COUNTS`, deployment
 ordering and the required fresh v6 ingestion before full-Debian promotion.
+
+Existing unscored prod releases retain all-page indexing and sitemaps. Full-Debian
+releases without a tier may activate staging but fail prod activation/promotion
+with `FULL_DEBIAN_TIER_REQUIRED`, including with owner authorization. The in-flight
+v5 full-Debian release needs a fresh scored replacement. B4 must rebase to ingest
+v7 after promotion-CAS #443 merges, retaining both request contracts.

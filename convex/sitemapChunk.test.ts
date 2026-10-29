@@ -77,14 +77,23 @@ it("advertises the indexed count rather than the full release count", async () =
 });
 
 
-it("does not expose sitemap chunks for a legacy release without a tier declaration", async () => {
+it("preserves the complete sitemap and count for a legacy release without a tier declaration", async () => {
   const t = convexTest(schema, modules);
   await t.run(async ctx => {
     await activeRelease(ctx, "prod", "ls");
     const release = (await ctx.db.query("datasetReleases").take(1))[0];
-    await ctx.db.patch(release._id, { indexablePageCount: undefined });
+    await ctx.db.patch(release._id, { indexablePageCount: undefined, pageCount: 10_001 });
+    const existing = (await ctx.db.query("manPages").take(1))[0];
+    await ctx.db.patch(existing._id, { indexable: undefined, popularityScore: undefined });
+    const { _id, _creationTime, ...metadata } = existing;
+    void _id; void _creationTime;
+    await ctx.db.insert("manPages", {
+      ...metadata,
+      externalId: "tail", name: "tail", section: "3", sitemapPage: 2, indexable: false,
+    });
   });
-  expect(await t.query(api.queries.listSitemapPageChunk, {
-    distro: "debian", page: 1, paginationOpts: { numItems: 5000, cursor: null },
-  })).toBeNull();
+  expect(await t.query(api.queries.listSeoReleases, {})).toMatchObject({ items: [{ pageCount: 10_001 }] });
+  const args = { distro: "debian" as const, page: 1, paginationOpts: { numItems: 5000, cursor: null } };
+  expect(await t.query(api.queries.listSitemapPageChunk, args)).toMatchObject({ items: [{ name: "ls", section: "1" }] });
+  expect(await t.query(api.queries.listSitemapPageChunk, { ...args, page: 2 })).toMatchObject({ items: [{ name: "tail", section: "3" }] });
 });

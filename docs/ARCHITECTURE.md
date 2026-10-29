@@ -58,7 +58,8 @@ generated layer advertises its own independent v3 contract.
 B4 adds per-page demand scores and indexable membership, plus a declared tier
 count verified through existing upload shards. Scored releases filter their
 sitemaps and serve the long tail with noindex. Unscored releases keep main's
-all-page indexing and sitemaps. See the [B4 policy and rollout](roadmap/b4-index-by-demand.md).
+all-page indexing and sitemaps. Full-Debian releases without a tier cannot
+enter prod (`FULL_DEBIAN_TIER_REQUIRED`), even with owner authorization. See the [B4 policy and rollout](roadmap/b4-index-by-demand.md).
 Large package provenance is stored in Convex file storage via a
 `releaseManifests` row. The release document contains counts, digests and lifecycle
 state. Digest-bound package batches populate `licensePackages` in transactions of

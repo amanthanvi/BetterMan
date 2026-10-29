@@ -118,3 +118,19 @@ describe("listManDistros", () => {
     await expect(t.query(api.queries.listManDistros, withStage)).rejects.toThrow();
   });
 });
+
+it.each(["debian", "ubuntu", "fedora", "arch", "alpine", "freebsd", "macos"] as const)("keeps unscored %s metadata and page payloads indexable, filtering only after scoring", async distro => {
+  const t = convexTest(schema, modules);
+  const releaseId = await t.run(async ctx => {
+    const releaseId = await activeRelease(ctx, distro);
+    const pageId = await page(ctx, releaseId, distro, "tail", "3");
+    await ctx.db.insert("manPageContents", { pageId, docJson: JSON.stringify({ toc: [], blocks: [] }) });
+    return releaseId;
+  });
+  const args = { distro, name: "tail", section: "3" };
+  expect(await t.query(api.queries.getManMetaByNameAndSection, args)).toMatchObject({ page: { indexable: true } });
+  expect(await t.action(api.content.getManByNameAndSection, args)).toMatchObject({ kind: "page", data: { page: { indexable: true } } });
+  await t.run(ctx => ctx.db.patch(releaseId, { indexablePageCount: 0 }));
+  expect(await t.query(api.queries.getManMetaByNameAndSection, args)).toMatchObject({ page: { indexable: false } });
+  expect(await t.action(api.content.getManByNameAndSection, args)).toMatchObject({ kind: "page", data: { page: { indexable: false } } });
+});

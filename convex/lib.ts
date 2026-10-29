@@ -1,3 +1,4 @@
+import { pageIsIndexable } from "./_indexPolicy";
 import type { Doc } from "./_generated/dataModel";
 import type { PageDerivedResponse } from "./_derivedEncoding";
 import type { ManPageBrief } from "./_generatedLayer";
@@ -131,7 +132,7 @@ export function pageResponse(
       sourcePackageVersion: page.sourcePackageVersion ?? null,
       datasetReleaseId: release.datasetReleaseId,
       hasParseWarnings: page.hasParseWarnings,
-      indexable: page.indexable === true,
+      indexable: pageIsIndexable(release, page),
       popularityScore: page.popularityScore ?? 0,
     },
     content: contentPayload,
