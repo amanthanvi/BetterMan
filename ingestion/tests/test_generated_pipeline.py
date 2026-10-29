@@ -346,6 +346,17 @@ def test_cli_convex_run_skips_unchanged_pages_and_dry_run_writes_nothing(monkeyp
     writes = [p["records"] for path, p in client.posts if path == "/ingest/generated"]
     assert len(writes) == 1 and writes[0][0]["contentSha256"] == "cpio" * 8
 
+    client.posts.clear()
+    assert cli.main([*base, "--no-llm", "--refresh-page"]) == 0
+    writes = [
+        record
+        for path, data in client.posts
+        if path == "/ingest/generated"
+        for record in data["records"]
+    ]
+    assert len(writes) == 2
+    assert all("generated" not in record for record in writes)
+
 
 def test_coverage_report_counts_tldr_and_gaps(tmp_path: Path):
     index = TldrIndex.load(tldr_tree(tmp_path, {"common/tar.md": TAR_TLDR}), commit=COMMIT)
@@ -966,3 +977,46 @@ def test_unchanged_rows_hand_missing_flag_usage_to_b7(monkeypatch):
     assert cli.main(base) == 0
     sent = [p for path, p in client.posts if path == "/ingest/generated/flag-usage"]
     assert sent == [{"contentSha256s": ["n" * 64]}]
+
+
+def test_invalid_json_diagnostics_count_only_shape_and_finish_reason():
+    from ingestion.generated.provider import RecordedProvider
+
+    page = tar()
+    det = no_tldr_det(page)
+    # Replay the first actual prompt and stop after one model response.
+    from ingestion.generated.prompt import build_messages
+
+    messages = build_messages(page, invocation="tar", example_count=5, avoid=[])
+    payload = {
+        "choices": [
+            {
+                "finish_reason": "length",
+                "message": {
+                    "content": '{"summary": "private page text',
+                },
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 2048},
+    }
+    provider = RecordedProvider({RecordedProvider.key(messages): payload})
+    gen = make_generator(provider)
+    gen.max_attempts = 1
+    assert gen.generate(page, det) is None
+    assert gen.stats.invalid_responses == {
+        "response is not JSON (finish_reason=length, content_shape=object_start)": 1
+    }
+    assert gen.stats.finish_reasons == {"length": 1}
+    assert gen.stats.content_shapes == {"object_start": 1}
+
+
+def test_rejection_reasons_never_quote_model_text():
+    from ingestion.generated.pipeline import _reason
+
+    assert _reason("wrapped invocation: sudo rm-everything") == "wrapped invocation"
+    assert _reason("placeholder in command position after evil") == (
+        "placeholder in command position"
+    )
+    assert _reason("unsupported shell syntax: No closing quotation") == "unsupported shell syntax"
+    assert _reason("unknown flag -Z in -xZf") == "unknown flag"
+    assert _reason("anything the verifier adds later") == "other"

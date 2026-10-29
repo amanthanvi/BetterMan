@@ -70,9 +70,24 @@ until the 30-day window has passed since the last run that spent money.
 
 The summary line counts requests, spend, rejected examples by reason, invalid
 model responses and failed pages. A jump in rejections or invalid responses
-after a model or prompt change means stop and review. For a sample of pages,
-open the man page API response (`/api/v1/man/<name>/<section>`) and read
-`brief`.
+after a model or prompt change means stop and review. `finishReasons` and
+`contentShapes` count completed responses, and invalid JSON reasons include both.
+`length` suggests truncation; `empty_with_reasoning` indicates reasoning was
+present without final content, not that it contained an answer. `text_before_object`
+indicates a prefix; it is rejected, not stripped. These are bounded categories:
+never log model text, reasoning, page text, or arbitrary provider values. The old
+run had none of these diagnostics, so its causes cannot be reconstructed.
+
+For a sample of pages, open the man page API response
+(`/api/v1/man/<name>/<section>`) and read `brief`.
+
+## Refreshing page examples
+
+Unchanged rows are skipped, so a fix to page-example or tldr extraction
+reaches stored rows only through a refresh. Run the workflow with
+`refresh_page` on, `llm` off and `dry_run` off: it rebuilds page and tldr
+examples on existing rows, keeps their model text and makes no model calls.
+Locally, the CLI flags are `--refresh-page --no-llm`.
 
 ## Pausing and resuming
 

@@ -287,6 +287,7 @@ def run(args: argparse.Namespace) -> int:
                 if (
                     state is not None
                     and state.has_record
+                    and not getattr(args, "refresh_page", False)
                     and fresh_tldr
                     and (fresh_llm or no_model)
                 ):
@@ -299,9 +300,11 @@ def run(args: argparse.Namespace) -> int:
                 # A dry run reads a bounded sample and extrapolates the rest.
                 totals["extrapolated"] += len(todo)
                 if llm:
+                    # A page refresh also selects rows whose model text is current.
+                    unpaid = sum(1 for _, fresh_llm in todo if not fresh_llm)
                     mean = estimated_usd / max(1, totals["wouldGenerate"])
-                    estimated_usd += mean * len(todo)
-                    totals["wouldGenerate"] += len(todo)
+                    estimated_usd += mean * unpaid
+                    totals["wouldGenerate"] += unpaid
                 continue
             if store is not None and todo:
                 for page in store.inputs(
@@ -386,6 +389,8 @@ def run(args: argparse.Namespace) -> int:
         summary["rejectedExamples"] = dict(generator.stats.rejected_examples)
         summary["invalidResponses"] = dict(generator.stats.invalid_responses)
         summary["failedPages"] = generator.stats.failed_pages
+        summary["finishReasons"] = dict(generator.stats.finish_reasons)
+        summary["contentShapes"] = dict(generator.stats.content_shapes)
     else:
         summary["estimatedOffPeakUsd"] = round(estimated_usd, 4)
     if paused is not None:
@@ -419,6 +424,11 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--tldr", help="tldr-pages checkout; default fetches the pinned commit")
     run_p.add_argument("--no-tldr", action="store_true")
     run_p.add_argument("--no-llm", action="store_true", help="tldr and page examples only")
+    run_p.add_argument(
+        "--refresh-page",
+        action="store_true",
+        help="rebuild page and tldr examples on existing rows",
+    )
     run_p.add_argument("--dry-run", action="store_true", help="no model calls and no writes")
     run_p.add_argument("--no-write", action="store_true", help="call the model but do not upload")
     run_p.add_argument(
