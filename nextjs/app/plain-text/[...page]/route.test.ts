@@ -240,7 +240,7 @@ it.each([true, false, undefined])('carries tier robots on text GET and HEAD: %s'
   for (const method of [GET, HEAD]) {
     const res = await method(req(), ctx())
     expect(res.status).toBe(200)
-    expect(res.headers.get('x-robots-tag')).toBe(indexable === true ? 'index, follow' : 'noindex, follow')
+    expect(res.headers.get('x-robots-tag')).toBe(indexable !== false ? 'index, follow' : 'noindex, follow')
     expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1>; rel="canonical"')
   }
 })

@@ -242,7 +242,7 @@ const cachedSection = unstable_cache(
 const cachedManByName = unstable_cache(
   async (distro: Distro, name: string) =>
     cacheableManPage(await convex().action(api.content.getManByName, { distro, name })),
-  ['betterman', 'convex', 'man-by-name', 'v4'],
+  ['betterman', 'convex', 'man-by-name', 'v5'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -258,14 +258,14 @@ const cachedResolveManByName = unstable_cache(
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string, pkg: string | null, _release: string | null) =>
     cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
-  ['betterman', 'convex', 'man-by-name-and-section', 'v5'],
+  ['betterman', 'convex', 'man-by-name-and-section', 'v6'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedManMetaByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string) =>
     await convex().query(api.queries.getManMetaByNameAndSection, { distro, name, section }),
-  ['betterman', 'convex', 'man-meta-by-name-and-section', 'b4-v1'],
+  ['betterman', 'convex', 'man-meta-by-name-and-section', 'b4-v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -349,7 +349,7 @@ const cachedLicenseText = unstable_cache(
 
 const cachedSeoReleases = unstable_cache(
   async () => await convex().query(api.queries.listSeoReleases, {}),
-  ['betterman', 'convex', 'seo-releases', 'b4-v1'],
+  ['betterman', 'convex', 'seo-releases', 'b4-v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -608,7 +608,7 @@ const cachedSeoSitemapPage = unstable_cache(
     if (data.datasetReleaseId !== datasetReleaseId) throw new SitemapReleaseMismatch(data)
     return data
   },
-  ['betterman', 'convex', 'seo-sitemap-page', 'b4-v1'],
+  ['betterman', 'convex', 'seo-sitemap-page', 'b4-v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 

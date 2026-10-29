@@ -35,7 +35,7 @@ async function pointRelease(t: Harness, releaseId: Id<"datasetReleases">, stage:
     });
   });
 }
-async function write(t: Harness, kind: typeof kinds[number], datasetReleaseId: string, name: string) {
+async function write(t: Harness, kind: typeof kinds[number], datasetReleaseId: string, name: string, indexed = false) {
   if (kind === "aliases") {
     return t.mutation(internal.ingest.insertAliases, {
       datasetReleaseId, aliases: [{ name, section: "1", targetName: "original-inline", targetSection: "1" }],
@@ -47,7 +47,8 @@ async function write(t: Harness, kind: typeof kinds[number], datasetReleaseId: s
     });
   }
   const metadata = {
-    externalId: name, name, section: "1", sitemapPage: 0, title: name, description: name,
+    externalId: name, name, section: "1", sitemapPage: indexed ? 1 : 0,
+    ...(indexed ? { indexable: true, popularityScore: 5000 } : {}), title: name, description: name,
     sourcePath: name, sourcePackage: null, sourcePackageVersion: null,
     contentSha256: name, hasParseWarnings: false, searchText: name, snippetText: name, links: [],
   };
@@ -173,9 +174,9 @@ describe("release sealing", () => {
     for (const distro of ["debian", "ubuntu"] as const) {
       const input = releaseInput(`full-${distro}`, distro);
       const { releaseId } = await t.mutation(internal.ingest.createRelease, {
-        ...input, imageRef: "https://another-mirror.example/debian", packageManifest: distro === "debian" ? debianManifest : null,
+        ...input, ...(distro === "debian" ? { indexablePageCount: 0 } : {}), imageRef: "https://another-mirror.example/debian", packageManifest: distro === "debian" ? debianManifest : null,
       });
-      await t.run(ctx => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
+      await t.run(ctx => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: distro === "debian" ? 1 : 0 }));
       await pointRelease(t, releaseId, "staging");
     }
     const args = { fromStage: "staging" as const, toStage: "prod" as const, distros: ["debian" as const, "ubuntu" as const], activatedAt: "2026-10-29T00:00:00Z" };
@@ -340,10 +341,10 @@ describe("release sealing", () => {
       const old = await t.mutation(internal.ingest.createRelease, releaseInput("old"));
       await pointRelease(t, old.releaseId, "prod");
     }
-    const input = { ...releaseInput("archive", "debian", 1), packageManifest: debianManifest, imageRef: "https://changed-mirror.example/archive" };
+    const input = { ...releaseInput("archive", "debian", 1), indexablePageCount: 1, packageManifest: debianManifest, imageRef: "https://changed-mirror.example/archive" };
     const { releaseId } = await t.mutation(internal.ingest.createRelease, input);
     expect(await t.run(ctx => ctx.db.get(releaseId))).toMatchObject({ acquisition: debianManifest.acquisition });
-    await write(t, "inline", "archive", "archive-page");
+    await write(t, "inline", "archive", "archive-page", true);
     const before = await t.run(ctx => ctx.db.query("activeReleases").take(10));
     for (const allowFullDebian of [undefined, false]) {
       await expect(t.mutation(internal.ingest.activateRelease, { ...activation("archive"), ...(allowFullDebian === undefined ? {} : { allowFullDebian }) }))
@@ -414,4 +415,58 @@ describe("release sealing", () => {
     expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(false);
     expect(await releaseRows(t, releaseId)).toEqual(before);
   });
+});
+
+it.each([false, true])("unscored full Debian cannot insert/replace a prod pointer even with owner authorization (existing: %s)", async existing => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  if (existing) {
+    const previous = await t.mutation(internal.ingest.createRelease, releaseInput("previous"));
+    await pointRelease(t, previous.releaseId, "prod");
+  }
+  const { releaseId } = await t.mutation(internal.ingest.createRelease, {
+    ...releaseInput("unscored-archive", "debian", 1), packageManifest: debianManifest,
+    imageRef: "https://mirror-changed.example",
+  });
+  await write(t, "inline", "unscored-archive", "old-page");
+  const before = await t.run(ctx => ctx.db.query("activeReleases").take(10));
+  for (const allowFullDebian of [false, true]) {
+    await expect(t.mutation(internal.ingest.activateRelease, {
+      ...activation("unscored-archive"), allowFullDebian,
+    })).rejects.toThrow("FULL_DEBIAN_TIER_REQUIRED");
+  }
+  expect(await t.run(ctx => ctx.db.query("activeReleases").take(10))).toEqual(before);
+  expect((await t.run(ctx => ctx.db.get(releaseId)))?.sealed).not.toBe(true);
+  // Staging still accepts the in-flight v5 release and hydrates normally.
+  const stage = { ...activation("unscored-archive"), stage: "staging" as const };
+  await t.mutation(internal.ingest.activateRelease, stage);
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await t.mutation(internal.ingest.activateRelease, stage)).toMatchObject({ pending: false });
+  for (const allowFullDebian of [false, true]) {
+    await expect(t.mutation(internal.ingest.promoteActiveReleases, {
+      fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", allowFullDebian,
+    })).rejects.toThrow("FULL_DEBIAN_TIER_REQUIRED");
+  }
+  expect(await t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod")).take(10)))
+    .toEqual(before);
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+});
+
+it("rolls back sibling promotions when an unscored full-Debian source fails the tier gate", async () => {
+  const t = convexTest(schema, modules);
+  for (const distro of ["ubuntu", "debian"] as const) {
+    const old = await t.mutation(internal.ingest.createRelease, releaseInput(`previous-${distro}`, distro));
+    await pointRelease(t, old.releaseId, "prod");
+    const next = await t.mutation(internal.ingest.createRelease, {
+      ...releaseInput(`next-${distro}`, distro), packageManifest: distro === "debian" ? debianManifest : null,
+    });
+    await t.run(ctx => ctx.db.patch(next.releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
+    await pointRelease(t, next.releaseId, "staging");
+  }
+  const pointers = () => t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod")).take(10));
+  const before = await pointers();
+  await expect(t.mutation(internal.ingest.promoteActiveReleases, {
+    fromStage: "staging", toStage: "prod", distros: ["ubuntu", "debian"], activatedAt: "now", allowFullDebian: true,
+  })).rejects.toThrow("FULL_DEBIAN_TIER_REQUIRED");
+  expect(await pointers()).toEqual(before);
 });

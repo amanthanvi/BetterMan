@@ -39,7 +39,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
   const pageCount = Math.ceil(release.pageCount / urlsPerFile)
   const lastmod = toIsoZ(release.ingestedAt)
 
-  const etag = weakEtag(['sitemap-distro-index-b4-v1', distro, release.datasetReleaseId, String(pageCount)])
+  const etag = weakEtag(['sitemap-distro-index-b4-v2', distro, release.datasetReleaseId, String(pageCount)])
   const ifNoneMatch = request.headers.get('if-none-match')
   if (ifNoneMatch && ifNoneMatch === etag) {
     return new Response(null, {

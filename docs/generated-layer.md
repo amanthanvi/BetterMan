@@ -235,7 +235,9 @@ cannot prove those flags, or what the reader would run.
 and 8, popular packages and routes promoted by aggregate traffic. Generated
 contract v3 returns the persisted tier and score. The default scan covers every
 section; the selector admits only that tier, ordered by descending demand score,
-then option-table presence and section order. A `--priority` file (`tar`,
+then option-table presence and section order. Unscored legacy releases retain
+all-page eligibility with zero stored score so deterministic page refresh stays
+available; scored releases use their stored tier. A `--priority` file (`tar`,
 `tar(1)`, `pkg:coreutils`) can reorder tier members but cannot promote a page.
 Pages without options get a summary and task phrases but no examples.
 

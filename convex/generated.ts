@@ -1,3 +1,4 @@
+import { pageIsIndexable } from "./_indexPolicy";
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -162,7 +163,7 @@ export const listCandidates = internalQuery({
         section: page.section,
         contentSha256: page.contentSha256,
         sourcePackage: page.sourcePackage ?? null,
-        indexable: page.indexable === true,
+        indexable: pageIsIndexable(release, page),
         popularityScore: page.popularityScore ?? 0,
         hasRecord: row !== null,
         promptVersion: row?.generated?.promptVersion ?? null,

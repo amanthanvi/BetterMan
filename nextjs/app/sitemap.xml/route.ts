@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
   const concepts = approvedConcepts()
   const etag = weakEtag([
-    'sitemap-index-b4-v1',
+    'sitemap-index-b4-v2',
     ...concepts.map((concept) => `concept:${concept.slug}`),
     ...releases.items.flatMap((r: (typeof releases.items)[number]) => [
       r.distro,

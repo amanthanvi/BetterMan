@@ -15,6 +15,7 @@ import type * as _derivedModel from "../_derivedModel.js";
 import type * as _destructive from "../_destructive.js";
 import type * as _explainBounds from "../_explainBounds.js";
 import type * as _generatedLayer from "../_generatedLayer.js";
+import type * as _indexPolicy from "../_indexPolicy.js";
 import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
 import type * as _manifestStorage from "../_manifestStorage.js";
@@ -64,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   _destructive: typeof _destructive;
   _explainBounds: typeof _explainBounds;
   _generatedLayer: typeof _generatedLayer;
+  _indexPolicy: typeof _indexPolicy;
   _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
   _manifestStorage: typeof _manifestStorage;

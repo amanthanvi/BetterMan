@@ -174,3 +174,20 @@ curl -fsS https://betterman.sh/api/v1/man/tar/1
 ## Rollback
 
 If prod verification fails after promotion, follow [Bad ingestion release published](bad-ingestion-release.md) to manually activate the saved previous prod release directly on `prod`, preserving manifest, seal, and hydration checks. Do not delete releases during incident response; leave old documents available for rollback. Once the incident is closed, remove superseded releases with the `prune-releases` workflow (see `docs/runbooks/multi-distro-ops.md`), which retains the newest verified inactive release per distro.
+
+## B4 tier gate and legacy serving
+
+Unscored prod releases keep main's behavior: all pages remain indexable and all
+existing sitemap URLs remain listed. Only scored releases filter the long tail.
+No seven-distro re-ingestion is required merely to deploy B4.
+
+A release with persisted `acquisition: "deb-extraction"` and no
+`indexablePageCount` cannot enter prod. Both direct activation and stage promotion
+check this in the prod-pointer transaction and return
+`FULL_DEBIAN_TIER_REQUIRED` (HTTP 409), even with `allowFullDebian: true`. The
+in-flight v5 full-Debian ingest can finish staging but needs a fresh scored
+replacement before promotion. A scored full-Debian release still needs the
+existing separate owner authorization. See the
+[B4 policy and dependency checklist](../roadmap/b4-index-by-demand.md); rebase B4
+to ingest v7 after #443, preserving its CAS request and fixed-source read, plus
+#442's generated-layer fixes. This runbook does not authorize promotion.

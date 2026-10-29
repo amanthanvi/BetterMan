@@ -192,7 +192,7 @@ describe("generated layer ingest routes", () => {
     })).json();
     expect(first.items).toEqual([{
       name: "cpio", section: "1", contentSha256: BSDTAR, sourcePackage: "tar",
-      indexable: false, popularityScore: 0,
+      indexable: true, popularityScore: 0,
       hasRecord: false, promptVersion: null, tldrCommit: null, suppressed: [], flagUsageCurrent: true,
     }]);
     expect(first.isDone).toBe(false);
@@ -200,6 +200,18 @@ describe("generated layer ingest routes", () => {
       stage: "staging", distro: "debian", section: "1", cursor: first.continueCursor, limit: 1,
     })).json();
     expect(second.items[0]).toMatchObject({ name: "tar", hasRecord: true, promptVersion: "b6-v1", tldrCommit: COMMIT });
+
+    // Legacy refresh_page remains usable; once scored, every section obeys
+    // the stored tier rather than a fresh section/package guess.
+    await t.run(async ctx => {
+      const release = (await ctx.db.query("datasetReleases").take(1))[0];
+      await ctx.db.patch(release._id, { indexablePageCount: 0 });
+    });
+    const scored = await (await call(t, "/ingest/generated/candidates", {
+      stage: "staging", distro: "debian", section: null, cursor: null, limit: 10,
+    })).json();
+    expect(scored.items).toHaveLength(3);
+    expect(scored.items.every((item: { indexable: boolean }) => item.indexable === false)).toBe(true);
 
     const missing = await call(t, "/ingest/generated/candidates", {
       stage: "prod", distro: "debian", section: "1", cursor: null, limit: 10,

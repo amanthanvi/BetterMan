@@ -307,6 +307,15 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       { type: 'table', headers: ['Oct', 'Dec', 'Hex', 'Char'], rows: asciiRows },
     ],
   }))
+
+  // Retain one real legacy release shape to exercise rolling-deploy serving.
+  if (distro === 'macos') {
+    for (const page of pages) {
+      delete page.indexable
+      delete page.popularityScore
+      page.sitemapPage = 1
+    }
+  }
   const datasetReleaseId = `e2e-${distro}-${Date.now()}`
   const sectionTotals = Object.entries(
     pages.reduce((acc, p) => {
@@ -324,7 +333,7 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
-    indexablePageCount: pages.filter(p => p.indexable).length,
+    ...(distro === 'macos' ? {} : { indexablePageCount: pages.filter(p => p.indexable).length }),
     providerCount: 5,
     packageBatches: [],
     aliasCount: 3,
