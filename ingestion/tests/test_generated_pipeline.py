@@ -199,7 +199,7 @@ class FakeClient:
         self.posts = []
 
     def _get_json(self, path):
-        return {"schemaVersion": 1}
+        return {"schemaVersion": 2}
 
     def post(self, path, payload):
         self.posts.append((path, payload))
@@ -869,3 +869,49 @@ def test_a_usage_limit_records_the_attempt_and_releases_the_reservation():
         gen._request([{"role": "user", "content": "test"}])
     assert gen.governor.checkpoint.ledger[0][1] == 0.0
     assert gen.governor._reserved == 0
+
+
+def test_unchanged_rows_hand_missing_flag_usage_to_b7(monkeypatch):
+    from ingestion.generated.tldr import TLDR_COMMIT
+
+    class NewRelease(FakeClient):
+        def post(self, path, payload):
+            if path == "/ingest/generated/candidates":
+                self.posts.append((path, payload))
+                item = {
+                    "section": "1",
+                    "hasRecord": True,
+                    "promptVersion": "b6-v1",
+                    "tldrCommit": TLDR_COMMIT,
+                }
+                return {
+                    "items": [
+                        {
+                            **item,
+                            "name": "new",
+                            "contentSha256": "n" * 64,
+                            "flagUsageCurrent": False,
+                        },
+                        {
+                            **item,
+                            "name": "old",
+                            "contentSha256": "o" * 64,
+                            "flagUsageCurrent": True,
+                        },
+                    ],
+                    "isDone": True,
+                }
+            if path == "/ingest/generated/flag-usage":
+                self.posts.append((path, payload))
+                return {"scheduled": len(payload["contentSha256s"])}
+            return super().post(path, payload)
+
+    client = NewRelease()
+    monkeypatch.setattr("ingestion.convex_client.ConvexIngestClient", lambda **kwargs: client)
+    monkeypatch.setattr(cli, "_load_tldr", lambda args: TldrIndex({}, commit=TLDR_COMMIT))
+    base = ["run", "--source", "convex", "--sections", "1"]
+    assert cli.main([*base, "--dry-run"]) == 0
+    assert not any(path == "/ingest/generated/flag-usage" for path, _ in client.posts)
+    assert cli.main(base) == 0
+    sent = [p for path, p in client.posts if path == "/ingest/generated/flag-usage"]
+    assert sent == [{"contentSha256s": ["n" * 64]}]

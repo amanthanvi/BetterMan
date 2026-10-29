@@ -115,7 +115,7 @@ describe("generated layer ingest routes", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       schemaVersion: GENERATED_CONTRACT_VERSION,
-      routes: ["/ingest/generated/candidates", "/ingest/generated/inputs", "/ingest/generated"],
+      routes: ["/ingest/generated/candidates", "/ingest/generated/inputs", "/ingest/generated", "/ingest/generated/flag-usage"],
     });
   });
 
@@ -190,7 +190,7 @@ describe("generated layer ingest routes", () => {
     })).json();
     expect(first.items).toEqual([{
       name: "cpio", section: "1", contentSha256: BSDTAR, sourcePackage: "tar",
-      hasRecord: false, promptVersion: null, tldrCommit: null, suppressed: [],
+      hasRecord: false, promptVersion: null, tldrCommit: null, suppressed: [], flagUsageCurrent: true,
     }]);
     expect(first.isDone).toBe(false);
     const second = await (await call(t, "/ingest/generated/candidates", {
@@ -428,5 +428,64 @@ describe("briefFromRecord", () => {
   it("returns null when a row has nothing to show", () => {
     expect(briefFromRecord(row({ page: { examples: [], flagUsage: [{ flag: "-c", count: 1 }] } }) as never)).toBeNull();
     expect(briefFromRecord(null)).toBeNull();
+  });
+});
+
+describe("B7 flag usage", () => {
+  afterEach(() => vi.useRealTimers());
+
+  async function usageOf(t: Harness, distro: Distro) {
+    return await t.run(async (ctx) => {
+      const pages = await ctx.db.query("manPages").withIndex("by_contentSha256", (q) => q.eq("contentSha256", TAR)).take(10);
+      return pages.find((page) => page.distro === distro)?.verifiedFlagUsage;
+    });
+  }
+
+  it("hands verified EXAMPLES and tldr counts to every page with the hash", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    await t.run(async (ctx) => {
+      await storedPage(ctx, await release(ctx, "debian", "staging"), "debian", "tar", TAR);
+      const pruning = await release(ctx, "ubuntu", "staging");
+      await ctx.db.patch(pruning, { pruning: true });
+      await storedPage(ctx, pruning, "ubuntu", "tar", TAR);
+    });
+    expect((await call(t, "/ingest/generated", { records: [record()] })).status).toBe(200);
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    expect(await usageOf(t, "debian")).toEqual([
+      { flag: "-c", count: 1, source: "examples" },
+      { flag: "-f", count: 1, source: "examples" },
+      { flag: "-x", count: 1, source: "tldr" },
+    ]);
+    // A release being pruned is left alone; generated examples never count.
+    expect(await usageOf(t, "ubuntu")).toBeNull(); // t.run returns undefined as null
+    const { items } = await (await call(t, "/ingest/generated/candidates", {
+      stage: "staging", distro: "debian", section: "1", cursor: null, limit: 5,
+    })).json();
+    expect(items[0]).toMatchObject({ name: "tar", flagUsageCurrent: true });
+  });
+
+  it("lets a later run refresh a new release's page with an unchanged hash", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    await t.run(async (ctx) => {
+      await storedPage(ctx, await release(ctx, "debian", "staging"), "debian", "tar", TAR);
+      // Already stored before this release existed: no upload will happen.
+      await ctx.db.insert("manPageGenerated", {
+        contentSha256: TAR, updatedAt: "2026-10-28T00:00:00Z",
+        tldr: { ...record().tldr },
+      });
+    });
+    const before = await (await call(t, "/ingest/generated/candidates", {
+      stage: "staging", distro: "debian", section: "1", cursor: null, limit: 5,
+    })).json();
+    expect(before.items[0].flagUsageCurrent).toBe(false);
+    const response = await call(t, "/ingest/generated/flag-usage", { contentSha256s: [TAR] });
+    expect(await response.json()).toEqual({ scheduled: 1 });
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    expect(await usageOf(t, "debian")).toEqual([{ flag: "-x", count: 1, source: "tldr" }]);
+    // Nothing is rescheduled once the page is current.
+    expect(await (await call(t, "/ingest/generated/flag-usage", { contentSha256s: [TAR] })).json())
+      .toEqual({ scheduled: 0 });
   });
 });

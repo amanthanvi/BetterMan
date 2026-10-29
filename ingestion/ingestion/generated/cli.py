@@ -256,6 +256,8 @@ def run(args: argparse.Namespace) -> int:
     totals: Counter[str] = Counter()
     estimated_usd = 0.0
     sampled = 0
+    # Unchanged rows whose pages (e.g. in a new release) lack B7 flag counts.
+    stale_usage: list[str] = []
     records: list[dict] = []
     out = open(args.out, "w", encoding="utf-8") if args.out else None  # noqa: SIM115
     paused: BudgetPaused | None = None
@@ -289,6 +291,8 @@ def run(args: argparse.Namespace) -> int:
                     and (fresh_llm or no_model)
                 ):
                     totals["skippedUnchanged"] += 1
+                    if not state.flag_usage_current:
+                        stale_usage.append(candidate.content_sha256)
                     continue
                 todo.append((candidate, fresh_llm))
             if store is not None and dry_run and sampled >= DRY_RUN_INPUT_SAMPLE:
@@ -363,6 +367,8 @@ def run(args: argparse.Namespace) -> int:
         if out:
             out.close()
         checkpoint.save()
+    if store is not None and stale_usage and not dry_run and not args.no_write:
+        totals["flagUsageScheduled"] = store.propagate_flag_usage(stale_usage)
     if store is not None and store.skipped:
         totals["inputTooLarge"] = len(store.skipped)
         _log("generation_inputs_skipped", pages=store.skipped[:20])

@@ -8,12 +8,13 @@ import type { Doc } from "./_generated/dataModel";
 
 // Advertised by GET /ingest/generated/contract. Keep aligned with
 // ingestion/ingestion/generated/store.py.
-export const GENERATED_CONTRACT_VERSION = 1;
+export const GENERATED_CONTRACT_VERSION = 2;
 
 export const GENERATED_ROUTES = [
   "/ingest/generated/candidates",
   "/ingest/generated/inputs",
   "/ingest/generated",
+  "/ingest/generated/flag-usage",
 ] as const;
 
 export const GENERATED_LIMITS = {
@@ -28,8 +29,12 @@ export const GENERATED_LIMITS = {
   summaryChars: 240,
   taskPhrases: 5,
   taskPhraseChars: 60,
-  flagUsageRows: 64,
+  partFlagUsageRows: 64,
   labelChars: 64,
+  // Pages per content hash that receive B7 flag usage in one pass.
+  flagUsagePages: 64,
+  // B7's setVerifiedFlagUsage accepts at most this many rows.
+  flagUsageRows: 256,
   // Serialized page inputs per response; later pages are deferred.
   inputResponseBytes: 8 * 1024 * 1024,
 } as const;
@@ -146,7 +151,7 @@ function checkExamples(examples: Example[], what: string): void {
 }
 
 function checkFlagUsage(rows: FlagUsage[], what: string): void {
-  check(rows.length <= GENERATED_LIMITS.flagUsageRows, `${what} flag usage is too long`);
+  check(rows.length <= GENERATED_LIMITS.partFlagUsageRows, `${what} flag usage is too long`);
   for (const row of rows) {
     check(row.flag.length > 0 && row.flag.length <= 80 && !hasForbiddenChars(row.flag), `${what} flag is malformed`);
     check(Number.isSafeInteger(row.count) && row.count > 0, `${what} flag count is invalid`);
@@ -276,4 +281,24 @@ export function generationDoc(doc: unknown): { toc: never[]; blocks: unknown[] }
     if (keepLevel !== null) kept.push(block);
   }
   return { toc: [], blocks: kept };
+}
+
+export type VerifiedFlagUsage = { flag: string; count: number; source: "examples" | "tldr" };
+
+/**
+ * B7's most-used-flags input (#429 `derived.setVerifiedFlagUsage`): verified
+ * counts from the manual's EXAMPLES and from tldr-pages. Generated examples
+ * never count.
+ */
+export function flagUsageFor(row: Doc<"manPageGenerated"> | null): VerifiedFlagUsage[] {
+  if (!row) return [];
+  const usage: VerifiedFlagUsage[] = [
+    ...(row.page?.flagUsage ?? []).map((item) => ({ ...item, source: "examples" as const })),
+    ...(row.tldr?.flagUsage ?? []).map((item) => ({ ...item, source: "tldr" as const })),
+  ];
+  return usage.slice(0, GENERATED_LIMITS.flagUsageRows);
+}
+
+export function sameFlagUsage(a: VerifiedFlagUsage[] | undefined, b: VerifiedFlagUsage[]): boolean {
+  return JSON.stringify(a ?? []) === JSON.stringify(b);
 }

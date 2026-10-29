@@ -41,7 +41,9 @@ _OPERATORS = sorted({*SEPARATORS - {"\n"}, *REDIRECTS, *_UNSUPPORTED_OPS}, key=l
 _OPERATOR_CHARS = frozenset(";&|<>()")
 
 
-def lex(text: str) -> list[Word | Op]:
+def lex(text: str, *, comments: bool = True) -> list[Word | Op]:
+    """Tokens of `text`. With `comments=False` a `#` that starts a word is an
+    error: displayed text must not carry an unverified tail."""
     tokens: list[Word | Op] = []
     buf: list[str] = []
     in_word = False
@@ -67,6 +69,8 @@ def lex(text: str) -> list[Word | Op]:
             tokens.append(Op("\n"))
             i += 1
         elif c == "#" and not in_word:
+            if not comments:
+                raise ShellSyntaxError("comment")
             while i < n and text[i] != "\n":
                 i += 1
         elif c == "'":

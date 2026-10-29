@@ -16,7 +16,7 @@ from ingestion.generated.page import PageInput
 from ingestion.generated.selector import Candidate
 
 # Keep aligned with convex/_generatedLayer.ts.
-GENERATED_CONTRACT_VERSION = 1
+GENERATED_CONTRACT_VERSION = 2
 CANDIDATE_PAGE_SIZE = 200
 INPUT_BATCH = 10
 RECORD_BATCH = 25
@@ -29,6 +29,8 @@ class RemoteCandidate:
     tldr_commit: str | None
     has_record: bool
     suppressed: frozenset[str] = frozenset()
+    # False when B7 (#429) has not yet received this row's flag counts.
+    flag_usage_current: bool = True
 
 
 class GeneratedStore:
@@ -80,6 +82,7 @@ class GeneratedStore:
                     tldr_commit=item.get("tldrCommit"),
                     has_record=bool(item.get("hasRecord")),
                     suppressed=frozenset(item.get("suppressed") or ()),
+                    flag_usage_current=item.get("flagUsageCurrent", True) is not False,
                 )
             if result.get("isDone", True):
                 return
@@ -125,3 +128,14 @@ class GeneratedStore:
             for key in totals:
                 totals[key] += int(result.get(key, 0))
         return totals
+
+    def propagate_flag_usage(self, hashes: list[str]) -> int:
+        """Hand stored flag counts to B7 for pages that do not have them yet."""
+        scheduled = 0
+        for start in range(0, len(hashes), RECORD_BATCH):
+            result = self.client.post(
+                "/ingest/generated/flag-usage",
+                {"contentSha256s": hashes[start : start + RECORD_BATCH]},
+            )
+            scheduled += int(result.get("scheduled", 0))
+        return scheduled

@@ -338,7 +338,7 @@ def simple_invocation_problems(command: str, invocations: Sequence[Sequence[str]
     subshells, heredocs, assignments or wrapper prefixes. Nothing is repaired.
     """
     try:
-        tokens = lex(command)
+        tokens = lex(command, comments=False)
     except ShellSyntaxError as exc:
         return [f"unsupported shell syntax: {exc}"]
     problems: list[str] = []

@@ -308,6 +308,15 @@ http.route({
 });
 
 http.route({
+  path: "/ingest/generated/flag-usage",
+  method: "POST",
+  handler: ingestAction(async (ctx, body) => {
+    const result = await ctx.runMutation(internal.generated.propagateFlagUsage, body as never);
+    return jsonResponse(result);
+  }),
+});
+
+http.route({
   path: "/ingest/generated",
   method: "POST",
   handler: ingestAction(async (ctx, body) => {

@@ -168,6 +168,8 @@ def test_single_quotes_keep_substitutions_literal():
         ("xargs tar -xf", "wrapper prefix xargs"),
         ("gzip -d a.gz", "does not start with tar"),
         ('tar -tf "$(ls)"', "unsupported shell syntax: command substitution"),
+        ("tar -tf a.tar #; rm -rf ~", "unsupported shell syntax: comment"),
+        ("tar -tf a.tar # list it", "unsupported shell syntax: comment"),
     ],
 )
 def test_generated_examples_must_be_one_simple_invocation(command, problem):
@@ -176,6 +178,8 @@ def test_generated_examples_must_be_one_simple_invocation(command, problem):
 
 def test_simple_invocations_pass():
     assert simple_invocation_problems("tar -xzf 'my archive.tgz' -C dir", [("tar",)]) == []
+    # `#` inside a word or quotes is ordinary text.
+    assert simple_invocation_problems("tar -cf a#1.tar '#notes'", [("tar",)]) == []
     assert simple_invocation_problems("git commit -m 'a; b'", invocations_for("git-commit")) == []
 
 

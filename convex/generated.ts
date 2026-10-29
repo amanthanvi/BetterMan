@@ -1,8 +1,12 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
+import type { MutationCtx } from "./_generated/server";
 import {
+  flagUsageFor,
   GENERATED_LIMITS,
   generatedPartNameValidator,
+  sameFlagUsage,
   generatedRecordValidator,
   GeneratedRecordError,
   validateGeneratedRecord,
@@ -51,7 +55,46 @@ export const upsertRecords = internalMutation({
         inserted += 1;
       }
     }
+    // B7 ranks most-used flags from these counts; hand them over by hash.
+    const usageHashes = args.records.filter((record) => record.page || record.tldr).map((record) => record.contentSha256);
+    if (usageHashes.length) {
+      await ctx.scheduler.runAfter(0, internal.generated.propagateFlagUsage, { contentSha256s: usageHashes });
+    }
     return { inserted, updated };
+  },
+});
+
+async function propagate(ctx: MutationCtx, contentSha256: string): Promise<number> {
+  const row = await ctx.db
+    .query("manPageGenerated")
+    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
+    .unique();
+  const usage = flagUsageFor(row);
+  const pages = await ctx.db
+    .query("manPages")
+    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
+    .take(GENERATED_LIMITS.flagUsagePages);
+  let scheduled = 0;
+  for (const page of pages) {
+    if (sameFlagUsage(page.verifiedFlagUsage, usage)) continue;
+    const release = await ctx.db.get(page.releaseId);
+    if (!release || release.pruning) continue;
+    await ctx.scheduler.runAfter(0, internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage });
+    scheduled += 1;
+  }
+  return scheduled;
+}
+
+/** Give B7 the verified flag counts for every page with these content hashes. */
+export const propagateFlagUsage = internalMutation({
+  args: { contentSha256s: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    if (args.contentSha256s.length > GENERATED_LIMITS.recordsPerRequest) {
+      throw new GeneratedRecordError(`at most ${GENERATED_LIMITS.recordsPerRequest} hashes per request`);
+    }
+    let scheduled = 0;
+    for (const contentSha256 of new Set(args.contentSha256s)) scheduled += await propagate(ctx, contentSha256);
+    return { scheduled };
   },
 });
 
@@ -87,6 +130,9 @@ export const listCandidates = internalQuery({
         promptVersion: row?.generated?.promptVersion ?? null,
         tldrCommit: row?.tldrCommit ?? row?.tldr?.commit ?? null,
         suppressed: row?.suppressed ?? [],
+        // False when B7 has not yet received this row's flag counts for this
+        // page, e.g. a new release of an unchanged page.
+        flagUsageCurrent: sameFlagUsage(page.verifiedFlagUsage, flagUsageFor(row)),
       };
     }));
     return { items, continueCursor: result.continueCursor, isDone: result.isDone };

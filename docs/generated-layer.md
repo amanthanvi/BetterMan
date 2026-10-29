@@ -321,17 +321,22 @@ Separate from the release ingest contract, behind the same ingest secret:
 
 | Route | Use |
 | --- | --- |
-| `GET /ingest/generated/contract` | Version 1, routes and limits |
+| `GET /ingest/generated/contract` | Version 2, routes and limits (separate from the release ingest contract) |
 | `POST /ingest/generated/candidates` | One section of a stage's active release, 200 per page, each with its row's prompt version, tldr commit and suppressed parts |
 | `POST /ingest/generated/inputs` | Stored synopsis, options, and the DESCRIPTION and EXAMPLES sections for up to 10 pages. Each page's UTF-8 size is measured before it is added, so a response never exceeds 8 MiB: pages that would push past it are deferred to the next request, and a page too large on its own is skipped with a reason |
-| `POST /ingest/generated` | Upsert up to 25 records |
+| `POST /ingest/generated` | Upsert up to 25 records; schedules B7 flag usage for their pages |
+| `POST /ingest/generated/flag-usage` | Hand stored flag counts to B7 for up to 25 content hashes whose pages lack them |
 
 ## Coordination
 
-- **B7 (#399):** most-used flags take `flagUsage` from the `page` part
-  (source `examples`) and the `tldr` part (source `tldr`), the same
-  `{flag, count}` shape as B7's `VerifiedFlagUsage`. Generated examples do not
-  count. B7 can read them by content hash, one indexed lookup per page.
+- **B7 (#399, merged in #429):** most-used flags come from the `page` part's
+  `flagUsage` (source `examples`) and the `tldr` part's (source `tldr`).
+  Generated examples never count. After an upload with either part,
+  `generated.propagateFlagUsage` finds every page with that content hash
+  (up to 64), skips releases being pruned and pages already current, and
+  schedules B7's own `derived.setVerifiedFlagUsage` for the rest. Candidates
+  report `flagUsageCurrent`, so a run that skips an unchanged hash still
+  refreshes the pages of a new release through `/ingest/generated/flag-usage`.
 - **B5 (#397):** task phrases are in `generated.taskPhrases`.
 - **C4 (#406):** renders `brief` from the man page response.
 
