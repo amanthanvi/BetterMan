@@ -2,7 +2,6 @@
 Both target executables were replaced by marker ELF binaries at image build.
 """
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path

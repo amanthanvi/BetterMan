@@ -22,8 +22,8 @@ describe('modeled wrappers',()=>{
  ])('admits validated wrapper values: %s',cmd=>expect(parseShell(cmd).diagnostics).toEqual([]));
  it.each(WRAPPER_FORMS)('lifts interleaved redirects across %s',wrapper=>{
   const parts=wrapper.split(' ');
-  for(let i=0;i<=parts.length;i++) {
-   const words=[...parts];words.splice(i,0,'>out');
+  for(const position of Array.from({length:parts.length+1},(_,n)=>n)) {
+   const words=[...parts];words.splice(position,0,'>out');
    const result=parseShell(words.join(' ')+' rm x');
    expect(result.diagnostics).toEqual([]);
    expect(result.stages.map(s=>s.tokens.find(t=>t.kind==='command')?.value)).toEqual([parts[0],'rm']);
