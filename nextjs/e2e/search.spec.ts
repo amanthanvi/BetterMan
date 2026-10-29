@@ -102,6 +102,10 @@ test.describe('search without JavaScript', () => {
     await page.goto('/search?q=tar')
     await expect(page.getByRole('list', { name: 'Search results' }).getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
     await expect(page.locator('[data-bm-top-hit]')).toContainText('Explain this line')
+    // A query nothing has cached yet: the page awaits its results rather than streaming a skeleton.
+    await page.goto(`/search?q=archiving&section=1&n=${Date.now()}`)
+    await expect(page.getByRole('status', { name: /Loading/ })).toHaveCount(0)
+    await expect(page.getByRole('list', { name: 'Search results' }).getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
   })
 })
 

@@ -1,14 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { SearchResponse } from '../../../lib/api'
-import type { Distro } from '../../../lib/distro'
+import type { SearchResponse } from '../../lib/api'
+import type { Distro } from '../../lib/distro'
 import { SearchResultsClient } from './SearchResultsClient'
 
 const distroState = vi.hoisted(() => ({ urlDistro: null as Distro | null }))
 
-vi.mock('../../../components/ui/LinkPendingHint', () => ({ LinkPendingHint: () => null }))
-vi.mock('../../../components/state/distro', () => ({ useDistro: () => ({ urlDistro: distroState.urlDistro }) }))
+vi.mock('../../components/ui/LinkPendingHint', () => ({ LinkPendingHint: () => null }))
+vi.mock('../../components/state/distro', () => ({ useDistro: () => ({ urlDistro: distroState.urlDistro }) }))
 
 afterEach(() => {
   distroState.urlDistro = null

@@ -181,7 +181,8 @@ first under reduced motion. Recent and Bookmarks render only once they hold
 entries; an empty home has no empty sections.
 
 Search has no display heading (the `h1` is visually hidden) and no running
-head. The section filter is the nine manual sections, without a listing read.
+head. Like explain, `/search` sits outside the `(site)` group with no loading
+boundary, so its results are in the HTML without JavaScript. The section filter is the nine manual sections, without a listing read.
 `components/search/` holds the stateless `SearchResultsBody` and `ResultRow`,
 shared by both pages, and `TopHit`. The top hit, on the added tint inside the
 first row, leads with one worked example and its gloss, its source label (the

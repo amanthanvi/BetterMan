@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 import { HomeDashboardClient } from './HomeDashboardClient'
-import { SearchPageInput } from './search/SearchPageInput'
+import { SearchPageInput } from '../search/SearchPageInput'
 import { fetchInfo, listSections, search, withDistroFallback } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
 import { explicitDistro, getFirst, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'

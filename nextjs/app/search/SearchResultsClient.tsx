@@ -3,12 +3,12 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { SearchResponse, SearchResult } from '../../../lib/api'
-import { withDistro, type Distro } from '../../../lib/distro'
-import { useDistro } from '../../../components/state/distro'
-import { SearchResultsBody } from '../../../components/search/SearchResultsBody'
+import type { SearchResponse, SearchResult } from '../../lib/api'
+import { withDistro, type Distro } from '../../lib/distro'
+import { useDistro } from '../../components/state/distro'
+import { SearchResultsBody } from '../../components/search/SearchResultsBody'
 
-export { resultKind } from '../../../components/search/ResultRow'
+export { resultKind } from '../../components/search/ResultRow'
 
 async function fetchMore(opts: {
   distro: Distro
