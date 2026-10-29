@@ -9,7 +9,7 @@ import {
   isBookmarked,
   toggleBookmark,
 } from '../../lib/bookmarks'
-import { StarIcon } from '../icons'
+import { ACTION_CLASS } from '../ui/action'
 
 export function BookmarkButton({ name, section, description }: { name: string; section: string; description?: string }) {
   const key = useMemo(() => `${name}(${section})`, [name, section])
@@ -60,13 +60,16 @@ export function BookmarkButton({ name, section, description }: { name: string; s
       type="button"
       aria-pressed={active}
       aria-label={active ? `Remove bookmark for ${key}` : `Bookmark ${key}`}
-      className={`inline-flex size-9 items-center justify-center transition-colors ${
-        active ? 'text-accent' : 'text-muted hover:text-fg'
-      }`}
+      className={ACTION_CLASS}
       onClick={onToggle}
-      title={active ? `Bookmarked: ${key}` : `Bookmark: ${key}`}
+      title={active ? `Bookmarked: ${key} (m)` : `Bookmark: ${key} (m)`}
     >
-      <StarIcon filled={active} className="size-4" />
+      Bookmark
+      {active ? (
+        <span aria-hidden="true" className="ml-1 inline-block no-underline">
+          ✓
+        </span>
+      ) : null}
       <span aria-live="polite" className="sr-only">
         {announcement}
       </span>

@@ -59,48 +59,42 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     .sort((a, b) => a.n - b.n)
     .slice(0, 9)
 
+  const sectionLinkClass = (active: boolean) =>
+    active ? 'font-semibold text-ink no-underline' : 'text-ink-2 no-underline hover:text-accent'
+
   return (
-    <div className="mx-auto max-w-5xl">
-      <header className="border-b border-edge pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
+    <div className="mx-auto max-w-[46rem] pt-10">
+      <h1 className="font-serif text-2xl font-semibold tracking-[-0.01em]">Search the manual</h1>
 
-        <form className="mt-4" action="/search" method="get" role="search" aria-label="Search man pages">
-          <SearchPageInput initialQ={q} section={section} />
-          {section ? <input type="hidden" name="section" value={section} /> : null}
-          {urlDistro ? <input type="hidden" name="distro" value={urlDistro} /> : null}
-        </form>
+      <form className="mt-6" action="/search" method="get" role="search" aria-label="Search man pages">
+        <SearchPageInput initialQ={q} section={section} />
+        {section ? <input type="hidden" name="section" value={section} /> : null}
+        {urlDistro ? <input type="hidden" name="distro" value={urlDistro} /> : null}
+      </form>
 
-        <nav aria-label="Section filter" className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-          <Link
-            href={buildSearchHref({ q, section: '', urlDistro })}
-            aria-current={!section ? 'page' : undefined}
-            className={`px-0.5 py-1 font-mono text-xs transition-colors ${
-              !section
-                ? 'font-semibold text-fg underline decoration-accent decoration-2 underline-offset-4 hover:no-underline'
-                : 'text-muted hover:text-fg hover:underline hover:underline-offset-4'
-            }`}
-          >
-            All
-          </Link>
-          {sectionPills.map((s) => (
+      <nav aria-label="Section filter" className="mt-4 text-sm leading-[1.9] text-ink-3">
+        <Link
+          href={buildSearchHref({ q, section: '', urlDistro })}
+          aria-current={!section ? 'page' : undefined}
+          className={sectionLinkClass(!section)}
+        >
+          All sections
+        </Link>
+        {sectionPills.map((s) => (
+          <span key={s.section}>
+            {' · '}
             <Link
-              key={s.section}
               href={buildSearchHref({ q, section: s.section, urlDistro })}
               aria-current={section === s.section ? 'page' : undefined}
-              className={`px-0.5 py-1 font-mono text-xs transition-colors ${
-                section === s.section
-                  ? 'font-semibold text-fg underline decoration-accent decoration-2 underline-offset-4 hover:no-underline'
-                  : 'text-muted hover:text-fg hover:underline hover:underline-offset-4'
-              }`}
+              className={`whitespace-nowrap ${sectionLinkClass(section === s.section)}`}
               title={s.label}
               aria-label={`Section ${s.section}: ${s.label}`}
             >
-              {s.section}
+              <span className="font-serif text-[0.875rem] text-ink-3 oldstyle-nums">{s.section}</span> {s.label}
             </Link>
-          ))}
-        </nav>
-
-      </header>
+          </span>
+        ))}
+      </nav>
 
       <SearchResultsClient distro={distro} q={q} section={section} initial={initial} />
     </div>

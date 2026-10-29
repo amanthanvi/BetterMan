@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { withDistro, type Distro } from '../../lib/distro'
 import {
@@ -18,6 +18,7 @@ import {
   type RecentItem,
 } from '../../lib/recent'
 import { useDistro } from '../../components/state/distro'
+import { ManSectionLabel } from '../../components/man/RunningHead'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Kbd } from '../../components/ui/Kbd'
 import { LinkPendingHint } from '../../components/ui/LinkPendingHint'
@@ -33,21 +34,6 @@ function formatRelativeFromMs(ms: number): string {
   }
 }
 
-function ManLink({ urlDistro, name, section, children }: { urlDistro: Distro | null; name: string; section: string; children: React.ReactNode }) {
-  const href = useMemo(() => {
-    const encodedName = encodeURIComponent(name)
-    const encodedSection = encodeURIComponent(section)
-    return withDistro(`/man/${encodedName}/${encodedSection}`, urlDistro)
-  }, [urlDistro, name, section])
-
-  return (
-    <Link href={href} className="group min-w-0 flex-1 py-2.5 transition-colors hover:no-underline">
-      {children}
-      <LinkPendingHint />
-    </Link>
-  )
-}
-
 function EntryRow({
   urlDistro,
   name,
@@ -61,18 +47,19 @@ function EntryRow({
   description?: string
   timestamp: number
 }) {
+  const href = withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`, urlDistro)
+
   return (
-    <ManLink urlDistro={urlDistro} name={name} section={section}>
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="flex min-w-0 items-baseline gap-3">
-          <span className="shrink-0 font-mono text-sm font-semibold text-fg group-hover:text-accent">
-            {name}({section})
-          </span>
-          {description ? <span className="min-w-0 truncate text-sm text-muted">{description}</span> : null}
-        </div>
-        <span className="shrink-0 font-mono text-xs text-faint">{formatRelativeFromMs(timestamp)}</span>
-      </div>
-    </ManLink>
+    <>
+      <Link href={href} className="group min-w-0 flex-1 truncate no-underline">
+        <span className="group-hover:text-accent">
+          <b className="font-semibold">{name}</b>({section})
+        </span>
+        {description ? <span className="text-ink-2"> {description}</span> : null}
+        <LinkPendingHint />
+      </Link>
+      <span className="shrink-0 font-sans text-xs text-ink-3">{formatRelativeFromMs(timestamp)}</span>
+    </>
   )
 }
 
@@ -112,54 +99,51 @@ export function HomeDashboardClient() {
   }, [])
 
   return (
-    <div className="mt-10 grid gap-10">
-      <section id="recent" aria-label="Recent">
-        <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">RECENT</h2>
-
-        <div className="pl-6 sm:pl-8">
-          {recentPages.length ? (
-            <div className="mt-2">
-              {recentPages.map((it) => (
-                <div key={`${it.name}:${it.section}:${it.at}`} className="flex items-stretch border-b border-edge last:border-b-0">
-                  <EntryRow urlDistro={urlDistro} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="No recent pages" className="mt-2">
-              Pages you open are listed here.
-            </EmptyState>
-          )}
-        </div>
+    <div className="mt-14 grid gap-10 sm:grid-cols-2 sm:gap-8">
+      <section id="recent" aria-label="Recent" className="min-w-0">
+        <ManSectionLabel as="h2">Recent</ManSectionLabel>
+        {recentPages.length ? (
+          <ul className={LIST}>
+            {recentPages.map((it) => (
+              <li key={`${it.name}:${it.section}:${it.at}`} className={ROW}>
+                <EntryRow urlDistro={urlDistro} name={it.name} section={it.section} description={it.description} timestamp={it.at} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState title="No recent pages" className="mt-1">
+            Pages you open are listed here.
+          </EmptyState>
+        )}
       </section>
 
-      <section id="bookmarks" aria-label="Bookmarks">
-        <h2 className="font-mono text-xs font-semibold tracking-[0.08em] text-muted">BOOKMARKS</h2>
-
-        <div className="pl-6 sm:pl-8">
-          {bookmarks.length ? (
-            <div className="mt-2">
-              {bookmarks.map((it) => (
-                <div key={`${it.name}:${it.section}:${it.addedAt}`} className="group/row flex items-stretch border-b border-edge last:border-b-0">
-                  <EntryRow urlDistro={urlDistro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
-                  <button
-                    type="button"
-                    className="flex shrink-0 items-center justify-center px-3 text-xs text-muted opacity-100 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0"
-                    onClick={() => removeBookmark({ name: it.name, section: it.section })}
-                    aria-label={`Remove bookmark for ${it.name}(${it.section})`}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="No bookmarks yet" className="mt-2">
-              Press <Kbd>M</Kbd> on a page to keep it here.
-            </EmptyState>
-          )}
-        </div>
+      <section id="bookmarks" aria-label="Bookmarks" className="min-w-0">
+        <ManSectionLabel as="h2">Bookmarks</ManSectionLabel>
+        {bookmarks.length ? (
+          <ul className={LIST}>
+            {bookmarks.map((it) => (
+              <li key={`${it.name}:${it.section}:${it.addedAt}`} className={`group/row ${ROW}`}>
+                <EntryRow urlDistro={urlDistro} name={it.name} section={it.section} description={it.description} timestamp={it.addedAt} />
+                <button
+                  type="button"
+                  className="shrink-0 font-sans text-xs text-ink-3 underline decoration-rule-2 underline-offset-[3px] hover:text-accent focus-visible:opacity-100 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0"
+                  onClick={() => removeBookmark({ name: it.name, section: it.section })}
+                  aria-label={`Remove bookmark for ${it.name}(${it.section})`}
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState title="No bookmarks yet" className="mt-1">
+            Press <Kbd>m</Kbd> on a page to keep it here.
+          </EmptyState>
+        )}
       </section>
     </div>
   )
 }
+
+const LIST = 'mt-1.5 font-serif text-md'
+const ROW = 'flex items-baseline gap-3 py-1'

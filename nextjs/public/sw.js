@@ -1,6 +1,6 @@
 /* BetterMan service worker (minimal, no Workbox). */
 
-const CACHE_VERSION = 'v0.6.5-1'
+const CACHE_VERSION = 'v0.6.5-2'
 const CACHE_PREFIX = 'bm'
 
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
@@ -19,23 +19,25 @@ const OFFLINE_HTML = `<!doctype html>
 <title>Offline · BetterMan</title>
 <style>
 :root { color-scheme: light dark; }
-body { margin: 0; background: #faf8f5; color: #1c1a17; font: 16px/1.6 system-ui, sans-serif; }
-main { max-width: 48rem; margin: 0 auto; padding: 2rem 1.5rem; }
-header { padding-bottom: .5rem; border-bottom: 1px solid #e6e1d9; font: 600 12px/1.5 ui-monospace, monospace; letter-spacing: .08em; }
-h1 { margin: 2rem 0 1rem; font-size: 1rem; font-weight: 400; color: #6f695f; }
-a { color: #c22126; font-family: ui-monospace, monospace; text-underline-offset: 4px; }
-a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+body { margin: 0; background: #f9f7f2; color: #1c1a16; font: 16px/1.55 system-ui, sans-serif; }
+main { max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem; }
+header { display: flex; justify-content: space-between; padding: .7rem 0 .65rem; border-bottom: 1px solid #e4dfd4; color: #6e685d; font: 15px/1.2 Georgia, serif; font-variant-caps: all-small-caps; letter-spacing: .08em; }
+h1 { margin: 12vh 0 1rem; font: 400 1.625rem/1.3 ui-monospace, monospace; }
+a { color: inherit; text-decoration-color: #c9c1b2; text-underline-offset: 3px; }
+a:hover { color: #a3261b; }
+a:focus-visible { outline: 2px solid #a3261b; outline-offset: 2px; }
 @media (prefers-color-scheme: dark) {
-  body { background: #0b0b0d; color: #ededf0; }
-  header { border-color: #26262b; }
-  h1 { color: #9b9ba3; }
-  a { color: #e5484d; }
+  body { background: #131210; color: #ece7dd; }
+  header { border-color: #2b2925; color: #9a9385; }
+  a { text-decoration-color: #46423b; }
+  a:hover { color: #ec8a76; }
+  a:focus-visible { outline-color: #ec8a76; }
 }
 </style>
 </head>
 <body>
 <main>
-<header>BETTERMAN(1)</header>
+<header><span>BETTERMAN(1)</span><span>BETTERMAN(1)</span></header>
 <h1>Offline — this page isn't cached</h1>
 <a href="/">Go home</a>
 </main>

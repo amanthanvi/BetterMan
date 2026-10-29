@@ -4,16 +4,17 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { type ComponentType, useCallback, useEffect, useRef, useState } from 'react'
 
 import type { InfoResponse } from '../../lib/api'
+import type { TocItem } from '../../lib/docModel'
 import { BOOKMARK_TOGGLE_EVENT } from '../../lib/bookmarks'
 import { FIND_REQUEST_EVENT, singleKeyShortcutsBlocked } from '../../lib/dom'
 import { withDistro, type Distro } from '../../lib/distro'
-import { getScrollBehavior, READER_INPUT_EVENTS } from '../../lib/scroll'
+import { cancelScrollPin, getScrollBehavior, READER_INPUT_EVENTS, scrollElementIntoView } from '../../lib/scroll'
 import { formatRelativeTime } from '../../lib/time'
 import { parseReleaseId } from '../../lib/release'
 import { useDistro } from '../state/distro'
 import { useTheme } from '../state/theme'
 import { useToc } from '../state/toc'
-import { MoonIcon, SearchIcon, SunIcon } from '../icons'
+import { ThemeIcon } from '../icons'
 import { Kbd } from '../ui/Kbd'
 
 // Shares one in-flight import between the idle preload and an open. A failed
@@ -76,6 +77,25 @@ function useOverlay<P>(
   return Overlay
 }
 
+// j and k scroll about three lines of the manual.
+const PAGER_LINE_PX = 90
+
+// Headings settle 8rem under the viewport top (scroll-margin), so a section
+// counts as current from just above that line.
+const SECTION_LINE_PX = 136
+
+/** The section heading before or after the reading position, at the shallowest level. */
+function adjacentSectionId(items: TocItem[], direction: 1 | -1): string | null {
+  const top = Math.min(...items.map((item) => item.level))
+  const headings = items
+    .filter((item) => item.level === top)
+    .map((item) => document.getElementById(item.id))
+    .filter((el): el is HTMLElement => el instanceof HTMLElement)
+  if (direction === 1) return headings.find((el) => el.getBoundingClientRect().top > SECTION_LINE_PX)?.id ?? null
+  const above = headings.filter((el) => el.getBoundingClientRect().top < SECTION_LINE_PX - 16)
+  return above.at(-1)?.id ?? null
+}
+
 function dashboardHref(section: 'recent' | 'bookmarks', urlDistro: Distro | null) {
   return `${withDistro('/', urlDistro)}#${section}`
 }
@@ -115,7 +135,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const routeKey = `${pathname}?${searchParams.toString()}`
   const routeParts = pathname.split('/').filter(Boolean)
-  const isManPage = routeParts[0] === 'man' && routeParts.length >= 3
+  // A rendered manual, not the URL: /man/ta/9 is a 404 with no find bar or bookmark.
+  const isManPage = toc.manualRendered
+  const isHome = routeParts.length === 0
 
   const [info, setInfo] = useState<InfoResponse | null>(null)
 
@@ -259,12 +281,61 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return
       }
 
-      if (singleKeyShortcutsBlocked(document)) return
+      // A focused widget (the contents' j/k) already handled the key.
+      if (e.defaultPrevented || singleKeyShortcutsBlocked(document)) return
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '?') {
         e.preventDefault()
         setShortcutsOpen(true)
         return
+      }
+
+      // On a man page the pager keys apply, as in less: / finds; j k scroll; g G top and
+      // bottom; [ ] the previous and next section. n N live with the find state.
+      if (isManPage && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const pagerKey = e.key
+        if (pagerKey === '/') {
+          e.preventDefault()
+          window.dispatchEvent(new CustomEvent(FIND_REQUEST_EVENT))
+          return
+        }
+        // A pin from an earlier jump (a section, a find match) attaches its stop-on-input
+        // listeners a frame late; under load this key may arrive first, so end it here.
+        if (pagerKey === 'j' || pagerKey === 'k') {
+          e.preventDefault()
+          cancelScrollPin()
+          window.scrollBy({ top: pagerKey === 'j' ? PAGER_LINE_PX : -PAGER_LINE_PX, behavior: 'auto' })
+          return
+        }
+        if (pagerKey === 'g') {
+          e.preventDefault()
+          cancelScrollPin()
+          window.scrollTo({ top: 0, left: 0, behavior: getScrollBehavior() })
+          return
+        }
+        if (pagerKey === 'G') {
+          e.preventDefault()
+          // Off-screen blocks take their real height only as they render near the
+          // viewport, so the page grows after a single scroll to its end. Pin the footer
+          // to the bottom instead; the pin re-scrolls as heights settle, until the reader
+          // takes over.
+          const end = document.querySelector('[data-bm-app-footer]')
+          if (end) scrollElementIntoView(end, { behavior: getScrollBehavior(), block: 'end' })
+          return
+        }
+        if ((pagerKey === '[' || pagerKey === ']') && toc.items.length) {
+          e.preventDefault()
+          const id = adjacentSectionId(toc.items, pagerKey === ']' ? 1 : -1)
+          if (!id) return
+          if (toc.scrollToId) toc.scrollToId(id)
+          else document.getElementById(id)?.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' })
+          try {
+            window.history.replaceState(null, '', `#${id}`)
+          } catch {
+            // ignore
+          }
+          return
+        }
       }
 
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === '/') {
@@ -403,18 +474,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [isManPage, toc])
 
   return (
-    <div className="min-h-dvh bg-bg text-fg">
+    <div className="min-h-dvh bg-paper text-ink">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-edge-strong focus:bg-raised focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-fg"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-rule-2 focus:bg-raised focus:px-3 focus:py-2 focus:text-sm"
       >
         Skip to content
       </a>
-      <header data-bm-app-header aria-label="Site header" className="sticky top-0 z-20 border-b border-edge bg-bg">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
-          <a href={withDistro('/', distro.urlDistro)} className="inline-flex items-center gap-2 text-fg hover:text-fg hover:no-underline">
-            <span className="font-mono text-sm font-semibold tracking-tight text-accent">&gt;_</span>
-            <span className="text-sm font-semibold tracking-tight">BetterMan</span>
+      <header data-bm-app-header aria-label="Site header" className="sticky top-0 z-20 border-b border-rule bg-paper">
+        <div className="mx-auto flex h-14 max-w-page items-center gap-5 px-5 md:gap-10 md:px-12">
+          {/* The home page sets the wordmark as its title, so the header does not repeat it there. */}
+          <a
+            href={withDistro('/', distro.urlDistro)}
+            aria-label="BetterMan home"
+            className={`bm-wm hover:text-ink ${isHome ? 'invisible' : ''}`}
+          >
+            betterman<span>(1)</span>
           </a>
 
           <div aria-live="polite" className="sr-only">
@@ -423,44 +498,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div aria-live="polite" className="sr-only">
             {overlayNotice}
           </div>
-          <span role="status" aria-label="Navigation" className={distro.isNavigating ? 'font-mono text-xs text-muted' : 'sr-only'}>
+          <span role="status" aria-label="Navigation" className={distro.isNavigating ? 'text-xs text-ink-3' : 'sr-only'}>
             {distro.isNavigating ? 'Loading…' : ''}
           </span>
 
-          <div className="ml-auto flex items-center gap-4">
-            <button
-              type="button"
-              className="group inline-flex h-9 items-center justify-center gap-2 px-1 text-muted transition-colors hover:text-fg"
-              onClick={() => setPaletteOpen(true)}
-              aria-label="Search ⌘K"
-              title="Command palette (Ctrl/⌘ K)"
-            >
-              <SearchIcon className="size-4" />
-              <span className="font-mono text-sm group-hover:underline group-hover:underline-offset-4">
-                search
-              </span>
-              <span className="hidden md:inline-flex">
-                <Kbd>⌘K</Kbd>
-              </span>
-            </button>
+          <button
+            type="button"
+            className="bm-js flex h-9 min-w-0 flex-1 items-center gap-3 border-b border-rule-2 text-left text-sm text-ink-3 hover:border-accent hover:text-ink md:max-w-96"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Search ⌘K"
+            title="Command palette (Ctrl/⌘ K)"
+          >
+            <span className="truncate">Search</span>
+            <Kbd className="ml-auto hidden md:inline-flex">⌘K</Kbd>
+          </button>
+          <a href={withDistro('/search', distro.urlDistro)} className="bm-nojs text-sm text-ink-2 underline">
+            Search
+          </a>
 
-            <button
-              type="button"
-              className="inline-flex size-9 items-center justify-center text-muted transition-colors hover:text-fg"
-              onClick={() => theme.cycle()}
-              title="Cycle theme"
-              aria-label="Cycle theme"
-            >
-              <SunIcon className="bm-theme-icon bm-theme-icon-sun size-4" />
-              <MoonIcon className="bm-theme-icon bm-theme-icon-moon size-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="bm-js -mr-2 ml-auto inline-flex size-9 shrink-0 items-center justify-center text-ink-2 hover:text-ink"
+            onClick={() => theme.cycle()}
+            title={`Theme: ${theme.mode} (d)`}
+            aria-label="Cycle theme"
+          >
+            <ThemeIcon className="size-4" />
+          </button>
         </div>
 
         {offline ? (
-          <div className="border-t border-edge bg-raised px-4 py-2 text-xs text-muted">
+          <p className="mx-auto max-w-page border-t border-rule px-5 py-2 text-xs text-ink-2 md:px-12">
             Offline — showing cached content
-          </div>
+          </p>
         ) : null}
       </header>
 
@@ -469,44 +539,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {ReadingPrefsDrawer ? <ReadingPrefsDrawer open={prefsOpen} onOpenChange={setPrefsOpen} /> : null}
       {CommandPalette ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
 
-      <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-10 pb-10 outline-none">
+      {/* clip, not hidden: hanging section numbers may overhang without making main a scroll container. */}
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-page overflow-x-clip px-5 pb-10 outline-none md:px-12">
         {children}
       </main>
 
-      <footer data-bm-app-footer aria-label="Site footer" className="border-t border-edge">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 font-mono">
-            <span aria-hidden="true" className="text-accent">&gt;_</span>
-            {info ? (
-              <span title={`Dataset ${info.datasetReleaseId}`}>
-                {info.pageCount.toLocaleString()} pages · updated {formatRelativeTime(info.lastUpdated)}
-                {parseReleaseId(info.datasetReleaseId).mandocVersion
-                  ? ` · mandoc ${parseReleaseId(info.datasetReleaseId).mandocVersion}`
-                  : ''}
-              </span>
-            ) : (
-              <span>BetterMan</span>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <a
-              href={withDistro('/licenses', distro.urlDistro)}
-              className="text-muted underline underline-offset-4 hover:text-fg"
-            >
-              Licenses
-            </a>
-            <a
-              href="https://github.com/amanthanvi/BetterMan"
-              className="text-muted underline underline-offset-4 hover:text-fg"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub
-            </a>
-          </div>
+      <footer data-bm-app-footer aria-label="Site footer" className="mt-20 border-t border-rule">
+        <div className="mx-auto flex max-w-page flex-wrap items-baseline gap-x-6 gap-y-2 px-5 pt-5 pb-10 text-sm text-ink-3 md:px-12">
+          <span>
+            <span className="bm-wm text-sm text-ink-2">betterman</span> · the Unix manual, typeset
+          </span>
+          {info ? (
+            <span title={`Dataset ${info.datasetReleaseId}`}>
+              {info.pageCount.toLocaleString()} pages · updated {formatRelativeTime(info.lastUpdated)}
+              {parseReleaseId(info.datasetReleaseId).mandocVersion
+                ? ` · mandoc ${parseReleaseId(info.datasetReleaseId).mandocVersion}`
+                : ''}
+            </span>
+          ) : null}
+          <a href={withDistro('/licenses', distro.urlDistro)} className="underline">
+            Licenses
+          </a>
+          <a href="https://github.com/amanthanvi/BetterMan" className="underline" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
         </div>
       </footer>
-
     </div>
   )
 }

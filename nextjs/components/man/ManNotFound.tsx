@@ -4,7 +4,7 @@ import { manPageHref, withDistro } from '../../lib/distro'
 import type { ManMiss } from '../../lib/manLookup'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
 import { ManDistroAvailability } from './ManDistroAvailability'
-import { ManSectionLabel } from './RunningHead'
+import { ManSectionLabel, RunningHead } from './RunningHead'
 
 /** What man-db prints for a miss, and the command that would print it. */
 export function manMiss(name: string, section: string | null): { command: string; message: string } {
@@ -18,16 +18,37 @@ export function ManNotFound({ miss }: { miss: ManMiss }) {
   const { command, message } = manMiss(name, section)
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <header className="border-b border-edge pb-6">
-        <p aria-hidden="true" className="font-mono text-xs text-muted">
+    <div className="mx-auto max-w-[46rem]">
+      <RunningHead title="MAN(1)" label="Manual pager utils" />
+      <header className="pt-[12vh]">
+        <p aria-hidden="true" className="font-mono text-sm text-ink-3">
           $ {command}
         </p>
-        <h1 className="mt-2 break-words font-mono text-2xl font-semibold leading-tight tracking-tight">{message}</h1>
+        <h1 className="mt-2 break-words font-mono text-[1.625rem] leading-snug">{message}</h1>
       </header>
 
+      {suggestions.length ? (
+        <section aria-label="Did you mean" className="mt-8">
+          <ManSectionLabel as="h2">Did you mean</ManSectionLabel>
+          <ul className="mt-1.5 font-serif text-lg">
+            {suggestions.map((s) => (
+              <li key={`${s.name}:${s.section}`} className="py-0.5">
+                <Link
+                  href={manPageHref(s.name, s.section, urlDistro)}
+                  className="underline decoration-rule-2 underline-offset-4 hover:decoration-accent"
+                >
+                  <b className="font-semibold">{s.name}</b>({s.section})
+                  <LinkPendingHint />
+                </Link>
+                {s.description ? <span className="text-ink-2">, {s.description}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {distro === 'macos' ? (
-        <p className="mt-6 max-w-[70ch] text-sm text-muted">
+        <p className="mt-8 max-w-[38rem] text-sm text-ink-2">
           BetterMan carries only the BSD-licensed subset of the manual pages macOS ships, so a page your Mac has may
           be missing here.
         </p>
@@ -35,34 +56,11 @@ export function ManNotFound({ miss }: { miss: ManMiss }) {
 
       <ManDistroAvailability name={name} section={section} distro={distro} available={miss.distros} />
 
-      {suggestions.length ? (
-        <section aria-label="Did you mean" className="mt-8">
-          <ManSectionLabel as="h2">DID YOU MEAN</ManSectionLabel>
-          <ul className="mt-3 space-y-2 pl-6 sm:pl-8">
-            {suggestions.map((s) => (
-              <li key={`${s.name}:${s.section}`} className="flex flex-col">
-                <Link
-                  href={manPageHref(s.name, s.section, urlDistro)}
-                  className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
-                >
-                  {s.name}({s.section})
-                  <LinkPendingHint />
-                </Link>
-                {s.description ? <div className="text-xs text-muted">{s.description}</div> : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <p className="mt-8 text-sm text-muted">
-        <Link
-          href={withDistro(`/search?q=${encodeURIComponent(name)}`, urlDistro)}
-          className="underline underline-offset-4"
-        >
+      <p className="mt-10 text-sm text-ink-3">
+        <Link href={withDistro(`/search?q=${encodeURIComponent(name)}`, urlDistro)} className="underline">
           Search for “{name}”
         </Link>{' '}
-        in page names and descriptions.
+        in page names and descriptions: it may exist on another system, in another section, or under another name.
       </p>
     </div>
   )

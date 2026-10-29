@@ -12,9 +12,9 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={cx('py-1 text-sm', className)}>
-      <div className="font-mono text-xs tracking-wide text-muted">{title}</div>
-      {children ? <div className="mt-1 text-muted">{children}</div> : null}
+    <div className={cx('py-1 text-sm text-ink-3', className)}>
+      <p className="font-serif text-base italic text-ink-2">{title}</p>
+      {children ? <p className="mt-1">{children}</p> : null}
     </div>
   )
 }

@@ -101,7 +101,7 @@ export function Dialog({
       onOpenChange={onOpenChange}
       label={label}
       positionClassName={cx(
-        'relative mx-auto mt-24 max-h-[calc(100dvh-8rem)] w-[min(92vw,38rem)] overflow-y-auto border border-edge bg-raised p-6 shadow-lg shadow-black/25 motion-reduce:animate-none',
+        'relative mx-auto mt-24 max-h-[calc(100dvh-8rem)] w-[min(92vw,38rem)] overflow-y-auto border border-rule-2 bg-raised px-6 py-5 text-ink shadow-overlay motion-reduce:animate-none',
         open ? 'bm-pop-in' : 'bm-pop-out motion-reduce:invisible',
       )}
       panelClassName={panelClassName}

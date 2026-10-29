@@ -79,7 +79,7 @@ export function ManPageFindBar({
     <div
       data-bm-findbar
       aria-hidden={open ? undefined : true}
-      className={`fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 border border-edge bg-raised p-2 shadow-lg shadow-black/20 motion-reduce:animate-none sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-[4.25rem] sm:w-[24rem] ${
+      className={`fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 border border-rule-2 bg-raised px-3 py-1.5 shadow-overlay motion-reduce:animate-none sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-[4.25rem] sm:w-[24rem] ${
         open ? 'bm-rise-in' : 'bm-rise-out pointer-events-none motion-reduce:invisible'
       }`}
       onKeyDown={(e) => {
@@ -96,11 +96,11 @@ export function ManPageFindBar({
           onChange={(e) => onFindChange(e.target.value)}
           onKeyDown={onFindKeyDown}
           placeholder="Find in page…"
-          className="h-9 min-w-0 flex-1 border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg placeholder:text-muted"
+          className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-ink placeholder:text-ink-3"
           aria-label="Find in page"
         />
 
-        <div className="min-w-[3.5rem] text-center font-mono text-xs text-muted">{findCountLabel}</div>
+        <div className="min-w-[3.5rem] text-center text-xs text-ink-3 tabular-nums">{findCountLabel}</div>
         <div aria-live="polite" className="sr-only">
           {getFindA11yStatus(find, findCountLabel)}
         </div>

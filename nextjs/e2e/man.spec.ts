@@ -511,3 +511,37 @@ test('man: NAME is not repeated in the body and RELATED hides when empty', async
   await page.goto('/man/tar/1')
   await expect(page.getByRole('complementary', { name: 'Related commands' })).toBeVisible()
 })
+
+test('man: content is complete without JavaScript, and controls that need it are hidden', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false })
+  const page = await context.newPage()
+  await page.goto('/man/tar/1')
+  await expect(page.getByRole('heading', { level: 1, name: /tar\(1\)/i })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Command-line options' }).getByText('-c', { exact: true })).toBeVisible()
+  await expect(page.locator('dt#opt-create')).toBeVisible()
+  await expect(page.locator('article p').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Cycle theme' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Find in page' })).toHaveCount(0)
+  await expect(page.getByRole('banner', { name: 'Site header' }).getByRole('link', { name: 'Search', exact: true })).toHaveAttribute('href', '/search')
+  await context.close()
+})
+
+test('man: scrollable code is keyboard-focusable and named, and the contents list holds only items', async ({ page }) => {
+  await page.goto('/man/tar/1')
+  const code = page.locator('#example-1 pre')
+  await expect(code).toHaveAttribute('tabindex', '0')
+  await expect(code).toHaveAttribute('aria-label', 'Code')
+  const strayChildren = await page
+    .locator('[data-bm-sidebar] nav[aria-label="On this page"] ol')
+    .evaluate((list) => [...list.children].filter((child) => child.tagName !== 'LI').length)
+  expect(strayChildren).toBe(0)
+})
+
+test('man: phones under 400px drop the running head; wider screens keep it', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/man/tar/1')
+  const head = page.locator('main .bm-rh').first()
+  await expect(head).toBeHidden()
+  await page.setViewportSize({ width: 768, height: 900 })
+  await expect(head).toBeVisible()
+})

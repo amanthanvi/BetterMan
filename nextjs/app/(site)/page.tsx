@@ -5,7 +5,7 @@ import { fetchInfo, listSections, withDistroFallback } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
 import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { sectionsLabel } from '../../lib/sectionsLabel'
-import { ManSectionLabel, RunningHead } from '../../components/man/RunningHead'
+import { ManSectionLabel } from '../../components/man/RunningHead'
 import { Kbd } from '../../components/ui/Kbd'
 import { LinkPendingHint } from '../../components/ui/LinkPendingHint'
 
@@ -21,79 +21,57 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const visible = sections.filter((s) => /^\d+$/.test(s.section)).slice(0, 9)
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <RunningHead title="BETTERMAN(1)" label="User Commands" />
+    <div className="mx-auto max-w-[40rem] pt-[10vh] md:pt-[14vh]">
+      <h1 className="font-serif text-3xl font-semibold tracking-[-0.015em] md:text-[3rem]">
+        betterman<span className="font-normal text-ink-3 oldstyle-nums">(1)</span>
+      </h1>
+      <p className="mt-2.5 font-serif text-lg italic text-ink-2 md:text-[1.3125rem]">
+        The Unix manual, typeset for the screen.
+      </p>
 
-      <section aria-label="Name" className="mt-10">
-        <ManSectionLabel>NAME</ManSectionLabel>
-        <h1 className="mt-2 pl-6 text-base font-normal text-fg sm:pl-8">
-          betterman — Unix manual pages, typeset for the screen
-        </h1>
-      </section>
-
-      <section aria-label="Search" className="mt-10">
-        <ManSectionLabel>SYNOPSIS</ManSectionLabel>
-        <div className="pl-6 sm:pl-8">
-          <form action="/search" method="get" role="search" aria-label="Search man pages" className="mt-3">
-            <div className="flex items-center gap-3">
-              <div aria-hidden="true" className="shrink-0 font-mono text-xl font-bold leading-none text-accent">
-                $
-              </div>
-              <input
-                name="q"
-                type="search"
-                autoComplete="off"
-                placeholder="search man pages…"
-                data-bm-home-search
-                className="h-12 min-w-0 flex-1 border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
-                aria-label="Search man pages"
-              />
-              {urlDistro ? <input type="hidden" name="distro" value={urlDistro} /> : null}
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 pl-7 text-xs text-muted">
-              <div className="flex items-center gap-1.5">
-                <Kbd>/</Kbd>
-                <span className="font-mono">search</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Kbd>⌘K</Kbd>
-                <span className="font-mono">palette</span>
-              </div>
-              <span className="font-mono text-faint">
-                {info.pageCount.toLocaleString()} pages · keyboard-first · no accounts
-              </span>
-            </div>
-          </form>
-        </div>
-      </section>
+      <form action="/search" method="get" role="search" aria-label="Search man pages" className="mt-10">
+        <input
+          name="q"
+          type="search"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="Try tar, ssh_config or copy files"
+          data-bm-home-search
+          className="bm-field border-b-[1.5px] border-ink pt-2 focus-visible:border-accent pb-2.5 text-lg placeholder:font-serif placeholder:italic md:text-xl"
+          aria-label="Search man pages"
+        />
+        {urlDistro ? <input type="hidden" name="distro" value={urlDistro} /> : null}
+        <p className="mt-2.5 text-sm text-ink-3">
+          A command, a flag, or words from what it does, across {info.pageCount.toLocaleString()} pages.{' '}
+          <span className="bm-js whitespace-nowrap">
+            <Kbd>/</Kbd> search · <Kbd>⌘K</Kbd> palette
+          </span>
+        </p>
+      </form>
 
       <HomeDashboardClient />
 
-      <section aria-label="Browse sections" className="mt-10 mb-4">
+      <section aria-label="Browse sections" className="mt-12">
         <div className="flex items-baseline justify-between gap-3">
-          <ManSectionLabel as="h2">BROWSE</ManSectionLabel>
-          {visible.length ? (
-            <div className="font-mono text-xs text-faint">{sectionsLabel(visible.map((s) => s.section))}</div>
-          ) : null}
+          <ManSectionLabel as="h2">Browse</ManSectionLabel>
+          {visible.length ? <p className="text-xs text-ink-3">{sectionsLabel(visible.map((s) => s.section))}</p> : null}
         </div>
-        <div className="mt-3 grid gap-x-8 gap-y-1.5 pl-6 sm:grid-cols-2 sm:pl-8 lg:grid-cols-3">
+        <ul className="mt-1.5 grid gap-x-8 font-serif text-md sm:grid-cols-2">
           {visible.map((s) => (
-            <Link
-              key={s.section}
-              href={withDistro(`/section/${encodeURIComponent(s.section)}`, urlDistro)}
-              className="group font-mono text-sm hover:no-underline"
-              title={s.label}
-            >
-              <span className="text-accent">{s.section}</span>{' '}
-              <span className="text-muted group-hover:text-fg group-hover:underline group-hover:underline-offset-4">
-                {s.label}
-              </span>
-              <LinkPendingHint />
-            </Link>
+            <li key={s.section} className="py-0.5">
+              <Link
+                href={withDistro(`/section/${encodeURIComponent(s.section)}`, urlDistro)}
+                className="group no-underline"
+                title={s.label}
+              >
+                <span className="inline-block min-w-5 text-ink-3 oldstyle-nums">{s.section}</span>{' '}
+                <span className="group-hover:text-accent">{s.label}</span>
+                <LinkPendingHint />
+              </Link>
+            </li>
           ))}
-          {!visible.length ? <span className="text-sm text-muted">Sections unavailable.</span> : null}
-        </div>
+        </ul>
+        {!visible.length ? <p className="mt-1.5 text-sm text-ink-3">Sections unavailable.</p> : null}
       </section>
     </div>
   )

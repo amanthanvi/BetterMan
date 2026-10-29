@@ -15,7 +15,7 @@ export const READING_PREFS_COOKIE = 'bm-reading-prefs'
 const DEFAULT_PREFS: ReadingPreferences = {
   version: 1,
   fontSize: 'medium',
-  fontFamily: 'sans',
+  fontFamily: 'serif',
   lineHeight: 'normal',
   columnWidth: 'normal',
   codeTheme: 'auto',

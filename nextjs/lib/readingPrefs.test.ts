@@ -45,7 +45,7 @@ function stubBrowser(stored: string | null, cookie = '') {
 afterEach(() => vi.unstubAllGlobals())
 
 it('defaults to the CSS fallback typography', () => {
-  expect(DEFAULT_PREFS).toMatchObject({ fontFamily: 'sans', lineHeight: 'normal' })
+  expect(DEFAULT_PREFS).toMatchObject({ fontFamily: 'serif', lineHeight: 'normal' })
 })
 
 describe('prefsFromCookie', () => {

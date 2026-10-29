@@ -17,6 +17,9 @@ type TocContextValue = {
   setSidebarOpen: (open: boolean) => void
   scrollToId: ScrollToId | null
   setScrollToId: (fn: ScrollToId | null) => void
+  /** True while a man page's manual is rendered (not its 404); the pager keys follow it. */
+  manualRendered: boolean
+  setManualRendered: (rendered: boolean) => void
 }
 
 const TocContext = createContext<TocContextValue | null>(null)
@@ -27,11 +30,25 @@ export function TocProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [scrollToId, _setScrollToId] = useState<ScrollToId | null>(null)
+  const [manualRendered, setManualRendered] = useState(false)
   const setScrollToId = useCallback((fn: ScrollToId | null) => _setScrollToId(fn ? () => fn : null), [])
 
   const value = useMemo(
-    () => ({ items, setItems, activeId, setActiveId, open, setOpen, sidebarOpen, setSidebarOpen, scrollToId, setScrollToId }),
-    [activeId, items, open, sidebarOpen, scrollToId, setScrollToId],
+    () => ({
+      items,
+      setItems,
+      activeId,
+      setActiveId,
+      open,
+      setOpen,
+      sidebarOpen,
+      setSidebarOpen,
+      scrollToId,
+      setScrollToId,
+      manualRendered,
+      setManualRendered,
+    }),
+    [activeId, items, manualRendered, open, sidebarOpen, scrollToId, setScrollToId],
   )
 
   return <TocContext.Provider value={value}>{children}</TocContext.Provider>

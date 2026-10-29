@@ -12,14 +12,14 @@ export function TocDrawer() {
   return (
     <Drawer open={toc.open} onOpenChange={toc.setOpen} label="Table of contents" side="left" panelClassName="p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-tight">Table of contents</h2>
+        <h2 className="small-caps text-lg font-semibold text-ink">Contents</h2>
         <Button variant="outline" size="sm" onClick={() => toc.setOpen(false)}>
           Close
         </Button>
       </div>
       <div className="sr-only">Jump to a section in this man page.</div>
 
-      <div className="mt-4">
+      <div className="-ml-3.5 mt-4">
         <Toc
           items={toc.items}
           activeId={toc.activeId}

@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 
+import { RunningHead } from '../../../components/man/RunningHead'
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
 import { canonicalWithDistro, withDistro } from '../../../lib/distro'
 import { MISSING_MAN_METADATA, resolveManName } from '../../../lib/manLookup'
@@ -57,37 +58,26 @@ export default async function ManByNamePage({
     )
   }
 
-  const title = `${name} — Choose section — BetterMan`
   return (
-    <div className="mx-auto max-w-5xl">
-      <header className="border-b border-edge pb-6">
-        <h1 className="font-mono text-3xl font-semibold tracking-tight">{name}</h1>
-        <p className="mt-2 text-sm text-muted">
-          Multiple sections match this name. Pick one:
-        </p>
-      </header>
+    <div className="mx-auto max-w-[46rem]">
+      <RunningHead title={name.toUpperCase()} label="Choose a section" />
+      <h1 className="mt-10 break-words font-serif text-3xl font-semibold tracking-[-0.015em] md:text-4xl">{name}</h1>
+      <p className="mt-2.5 font-serif text-lg italic text-ink-2">More than one section has a page by this name.</p>
 
-      <ol className="mt-6 space-y-3">
+      <ul className="mt-8 font-serif text-md">
         {result.options.map((opt) => (
-          <li
-            key={opt.section}
-            className="border-b border-edge py-4 "
-          >
+          <li key={opt.section} className="border-t border-rule py-2.5">
             <Link
               href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, urlDistro)}
-              className="font-mono text-base font-semibold tracking-tight underline underline-offset-4"
+              className="no-underline hover:text-accent"
             >
-              {name}({opt.section})
+              <b className="font-semibold">{name}</b>({opt.section})
               <LinkPendingHint />
-            </Link>
-            <div className="mt-1 text-sm text-muted">{opt.description}</div>
+            </Link>{' '}
+            <span className="text-ink-2">{opt.description}</span>
           </li>
         ))}
-      </ol>
-
-      <div className="mt-10 text-xs text-muted">
-        <span className="font-mono">{title}</span>
-      </div>
+      </ul>
     </div>
   )
 }

@@ -4,10 +4,9 @@ import type { Distro } from '../../lib/distro'
 import { DISTRO_LABEL, DISTRO_ORDER, normalizeDistro } from '../../lib/distro'
 import type { ManPage, ManPageVariant } from '../../lib/docModel'
 import { BookmarkButton } from '../bookmarks/BookmarkButton'
-import { CheckIcon, CopyIcon, ListIcon, SearchIcon, SlidersIcon } from '../icons'
 import { useDistro } from '../state/distro'
-import { IconButton } from '../ui/IconButton'
-import { ManSectionLabel, RunningHead, sectionLabel } from './RunningHead'
+import { ACTION_CLASS } from '../ui/action'
+import { ManSectionLabel } from './RunningHead'
 
 function buildVariantPicker(variants: ManPageVariant[]): { ordered: ManPageVariant[] } | null {
   const list = Array.isArray(variants) ? variants : []
@@ -47,50 +46,23 @@ export function ManPageHeaderCard({
 
   return (
     <header>
-      <RunningHead title={`${page.name.toUpperCase()}(${page.section})`} label={sectionLabel(page.section)} />
+      <h1 className="break-words font-serif text-3xl font-semibold tracking-[-0.015em] md:text-4xl">
+        {page.name}
+        <span className="ml-[0.08em] text-[0.5em] font-normal tracking-normal text-ink-3 oldstyle-nums">({page.section})</span>
+      </h1>
+      {page.description ? (
+        <p className="mt-2.5 max-w-text font-serif text-lg italic text-ink-2 md:text-[1.375rem] md:leading-[1.35]">
+          {page.description}
+        </p>
+      ) : null}
 
-      <div className="mt-8 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-        <div className="min-w-0">
-          <h1 className="break-words font-mono text-2xl font-semibold leading-tight tracking-tight">
-            {page.name}
-            <span className="text-muted">({page.section})</span>
-          </h1>
-          {page.description ? <p className="mt-1 max-w-[70ch] text-base text-muted">{page.description}</p> : null}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {hasToc ? (
-            <IconButton onClick={onOpenContents} aria-label="Open contents" title="Contents (b)" className="lg:hidden">
-              <ListIcon className="size-4" />
-            </IconButton>
-          ) : null}
-
-          <IconButton onClick={onOpenFind} aria-label="Find in page" title="Find in page (F)">
-            <SearchIcon className="size-4" />
-          </IconButton>
-
-          <IconButton onClick={onOpenPrefs} aria-label="Reading preferences" title="Reading preferences (P)">
-            <SlidersIcon className="size-4" />
-          </IconButton>
-
-          <BookmarkButton name={page.name} section={page.section} description={page.description || page.title} />
-
-          <IconButton onClick={onCopyLink} aria-label="Copy link to clipboard" title={copiedLink ? 'Copied' : 'Copy link'}>
-            {copiedLink ? <CheckIcon className="bm-pop-in size-4 text-accent motion-reduce:animate-none" /> : <CopyIcon className="size-4" />}
-            <span aria-live="polite" className="sr-only">
-              {copiedLink ? 'Link copied' : ''}
-            </span>
-          </IconButton>
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-xs text-faint">
+      <div className="mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm text-ink-2">
         {variantPicker ? (
-          <label className="inline-flex items-center gap-1.5">
-            <span>distro</span>
+          <label className="inline-flex items-baseline gap-2">
+            <span className="text-ink-3">System</span>
             {/* Uncontrolled so the choice stays visible while the server renders it; the key
                 resets it to whatever distro was actually served.
-                bg-bg, not bg-transparent: Chromium draws the dropdown as its own page with a
+                bg-paper, not bg-transparent: Chromium draws the dropdown as its own page with a
                 white body and copies this element's computed background-color and color onto
                 the list, so a transparent select shows dark-theme ink on white. */}
             <select
@@ -101,7 +73,7 @@ export function ManPageHeaderCard({
                 const next = normalizeDistro(e.target.value)
                 if (next) setDistro(next)
               }}
-              className="border-0 border-b border-edge bg-bg px-0.5 py-0.5 text-xs text-fg"
+              className="border-0 border-b border-rule-2 bg-paper py-0.5 text-sm text-ink hover:border-accent"
               aria-label="Select distribution variant"
             >
               {variantPicker.ordered.map((v) => {
@@ -115,22 +87,49 @@ export function ManPageHeaderCard({
               })}
             </select>
           </label>
-        ) : null}
-
-        {variantPicker ? null : <span className="text-muted">{DISTRO_LABEL[distro]}</span>}
+        ) : (
+          <span className="text-ink">{DISTRO_LABEL[distro]}</span>
+        )}
 
         {page.sourcePackage ? (
-          <span className="min-w-0 max-w-full break-words" title="Source package">
-            <span className="text-muted">{page.sourcePackage}</span>
-            {page.sourcePackageVersion ? <span> {page.sourcePackageVersion}</span> : null}
+          <span className="min-w-0 max-w-full break-words font-mono text-xs" title="Source package">
+            {page.sourcePackage}
+            {page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : null}
           </span>
         ) : null}
+
+        {/* Inline and balanced, so a narrow screen wraps the actions evenly rather than orphaning the last. */}
+        <div className="bm-js leading-7 text-balance md:ml-auto [&>*:not(:last-child)]:mr-5">
+          {hasToc ? (
+            <button type="button" onClick={onOpenContents} aria-label="Open contents" title="Contents (b)" className={`${ACTION_CLASS} lg:hidden`}>
+              Contents
+            </button>
+          ) : null}
+          <button type="button" onClick={onOpenFind} aria-label="Find in page" title="Find in page (f)" className={ACTION_CLASS}>
+            Find
+          </button>
+          <button type="button" onClick={onOpenPrefs} aria-label="Reading preferences" title="Reading preferences (p)" className={ACTION_CLASS}>
+            Preferences
+          </button>
+          <BookmarkButton name={page.name} section={page.section} description={page.description || page.title} />
+          <button type="button" onClick={onCopyLink} aria-label="Copy link to clipboard" title={copiedLink ? 'Copied' : 'Copy link'} className={ACTION_CLASS}>
+            Copy link
+            {copiedLink ? (
+              <span aria-hidden="true" className="bm-pop-in ml-1 inline-block text-accent no-underline motion-reduce:animate-none">
+                ✓
+              </span>
+            ) : null}
+            <span aria-live="polite" className="sr-only">
+              {copiedLink ? 'Link copied' : ''}
+            </span>
+          </button>
+        </div>
       </div>
 
       {synopsis?.length ? (
-        <div className="mt-8">
+        <div className="mt-9">
           <ManSectionLabel as="h2">SYNOPSIS</ManSectionLabel>
-          <pre className="mt-2 overflow-x-auto bg-code-bg p-4 text-sm leading-[1.6] text-fg" tabIndex={0}>
+          <pre tabIndex={0} role="group" aria-label="Synopsis" className="mt-1.5 overflow-x-auto pl-[1.75em] text-sm leading-[1.65]">
             <code>{synopsis.join('\n')}</code>
           </pre>
         </div>

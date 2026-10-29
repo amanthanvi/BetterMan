@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SectionPage } from '../../lib/api'
-import type { Distro } from '../../lib/distro'
+import { DISTRO_LABEL, type Distro } from '../../lib/distro'
 import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
-import { FIND_REQUEST_EVENT } from '../../lib/dom'
+import { FIND_REQUEST_EVENT, singleKeyShortcutsBlocked } from '../../lib/dom'
 import { getScrollBehavior, scrollToIdWhenRendered } from '../../lib/scroll'
 import { ChevronDownIcon } from '../icons'
 import { defaultCodeLanguage } from '../doc/CodeBlock'
@@ -23,7 +23,8 @@ import { ManPageFooterSections } from './ManPageFooterSections'
 import { ManPageHeaderCard } from './ManPageHeaderCard'
 import { ManPageOptionsSection, OPTIONS_COLLAPSE_THRESHOLD } from './ManPageOptionsSection'
 import { collectBlockIds, optionRowIds } from './optionAnchors'
-import { ManSectionLabel } from './RunningHead'
+import { ManSectionLabel, RunningFoot, RunningHead, sectionLabel } from './RunningHead'
+import { definitionLocators, sectionNumbers } from './sectionNumbers'
 import { useManPageFind } from './useManPageFind'
 
 /**
@@ -106,7 +107,7 @@ export function ManPageView({
   reportHref: string
 }) {
   const toc = useToc()
-  const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
+  const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen, setManualRendered } = toc
   const distro = useDistro()
 
   const examples = useMemo(() => extractExamples(content.blocks), [content.blocks])
@@ -118,6 +119,8 @@ export function ManPageView({
   )
   const bodyIds = useMemo(() => collectBlockIds(body.blocks), [body.blocks])
   const optionRows = useMemo(() => optionRowIds(content.options ?? [], bodyIds), [bodyIds, content.options])
+  const numbers = useMemo(() => sectionNumbers(body.toc), [body.toc])
+  const locators = useMemo(() => definitionLocators(body.blocks, numbers), [body.blocks, numbers])
   const manFind = useManPageFind({ blocks: body.blocks })
   const { openFind } = manFind
 
@@ -142,6 +145,11 @@ export function ManPageView({
     setItems(body.toc)
     return () => setItems([])
   }, [body.toc, setItems])
+
+  useEffect(() => {
+    setManualRendered(true)
+    return () => setManualRendered(false)
+  }, [setManualRendered])
 
   useEffect(() => {
     setActiveId(activeTocId)
@@ -240,6 +248,21 @@ export function ManPageView({
     return () => window.removeEventListener(FIND_REQUEST_EVENT, openFind)
   }, [openFind])
 
+  // n and N step through find matches, as in less, once a search has matches.
+  const { goNext: findNext, goPrev: findPrev, matchCount: findMatches } = manFind
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || !findMatches) return
+      if (e.key !== 'n' && e.key !== 'N') return
+      if (singleKeyShortcutsBlocked(document)) return
+      e.preventDefault()
+      if (e.key === 'n') findNext()
+      else findPrev()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [findMatches, findNext, findPrev])
+
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href)
@@ -290,49 +313,33 @@ export function ManPageView({
     }
   }
 
-  const gridCols = desktopSidebarExpanded
-    ? 'lg:grid-cols-[16rem_minmax(0,1fr)]'
-    : 'lg:grid-cols-[3rem_minmax(0,1fr)]'
+  const title = `${page.name.toUpperCase()}(${page.section})`
+  const edition = page.sourcePackage
+    ? `${page.sourcePackage}${page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : ''}`
+    : DISTRO_LABEL[servedDistro]
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div>
       <RecentPageRecorder name={page.name} section={page.section} description={page.description || page.title} />
 
-      <ManPageHeaderCard
-        page={page}
-        synopsis={content.synopsis}
-        variants={variants}
-        distro={servedDistro}
-        hasToc={hasToc}
-        onOpenContents={() => setTocOpen(true)}
-        onOpenFind={manFind.openFind}
-        onOpenPrefs={openPrefs}
-        onCopyLink={copyLink}
-        copiedLink={copiedLink}
-      />
+      {/* Under 400px the title already carries name(section); the head would only crowd it. */}
+      <RunningHead title={title} label={sectionLabel(page.section)} className="max-[25rem]:hidden" />
 
-      <ManPageFindBar
-        open={manFind.findOpen}
-        onClose={manFind.closeFind}
-        find={manFind.find}
-        findInputRef={manFind.findInputRef}
-        onFindChange={manFind.onFindChange}
-        onFindKeyDown={onFindKeyDown}
-        findCountLabel={manFind.findCountLabel}
-        matchCount={manFind.matchCount}
-        onPrev={manFind.goPrev}
-        onNext={manFind.goNext}
-      />
-
-      <div className={`mt-10 ${hasToc ? `lg:grid lg:items-start lg:gap-10 ${gridCols}` : ''}`}>
+      <div
+        className={`mt-9 ${
+          hasToc ? `lg:grid lg:items-start lg:gap-16 ${desktopSidebarExpanded ? 'lg:grid-cols-[12.5rem_minmax(0,1fr)]' : 'lg:grid-cols-[2rem_minmax(0,1fr)]'}` : ''
+        }`}
+      >
         {hasToc ? (
           <aside className="hidden lg:block lg:self-stretch">
-            <div className="sticky top-20">
-              <div data-bm-sidebar className="h-[calc(100dvh-6.5rem)] overflow-y-auto pr-2">
+            <div className="sticky top-16">
+              <div data-bm-sidebar className="h-[calc(100dvh-4rem)] overflow-y-auto pb-8 [scrollbar-width:thin]">
                 {desktopSidebarExpanded ? (
                   <>
-                    <div className="flex items-center justify-between gap-3">
-                      <ManSectionLabel as="h2">CONTENTS</ManSectionLabel>
+                    <div className="flex items-center justify-between gap-3 pl-3.5">
+                      <ManSectionLabel as="h2" className="text-sm">
+                        Contents
+                      </ManSectionLabel>
                       <IconButton
                         variant="ghost"
                         size="sm"
@@ -340,11 +347,11 @@ export function ManPageView({
                         aria-label="Collapse sidebar"
                         title="Collapse (b)"
                       >
-                        <ChevronDownIcon className="size-4 rotate-90" />
+                        <ChevronDownIcon className="size-3.5 rotate-90" />
                       </IconButton>
                     </div>
 
-                    <div className="mt-3">
+                    <div className="mt-2">
                       <Toc
                         items={body.toc}
                         activeId={activeTocId}
@@ -354,55 +361,87 @@ export function ManPageView({
                     </div>
                   </>
                 ) : (
-                  <div className="flex h-full items-start justify-center pt-1">
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSidebarOpen(true)}
-                      aria-label="Expand sidebar"
-                      title="Expand (b)"
-                    >
-                      <ChevronDownIcon className="size-4 -rotate-90" />
-                    </IconButton>
-                  </div>
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSidebarOpen(true)}
+                    aria-label="Expand sidebar"
+                    title="Expand (b)"
+                  >
+                    <ChevronDownIcon className="size-3.5 -rotate-90" />
+                  </IconButton>
                 )}
               </div>
             </div>
           </aside>
         ) : null}
 
-        <article className="mx-auto w-full min-w-0 max-w-[var(--bm-reading-column-width)] [font-family:var(--bm-reading-font-family)] [font-size:var(--bm-reading-font-size)] leading-[var(--bm-reading-line-height)]">
-          <ManPageExamples examples={examples} codeLanguage={codeLanguage} />
-
-          <ManPageOptionsSection
-            optionTerms={optionTerms}
-            onClearHighlight={() => setSelectedOption(null)}
-            options={content.options}
-            rowIds={optionRows}
-            optionsCount={optionsCount}
-            optionsExpanded={optionsExpanded}
-            onToggleOptionsExpanded={() => setOptionsExpanded((v) => !v)}
-            selectedAnchorId={selectedOption?.anchorId}
-            flashAnchorId={flashAnchorId}
-            onSelectOption={onSelectOption}
+        <div className="mx-auto w-full min-w-0 max-w-[var(--bm-reading-column-width)] lg:mx-0">
+          <ManPageHeaderCard
+            page={page}
+            synopsis={content.synopsis}
+            variants={variants}
+            distro={servedDistro}
+            hasToc={hasToc}
+            onOpenContents={() => setTocOpen(true)}
+            onOpenFind={manFind.openFind}
+            onOpenPrefs={openPrefs}
+            onCopyLink={copyLink}
+            copiedLink={copiedLink}
           />
 
-          <DocRenderer
-            blocks={body.blocks}
-            urlDistro={distro.urlDistro}
-            findQuery={manFind.findEnabled ? manFind.findQuery : undefined}
-            optionTerms={optionTerms}
-            codeLanguage={codeLanguage}
+          <ManPageFindBar
+            open={manFind.findOpen}
+            onClose={manFind.closeFind}
+            find={manFind.find}
+            findInputRef={manFind.findInputRef}
+            onFindChange={manFind.onFindChange}
+            onFindKeyDown={onFindKeyDown}
+            findCountLabel={manFind.findCountLabel}
+            matchCount={manFind.matchCount}
+            onPrev={manFind.goPrev}
+            onNext={manFind.goNext}
           />
 
-          <ManPageFooterSections
-            reportHref={reportHref}
-            urlDistro={distro.urlDistro}
-            seeAlso={content.seeAlso}
-            relatedItems={relatedItems}
-            hasParseWarnings={page.hasParseWarnings === true}
-          />
-        </article>
+          <article className="mt-10">
+            <ManPageExamples examples={examples} codeLanguage={codeLanguage} />
+
+            <ManPageOptionsSection
+              optionTerms={optionTerms}
+              onClearHighlight={() => setSelectedOption(null)}
+              options={content.options}
+              rowIds={optionRows}
+              locators={locators}
+              optionsCount={optionsCount}
+              optionsExpanded={optionsExpanded}
+              onOptionsExpandedChange={setOptionsExpanded}
+              selectedAnchorId={selectedOption?.anchorId}
+              flashAnchorId={flashAnchorId}
+              onSelectOption={onSelectOption}
+            />
+
+            <DocRenderer
+              blocks={body.blocks}
+              urlDistro={distro.urlDistro}
+              findQuery={manFind.findEnabled ? manFind.findQuery : undefined}
+              optionTerms={optionTerms}
+              codeLanguage={codeLanguage}
+              sectionNumbers={numbers}
+            />
+
+            <ManPageFooterSections
+              reportHref={reportHref}
+              urlDistro={distro.urlDistro}
+              seeAlso={content.seeAlso}
+              relatedItems={relatedItems}
+              hasParseWarnings={page.hasParseWarnings === true}
+            />
+          </article>
+
+          <div className="mt-16">
+            <RunningFoot start={edition} label={DISTRO_LABEL[servedDistro]} end={title} />
+          </div>
+        </div>
       </div>
     </div>
   )
