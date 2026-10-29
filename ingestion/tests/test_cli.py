@@ -290,3 +290,26 @@ def test_invalid_job_deadline_exits_before_ingestion(monkeypatch, caplog):
     with caplog.at_level("INFO"):
         assert cli.main(["ingest"]) == 2
     assert "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS must be a Unix timestamp" in caplog.text
+
+
+def test_full_debian_uses_archive_path_before_docker(monkeypatch):
+    calls = []
+
+    def run(**kwargs):
+        calls.append(kwargs)
+        return 0
+
+    monkeypatch.setattr(cli, "_run_ingest", run)
+    monkeypatch.setattr(
+        cli, "run_ingest_container", lambda **_: pytest.fail("must not install Debian packages")
+    )
+    assert cli.main(["ingest", "--distro", "debian", "--no-activate"]) == 0
+    assert calls[0]["archive_mode"] is True
+    assert calls[0]["activate"] is False
+
+
+def test_debian_sample_keeps_curated_docker_path(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli, "run_ingest_container", lambda **kwargs: calls.append(kwargs) or 0)
+    assert cli.main(["ingest", "--distro", "debian", "--sample"]) == 0
+    assert calls == [{"sample": True, "activate": False, "distro": "debian"}]

@@ -279,12 +279,20 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
+    providerCount: 1,
+    packageBatches: [],
     aliasCount: 1,
     licenseCount: 0,
     sectionTotals,
     licensePackages: [],
   })
   await post('/ingest/pages', { datasetReleaseId, pages })
+  await post('/ingest/pages/storage', { datasetReleaseId, pages: [{
+    ...page({ name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)',
+      description: 'Alternate package provider', sourcePackage: 'alternate-perl',
+      toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Alternate provider documentation.' }] }],
+    }), providerOnly: true,
+  }] })
   // `.so` stub: /man/gunzip/1 redirects to gzip(1).
   await post('/ingest/aliases', {
     datasetReleaseId,

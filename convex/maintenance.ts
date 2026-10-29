@@ -42,6 +42,8 @@ const DEFAULT_STORAGE_STATS_LIMIT = 25;
 const MAX_STORAGE_STATS_LIMIT = 100;
 
 const storageStatsTableValidator = v.union(
+  v.literal("manPageProviders"),
+  v.literal("releaseProviderUploadShards"),
   v.literal("activeReleases"),
   v.literal("datasetReleases"),
   v.literal("derivedBuilds"),
@@ -78,6 +80,8 @@ const storageStatsTableValidator = v.union(
 type StorageStatsTable = TableNames;
 
 export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<keyof Doc<T>, string>> } = {
+  manPageProviders: ["name", "section", "sourcePackage", "sourcePath", "title", "description"],
+  releaseProviderUploadShards: [],
   activeReleases: ["distro", "datasetReleaseId"],
   datasetReleases: ["datasetReleaseId", "packageManifestJson"],
   derivedBuilds: ["locale", "key", "fingerprint"],
@@ -774,7 +778,9 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
         .query("manPageContents")
         .withIndex("by_blobId", (q) => q.eq("blobId", blob._id))
         .first();
-      if (ref) continue;
+      const providerRef = await ctx.db.query("manPageProviders")
+        .withIndex("by_blobId", q => q.eq("blobId", blob._id)).first();
+      if (ref || providerRef) continue;
       orphans += 1;
       if (dryRun) continue;
 
@@ -979,9 +985,8 @@ export const releaseStats = internalQuery({
 export const measureReleaseBatch = internalQuery({
   args: {
     datasetReleaseId: v.string(), cursor: v.union(v.string(), v.null()),
-    table: v.union(v.literal("manPages"), v.literal("manPageSearchDocuments"), v.literal("manPageLinks"),
-      v.literal("manPageSymbols"),
-  v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
+    table: v.union(v.literal("manPageProviders"), v.literal("releaseProviderUploadShards"), v.literal("manPages"), v.literal("manPageSearchDocuments"), v.literal("manPageLinks"),
+      v.literal("manPageSymbols"), v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
       v.literal("releaseSectionStats"), v.literal("releaseManifests"), v.literal("releasePackageBatches"), v.literal("releasePageUploadShards")),
   },
   returns: v.object({ documents: v.number(), jsonBytes: v.number(), storageBytes: v.number(), isDone: v.boolean(), continueCursor: v.string() }),
@@ -989,7 +994,9 @@ export const measureReleaseBatch = internalQuery({
     const release = await releaseByDatasetReleaseId(ctx, args.datasetReleaseId);
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     const id = release._id;
-    const query = args.table === "manPages" ? ctx.db.query("manPages").withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", id))
+    const query = args.table === "manPageProviders" ? ctx.db.query("manPageProviders").withIndex("by_releaseId_and_externalId", q => q.eq("releaseId", id))
+      : args.table === "releaseProviderUploadShards" ? ctx.db.query("releaseProviderUploadShards").withIndex("by_releaseId_and_bucket", q => q.eq("releaseId", id))
+      : args.table === "manPages" ? ctx.db.query("manPages").withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", id))
       : args.table === "manPageSearchDocuments" ? ctx.db.query("manPageSearchDocuments").withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", id))
       : args.table === "manPageLinks" ? ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", id))
       : args.table === "manPageOptionFlags" ? ctx.db.query("manPageOptionFlags").withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", id))
@@ -1011,6 +1018,10 @@ export const measureReleaseBatch = internalQuery({
           .withIndex("by_pageId", (q) => q.eq("pageId", row._id as Id<"manPages">)).unique();
         if (content) { documents++; jsonBytes += bytes(content); }
         const blob = content?.blobId ? await ctx.db.get(content.blobId) : null;
+        if (blob) { documents++; jsonBytes += bytes(blob); }
+        if (blob?.storageId) storageBytes += (await ctx.db.system.get(blob.storageId))?.size ?? 0;
+      } else if (args.table === "manPageProviders" && "blobId" in row) {
+        const blob = await ctx.db.get(row.blobId);
         if (blob) { documents++; jsonBytes += bytes(blob); }
         if (blob?.storageId) storageBytes += (await ctx.db.system.get(blob.storageId))?.size ?? 0;
       } else if (args.table === "releaseManifests" && "storageId" in row && row.storageId) {

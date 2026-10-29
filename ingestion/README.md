@@ -16,7 +16,7 @@ Optional: `BETTERMAN_INGEST_WORKERS` sets the number of parse processes, clamped
 
 ## Large releases and recovery
 
-Ingest contract **2** must be deployed before this client writes. Release
+Ingest contract **5** must be deployed before this client writes. Release
 provenance is a JSON file in Convex storage, referenced from `releaseManifests`;
 page views read only the small release row. Page-upload counters use 16 shards;
 sealing folds their per-section counts in one bounded verification transaction,
@@ -206,3 +206,81 @@ no Convex deployment. `--source convex` reads the active release through the
 ingest secret. Model calls need `OPENCODE_GO_API_KEY`; without it, model text is
 only estimated. Design, verifier rules and cost model: `docs/generated-layer.md`.
 Operations: `docs/runbooks/generated-layer.md`.
+
+## Full Debian from archives
+
+`pnpm ingest:run --distro debian` uses the native archive pipeline. It requires
+Python 3.14 (including standard-library zstd support) and `mandoc` on the host.
+The workflow installs only that renderer on its Debian matrix leg; it never
+installs the packages being documented. `--sample` retains the small Docker
+fixture path, and other distros retain their existing runners.
+
+`data/debian-trixie.json` pins an immutable snapshot mirror, suite/component/arch
+and the Release SHA256. The verified Release supplies SHA256 and byte counts for
+Contents-all, Contents-amd64 and Packages.xz. Contents selects English root man
+paths; Packages supplies every selected archive's exact version, filename, size
+and SHA256. Downloads stream through an atomic temporary file, verify size/hash
+before extraction, retry transient failures at most three times, and remove each
+`.deb` after selective extraction. There is no package installation or execution
+of maintainer scripts. The four-download queue reserves disk space and leaves
+512 MiB free; documentation members and expanded roff inputs are limited to
+16 MiB. Only hashed regular files are written; archive links remain SQLite data.
+
+The bundled, checksummed `data/popcon-by-inst.tsv.gz` is a normalized snapshot
+of Debian's public `https://popcon.debian.org/by_inst` statistics. The lock
+records the original source digest, acquisition date and normalized-file digest.
+Runtime uses this fixed snapshot, so an upstream update cannot change provider
+choices during a run. To deliberately refresh it:
+
+```bash
+pnpm ingest:debian-pin-popcon
+```
+
+Review and commit both data and lock changes. The normalizer keeps the package
+and **inst** columns, sorts by package, and writes gzip with an empty filename
+and mtime zero at compression level 6. For a mirror refresh, obtain the new snapshot's signed Release
+through Debian's archive trust chain, review/pin its SHA256, then run the local
+benchmark; never replace a checksum merely to bypass a failed verification.
+
+Curated gawk, vim-common, less and netcat-openbsd manuals own the `awk`, `vi`,
+`editor`, `pager` and `nc` names. For other collisions, descending popcon installed
+count wins, then package name and original source path break ties. Case-only
+collisions and every other provider retain distinct identities. The first
+successfully parsed provider becomes the clean route. Symlinks, hardlinks and
+`.so` requests resolve in the same package first, then indexed cross-package
+owners (acquired on demand). `SOURCE_TARGETS` documents exact pinned-corpus
+repairs for renamed alternatives and obsolete upstream stub section suffixes.
+No includes may read host paths. Archive aliases are materialized documents, so
+colliding alias providers are preserved too; curated distro redirects are unchanged.
+
+Canonical pages remain in `manPages` for search, browse and sitemaps. Alternates
+use `manPageProviders` and shared content blobs, with completeness counters in
+`releaseProviderUploadShards`. `?pkg=<package>` selects a provider on HTML, JSON,
+text and OG routes. Same-package case/path variants are retained; the package
+selector chooses their deterministic first original path. A provider switch UI
+belongs to B10 #402. Copyrights are resolved from each selected archive (including
+linked doc directories), deduplicated within that package and uploaded through
+the existing license batches. Missing/blank or oversized notices block publishing;
+notices are never truncated. More than 2% unresolved/failed sources or missing
+required curated command pages also blocks publishing.
+
+The provider contract is **v5**, after B7 #429's v3 and B5 #430's v4. Before
+merging, rebase after both and preserve their function/field union, derived lease
+fences, symbols payloads, release-child registry and storage-stat entries. Deploy
+that combined Convex contract before starting the updated client. Do not deploy
+Convex during a dataset run. The client fails closed on mismatches.
+
+The archive benchmark defaults to acquisition/parsing only:
+
+```bash
+pnpm ingest:debian-benchmark --workdir /absolute/path/to/sample --packages 2000 --workers 4
+```
+
+The directory stores verified indexes, selectively extracted sources, SQLite
+spools, a pin fingerprint and stable sample selection. Resume with the same pins
+and sample size. `report.json` reports timings, failures, copyright sizes, disk
+and parent/largest-child peak RSS in bytes. Use a fresh directory for cold
+acquisition timing. `--local-upload` additionally publishes only to the matching
+loopback deployment in this worktree's local Convex configuration; it refuses
+deploy keys and writes `local-upload.json`. It must never target a shared backend.
+See [measured evidence and projections](../docs/roadmap/b1-debian-evidence.md).

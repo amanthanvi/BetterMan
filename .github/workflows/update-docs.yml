@@ -177,6 +177,11 @@ jobs:
         env:
           DISTRO: ${{ matrix.distro }}
 
+      - name: Install Debian archive renderer
+        id: debian_renderer
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro == 'debian' && !inputs.sample }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
+
       - name: Ingest to Convex staging
         id: staging
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro != 'freebsd' }}

@@ -1,0 +1,15 @@
+{
+  "mirror": "https://snapshot.debian.org/archive/debian/20261001T000000Z",
+  "suite": "trixie",
+  "component": "main",
+  "architecture": "amd64",
+  "releaseSha256": "ed56aac47e7911e65ee63aae8d67e29f20e023f840e49f8ed037043a33de138a",
+  "popcon": {
+    "url": "https://popcon.debian.org/by_inst",
+    "acquiredAt": "2026-10-29",
+    "sourceSha256": "60d469b43fbb00fed5a1e1c67d9136bb3b6590bec64dd47cc9321616f1cb8a91",
+    "file": "popcon-by-inst.tsv.gz",
+    "sha256": "8e2cc98280beacff1ac62b434380a00d5ebbc79800cf51845f1fc46d6db1750a",
+    "format": "package tab installed-count; normalized from rank/name/inst columns of by_inst"
+  }
+}

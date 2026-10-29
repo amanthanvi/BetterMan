@@ -357,6 +357,9 @@ function assertWorkflowWiring(workflow) {
   assert.equal(step('activation_deadline').env.BETTERMAN_JOB_TIMEOUT_MINUTES, '${{ matrix.timeout }}')
   assert.match(step('activation_deadline').run, /BETTERMAN_JOB_TIMEOUT_MINUTES \* 60 - 180/)
   assert.match(step('freebsd').with.envs, /BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS/)
+  assert.equal(step('debian_renderer').if, "${{ needs.plan.outputs.ingest == 'true' && matrix.distro == 'debian' && !inputs.sample }}")
+  assert.match(step('debian_renderer').run, /--no-install-recommends mandoc/)
+  assert.ok(index('dependencies') < index('debian_renderer') && index('debian_renderer') < index('staging'))
   const promotion = "${{ needs.plan.outputs.promote == 'true' }}"
   for (const id of ['promote', 'verify_prod']) assert.equal(step(id).if, promotion)
   assert.equal(step('promote').env.BETTERMAN_INGEST_ENABLED, '${{ needs.plan.outputs.ingest }}')

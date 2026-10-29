@@ -117,6 +117,13 @@ export async function verifyDeclaredManifest(ctx: MutationCtx, release: Doc<"dat
     .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", release._id)).take(MAX_MANIFEST_SECTIONS + 1);
   validateManifestSections(release.pageCount, stats);
   const progress = await pageUploadProgress(ctx, release);
+  if (release.providerCount !== undefined) {
+    const shards = await ctx.db.query("releaseProviderUploadShards")
+      .withIndex("by_releaseId_and_bucket", q => q.eq("releaseId", release._id)).take(PAGE_UPLOAD_SHARDS + 1);
+    const count = shards.reduce((sum, shard) => sum + shard.count, 0);
+    if (shards.length > PAGE_UPLOAD_SHARDS || count > release.providerCount) throw new Error("RELEASE_MANIFEST_EXCEEDED");
+    if (count !== release.providerCount) throw new Error("RELEASE_MANIFEST_INCOMPLETE");
+  }
   if ((progress.pageCount !== undefined && progress.pageCount > release.pageCount) ||
       stats.some((stat) => (progress.sections.get(stat.section) ?? 0) > stat.total)) {
     throw new Error("RELEASE_MANIFEST_EXCEEDED");

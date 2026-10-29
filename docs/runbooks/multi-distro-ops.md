@@ -204,3 +204,20 @@ request, carrying only an explicit URL `?distro=`. A cookie/default never enters
 the recovery URL. The `(site)/loading.tsx` boundary can already have streamed
 HTTP 200; in that case Next emits its client/meta redirect. Before streaming,
 Next returns HTTP 307. This recovery is not a permanent canonical redirect.
+
+## Debian archive imports
+
+The full Debian leg now runs native Python/mandoc against the checksum-pinned
+trixie main snapshot in `ingestion/data/debian-trixie.json`; it extracts `.deb`
+manuals and copyrights without installing their packages. Debian samples and
+other distro paths keep the curated runners. See the [archive operator notes](../../ingestion/README.md#full-debian-from-archives).
+The matrix's existing 300-minute Linux deadline still applies (below the six-hour
+runner cap), including setup/acquisition/parsing/uploads. Activation uses only
+the remaining platform budget, capped at 45 minutes, and is resumable afterward.
+
+Merge/deploy ordering is B7 #429 v3, B5 #430 v4, then archive providers v5. Preserve
+the combined contract and payload fields when rebasing; do not deploy during an
+update-docs run. A local sample and projection do not authorize the full shared
+run or a spend increase. Obtain owner sign-off for the projected storage/cost,
+then follow the normal create → verify → seal → activate staging → promote prod
+and rollback/prune procedure. No full shared import was performed for the sample.

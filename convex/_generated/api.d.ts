@@ -19,6 +19,7 @@ import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
 import type * as _manifestStorage from "../_manifestStorage.js";
 import type * as _optionFlags from "../_optionFlags.js";
+import type * as _providers from "../_providers.js";
 import type * as _relatedLinks from "../_relatedLinks.js";
 import type * as _releaseChildren from "../_releaseChildren.js";
 import type * as _releaseIntegrity from "../_releaseIntegrity.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   _legacyContent: typeof _legacyContent;
   _manifestStorage: typeof _manifestStorage;
   _optionFlags: typeof _optionFlags;
+  _providers: typeof _providers;
   _relatedLinks: typeof _relatedLinks;
   _releaseChildren: typeof _releaseChildren;
   _releaseIntegrity: typeof _releaseIntegrity;

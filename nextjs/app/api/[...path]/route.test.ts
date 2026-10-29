@@ -522,3 +522,10 @@ describe('bounded on-demand portability details', () => {
     expect((await GET(request('/api/v1/man/tar/1/portability'), context(['v1', 'man', 'tar', '1', 'portability']))).status).toBe(404)
   })
 })
+
+it('passes explicit package selection through the page API', async () => {
+  apiMocks.fetchManByNameAndSectionOrAlias.mockResolvedValue({ kind: 'page', data: { page: { name: 'shared', section: '1' } } })
+  const response = await GET(request('/api/v1/man/shared/1?pkg=alternate'), { params: Promise.resolve({ path: ['v1', 'man', 'shared', '1'] }) })
+  expect(response.status).toBe(200)
+  expect(apiMocks.fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'shared', section: '1', pkg: 'alternate' })
+})

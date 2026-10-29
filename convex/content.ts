@@ -519,6 +519,7 @@ export const getManByNameAndSectionReadModel = internalQuery({
     distro: distroValidator,
     name: v.string(),
     section: v.string(),
+    pkg: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const name = normalizeName(args.name);
@@ -529,6 +530,17 @@ export const getManByNameAndSectionReadModel = internalQuery({
       name,
       section,
     });
+    if (args.pkg && page?.sourcePackage !== args.pkg) {
+      const provider = await ctx.db.query("manPageProviders")
+        .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id)
+          .eq("name", name).eq("section", section).eq("sourcePackage", args.pkg!)).first();
+      if (!provider) return null;
+      const blob = await ctx.db.get(provider.blobId);
+      if (!blob) return null;
+      return { kind: "page" as const, data: { release, page: provider, variants: [],
+        content: blob.storageId ? { storageId: blob.storageId, fields: null }
+          : { storageId: null, fields: await readAllContentBlobFields(ctx, blob) } } };
+    }
     if (!page) {
       const target = await aliasTarget(ctx, { releaseId: release._id, name, section });
       if (target) return { kind: "alias" as const, ...target };
@@ -581,6 +593,7 @@ export const getManByNameAndSection = action({
     distro: distroValidator,
     name: v.string(),
     section: v.string(),
+    pkg: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<unknown> => {
     const result = await ctx.runQuery(internal.content.getManByNameAndSectionReadModel, {

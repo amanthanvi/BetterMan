@@ -42,10 +42,14 @@ async function orMissing<T>(lookup: Promise<T>): Promise<T | null> {
 
 /** Page metadata proves a page exists; a `.so` stub, which has none, loads its alias target. */
 export const locateManPage = cache(
-  async (name: string, section: string, requestedDistro: Distro): Promise<LocatedManPage | null> =>
+  async (name: string, section: string, requestedDistro: Distro, pkg?: string): Promise<LocatedManPage | null> =>
     await orMissing(
       withDistroFallback(requestedDistro, async (distro): Promise<LocatedManPage['data']> => {
-        const opts = { distro, name: name.toLowerCase(), section }
+        const opts = { distro, name: name.toLowerCase(), section, ...(pkg ? { pkg } : {}) }
+        if (pkg) {
+          const provider = await fetchManByNameAndSectionOrAlias(opts)
+          return provider.kind === 'alias' ? provider : { kind: 'page', page: provider.data.page }
+        }
         try {
           return { kind: 'page', page: (await fetchManMetaByNameAndSection(opts)).page }
         } catch (err) {

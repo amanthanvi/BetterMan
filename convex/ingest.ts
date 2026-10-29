@@ -7,6 +7,7 @@ import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { scheduleDerivedBuild } from "./derived";
 import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
+import { insertProvider, recordProviderUploads } from "./_providers";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
 import { insertSymbols, symbolInput } from './_symbols';
@@ -71,6 +72,7 @@ const optionFlagInput = v.object({
 });
 
 const storedPageInput = v.object({
+  providerOnly: v.optional(v.boolean()),
   externalId: v.string(),
   name: v.string(),
   section: v.string(),
@@ -292,6 +294,7 @@ export const createRelease = internalMutation({
     packageManifestStorageId: v.optional(v.id("_storage")),
     packageManifestDigest: v.optional(v.string()),
     packageBatches: v.optional(v.array(v.object({ digest: v.string(), count: v.number(), licenseCount: v.number() }))),
+    providerCount: v.optional(v.number()),
     pageCount: v.number(),
     aliasCount: v.number(),
     licenseCount: v.number(),
@@ -300,6 +303,7 @@ export const createRelease = internalMutation({
   },
   handler: async (ctx, args) => {
     const packages = args.licensePackages ?? [];
+    if (args.providerCount !== undefined && (!validManifestCount(args.providerCount) || args.packageBatches === undefined)) throw new Error("INVALID_RELEASE_MANIFEST");
     if (args.packageBatches !== undefined) {
       validateManifestSections(args.pageCount, args.sectionTotals);
       if (packages.length || !validManifestCount(args.aliasCount) || !validManifestCount(args.licenseCount) ||
@@ -345,6 +349,7 @@ export const createRelease = internalMutation({
       packageBatchCount: args.packageBatches?.length ?? 0,
       uploadedPackageBatchCount: 0,
       pageCount: args.pageCount,
+      ...(args.providerCount !== undefined ? { providerCount: args.providerCount } : {}),
       aliasCount: args.aliasCount,
       licenseCount: args.licenseCount,
       uploadedPageCount: 0,
@@ -538,8 +543,16 @@ export const insertStoredPages = internalMutation({
 
     let inserted = 0;
     let skipped = 0;
+    let providerInserted = 0;
     const bySection = new Map<string, number>();
     for (const page of args.pages) {
+      if (page.providerOnly) {
+        const added = await insertProvider(ctx, release, page, immutable, () => findOrCreateStoredContentBlob(ctx, {
+          contentSha256: page.contentSha256, storageId: page.contentStorageId,
+        }));
+        if (added) { inserted++; providerInserted++; } else skipped++;
+        continue;
+      }
       const existing = await ctx.db
         .query("manPages")
         .withIndex("by_releaseId_and_externalId", (q) =>
@@ -615,7 +628,8 @@ export const insertStoredPages = internalMutation({
       bySection.set(page.section, (bySection.get(page.section) ?? 0) + 1);
     }
 
-    if (inserted > 0) {
+    if (providerInserted > 0) await recordProviderUploads(ctx, release, providerInserted, args.pages[0].externalId);
+    if (bySection.size > 0) {
       await recordPageUploads(ctx, release, bySection, args.pages[0].externalId);
       if (!release.shardedPageUploads) await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
     }

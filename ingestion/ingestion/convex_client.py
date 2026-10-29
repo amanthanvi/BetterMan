@@ -41,9 +41,9 @@ class ConvexContractError(RuntimeError):
 # Keep these aligned with convex/ingestContract.ts. Ingestion refuses to write
 # until GET /ingest/contract advertises the same schema version, functions,
 # declaration counts, and activate-pending flag. Alignment test:
-# tests/test_ingest_contract.py. Contract v4 retains license-package batches and
-# extractor provenance, adding stored-page symbols and optional option arguments.
-REQUIRED_SCHEMA_VERSION = 4
+# tests/test_ingest_contract.py. v5 retains v4 license batches, extractor
+# provenance, packed signatures, symbols and optional arguments, adding providers.
+REQUIRED_SCHEMA_VERSION = 5
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",
     "ingest.insertStoredPages",
@@ -52,7 +52,7 @@ REQUIRED_FUNCTIONS = (
     "ingest.insertLicenses",
     "ingest.activateRelease",
 )
-REQUIRED_DECLARATION_COUNTS = ("pageCount", "aliasCount", "licenseCount")
+REQUIRED_DECLARATION_COUNTS = ("pageCount", "aliasCount", "licenseCount", "providerCount")
 _CONTRACT_PATH = "/ingest/contract"
 
 

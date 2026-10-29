@@ -135,3 +135,9 @@ it.each(['foo%253A%253Abar', 'foo%ZZ'])('rejects malformed or doubly encoded OG 
   await expect(get(name, '3pm')).rejects.toThrow('NEXT_NOT_FOUND')
   expect(apiMocks.fetchManMetaByNameAndSection).not.toHaveBeenCalled()
 })
+
+it('loads metadata from the explicit package provider', async () => {
+  const response = await get('foo::bar', '3pm', '?pkg=alternate')
+  expect(response.status).toBe(200)
+  expect(apiMocks.fetchManMetaByNameAndSection).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm', pkg: 'alternate' })
+})

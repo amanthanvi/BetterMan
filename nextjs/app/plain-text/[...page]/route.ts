@@ -40,6 +40,11 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
     name = target.name
     if (target.kind === 'page') section = target.section
   }
+  const pkg = new URL(request.url).searchParams.get('pkg')
+  const textHref = (path: string) => {
+    const href = withDistro(path, urlDistro)
+    return pkg ? `${href}${href.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}` : href
+  }
   const rawDistro = new URL(request.url).searchParams.get('distro')?.trim()
   const urlDistro = rawDistro ? normalizeDistro(rawDistro) : null
   if (rawDistro && !urlDistro) return text('Invalid distro\n', 400)
@@ -50,13 +55,13 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
     const { distro, data } = await withDistroFallback(requestedDistro, async (distro) =>
       section === undefined
         ? await fetchManResolve({ distro, name: name.toLowerCase() })
-        : await fetchManByNameAndSectionOrAlias({ distro, name: name.toLowerCase(), section: section.toLowerCase() }),
+        : await fetchManByNameAndSectionOrAlias({ distro, name: name.toLowerCase(), section: section.toLowerCase(), ...(pkg ? { pkg } : {}) }),
     )
     if (data.kind === 'ambiguous') {
-      return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => withDistro(`${manPath(name, option.section)}.txt`, urlDistro)).join('\n')}\n`, 409)
+      return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => textHref(`${manPath(name, option.section)}.txt`)).join('\n')}\n`, 409)
     }
     if (data.kind === 'alias' || !('data' in data)) {
-      return text('', 308, { Location: withDistro(`${manPath(data.name, data.section)}.txt`, urlDistro) })
+      return text('', 308, { Location: textHref(`${manPath(data.name, data.section)}.txt`) })
     }
     const canonical = `${getPublicOrigin(request)}${canonicalWithDistro(manPath(data.data.page.name, data.data.page.section), distro)}`
     return text(renderManText(data.data), 200, { Link: `<${canonical}>; rel="canonical"` })

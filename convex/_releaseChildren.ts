@@ -11,6 +11,10 @@ type Reader = (ctx: QueryCtx | MutationCtx, releaseId: Id<"datasetReleases">, li
 // and the runtime schema-enumeration test until this registry is updated.
 // manPages stays last: its page-owned payload is removed before the page row.
 export const RELEASE_CHILD_READERS = {
+  manPageProviders: (ctx, releaseId, limit) => ctx.db.query("manPageProviders")
+    .withIndex("by_releaseId_and_externalId", q => q.eq("releaseId", releaseId)).take(limit),
+  releaseProviderUploadShards: (ctx, releaseId, limit) => ctx.db.query("releaseProviderUploadShards")
+    .withIndex("by_releaseId_and_bucket", q => q.eq("releaseId", releaseId)).take(limit),
   releaseManifests: (ctx, releaseId, limit) => ctx.db.query("releaseManifests")
     .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(limit),
   releasePackageBatches: (ctx, releaseId, limit) => ctx.db.query("releasePackageBatches")

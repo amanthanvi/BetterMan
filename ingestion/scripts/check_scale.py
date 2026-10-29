@@ -118,6 +118,8 @@ def footprint(admin: LocalAdmin, release_id: str) -> dict:
     tables = {}
     for table in [
         "manPages",
+        "manPageProviders",
+        "releaseProviderUploadShards",
         "manPageSearchDocuments",
         "manPageLinks",
         "manPageOptionFlags",

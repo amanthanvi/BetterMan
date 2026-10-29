@@ -28,6 +28,14 @@ export async function requireMutablePage(ctx: MutationCtx, pageId: Id<"manPages"
 export async function requireMutableBlob(ctx: MutationCtx, blobId: Id<"manPageContentBlobs">) {
   const references = await ctx.db.query("manPageContents")
     .withIndex("by_blobId", (q) => q.eq("blobId", blobId)).take(101);
+  const providerReferences = await ctx.db.query("manPageProviders")
+    .withIndex("by_blobId", q => q.eq("blobId", blobId)).take(101);
+  if (references.length + providerReferences.length > 100) throw new Error("CONTENT_REFERENCE_LIMIT");
+  for (const reference of providerReferences) {
+    const release = await ctx.db.get(reference.releaseId);
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+    await requireMutableRelease(ctx, release);
+  }
   // Fail closed when all owners cannot be checked in a bounded transaction.
   if (references.length > 100) throw new Error("CONTENT_REFERENCE_LIMIT");
   for (const reference of references) await requireMutablePage(ctx, reference.pageId);

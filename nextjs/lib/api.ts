@@ -212,9 +212,9 @@ const cachedResolveManByName = unstable_cache(
 )
 
 const cachedManByNameAndSection = unstable_cache(
-  async (distro: Distro, name: string, section: string) =>
-    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section })),
-  ['betterman', 'convex', 'man-by-name-and-section', 'v3'],
+  async (distro: Distro, name: string, section: string, pkg: string | null) =>
+    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}) })),
+  ['betterman', 'convex', 'man-by-name-and-section', 'v4'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -407,9 +407,10 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   distro: Distro
   name: string
   section: string
+  pkg?: string
 }): Promise<ManByNameAndSectionResult> {
   const result = (await mapConvexError(() =>
-    cachedManByNameAndSection(opts.distro, opts.name, opts.section),
+    cachedManByNameAndSection(opts.distro, opts.name, opts.section, opts.pkg ?? null),
   )) as ConvexManByNameAndSectionResult
   if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
   return result
@@ -440,7 +441,13 @@ export async function fetchManMetaByNameAndSection(opts: {
   distro: Distro
   name: string
   section: string
+  pkg?: string
 }): Promise<ManPageMetaResponse> {
+  if (opts.pkg) {
+    const provider = await fetchManByNameAndSectionOrAlias(opts)
+    if (provider.kind !== 'page') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+    return { page: provider.data.page }
+  }
   const result = (await mapConvexError(() =>
     cachedManMetaByNameAndSection(opts.distro, opts.name, opts.section),
   )) as ManPageMetaResponse | null

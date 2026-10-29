@@ -1,0 +1,253 @@
+{
+  "environment": {
+    "os": "macOS arm64",
+    "python": "3.14.9",
+    "node": "26.5.0",
+    "convex": "1.48.0",
+    "scope": "worktree loopback only"
+  },
+  "coldAcquisitionAndParse": {
+    "samplePackages": 2000,
+    "dependencyPackages": 66,
+    "fullPackages": 17294,
+    "fullDownloadBytes": 18055229016,
+    "sampleArchiveBytes": 1997753706,
+    "parsedPages": 16561,
+    "alternateProviders": 14,
+    "unresolved": 4,
+    "parseFailures": 0,
+    "indexSeconds": 6.691023875027895,
+    "acquireSeconds": 249.82996724999975,
+    "parseSeconds": 76.77536566695198,
+    "licenseSeconds": 27.693151125102304,
+    "licenses": 2000,
+    "maxLicenseBytes": 622747,
+    "missingLicenses": [],
+    "cachedPackages": 0,
+    "maxRssPlatformUnits": 396394496,
+    "workspaceLogicalBytes": 530402758,
+    "archiveConcurrencyBoundBytes": 366475788,
+    "workers": 4,
+    "pinsSha256": "172d0e358555dcf1c1c97d0afaab8d2f627eaeb4e92bbb4a592e1079f727f7a7",
+    "failures": [],
+    "missing": [
+      {
+        "package": "krb5-admin-server",
+        "path": "usr/share/man/man8/kadmin.local.8.gz",
+        "error": "krb5-admin-server:usr/share/man/man1/kadmin.1"
+      },
+      {
+        "package": "php-cgi",
+        "path": "usr/share/man/man1/php-cgi.default.1.gz",
+        "error": "php8.4-cgi:usr/share/man/man1/php.1"
+      },
+      {
+        "package": "manpages-dev",
+        "path": "usr/share/man/man2/PR_MPX_DISABLE_MANAGEMENT.2const.gz",
+        "error": "manpages-dev:usr/share/man/man2/PR_MPX_ENABLE_MANAGEMENT.2const"
+      },
+      {
+        "package": "manpages-dev",
+        "path": "usr/share/man/man2/PR_TASK_PERF_EVENTS_ENABLE.2const.gz",
+        "error": "manpages-dev:usr/share/man/man2/PR_TASK_PERF_EVENTS_DISABLE.2const"
+      }
+    ]
+  },
+  "finalCachedParseTwoWorkers": {
+    "samplePackages": 2000,
+    "dependencyPackages": 68,
+    "fullPackages": 17308,
+    "fullDownloadBytes": 18116092332,
+    "sampleArchiveBytes": 0,
+    "parsedPages": 16568,
+    "alternateProviders": 14,
+    "unresolved": 0,
+    "parseFailures": 0,
+    "indexSeconds": 5.153476999956183,
+    "acquireSeconds": 0.00013025000225752592,
+    "parseSeconds": 73.41721145901829,
+    "licenseSeconds": 0.2151447080541402,
+    "licenses": 2000,
+    "maxLicenseBytes": 622747,
+    "missingLicenses": [],
+    "cachedPackages": 2068,
+    "parentPeakRssBytes": 186613760,
+    "largestChildPeakRssBytes": 144654336,
+    "sourceBytes": 48066831,
+    "spoolBytes": 385081344,
+    "workspaceLogicalBytes": 2032537983,
+    "archiveConcurrencyBoundBytes": 270359640,
+    "workers": 2,
+    "pinsSha256": "172d0e358555dcf1c1c97d0afaab8d2f627eaeb4e92bbb4a592e1079f727f7a7",
+    "failures": [],
+    "missing": []
+  },
+  "firstLocalUpload": {
+    "releaseId": "2026-10-29T02:27:54Z+debian+local-scale-debs+mandoc:host",
+    "seconds": 176.79530899995007,
+    "timings": {
+      "pageUploadSeconds": 103.0830097500002,
+      "licenseUploadSeconds": 3.808039625058882,
+      "activationSeconds": 41.01006712496746
+    },
+    "footprint": {
+      "documents": 226995.0,
+      "jsonBytes": 107032621.0,
+      "storageBytes": 299371721.0,
+      "tables": {
+        "manPages": {
+          "documents": 49653.0,
+          "jsonBytes": 19449145.0,
+          "storageBytes": 298699098.0
+        },
+        "manPageProviders": {
+          "documents": 28.0,
+          "jsonBytes": 12624.0,
+          "storageBytes": 392404.0
+        },
+        "releaseProviderUploadShards": {
+          "documents": 8.0,
+          "jsonBytes": 1160.0,
+          "storageBytes": 0.0
+        },
+        "manPageSearchDocuments": {
+          "documents": 16551.0,
+          "jsonBytes": 16109998.0,
+          "storageBytes": 0.0
+        },
+        "manPageLinks": {
+          "documents": 86335.0,
+          "jsonBytes": 36153051.0,
+          "storageBytes": 0.0
+        },
+        "manPageOptionFlags": {
+          "documents": 70359.0,
+          "jsonBytes": 19586089.0,
+          "storageBytes": 0.0
+        },
+        "licensePackages": {
+          "documents": 2000.0,
+          "jsonBytes": 553478.0,
+          "storageBytes": 0.0
+        },
+        "licenses": {
+          "documents": 2000.0,
+          "jsonBytes": 15142130.0,
+          "storageBytes": 0.0
+        },
+        "releaseSectionStats": {
+          "documents": 33.0,
+          "jsonBytes": 9043.0,
+          "storageBytes": 0.0
+        },
+        "releaseManifests": {
+          "documents": 1.0,
+          "jsonBytes": 171.0,
+          "storageBytes": 280219.0
+        },
+        "releasePackageBatches": {
+          "documents": 10.0,
+          "jsonBytes": 2418.0,
+          "storageBytes": 0.0
+        },
+        "releasePageUploadShards": {
+          "documents": 16.0,
+          "jsonBytes": 13314.0,
+          "storageBytes": 0.0
+        }
+      }
+    }
+  },
+  "finalLocalUploadWithContentReuse": {
+    "releaseId": "2026-10-29T02:34:34Z+debian+local-scale-debs+mandoc:host",
+    "seconds": 176.53178537497297,
+    "timings": {
+      "pageUploadSeconds": 59.57431075000204,
+      "licenseUploadSeconds": 4.545767707983032,
+      "activationSeconds": 41.14587550004944
+    },
+    "footprint": {
+      "documents": 227059.0,
+      "jsonBytes": 107054983.0,
+      "storageBytes": 299493121.0,
+      "tables": {
+        "manPages": {
+          "documents": 49662.0,
+          "jsonBytes": 19452682.0,
+          "storageBytes": 298820498.0
+        },
+        "manPageProviders": {
+          "documents": 28.0,
+          "jsonBytes": 12622.0,
+          "storageBytes": 392404.0
+        },
+        "releaseProviderUploadShards": {
+          "documents": 9.0,
+          "jsonBytes": 1304.0,
+          "storageBytes": 0.0
+        },
+        "manPageSearchDocuments": {
+          "documents": 16554.0,
+          "jsonBytes": 16112445.0,
+          "storageBytes": 0.0
+        },
+        "manPageLinks": {
+          "documents": 86349.0,
+          "jsonBytes": 36159069.0,
+          "storageBytes": 0.0
+        },
+        "manPageOptionFlags": {
+          "documents": 70396.0,
+          "jsonBytes": 19596109.0,
+          "storageBytes": 0.0
+        },
+        "licensePackages": {
+          "documents": 2000.0,
+          "jsonBytes": 553474.0,
+          "storageBytes": 0.0
+        },
+        "licenses": {
+          "documents": 2000.0,
+          "jsonBytes": 15142142.0,
+          "storageBytes": 0.0
+        },
+        "releaseSectionStats": {
+          "documents": 33.0,
+          "jsonBytes": 9043.0,
+          "storageBytes": 0.0
+        },
+        "releaseManifests": {
+          "documents": 1.0,
+          "jsonBytes": 171.0,
+          "storageBytes": 280219.0
+        },
+        "releasePackageBatches": {
+          "documents": 10.0,
+          "jsonBytes": 2418.0,
+          "storageBytes": 0.0
+        },
+        "releasePageUploadShards": {
+          "documents": 16.0,
+          "jsonBytes": 13504.0,
+          "storageBytes": 0.0
+        }
+      }
+    },
+    "canonicalMetadataLookup": {
+      "documents": 3.0,
+      "jsonBytes": 1713.0,
+      "releaseJsonBytes": 820.0
+    }
+  },
+  "copyrightStress": {
+    "seconds": 7.944788082968444,
+    "notices": {
+      "chromium": 284231,
+      "firefox-esr": 82470,
+      "libreoffice-core": 20199,
+      "texlive-binaries": 27246,
+      "rustc": 147871,
+      "qt6-tools-dev-tools": 12116
+    }
+  }
+}

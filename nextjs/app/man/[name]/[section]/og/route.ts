@@ -26,7 +26,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
   const { data } = await (async () => {
     try {
       return await withDistroFallback(requestedDistro, (distro) =>
-        fetchManMetaByNameAndSection({ distro, name: name.toLowerCase(), section }),
+        fetchManMetaByNameAndSection({ distro, name: name.toLowerCase(), section, ...(new URL(request.url).searchParams.get('pkg') ? { pkg: new URL(request.url).searchParams.get('pkg')! } : {}) }),
       )
     } catch (err) {
       if (err instanceof FastApiError && err.status === 404) notFound()

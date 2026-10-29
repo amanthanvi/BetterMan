@@ -245,7 +245,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const result = await measure(metrics, 'convex_man', () =>
-        fetchManByNameAndSectionOrAlias({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+        fetchManByNameAndSectionOrAlias({ distro, name: parts[1].toLowerCase(), section: parts[2], ...(new URL(req.url).searchParams.get('pkg') ? { pkg: new URL(req.url).searchParams.get('pkg')! } : {}) }),
       )
       if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section)
       return cachedJson(result.data)
