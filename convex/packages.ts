@@ -38,7 +38,7 @@ export const getPackage = query({
   },
   returns: v.object({
     name: v.string(), version: v.union(v.string(), v.null()), datasetReleaseId: v.string(),
-    pages: v.array(v.object({ name: v.string(), section: v.string(), title: v.string(), version: v.union(v.string(), v.null()) })),
+    pages: v.array(v.object({ name: v.string(), section: v.string(), title: v.string(), description: v.string(), version: v.union(v.string(), v.null()) })),
     hasMore: v.boolean(), nextCursor: v.union(v.string(), v.null()),
     cursorReset: v.union(v.null(), v.literal("invalid"), v.literal("stale")),
   }),
@@ -69,7 +69,7 @@ export const getPackage = query({
     }
     return {
       name, version: result.page[0]?.sourcePackageVersion ?? null, datasetReleaseId: release.datasetReleaseId,
-      pages: result.page.map((page) => ({ name: page.name, section: page.section, title: page.title, version: page.sourcePackageVersion ?? null })),
+      pages: result.page.map((page) => ({ name: page.name, section: page.section, title: page.title, description: page.description, version: page.sourcePackageVersion ?? null })),
       hasMore: !result.isDone,
       nextCursor: result.isDone ? null : encodePackageCursor({ releaseId: release._id, packageName: name, cursor: result.continueCursor }),
       cursorReset,

@@ -54,7 +54,8 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
             <Link className="font-mono underline underline-offset-4" href={withDistro(`/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`, distro)}>
               {page.name}({page.section})
             </Link>
-            <span className="ml-3 text-sm text-ink-3">{page.title}</span>
+            {/* title is the citation itself (rmt(8)); the NAME line's description says what the page is. */}
+            {page.description ? <span className="ml-3 text-sm text-ink-3">{page.description}</span> : null}
           </li>
         ))}
       </ul>

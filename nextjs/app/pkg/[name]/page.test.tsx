@@ -12,12 +12,15 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllEnvs())
 it('renders package/version/pages and preserves the distro and cursor on next page links', async () => {
-  mocks.fetchPackage.mockResolvedValue({ name: 'libX11', version: '1.8', pages: [{ name: 'XOpenDisplay', section: '3', title: 'open display' }], hasMore: true, nextCursor: 'next+cursor' })
+  mocks.fetchPackage.mockResolvedValue({ name: 'libX11', version: '1.8', pages: [{ name: 'XOpenDisplay', section: '3', title: 'XOpenDisplay(3)', description: 'connect to X server' }], hasMore: true, nextCursor: 'next+cursor' })
   const html = renderToStaticMarkup(await PackagePage({ params: Promise.resolve({ name: 'libX11' }), searchParams: Promise.resolve({ distro: 'freebsd' }) }))
   expect(mocks.fetchPackage).toHaveBeenCalledWith({ distro: 'freebsd', name: 'libX11', cursor: undefined })
   expect(html).toContain('libX11')
   expect(html).toContain('1.8')
   expect(html).toContain('/man/XOpenDisplay/3?distro=freebsd')
+  // The citation appears once, as the link; the description follows it.
+  expect(html).toContain('connect to X server')
+  expect(html.split('XOpenDisplay(3)')).toHaveLength(2)
   expect(html).toContain('/pkg/libX11?distro=freebsd&amp;cursor=next%2Bcursor')
 })
 it('returns 404 for an unknown package and keeps a valid empty cursor page readable', async () => {
