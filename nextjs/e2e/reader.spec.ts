@@ -146,7 +146,7 @@ test('reader: an explicit Debian link keeps Debian through links while the defau
   const header = page.locator('header').filter({ has: page.getByRole('heading', { level: 1, name: /gzip\(1\)/i }) })
   await expect(header.getByText('Debian', { exact: true })).toBeVisible()
 
-  await waitForInteractiveShell(page)
+  // The shell persists across client navigation, so its handlers are still attached.
   await page.getByRole('button', { name: 'Search' }).click()
   await page.getByRole('combobox', { name: 'Command palette input' }).fill('>go home')
   await page.getByRole('option', { name: /Go home/ }).click()
