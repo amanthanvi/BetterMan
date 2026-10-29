@@ -1008,3 +1008,15 @@ def test_invalid_json_diagnostics_count_only_shape_and_finish_reason():
     }
     assert gen.stats.finish_reasons == {"length": 1}
     assert gen.stats.content_shapes == {"object_start": 1}
+
+
+def test_rejection_reasons_never_quote_model_text():
+    from ingestion.generated.pipeline import _reason
+
+    assert _reason("wrapped invocation: sudo rm-everything") == "wrapped invocation"
+    assert _reason("placeholder in command position after evil") == (
+        "placeholder in command position"
+    )
+    assert _reason("unsupported shell syntax: No closing quotation") == "unsupported shell syntax"
+    assert _reason("unknown flag -Z in -xZf") == "unknown flag"
+    assert _reason("anything the verifier adds later") == "other"

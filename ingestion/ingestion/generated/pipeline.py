@@ -320,14 +320,32 @@ class Generator:
         return part
 
 
+# Verifier problems can quote model-written command text. Logged counters use
+# these fixed categories; only the retry prompt sees the full problem.
+_REASONS = (
+    ("unknown flag", "unknown flag"),
+    ("does not run", "does not run the command"),
+    ("does not start with", "does not run the command"),
+    ("wrapper prefix", "wrapper prefix"),
+    ("placeholder in command position", "placeholder in command position"),
+    ("placeholder inside flag", "placeholder inside flag"),
+    ("placeholder used as a flag", "placeholder used as a flag"),
+    ("wrapped invocation", "wrapped invocation"),
+    ("indirect invocation", "indirect invocation"),
+    ("unsupported shell syntax", "unsupported shell syntax"),
+    ("more than one command", "more than one command"),
+    ("redirection", "redirection"),
+    ("variable assignment", "variable assignment"),
+    ("unsafe command", "unsafe command"),
+    ("control characters", "control characters"),
+)
+
+
 def _reason(problem: str) -> str:
-    if problem.startswith("unknown flag"):
-        return "unknown flag"
-    if problem.startswith(("does not run", "does not start with")):
-        return "does not run the command"
-    if problem.startswith("wrapper prefix"):
-        return "wrapper prefix"
-    return problem
+    for prefix, reason in _REASONS:
+        if problem.startswith(prefix):
+            return reason
+    return "other"
 
 
 MAX_FLAG_USAGE_ROWS = 64

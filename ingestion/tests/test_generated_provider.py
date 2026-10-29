@@ -165,6 +165,14 @@ def test_parse_completion_rejects_malformed_payloads():
     assert not bare.usage_reported and bare.prompt_tokens == 0
 
 
+@pytest.mark.parametrize("message", [None, "text", [], 5])
+def test_parse_completion_rejects_non_object_messages(message):
+    with pytest.raises(ProviderError):
+        parse_completion({"choices": [{"message": message}]})
+    with pytest.raises(ProviderError):
+        parse_completion({"choices": [message]})
+
+
 def test_recorded_provider_replays_by_prompt():
     recorded = RecordedProvider({RecordedProvider.key(MESSAGES): completion("ok")})
     assert recorded.send(MESSAGES, max_tokens=1).text == "ok"

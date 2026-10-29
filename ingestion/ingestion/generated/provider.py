@@ -98,11 +98,6 @@ def _usage_limit(status: int, body: str) -> bool:
     return status in {402, 403, 429} and any(marker in lowered for marker in _USAGE_LIMIT_MARKERS)
 
 
-def _clip(text: str, limit: int = 300) -> str:
-    text = " ".join(text.split())
-    return text if len(text) <= limit else text[:limit] + "..."
-
-
 def _billed(payload: Mapping[str, object]) -> float | None:
     allowance = payload.get("opencode")
     if isinstance(allowance, Mapping):
@@ -126,9 +121,11 @@ def parse_completion(payload: object) -> Completion:
     try:
         choice = payload["choices"][0]
         message = choice["message"]
-        text = message.get("content")
     except (KeyError, IndexError, TypeError) as exc:
         raise ProviderError("completion response has no message content") from exc
+    if not isinstance(choice, Mapping) or not isinstance(message, Mapping):
+        raise ProviderError("completion response has no message content")
+    text = message.get("content")
     if text is None:
         text = ""
     if not isinstance(text, str):

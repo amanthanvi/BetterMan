@@ -190,3 +190,17 @@ def test_tagged_examples_pair_each_term_with_its_body(name, rows):
     page = PageInput("debian", name, "1", "a" * 64, "", [], [], parsed.doc.model_dump())
     examples, _ = page_examples(page)
     assert [(e.command, e.description) for e in examples] == rows
+
+
+def test_term_without_body_keeps_the_preceding_paragraph():
+    from ingestion.generated.page import PageInput
+    from ingestion.mandoc_parser import parse_mandoc_html
+
+    html = (
+        '<div class="manual-text"><h1>EXAMPLES</h1><p>List the file:</p>'
+        '<dl class="Bl-tag"><dt><a class="permalink">cat f</a></dt><dd></dd></dl></div>'
+    )
+    parsed = parse_mandoc_html(html)
+    page = PageInput("debian", "cat", "1", "a" * 64, "", [], [], parsed.doc.model_dump())
+    examples, _ = page_examples(page)
+    assert [(e.command, e.description) for e in examples] == [("cat f", "List the file:")]

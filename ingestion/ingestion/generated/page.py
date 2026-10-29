@@ -164,8 +164,11 @@ def page_examples(page: PageInput) -> tuple[list[Example], Counter[str]]:
         else:
             continue
         if kind == "_term":
+            # A term's own body describes it; without one, keep the
+            # paragraph that came before, as for other layouts.
             description_block = block.get("description")
-            context = inline_text(description_block.get("inlines", ())) if description_block else ""
+            if description_block is not None:
+                context = inline_text(description_block.get("inlines", ()))
             skip_description = description_block is not None
         command = _command_text(text)
         if command is None:
