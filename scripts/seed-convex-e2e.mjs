@@ -265,6 +265,35 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
   pages.push(page({ name: 'tnftp', section: '1', title: 'tnftp(1)', description: 'Terminal FTP fixture',
     sourcePackage: 'tnftp', toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Terminal FTP documentation.' }] }],
   }))
+  if (distro === 'debian' || distro === 'freebsd' || distro === 'macos') {
+    // ls(1) for the options index: ten options, two of them GNU-only, so portability differs.
+    const flags = [
+      ['-a', 'all', 'Do not ignore entries starting with a dot.'],
+      ['-l', 'long', 'Use a long listing format.'],
+      ['-h', 'human', 'Print sizes in human-readable form.'],
+      ['-R', 'recursive', 'List subdirectories recursively.'],
+      ['-t', 'time', 'Sort by modification time, newest first.'],
+      ['-S', 'size', 'Sort by file size, largest first.'],
+      ['-r', 'reverse', 'Reverse the order while sorting.'],
+      ['-1', 'one', 'List one file per line.'],
+      ...(distro === 'debian' ? [
+        ['--color', 'color', 'Colorize the output.'],
+        ['--group-directories-first', 'group-directories-first', 'Group directories before files.'],
+      ] : []),
+    ]
+    const items = flags.map(([flag, id, description]) => ({ id: `opt-${id}`, termInlines: [{ type: 'code', text: flag }], definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: description }] }] }))
+    pages.push(page({
+      name: 'ls', section: '1', title: 'ls(1)', description: 'list directory contents', sourcePackage: 'coreutils',
+      toc: [{ id: 'description', title: 'DESCRIPTION', level: 2 }, { id: 'options', title: 'OPTIONS', level: 2 }],
+      blocks: [
+        { type: 'heading', id: 'description', level: 2, text: 'DESCRIPTION' },
+        { type: 'paragraph', inlines: [{ type: 'text', text: 'List information about the files.' }] },
+        { type: 'heading', id: 'options', level: 2, text: 'OPTIONS' },
+        { type: 'definition_list', items },
+      ],
+      options: flags.map(([flag, id, description]) => ({ flags: flag, anchorId: `opt-${id}`, description })),
+    }))
+  }
   const datasetReleaseId = `e2e-${distro}-${Date.now()}`
   const sectionTotals = Object.entries(
     pages.reduce((acc, p) => {
@@ -290,6 +319,26 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     licensePackages: [],
   })
   await post('/ingest/pages', { datasetReleaseId, pages })
+  if (distro === 'debian') {
+    // The generated layer (B6) for tar(1): a summary and sourced examples for the man page's In brief.
+    const tar = pages.find((p) => p.name === 'tar')
+    await post('/ingest/generated', { records: [{
+      contentSha256: tar.contentSha256,
+      page: { examples: [{ description: 'Create an archive from a folder', command: 'tar -cf archive.tar ./my-folder' }], flagUsage: [{ flag: '-c', count: 1 }] },
+      tldr: {
+        commit: 'f4566462f5996e13a4f3523f21dc2a863aec53c1', path: 'common/tar.md', rejected: 0,
+        examples: [{ description: 'Create an archive and write it to a file', command: 'tar --create --file path/to/target.tar path/to/file', placeholders: [[20, 38], [39, 51]] }],
+        flagUsage: [{ flag: '--create', count: 1 }],
+      },
+      generated: {
+        provider: 'opencode-go', model: 'deepseek-v4.1-flash', promptVersion: 'b6-v1', generatedAt: '2026-10-28',
+        summary: 'Creates and extracts archive files <b>such as</b> tarballs.',
+        examples: [{ description: 'Create an archive of the current folder', command: 'tar -c .' }],
+        taskPhrases: ['create a tar archive', 'bundle a folder'],
+        rejected: 0,
+      },
+    }] })
+  }
   await post('/ingest/pages/storage', { datasetReleaseId, pages: [{
     ...page({ name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)',
       description: 'Alternate package provider', sourcePackage: 'alternate-perl',

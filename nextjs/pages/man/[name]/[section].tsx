@@ -36,6 +36,8 @@ type PageProps = {
   urlDistro: Distro | null
   release: ReleaseInfo | null
   reportHref: string
+  portabilityMode: 'glyph' | 'text'
+  portabilityToggleHref: string
 }
 
 type MissProps = { kind: 'miss'; head: ManHeadData; miss: ManMiss; release: ReleaseInfo | null }
@@ -66,12 +68,25 @@ function pageHead(page: ManPage, servedDistro: Distro, pkg: string | null, origi
   }
 }
 
+/** This page's URL with the other portability mode, keeping its own `?distro=` and `?pkg=`. */
+function portabilityToggle(name: string, section: string, query: Record<string, string | string[] | undefined>, mode: 'glyph' | 'text'): string {
+  const params = new URLSearchParams()
+  for (const key of ['distro', 'pkg']) {
+    const value = firstQuery(query[key])
+    if (value) params.set(key, value)
+  }
+  if (mode === 'glyph') params.set('portability', 'text')
+  const search = params.toString()
+  return `/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}${search ? `?${search}` : ''}#options-index`
+}
+
 export const getServerSideProps: GetServerSideProps<Props> = async ({ params, query, req, res }) => {
   const name = String(params?.name ?? '')
   const section = String(params?.section ?? '')
   const urlDistro = normalizeDistro(firstQuery(query.distro))
   const distro = urlDistro ?? 'debian'
   const pkg = packageName(firstQuery(query.pkg)) ?? null
+  const portabilityMode = firstQuery(query.portability) === 'text' ? 'text' : 'glyph'
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
   const found = await lookupManPage({ name, section, distro, ...(pkg ? { pkg } : {}), ...(releaseKey ? { release: releaseKey } : {}) })
@@ -111,6 +126,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
       urlDistro,
       release,
       reportHref: reportProblemHref({ page, distro: found.distro, origin }),
+      portabilityMode,
+      portabilityToggleHref: portabilityToggle(name, section, query, portabilityMode),
     },
   }
 }
@@ -127,7 +144,7 @@ export default function ManPageRoute(props: Props) {
     )
   }
 
-  const { data, related, servedDistro, urlDistro, release, reportHref } = props
+  const { data, related, servedDistro, urlDistro, release, reportHref, portabilityMode, portabilityToggleHref } = props
   return (
     <>
       <ManShell urlDistro={urlDistro} release={release}>
@@ -138,8 +155,10 @@ export default function ManPageRoute(props: Props) {
           servedDistro={servedDistro}
           urlDistro={urlDistro}
           relatedItems={related}
-          portability={data.derived ? { portability: data.derived.portability, stale: data.derived.stale } : undefined}
-          derivedLinks={data.derived ? { referencedBy: data.derived.referencedBy, family: data.derived.family, package: data.derived.package } : undefined}
+          derived={data.derived}
+          brief={data.brief}
+          portabilityMode={portabilityMode}
+          portabilityToggleHref={portabilityToggleHref}
           reportHref={reportHref}
         />
       </ManShell>

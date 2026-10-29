@@ -130,18 +130,28 @@ Light is paper; dark is the same plate in warm ink on black.
 - **Index of options.** "Compiled by BetterMan" in sans: flags in bold mono
   (each flag its own element; the comma is CSS), the description, and the
   section locator in old-style figures. Past 8 options a filter narrows the
-  index; it never hides manual text. Past 20, the rest sit in a native
-  `<details>`.
+  index; when portability data has a non-portable flag, "Portable only" narrows
+  it to flags on all three systems. Neither ever hides manual text. Past 20,
+  the rest sit in a native `<details>`. Options new since the page's previous
+  release carry "new in <version>".
 - **Portability glyph** (`components/man/Portability.tsx`). Three 7px cells,
   GNU/Linux · FreeBSD · macOS: filled present, hollow absent, half-filled
   present but different. Drawn beside the flag and only on non-portable flags,
   with the full words as its accessible name and tooltip, and a one-line legend
   once per page that says the cells show availability, not identical behaviour.
-  It renders only when portability data is passed; none exists yet (B7, #399).
-- **BetterMan's layer.** The examples preview and the See also / Related
-  addendum sit on the `added` tint in sans, each labelled with its source.
-  In brief (C4) lands in the same layer and omits any part whose data is
-  missing.
+  B7's derived data (#399) supplies the cells (`components/man/PortabilityGlyph.tsx`).
+  `?portability=text` writes them as words instead ("not on FreeBSD"), with a
+  link to switch back.
+- **BetterMan's layer.** In brief (`components/man/ManPageBrief.tsx`) and
+  the See also / Related addendum sit on the `added` tint in sans. In brief
+  sits between SYNOPSIS and the index: the summary, then two columns, sourced
+  examples beside the most-used flags. Each example carries a short source label
+  (`from EXAMPLES`, `tldr-pages` linked with `CC BY 4.0` and the change notice,
+  or `generated · <model>, <date>`). Most-used flags show only when counted from
+  verified examples, grouped "One mode · Then add" when the page defines modes.
+  Each part is omitted without data, and the whole section without any; a page
+  without generated examples shows its own EXAMPLES there. Generated and tldr
+  text is rendered as text, never markup (`docs/generated-layer.md`).
 
 ## Component vocabulary
 
@@ -186,7 +196,7 @@ combinator.
   exact text), select "Select distribution variant" (a real `<select>`), list
   "Search results" with small-caps kind labels (`flag` for an option match;
   `command`, `function`, `file format`, … by section), regions "Recent" /
-  "Bookmarks" / "Browse sections" / "Quick examples" (no heading inside) /
+  "Bookmarks" / "Browse sections" / "In brief" / "Options" /
   "Other distributions" / "Did you mean" (man page 404), complementaries "See
   also" / "Related commands", headings "Browse" and "Search the manual", TOC
   active link `aria-current="location"`, link "Report a problem" (man page

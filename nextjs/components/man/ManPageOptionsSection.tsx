@@ -19,11 +19,17 @@ export function ManPageOptionsSection({
   rowIds,
   locators,
   portability,
+  newIn,
+  portabilityMode = 'glyph',
+  portabilityToggleHref,
 }: {
   options?: OptionItem[] | null
   rowIds: ReadonlyMap<string, string>
   locators?: ReadonlyMap<string, string>
   portability?: Pick<PageDerivedResponse, 'portability' | 'stale'>
+  newIn?: PageDerivedResponse['newIn']
+  portabilityMode?: 'glyph' | 'text'
+  portabilityToggleHref?: string
 }) {
   const allOptions = options ?? []
   const optionsCount = allOptions.length
@@ -40,11 +46,13 @@ export function ManPageOptionsSection({
       rowIds={rowIds}
       locators={locators}
       portability={portability?.portability}
+      portabilityMode={portabilityMode}
+      newIn={newIn}
     />
   )
 
   return (
-    <section data-bm-options className="mb-12 border-y border-rule pt-6 pb-4" aria-label="Options">
+    <section id="options-index" data-bm-options className="mb-12 border-y border-rule pt-6 pb-4" aria-label="Options">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <h2 className="small-caps text-lg font-semibold text-ink">Index of options</h2>
         <p className="text-xs text-ink-3">
@@ -52,19 +60,27 @@ export function ManPageOptionsSection({
         </p>
       </div>
 
-      {/* The filter narrows this index only; the manual text below is never hidden. */}
-      {optionsCount > FILTER_MIN_OPTIONS ? (
+      {/* The filters narrow this index only; the manual text below is never hidden (fix 7). */}
+      {optionsCount > FILTER_MIN_OPTIONS || hasPortability ? (
         <div className="bm-js mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1">
-          <input
-            type="search"
-            name="bm-options-filter"
-            data-bm-options-filter
-            placeholder={`Filter ${optionsCount} options`}
-            autoComplete="off"
-            spellCheck={false}
-            aria-label="Filter options"
-            className="bm-field max-w-64 py-1 text-sm"
-          />
+          {optionsCount > FILTER_MIN_OPTIONS ? (
+            <input
+              type="search"
+              name="bm-options-filter"
+              data-bm-options-filter
+              placeholder={`Filter ${optionsCount} options`}
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Filter options"
+              className="bm-field max-w-64 py-1 text-sm"
+            />
+          ) : null}
+          {hasPortability ? (
+            <label className="inline-flex items-baseline gap-1.5 text-sm text-ink-2">
+              <input type="checkbox" name="bm-options-portable" data-bm-options-portable className="accent-accent" />
+              Portable only
+            </label>
+          ) : null}
           <span aria-live="polite" data-bm-options-count className="text-xs text-ink-3 tabular-nums">
             {`${optionsCount} options`}
           </span>
@@ -72,8 +88,15 @@ export function ManPageOptionsSection({
       ) : null}
 
       {hasPortability ? <div className="mt-3">
-        <PortabilityLegend />
-        <p className="mt-1 text-xs text-ink-3">A dash means the manual is not included in that dataset; ? means unknown or not loaded.</p>
+        {portabilityMode === 'glyph' ? <PortabilityLegend /> : <p className="text-xs text-ink-3">Portability across GNU/Linux, FreeBSD and macOS, in words. Unmarked flags exist on all three; this shows availability, not identical behavior.</p>}
+        {portabilityMode === 'glyph' ? <p className="mt-1 text-xs text-ink-3">A dash means the manual is not included in that dataset; ? means unknown or not loaded.</p> : null}
+        {portabilityToggleHref ? (
+          <p className="mt-1 text-xs">
+            <a href={portabilityToggleHref} className="text-ink-2 underline decoration-rule-2 underline-offset-2 hover:text-accent">
+              {portabilityMode === 'glyph' ? 'Show portability as words' : 'Show portability as cells'}
+            </a>
+          </p>
+        ) : null}
       </div> : null}
       {portability?.stale ? <p className="mt-2 text-xs text-ink-3">Portability reflects an earlier snapshot. Some comparison data may be unavailable.</p> : null}
 

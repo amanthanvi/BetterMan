@@ -39,7 +39,7 @@ export const OVERLAY_FILES = new Set([
 ])
 
 // BetterMan's own voice: In brief, examples, the addendum. Tinted, never boxed.
-export const ADDED_FILES = new Set(['components/man/ManPageExamples.tsx', 'components/man/ManPageFooterSections.tsx'])
+export const ADDED_FILES = new Set(['components/man/ManPageBrief.tsx', 'components/man/ManPageFooterSections.tsx'])
 
 // The only red fill: the 2px contents marker beside the active heading.
 export const ACCENT_FILL_FILES = new Set(['components/toc/Toc.tsx', 'man-client/toc.ts'])
