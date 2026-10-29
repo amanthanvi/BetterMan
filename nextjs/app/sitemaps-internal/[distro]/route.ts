@@ -37,6 +37,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
 
   const urlsPerFile = releases.urlsPerFile || 10000
   const pageCount = Math.ceil(release.pageCount / urlsPerFile)
+  if (pageCount === 0) return new Response(null, { status: 404 })
   const lastmod = toIsoZ(release.ingestedAt)
 
   const etag = weakEtag(['sitemap-distro-index-b4-v2', distro, release.datasetReleaseId, String(pageCount)])

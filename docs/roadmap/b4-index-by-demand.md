@@ -24,9 +24,11 @@ or traffic counts dominate linearly. Membership uses the raw counts, avoiding
 rounding at thresholds. All pages remain in browsing, search and direct reads.
 No score is computed during a page view, and this change does not modify search ranking.
 
-Debian and Ubuntu use exact binary-package names, stripping only a Debian
-multiarch suffix. Fedora, Arch, Alpine, FreeBSD and macOS use the same exact-name
-match as a proxy. Package renames (e.g. `openssh-clients` vs `openssh-client`),
+Only Debian has measured tier numbers. Ubuntu, Fedora, Arch, Alpine and FreeBSD
+use exact package-name matches to Debian popcon as proxies, stripping only a
+Debian multiarch suffix. No tier-size claim is made for those systems. macOS has
+no package ownership and therefore gets sections 1/5/7/8 only with today's
+popcon-only input; optional route traffic could later promote other sections. Package renames (e.g. `openssh-clients` vs `openssh-client`),
 base-system pages without package ownership and `-devel`/`-dev` differences get
 zero package prior; they still get the section rule and measured route demand.
 This proxy is useful for common command packages, weak for libraries and other
@@ -69,7 +71,8 @@ Ingestion assigns dense positive `sitemapPage` numbers to the tier, at most
 query paginates at **5,000 rows** per call, below the 8,192-element value limit.
 The Next.js layer assembles those bounded chunks into XML outside Convex.
 For scored releases, sitemap indexes use `indexablePageCount`; a scored zero
-count produces no leaf sitemap. For unscored releases they use the original
+count produces no leaf sitemap, and its distro sitemap index returns 404.
+For unscored releases they use the original
 `pageCount` and existing sitemap assignments, with no page filtering, exactly
 as on main. A defensive post-pagination check in scored releases rejects
 missing/long-tail signals without losing the continuation cursor. Updated cache
@@ -86,12 +89,14 @@ its existing 5 calls / 29 documents / 1 storage read budget.
 
 Generated contract **v3** adds nullable section selection and persisted demand
 signals. By default generation paginates all sections. Scored releases select
-only the stored tier, ordered by descending demand score. Legacy releases keep
-all candidates eligible with zero stored score and section-order tie breaking,
-so #442's `refresh_page` remains usable before new ingestion. Cached-source generation uses
-the same Python policy. `--priority` remains an optional scheduling hint within
-the tier and cannot promote a long-tail page. `--sections` restricts the remote
-scan; the historical four-section default no longer hides popular library pages.
+only the stored tier, ordered by descending demand score. Unscored releases
+return `indexable: null`; by default the selector admits only main's exact
+sections **1, 8, 5 and 7**, not suffixes or popular-package library pages. Their stored
+scores remain zero. This keeps #442's `refresh_page` within its original scope
+without spending Go budget on a new long tail. Cached-source candidates without
+a tier use the same legacy rule. `--priority` only reorders eligible pages;
+`--sections` retains main's explicit legacy section override; it never overrides
+a scored page's stored false membership.
 
 ## Monthly re-evaluation and owner runbook
 
@@ -101,12 +106,19 @@ can promote at 100 views and demote below it if neither package nor section
 qualifies; the active immutable release does not change between refreshes.
 Full-Debian opt-in and its separate owner authorization remain required.
 
-1. Deploy the matching reviewed Convex and Next implementation. Existing
-   unscored prod releases continue serving indexable pages and complete sitemaps;
-   deployment does **not** require re-ingesting all seven distros. Scored curated
-   editions also remain fully indexed in the measured explicit-package fixture.
-   The generated worker uses v3, consumes stored tiers from scored releases and
-   retains legacy eligibility for deterministic page refresh.
+1. **Merge only after the November 1, 2026 05:00 UTC monthly run completes.**
+   That run uses today's code and promotes unscored curated releases as usual.
+   After #443 lands, rebase B4 to ingest v7 with both payloads before merging.
+   Once B4 is deployed, the lead runs an **all-distro staging-only ingest**
+   (`ingest=true`, `promote=false`, not a sample), inspects each distro's declared
+   `indexablePageCount`, then dispatches promotion with `ingest=false`,
+   `promote=true` and an `expected_release_ids` JSON map containing all seven
+   inspected staging IDs. These are the #443 CAS pins; do not leave an unlisted
+   distro to capture an uninspected source at job time. Full Debian retains its
+   separate ingestion/owner-promotion opt-ins. Do not run or dispatch this
+   sequence as part of this implementation task.
+   Existing unscored prod editions remain indexable throughout deployment;
+   measured Debian counts do not establish the other distros' tier sizes.
 2. **Full-Debian releases require a scored replacement before prod promotion.**
    Both direct activation and stage promotion check persisted
    `acquisition: "deb-extraction"` and `indexablePageCount` inside the mutation
@@ -125,13 +137,15 @@ Full-Debian opt-in and its separate owner authorization remain required.
    Use the narrowest site access supported by the account. No key exists today;
    absence is a successful popcon-only run. No owner configuration is performed
    by this change.
-4. The workflow runs `pnpm analytics:counts` before ingestion, requesting only
-   aggregate pageviews. A configured export failure fails the job rather than
-   silently publishing a stale/fallback tier. The snapshot is passed via
-   `BETTERMAN_PLAUSIBLE_COUNTS`; Linux containers receive a read-only file mount,
-   host ingestion receives the path, and FreeBSD receives the checkout file and imports checkout sources so the
-   pinned data is available.
-   The API key is not forwarded into any ingestion container or VM.
+4. One dedicated `demand` job runs `pnpm analytics:counts` for the workflow,
+   with at most three attempts (2 s then 4 s backoff). It exports only aggregate
+   pageviews and uploads one `page-demand` artifact for all distro jobs. Each
+   manifest records the digest of those same bytes. No key means no artifact
+   and popcon-only scoring everywhere. Exhausted retries fail the shared job
+   before any distro ingests, rather than mixing partial snapshots. A
+   promote-only dispatch does not export analytics. The artifact is retained
+   for 14 days; Linux receives a read-only file mount, hosts receive its path,
+   and FreeBSD receives the checkout file. No API key enters ingestion.
 5. For an authorized local/operator run, export with `PLAUSIBLE_API_KEY`,
    `PLAUSIBLE_SITE_ID=betterman.sh` and `PLAUSIBLE_COUNTS_OUTPUT=<absolute-path>`
    using `pnpm analytics:counts`, then set
@@ -146,6 +160,31 @@ Full-Debian opt-in and its separate owner authorization remain required.
    Re-evaluation does not authorize a spend increase or a full-Debian promotion.
    To change the popcon prior, use the existing reviewed pinning process and
    commit the new checksum; the monthly job never trusts an unpinned download.
+
+### Inspect staging tier counts without a deploy key
+
+There is **no existing programmatic read-only path exposing a staging release's
+stored `indexablePageCount` without a deploy key**. Public SEO queries expose
+only prod; #443's authenticated `/ingest/promotion-source` verifies the fixed
+staging source but returns only its distro and release ID. Generated candidates
+are not the declared release count. Do not use those as a substitute.
+
+Take each staging ID from its `dataset-result-<distro>` artifact
+(`releaseId`), then find the `datasetReleases` row with that `datasetReleaseId`
+in the Convex dashboard and read `indexablePageCount` using normal account/data
+access, or use
+existing privileged read access. The ingestion request declares the count, but
+it is not currently emitted as a retained workflow result artifact. If the lead
+has no way to inspect the stored declarations, that inspection step remains
+unavailable; this PR does not add a new endpoint or grant credentials.
+
+### Accepted robots cache lag
+
+Page and metadata caches are not keyed by release and can retain a prior robots
+signal for **one hour**. OG responses have a one-day fresh cache plus seven-day
+stale window, so their robots signal can lag by **about eight days**. Sitemap
+and representation caches can refresh at different times after a release switch.
+The lead accepts this lag; this PR does not add invalidation or change cache TTLs.
 
 ## Tier measurement and projection
 
@@ -180,8 +219,8 @@ A separate 115,000-page synthetic test yields 38,334 tier members with dense
 The lead's rollout correction preserves legacy indexability and moves the hard
 safety gate to full-Debian promotion. Revision checks and the final head are
 recorded in the PR. Validation passed: 3,248 Convex tests and typecheck;
-879 ingestion tests after the #442 rebase; 579 Next unit tests, lint, grammar
-and build; 136 E2E tests (scored and legacy serving); 119 ops tests; performance
+880 ingestion tests; 582 Next unit tests, lint, grammar
+and build; 136 E2E tests (scored and legacy serving); 121 ops tests; performance
 budgets with 5 calls / 29 documents / 1 storage read. The local backend used
 isolated ports 3416/3417. No budgets, runner configuration or shared
 infrastructure were changed.

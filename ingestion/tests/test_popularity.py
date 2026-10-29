@@ -109,3 +109,16 @@ def test_metadata_projection_counts_normalized_routes_without_extracting_archive
     assert result["fullDebianRoutes"]["routes"] == 3
     assert result["fullDebianRoutes"]["indexable"] == 2
     assert result["projected115kCanonicalIndexable"] == 76_667
+
+
+def test_unscored_generation_keeps_legacy_exact_sections_even_for_popular_packages():
+    candidates = [
+        Candidate("library", "3", "library", "coreutils", True, None, 0),
+        Candidate("module", "3pm", "module", "coreutils", True, None, 0),
+        Candidate("posix", "1p", "posix", "coreutils", True, None, 0),
+        *[Candidate(f"section{s}", s, s, None, False, None, 0) for s in ("1", "8", "5", "7")],
+        *[Candidate(f"tail{s}", s, s, None, True, None, 0) for s in ("2", "4", "6", "9")],
+    ]
+    assert [c.section for c in select(candidates)] == ["1", "8", "5", "7"]
+    assert [c.section for c in select(candidates, sections=("3",))] == ["3"]
+    assert [c.section for c in select([Candidate("promoted", "3", "hot", indexable=True)])] == ["3"]

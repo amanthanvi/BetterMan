@@ -319,3 +319,34 @@ existing separate owner authorization. See the
 [B4 policy and dependency checklist](../roadmap/b4-index-by-demand.md); rebase B4
 to ingest v7 after #443, preserving its CAS request and fixed-source read, plus
 #442's generated-layer fixes. This runbook does not authorize promotion.
+
+### B4 rollout order and tier inspection
+
+Merge B4 **after the November 1, 2026 05:00 UTC monthly run** completes; that run
+promotes today's unscored curated releases as usual. After deployment, the lead
+runs all seven distros with `ingest=true`, `promote=false` and no sample, inspects
+each staging release's declared `indexablePageCount`, then promotes with
+`ingest=false`, `promote=true` and #443's `expected_release_ids` JSON map pinning
+**all seven inspected IDs**. Retain separate full-Debian opt-ins/owner review.
+This documents the lead's sequence; no dispatch is authorized by this task.
+
+Only Debian has measured tier numbers. Other package priors are exact-name
+proxies; macOS has no package ownership and gets sections 1/5/7/8 only with the
+current popcon-only input (optional future route traffic may promote others).
+Do not assume Debian's 100% curated ratio applies to other distros.
+
+No existing programmatic read-only path exposes staging `indexablePageCount`
+without a deploy key: public SEO reads prod only, and #443's authenticated
+`/ingest/promotion-source` returns the verified staging ID, not its tier count.
+Inspect each corresponding `datasetReleases` row in the Convex dashboard using
+normal account/data access, or existing privileged read access. If unavailable,
+there is no supported keyless API command for this inspection. The ingestion
+declaration is not currently retained as a result artifact.
+
+A promote-only job that encounters `FULL_DEBIAN_TIER_REQUIRED` records a clean
+skip with "scored full-Debian replacement required"; sibling distro records are
+unaffected. The server still refuses the pointer write.
+
+Accepted cache limit: page/meta robots can lag a release switch by one hour,
+and OG robots by about eight days (one day fresh plus seven days stale).
+Sitemaps may switch before those signals; no invalidation change is included.

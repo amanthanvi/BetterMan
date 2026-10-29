@@ -81,7 +81,8 @@ when enabling analytics; this change does not alter account configuration.
 
 Run `pnpm analytics:counts` from the repo worktree. It is not part of application
 builds or runtime requests and does not read or write Convex. The monthly dataset
-workflow runs it before ingestion. Without a nonblank
+workflow exports once before ingestion with up to three attempts, then shares
+one aggregate artifact across every distro. Without a nonblank
 `PLAUSIBLE_API_KEY`, it succeeds without network or filesystem changes, preserving
 any previous snapshot. Supply that private Stats API key only in an authorized
 operator environment; never prefix it with `NEXT_PUBLIC_` or commit it.
@@ -99,8 +100,7 @@ validate. Failures leave the old snapshot intact and exit nonzero without
 printing credentials or provider bodies. The JSON has `schemaVersion: 1`,
 `siteId`, `generatedAt`, `dateRange` (two ISO instants), and a `pageviews` mapping
 from path to aggregate integer count. The monthly dataset workflow consumes this
-file through
-`BETTERMAN_PLAUSIBLE_COUNTS` when the production environment secret
+file through `BETTERMAN_PLAUSIBLE_COUNTS` when the production environment secret
 `PLAUSIBLE_API_KEY` exists. [B4](roadmap/b4-index-by-demand.md) documents
 scoring, the traffic threshold, deployment order and owner configuration.
 
