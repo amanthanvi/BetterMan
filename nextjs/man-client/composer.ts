@@ -1,61 +1,81 @@
 import { parseOptionTerms } from '../components/man/find'
 import { trackEvent } from '../lib/analytics'
-import { portabilityWords } from '../lib/manBrief'
+import { argumentSpec, commandText, composerWarnings, ordered, type ComposePick } from './composeModel'
 import { BUTTON, h } from './dom'
 
 /**
  * The command composer: pick flags from the index of options while reading and
- * copy the command they make. Each pick warns, in words, where the flag is not
- * on all three systems, and when two of the page's modes are picked together.
- * The add control shows on hover, focus or a tap on the row (fix 6).
+ * copy the command they make. The add control shows on a row's hover, focus or
+ * tap (fix 6); a picked flag is marked on its term and listed in the bar, never
+ * by a standing control. Arguments are typed by the reader: the manual's
+ * notation is a placeholder, not a value (composeModel.ts).
  */
-type Pick = { flag: string; argument: string; portability: string | null; mode: boolean }
-
-const picks = new Map<string, Pick>()
+const picks = new Map<string, ComposePick>()
 let bar: HTMLElement | null = null
 let commandEl: HTMLElement
 let warningEl: HTMLElement
+let statusEl: HTMLElement
 let liveEl: HTMLElement
+let copyButton: HTMLButtonElement
 
-function command(): { text: string; node: DocumentFragment } {
-  const name = document.querySelector<HTMLElement>('[data-bm-manual]')?.dataset.bmPageName ?? ''
-  const ordered = [...picks.values()].sort((a, b) => Number(b.mode) - Number(a.mode))
-  const node = document.createDocumentFragment()
-  node.append(name)
-  let text = name
-  for (const pick of ordered) {
-    node.append(' ', pick.flag)
-    text += ` ${pick.flag}`
-    if (pick.argument) {
-      const glue = pick.flag.startsWith('--') ? '=' : ' '
-      node.append(glue, h('i', {}, pick.argument))
-      text += `${glue}${pick.argument}`
-    }
-  }
-  return { text, node }
+function pageName(): string {
+  return document.querySelector<HTMLElement>('[data-bm-manual]')?.dataset.bmPageName ?? ''
 }
 
-function warnings(): string {
-  const out: string[] = []
-  for (const pick of picks.values()) if (pick.portability) out.push(`${pick.flag}: ${portabilityWords(pick.portability)}.`)
-  const modes = [...picks.values()].filter((pick) => pick.mode).map((pick) => pick.flag)
-  if (modes.length > 1) out.push(`Choose one mode: ${modes.join(' and ')} conflict.`)
-  return out.join(' ')
+/** The command line, with an input wherever the reader supplies an argument. */
+function renderCommand() {
+  const parts: Node[] = [document.createTextNode(pageName())]
+  for (const pick of ordered([...picks.values()])) {
+    parts.push(document.createTextNode(` ${pick.flag}`))
+    const spec = argumentSpec(pick.argument)
+    if (!spec) continue
+    const input = h('input', {
+      type: 'text',
+      value: pick.value,
+      placeholder: pick.argument.trim(),
+      size: Math.max(4, Math.min(24, (pick.value || pick.argument).length + 1)),
+      'aria-label': `${spec.optional ? 'Optional value' : 'Value'} for ${pick.flag} (${spec.name})`,
+      autocomplete: 'off',
+      spellcheck: 'false',
+      class: 'ml-1 border-0 border-b border-rule-2 bg-transparent px-0.5 font-mono text-sm text-ink placeholder:italic placeholder:text-ink-3 focus:border-accent',
+    })
+    input.addEventListener('input', () => {
+      pick.value = input.value
+      input.size = Math.max(4, Math.min(24, (input.value || pick.argument).length + 1))
+      renderState()
+    })
+    parts.push(input)
+  }
+  commandEl.replaceChildren(...parts)
+}
+
+/** Warnings, the missing-value note and Copy, which follow the typed values. */
+function renderState() {
+  const { missing } = commandText(pageName(), [...picks.values()])
+  const warning = composerWarnings([...picks.values()])
+  warningEl.textContent = warning
+  warningEl.hidden = !warning
+  statusEl.textContent = missing.length ? `Fill in ${missing.join(', ')} to copy.` : ''
+  statusEl.hidden = !missing.length
+  copyButton.disabled = missing.length > 0
 }
 
 function build() {
-  commandEl = h('code', { class: 'min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm text-ink', tabindex: 0, role: 'group', 'aria-label': 'Command' })
+  commandEl = h('div', { class: 'min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm text-ink', role: 'group', 'aria-label': 'Command' })
   warningEl = h('p', { class: 'text-xs text-accent' })
+  statusEl = h('p', { class: 'text-xs text-ink-3' })
   liveEl = h('div', { class: 'sr-only', 'aria-live': 'polite' })
-  const copy = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.outline}` }, 'Copy')
+  copyButton = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.outline}` }, 'Copy')
   const clear = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.ghost}` }, 'Clear')
-  copy.addEventListener('click', async () => {
+  copyButton.addEventListener('click', async () => {
+    const { text, missing } = commandText(pageName(), [...picks.values()])
+    if (missing.length) return
     try {
-      await navigator.clipboard.writeText(command().text)
-      copy.textContent = 'Copied'
+      await navigator.clipboard.writeText(text)
+      copyButton.textContent = 'Copied'
       trackEvent('composer copied')
       window.setTimeout(() => {
-        copy.textContent = 'Copy'
+        copyButton.textContent = 'Copy'
       }, 2000)
     } catch {
       // ignore
@@ -73,7 +93,8 @@ function build() {
       'data-bm-composer': true,
       class: 'fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 border border-rule-2 bg-raised px-4 py-2 shadow-overlay sm:inset-x-auto sm:left-1/2 sm:w-[min(40rem,calc(100vw-2rem))] sm:-translate-x-1/2',
     },
-    h('div', { class: 'flex items-center gap-3' }, commandEl, copy, clear),
+    h('div', { class: 'flex items-center gap-3' }, commandEl, copyButton, clear),
+    statusEl,
     warningEl,
     liveEl,
   )
@@ -82,18 +103,19 @@ function build() {
 
 function render() {
   if (!bar) build()
-  const { node } = command()
-  commandEl.replaceChildren(node)
-  const warning = warnings()
-  warningEl.textContent = warning
-  warningEl.hidden = !warning
+  renderCommand()
+  renderState()
   bar!.hidden = picks.size === 0
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-bm-action="compose"]')) {
     const flag = button.dataset.bmFlag ?? ''
     const on = picks.has(flag)
     button.setAttribute('aria-pressed', String(on))
     button.setAttribute('aria-label', `${on ? 'Remove' : 'Add'} ${flag} ${on ? 'from' : 'to'} the command`)
-    button.textContent = on ? 'added' : 'add'
+    button.textContent = on ? 'remove' : 'add'
+    // The picked state is a mark on the term (and the bar), not a control left standing.
+    const row = button.closest('tr')
+    if (on) row?.setAttribute('data-bm-composed', '')
+    else row?.removeAttribute('data-bm-composed')
   }
 }
 
@@ -122,10 +144,11 @@ export function initComposer() {
           argument: link?.querySelector('[data-bm-option-argument]')?.textContent?.trim() ?? '',
           portability: row.dataset.bmPortability ?? null,
           mode: row.hasAttribute('data-bm-mode'),
+          value: '',
         })
       }
       render()
-      liveEl.textContent = removing ? `Removed ${flag}.` : `Added ${flag}. ${warnings()}`.trim()
+      liveEl.textContent = removing ? `Removed ${flag}.` : `Added ${flag}. ${composerWarnings([...picks.values()])}`.trim()
     })
   }
   // On touch there is no hover: a tap on the row (not on its links) reveals its add control.

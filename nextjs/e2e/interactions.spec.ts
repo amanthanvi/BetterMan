@@ -2,36 +2,59 @@ import { expect, test } from '@playwright/test'
 
 import { waitForInteractiveShell } from './shortcuts'
 
-test('man: the composer assembles a command from picked flags and warns about portability and modes', async ({ page }) => {
+test('man: the composer assembles a command from picked flags and typed values, with portability warnings', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.goto('/man/ls/1')
   await waitForInteractiveShell(page)
   const table = page.getByRole('table', { name: 'Command-line options' })
   const row = (flag: string) => table.locator('tr').filter({ has: page.getByText(flag, { exact: true }) })
+  const composer = page.getByRole('region', { name: 'Command composer' })
+  const command = composer.getByRole('group', { name: 'Command' })
+  const copy = composer.getByRole('button', { name: 'Copy' })
 
-  // No standing add control: it shows on the row's hover or focus (fix 6).
+  // No standing add control: it shows on the row's hover or focus, or a tap (fix 6).
   const addLong = row('-l').locator('[data-bm-action="compose"]')
   await expect(addLong).toHaveAccessibleName('Add -l to the command')
   await expect(addLong).toHaveCSS('opacity', '0')
   await row('-l').hover()
   await expect(addLong).toHaveCSS('opacity', '1')
   await addLong.click()
-
-  const composer = page.getByRole('region', { name: 'Command composer' })
-  await expect(composer.getByRole('group', { name: 'Command' })).toHaveText('ls -l')
+  await expect(command).toHaveText('ls -l')
   await expect(addLong).toHaveAttribute('aria-pressed', 'true')
   await expect(addLong).toHaveAccessibleName('Remove -l from the command')
 
-  const addColor = row('--color').getByRole('button', { name: 'Add --color to the command' })
+  // Once hover and focus leave, the picked state is a mark on the term, not a control left standing.
+  await page.mouse.move(0, 0)
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await expect(addLong).toHaveCSS('opacity', '0')
+  await expect(row('-l').getByText('in command')).toBeVisible()
+
+  // An optional argument is left off until typed, and the notation is never copied as a value.
+  const addColor = row('--color').locator('[data-bm-action="compose"]')
   await addColor.focus()
   await expect(addColor).toHaveCSS('opacity', '1')
   await page.keyboard.press('Enter')
-  await expect(composer.getByRole('group', { name: 'Command' })).toHaveText('ls -l --color')
+  await expect(command).toHaveText('ls -l --color')
   await expect(composer).toContainText('--color: unknown on FreeBSD and macOS.')
+  await expect(copy).toBeEnabled()
 
+  // A required argument keeps Copy disabled until the reader types it.
+  await row('-w').hover()
+  await row('-w').locator('[data-bm-action="compose"]').click()
+  await expect(copy).toBeDisabled()
+  await expect(composer).toContainText('Fill in COLS for -w to copy.')
+  await composer.getByRole('textbox', { name: 'Value for -w (COLS)' }).fill('80')
+  await composer.getByRole('textbox', { name: 'Optional value for --color (WHEN)' }).fill('always')
+  await expect(copy).toBeEnabled()
+  await copy.click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('ls -l --color=always -w 80')
+
+  await row('-l').hover()
   await row('-l').getByRole('button', { name: 'Remove -l from the command' }).click()
-  await expect(composer.getByRole('group', { name: 'Command' })).toHaveText('ls --color')
+  await expect(command).toHaveText('ls --color -w')
   await composer.getByRole('button', { name: 'Clear' }).click()
   await expect(composer).toBeHidden()
+  await expect(row('--color').getByText('in command')).toBeHidden()
 })
 
 test('man: a cross-reference previews its page on keyboard focus and hover', async ({ page }) => {

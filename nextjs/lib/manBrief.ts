@@ -50,7 +50,7 @@ export function definitionHeadings(blocks: BlockNode[]): Map<string, string> {
 
 /** Options a page defines under its modes heading: picking two of them is a conflict. */
 export function modeAnchors(blocks: BlockNode[]): Set<string> {
-  return new Set([...definitionHeadings(blocks)].filter(([, heading]) => MODE_HEADING.test(heading)).map(([id]) => id))
+  return new Set([...definitionHeadings(blocks)].filter(([, heading]) => isModeHeading(heading)).map(([id]) => id))
 }
 
 /** The first sentence of a definition, cut to fit one line. */

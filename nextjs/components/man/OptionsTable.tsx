@@ -94,10 +94,14 @@ export function OptionsTable({
                   data-bm-action="compose"
                   aria-pressed="false"
                   aria-label={`Add ${splitFlags(opt.flags)[0]} to the command`}
-                  className="bm-js ml-2 align-baseline text-xs text-ink-3 underline decoration-rule-2 underline-offset-2 opacity-0 hover:text-accent focus-visible:opacity-100 group-hover/opt:opacity-100 group-focus-within/opt:opacity-100 group-data-[bm-revealed]/opt:opacity-100 aria-pressed:text-accent aria-pressed:opacity-100"
+                  className="bm-js ml-2 align-baseline text-xs text-ink-3 underline decoration-rule-2 underline-offset-2 opacity-0 hover:text-accent focus-visible:opacity-100 group-hover/opt:opacity-100 group-focus-within/opt:opacity-100 group-data-[bm-revealed]/opt:opacity-100"
                 >
                   add
                 </button>
+                {/* A picked flag is marked on its term; the control itself still shows only on hover, focus or tap. */}
+                <span data-bm-composed-mark className="bm-js ml-2 hidden whitespace-nowrap text-xs text-accent group-data-[bm-composed]/opt:inline">
+                  in command
+                </span>
                 {newInByAnchor.has(opt.anchorId) ? (
                   <span className="ml-2 whitespace-nowrap text-xs text-ink-3" title="Not in this page's previous release">
                     new{newInByAnchor.get(opt.anchorId)!.packageVersion ? ` in ${newInByAnchor.get(opt.anchorId)!.packageVersion}` : ''}

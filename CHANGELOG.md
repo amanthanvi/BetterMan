@@ -4,7 +4,7 @@ All notable changes to BetterMan are documented here.
 
 ## Unreleased
 
-- Man pages (C4, #406): a command composer (pick flags from the options index, with hover/focus-only add controls, portability and mode-conflict warnings, and a copy button); cross-reference previews on hover and keyboard focus; and live reference tables (find a row, sort columns, never hiding rows), such as ascii(7).
+- Man pages (C4, #406): a command composer (pick flags from the options index with hover/focus/tap-only add controls, type each argument rather than copying the manual's notation, and get portability and exclusive-mode warnings before copying); cross-reference previews on hover and keyboard focus; and live reference tables (find a row, sort columns, never hiding rows), such as ascii(7).
 
 - Man pages (C4, #406): In brief replaces the examples preview. It is the generated summary, sourced examples (the page's EXAMPLES, then tldr-pages credited under CC BY 4.0 with the change notice, then verified generated examples, each labelled) and the most-used flags counted from verified examples, grouped "One mode · Then add" where the page defines modes. Each part is omitted without data. The index of options gains a "Portable only" filter, `?portability=text` words for the portability cells, and "new in <version>" marks; its filters never hide manual text.
 

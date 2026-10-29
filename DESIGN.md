@@ -136,10 +136,14 @@ Light is paper; dark is the same plate in warm ink on black.
   release carry "new in <version>".
 - **Command composer** (`man-client/composer.ts`). Each index row has an add
   control that shows only on the row's hover or focus, or a tap on touch, never
-  as a standing "+" (fix 6). Picked flags build a copyable command in a bar at
-  the bottom (region "Command composer"), mode flags first. It warns in words
-  where a flag is not on all three systems, and when two of the page's modes are
-  picked together.
+  as a standing "+" (fix 6). A picked flag is marked "in command" on its term
+  and listed in a bar at the bottom (region "Command composer"), mode flags
+  first. The reader types each argument into an input whose placeholder is the
+  manual's notation; the notation is never copied as a value. An empty optional
+  argument (`--color[=WHEN]`) is left off; an empty required one (`-f ARCHIVE`)
+  keeps Copy disabled. It warns in words where a flag is not on all three
+  systems, and when two exclusive modes are picked together. Only whole
+  headings such as "Operation mode" mark exclusive modes (`isModeHeading`).
 - **Cross-reference previews** (`man-client/previews.ts`). A link to another
   man page in the article shows that page's name(section) and description on
   hover or keyboard focus, as a tooltip that describes the link (`aria-describedby`).
