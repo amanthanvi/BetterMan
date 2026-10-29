@@ -80,6 +80,8 @@ export class FastApiError extends Error {
   status: number
   code: string
   bodyText?: string
+  /** For a miss: the release that answered it, when Convex says (see servedRelease). */
+  datasetReleaseId?: string
 
   constructor(status: number, code: string, message: string, bodyText?: string) {
     super(message)
@@ -120,12 +122,22 @@ function isMissingActiveReleaseError(err: unknown): boolean {
 class UncacheableManPage extends Error {
   constructor(readonly value: unknown) { super('Man page exceeds the shared data-cache entry limit') }
 }
-// A page read under one release key must come from that release: during a
+/**
+ * The release a lookup outcome came from: every man page lookup names it, the
+ * page in its metadata, and aliases, misses and name resolutions alongside.
+ */
+export function servedRelease(value: unknown): string | null {
+  const v = value as { datasetReleaseId?: unknown; data?: { page?: { datasetReleaseId?: unknown } } } | null
+  const served = v?.datasetReleaseId ?? v?.data?.page?.datasetReleaseId
+  return typeof served === 'string' && served ? served : null
+}
+
+// A result read under one release key must come from that release: during a
 // promotion an instance can still key on the old one, and storing the new
-// content under it would serve it again after a rollback.
+// answer under it (a page, an alias, a miss, a name's sections) would serve it
+// again after a rollback. An outcome that names no release is not stored either.
 function cacheableManPage<T>(value: T, release: string | null = null): T {
-  const served = (value as { data?: { page?: { datasetReleaseId?: string } } } | null)?.data?.page?.datasetReleaseId
-  if (release && served && served !== release) throw new UncacheableManPage(value)
+  if (release && servedRelease(value) !== release) throw new UncacheableManPage(value)
   if (new TextEncoder().encode(JSON.stringify(value)).length > 1_900_000) throw new UncacheableManPage(value)
   return value
 }
@@ -214,14 +226,14 @@ const cachedManByName = unstable_cache(
 // ignores it; it only keys the data cache, so a promotion misses every old entry.
 const cachedResolveManByName = unstable_cache(
   async (distro: Distro, name: string, _release: string | null) =>
-    await convex().query(api.queries.resolveManByName, { distro, name }),
+    cacheableManPage(await convex().query(api.queries.resolveManByName, { distro, name }), _release),
   ['betterman', 'convex', 'resolve-man-by-name'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string, pkg: string | null, _release: string | null) =>
-    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}) }), _release),
+    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section, ...(pkg ? { pkg } : {}), reportRelease: true }), _release),
   ['betterman', 'convex', 'man-by-name-and-section', 'v4'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
@@ -361,7 +373,7 @@ export async function listSection(opts: {
   return result
 }
 
-export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string }
+export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string; datasetReleaseId?: string }
 
 export type ManByNameResult =
   | { kind: 'page'; data: ManPageResponse }
@@ -374,7 +386,18 @@ type ConvexManByNameResult =
   | { kind: 'ambiguous'; options: AmbiguousPageResponse['options'] }
   | ManAlias
 
-type ConvexManByNameAndSectionResult = { kind: 'page'; data: ManPageResponse } | ManAlias | null
+type ConvexManByNameAndSectionResult =
+  | { kind: 'page'; data: ManPageResponse }
+  | ManAlias
+  | { kind: 'not_found'; datasetReleaseId?: string }
+  // Before the release-naming Convex deploy, a miss was null.
+  | null
+
+function pageNotFound(datasetReleaseId: string | null): FastApiError {
+  const err = apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  if (datasetReleaseId) err.datasetReleaseId = datasetReleaseId
+  return err
+}
 
 export async function fetchManByName(opts: {
   distro: Distro
@@ -404,7 +427,7 @@ export type ManResolveResult = Exclude<FunctionReturnType<typeof api.queries.res
 /** Resolves a name-only URL from page metadata, without loading the document. */
 export async function fetchManResolve(opts: { distro: Distro; name: string; release?: string }): Promise<ManResolveResult> {
   const result = await mapConvexError(() => cachedResolveManByName(opts.distro, opts.name, opts.release ?? null))
-  if (result.kind === 'not_found') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  if (result.kind === 'not_found') throw pageNotFound(servedRelease(result))
   return result
 }
 
@@ -421,7 +444,7 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   const result = (await mapConvexError(() =>
     cachedManByNameAndSection(opts.distro, opts.name, opts.section, packageName(opts.pkg) ?? null, opts.release ?? null),
   )) as ConvexManByNameAndSectionResult
-  if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
+  if (!result || result.kind === 'not_found') throw pageNotFound(servedRelease(result))
   return result
 }
 

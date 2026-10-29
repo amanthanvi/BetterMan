@@ -36,13 +36,13 @@ function propsOf(result: object): object {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data, related: [] })
+  lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data, related: [], servedRelease: '2026-10-28+debian' })
   lookup.manMiss.mockImplementation(async (opts: object) => ({ ...opts, suggestions: [], distros: [], limited: false }))
 })
 
 it('carries its head to the document: canonical, share image, JSON-LD and the index tier', async () => {
   const result = await pageProps(context({ name: 'tar', section: '1' }, { distro: 'ubuntu' }).ctx)
-  lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, indexable: false } }, related: [] })
+  lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, indexable: false } }, related: [], servedRelease: '2026-10-28+debian' })
   const tail = await pageProps(context({ name: 'tar', section: '1' }).ctx)
   expect(propsOf(result)).toMatchObject({
     head: {
@@ -73,7 +73,7 @@ describe('/man/<name>/<section>', () => {
 
   it('renders the manual with a canonical URL, JSON-LD and the man page script', async () => {
     const { ctx } = context({ name: 'tar', section: '1' }, { distro: 'ubuntu' })
-    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'ubuntu', data, related: [] })
+    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'ubuntu', data, related: [], servedRelease: '2026-10-28+debian' })
     const result = await pageProps(ctx)
     const html = renderToStaticMarkup(ManPageRoute(propsOf(result) as Parameters<typeof ManPageRoute>[0]))
     expect(html).toContain('data-bm-manual')
@@ -90,7 +90,7 @@ describe('/man/<name>/<section>', () => {
   })
 
   it('does not share a page served from another release than its key', async () => {
-    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, datasetReleaseId: '2026-10-29+debian' } }, related: [] })
+    lookup.lookupManPage.mockResolvedValue({ kind: 'page', distro: 'debian', data: { ...data, page: { ...page, datasetReleaseId: '2026-10-29+debian' } }, related: [], servedRelease: '2026-10-29+debian' })
     const { ctx, res } = context({ name: 'tar', section: '1' })
     await pageProps(ctx)
     expect(res.headers['cache-control']).toBe('private, no-store')
@@ -106,7 +106,7 @@ describe('/man/<name>/<section>', () => {
   })
 
   it('answers a miss with a real 404 in man’s voice, and keeps a rate-limited one private', async () => {
-    lookup.lookupManPage.mockResolvedValue(null)
+    lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
     const { ctx, res } = context({ name: 'ta', section: '9' })
     const result = await pageProps(ctx)
     expect(res.statusCode).toBe(404)
@@ -123,24 +123,51 @@ describe('/man/<name>/<section>', () => {
   })
 
   it('redirects a .so alias, permanently only for an explicit distro', async () => {
-    lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', distro: 'debian' })
+    lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', distro: 'debian', servedRelease: '2026-10-28+debian' })
     await expect(pageProps(context({ name: 'gunzip', section: '1' }).ctx)).resolves.toEqual({ redirect: { destination: '/man/gzip/1', permanent: false } })
     await expect(pageProps(context({ name: 'gunzip', section: '1' }, { distro: 'debian' }).ctx)).resolves.toEqual({
       redirect: { destination: '/man/gzip/1?distro=debian', permanent: true },
     })
-    lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'foo::bar', section: '3pm', pkg: 'alternate-perl', distro: 'debian' })
+    lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'foo::bar', section: '3pm', pkg: 'alternate-perl', distro: 'debian', servedRelease: '2026-10-28+debian' })
     await expect(pageProps(context({ name: 'foo::stub', section: '3pm' }).ctx)).resolves.toEqual({
       redirect: { destination: '/man/foo%3A%3Abar/3pm?pkg=alternate-perl', permanent: false },
     })
   })
 })
 
+describe('answers from another release than the proxy key', () => {
+  const other = '2026-10-29+debian'
+  it('shares no redirect, alias or miss that release B gave under release A', async () => {
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'race-probe', section: '9' }, servedRelease: other })
+    const name = context({ name: 'race-probe' })
+    await expect(nameProps(name.ctx)).resolves.toMatchObject({ redirect: { destination: '/man/race-probe/9' } })
+    expect(name.res.headers['cache-control']).toBe('private, no-store')
+
+    lookup.lookupManPage.mockResolvedValue({ kind: 'alias', name: 'bzip2', section: '1', distro: 'debian', servedRelease: other })
+    const alias = context({ name: 'race-alias', section: '1' })
+    await pageProps(alias.ctx)
+    expect(alias.res.headers['cache-control']).toBe('private, no-store')
+
+    lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: other })
+    const miss = context({ name: 'race-probe', section: '1' })
+    await pageProps(miss.ctx)
+    expect(miss.res.statusCode).toBe(404)
+    expect(miss.res.headers['cache-control']).toBe('private, no-store')
+    expect(miss.res.headers['cdn-cache-control']).toBeUndefined()
+
+    lookup.resolveManName.mockResolvedValue({ result: null, servedRelease: null })
+    const unknown = context({ name: 'gizp' })
+    await nameProps(unknown.ctx)
+    expect(unknown.res.headers['cache-control']).toBe('private, no-store')
+  })
+})
+
 describe('/man/<name>', () => {
   it('redirects to the only section and renders a picker for several', async () => {
-    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' } })
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
     await expect(nameProps(context({ name: 'tar' }, { distro: 'ubuntu' }).ctx)).resolves.toEqual({ redirect: { destination: '/man/tar/1?distro=ubuntu', permanent: false } })
 
-    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'ambiguous', options: [{ section: '1', description: 'format' }, { section: '3', description: 'formatted output' }] } })
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'ambiguous', options: [{ section: '1', description: 'format' }, { section: '3', description: 'formatted output' }] }, servedRelease: '2026-10-28+debian' })
     const result = await nameProps(context({ name: 'printf' }).ctx)
     const html = renderToStaticMarkup(ManNameRoute(propsOf(result) as Parameters<typeof ManNameRoute>[0]))
     expect(html).toContain('href="/man/printf/1"')
@@ -148,7 +175,7 @@ describe('/man/<name>', () => {
   })
 
   it('answers a missing name with a 404', async () => {
-    lookup.resolveManName.mockResolvedValue(null)
+    lookup.resolveManName.mockResolvedValue({ result: null, servedRelease: '2026-10-28+debian' })
     const { ctx, res } = context({ name: 'gizp' })
     await nameProps(ctx)
     expect(res.statusCode).toBe(404)

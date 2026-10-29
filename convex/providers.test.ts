@@ -55,6 +55,8 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "alternate" }))
     .toMatchObject({ kind: "page", data: { page: { sourcePackage: "alternate", description: "case-A" } } });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "absent" })).toBeNull();
+  expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "absent", reportRelease: true }))
+    .toEqual({ kind: "not_found", datasetReleaseId: expect.any(String) });
   expect((await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 20 }))?.results).toHaveLength(1);
   expect((await upload([page("late", true)])).status).toBe(409);
   const providers = await t.run(ctx => ctx.db.query("manPageProviders").take(3));

@@ -525,6 +525,9 @@ export const getManByNameAndSectionReadModel = internalQuery({
     const name = normalizeName(args.name);
     const section = normalizeSection(args.section);
     const release = await requireActiveRelease(ctx, args);
+    // Every outcome names the release it read, so a caller can tell whether it
+    // may cache the answer under the release it expected.
+    const notFound = { kind: "not_found" as const, datasetReleaseId: release.datasetReleaseId };
     const page = await pageByNameAndSection(ctx, {
       releaseId: release._id,
       name,
@@ -551,13 +554,13 @@ export const getManByNameAndSectionReadModel = internalQuery({
       if (!provider) {
         const alias = await ctx.db.query("manPageAliasProviders")
           .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id).eq("name", name).eq("section", section).eq("sourcePackage", args.pkg!)).first();
-        return alias ? { kind: "alias" as const, name: alias.targetName, section: alias.targetSection, pkg: alias.targetPackage } : null;
+        return alias ? { kind: "alias" as const, name: alias.targetName, section: alias.targetSection, pkg: alias.targetPackage, datasetReleaseId: release.datasetReleaseId } : notFound;
       }
       const [blob, generated] = await Promise.all([
         ctx.db.get(provider.blobId),
         ctx.db.query("manPageGenerated").withIndex("by_contentSha256", q => q.eq("contentSha256", provider.contentSha256)).unique(),
       ]);
-      if (!blob) return null;
+      if (!blob) return notFound;
       // B7 summaries are keyed to the canonical route/signature, not this
       // provider. B6 briefs are content-hash keyed and can safely follow it.
       return { kind: "page" as const, data: { release, page: provider, variants: [],
@@ -567,12 +570,12 @@ export const getManByNameAndSectionReadModel = internalQuery({
     }
     if (!page) {
       const target = await aliasTarget(ctx, { releaseId: release._id, name, section });
-      if (target) return { kind: "alias" as const, ...target };
-      return null;
+      if (target) return { kind: "alias" as const, ...target, datasetReleaseId: release.datasetReleaseId };
+      return notFound;
     }
 
     const data = await pageReadModel(ctx, { stage: args.stage, release, page });
-    if (!data) return null;
+    if (!data) return notFound;
     return { kind: "page" as const, data };
   },
 });
@@ -618,19 +621,23 @@ export const getManByNameAndSection = action({
     name: v.string(),
     section: v.string(),
     pkg: v.optional(v.string()),
+    /** Misses answer `{ kind: "not_found", datasetReleaseId }` instead of null, so callers can key caches on the serving release. */
+    reportRelease: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<unknown> => {
+    const { reportRelease, ...lookup } = args;
     const result = await ctx.runQuery(internal.content.getManByNameAndSectionReadModel, {
-      ...args,
+      ...lookup,
       stage: PUBLIC_DATASET_STAGE,
     });
-    if (!result) return null;
+    // Older callers, still live during a deploy, read a miss as null.
+    if (result.kind === "not_found") return reportRelease ? result : null;
     if (result.kind === "alias") {
-      return { kind: "alias" as const, name: result.name, section: result.section, ...(result.pkg ? { pkg: result.pkg } : {}) };
+      return { kind: "alias" as const, name: result.name, section: result.section, ...(result.pkg ? { pkg: result.pkg } : {}), datasetReleaseId: result.datasetReleaseId };
     }
 
     const content = await resolveContent(ctx, result.data.content);
-    if (!content) return null;
+    if (!content) return reportRelease ? { kind: "not_found" as const, datasetReleaseId: result.data.release.datasetReleaseId } : null;
 
     return {
       kind: "page" as const,

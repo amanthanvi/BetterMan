@@ -24,8 +24,8 @@ it('stores stub providers without page/search duplicates, verifies counts and re
   await t.mutation(internal.ingest.activateRelease,{datasetReleaseId:'stub-providers',stage:'prod',activatedAt:'now'});
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   await t.mutation(internal.ingest.activateRelease,{datasetReleaseId:'stub-providers',stage:'prod',activatedAt:'now'});
-  expect(await t.action(api.content.getManByNameAndSection,{distro:'debian',name:'acosf',section:'3'})).toEqual({kind:'alias',name:'acos',section:'3'});
-  expect(await t.action(api.content.getManByNameAndSection,{distro:'debian',name:'acosf',section:'3',pkg:'other-doc'})).toEqual({kind:'alias',name:'acos',section:'3',pkg:'math-doc'});
+  expect(await t.action(api.content.getManByNameAndSection,{distro:'debian',name:'acosf',section:'3'})).toEqual({kind:'alias',name:'acos',section:'3',datasetReleaseId:expect.any(String)});
+  expect(await t.action(api.content.getManByNameAndSection,{distro:'debian',name:'acosf',section:'3',pkg:'other-doc'})).toEqual({kind:'alias',name:'acos',section:'3',pkg:'math-doc',datasetReleaseId:expect.any(String)});
   expect(await t.query(internal.maintenance.measureReleaseBatch, { datasetReleaseId:'stub-providers', table:'manPageAliases', cursor:null })).toMatchObject({documents:1,isDone:true});
   expect(await t.query(internal.maintenance.measureReleaseBatch, { datasetReleaseId:'stub-providers', table:'datasetReleases', cursor:null })).toMatchObject({documents:1,isDone:true});
   expect(await t.run(ctx=>ctx.db.query('manPages').take(5))).toHaveLength(1);
@@ -68,7 +68,7 @@ it('selects an exact-case real provider ahead of a normalized alternative alias'
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   await t.mutation(internal.ingest.activateRelease,{datasetReleaseId:'case-providers',stage:'prod',activatedAt:'now'});
   const args = { distro:'debian' as const, section:'1' };
-  expect(await t.action(api.content.getManByNameAndSection,{...args,name:'ftp'})).toEqual({kind:'alias',name:'tnftp',section:'1'});
+  expect(await t.action(api.content.getManByNameAndSection,{...args,name:'ftp'})).toEqual({kind:'alias',name:'tnftp',section:'1',datasetReleaseId:expect.any(String)});
   for (const lookup of [{name:'FTP'}, {name:'ftp',pkg:'ftp.app'}]) {
     expect(await t.action(api.content.getManByNameAndSection,{...args,...lookup})).toMatchObject({kind:'page',data:{page:{sourcePackage:'ftp.app',description:'GNUstep FTP'}}});
   }

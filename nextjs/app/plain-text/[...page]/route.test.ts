@@ -25,7 +25,7 @@ beforeEach(() => {
   vi.stubEnv('PUBLIC_BASE_URL', 'https://betterman.sh')
   vi.mocked(isRateLimited).mockResolvedValue(false)
   vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: manual })
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'tar', section: '1', title: 'tar(1)', description: 'archive' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'tar', section: '1', title: 'tar(1)', description: 'archive', datasetReleaseId: 'r1' })
 })
 afterEach(() => vi.unstubAllEnvs())
 
@@ -92,7 +92,7 @@ it('falls back only for an unavailable release and uses its canonical distro', a
 })
 
 it('offers explicit text URLs for ambiguous names', async () => {
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }] })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
   const res = await GET(req('?distro=ubuntu'), ctx(['printf']))
   expect(res.status).toBe(409)
   expect(await res.text()).toContain('/man/printf/3.txt?distro=ubuntu')
@@ -100,19 +100,19 @@ it('offers explicit text URLs for ambiguous names', async () => {
 
 it('keeps only the request distro in redirects and choices, Debian included, after a fallback', async () => {
   vi.mocked(fetchManResolve).mockRejectedValueOnce(new FastApiError(404, 'RELEASE_NOT_FOUND', 'Missing'))
-    .mockResolvedValueOnce({ kind: 'alias', name: 'gzip', section: '1' })
+    .mockResolvedValueOnce({ kind: 'alias', name: 'gzip', section: '1', datasetReleaseId: 'r1' })
   const fallback = await GET(req('?distro=arch'), ctx(['gunzip']))
   expect(fallback.headers.get('location')).toBe('/man/gzip/1.txt?distro=arch')
 
   const explicitDebian = await GET(req('?distro=debian'), ctx(['TAR']))
   expect(explicitDebian.headers.get('location')).toBe('/man/tar/1.txt?distro=debian')
 
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }] })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'ambiguous', options: [{ section: '3', title: 'printf(3)', description: 'format' }], datasetReleaseId: 'r1' })
   expect(await (await GET(req(), ctx(['printf']))).text()).toContain('/man/printf/3.txt\n')
 })
 
 it('keeps aliases in plain text and honors distro', async () => {
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'alias', name: 'gzip', section: '1', datasetReleaseId: 'r1' })
   const res = await GET(req('?distro=ubuntu'), ctx(['gunzip']))
   expect(res.status).toBe(308)
   expect(res.headers.get('location')).toBe('/man/gzip/1.txt?distro=ubuntu')
@@ -154,7 +154,7 @@ it('decodes Perl route parameters exactly once for text payloads and name-only r
   expect(response.status).toBe(200)
   expect(await response.text()).toContain('FOO::BAR(3pm)')
   expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm' })
-  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'foo::bar', section: '3pm', title: '', description: '' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'foo::bar', section: '3pm', title: '', description: '', datasetReleaseId: 'r1' })
   expect((await GET(req(), ctx(['foo%3A%3Abar']))).headers.get('location')).toBe('/man/foo%3A%3Abar/3pm.txt')
 })
 

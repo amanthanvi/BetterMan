@@ -74,11 +74,14 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const pkg = packageName(firstQuery(query.pkg)) ?? null
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
-  const keyed = Boolean(release)
-
   const found = await lookupManPage({ name, section, distro, ...(pkg ? { pkg } : {}), ...(releaseKey ? { release: releaseKey } : {}) })
 
-  if (!found) {
+  // Shared under the proxy's release key only when that release answered: within the
+  // proxy's TTL after a promotion (or a rollback) the two can differ, for misses and
+  // aliases as well as pages.
+  const keyed = Boolean(releaseKey) && found.servedRelease === releaseKey
+
+  if (found.kind === 'miss') {
     const miss = await manMiss({ name, section, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
     setManCache(res, miss.limited ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed })
@@ -97,8 +100,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
 
   const origin = getPublicOrigin({ headers: requestHeaders(req.headers) })
   const { page } = found.data
-  // Served from a release other than the key's (a promotion mid-flight, or a fallback distro's): do not share it.
-  setManCache(res, MAN_PAGE_CACHE, { keyed: keyed && page.datasetReleaseId === releaseKey })
+  setManCache(res, MAN_PAGE_CACHE, { keyed })
   return {
     props: {
       kind: 'page',

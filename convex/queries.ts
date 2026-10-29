@@ -194,13 +194,15 @@ export const resolveManByName = query({
       section: v.string(),
       title: v.string(),
       description: v.string(),
+      datasetReleaseId: v.string(),
     }),
     v.object({
       kind: v.literal("ambiguous"),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
+      datasetReleaseId: v.string(),
     }),
-    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()) }),
-    v.object({ kind: v.literal("not_found") }),
+    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()), datasetReleaseId: v.string() }),
+    v.object({ kind: v.literal("not_found"), datasetReleaseId: v.string() }),
   ),
   handler: async (ctx, args) => {
     const release = await requireActiveRelease(ctx, {
@@ -208,9 +210,11 @@ export const resolveManByName = query({
       distro: args.distro,
     });
     const result = await resolvePageByName(ctx, { releaseId: release._id, name: normalizeName(args.name) });
-    if (result.kind !== "page") return result;
+    // The release this answer comes from, so a caller caching it under an expected release can check.
+    const { datasetReleaseId } = release;
+    if (result.kind !== "page") return { ...result, datasetReleaseId };
     const { name, section, title, description } = result.page;
-    return { kind: "page" as const, name, section, title, description };
+    return { kind: "page" as const, name, section, title, description, datasetReleaseId };
   },
 });
 

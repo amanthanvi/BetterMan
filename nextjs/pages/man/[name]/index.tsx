@@ -34,10 +34,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const distro = urlDistro ?? 'debian'
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
-  const keyed = Boolean(release)
-
   const resolved = await resolveManName(name, distro, releaseKey)
-  if (!resolved) {
+  // Shared under the proxy's release key only when that release answered (see pages/man/[name]/[section].tsx).
+  const keyed = Boolean(releaseKey) && resolved.servedRelease === releaseKey
+  if (!resolved.result) {
     const miss = await manMiss({ name, section: null, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
     res.statusCode = 404
     setManCache(res, miss.limited ? MAN_PRIVATE_CACHE : MAN_MISS_CACHE, { keyed })

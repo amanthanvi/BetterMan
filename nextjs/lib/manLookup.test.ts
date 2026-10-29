@@ -15,6 +15,7 @@ vi.mock('./api', async (importOriginal) => {
   return {
     FastApiError: actual.FastApiError,
     withDistroFallback: actual.withDistroFallback,
+    servedRelease: actual.servedRelease,
     fetchManByNameAndSectionOrAlias: mocks.fetchManByNameAndSectionOrAlias,
     fetchRelated: mocks.fetchRelated,
     fetchManResolve: mocks.fetchManResolve,
@@ -47,6 +48,7 @@ describe('lookupManPage', () => {
       distro: 'debian',
       data: page.data,
       related: [{ name: 'related-debian' }],
+      servedRelease: null,
     })
     expect(mocks.fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', release: 'r1' })
     expect(mocks.fetchRelated).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', release: 'r1' })
@@ -62,9 +64,9 @@ describe('lookupManPage', () => {
 
   it('reports an alias target and a miss', async () => {
     mocks.fetchManByNameAndSectionOrAlias.mockResolvedValueOnce({ kind: 'alias', name: 'gzip', section: '1' })
-    await expect(lookupManPage({ name: 'gunzip', section: '1', distro: 'debian' })).resolves.toEqual({ kind: 'alias', name: 'gzip', section: '1', distro: 'debian' })
+    await expect(lookupManPage({ name: 'gunzip', section: '1', distro: 'debian' })).resolves.toEqual({ kind: 'alias', name: 'gzip', section: '1', distro: 'debian', servedRelease: null })
     mocks.fetchManByNameAndSectionOrAlias.mockRejectedValueOnce(pageNotFound())
-    await expect(lookupManPage({ name: 'ta', section: '9', distro: 'debian' })).resolves.toBeNull()
+    await expect(lookupManPage({ name: 'ta', section: '9', distro: 'debian' })).resolves.toEqual({ kind: 'miss', servedRelease: null })
   })
 
   it('passes other failures through, so they are errors, not 404s', async () => {
@@ -76,9 +78,9 @@ describe('lookupManPage', () => {
 describe('resolveManName', () => {
   it('resolves a lowercased name and returns null for a miss', async () => {
     mocks.fetchManResolve.mockResolvedValueOnce({ kind: 'page', name: 'tar', section: '1' })
-    await expect(resolveManName('TAR', 'debian', 'r1')).resolves.toEqual({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' } })
+    await expect(resolveManName('TAR', 'debian', 'r1')).resolves.toEqual({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: null })
     expect(mocks.fetchManResolve).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', release: 'r1' })
-    await expect(resolveManName('gizp', 'debian')).resolves.toBeNull()
+    await expect(resolveManName('gizp', 'debian')).resolves.toEqual({ result: null, servedRelease: null })
   })
 })
 

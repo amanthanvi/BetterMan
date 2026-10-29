@@ -6,6 +6,7 @@ import {
   fetchRelated,
   suggest,
   withDistroFallback,
+  servedRelease,
   type ManAlias,
   type ManResolveResult,
   type RelatedResponse,
@@ -22,27 +23,39 @@ import { isManName } from './shortUrl'
  * and the active release, and the CDN can cache it.
  */
 
+/**
+ * Every outcome names the release that answered it (`servedRelease`), so a
+ * route can share it under the proxy's release key only when the two agree.
+ */
+type Served = { servedRelease: string | null }
 export type ManPageLookup =
-  | { kind: 'page'; distro: Distro; data: ManPageResponse; related: RelatedResponse['items'] }
-  | ({ distro: Distro } & ManAlias)
+  | ({ kind: 'page'; distro: Distro; data: ManPageResponse; related: RelatedResponse['items'] } & Served)
+  | ({ distro: Distro } & ManAlias & Served)
+  | ({ kind: 'miss' } & Served)
 
-async function orMissing<T>(lookup: Promise<T>): Promise<T | null> {
+type Missing = { missing: true; servedRelease: string | null }
+
+async function orMissing<T>(lookup: Promise<T>): Promise<T | Missing> {
   try {
     return await lookup
   } catch (err) {
-    if (err instanceof FastApiError && err.status === 404) return null
+    if (err instanceof FastApiError && err.status === 404) return { missing: true, servedRelease: err.datasetReleaseId ?? null }
     throw err
   }
 }
 
-/** A page, or the alias target when the URL is a `.so` stub; null for a miss. */
+function isMissing(value: unknown): value is Missing {
+  return Boolean(value && typeof value === 'object' && (value as Missing).missing === true)
+}
+
+/** A page, the alias target when the URL is a `.so` stub, or a miss. */
 export async function lookupManPage(opts: {
   name: string
   section: string
   distro: Distro
   pkg?: string
   release?: string
-}): Promise<ManPageLookup | null> {
+}): Promise<ManPageLookup> {
   const { name, section, pkg, release } = opts
   const relatedFor = (distro: Distro) => fetchRelated({ distro, name, section, ...(release ? { release } : {}) }).catch(() => ({ items: [] }))
   // Related reads run beside the document, for the requested distro; a fallback to Debian reads them again.
@@ -52,21 +65,23 @@ export async function lookupManPage(opts: {
       fetchManByNameAndSectionOrAlias({ distro, name, section, ...(pkg ? { pkg } : {}), ...(release ? { release } : {}) }),
     ),
   )
-  if (!found) return null
-  if (found.data.kind === 'alias') return { ...found.data, distro: found.distro }
+  if (isMissing(found)) return { kind: 'miss', servedRelease: found.servedRelease }
+  if (found.data.kind === 'alias') return { ...found.data, distro: found.distro, servedRelease: servedRelease(found.data) }
   const relatedItems = (await (found.distro === opts.distro ? related : relatedFor(found.distro))).items
-  return { kind: 'page', distro: found.distro, data: found.data.data, related: relatedItems }
+  return { kind: 'page', distro: found.distro, data: found.data.data, related: relatedItems, servedRelease: servedRelease(found.data) }
 }
 
-export type ResolvedManName = { distro: Distro; result: ManResolveResult }
+export type ResolvedManName = ({ distro: Distro; result: ManResolveResult } | { result: null }) & Served
 
-export async function resolveManName(name: string, distro: Distro, release?: string): Promise<ResolvedManName | null> {
+/** A name's only section, alias target or section picker; `result: null` for a miss. */
+export async function resolveManName(name: string, distro: Distro, release?: string): Promise<ResolvedManName> {
   const resolved = await orMissing(
     withDistroFallback(distro, (activeDistro) =>
       fetchManResolve({ distro: activeDistro, name: name.toLowerCase(), ...(release ? { release } : {}) }),
     ),
   )
-  return resolved && { distro: resolved.distro, result: resolved.data }
+  if (isMissing(resolved)) return { result: null, servedRelease: resolved.servedRelease }
+  return { distro: resolved.distro, result: resolved.data, servedRelease: servedRelease(resolved.data) }
 }
 
 export type ManMiss = {
