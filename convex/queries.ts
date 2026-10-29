@@ -616,7 +616,11 @@ async function typoHits(
 ): Promise<RankedHit[]> {
   const textNorm = args.queryText.toLowerCase();
   if (!/^[a-z0-9_.+:-]{3,64}$/.test(textNorm)) return [];
+  // Doubled letters and a stray last character come first: a short name such
+  // as tar sits past the first 16 names of a crowded two-letter bucket.
+  const collapsed = textNorm.replace(/(.)\1+/g, "$1");
   const prefixes = [...new Set([
+    ...[collapsed, textNorm.slice(0, -1)].filter((prefix) => prefix.length >= 2 && prefix !== textNorm),
     textNorm.slice(0, Math.max(2, textNorm.length - 4)), textNorm.slice(0, 2),
     textNorm[1] + textNorm[0], textNorm[0] + textNorm[2], textNorm[0],
   ])];
