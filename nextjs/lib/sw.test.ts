@@ -91,6 +91,25 @@ describe('service worker', () => {
     expect(w.entries.has(`${origin}/man/tar/1`)).toBe(true)
   })
 
+  it('never caches explain pages, explain API answers or anything typed as a query', async () => {
+    const w = worker()
+    for (const path of ['/explain?cmd=rm%20-rf%20secret', '/api/v1/explain?cmd=x', '/?q=export%20TOKEN%3Dabc', '/search?cmd=x', '/search?q=curl%20-H%20token', '/api/v1/search?q=x', '/api/v1/suggest?q=x']) {
+      const request = w.request(path, path.startsWith('/api/') ? 'cors' : 'navigate')
+      expect(request.response, path).toBeUndefined()
+    }
+    expect(w.fetch).not.toHaveBeenCalled()
+    expect(w.cache.put).not.toHaveBeenCalled()
+  })
+
+  it('purges private entries an older worker stored', async () => {
+    const w = worker()
+    w.entries.set(`${origin}/explain?cmd=rm%20secret`, new Response('old'))
+    w.entries.set(`${origin}/man/tar/1`, new Response('keep'))
+    await w.activate()
+    expect(w.entries.has(`${origin}/explain?cmd=rm%20secret`)).toBe(false)
+    expect(w.entries.has(`${origin}/man/tar/1`)).toBe(true)
+  })
+
   it('serves an inline offline page for an uncached navigation', async () => {
     const w = worker()
     w.fetch.mockRejectedValue(new TypeError('offline'))

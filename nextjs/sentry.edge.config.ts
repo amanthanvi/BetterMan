@@ -17,7 +17,8 @@ Sentry.init({
       response: { deny: ['forwarded', '-ip', 'remote-', 'via', '-user'] },
     },
     httpBodies: [],
-    urlQueryParams: { deny: ['forwarded', '-ip', 'remote-', 'via', '-user'] },
+    // cmd and q carry pasted command lines and searches (explain, search, home).
+    urlQueryParams: { deny: ['forwarded', '-ip', 'remote-', 'via', '-user', 'cmd', 'q'] },
     genAI: { inputs: false, outputs: false },
     databaseQueryData: false,
     queues: false,

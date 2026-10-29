@@ -104,8 +104,8 @@ export default async function ExplainPage({ searchParams }: { searchParams: Prom
             </section>
             <SafetyNote facts={explainFacts(result.data)} />
             <p className="mt-10 max-w-xl text-xs text-ink-3">
-              Each token is matched to its exact definition in the manual named beside it; flags in a cluster are split.
-              Nothing is run, expanded or looked up on your system.
+              Where a manual defines a token, its note quotes that definition and names the manual; flags in a cluster are
+              split. Nothing is run, expanded or looked up on your system.
             </p>
           </>
         )

@@ -243,6 +243,11 @@ Diagnostics are shown as returned, with a sentence that safety notes are
 withheld. The safety note lists the collected `destructive` facts verbatim;
 hint backticks become `<code>` through text splitting, never markup.
 
+Because a line can hold secrets, the service worker never stores `/explain`,
+`/api/v1/explain`, or any URL with a `cmd` or `q` parameter (search pages and
+API answers included) in Cache Storage, and purges such entries an older worker
+kept; Sentry's URL data denies `cmd` and `q`.
+
 Portability cells are not in this response (`portability` stays null). The
 page reads them separately with `portability.getCells({distro, name, section,
 anchors})`: three reads per manual (release, page, compact derived summary), at

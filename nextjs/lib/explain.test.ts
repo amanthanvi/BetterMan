@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import archive from '../../docs/examples/explain-archive.json'
-import pipeline from '../../docs/examples/explain-pipeline.json'
+// Copies of docs/examples/explain-*.json: the container build copies only convex/ and nextjs/.
+import archive from './__fixtures__/explain-archive.json'
+import pipeline from './__fixtures__/explain-pipeline.json'
 import type { Explanation } from '../../convex/explain'
 import { codeSpans, explainFacts, looksLikeCommandLine, numberTokens, optionAnchorsByPage, readingLines, tokenCells } from './explain'
 
