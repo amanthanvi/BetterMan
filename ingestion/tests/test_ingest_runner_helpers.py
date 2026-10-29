@@ -555,6 +555,11 @@ def test_page_batch_limits_come_from_the_environment(monkeypatch) -> None:
     monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", "7")
     monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", "1024")
     assert _page_batch_limits() == (7, 1024)
+    monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", "20")
+    assert _page_batch_limits() == (10, 1024)
+    monkeypatch.setattr(ingest_runner, "MAX_SYMBOLS", 64)
+    assert _page_batch_limits() == (15, 1024)
+    monkeypatch.setattr(ingest_runner, "MAX_SYMBOLS", 256)
     for value in ["0", "-1", "abc", "1.5"]:
         monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", value)
         with pytest.raises(RuntimeError, match="BETTERMAN_INGEST_PAGE_BATCH_ITEMS must be"):

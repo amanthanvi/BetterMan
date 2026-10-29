@@ -177,3 +177,16 @@ test('command palette: a symbol result keeps its definition anchor', async ({ br
     await context.close()
   }
 })
+
+test('command palette: a page-level subcommand symbol still has a badge', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({baseURL,serviceWorkers:'block'})
+  const page = await context.newPage()
+  try {
+    await page.route(/\/api\/v1\/search\?/,route=>route.fulfill({json:{query:'git commit',results:[{name:'git-commit',section:'1',title:'git-commit(1)',description:'Record changes',symbolKind:'subcommand',highlights:['git commit']}],suggestions:[],hasMore:false}}))
+    await page.goto('/')
+    await waitForInteractiveShell(page)
+    await page.getByRole('button',{name:'Search'}).click()
+    await page.getByRole('combobox',{name:'Command palette input'}).fill('git commit')
+    await expect(page.getByRole('option',{name:/git-commit\(1\)/}).getByText('subcommand',{exact:true})).toBeVisible()
+  } finally { await context.close() }
+})

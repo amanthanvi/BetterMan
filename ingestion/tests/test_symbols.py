@@ -152,3 +152,67 @@ def test_suffixed_subcommands_and_utf16_limits():
     )
     assert rows[0]["excerpt"] == "a" * 159
     assert utf16_length(rows[0]["excerpt"]) <= 160
+
+
+def test_real_cached_layouts_and_anchors():
+    import json
+    from pathlib import Path
+
+    cases = json.loads((Path(__file__).parent / "fixtures/symbol-layouts.json").read_text())
+    expected = {
+        "systemctl": "systemctl restart",
+        "systemd.service": "ExecStart=",
+        "errno": "ENOSPC",
+        "environ": "HOME",
+        "resolv.conf": "nameserver",
+        "rsyncd.conf": "motd file",
+        "tmpfs": "size",
+        "less": "LESS",
+        "python3": "PYTHONPATH",
+        "rsync": "RSYNC_RSH",
+        "ps": "POSIXLY_CORRECT",
+        "find": "POSIXLY_CORRECT",
+    }
+    for case in cases:
+        rows = symbol_rows(case["name"], case["section"], case["doc"])
+        assert rows == case["symbols"]
+        assert expected[case["name"]] in {row["term"] for row in rows}, case["name"]
+        ids = {b["id"] for b in case["doc"]["blocks"] if b["type"] == "heading"}
+        ids.update(
+            item["id"]
+            for b in case["doc"]["blocks"]
+            if b["type"] == "definition_list"
+            for item in b["items"]
+            if item.get("id")
+        )
+        assert all(row["anchorId"] in ids for row in rows)
+        assert not {"The", "pre", "commit", "agent", "session", "tun", "x11"} & {
+            row["term"] for row in rows
+        }
+    resolv = next(case for case in cases if case["name"] == "resolv.conf")
+    assert "search" in {row["term"] for row in resolv["symbols"]}
+
+
+def test_explicit_heading_synonyms_and_prose_exclusions():
+    for title in ("ENVIRONMENT VARIABLES", "ENVIRONMENT VARIABLE"):
+        assert (
+            symbol_rows("example", "1", {"blocks": [heading(title, "env"), definitions("HOME")]})[
+                0
+            ]["kind"]
+            == "environment"
+        )
+    for title in ("CONFIG DIRECTIVES", "CONFIGURATION DIRECTIVES", "OPTIONS"):
+        assert (
+            symbol_rows(
+                "example", "5", {"blocks": [heading(title, "config"), definitions("Directive")]}
+            )[0]["kind"]
+            == "config"
+        )
+    assert (
+        symbol_rows(
+            "example",
+            "1",
+            {"blocks": [heading("PROFILES", "profiles"), definitions("/etc/profile")]},
+        )
+        == []
+    )

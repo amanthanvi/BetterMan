@@ -16,7 +16,8 @@ The response has `version: 1`, the original `input`, a URL-encoded `shareUrl`,
 `diagnostics`, and `stages`. Each stage has a stable numeric `id`, `parent`
 (or null), `relation` (`list`, `subshell`, `substitution`, `wrapper`, `exec`),
 `tokens`, and a `destructive` array. IDs reflect lexical discovery; child
-stages refer to their containing command, wrapper or substitution. Empty
+stages refer to their containing command, wrapper or substitution. The array
+places each child directly after its parent; IDs need not be ascending. Empty
 lexer stages are omitted, so IDs can have gaps. This is static syntax, not a
 prediction of which conditional branches will run.
 
@@ -62,23 +63,35 @@ command arguments (`sudo`, `env`, `xargs`, `timeout`, `nice`, `nohup`, `time`,
 `command`, `exec`, `doas`) are separate child stages, including `find -exec` /
 `-execdir` / `-ok` / `-okdir`.
 
-Destructive entries have `{description, dryRun}`. They describe standard
-command operations requested by literal input, not completed execution or
-certain data loss. Dynamic input, malformed syntax, unresolved options,
-resolution exhaustion and uncertain wrapper parents suppress claims. Signals
-name literal operations and operands, including plain/recursive rm, find
--delete and -exec rm, xargs rm, dd output, mkfs with a device, reducing
-truncate sizes, shred, tar --remove-files, rsync --delete, git clean, and
-truncating redirections (`>`, `>|`, `&>`, filename `>&`). Interactive/dry-run
-modes and uncertain or unresolved options suppress claims. Ordered rm
-force/interactive switches honor the last applicable switch. Special device
-sinks (/dev/null, standard streams, tty and fd paths) are excluded.
-`dryRun` offers only an operation-specific inspection hint: replace rm with
-`ls -d`, find -delete with -print, add rsync --dry-run, replace git clean -f
-with -n, or add mkfs.ext4 -n. These are inspection suggestions, not a promise
-that the entire original line is safe: other stages still have side effects.
-Absence of a signal **does not establish that a command is safe**. Names may be shadowed by shell
-functions/aliases or executables; their runtime identities are not inspected.
+Destructive entries have `{description, dryRun}`. They describe literal
+operations requested by the line, not runtime success or certain data loss.
+The independent semantic allowlist in `convex/_destructive.ts` is stricter
+than the manual option index. Every option/predicate on the command and each
+wrapper ancestor must be modeled; a recognized but unmodeled manual option
+still suppresses the note. Dynamic/unknown syntax and resolution exhaustion
+also suppress it. The supported set is deliberately small:
+
+| Operation | Modeled forms and exclusions | Inspection hint |
+| --- | --- | --- |
+| rm | Basic force/recursive/ordered interactive switches; dot/dot-dot/root operands excluded; literal operands or explicitly modeled find/xargs replacements | Replace rm with `ls -d` |
+| find -delete | Literal roots after -H/-L/-P/-O/-D globals; conjunction-only name/type/age/depth predicates; -delete must be the last primary; no branching/pruning | Replace -delete with -print |
+| git clean | One literal global -C; -f/-d/-x/-X, with -n/-i suppressing; -e, pathspecs and other global options unmodeled | Replace -f with -n |
+| mkfs.ext4 / mke2fs | One literal filesystem target, no flags; -n/-V suppress; aliases resolve to mke2fs | Add -n |
+| truncate | Exactly one size option of zero and literal non-device-path operands | null |
+| echo redirection | One truncating output redirect to a literal non-device path; no options or other redirects | null |
+
+No notes or hints are emitted for dd, rsync, shred or tar in this revision.
+Their operands, copy layout, predicate/mode interactions and file-type effects
+need a separate model before adding them to the allowlist. Output redirects
+never make device-truncation claims. sudo listing/validation/timestamp/edit
+and shell modes are opaque. xargs interactive mode is unmodeled, so it cannot
+support a no-prompt claim. Wrapper children appear directly after their parent;
+list terminators stay with the containing stage. Unknown lexical tokens keep
+kind `unknown` throughout resolution.
+
+Hints inspect only the named operation: other stages can still have side
+effects. Runtime aliases/functions, executable identities, file existence and
+noclobber state are not inspected. Absence of a note never establishes safety.
 
 Limits are 4,096 characters, 128 lexical tokens, 24 stages and nesting depth 8.
 The resolver performs at most 64 indexed lookups and shares a 64-document
@@ -105,14 +118,24 @@ anchors take effect after the next ingest. Old releases remain readable and
 return explicit unknowns or missing excerpts where metadata is absent.
 
 The symbol index is separate from the unchanged document model. Python derives
-up to 256 unique terms per page from definition IDs under ENVIRONMENT, FILES,
-ERRORS and section-5 directives, plus known hyphenated command families.
+up to 256 unique terms per page from definition IDs under explicit heading
+synonyms for environment, files, errors and section-5 directives, plus known
+hyphenated command families. ENVIRONMENT VARIABLE(S), FILES AND DIRECTORIES,
+CONFIG/CONFIGURATION DIRECTIVES and supported config OPTIONS layouts are
+recognized; PROFILES and arbitrary substring matches are not.
 Subsections retain their enclosing category; missing item IDs use the actual
-section ID. Invalid/oversized terms or anchors are omitted, never truncated
+section ID. Styled directive terms support multi-word keys, assignment
+placeholders and keyword-plus-description layouts. Formatted paragraph/list
+definitions (systemd and systemctl) use their actual enclosing section anchor.
+Parent-page COMMANDS definitions resolve known-family verbs when there is no
+separate subcommand page. errno and environ special-page layouts are covered
+by selected, hashed real-corpus fixtures. Invalid/oversized terms or anchors are omitted, never truncated
 into a bogus anchor. Excerpts are clipped at 160 UTF-16 units without splitting
 surrogate pairs; Python and Convex use the same unit. Terms/anchors over their limits are skipped.
 Contract schema version 2 prevents new ingestion from writing to an older
-deployment. Default page batches are ten items to retain mutation write headroom.
+deployment. Default page batches are derived from a 7,000-derived-write budget divided
+by 400 option rows plus the symbol cap per page (currently ten items). The
+existing item-count setting can lower this bound but cannot bypass it.
 See [the cached-corpus audit](symbol-index-audit.md) for coverage and quality
 evidence. Bash syntax headings are reserved first. Search reads at most eight exact matching rows,
 denormalized with page metadata, with optional section/distro scoping. No

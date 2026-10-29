@@ -620,7 +620,7 @@ async function textHits(
     const existing = ranked.get(symbol.pageId);
     if (existing?.name.toLowerCase() === queryNorm) continue;
     ranked.set(symbol.pageId, { name: symbol.name, section: symbol.section, title: symbol.title, description: symbol.description,
-      symbolKind: symbol.kind, highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, rank: Math.max(existing?.rank ?? 0, 2_500) });
+      symbolKind: symbol.kind, highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, rank: Math.max(existing?.rank ?? 0, symbol.kind === 'subcommand' && symbol.name.toLowerCase() === queryNorm.replace(' ', '-') ? 2_600 : 2_500) });
   }
   return [...ranked.values()].sort(compareHits);
 }

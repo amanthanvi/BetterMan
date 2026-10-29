@@ -87,6 +87,7 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
   }
   const stages: Explanation['stages'] = [];
   const uncertainStages = new Set<number>();
+  const safetyContexts = new Map<number, {stage: typeof parsed.stages[number]; tokens: Explanation['stages'][number]['tokens']; command: string}>();
   for (const stage of parsed.stages) {
     if (!stage.tokens.length) continue;
     let page: Doc<'manPages'> | null = null;
@@ -94,6 +95,7 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
     if (commandIndex >= 0) page = await pageFor(stage.tokens[commandIndex].value.split('/').at(-1)!);
     const commandPage = page;
     let subcommandIndex = -1;
+    let subcommandRow: Doc<'manPageSymbols'> | null = null;
     let candidateIndex = commandIndex + 1;
     while (page && COMMAND_FAMILIES.has(page.name) && candidateIndex < stage.tokens.length) {
       const token = stage.tokens[candidateIndex];
@@ -111,7 +113,8 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
       let rows = await lookupSymbol(literal);
       const verb = family === 'ip' ? IP_OBJECTS[next.value] ?? next.value : next.value;
       if (!rows?.length && verb !== next.value) rows = await lookupSymbol(`${family} ${verb}`);
-      const row = rows?.find(row => row.kind === 'subcommand' && commandSection(row.section));
+      const row = rows?.find(row => row.kind === 'subcommand' && commandSection(row.section) && row.name === `${family}-${verb}`)
+        ?? rows?.find(row => row.kind === 'subcommand' && commandSection(row.section));
       let subpage: Doc<'manPages'> | null = null;
       if (row) subpage = await read(`id:${row.pageId}`, 1, () => ctx.db.get(row.pageId));
       // Exact names only, only for known families, and only without symbol rows.
@@ -123,7 +126,7 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
           if (subpage) break;
         }
       }
-      if (subpage && subpage.releaseId === release._id) { page = subpage; subcommandIndex = candidateIndex; }
+      if (subpage && subpage.releaseId === release._id) { page = subpage; subcommandIndex = candidateIndex; subcommandRow = row ?? null; }
       else unknownSubcommand = candidateIndex;
     }
     const tokens: Infer<typeof tokenValidator>[] = [];
@@ -132,10 +135,10 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
       const token = stage.tokens[i], shell = await shellReference(token, stage.relation);
       const currentPage = subcommandIndex >= 0 && i < subcommandIndex ? commandPage : page;
       const base = { text: token.text, value: token.value, start: token.start, end: token.end, page: null as ReturnType<typeof pageRef> | null, anchor: null as string | null, excerpt: '', takesArgument: null as boolean | null, portability: null, shell };
-      if (limited || i === unknownSubcommand) { tokens.push({...base, kind: 'unknown'}); continue; }
+      if (limited || i === unknownSubcommand || token.kind === 'unknown') { tokens.push({...base, kind: 'unknown'}); continue; }
       if (token.kind === 'command' || i === subcommandIndex) {
         const target = i === subcommandIndex ? page : commandPage;
-        tokens.push({ ...base, kind: target ? (i === subcommandIndex ? 'subcommand' : 'command') : 'unknown', page: target ? pageRef(target) : null, excerpt: target?.description ?? '' });
+        tokens.push({ ...base, kind: target ? (i === subcommandIndex ? 'subcommand' : 'command') : 'unknown', page: target ? pageRef(target) : null, excerpt: i === subcommandIndex ? subcommandRow?.excerpt ?? target?.description ?? '' : target?.description ?? '', anchor: i === subcommandIndex ? subcommandRow?.anchorId || null : null });
         continue;
       }
       if (token.kind === 'operator' || token.kind === 'redirect' || token.kind === 'redirectTarget' || token.kind === 'assignment' || token.kind === 'comment') { tokens.push({ ...base, kind: token.kind }); continue; }
@@ -171,7 +174,15 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
     if (pending) parsed.diagnostics.push(`Missing argument for ${pending.flag}`);
     const uncertain = parsed.diagnostics.length > 0 || tokens.some(token => token.kind === 'unknown') || (stage.parent !== null && uncertainStages.has(stage.parent));
     if (uncertain) uncertainStages.add(stage.id);
-    stages.push({ id: stage.id, parent: stage.parent, relation: stage.relation, tokens, destructive: uncertain ? [] : destructiveSignals(stage, tokens, page?.name ?? '', parsed.stages.find(parent => parent.id === stage.parent)?.tokens.find(token => token.kind === 'command')?.value) });
+    safetyContexts.set(stage.id, {stage,tokens,command: page?.name ?? ''});
+    const ancestors = [];
+    let parent = stage.parent;
+    while (parent !== null) {
+      const context = safetyContexts.get(parent);
+      if (!context) break;
+      ancestors.unshift(context); parent = context.stage.parent;
+    }
+    stages.push({ id: stage.id, parent: stage.parent, relation: stage.relation, tokens, destructive: uncertain ? [] : destructiveSignals(stage, tokens, page?.name ?? '', ancestors) });
   }
   return { version: 1 as const, input: args.cmd, shareUrl: `/explain?cmd=${encodeURIComponent(args.cmd)}${args.distro === 'debian' ? '' : `&distro=${args.distro}`}`, diagnostics: parsed.diagnostics, stages };
 }

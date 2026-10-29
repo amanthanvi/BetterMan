@@ -1,0 +1,967 @@
+[
+  {
+    "name": "systemctl",
+    "section": "1",
+    "source": "/tmp/issue416/out/debian/html/systemctl.1.html.gz",
+    "sourceHtmlSha256": "63e4b7d034d110a639d275d430ef732649aaf8b49bdec7ef018e79ee5a0c12fc",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "commands",
+          "level": 2,
+          "text": "COMMANDS"
+        },
+        {
+          "type": "heading",
+          "id": "unit-commands-introspection-and-modification",
+          "level": 3,
+          "text": "Unit Commands (Introspection and Modification)"
+        },
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "restart "
+                }
+              ]
+            },
+            {
+              "type": "strong",
+              "inlines": []
+            },
+            {
+              "type": "emphasis",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "PATTERN"
+                }
+              ]
+            },
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "..."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            [
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "Stop and then start one or more units specified on the command line. If the units are not running yet, they will be started."
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "systemctl restart",
+        "anchorId": "unit-commands-introspection-and-modification",
+        "excerpt": "Stop and then start one or more units specified on the command line. If the units are not running yet, they will be started.",
+        "kind": "subcommand"
+      }
+    ]
+  },
+  {
+    "name": "systemd.service",
+    "section": "5",
+    "source": "/tmp/issue416/out/debian/html/systemd.service.5.html.gz",
+    "sourceHtmlSha256": "6c89aeba72a5af04b48c13582486a03277552a441c9d584884d4cd8871a42cdd",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "options",
+          "level": 2,
+          "text": "OPTIONS"
+        },
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "emphasis",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "ExecStart="
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            [
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "Commands that are executed when this service is started."
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "ExecStart=",
+        "anchorId": "options",
+        "excerpt": "Commands that are executed when this service is started.",
+        "kind": "config"
+      }
+    ]
+  },
+  {
+    "name": "errno",
+    "section": "3",
+    "source": "/tmp/issue416/out/debian/html/errno.3.html.gz",
+    "sourceHtmlSha256": "713b5f6c816f42986bbeb9e9e79264e53e4388ff36afa3415ad886856c90c8e1",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "description",
+          "level": 2,
+          "text": "DESCRIPTION"
+        },
+        {
+          "type": "heading",
+          "id": "list-of-error-names",
+          "level": 3,
+          "text": "List of error names"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "ENOSPC",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "ENOSPC"
+                    }
+                  ]
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "No space left on device (POSIX.1-2001)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "ENOSPC",
+        "anchorId": "ENOSPC",
+        "excerpt": "No space left on device (POSIX.1-2001).",
+        "kind": "errors"
+      }
+    ]
+  },
+  {
+    "name": "environ",
+    "section": "7",
+    "source": "/tmp/issue416/out/debian/html/environ.7.html.gz",
+    "sourceHtmlSha256": "85ecf5acbb21ac5e62f216d7364e9a160bd5c7547941038b90a62009894f45c5",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "description",
+          "level": 2,
+          "text": "DESCRIPTION"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "HOME",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "HOME"
+                    }
+                  ]
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "A user's login directory. Set at login time, see section NOTES below."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "HOME",
+        "anchorId": "HOME",
+        "excerpt": "A user's login directory. Set at login time, see section NOTES below.",
+        "kind": "environment"
+      }
+    ]
+  },
+  {
+    "name": "resolv.conf",
+    "section": "5",
+    "source": "/tmp/issue416/out/debian/html/resolv.conf.5.html.gz",
+    "sourceHtmlSha256": "acbd6c7f1fb666a865d7d9f779dff1b585e236c5e51604f874272fa905de6151",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "description",
+          "level": 2,
+          "text": "DESCRIPTION"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "nameserver",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "nameserver"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " Name server IP address"
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "Internet address of a name server that the resolver should query, either an IPv4 address (in dot notation), or an IPv6 address in colon (and possibly dot) notation as per RFC 2373. Up to "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "MAXNS"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " (currently 3, see "
+                    },
+                    {
+                      "type": "emphasis",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "<resolv.h>"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": ") name servers may be listed, one per keyword. If there are multiple servers, the resolver library queries them in the order listed. If no "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "nameserver"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " entries are present, the default is to use the name server on the local machine. (The algorithm used is to try a name server, and if the query times out, try the next, until out of name servers, then repeat trying all the name servers until a maximum number of retries are made.)"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "search",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "search"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " Search list for host-name lookup."
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "By default, the search list contains one entry, the local domain name. It is determined from the local hostname returned by "
+                    },
+                    {
+                      "type": "link",
+                      "href": "/man/gethostname/2",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "gethostname(2)"
+                        }
+                      ],
+                      "linkType": "internal"
+                    },
+                    {
+                      "type": "text",
+                      "text": "; the local domain name is taken to be everything after the first '.'. Finally, if the hostname does not contain a '.', the root domain is assumed as the local domain name."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "nameserver",
+        "anchorId": "nameserver",
+        "excerpt": "Internet address of a name server that the resolver should query, either an IPv4 address (in dot notation), or an IPv6 address in colon (and possibly dot) notat",
+        "kind": "config"
+      },
+      {
+        "term": "search",
+        "anchorId": "search",
+        "excerpt": "By default, the search list contains one entry, the local domain name. It is determined from the local hostname returned by gethostname(2) ; the local domain na",
+        "kind": "config"
+      }
+    ]
+  },
+  {
+    "name": "rsyncd.conf",
+    "section": "5",
+    "source": "/tmp/issue416/out/debian/html/rsyncd.conf.5.html.gz",
+    "sourceHtmlSha256": "a41dd00c32451603b7c960fa2b014228b37bf6464a155a0dbb34e3fade368005",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "global-parameters",
+          "level": 2,
+          "text": "GLOBAL PARAMETERS"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "motd",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "motd file"
+                    }
+                  ]
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "This parameter allows you to specify a \"message of the day\" (MOTD) to display to clients on each connect. This usually contains site information and any legal notices. The default is no MOTD file. This can be overridden by the "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "--dparam=motdfile=FILE"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " command-line option when starting the daemon."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "id": "module-parameters",
+          "level": 2,
+          "text": "MODULE PARAMETERS"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "path",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "path"
+                    }
+                  ]
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "This parameter specifies the directory in the daemon's filesystem to make available in this module. You must specify this parameter for each module in "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "rsyncd.conf"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": "."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "motd file",
+        "anchorId": "motd",
+        "excerpt": "This parameter allows you to specify a \"message of the day\" (MOTD) to display to clients on each connect. This usually contains site information and any legal n",
+        "kind": "config"
+      },
+      {
+        "term": "path",
+        "anchorId": "path",
+        "excerpt": "This parameter specifies the directory in the daemon's filesystem to make available in this module. You must specify this parameter for each module in rsyncd.co",
+        "kind": "config"
+      }
+    ]
+  },
+  {
+    "name": "tmpfs",
+    "section": "5",
+    "source": "/tmp/issue416/out/debian/html/tmpfs.5.html.gz",
+    "sourceHtmlSha256": "e9403c49fc5282a83d7639048a822ce2704f58f5665d09032d438ac0bc6e4fc4",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "description",
+          "level": 2,
+          "text": "DESCRIPTION"
+        },
+        {
+          "type": "heading",
+          "id": "mount-options",
+          "level": 3,
+          "text": "Mount options"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "size",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "size"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "="
+                },
+                {
+                  "type": "emphasis",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "bytes"
+                    }
+                  ]
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "Specify an upper limit on the size of the filesystem. The size is given in bytes, and rounded up to entire pages. The limit is removed if the size is "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "0"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": "."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "size",
+        "anchorId": "size",
+        "excerpt": "Specify an upper limit on the size of the filesystem. The size is given in bytes, and rounded up to entire pages. The limit is removed if the size is 0 .",
+        "kind": "config"
+      }
+    ]
+  },
+  {
+    "name": "less",
+    "section": "1",
+    "source": "/tmp/issue416/out/debian/html/less.1.html.gz",
+    "sourceHtmlSha256": "4f8046672d05529dbf6bd285896ebf2cfe669258a4277a42cd149c401ef24936",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "environment-variables",
+          "level": 2,
+          "text": "ENVIRONMENT VARIABLES"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "LESS",
+              "termInlines": [
+                {
+                  "type": "text",
+                  "text": "LESS"
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "Options which are passed to "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "less"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " automatically."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "LESS",
+        "anchorId": "LESS",
+        "excerpt": "Options which are passed to less automatically.",
+        "kind": "environment"
+      }
+    ]
+  },
+  {
+    "name": "python3",
+    "section": "1",
+    "source": "/tmp/issue416/out/debian/html/python3.1.html.gz",
+    "sourceHtmlSha256": "241723dad4ea3204c4c6cd95cec3a747e678ad16980e82e5fad9859708bbf4b9",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "environment-variables",
+          "level": 2,
+          "text": "ENVIRONMENT VARIABLES"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "PYTHONPATH",
+              "termInlines": [
+                {
+                  "type": "text",
+                  "text": "PYTHONPATH"
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "Augments the default search path for module files. The format is the same as the shell's $PATH: one or more directory pathnames separated by colons. Non-existent directories are silently ignored. The default search path is installation dependent, but generally begins with ${prefix}/lib/python<version> (see PYTHONHOME above). The default search path is always appended to $PYTHONPATH. If a script argument is given, the directory containing the script is inserted in the path in front of $PYTHONPATH. The search path can be manipulated from within a Python program as the variable "
+                    },
+                    {
+                      "type": "emphasis",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "sys.path"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": "."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "PYTHONPATH",
+        "anchorId": "PYTHONPATH",
+        "excerpt": "Augments the default search path for module files. The format is the same as the shell's $PATH: one or more directory pathnames separated by colons. Non-existen",
+        "kind": "environment"
+      }
+    ]
+  },
+  {
+    "name": "rsync",
+    "section": "1",
+    "source": "/tmp/issue416/out/debian/html/rsync.1.html.gz",
+    "sourceHtmlSha256": "3977a7edddee73ab2fbbf06c7f066b16000a09a69804bba42c867f9d42274e11",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "environment-variables",
+          "level": 2,
+          "text": "ENVIRONMENT VARIABLES"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "RSYNC_RSH",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "RSYNC_RSH"
+                    }
+                  ]
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "This environment variable allows you to override the default shell used as the transport for rsync. Command line options are permitted after the command name, just as in the "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "--rsh"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " ("
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "-e"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": ") option."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "RSYNC_RSH",
+        "anchorId": "RSYNC_RSH",
+        "excerpt": "This environment variable allows you to override the default shell used as the transport for rsync. Command line options are permitted after the command name, j",
+        "kind": "environment"
+      }
+    ]
+  },
+  {
+    "name": "ps",
+    "section": "1",
+    "source": "/tmp/issue416/out/debian/html/ps.1.html.gz",
+    "sourceHtmlSha256": "2c030262a1dd753eea316b70d1936d031b6ed1e4ea1137320245a9efa611e379",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "environment-variables",
+          "level": 2,
+          "text": "ENVIRONMENT VARIABLES"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "POSIXLY_CORRECT",
+              "termInlines": [
+                {
+                  "type": "strong",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "POSIXLY_CORRECT"
+                    }
+                  ]
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "Don't find excuses to ignore bad \"features\"."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "POSIXLY_CORRECT",
+        "anchorId": "POSIXLY_CORRECT",
+        "excerpt": "Don't find excuses to ignore bad \"features\".",
+        "kind": "environment"
+      }
+    ]
+  },
+  {
+    "name": "find",
+    "section": "1",
+    "source": "/tmp/issue416/out/debian/html/find.1.html.gz",
+    "sourceHtmlSha256": "80f19b45e4fd7ee1de7af7be58424f50220aa2aba19ea3b37b0ab707da7624e2",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "environment-variables",
+          "level": 2,
+          "text": "ENVIRONMENT VARIABLES"
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "POSIXLY_CORRECT",
+              "termInlines": [
+                {
+                  "type": "text",
+                  "text": "POSIXLY_CORRECT"
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "Determines the block size used by "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "-ls"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " and "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "-fls"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": ". If "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "POSIXLY_CORRECT"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " is set, blocks are units of 512 bytes. Otherwise they are units of 1024 bytes."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "symbols": [
+      {
+        "term": "POSIXLY_CORRECT",
+        "anchorId": "POSIXLY_CORRECT",
+        "excerpt": "Determines the block size used by -ls and -fls . If POSIXLY_CORRECT is set, blocks are units of 512 bytes. Otherwise they are units of 1024 bytes.",
+        "kind": "environment"
+      }
+    ]
+  }
+]

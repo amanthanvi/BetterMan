@@ -359,6 +359,8 @@ try {
     ['explainArchive', 'explain:explain', { distro: 'debian', cmd: 'tar -xzvf backup.tar.gz -C /srv/www' }],
     ['explainPipeline', 'explain:explain', { distro: 'debian', cmd: "find . -name '*.log' -mtime +7 -print0 | xargs -0 rm -f" }],
     ['explainSubcommand', 'explain:explain', { distro: 'debian', cmd: 'git commit -m "message"' }],
+    ['explainParentCommand','explain:explain',{distro:'debian',cmd:'systemctl restart nginx'}],
+    ['explainMkfsAlias','explain:explain',{distro:'debian',cmd:'mkfs.ext4 /dev/sdb1'}],
     ['explainMulti', 'explain:explain', { distro: 'debian', cmd: [...'abcdefghijklmnopqrstuvwx'].map(verb=>`git ${verb}`).join('|') }],
     ['explainBounded', 'explain:explain', { distro: 'debian', cmd: 'bounded ' + Array.from({ length: 100 }, (_, i) => `--limit${i}`).join(' ') }],
   ]) {
@@ -387,6 +389,11 @@ try {
         assert.ok(result.stages.some(stage => stage.destructive.length === 1))
         assert.equal(tokens.find(token => token.value === '|').shell.anchor, 'shell-pipeline')
       }
+      if(name === 'explainParentCommand') {
+        assert.equal(tokens.find(token=>token.kind==='subcommand').anchor,'unit-commands-introspection-and-modification')
+        assert.equal(tokens.find(token=>token.kind==='subcommand').page.name,'systemctl')
+      }
+      if(name === 'explainMkfsAlias') assert.equal(result.stages[0].destructive[0].dryRun,'add `-n`')
       if (name === 'explainSubcommand') assert.equal(tokens.find(token => token.kind === 'subcommand').page.name, 'git-commit')
     }
     for (const [metric, value] of Object.entries(metrics)) actual[`${name}.${metric}`] = value

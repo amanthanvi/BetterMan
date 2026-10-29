@@ -26,3 +26,16 @@ test('explain: production Convex limit codes survive redaction as HTTP 400', asy
     expect((await response.json()).code).toBe(code)
   }
 })
+
+test('explain: wrapper order and unsupported lexical kinds survive HTTP resolution', async ({ request }) => {
+  const ordered = await request.get('/api/v1/explain', {params:{cmd:'sudo rm f; echo done'}})
+  expect(ordered.status()).toBe(200)
+  const result = await ordered.json()
+  expect(result.stages.map((s:{tokens:{value:string}[]})=>s.tokens[0].value)).toEqual(['sudo','rm','echo'])
+  expect(result.stages[1].tokens.some((t:{value:string})=>t.value===';')).toBe(false)
+  for(const cmd of ['echo <<EOF\nrm f\nEOF','echo \\$(rm -rf /)']) {
+    const response = await request.get('/api/v1/explain',{params:{cmd}})
+    expect(response.status()).toBe(200)
+    expect((await response.json()).stages[0].tokens.at(-1).kind).toBe('unknown')
+  }
+})

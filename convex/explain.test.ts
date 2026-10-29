@@ -3,6 +3,7 @@ import { convexTest } from 'convex-test';
 import { describe, it, expect } from 'vitest';
 import { makeFunctionReference } from 'convex/server';
 import schema from './schema';
+import symbolLayouts from '../ingestion/tests/fixtures/symbol-layouts.json';
 import { optionFlagRows } from './_optionFlags';
 import { insertSymbols, type SymbolInput } from './_symbols';
 import { api } from './_generated/api';
@@ -25,14 +26,15 @@ export async function explainFixture(documentsRead = 258) {
       const specs = [
         { name: 'tar', section: '1', options: tar },
         { name: 'find', section: '1', options: [
-          { flags: '-name', anchorId: 'name', argument: 'PATTERN' }, { flags: '-mtime', anchorId: 'mtime', argument: 'N' },
+          {flags:'-L',anchorId:'follow'},{flags:'-P',anchorId:'nofollow'},{flags:'-H',anchorId:'commandfollow'}, { flags: '-name', anchorId: 'name', argument: 'PATTERN' }, { flags: '-mtime', anchorId: 'mtime', argument: 'N' },
           { flags: '-print0', anchorId: 'print0' }, { flags: '-delete', anchorId: 'delete' }, { flags: '-exec', anchorId: 'exec', argument: 'COMMAND' },
         ] },
-        { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' }] },
-        { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' }, { flags: '-r', anchorId: 'recursive' }, {flags:'-i',anchorId:'interactive'}, {flags:'-I',anchorId:'interactive-once'}, {flags:'--interactive[=WHEN]',anchorId:'interactive-long'}] },
+        { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' },{flags:'-p, --interactive',anchorId:'prompt'},{flags:'-I',anchorId:'replace',argument:'REPLACE'}] },
+        { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' }, { flags: '-r', anchorId: 'recursive' }, {flags:'-i',anchorId:'interactive'}, {flags:'--one-file-system',anchorId:'filesystem'},{flags:'-I',anchorId:'interactive-once'}, {flags:'--interactive[=WHEN]',anchorId:'interactive-long'}] },
         { name: 'git', section: '1', options: [{ flags: '-C', anchorId: 'chdir', argument: 'DIR' }] },
         { name: 'git-rebase', section: '1', options: [] },
         { name: 'git-commit', section: '1', options: [{ flags: '-m, --message', anchorId: 'message', argument: 'MESSAGE' }] },
+        {name:'systemctl', section:'1', options:[]},
         { name: 'ip', section: '8', options: [] }, { name: 'ip-address', section: '8', options: [] }, {name:'ip-addrlabel', section:'8',options:[]},
         {name:'ssh', section:'1',options:[]}, {name:'ssh-add',section:'1',options:[]},
         {name:'openssl',section:'1ssl',options:[]}, {name:'openssl-x509',section:'1ossl',options:[]},
@@ -40,13 +42,13 @@ export async function explainFixture(documentsRead = 258) {
         ...['timeout','nice','nohup','time','command','exec','doas','echo'].map(name=>({name,section:'1',options:[]})),
         {name:'dd',section:'1',options:[]},
         {name:'truncate',section:'1',options:[{flags:'-s, --size',argument:'SIZE',anchorId:'size'}]},
-        {name:'mkfs.ext4',section:'8',options:[{flags:'-n',anchorId:'dry-run'}, {flags:'-L',anchorId:'label',argument:'LABEL'}]},
+        {name:'mke2fs',section:'8',options:[{flags:'-n',anchorId:'dry-run'}, {flags:'-L',anchorId:'label',argument:'LABEL'}]},
         {name:'shred',section:'1',options:[]},
-        {name:'rsync',section:'1',options:[{flags:'--delete',anchorId:'delete'}, {flags:'-n, --dry-run',anchorId:'dry-run'}]},
-        {name:'git-clean',section:'1',options:[...['f','n','d','i'].map(f=>({flags:`-${f}`,anchorId:f})),{flags:'--dry-run',anchorId:'dry'}]},
+        {name:'rsync',section:'1',options:[{flags:'-a',anchorId:'archive'},{flags:'--delete',anchorId:'delete'}, {flags:'-n, --dry-run',anchorId:'dry-run'}]},
+        {name:'git-clean',section:'1',options:[...['f','n','d','i','x','X'].map(f=>({flags:`-${f}`,anchorId:f})),{flags:'--dry-run',anchorId:'dry'},{flags:'-e',anchorId:'exclude',argument:'PATTERN'}]},
         { name: 'mysql', section: '1', options: [{ flags: '-u, --user', anchorId: 'user', argument: 'USER' }] },
         { name: 'bash', section: '1', options: [] },
-        { name: 'sudo', section: '1', options: [{ flags: '-u', anchorId: 'user', argument: 'USER' },{flags:'-i',anchorId:'login'}] },
+        { name: 'sudo', section: '1', options: [{ flags: '-u', anchorId: 'user', argument: 'USER' },{flags:'-i',anchorId:'login'},...['l','v','k','K','e'].map(f=>({flags:`-${f}`,anchorId:`mode-${f}`}))] },
         { name: 'env', section: '1', options: [] },
         { name: 'ssh_config', section: '5', options: [] }, { name: 'systemd.service', section: '5', options: [] },
         { name: 'errno', section: '3', options: [] },
@@ -59,10 +61,13 @@ export async function explainFixture(documentsRead = 258) {
         for (const row of optionFlagRows(spec.options)) await ctx.db.insert('manPageOptionFlags', { ...row, releaseId, pageId, nameNorm: spec.name, section: spec.section, anchorId: `${distro}-${row.anchorId}` });
         const symbols: SymbolInput[] = [];
         if (/^(git|ip|openssl)-/.test(spec.name)) symbols.push({ term: spec.name.replace('-', ' '), anchorId: '', excerpt: `Subcommand ${spec.name}`, kind: 'subcommand' });
+        if(spec.name==='git') symbols.push({term:'git commit',anchorId:'commands',excerpt:'Parent command definition',kind:'subcommand'});
+        if(spec.name==='systemctl') symbols.push(...symbolLayouts.find(layout=>layout.name==='systemctl')!.symbols.map(row=>({...row,kind:'subcommand' as const})));
         if (spec.name === 'ssh_config') symbols.push({ term: 'ForwardAgent', anchorId: 'ForwardAgent', excerpt: 'Forward authentication agent connections.', kind: 'config' });
         if (spec.name === 'systemd.service') symbols.push({ term: 'ExecStart=', anchorId: 'ExecStart', excerpt: 'Commands executed when this service starts.', kind: 'config' });
         if (spec.name === 'errno') symbols.push({ term: 'ENOSPC', anchorId: 'enospc', excerpt: 'No space left on device.', kind: 'errors' });
         if (spec.name === 'bash') for (const kind of ['pipeline', 'redirect', 'quoting', 'glob', 'substitution', 'subshell', 'list', 'assignment', 'expansion', 'processSubstitution']) symbols.push({ term: `shell:${kind}`, anchorId: `real-${kind}`, excerpt: `Shell ${kind}`, kind: 'shell' });
+        if(spec.name==='mke2fs') await ctx.db.insert('manPageAliases',{releaseId,datasetReleaseId:distro,name:'mkfs.ext4',section:'8',targetName:'mke2fs',targetSection:'8'});
         await insertSymbols(ctx, release, pageId, { ...spec, title: `${spec.name}(${spec.section})`, description: `Manual for ${spec.name}` }, symbols);
       }
     }
@@ -80,7 +85,7 @@ describe('bounded explain resolution', () => {
     const pipeline = await explain(t, "find . -name '*.log' -mtime +7 -print0 | xargs -0 rm -f");
     expect(pipeline.stages.map((s: {tokens: {kind: string;value: string}[]}) => s.tokens.find(t => t.kind === 'command')?.value)).toEqual(['find', 'xargs', 'rm']);
     expect(pipeline.stages[0].tokens.find((t: {value: string}) => t.value === '|').shell.anchor).toBe('real-pipeline');
-    expect(pipeline.stages[2].destructive[0].description).toContain('removes the paths supplied by xargs without prompting');
+    expect(pipeline.stages[2].destructive[0].description).toContain('requests removal of the paths supplied by xargs without prompting');
     expect(pipeline.shareUrl).toBe(`/explain?cmd=${encodeURIComponent(pipeline.input)}`);
     expect(pipeline.diagnostics).toEqual([]);
   });
@@ -229,18 +234,19 @@ describe('review regressions: explanation semantics', () => {
     expect((await explain(t,'ssh add')).stages[0].tokens.at(-1)).toMatchObject({kind:'argument',page:null});
   });
   it.each([
-    ['rm -rf build/','removes build/ and everything under it without prompting','ls -d'],
-    ['rm -i -f x','removes x without prompting','ls -d'], ['rm f','removes f.','ls -d'], ['find . | xargs rm','paths supplied by xargs','ls -d'],
+    ['rm -rf build/','requests removal of build/ with recursive directory traversal without prompting','ls -d'],
+    ['rm -i -f x','requests removal of x without prompting','ls -d'], ['rm f','requests removal of f.','ls -d'], ['find . | xargs rm','paths supplied by xargs','ls -d'],
     ['find . -exec rm {} +','each path substituted for {}','ls -d'],
-    ['find . -delete','deletes matching files','-print'],
-    ['dd if=input of=output','writes input data to output',null],
-    ['truncate -s 0 f','zero bytes',null],['shred f','overwrites the contents of f',null],
-    ['mkfs.ext4 /dev/sdb1','creates a filesystem on /dev/sdb1','add `-n`'],
-    ['rsync --delete source/ dest/','deletes destination entries','--dry-run'],
-    ['git clean -fd','untracked files and directories','-n'],
-    ['echo text &> f','opens f for output with truncation',null],
-    ['echo text >| f','opens f for output with truncation',null],
-    ['echo text >& f','opens f for output with truncation',null],
+    ['git -C dir clean -fd','in dir.','-n'], ['git clean -fX','ignored files','-n'],['git clean -fx','including ignored','-n'],
+    ['rm {}','removal of {}.', 'ls -d'],['xargs rm {}','{} and the paths supplied by xargs','ls -d'], ['xargs -I % rm %','each input line substituted for %','ls -d'],
+    ['find -L /srv -name x -delete','tree rooted at /srv.','-print'], ['find -P /data -delete','tree rooted at /data.','-print'],
+    ['find . -delete','requests deletion of matching files','-print'],
+    ['truncate -s 0 f','zero bytes',null],
+    ['mkfs.ext4 /dev/sdb1','creation of a filesystem on /dev/sdb1','add `-n`'],
+    ['git clean -fd','non-ignored untracked files and directories','-n'],
+    ['echo text &> f','requests output to f with truncation',null],
+    ['echo text >| f','requests output to f with truncation',null],
+    ['echo text >& f','requests output to f with truncation',null],
   ])('describes literal operation %s accurately',async(cmd,wording,dryRun)=>{
     const result=await explain(await explainFixture(),cmd);
     const notes=result.stages.flatMap((s:{destructive:{description:string;dryRun:string|null}[]})=>s.destructive);
@@ -249,6 +255,9 @@ describe('review regressions: explanation semantics', () => {
     if(dryRun) expect(notes.some((n:{dryRun:string|null})=>n.dryRun?.includes(dryRun))).toBe(true);
   });
   it.each([
+    'dd if=a of=b','dd if=a of=b count=0','dd if=a of=b seek=1','dd if=a of=b conv=notrunc','shred f','tar --remove-files f','rsync -a --delete a b','rsync --delete a b',
+    'rm -rf --one-file-system build/','rm -rf a{b,c}','mkfs.ext4 -L label /dev/sdb1','sudo -l rm -rf /','sudo -v rm -rf /','sudo -k rm -rf /','sudo -K rm -rf /','sudo -e rm -rf /',
+    'env - rm -f f','xargs -p rm -f','find . -delete -name x','git clean -fe pattern','rm -rf /','rm -rf .','rm -rf ..','rm -rf folder/.','echo > /dev/sda',
     'dd if=/dev/zero of=/dev/null','dd if=input of=/dev/stdout','dd if=input of=/dev/fd/2',
     'rm -rfi x','rm -f -i x','rm -f -I x','rm -f --interactive=always x',
     'truncate -s 0 -s +1G f','truncate -s +1G f',"truncate -s '>1G' f",'mkfs.ext4 -n /dev/sdb1','mkfs.ext4 -L label',
@@ -280,4 +289,35 @@ it.each([
   ['('.repeat(10)+'echo'+')'.repeat(10),'EXPLAIN_TOO_DEEP'],
 ])('returns structured Convex limit codes: %s', async (cmd,code) => {
   await expect(explain(await explainFixture(),cmd)).rejects.toMatchObject({data:{code}});
+});
+
+it('keeps wrapper children adjacent without moving list terminators, and preserves unknown kinds',async()=>{
+ const t=await explainFixture();
+ const result=await explain(t,'sudo rm f; echo done');
+ expect(result.stages.map((stage:{tokens:{value:string}[]})=>stage.tokens[0].value)).toEqual(['sudo','rm','echo']);
+ expect(result.stages[1].tokens.some((token:{value:string})=>token.value===';')).toBe(false);
+ for(const input of ['echo <<EOF\nrm f\nEOF','echo \\$(rm -rf /)']) {
+   const result=await explain(t,input);
+   expect(result.stages[0].tokens.at(-1).kind).toBe('unknown');
+ }
+});
+
+it('resolves parent-page COMMANDS definitions to their real section anchors', async()=>{
+ const t=await explainFixture(20);
+ const result=await explain(t,'systemctl restart nginx');
+ expect(result.stages[0].tokens[1]).toMatchObject({kind:'subcommand',value:'restart',page:{name:'systemctl',section:'1'},anchor:'unit-commands-introspection-and-modification'});
+ expect(result.stages[0].tokens[1].excerpt).toContain('Stop and then start');
+ const search=await t.query(api.queries.search,{distro:'debian',q:'systemctl restart',section:null,limit:20,offset:0});
+ expect(search.results[0]).toMatchObject({name:'systemctl',symbolKind:'subcommand',anchorId:'unit-commands-introspection-and-modification'});
+});
+
+it.each([
+ ['git clean -fd','git clean requests removal of non-ignored untracked files and directories in the current directory.'],
+ ['git clean -fX','git clean requests removal of ignored files in the current directory.'],
+ ['git clean -fx','git clean requests removal of untracked, including ignored files in the current directory.'],
+ ['git -C dir clean -fd','git clean requests removal of non-ignored untracked files and directories in dir.'],
+ ['find . -delete','find -delete requests deletion of matching files and empty directories in the tree rooted at the current directory.'],
+])('pins modeled wording exactly: %s',async(cmd,description)=>{
+ const result=await explain(await explainFixture(),cmd);
+ expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).map((n:{description:string})=>n.description)).toEqual([description]);
 });

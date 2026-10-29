@@ -9,6 +9,58 @@ MAX_SYMBOLS = 256
 COMMAND_FAMILIES = ("git", "ip", "openssl", "systemctl", "docker", "podman")
 
 
+# Exact aliases only: PROFILES and arbitrary prose headings are not categories.
+HEADING_KINDS = {
+    **dict.fromkeys(
+        ("ENVIRONMENT", "ENVIRONMENT VARIABLES", "ENVIRONMENT VARIABLE"), "environment"
+    ),
+    **dict.fromkeys(("FILES", "FILES AND DIRECTORIES", "CONFIGURATION FILES"), "files"),
+    **dict.fromkeys(("ERRORS", "ERROR NAMES", "LIST OF ERROR NAMES"), "errors"),
+    **dict.fromkeys(("COMMANDS", "SUBCOMMANDS", "SUBCOMMAND"), "subcommand"),
+}
+CONFIG_HEADINGS = {
+    "",
+    "DESCRIPTION",
+    "OPTIONS",
+    "DIRECTIVES",
+    "CONFIGURATION",
+    "SETTINGS",
+    "CONFIG DIRECTIVES",
+    "CONFIGURATION DIRECTIVES",
+    "GLOBAL PARAMETERS",
+    "MODULE PARAMETERS",
+    "MOUNT OPTIONS",
+    "CONFIGURATION OPTIONS",
+}
+
+
+def _formatted_lead(inlines: list) -> str:
+    if inlines and inlines[0].get("type") in ("strong", "emphasis", "code"):
+        return _text(inlines[0]).strip()
+    return ""
+
+
+def _config_terms(inlines: list) -> list[str]:
+    term = "".join(_text(inline) for inline in inlines).strip()
+    # Assignment placeholders are values, never part of a directive identity.
+    if "=" in term:
+        key = term.split("=", 1)[0].strip()
+        return (
+            [key + ("=" if term.endswith("=") else "")]
+            if re.fullmatch(r"[A-Za-z_][\w.-]{1,119}", key)
+            else []
+        )
+    terms = term.split(", ")
+    if all(re.fullmatch(r"[A-Za-z_][\w.-]{1,119}", t) for t in terms):
+        return terms
+    # Real resolv.conf terms begin with a styled keyword followed by prose;
+    # rsyncd.conf has complete styled multi-word parameter names.
+    lead = _formatted_lead(inlines)
+    if re.fullmatch(r"[a-z][a-z0-9_-]*(?: [a-z][a-z0-9_-]*){0,3}", lead):
+        return [lead]
+    return []
+
+
 def utf16_length(text: str) -> int:
     return len(text.encode("utf-16-le")) // 2
 
@@ -24,7 +76,7 @@ def _text(value: object) -> str:
         return ""
     if isinstance(value.get("text"), str):
         return value["text"]
-    return _text(value.get("inlines", value.get("definitionBlocks", [])))
+    return _text(value.get("inlines", value.get("definitionBlocks", value.get("items", []))))
 
 
 def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> list[dict[str, str]]:
@@ -61,7 +113,7 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
         add(f"{family} {subcommand}", "", description, "subcommand")
 
     def walk(blocks: list, heading: str = "", anchor: str = "", nested: bool = False) -> None:
-        for block in blocks:
+        for index, block in enumerate(blocks):
             if not isinstance(block, dict):
                 continue
             if block.get("type") == "heading":
@@ -69,23 +121,16 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
                 if (
                     block.get("level", 2) <= 2
                     or not heading
-                    or title in ("ENVIRONMENT", "FILES", "ERRORS")
+                    or title in HEADING_KINDS
+                    or title in CONFIG_HEADINGS
                 ):
                     heading = title
                 anchor = str(block.get("id", ""))
             elif block.get("type") == "definition_list":
-                kind = {"ENVIRONMENT": "environment", "FILES": "files", "ERRORS": "errors"}.get(
-                    heading
-                )
-                config_section = heading in (
-                    "",
-                    "DESCRIPTION",
-                    "OPTIONS",
-                    "DIRECTIVES",
-                    "CONFIGURATION",
-                    "SETTINGS",
-                ) or heading.endswith("SECTION OPTIONS")
-                if not kind and section.startswith("5") and config_section:
+                kind = HEADING_KINDS.get(heading)
+                if name == "environ" and section.startswith("7") and heading == "DESCRIPTION":
+                    kind = "environment"
+                if not kind and section.startswith("5") and heading in CONFIG_HEADINGS:
                     kind = "config"
                 for item in block.get("items", []):
                     if not isinstance(item, dict):
@@ -94,11 +139,16 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
                     target = item.get("id") or anchor
                     if kind and target and not nested:
                         if kind == "config":
-                            # A complete directive term, never the first word of prose or a flag.
-                            terms = term.split(", ")
+                            terms = _config_terms(item.get("termInlines", []))
+                        elif kind == "subcommand":
+                            lead = (
+                                _formatted_lead(item.get("termInlines", []))
+                                or term.split(" ", 1)[0]
+                            )
                             terms = (
-                                terms
-                                if all(re.fullmatch(r"[A-Za-z_][\w.-]{1,119}=?", t) for t in terms)
+                                [f"{name} {lead}"]
+                                if name in COMMAND_FAMILIES
+                                and re.fullmatch(r"[a-z][a-z0-9-]*", lead)
                                 else []
                             )
                         elif kind == "errors":
@@ -112,6 +162,30 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
                         for symbol in terms:
                             add(symbol, str(target), _text(item.get("definitionBlocks", [])), kind)
                     walk(item.get("definitionBlocks", []), heading, anchor, True)
+            elif block.get("type") == "paragraph" and not nested:
+                # DocBook/systemd emits a formatted term paragraph followed by
+                # an indented definition list. Use its real enclosing section ID.
+                following = blocks[index + 1] if index + 1 < len(blocks) else {}
+                if following.get("type") != "list" or not anchor:
+                    continue
+                inlines = block.get("inlines", [])
+                term = "".join(_text(inline) for inline in inlines).strip()
+                if (
+                    section.startswith("5")
+                    and heading in CONFIG_HEADINGS
+                    and re.fullmatch(r"[A-Za-z_][\w.-]+=(?:, [A-Za-z_][\w.-]+=)*", term)
+                ):
+                    for directive in term.split(", "):
+                        add(directive, anchor, _text(following.get("items", [])), "config")
+                elif HEADING_KINDS.get(heading) == "subcommand" and name in COMMAND_FAMILIES:
+                    lead = _formatted_lead(inlines)
+                    if re.fullmatch(r"[a-z][a-z0-9-]*", lead):
+                        add(
+                            f"{name} {lead}",
+                            anchor,
+                            _text(following.get("items", [])),
+                            "subcommand",
+                        )
             elif block.get("type") == "list":
                 for children in block.get("items", []):
                     walk(children, heading, anchor, nested)

@@ -195,3 +195,10 @@ release selection. These direct-query budgets exclude HTTP rate limiting,
 SSR/hydration and destination rendering; no explain UI is shipped in B5. The
 [JSON contract](explain-contract.md) documents unresolved and unsupported
 syntax, safety uncertainty and ingest dependencies.
+
+The round-2 supplement resolves `systemctl restart nginx` through the parent
+page COMMANDS symbol (5 document reads) and `mkfs.ext4 /dev/sdb1` through the
+mke2fs alias (4). Both make one call and zero blob reads. Assertions pin the
+parent section anchor and alias-specific inspection hint. Prior descriptors,
+tolerances and document counts remain unchanged; these cases also share the
+66-document whole-request ceiling.

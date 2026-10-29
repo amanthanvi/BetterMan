@@ -160,6 +160,7 @@ export function parseShell(input: string): ShellParse {
     }
     if (command < 0 || !stage.tokens[command] || ['operator', 'redirect', 'redirectTarget', 'comment'].includes(stage.tokens[command].kind)) continue;
     const token = stage.tokens[command];
+    if (token.kind === 'unknown') continue;
     if (token.dynamic || token.kind === 'glob') { token.kind = 'unknown'; continue; }
     token.kind = 'command';
     const name = token.value.split('/').at(-1)!;
@@ -178,7 +179,7 @@ export function parseShell(input: string): ShellParse {
         const parts = t.value.startsWith('--') ? [t.value.split('=', 1)[0]] : [...t.value.slice(1)].map(letter => `-${letter}`);
         let consumes = false, opaque = false;
         for (const [n, part] of parts.entries()) {
-          if ((name === 'env' && ['-S','--split-string'].includes(part)) || (name === 'sudo' && ['-s','-i','--shell','--login'].includes(part)) || (name === 'doas' && ['-s','-C'].includes(part)) || (name === 'command' && ['-v','-V'].includes(part)) || ['--help','--version'].includes(part)) opaque = true;
+          if ((name === 'env' && ['-S','--split-string'].includes(part)) || (name === 'sudo' && ['-s','-i','--shell','--login','-l','--list','-v','--validate','-k','--reset-timestamp','-K','--remove-timestamp','-e','--edit'].includes(part)) || (name === 'doas' && ['-s','-C'].includes(part)) || (name === 'command' && ['-v','-V'].includes(part)) || ['--help','--version'].includes(part)) opaque = true;
           if (WRAPPER_ARGUMENTS[name].has(part)) {
             consumes = t.value.startsWith('--') ? !t.value.includes('=') : n === parts.length - 1;
             break;
@@ -190,7 +191,8 @@ export function parseShell(input: string): ShellParse {
       }
       if (name === 'timeout' && end < stage.tokens.length) end++;
       if (end < stage.tokens.length && !['operator', 'redirect', 'comment'].includes(stage.tokens[end].kind)) {
-        const child = create(stage.id, 'wrapper'); child.tokens = stage.tokens.splice(end);
+        const boundary = stage.tokens.findIndex((token, i) => i >= end && token.kind === 'operator');
+        const child = create(stage.id, 'wrapper'); child.tokens = stage.tokens.splice(end, (boundary < 0 ? stage.tokens.length : boundary) - end);
       }
     } else if (name === 'find') {
       let after = command;
@@ -205,5 +207,12 @@ export function parseShell(input: string): ShellParse {
       }
     }
   }
+  const ordered: ShellStage[] = [];
+  const visit = (stage: ShellStage) => {
+    ordered.push(stage);
+    for (const child of result.stages.filter(child => child.parent === stage.id)) visit(child);
+  };
+  result.stages.filter(stage => stage.parent === null).forEach(visit);
+  result.stages = ordered;
   return result;
 }

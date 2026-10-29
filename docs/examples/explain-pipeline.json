@@ -200,7 +200,7 @@
     {
       "destructive": [
         {
-          "description": "rm -f removes the paths supplied by xargs without prompting.",
+          "description": "rm requests removal of the paths supplied by xargs without prompting.",
           "dryRun": "run the line with `ls -d` in place of `rm` first"
         }
       ],

@@ -203,6 +203,8 @@ export async function createExplainFixture(onCall: () => void) {
       { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' }] },
       { name: 'git', section: '1', options: [] },
       { name: 'git-commit', section: '1', options: [{ flags: '-m', anchorId: 'message', argument: 'MESSAGE' }] },
+      { name: 'systemctl', section: '1', options: [] },
+      { name: 'mke2fs', section: '8', options: [] },
       { name: 'ssh_config', section: '5', options: [] },
       { name: 'bounded', section: '1', options: Array.from({ length: 100 }, (_, i) => ({ flags: `--limit${i}`, anchorId: `limit${i}` })) },
     ]
@@ -216,6 +218,8 @@ export async function createExplainFixture(onCall: () => void) {
           await ctx.db.insert('manPageSymbols', { releaseId, pageId: targetId, name, section: '5', title: `${name}(5)`, description: 'Client configuration', term: 'ForwardAgent', termNorm: 'forwardagent', anchorId: 'ForwardAgent', excerpt: 'Forward authentication agent connections.', kind: 'config' })
         }
       }
+      if (spec.name === 'systemctl') await ctx.db.insert('manPageSymbols',{releaseId,pageId,name:'systemctl',section:'1',title:'systemctl(1)',description:'Control the system manager',term:'systemctl restart',termNorm:'systemctl restart',anchorId:'unit-commands-introspection-and-modification',excerpt:'Stop and then start one or more units specified on the command line.',kind:'subcommand'})
+      if (spec.name === 'mke2fs') await ctx.db.insert('manPageAliases',{releaseId,datasetReleaseId,name:'mkfs.ext4',section:'8',targetName:'mke2fs',targetSection:'8'})
       if (spec.name === 'git-commit') await ctx.db.insert('manPageSymbols', { releaseId, pageId, name: spec.name, section: '1', title: 'git-commit(1)', description: 'Commit changes', term: 'git commit', termNorm: 'git commit', anchorId: '', excerpt: 'Commit changes', kind: 'subcommand' })
     }
     const tar = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'tar').eq('section', '1')).unique()

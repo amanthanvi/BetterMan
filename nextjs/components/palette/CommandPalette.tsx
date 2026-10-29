@@ -525,7 +525,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                         itemLabel(item)
                       )}
                     </div>
-                    {item.kind === 'page' && item.anchorId ? (
+                    {item.kind === 'page' && (item.anchorId || item.symbolKind) ? (
                       <span className="shrink-0 small-caps text-sm text-ink-3">{item.match === 'option' ? 'flag' : item.symbolKind ? ({config:'directive',environment:'environment',files:'file',errors:'errno',subcommand:'subcommand',shell:'shell'} as const)[item.symbolKind] : 'definition'}</span>
                     ) : null}
                     {item.kind === 'page' ? (

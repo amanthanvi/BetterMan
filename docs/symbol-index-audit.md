@@ -21,3 +21,32 @@ The targeted audit found no remaining config terms equal to `The`, `f`, `pre`, `
 Cached HTML manifest SHA-256:
 
 `7921b48b1301f81501b7eb75aa59ad03d4032c6f514ae71691e6ecadc61ca5f3`
+
+## Round 2: recall and real document layouts
+
+Compared `7981298` with the round-2 extractor on the identical 18,529-page corpus; zero parse failures. Explicit heading synonyms restore environment/file categories without substring matching. Styled directive terms retain multi-word rsyncd.conf keys, strip assignment values, and distinguish a leading resolv.conf keyword from accompanying prose. Paragraph/list term-definition pairs use the existing enclosing section anchor when there is no term ID. Real selected AST fixtures record their source HTML hashes in `ingestion/tests/fixtures/symbol-layouts.json`.
+
+| Distro | Category | Before | After |
+| --- | --- | ---: | ---: |
+| debian | environment | 464 | 747 |
+| debian | files | 876 | 896 |
+| debian | errors | 3,884 | 4,011 |
+| debian | config | 851 | 1,551 |
+| debian | subcommand | 236 | 308 |
+| debian | shell | 10 | 10 |
+| ubuntu | environment | 478 | 698 |
+| ubuntu | files | 810 | 830 |
+| ubuntu | errors | 3,617 | 3,744 |
+| ubuntu | config | 762 | 1,631 |
+| ubuntu | subcommand | 233 | 304 |
+| ubuntu | shell | 10 | 10 |
+| fedora | environment | 450 | 632 |
+| fedora | files | 671 | 691 |
+| fedora | errors | 2,086 | 2,213 |
+| fedora | config | 759 | 1,346 |
+| fedora | subcommand | 240 | 312 |
+| fedora | shell | 10 | 10 |
+
+Totals: Debian **6,321 → 7,523**, Ubuntu **5,910 → 7,217**, Fedora **4,216 → 5,204** (all **16,447 → 19,944**). Debian environment symbols are **747**, above the original 714 reference. Targeted checks retain the round-1 exclusions (`The`, `f`, `pre`, `commit`, nested ssh_config values and single-letter config terms).
+
+Real Debian layout results: systemd.service(5) **41** symbols including ExecStart=; errno(3) **127** including ENOSPC; environ(7) **11** including HOME; systemctl(1) **72** parent-page command terms including restart; resolv.conf(5) includes nameserver/search; tmpfs(5) includes size; rsyncd.conf(5) includes motd file/path. Definition-item IDs are retained when present; paragraph/list definitions use actual section IDs, rather than inventing per-term anchors. Environment regressions cover less, python3, rsync RSYNC_RSH, ps, and find POSIXLY_CORRECT. The regression fixture is selected from actual parsed blocks, not a synthetic definition-list substitute.
