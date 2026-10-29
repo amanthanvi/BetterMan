@@ -160,6 +160,7 @@ Also verify in a real browser:
 ## Failure triage
 
 - Build failure: inspect the `deploy_production` job in the `deploy-vercel` workflow and Vercel build logs; reproduce with `pnpm next:build`.
+- Convex push stopped at "This push will create the following indexes on large tables": automatic deploys keep Convex's large-index check. After the change has been reviewed, rerun `deploy-vercel` manually for the same `main` SHA with `confirm_large_indexes` checked. Convex then builds the indexes during the push, while the current functions keep serving, and switches when the backfill completes. That run's job timeout rises from 20 to 90 minutes. For an index too large to build within that time, stage it (`staged: true`) in one release and use it in the next.
 - Convex deploy/check failure: verify `CONVEX_DEPLOY_KEY` and the `CONVEX_URL` GitHub environment variable, then run `CONVEX_URL=<production-url> pnpm convex:prod-check` locally. Do not continue to Vercel until the data, search, page, and metadata checks pass.
 - Missing environment: verify the protected GitHub `production` environment secrets and `CONVEX_URL` variable, plus the Vercel production Convex URL (`NEXT_PUBLIC_CONVEX_URL` or `CONVEX_URL`). The deploy script enforces `PUBLIC_BASE_URL=https://betterman.sh` on each production deployment.
 - Smoke failure: use `vercel curl` against the immutable deployment URL before changing the production alias.

@@ -11,6 +11,11 @@ on:
         description: "Full 40-character SHA from main history to deploy or roll back to"
         required: true
         type: string
+      confirm_large_indexes:
+        description: "Build new indexes on large Convex tables during this deploy (it waits for the backfill)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -82,7 +87,8 @@ jobs:
   deploy_production:
     needs: resolve_revision
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # A confirmed large-index push waits for Convex to backfill before it completes.
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_large_indexes && 90 || 20 }}
     concurrency:
       group: deploy-vercel-production
       cancel-in-progress: false
@@ -154,6 +160,7 @@ jobs:
         shell: bash
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          BETTERMAN_CONFIRM_LARGE_INDEXES: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_large_indexes }}
         run: |
           set -euo pipefail
 
@@ -161,9 +168,16 @@ jobs:
             echo "CONVEX_DEPLOY_KEY is required in the protected production environment." >&2
             exit 1
           fi
+          # Convex stops a push that creates indexes on large tables. Only a manual
+          # deploy may confirm one; automatic deploys keep the check.
+          large_indexes=""
+          if [[ "$BETTERMAN_CONFIRM_LARGE_INDEXES" == "true" ]]; then
+            large_indexes="--skip-large-indexes-check"
+          fi
           pnpm exec convex deploy \
             --typecheck enable \
             --codegen disable \
+            ${large_indexes:+"$large_indexes"} \
             --message "GitHub Actions ${BETTERMAN_DEPLOY_SHA}"
           pnpm exec convex run --prod related:backfillActiveReleases '{}'
 
