@@ -21,7 +21,7 @@ page). Both are set like pages of a printed manual.
    cards, no enclosing boxes and no rounded corners in the document flow. The
    `added` tint is the one exception, and it is a tint, never a box.
 3. **Only floating overlays get chrome.** Dialog, drawer, command palette, find
-   bar and skip link carry one square `border-rule-2` edge, the `raised` fill
+   bar, skip link and explain's definition card carry one square `border-rule-2` edge, the `raised` fill
    and `shadow-overlay`. The sticky header and section toolbar are `paper` with
    a hairline under them.
 4. **One red.** `accent` marks selection, focus and warnings: the focus ring,
@@ -170,6 +170,34 @@ Light is paper; dark is the same plate in warm ink on black.
   without generated examples shows its own EXAMPLES there. Generated and tldr
   text is rendered as text, never markup (`docs/generated-layer.md`).
 
+## Explain
+
+`/explain?cmd=…` (`app/explain/page.tsx`) is server-rendered and complete
+without JavaScript; it sits outside the `(site)` group so no loading boundary
+streams it. There is no display heading and no running head: the `h1` is
+visually hidden. In every width the order is the command (a wrapping mono
+`textarea`, Enter explains), the reading, then the numbered token grid, then
+the numbered definitions and the safety note.
+
+- **Reading** (`ExplainVoice.tsx`, the added tint): each resolved command's
+  NAME line in input order, and any engine diagnostics with the sentence that
+  safety notes are withheld. Nothing generated.
+- **Token grid** (`.bm-tks`): number above, token in mono, kind in small caps
+  below, on a rule that says the kind (heavy for commands, solid for flags,
+  dashed for arguments, dotted for shell syntax). A cluster is one cell whose
+  flags are separate links. Every link points at its note (`#x-<n>`), so without
+  JavaScript the grid is a table of contents.
+- **Definition card** (`DefinitionCard.tsx`, an overlay): with JavaScript a
+  token opens its one note, cloned from the list, in a card with a close
+  control; Escape closes it. Under `md` it pins under the site header while the
+  grid and notes scroll.
+- **Definitions:** serif excerpts from the manual, the source as a quiet link to
+  the exact `page#anchor`, and three portability cells on every flag that has
+  data (with the legend once). Unresolved tokens say no definition was matched.
+- **Safety note** (`aside` "Safety note", the added tint with a 2px red rule at
+  its edge, the one red in the note): "Before you run this" and the engine's
+  fixed facts verbatim. The page adds no claim (`docs/explain-contract.md`).
+
 ## Component vocabulary
 
 `components/ui/`: `Button` (outline = underlined text, ghost = quiet ink,
@@ -217,7 +245,11 @@ combinator.
   "Other distributions" / "Did you mean" (man page 404), complementaries "See
   also" / "Related commands", headings "Browse" and "Search the manual", TOC
   active link `aria-current="location"`, link "Report a problem" (man page
-  footer). Labels may render in small caps; name matching is case-insensitive.
+  footer), and on explain: search form "Explain a command line", textbox
+  "Command line to explain", region "Reading", list "Tokens" (a cluster's flags
+  are its links), list "Definitions" (items `#x-<n>`), region "Definition" with
+  button "Close definition", complementary "Safety note". Labels may render in
+  small caps; name matching is case-insensitive.
 - **Robustness:** scrollable `<pre>` and table wrappers take `tabindex="0"`
   with a label; lists hold only `<li>`; no interactive element nests another;
   controls that need JavaScript are hidden without it.
@@ -236,6 +268,7 @@ combinator.
     page's off-screen blocks finish laying out) · `[` / `]` previous / next section ·
     `b` contents sidebar (drawer under `lg`) · `p` reading preferences · `m`
     bookmark. In the find field, Enter / Shift+Enter step through matches.
+  - On explain, `/` focuses the command field (it carries `data-bm-page-search`).
   - In the contents, `j` / `k` and the arrow keys move between entries.
   - Single-key shortcuts are ignored while typing in a field or while any modal
     (`aria-modal="true"`) is open.

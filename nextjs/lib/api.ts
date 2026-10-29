@@ -5,6 +5,7 @@ import type { FunctionReturnType } from 'convex/server'
 import type { Distro } from './distro'
 import type { AmbiguousPageResponse, ManPage, ManPageResponse } from './docModel'
 import { getConvexClient } from './convexClient'
+import { ConvexError } from 'convex/values'
 const PUBLIC_REVALIDATE_SECONDS = 60 * 60
 const SEARCH_REVALIDATE_SECONDS = 5 * 60
 const SITEMAP_CHUNK_ITEMS = 5000
@@ -618,4 +619,37 @@ export async function fetchPackage(opts: { distro: Distro; name: string; cursor?
 
 export async function fetchPortability(opts: { distro: Distro; name: string; section: string; offset: number }) {
   return await mapConvexError(() => convex().query(api.portability.getDetails, opts))
+}
+
+export type { Explanation } from '../../convex/explain'
+export type ExplainResult =
+  | { kind: 'ok'; data: import('../../convex/explain').Explanation }
+  | { kind: 'limit' }
+  | { kind: 'unavailable' }
+
+const EXPLAIN_LIMIT_CODES = new Set(['EXPLAIN_INPUT_TOO_LONG', 'EXPLAIN_TOO_MANY_TOKENS', 'EXPLAIN_TOO_MANY_STAGES', 'EXPLAIN_TOO_DEEP'])
+
+/** Uncached: a command line can hold anything the reader pasted. */
+export async function fetchExplanation(opts: { distro: Distro; cmd: string }): Promise<ExplainResult> {
+  try {
+    return { kind: 'ok', data: await mapConvexError(() => convex().query(api.explain.explain, opts)) }
+  } catch (error) {
+    if (isReleaseNotFoundError(error)) throw error
+    const data = error instanceof ConvexError ? error.data : null
+    const code = data && typeof data === 'object' && 'code' in data ? data.code : null
+    if (typeof code === 'string' && EXPLAIN_LIMIT_CODES.has(code)) return { kind: 'limit' }
+    return { kind: 'unavailable' }
+  }
+}
+
+export type PortabilityCells = NonNullable<FunctionReturnType<typeof api.portability.getCells>>
+
+/** The three-system cells for the options one explained line uses, per manual. */
+export async function fetchPortabilityCells(opts: { distro: Distro; name: string; section: string; anchors: string[] }): Promise<PortabilityCells | null> {
+  try {
+    return await mapConvexError(() => convex().query(api.portability.getCells, opts))
+  } catch {
+    // Cells are enrichment: without them the flags still explain.
+    return null
+  }
 }

@@ -25,3 +25,33 @@ export const getDetails = query({
       nextOffset: rows.length && nextOffset < main.portability.available ? nextOffset : null };
   },
 });
+
+/** Most option anchors one explained line asks about for a single manual. */
+export const MAX_CELL_ANCHORS = 64;
+
+/**
+ * The three GNU/Linux · FreeBSD · macOS cells for specific options of one manual,
+ * read from the compact summary only (no detail chunk). An anchor outside the
+ * summary's loaded rows is `l` (not loaded), never treated as portable.
+ */
+export const getCells = query({
+  args: { distro: distroValidator, name: v.string(), section: v.string(), anchors: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    if (args.anchors.length > MAX_CELL_ANCHORS) throw new Error("TOO_MANY_PORTABILITY_ANCHORS");
+    const release = await requireActiveRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro });
+    const page = await pageByNameAndSection(ctx, { releaseId: release._id, name: normalizeName(args.name), section: normalizeSection(args.section) });
+    if (!page || (!release.derivedCompletedKey && !release.derivedInitialized)) return null;
+    const row = await ctx.db.query("manPageDerived").withIndex("by_locale_and_distro_and_name_and_section", (q) => q.eq("locale", release.locale).eq("distro", args.distro).eq("name", page.name).eq("section", page.section)).unique();
+    if (!row || row.cleanupPending || row.sourceContentSha256 !== page.contentSha256 || !page.optionSignatureHash || row.sourceSignatureHash !== page.optionSignatureHash) return null;
+    const { portability } = decodeSummary(row.summaryJson);
+    const loaded = new Map(portability.rows);
+    const complete = portability.rows.length >= portability.total;
+    const cells: Record<string, string> = {};
+    for (const anchor of new Set(args.anchors)) {
+      const codes = loaded.get(anchor);
+      if (codes) cells[anchor] = codes;
+      else if (!complete) cells[anchor] = "lll";
+    }
+    return { systems: portability.systems, cells };
+  },
+});

@@ -67,7 +67,7 @@ Plausible's tracker owns pageviews, so do not add a second route observer.
 | --- | --- | --- |
 | `palette opened` | none | Once per successful palette open, including keyboard opens and reopens. |
 | `pref changed` | `axis` only: `fontSize`, `fontFamily`, `lineHeight`, `columnWidth`, `codeTheme` | Preference controls and reset, once per changed axis. Reselecting a value, hydration and storage synchronization do not count. |
-| `explain used` | none | Reserved for the future explain UI. |
+| `explain used` | none | Once per rendered explanation on `/explain`. The command line is never sent. |
 | `portability toggled` | none | Reserved for the future portability UI. |
 | `composer copied` | none | Reserved for the future composer, not ordinary code-block copying. |
 | `concept opened` | none | Reserved for the future concept UI. |

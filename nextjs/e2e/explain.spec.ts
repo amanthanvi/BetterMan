@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('explain: static seeded command resolves exact option anchors over HTTP', async ({ request }) => {
+test('explain: static seeded command resolves exact option anchors over HTTP, and its share URL is the page', async ({ request }) => {
   const cmd = 'tar -c build/'
   const response = await request.get('/api/v1/explain', {params: {cmd}})
   expect(response.status()).toBe(200)
@@ -10,9 +10,12 @@ test('explain: static seeded command resolves exact option anchors over HTTP', a
   expect(result.shareUrl).toBe(`/explain?cmd=${encodeURIComponent(cmd)}`)
   const options = result.stages.flatMap((s: {tokens: {kind:string;anchor:string|null}[]}) => s.tokens).filter((t: {kind:string}) => t.kind === 'option')
   expect(options.map((t: {anchor:string|null}) => t.anchor)).toEqual(['opt-create'])
+  // The share URL is the explain page: HTML, private, and carrying the line it explains.
   const share = await request.get(result.shareUrl)
   expect(share.status()).toBe(200)
-  expect((await share.json()).input).toBe(cmd)
+  expect(share.headers()['content-type']).toContain('text/html')
+  expect(share.headers()['cache-control']).toContain('no-store')
+  expect(await share.text()).toContain('>tar -c build/</textarea>')
 })
 
 test('explain: production Convex limit codes survive redaction as HTTP 400', async ({ request }) => {

@@ -197,7 +197,7 @@ The explain resolver additionally caps 64 indexed lookups and shares one
 64-document allowance across all stages (each query reserves its maximum) and 4,096 characters / 128 lexical tokens / 24 stages / eight nested
 levels. Its conservative whole-query ceiling is 66 document reads including
 release selection. These direct-query budgets exclude HTTP rate limiting,
-SSR/hydration and destination rendering; no explain UI is shipped in B5. The
+SSR/hydration and destination rendering; the C5 explain page is not a measured browser route. The
 [JSON contract](explain-contract.md) documents unresolved and unsupported
 syntax, safety uncertainty and ingest dependencies.
 

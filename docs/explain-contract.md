@@ -1,8 +1,9 @@
 # Static command explanations (B5 / C5 contract)
 
-`GET /api/v1/explain?cmd=<URL-encoded shell line>&distro=debian` and the
-shareable `GET /explain?cmd=...` return the same version-1 JSON. The latter
-currently serves JSON; C5 can replace that route with its interface. Responses
+`GET /api/v1/explain?cmd=<URL-encoded shell line>&distro=debian` returns the
+version-1 JSON. The `shareUrl`, `GET /explain?cmd=...`, is the explain page
+(C5): server-rendered HTML that renders this same response, complete without
+JavaScript, `noindex` and uncached. Responses
 are private/no-store because commands can contain sensitive values. Validation
 precedes the existing search rate limiter; invalid input returns 400, a spent
 or unavailable limiter returns 429, and unavailable data returns 503. No shell,
@@ -229,3 +230,23 @@ Interactive xargs, nested xargs input dependencies, and doas after environment
 clearing receive diagnostics and no facts/hints. Token explanations remain.
 See the [recorded GNU admission oracle](../scripts/explain-differential/README.md)
 for generation, coverage and its deliberately bounded evidentiary scope.
+
+## The explain page (C5)
+
+`/explain` renders the engine's response and adds no claim of its own. Tokens
+appear in input order, numbered from 1. Tokens one typed word produced (a
+cluster such as `-xzvf`, or `-C/srv`) share one grid cell, with each flag its own
+link to its own note. A note shows the engine's kind, excerpt and source; the
+source link is the exact `page#anchor` the engine returned, or the shell
+reference for syntax. The reading lists each resolved command's NAME line.
+Diagnostics are shown as returned, with a sentence that safety notes are
+withheld. The safety note lists the collected `destructive` facts verbatim;
+hint backticks become `<code>` through text splitting, never markup.
+
+Portability cells are not in this response (`portability` stays null). The
+page reads them separately with `portability.getCells({distro, name, section,
+anchors})`: three reads per manual (release, page, compact derived summary), at
+most 64 anchors, and at most four manuals per line. Anchors past the summary's
+loaded rows are `lll` (not loaded); anchors a complete summary lacks are
+omitted. Explain shows the cells on every flag that has them, including fully
+available ones, with a legend that says they show availability only.
