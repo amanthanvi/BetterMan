@@ -145,6 +145,8 @@ class GenerationStats:
     rejected_examples: Counter[str] = field(default_factory=Counter)
     invalid_responses: Counter[str] = field(default_factory=Counter)
     failed_pages: int = 0
+    finish_reasons: Counter[str] = field(default_factory=Counter)
+    content_shapes: Counter[str] = field(default_factory=Counter)
 
 
 def _estimate_tokens(messages: list[dict[str, str]]) -> int:
@@ -157,7 +159,7 @@ class Generator:
         provider: Provider,
         governor: BudgetGovernor,
         *,
-        max_output_tokens: int = 700,
+        max_output_tokens: int = 2048,
         max_attempts: int = 2,
         today: Callable[[], str] = lambda: datetime.now(UTC).date().isoformat(),
         sleep: Callable[[float], None] = time.sleep,
@@ -270,8 +272,15 @@ class Generator:
             part.prompt_tokens += completion.prompt_tokens
             part.completion_tokens += completion.completion_tokens
             part.usd += completion.billed_usd or 0.0
+            self._count("finish_reasons", completion.finish_reason)
+            self._count("content_shapes", completion.content_shape)
             parsed = parse_response(completion.text, name=page.name)
             for problem in parsed.problems:
+                if problem == "response is not JSON":
+                    problem = (
+                        f"{problem} (finish_reason={completion.finish_reason}, "
+                        f"content_shape={completion.content_shape})"
+                    )
                 self._count("invalid_responses", problem)
             summary = summary or parsed.summary
             phrases = phrases or parsed.task_phrases
@@ -311,14 +320,32 @@ class Generator:
         return part
 
 
+# Verifier problems can quote model-written command text. Logged counters use
+# these fixed categories; only the retry prompt sees the full problem.
+_REASONS = (
+    ("unknown flag", "unknown flag"),
+    ("does not run", "does not run the command"),
+    ("does not start with", "does not run the command"),
+    ("wrapper prefix", "wrapper prefix"),
+    ("placeholder in command position", "placeholder in command position"),
+    ("placeholder inside flag", "placeholder inside flag"),
+    ("placeholder used as a flag", "placeholder used as a flag"),
+    ("wrapped invocation", "wrapped invocation"),
+    ("indirect invocation", "indirect invocation"),
+    ("unsupported shell syntax", "unsupported shell syntax"),
+    ("more than one command", "more than one command"),
+    ("redirection", "redirection"),
+    ("variable assignment", "variable assignment"),
+    ("unsafe command", "unsafe command"),
+    ("control characters", "control characters"),
+)
+
+
 def _reason(problem: str) -> str:
-    if problem.startswith("unknown flag"):
-        return "unknown flag"
-    if problem.startswith(("does not run", "does not start with")):
-        return "does not run the command"
-    if problem.startswith("wrapper prefix"):
-        return "wrapper prefix"
-    return problem
+    for prefix, reason in _REASONS:
+        if problem.startswith(prefix):
+            return reason
+    return "other"
 
 
 MAX_FLAG_USAGE_ROWS = 64

@@ -158,7 +158,7 @@ def parse_response(text: str, *, name: str) -> GeneratedText:
     if not isinstance(data, dict):
         return GeneratedText(None, [], [], ["response is not a JSON object"])
     unknown = set(data) - {"summary", "examples", "taskPhrases"}
-    problems = [f"unexpected keys: {', '.join(sorted(unknown))}"] if unknown else []
+    problems = ["unexpected keys"] if unknown else []
     summary, summary_problem = _summary(data.get("summary"), name)
     examples, example_problems = _examples(data.get("examples", []))
     phrases, phrase_problem = _phrases(data.get("taskPhrases"))

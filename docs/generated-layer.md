@@ -12,7 +12,7 @@ machine, stored by page content hash and read with the page.
 
 | Source | Label | What it is | Check |
 | --- | --- | --- | --- |
-| `page` | from EXAMPLES | The manual's own EXAMPLES section: code blocks, mdoc `.Dl` lines and command-shaped `.TP` terms, with the paragraph before each as its description | Shown as written. Only examples whose flags verify count toward flag usage |
+| `page` | from EXAMPLES | The manual's own EXAMPLES section: code blocks, mdoc `.Dl` lines and command-shaped `.TP` terms, with the preceding paragraph for code blocks or the definition body for tagged commands as its description | Shown as written. Only examples whose flags verify count toward flag usage |
 | `tldr` | tldr-pages | [tldr-pages](https://github.com/tldr-pages/tldr), pinned to one commit, platform page before `common/` | Every flag in every segment that runs this page's command must exist in this page's options table, or the example is dropped. Human-curated pipelines may stay |
 | `generated` | generated · verified | Model-written examples, only to fill the gap to three | Exactly one simple command that runs this page's command, then the same flag verifier, a schema check, a duplicate check and an unsafe-shape check |
 
@@ -211,7 +211,9 @@ without options get a summary and task phrases but no examples.
 Each row is keyed by the page's raw-source content hash. A run skips a page
 whose hash already has generated text, so text is regenerated only when the
 page changes. `--refresh-prompt` regenerates rows made with an older prompt
-version, deliberately. Identical pages in other releases or distros reuse the
+version, deliberately. `--refresh-page --no-llm` rebuilds deterministic page
+examples for existing selected rows without regenerating model text; suppressed
+parts remain suppressed. Identical pages in other releases or distros reuse the
 row. Variants with different hashes need their own run (`--distro`).
 
 ## Budget governor
@@ -270,14 +272,32 @@ generated parts within one run or on an operator's machine.
 
 ## Cost model
 
+The 2,048-token output ceiling gives headroom for the accepted schema: a
+240-character summary, five examples of up to 160-character descriptions and
+300-character commands, five 60-character phrases, and JSON syntax. Tokenization,
+escaping and reasoning may consume more; this is not a guaranteed fit. The old
+700-token ceiling could truncate a long response, but the first run did not
+record finish reasons, so truncation is unproven. The governor reserves the
+actual ceiling at peak prices on every attempt. At 830 input tokens the peak
+reservation rises from $0.001089 to $0.002707 per request; ordinary spend is
+based on reported usage, not the ceiling. The estimated 450 output tokens and
+cost table below have not been remeasured.
+
+[DeepSeek's API documentation](https://api-docs.deepseek.com/api/create-chat-completion)
+describes `length`, separate `reasoning_content`, and a direct-API thinking
+switch. [OpenCode Go](https://opencode.ai/docs/go/) documents its compatible
+endpoint but does not confirm that it forwards that switch for this model, so
+we do not send it. The next live run must establish the actual failure shapes.
+
+
 Go's DeepSeek V4.1 Flash prices per million tokens: $0.15 input, $0.60 output,
 $0.003 cached input, off-peak; double at peak.
 
 | Term | Value | Basis |
 | --- | --- | --- |
 | Input tokens per request | 830 | 635 measured over Debian's indexed tier (characters / 4), plus 30% for tokenizer differences |
-| Output tokens per request | 450 | JSON with a summary, up to five examples and five phrases; `max_tokens` is 700 |
-| Requests per page | 1.25 | One retry for about a quarter of pages; unmeasured until a live run |
+| Output tokens per request | 450 | JSON with a summary, up to five examples and five phrases; `max_tokens` is 2,048 |
+| Requests per page | 1.25 | Planning assumption; the first live sample made 59 requests for 50 pages (1.18) |
 | Cost per page | $0.00049 | (830 × 0.15 + 450 × 0.60) / 10⁶ × 1.25 |
 
 | Pass | Pages | Cost | Requests | Time at 20 req/min |
@@ -292,8 +312,7 @@ request rate before money: at 20 requests per minute a 5 h window spends about
 $2.40. A first full pass at the defaults spreads over about two weeks of
 manual and scheduled runs; raising `BETTERMAN_GEN_RPM` and concurrency
 shortens it, and the weekly cap ($20 at half share, about 40,000 pages) then
-becomes the limit. No live request was made for this estimate: latency,
-retries and real token counts are unmeasured.
+becomes the limit. The first live sample made 59 requests for 50 pages; its aggregate cost was $0.02. Actual output token counts and the reason for invalid JSON were not retained, so the estimate remains provisional.
 
 Switching to the direct DeepSeek API, or any other provider, is a spend change
 that needs owner sign-off (`docs/roadmap/betterman-2.md`).

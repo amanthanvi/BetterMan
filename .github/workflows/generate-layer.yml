@@ -40,6 +40,10 @@ on:
         description: Generate model text (off writes page and tldr examples only)
         type: boolean
         default: true
+      refresh_page:
+        description: Rebuild page and tldr examples on rows that already exist (pair with llm off for no model calls)
+        type: boolean
+        default: false
   schedule:
     # 12:00 UTC on the 2nd and 9th, after the monthly ingest on the 1st and
     # outside Go's weekday peak hours. The second run resumes a paused pass.
@@ -109,6 +113,7 @@ jobs:
           # Scheduled runs write when the key exists; manual runs default to dry.
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
           LLM: ${{ github.event_name != 'workflow_dispatch' || inputs.llm }}
+          REFRESH_PAGE: ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_page && 'true' || 'false' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -122,6 +127,7 @@ jobs:
             --work "$RUNNER_TEMP/work"
           if [ -n "$LIMIT" ]; then set -- "$@" --limit "$LIMIT"; fi
           if [ "$LLM" != "true" ]; then set -- "$@" --no-llm; fi
+          if [ "$REFRESH_PAGE" = "true" ]; then set -- "$@" --refresh-page; fi
           if [ -z "${OPENCODE_GO_API_KEY:-}" ]; then
             echo "::notice::OPENCODE_GO_API_KEY is not set; running as a dry run."
             set -- "$@" --dry-run

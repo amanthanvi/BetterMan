@@ -116,8 +116,12 @@ def _flat(blocks: Iterable[dict]) -> Iterable[dict]:
         if block.get("type") == "definition_list":
             for item in block.get("items", ()):
                 term = inline_text(item.get("termInlines", ()))
-                yield {"type": "_term", "text": term}
-                yield from _flat(item.get("definitionBlocks", ()))
+                body = item.get("definitionBlocks", ())
+                first = body[0] if body and body[0].get("type") == "paragraph" else None
+                yield {"type": "_term", "text": term, "description": first}
+                if first is not None:
+                    yield {**first, "type": "_definition_description"}
+                yield from _flat(body[1:] if first is not None else body)
         elif block.get("type") == "list":
             for item in block.get("items", ()):
                 yield from _flat(item)
@@ -134,8 +138,14 @@ def page_examples(page: PageInput) -> tuple[list[Example], Counter[str]]:
     examples: list[Example] = []
     flags: Counter[str] = Counter()
     context = ""
+    skip_description = False
     for block in _flat(section_blocks(page.doc, EXAMPLE_HEADINGS)):
         kind = block.get("type")
+        if kind == "_definition_description":
+            if skip_description:
+                skip_description = False
+                continue
+            kind = "paragraph"
         if kind == "code_block":
             text = str(block.get("text", ""))
         elif kind in {"_term", "paragraph"}:
@@ -153,6 +163,13 @@ def page_examples(page: PageInput) -> tuple[list[Example], Counter[str]]:
                 continue
         else:
             continue
+        if kind == "_term":
+            # A term's own body describes it; without one, keep the
+            # paragraph that came before, as for other layouts.
+            description_block = block.get("description")
+            if description_block is not None:
+                context = inline_text(description_block.get("inlines", ()))
+            skip_description = description_block is not None
         command = _command_text(text)
         if command is None:
             continue

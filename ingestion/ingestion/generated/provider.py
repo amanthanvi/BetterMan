@@ -80,6 +80,8 @@ class Completion:
     billed_usd: float | None = None
     # False when the response had no usage block; the caller charges the worst case.
     usage_reported: bool = True
+    finish_reason: str = "unknown"
+    content_shape: str = "unknown"
 
 
 class Provider:
@@ -94,11 +96,6 @@ class Provider:
 def _usage_limit(status: int, body: str) -> bool:
     lowered = body.lower()
     return status in {402, 403, 429} and any(marker in lowered for marker in _USAGE_LIMIT_MARKERS)
-
-
-def _clip(text: str, limit: int = 300) -> str:
-    text = " ".join(text.split())
-    return text if len(text) <= limit else text[:limit] + "..."
 
 
 def _billed(payload: Mapping[str, object]) -> float | None:
@@ -122,11 +119,43 @@ def parse_completion(payload: object) -> Completion:
     if not isinstance(payload, Mapping):
         raise ProviderError("completion response is not a JSON object")
     try:
-        text = payload["choices"][0]["message"]["content"]
+        choice = payload["choices"][0]
+        message = choice["message"]
     except (KeyError, IndexError, TypeError) as exc:
         raise ProviderError("completion response has no message content") from exc
+    if not isinstance(choice, Mapping) or not isinstance(message, Mapping):
+        raise ProviderError("completion response has no message content")
+    text = message.get("content")
+    if text is None:
+        text = ""
     if not isinstance(text, str):
         raise ProviderError("completion content is not text")
+    reason = choice.get("finish_reason")
+    if not isinstance(reason, str) or reason not in {
+        "stop",
+        "length",
+        "content_filter",
+        "tool_calls",
+        "insufficient_system_resource",
+        "aborted",
+    }:
+        reason = "unknown"
+    stripped = text.strip()
+    if not stripped:
+        shape = (
+            "empty_with_reasoning"
+            if isinstance(message.get("reasoning_content"), str)
+            and message["reasoning_content"].strip()
+            else "empty"
+        )
+    elif stripped.startswith("```"):
+        shape = "fenced"
+    elif stripped.startswith("{"):
+        shape = "object_start"
+    elif "{" in stripped:
+        shape = "text_before_object"
+    else:
+        shape = "other"
     usage = _usage(payload.get("usage"))
     return Completion(
         text=text,
@@ -135,6 +164,8 @@ def parse_completion(payload: object) -> Completion:
         cached_tokens=usage[2] if usage else 0,
         billed_usd=_billed(payload),
         usage_reported=usage is not None,
+        finish_reason=reason,
+        content_shape=shape,
     )
 
 
@@ -204,12 +235,10 @@ class OpenAICompatibleProvider(Provider):
         except HTTPError as exc:
             detail = _read_error(exc)
             if _usage_limit(exc.code, detail):
-                raise UsageLimitExceeded(f"HTTP {exc.code}: {_clip(detail)}") from None
+                raise UsageLimitExceeded(f"HTTP {exc.code}") from None
             if exc.code in {408, 409, 429} or exc.code >= 500:
-                raise TransientProviderError(
-                    f"HTTP {exc.code}: {_clip(detail)}", _retry_after(exc)
-                ) from None
-            raise ProviderError(f"HTTP {exc.code}: {_clip(detail)}") from None
+                raise TransientProviderError(f"HTTP {exc.code}", _retry_after(exc)) from None
+            raise ProviderError(f"HTTP {exc.code}") from None
         except (URLError, TimeoutError, HTTPException, ConnectionError, ssl.SSLError) as exc:
             raise TransientProviderError(f"request failed: {type(exc).__name__}") from None
         except (ValueError, UnicodeDecodeError):
