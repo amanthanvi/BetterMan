@@ -107,7 +107,7 @@ export function ManPageView({
   reportHref: string
 }) {
   const toc = useToc()
-  const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen } = toc
+  const { scrollToId, setScrollToId, setItems, setActiveId, setOpen: setTocOpen, sidebarOpen, setSidebarOpen, setManualRendered } = toc
   const distro = useDistro()
 
   const examples = useMemo(() => extractExamples(content.blocks), [content.blocks])
@@ -145,6 +145,11 @@ export function ManPageView({
     setItems(body.toc)
     return () => setItems([])
   }, [body.toc, setItems])
+
+  useEffect(() => {
+    setManualRendered(true)
+    return () => setManualRendered(false)
+  }, [setManualRendered])
 
   useEffect(() => {
     setActiveId(activeTocId)

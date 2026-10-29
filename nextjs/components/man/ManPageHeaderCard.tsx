@@ -98,7 +98,8 @@ export function ManPageHeaderCard({
           </span>
         ) : null}
 
-        <div className="bm-js flex flex-wrap items-baseline gap-x-5 gap-y-1 md:ml-auto">
+        {/* Inline and balanced, so a narrow screen wraps the actions evenly rather than orphaning the last. */}
+        <div className="bm-js leading-7 text-balance md:ml-auto [&>*:not(:last-child)]:mr-5">
           {hasToc ? (
             <button type="button" onClick={onOpenContents} aria-label="Open contents" title="Contents (b)" className={`${ACTION_CLASS} lg:hidden`}>
               Contents

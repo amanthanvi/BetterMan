@@ -40,7 +40,8 @@ page). Both are set like pages of a printed manual.
    turns the rule red and thickens it in place of the outline. A native
    `<select>` uses `bg-paper` so Chromium's popup copies an opaque background.
    `Kbd` is the one bordered chip. The rare primary (error Retry) is ink
-   reversed, not red.
+   reversed, not red. Anything typed into a field is mono; a field may give
+   only its placeholder another voice (`placeholder:font-serif`).
 7. **JavaScript only enhances.** Every page is complete without it. Controls
    that need it carry `bm-js` and are hidden under `@media (scripting: none)`,
    with a `bm-nojs` fallback where one exists (the header search becomes a link
@@ -51,8 +52,11 @@ fails on rounded corners (utilities or a non-zero `border-radius`), enclosing
 borders, `bg-raised` or shadows outside the overlay allowlist, the `added` tint
 outside the BetterMan-voice allowlist or with a border, `bg-accent` outside the
 contents marker, retired colour tokens, arbitrary colours or font families,
-`outline-none` on anything but a programmatic focus target, and any web font
-other than BM Text. `@theme` resets Tailwind's default colours, fonts, sizes and
+`outline-none` on anything but a programmatic focus target, a typed field value
+set in anything but mono, and any web font other than BM Text. It reads
+utilities through variants, `!`, opacity modifiers and arbitrary values
+(`border-2`, `bg-accent/50`, `bg-[color:var(--color-accent)]`, `[border:…]`);
+`nextjs/scripts/check-visual-grammar.test.ts` holds the regression cases. `@theme` resets Tailwind's default colours, fonts, sizes and
 shadows, so only the tokens below generate utilities.
 
 ## Tokens
@@ -85,7 +89,13 @@ Light is paper; dark is the same plate in warm ink on black.
   `OFL.txt` license and `FONTLOG.txt`; `scripts/fonts/build-bm-text.py` builds
   it. Roman spans weights 400–600, italic is 400, optical size is pinned at 20.
   Each style is split by `unicode-range` into Latin, Latin Extended, Greek and
-  Cyrillic files, so a page fetches only the scripts it uses. The Latin roman
+  Cyrillic files, so a page fetches only the scripts it uses. The ranges claim
+  only blocks the font has glyphs for. Greek is monotonic: polytonic Greek
+  (Greek Extended, e.g. U+1F04 ἄ), Latin Extended-C/D, Cyrillic Extended-A/B/C,
+  CJK and every other script fall back per character through the rest of
+  `font-serif` (Iowan Old Style, Palatino, Georgia, Noto Serif, the CJK serifs,
+  then the system serif). A fallback glyph may differ slightly in weight and
+  metrics. The Latin roman
   (≈53 KB) is preloaded; `font-display: swap`.
 - **Measures.** `max-w-text` 42.5rem (the reading column), `max-w-margin`
   14rem (reserved for marginalia), `max-w-page` 82.5rem (page frame). Operate
@@ -185,10 +195,19 @@ combinator.
 - **404 voice:** a missing man page's `h1` is man-db's message, "No manual
   entry for <name>" or "No manual entry for <name> in section <section>";
   every other 404's `h1` is "No such file or directory". Both are mono.
-- **Keyboard map:** ⌘K palette · `/` search · `?` shortcuts · `d` theme ·
-  `b` sidebar/TOC · `t` top · `h` home · `p` prefs · `m` bookmark · `f` find
-  (man pages) · Enter/Shift+Enter find navigation · j/k (and arrows) within the
-  contents. Single-key shortcuts are ignored while typing in a field or while
-  any modal (`aria-modal="true"`) is open.
+- **Keyboard map** (the shortcuts dialog, `?`, lists the same keys):
+  - Everywhere: ⌘K / Ctrl+K palette · `/` focuses the page's search field (home,
+    search) or opens the palette · `?` shortcuts · `d` cycle theme · `t` top ·
+    `h` home's recent pages.
+  - On a rendered man page (ManPageView sets `manualRendered`; a man-page 404
+    is not one, so `/` stays search there), the pager keys work as in less:
+    `/` or `f` find in page · `n` / `N` next / previous match, resuming from the
+    last match shown even after the find bar closes · `j` / `k` scroll about
+    three lines · `g` / `G` top / bottom · `[` / `]` previous / next section ·
+    `b` contents sidebar (drawer under `lg`) · `p` reading preferences · `m`
+    bookmark. In the find field, Enter / Shift+Enter step through matches.
+  - In the contents, `j` / `k` and the arrow keys move between entries.
+  - Single-key shortcuts are ignored while typing in a field or while any modal
+    (`aria-modal="true"`) is open.
 - Print forces light monochrome through the colour tokens and renders every
   block. A full print stylesheet is later work.

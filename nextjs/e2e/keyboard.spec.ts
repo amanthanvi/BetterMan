@@ -100,12 +100,23 @@ test('man: pager keys find, step through matches, scroll and move between sectio
   await findInput.fill('filler block')
   const count = page.locator('[data-bm-findbar]').getByText(/^\d+\/\d+$/)
   await expect(count).toHaveText('1/120')
+  // Which occurrence is current, by its position among all find marks.
+  const current = () =>
+    page.evaluate(() => [...document.querySelectorAll('mark[data-bm-find]')].findIndex((m) => m.classList.contains('bm-find-active')))
+  await expect.poll(current).toBe(0)
+
+  // Closing find keeps the position: n moves on from occurrence 1, as in less.
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-bm-findbar]')).toHaveCount(0)
   await page.keyboard.press('n')
-  await expect(page.locator('mark.bm-find-active')).toHaveText(/filler block/i)
+  await expect.poll(current).toBe(1)
+  await page.keyboard.press('n')
+  await expect.poll(current).toBe(2)
+  await page.keyboard.press('N')
+  await expect.poll(current).toBe(1)
   await page.keyboard.press('N')
   await page.keyboard.press('N')
+  await expect.poll(current).toBe(119)
   await expect(page.locator('mark.bm-find-active')).toBeInViewport()
 
   await page.keyboard.press('g')
@@ -118,4 +129,12 @@ test('man: pager keys find, step through matches, scroll and move between sectio
   await expect
     .poll(() => page.evaluate(() => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2))
     .toBe(true)
+})
+
+test('man 404: / falls back to search, since no manual is rendered to find in', async ({ page }) => {
+  const response = await page.goto('/man/ta/9')
+  expect(response?.status()).toBe(404)
+  await waitForInteractiveShell(page)
+  await pressShortcutUntilVisible(page, '/', page.getByRole('combobox', { name: 'Command palette input' }))
+  await expect(page.locator('[data-bm-findbar]')).toHaveCount(0)
 })

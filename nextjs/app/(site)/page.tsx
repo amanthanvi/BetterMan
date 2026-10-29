@@ -37,7 +37,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           spellCheck={false}
           placeholder="Try tar, ssh_config or copy files"
           data-bm-home-search
-          className="bm-field border-b-[1.5px] border-ink pt-2 focus-visible:border-accent pb-2.5 font-serif text-xl placeholder:italic md:text-[1.5rem]"
+          className="bm-field border-b-[1.5px] border-ink pt-2 focus-visible:border-accent pb-2.5 text-lg placeholder:font-serif placeholder:italic md:text-xl"
           aria-label="Search man pages"
         />
         {urlDistro ? <input type="hidden" name="distro" value={urlDistro} /> : null}

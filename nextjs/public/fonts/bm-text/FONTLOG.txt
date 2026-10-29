@@ -10,8 +10,11 @@ Changes from the Original Version:
 - Instanced from SourceSerif4Variable-Roman.ttf and -Italic.ttf with the
   optical-size axis pinned at 20. Roman keeps the weight axis from 400 to 600;
   italic is pinned at 400.
-- Subset by Unicode range into Latin, Latin Extended, Greek and Cyrillic files,
-  keeping the kern, liga, clig, calt, ccmp, locl, mark, mkmk, smcp, c2sc, onum,
+- Subset by Unicode range into Latin, Latin Extended, Greek and Cyrillic files.
+  The Greek file is monotonic Greek: Source Serif 4 has no Greek Extended
+  (polytonic) glyphs, nor Latin Extended-C/D or Cyrillic Extended-A/B/C, so
+  those characters fall back to the next serif in the stack. The files keep
+  the kern, liga, clig, calt, ccmp, locl, mark, mkmk, smcp, c2sc, onum,
   lnum, pnum, tnum, case and sups features. Hinting is removed.
 - Family, full, PostScript and instance names are renamed to BM Text / BMText.
   Copyright, trademark and license names are unchanged.

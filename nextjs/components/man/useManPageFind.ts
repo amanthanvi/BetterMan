@@ -136,8 +136,9 @@ export function useManPageFind({ blocks }: { blocks: BlockNode[] }) {
 
   const closeFind = () => {
     if (focusRestoreFrameRef.current !== null) return
+    // Clear the highlight but keep the position: the marks stay, and n / N resume
+    // from this match rather than showing it again.
     if (activeMarkRef.current) activeMarkRef.current.classList.remove('bm-find-active')
-    activeMarkRef.current = null
     const previouslyFocused = previouslyFocusedRef.current
     previouslyFocusedRef.current = null
     pendingFocusRestoreTargetRef.current = previouslyFocused

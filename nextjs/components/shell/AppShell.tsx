@@ -135,7 +135,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const routeKey = `${pathname}?${searchParams.toString()}`
   const routeParts = pathname.split('/').filter(Boolean)
-  const isManPage = routeParts[0] === 'man' && routeParts.length >= 3
+  // A rendered manual, not the URL: /man/ta/9 is a 404 with no find bar or bookmark.
+  const isManPage = toc.manualRendered
   const isHome = routeParts.length === 0
 
   const [info, setInfo] = useState<InfoResponse | null>(null)

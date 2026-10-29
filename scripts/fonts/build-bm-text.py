@@ -11,7 +11,9 @@ Usage, from the repository root, with fontTools and brotli installed:
 
 The inputs are the VAR/*.ttf files of the 4.005R release
 (https://github.com/adobe-fonts/source-serif/releases/tag/4.005R).
-Output goes to nextjs/public/fonts/bm-text/.
+Output goes to nextjs/public/fonts/bm-text/. fontTools stamps head.modified with
+the build time; set SOURCE_DATE_EPOCH to reproduce the committed files byte for byte.
+Otherwise only that timestamp differs.
 """
 
 import io
@@ -25,14 +27,17 @@ from fontTools.varLib import instancer
 OUT = Path(__file__).resolve().parents[2] / "nextjs" / "public" / "fonts" / "bm-text"
 
 # Keep these in sync with the unicode-range descriptors in nextjs/app/globals.css.
+# Only blocks Source Serif 4.005 has glyphs for: it has no Greek Extended
+# (polytonic), Latin Extended-C/D or Cyrillic Extended-A/B/C, so those
+# characters fall back through the rest of the serif stack.
 SUBSETS = {
     "latin": "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,"
     "U+2000-206F,U+20AC,U+2122,U+2190-2195,U+2212,U+2215,U+2264-2265,U+FEFF,U+FFFD",
-    "latin-ext": "U+0100-0130,U+0132-0151,U+0154-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,"
+    "latin-ext": "U+0100-0130,U+0132-0151,U+0154-02BA,U+02BD-02C5,U+02C7-02CC,U+02DD-02FF,"
     "U+0300-0303,U+0305-0307,U+0309-0328,U+032A-036F,U+1D00-1DBF,U+1E00-1EFF,U+20A0-20AB,U+20AD-20C0,"
-    "U+2113,U+2C60-2C7F,U+A720-A7FF",
-    "greek": "U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF,U+1F00-1FFF",
-    "cyrillic": "U+0400-052F,U+1C80-1C8A,U+20B4,U+2116,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F",
+    "U+2113",
+    "greek": "U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF",
+    "cyrillic": "U+0400-052F,U+20B4,U+2116",
 }
 
 # Small caps, figure styles, ligatures and the shaping features scripts need.

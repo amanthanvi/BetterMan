@@ -2,8 +2,8 @@
 
 /* BM Text: a Source Serif 4 subset renamed under its OFL (public/fonts/bm-text/FONTLOG.txt).
    Each file covers one script; browsers fetch only the ranges a page uses. Keep the ranges
-   in sync with scripts/fonts/build-bm-text.py. Other scripts, CJK included, fall back
-   through the rest of --font-serif. */
+   in sync with scripts/fonts/build-bm-text.py. Ranges cover only what the font has:
+   polytonic Greek, other scripts and CJK fall back through the rest of --font-serif. */
 @font-face {
   font-family: "BM Text";
   src: url("/fonts/bm-text/bm-text-roman-latin.woff2") format("woff2");
@@ -19,7 +19,7 @@
   font-weight: 400 600;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+1D00-1DBF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02CC, U+02DD-02FF, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+1D00-1DBF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2113;
 }
 
 @font-face {
@@ -28,7 +28,7 @@
   font-weight: 400 600;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF, U+1F00-1FFF;
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
 }
 
 @font-face {
@@ -37,7 +37,7 @@
   font-weight: 400 600;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0400-052F, U+1C80-1C8A, U+20B4, U+2116, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+  unicode-range: U+0400-052F, U+20B4, U+2116;
 }
 
 @font-face {
@@ -55,7 +55,7 @@
   font-weight: 400;
   font-style: italic;
   font-display: swap;
-  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+1D00-1DBF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02CC, U+02DD-02FF, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+1D00-1DBF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2113;
 }
 
 @font-face {
@@ -64,7 +64,7 @@
   font-weight: 400;
   font-style: italic;
   font-display: swap;
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF, U+1F00-1FFF;
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
 }
 
 @font-face {
@@ -73,7 +73,7 @@
   font-weight: 400;
   font-style: italic;
   font-display: swap;
-  unicode-range: U+0400-052F, U+1C80-1C8A, U+20B4, U+2116, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+  unicode-range: U+0400-052F, U+20B4, U+2116;
 }
 
 @theme {
@@ -256,6 +256,17 @@
   pre,
   samp {
     font-family: var(--font-mono);
+  }
+
+  /* Anything you type is mono. Placeholders speak in BetterMan's sans unless a field
+     gives them another voice; the value never does (pnpm next:grammar checks). */
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="submit"]),
+  textarea {
+    font-family: var(--font-mono);
+  }
+
+  ::placeholder {
+    font-family: var(--font-sans);
   }
 
   /* A clicked link into a route without a loading boundary dims until the payload lands. */

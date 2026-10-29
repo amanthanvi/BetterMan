@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
+import { waitForInteractiveShell } from './shortcuts'
 
 test('search: Try links trigger a search', async ({ page }) => {
   await page.goto('/search')
@@ -99,4 +100,25 @@ test('search: description words find a page whose name does not match', async ({
 
   await page.goto('/search?q=expand files')
   await expect(page.getByRole('link', { name: /gzip\(1\)/i })).toBeVisible()
+})
+
+test('search: typed values are mono while placeholders keep their voice', async ({ page }) => {
+  const family = (selector: string) => page.locator(selector).evaluate((el) => getComputedStyle(el).fontFamily)
+  const placeholderFamily = (selector: string) =>
+    page.locator(selector).evaluate((el) => getComputedStyle(el, '::placeholder').fontFamily)
+
+  await page.goto('/search?q=systemd-tmpfiles')
+  expect(await family('[data-bm-page-search]')).toMatch(/^ui-monospace/)
+  expect(await placeholderFamily('[data-bm-page-search]')).toMatch(/^"BM Text"/)
+
+  await page.goto('/')
+  expect(await family('[data-bm-home-search]')).toMatch(/^ui-monospace/)
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Search' }).click()
+  expect(await family('input[name="bm-palette"]')).toMatch(/^ui-monospace/)
+
+  await page.goto('/man/tar/1')
+  await waitForInteractiveShell(page)
+  await page.getByRole('button', { name: 'Find in page' }).click()
+  expect(await family('input[name="bm-find"]')).toMatch(/^ui-monospace/)
 })
