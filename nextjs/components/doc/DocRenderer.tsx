@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { memo, useEffect, useMemo, type ReactNode } from 'react'
+import { Fragment, memo, useEffect, useMemo, type ReactNode } from 'react'
 
 import { withDistro, type Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
@@ -17,6 +17,7 @@ type HighlightCtx = {
   findRegex?: RegExp
   optionRegex?: RegExp
   codeLanguage?: CodeLanguage
+  sectionNumbers?: ReadonlyMap<string, string>
 }
 
 // The whole document re-renders on any prop change, so skip the man page's
@@ -28,6 +29,7 @@ export const DocRenderer = memo(function DocRenderer({
   findQuery,
   optionTerms,
   codeLanguage,
+  sectionNumbers,
 }: {
   blocks: BlockNode[]
   /** The page URL's own `?distro=`, which internal links carry; null for a bare URL. */
@@ -36,6 +38,8 @@ export const DocRenderer = memo(function DocRenderer({
   optionTerms?: string[]
   /** Highlighting for code blocks the parser gave no language. */
   codeLanguage?: CodeLanguage
+  /** Hanging numbers per heading id, from `sectionNumbers()`. */
+  sectionNumbers?: ReadonlyMap<string, string>
 }) {
   const find = findQuery?.trim()
   const stableFind = find && find.length >= 2 ? find : undefined
@@ -46,8 +50,8 @@ export const DocRenderer = memo(function DocRenderer({
   }, [stableFind])
 
   const ctx = useMemo(
-    (): HighlightCtx => ({ findQuery: stableFind, findRegex, optionRegex, codeLanguage }),
-    [codeLanguage, findRegex, optionRegex, stableFind],
+    (): HighlightCtx => ({ findQuery: stableFind, findRegex, optionRegex, codeLanguage, sectionNumbers }),
+    [codeLanguage, findRegex, optionRegex, sectionNumbers, stableFind],
   )
 
   useEffect(() => {
@@ -69,6 +73,7 @@ export const DocRenderer = memo(function DocRenderer({
     }
   }, [])
 
+  // The typography is `.bm-manual` in globals.css; blocks render as plain elements.
   // Long pages only: `.bm-doc > *` in globals.css gives each top-level block
   // `content-visibility: auto`, and the estimate stands in for its height until
   // it has rendered once. Short pages keep the plain block list.
@@ -77,7 +82,7 @@ export const DocRenderer = memo(function DocRenderer({
 
   if (!estimates) {
     return (
-      <div className="space-y-5">
+      <div className="bm-manual">
         {blocks.map((block, idx) => (
           <BlockView key={blockKey(block, idx)} block={block} ctx={ctx} urlDistro={urlDistro} />
         ))}
@@ -86,7 +91,7 @@ export const DocRenderer = memo(function DocRenderer({
   }
 
   return (
-    <div className="bm-doc">
+    <div className="bm-manual bm-doc">
       {blocks.map((block, idx) => (
         <div key={blockKey(block, idx)} style={{ containIntrinsicBlockSize: `auto ${estimates[idx]}px` }}>
           <BlockView block={block} ctx={ctx} urlDistro={urlDistro} />
@@ -106,31 +111,31 @@ function blockKey(block: BlockNode, fallbackIdx: number) {
 // about 130 ms at 4x CPU); bash(1) has 573 blocks.
 export const SKIP_OFFSCREEN_MIN_BLOCKS = 150
 
-// Rough desktop heights at the default reading preferences: 15px type at 1.65
-// line height in a 56rem column. Accuracy only affects the scrollbar and deep
-// links before a block first renders.
-const LINE_PX = 25
+// Rough desktop heights at the default reading preferences: 18px serif at 1.62
+// line height in a 42.5rem column, with each block's top margin. Accuracy only
+// affects the scrollbar and deep links before a block first renders.
+const LINE_PX = 29
 
-function estimateBlockHeight(block: BlockNode, charsPerLine = 110): number {
+function estimateBlockHeight(block: BlockNode, charsPerLine = 80): number {
   switch (block.type) {
     case 'heading':
-      return 54
+      return block.level <= 2 ? 76 : 62
     case 'paragraph':
-      return LINE_PX * Math.ceil(Math.max(1, inlinesLength(block.inlines)) / charsPerLine)
+      return 15 + LINE_PX * Math.ceil(Math.max(1, inlinesLength(block.inlines)) / charsPerLine)
     case 'list':
       return block.items.reduce((sum, item) => sum + 6 + item.reduce((s, b) => s + estimateBlockHeight(b, charsPerLine - 10), 0), 0)
     case 'definition_list':
-      // The term column takes about a quarter of the width.
+      // The term sits on its own line above an indented definition.
       return block.items.reduce(
-        (sum, item) => sum + 12 + Math.max(LINE_PX, item.definitionBlocks.reduce((s, b) => s + estimateBlockHeight(b, 80), 0)),
-        0,
+        (sum, item) => sum + 40 + item.definitionBlocks.reduce((s, b) => s + estimateBlockHeight(b, charsPerLine - 4), 0),
+        15,
       )
     case 'code_block':
-      return 32 + 22 * block.text.split('\n').length
+      return 20 + 23 * block.text.split('\n').length
     case 'table':
-      return 40 + 36 * block.rows.length
+      return 50 + 34 * block.rows.length
     case 'horizontal_rule':
-      return 25
+      return 16
   }
 }
 
@@ -143,51 +148,25 @@ const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: Bl
     case 'heading': {
       const level = clamp(block.level, 2, 6)
       const Tag = (`h${level}` as unknown) as 'h2'
-
-      // In a long page every heading is the first child of its block wrapper;
-      // only the document's first block drops the padding.
-      const base = 'scroll-mt-32 pt-8 first:pt-0 [.bm-doc>:not(:first-child)>&]:pt-8 text-fg'
-      const headingClass =
-        level === 2
-          ? 'font-mono text-lg font-semibold tracking-[0.04em] leading-[1.2]'
-          : level === 3
-            ? 'font-mono text-sm font-semibold tracking-[0.02em] leading-[1.2]'
-            : level === 4
-              ? 'text-sm font-bold leading-[1.2]'
-              : 'text-sm font-semibold leading-[1.2]'
-
       return (
-        <Tag id={block.id} className={`${base} ${headingClass}`} data-level={level}>
-          <a
-            href={`#${block.id}`}
-            className="group inline-flex min-w-0 items-baseline gap-2 text-fg no-underline hover:text-fg"
-          >
-            <span className="min-w-0 flex-1">{highlightText(block.text, ctx)}</span>
-            <span
-              aria-hidden="true"
-              className="font-mono text-xs text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-            >
-              #
-            </span>
-          </a>
+        <Tag id={block.id} data-n={ctx.sectionNumbers?.get(block.id)}>
+          <a href={`#${block.id}`}>{highlightText(block.text, ctx)}</a>
         </Tag>
       )
     }
 
     case 'paragraph':
-      return <p className="text-fg">{renderInlines(block.inlines, ctx, urlDistro)}</p>
+      return <p>{renderInlines(block.inlines, ctx, urlDistro)}</p>
 
     case 'list': {
       const ListTag = (block.ordered ? 'ol' : 'ul') as 'ol'
       return (
-        <ListTag className={`ml-6 space-y-1.5 text-fg ${block.ordered ? 'list-decimal' : 'list-disc'}`}>
+        <ListTag>
           {block.items.map((itemBlocks, idx) => (
             <li key={idx}>
-              <div className="space-y-2">
-                {itemBlocks.map((child, childIdx) => (
-                  <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} urlDistro={urlDistro} />
-                ))}
-              </div>
+              {itemBlocks.map((child, childIdx) => (
+                <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} urlDistro={urlDistro} />
+              ))}
             </li>
           ))}
         </ListTag>
@@ -195,21 +174,18 @@ const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: Bl
     }
 
     case 'definition_list':
-      /* troff .TP: term in a fixed left column, definition flowing beside it;
-         stacked with an indent on narrow screens. */
+      /* troff .TP: the term on its own line, the definition under it with a hanging indent. */
       return (
-        <dl className="space-y-3">
+        <dl>
           {block.items.map((item, idx) => (
-            <div key={item.id ?? idx} className="grid gap-x-6 sm:grid-cols-[minmax(8ch,28ch)_minmax(0,1fr)]">
-              <dt id={item.id ?? undefined} className="scroll-mt-32 break-words font-mono text-sm font-semibold text-fg">
-                {renderInlines(item.termInlines, ctx, urlDistro)}
-              </dt>
-              <dd className="mt-1.5 min-w-0 space-y-2 pl-4 text-fg sm:mt-0 sm:pl-0">
+            <Fragment key={item.id ?? idx}>
+              <dt id={item.id ?? undefined}>{renderInlines(item.termInlines, ctx, urlDistro)}</dt>
+              <dd>
                 {item.definitionBlocks.map((child, childIdx) => (
                   <BlockView key={blockKey(child, childIdx)} block={child} ctx={ctx} urlDistro={urlDistro} />
                 ))}
               </dd>
-            </div>
+            </Fragment>
           ))}
         </dl>
       )
@@ -228,24 +204,21 @@ const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: Bl
 
     case 'table':
       return (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-fg">
-            <thead className="text-muted">
+        // Wide tables scroll sideways, so the scroller takes keyboard focus.
+        <div className="bm-tbl" tabIndex={0} role="group" aria-label="Table">
+          <table>
+            <thead>
               <tr>
                 {block.headers.map((h, idx) => (
-                  <th key={idx} className="border-b border-edge-strong pb-2 pl-0 pr-4 font-mono text-xs font-medium tracking-wide">
-                    {highlightText(h, ctx)}
-                  </th>
+                  <th key={idx}>{highlightText(h, ctx)}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {block.rows.map((row, rowIdx) => (
-                <tr key={rowIdx} className="border-b border-edge last:border-b-0">
+                <tr key={rowIdx}>
                   {row.map((cell, cellIdx) => (
-                    <td key={cellIdx} className="py-2 pl-0 pr-4 text-sm">
-                      {highlightText(cell, ctx, true)}
-                    </td>
+                    <td key={cellIdx}>{highlightText(cell, ctx, true)}</td>
                   ))}
                 </tr>
               ))}
@@ -255,7 +228,7 @@ const BlockView = memo(function BlockView({ block, ctx, urlDistro }: { block: Bl
       )
 
     case 'horizontal_rule':
-      return <hr className="my-6 border-edge" />
+      return <hr />
   }
 })
 
@@ -266,21 +239,17 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, urlDistro: Dist
       case 'text':
         return <span key={idx}>{highlightText(inline.text, ctx, linkify)}</span>
       case 'code':
-        /* Bold mono is the troff convention for "type this literally" — no pill. */
-        return (
-          <code key={idx} className="font-mono text-[0.95em] font-semibold text-fg">
-            {highlightText(inline.text, ctx)}
-          </code>
-        )
+        /* troff bold: "type this literally". Bold serif in prose, bold mono in option terms. */
+        return <code key={idx}>{highlightText(inline.text, ctx)}</code>
       case 'emphasis':
         return (
-          <em key={idx} className="italic">
+          <em key={idx}>
             {renderInlines(inline.inlines, ctx, urlDistro, linkify)}
           </em>
         )
       case 'strong':
         return (
-          <strong key={idx} className="font-semibold">
+          <strong key={idx}>
             {renderInlines(inline.inlines, ctx, urlDistro, linkify)}
           </strong>
         )
@@ -294,18 +263,14 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, urlDistro: Dist
         }
         if (inline.linkType === 'unresolved') {
           return (
-            <span
-              key={idx}
-              className="cursor-not-allowed text-muted underline decoration-edge-strong decoration-dotted underline-offset-4"
-              title="Not available in this dataset"
-            >
+            <span key={idx} className="bm-unresolved" title="Not available in this dataset">
               {renderInlines(inline.inlines, ctx, urlDistro, false)}
               <span className="sr-only"> (not available)</span>
             </span>
           )
         }
         return (
-          <Link key={idx} href={inline.href.startsWith('/') ? withDistro(inline.href, urlDistro) : inline.href} className="underline underline-offset-4 decoration-accent-edge">
+          <Link key={idx} href={inline.href.startsWith('/') ? withDistro(inline.href, urlDistro) : inline.href}>
             {renderInlines(inline.inlines, ctx, urlDistro, false)}
             <LinkPendingHint />
           </Link>
@@ -316,11 +281,8 @@ function renderInlines(inlines: InlineNode[], ctx: HighlightCtx, urlDistro: Dist
 
 function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-accent-edge [overflow-wrap:anywhere]">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="bm-ext [overflow-wrap:anywhere]">
       {children}
-      <span aria-hidden="true" className="ml-1 text-xs text-muted">
-        ↗
-      </span>
       <span className="sr-only"> (opens in new tab)</span>
     </a>
   )

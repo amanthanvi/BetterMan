@@ -435,12 +435,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       />
       <div
         ref={dialogRef}
-        className={`relative flex w-full max-h-[70vh] flex-col overflow-hidden border border-edge bg-raised shadow-lg shadow-black/25 motion-reduce:animate-none sm:max-h-[60vh] sm:w-[min(94vw,40rem)] ${
+        className={`relative flex w-full max-h-[70vh] flex-col overflow-hidden border border-rule-2 bg-raised text-ink shadow-overlay motion-reduce:animate-none sm:max-h-[60vh] sm:w-[min(94vw,40rem)] ${
           open ? 'bm-pop-in' : 'bm-pop-out motion-reduce:invisible'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-edge p-3">
+        <div className="border-b border-rule px-4 py-2">
           <div aria-live="polite" className="sr-only">
             {searchState.status === 'loading'
               ? 'Searching'
@@ -460,7 +460,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 setActiveIndex(0)
               }}
               placeholder="Search man pages…"
-              className="h-10 w-full min-w-0 flex-1 bg-transparent px-1 font-mono text-sm text-fg placeholder:text-muted"
+              className="h-10 w-full min-w-0 flex-1 bg-transparent text-base text-ink placeholder:text-ink-3"
               aria-label="Command palette input"
               role="combobox"
               aria-autocomplete="list"
@@ -469,7 +469,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               aria-activedescendant={items.length ? `bm-palette-option-${safeActiveIndex}` : undefined}
             />
             {modeHint ? (
-              <span className="shrink-0 font-mono text-xs font-semibold text-accent">
+              <span className="shrink-0 small-caps text-sm text-ink-3">
                 {modeHint}
               </span>
             ) : null}
@@ -478,14 +478,14 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2" role="region" aria-label="Command palette results">
           {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'loading' ? (
-            <div className="p-3 text-sm text-muted">Searching…</div>
+            <div className="p-3 text-sm text-ink-3">Searching…</div>
           ) : null}
 
           {parsed.mode === 'search' && parsed.text.trim() && searchState.status === 'error' ? (
-            <div className="p-3 text-sm text-muted">Search failed.</div>
+            <div className="p-3 text-sm text-ink-3">Search failed.</div>
           ) : null}
 
-          {!items.length && parsed.text.trim() ? <div className="p-3 text-sm text-muted">No matches.</div> : null}
+          {!items.length && parsed.text.trim() ? <div className="p-3 text-sm text-ink-3">No matches.</div> : null}
 
           <div id="bm-palette-list" role="listbox" className="space-y-0.5">
             {items.map((item, idx) => {
@@ -500,13 +500,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   aria-selected={activeRow}
                   tabIndex={-1}
                   className={`w-full cursor-pointer px-3 py-2 text-left transition-colors ${
-                    activeRow ? 'bg-accent-subtle text-fg' : 'text-muted hover:text-fg'
+                    activeRow ? 'bg-wash text-ink' : 'text-ink-2 hover:text-ink'
                   }`}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => item.run()}
                 >
                   <div className="flex items-baseline gap-3">
-                    <div className="min-w-0 shrink-0 font-mono text-sm font-semibold text-fg">
+                    <div className={`min-w-0 shrink-0 text-ink ${item.kind === 'page' ? 'font-serif text-base' : 'text-sm'}`}>
                       {item.kind === 'action' ? (
                         <>
                           <span aria-hidden="true">&gt; </span>
@@ -522,15 +522,15 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                       )}
                     </div>
                     {item.kind === 'page' && item.anchorId ? (
-                      <span className="shrink-0 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-muted">options</span>
+                      <span className="shrink-0 small-caps text-sm text-ink-3">flag</span>
                     ) : null}
                     {item.kind === 'page' ? (
-                      <div className="min-w-0 flex-1 truncate text-sm text-muted">{item.description}</div>
+                      <div className="min-w-0 flex-1 truncate text-sm text-ink-2">{item.description}</div>
                     ) : item.kind === 'action' && item.detail ? (
-                      <div className="min-w-0 flex-1 truncate text-sm text-muted">{item.detail}</div>
+                      <div className="min-w-0 flex-1 truncate text-sm text-ink-2">{item.detail}</div>
                     ) : null}
                     {bookmark ? (
-                      <div className="shrink-0 text-xs text-muted">
+                      <div className="shrink-0 text-xs text-ink-3">
                         <span aria-hidden="true">★</span>
                         <span className="sr-only">Bookmarked</span>
                       </div>
@@ -542,7 +542,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-edge px-3 py-2 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-rule px-4 py-2 text-xs text-ink-3">
           <span className="flex items-center gap-1.5">
             <Kbd>↑↓</Kbd> navigate
           </span>
@@ -552,7 +552,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           <span className="flex items-center gap-1.5">
             <Kbd>esc</Kbd> close
           </span>
-          <span className="ml-auto hidden font-mono text-faint sm:inline">&gt; actions · # headings · @distro</span>
+          <span className="ml-auto hidden font-mono sm:inline">&gt; actions · # headings · @distro</span>
         </div>
       </div>
     </div>,

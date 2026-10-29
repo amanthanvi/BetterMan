@@ -28,11 +28,11 @@ function SegmentedRadioGroup<T extends string>({
 }: SegmentedRadioGroupProps<T>) {
   return (
     <section>
-      <div className="font-mono text-xs tracking-wide text-muted">{label}</div>
+      <div className="text-sm text-ink-3">{label}</div>
       <div
         role="radiogroup"
         aria-label={label}
-        className={cx('mt-2 flex w-full border-b border-edge', scroll ? 'overflow-x-auto' : '')}
+        className={cx('mt-1.5 flex w-full border-b border-rule', scroll ? 'overflow-x-auto' : '')}
         onKeyDown={(e) => {
           if (!options.length) return
 
@@ -65,9 +65,9 @@ function SegmentedRadioGroup<T extends string>({
             aria-checked={value === o.id}
             tabIndex={value === o.id ? 0 : -1}
             className={cx(
-              '-mb-px border-b-2 px-3 py-2 text-left font-mono text-sm leading-tight transition-colors',
+              '-mb-px border-b-2 px-2.5 py-2 text-left text-sm leading-tight transition-colors',
               scroll ? 'shrink-0 min-w-[5.75rem]' : 'flex-1',
-              value === o.id ? 'border-accent text-fg' : 'border-transparent text-muted hover:text-fg',
+              value === o.id ? 'border-accent text-ink' : 'border-transparent text-ink-2 hover:text-ink',
             )}
             onClick={() => onChange(o.id)}
           >
@@ -101,8 +101,8 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-base font-semibold tracking-tight text-fg">Reading preferences</div>
-          <div className="mt-1 text-sm text-muted">Applies to man page reading.</div>
+          <h2 className="small-caps text-lg font-semibold text-ink">Reading preferences</h2>
+          <p className="mt-1 text-sm text-ink-3">How the manual is set on every page.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} aria-label="Close reading preferences, Esc">
           Esc
@@ -175,7 +175,7 @@ export function ReadingPrefsDrawer({ open, onOpenChange }: { open: boolean; onOp
         />
 
         <div className="pt-2">
-          <Button variant="outline" className="font-mono" onClick={() => {
+          <Button variant="outline" onClick={() => {
             for (const axis of PREFERENCE_AXES) {
               if (prefs[axis] !== DEFAULT_PREFS[axis]) trackEvent('pref changed', axis)
             }

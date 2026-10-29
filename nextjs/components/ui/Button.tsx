@@ -6,16 +6,17 @@ export type ButtonVariant = 'solid' | 'outline' | 'ghost'
 export type ButtonSize = 'sm' | 'md'
 
 /* Text-first controls: 'outline' is an underlined text action, 'ghost' is
-   quiet ink. 'solid' survives only for the rare primary (e.g. error Retry). */
+   quiet ink. 'solid' is ink on paper reversed, for the rare primary (error Retry);
+   the red stays for selection, focus and warnings. */
 const VARIANT: Record<ButtonVariant, string> = {
-  solid: 'bg-accent px-3 text-accent-contrast hover:bg-accent-hover',
-  outline: 'bg-transparent text-fg underline underline-offset-4 decoration-edge-strong hover:decoration-accent',
-  ghost: 'text-muted hover:text-fg',
+  solid: 'bg-ink px-3 text-paper hover:bg-ink-2',
+  outline: 'text-ink underline decoration-rule-2 underline-offset-[3px] hover:text-accent hover:decoration-accent',
+  ghost: 'text-ink-2 hover:text-ink',
 }
 
 const SIZE: Record<ButtonSize, string> = {
-  sm: 'h-8 gap-1.5 px-1 text-sm',
-  md: 'h-9 gap-2 px-1 text-sm',
+  sm: 'h-8 gap-1.5 text-sm',
+  md: 'h-9 gap-2 text-sm',
 }
 
 export function Button({
@@ -32,7 +33,7 @@ export function Button({
     <button
       type={type}
       className={cx(
-        'inline-flex shrink-0 items-center justify-center font-medium transition-colors',
+        'inline-flex shrink-0 items-center justify-center transition-colors',
         'disabled:pointer-events-none disabled:opacity-50',
         SIZE[size],
         VARIANT[variant],

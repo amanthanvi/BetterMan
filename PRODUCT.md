@@ -22,20 +22,23 @@ BetterMan 2 aims, in order, to be the default lookup, a daily-driver tool, and a
 
 ## Constraints (durable)
 
-- Strict CSP: self-hosted assets only (Geist Sans + JetBrains Mono woff2), nonce'd scripts; browser analytics requests stay same-origin through a cookieless Plausible proxy. Only optional Sentry connects externally.
+- Strict CSP: self-hosted assets only (one web font, BM Text, in unicode-range woff2 files; sans and mono are system faces), nonce'd scripts; browser analytics requests stay same-origin through a cookieless Plausible proxy. Only optional Sentry connects externally.
 - Content is a typed block/inline AST from the ingestion pipeline (`ingestion/ingestion/doc_model.py`, mirrored in `nextjs/lib/docModel.ts`, kept aligned by golden fixtures).
 - Playwright e2e specs in `nextjs/e2e/` are the behavioral contract (semantic roles, aria-labels, `data-bm-*` hooks); reading prefs bind via `body[data-bm-*]` attributes.
 - Convex is the runtime data source, read server-side only; read-cost frugality is an active goal — no client subscriptions.
 - Zero-account product: all personalization stays in localStorage/cookies.
 - No runtime LLM. Generated text (summaries, gap-fill examples, task phrases, concept explainers) is built at ingest. It is labeled with model and date, and generated examples are checked flag by flag against the page's options table.
 
-## Brand commitments (confirmed 2026-07, under review)
+## Brand commitments (decided 2026-10-27)
 
-The 2026-10-26 decisions open the visual identity, including the name, to the BetterMan 2 design bake-off. These commitments hold until the owner signs off on a new direction.
+The owner signed off on the BetterMan 2 direction (`docs/roadmap/betterman-2.md`); `DESIGN.md` records the system.
 
-- Terminal DNA, evolved not replaced: `>_` wordmark glyph, red accent, monospace as identity accent (never body prose), keyboard-first affordances.
-- One design; light + dark + system themes only (retro/glass skins removed by decision).
-- Voice: quiet, precise, tool-like; no marketing fluff.
+- **Name and mark:** BetterMan, with the wordmark set the way the manual sets a command, **betterman**(1). The `>_` glyph is retired from the interface (the app icons and share cards follow in C6); the typesetting is the identity.
+- **The print manual:** the finest edition of the Unix manual, typeset for the screen. Running heads and foot, true small caps, old-style figures, hanging section numbers, hairlines and square corners.
+- **Three voices:** the upstream manual in the serif BM Text; everything BetterMan adds in system sans, on a quiet tint when it sits in the page; anything you type in system mono.
+- **One red,** for selection, focus and warnings, never decoration.
+- One design; light (paper) + dark (warm ink on black) + system themes only.
+- Keyboard-first, with the pager's keys on man pages. Voice: quiet, precise, tool-like; no marketing fluff.
 
 ## Platform
 
@@ -48,5 +51,4 @@ web
 
 ## Open decisions
 
-- The visual direction and the name are chosen through the BetterMan 2 bake-off, and both need owner sign-off (`docs/roadmap/betterman-2.md`, C1–C3).
 - How concepts surface on a man page (a footer line plus search, or hover/tap cards) is decided from bake-off drafts.

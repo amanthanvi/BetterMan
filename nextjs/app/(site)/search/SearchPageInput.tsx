@@ -96,7 +96,7 @@ export function SearchPageInput({
       data-bm-page-search
       autoComplete="off"
       autoFocus={!initialQ}
-      className="h-12 w-full border-0 border-b border-edge bg-transparent px-1 font-mono text-sm text-fg transition-colors placeholder:text-muted hover:border-edge-strong"
+      className="bm-field pt-1.5 pb-2 font-serif text-xl placeholder:italic"
       aria-label="Search man pages"
     />
   )

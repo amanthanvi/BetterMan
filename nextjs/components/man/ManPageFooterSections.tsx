@@ -5,7 +5,6 @@ import Link from 'next/link'
 import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
 import { withDistro, type Distro } from '../../lib/distro'
-import { ManSectionLabel } from './RunningHead'
 import { LinkPendingHint } from '../ui/LinkPendingHint'
 
 export function ManPageFooterSections({
@@ -24,75 +23,74 @@ export function ManPageFooterSections({
   const seeAlsoItems = (seeAlso ?? []).slice(0, 24)
   const related = relatedItems.slice(0, 24)
 
+  const hasAddendum = seeAlsoItems.length > 0 || related.length > 0
+
   return (
     <>
-      {seeAlsoItems.length ? (
-        <aside className="mt-12 border-t border-edge pt-6" aria-label="See also">
-          <ManSectionLabel as="h2">SEE ALSO</ManSectionLabel>
-          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-            {seeAlsoItems.map((ref) => {
-              const key = `${ref.name}:${ref.section ?? ''}`
-              const title = ref.section ? `${ref.name}(${ref.section})` : ref.name
+      {/* BetterMan's addendum: the manual's cross-references as links, and pages that sit near this one. */}
+      {hasAddendum ? (
+        <div className="bm-added mt-14 px-5 py-4 text-sm max-md:-mx-5 md:px-8 md:py-5">
+          {seeAlsoItems.length ? (
+            <aside className={ROW} aria-label="See also">
+              <h2 className={LABEL}>See also</h2>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 font-serif text-base">
+                {seeAlsoItems.map((ref) => {
+                  const key = `${ref.name}:${ref.section ?? ''}`
 
-              if (ref.section && !ref.resolvedPageId) {
-                return (
-                  <li key={key}>
-                    <span className="font-mono text-sm text-faint" title="Not available in this dataset">
-                      {title}
-                    </span>
-                    <span className="sr-only"> (not available)</span>
+                  if (ref.section && !ref.resolvedPageId) {
+                    return (
+                      <li key={key} className="text-ink-3" title="Not available in this dataset">
+                        {ref.name}({ref.section})<span className="sr-only"> (not available)</span>
+                      </li>
+                    )
+                  }
+
+                  const href = ref.section
+                    ? withDistro(`/man/${encodeURIComponent(ref.name)}/${encodeURIComponent(ref.section)}`, urlDistro)
+                    : withDistro(`/man/${encodeURIComponent(ref.name)}`, urlDistro)
+
+                  return (
+                    <li key={key}>
+                      <Link href={href} className="underline">
+                        <b className="font-semibold">{ref.name}</b>
+                        {ref.section ? `(${ref.section})` : null}
+                        <LinkPendingHint />
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </aside>
+          ) : null}
+
+          {related.length ? (
+            <aside className={ROW} aria-label="Related commands">
+              <h2 className={LABEL}>Related</h2>
+              <ul className="grid gap-y-1 sm:grid-cols-2 sm:gap-x-6">
+                {related.map((item) => (
+                  <li key={`${item.name}:${item.section}`} className="min-w-0 truncate">
+                    <Link
+                      href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, urlDistro)}
+                      className="no-underline"
+                    >
+                      <span className="font-serif text-base">
+                        <b className="font-semibold">{item.name}</b>({item.section})
+                      </span>{' '}
+                      <span className="text-ink-2">{item.description}</span>
+                      <LinkPendingHint />
+                    </Link>
                   </li>
-                )
-              }
-
-              const href = ref.section
-                ? withDistro(`/man/${encodeURIComponent(ref.name)}/${encodeURIComponent(ref.section)}`, urlDistro)
-                : withDistro(`/man/${encodeURIComponent(ref.name)}`, urlDistro)
-
-              return (
-                <li key={key}>
-                  <Link href={href} className="font-mono text-sm">
-                    {title}
-                    <LinkPendingHint />
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </aside>
+                ))}
+              </ul>
+            </aside>
+          ) : null}
+        </div>
       ) : null}
 
-      {related.length ? (
-        <aside className="mt-10 border-t border-edge pt-6" aria-label="Related commands">
-          <ManSectionLabel as="h2">RELATED</ManSectionLabel>
-          <ul className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
-            {related.map((item) => (
-              <li key={`${item.name}:${item.section}`}>
-                <Link
-                  href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, urlDistro)}
-                  className="group flex items-baseline gap-3 py-1.5 transition-colors hover:no-underline"
-                >
-                  <span className="shrink-0 font-mono text-sm text-accent group-hover:underline group-hover:underline-offset-4">
-                    {item.name}({item.section})
-                  </span>
-                  <span className="min-w-0 truncate text-sm text-muted">{item.description}</span>
-                  <LinkPendingHint />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </aside>
-      ) : null}
-
-      <div className="mt-10 space-y-2 border-t border-edge pt-4 font-mono text-xs text-faint">
+      <div className="mt-8 space-y-1 text-xs text-ink-3">
         {hasParseWarnings ? <p>mandoc reported formatting warnings for this page. Some structure may be lost.</p> : null}
         <p>
-          <a
-            href={reportHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted underline decoration-edge-strong underline-offset-4 transition-colors hover:text-fg hover:decoration-accent"
-          >
+          <a href={reportHref} target="_blank" rel="noopener noreferrer" className="underline">
             Report a problem
           </a>{' '}
           with this page on GitHub.
@@ -101,3 +99,6 @@ export function ManPageFooterSections({
     </>
   )
 }
+
+const ROW = 'grid gap-x-4 gap-y-1 py-1.5 sm:grid-cols-[7.5rem_minmax(0,1fr)]'
+const LABEL = 'pt-0.5 text-sm font-normal text-ink-3'

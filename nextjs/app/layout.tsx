@@ -33,16 +33,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" data-theme={theme} suppressHydrationWarning>
       <head>
+        {/* The manual's roman, Latin range. Other ranges and the italic load when a page uses them. */}
         <link
           rel="preload"
-          href="/fonts/geist/GeistSans-Variable.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href="/fonts/jetbrains-mono/jetbrainsmono-roman.woff2"
+          href="/fonts/bm-text/bm-text-roman-latin.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

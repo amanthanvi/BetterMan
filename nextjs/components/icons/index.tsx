@@ -1,78 +1,10 @@
 export type IconProps = { className?: string }
 
-export function SearchIcon({ className }: IconProps) {
+export function ThemeIcon({ className }: IconProps) {
   return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" />
-    </svg>
-  )
-}
-
-export function SunIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="M4.93 4.93l1.41 1.41" />
-      <path d="M17.66 17.66l1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="M4.93 19.07l1.41-1.41" />
-      <path d="M17.66 6.34l1.41-1.41" />
-    </svg>
-  )
-}
-
-export function MoonIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 12.8A8.5 8.5 0 0 1 11.2 3a7 7 0 1 0 9.8 9.8Z" />
-    </svg>
-  )
-}
-
-export function StarIcon({ className, filled }: IconProps & { filled?: boolean }) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2Z" />
+    <svg className={className ?? 'size-4'} viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor" />
     </svg>
   )
 }
@@ -108,42 +40,6 @@ export function CheckIcon({ className }: IconProps) {
       aria-hidden="true"
     >
       <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
-}
-
-export function ListIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M8 6h13M8 12h13M8 18h13" />
-      <path d="M3 6h.01M3 12h.01M3 18h.01" />
-    </svg>
-  )
-}
-
-export function SlidersIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className ?? 'size-4'}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
-      <path d="M2 14h4M10 8h4M18 16h4" />
     </svg>
   )
 }

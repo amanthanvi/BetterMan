@@ -1,102 +1,175 @@
 @import "tailwindcss";
 
+/* BM Text: a Source Serif 4 subset renamed under its OFL (public/fonts/bm-text/FONTLOG.txt).
+   Each file covers one script; browsers fetch only the ranges a page uses. Keep the ranges
+   in sync with scripts/fonts/build-bm-text.py. Other scripts, CJK included, fall back
+   through the rest of --font-serif. */
 @font-face {
-  font-family: "Geist Sans";
-  src: url("/fonts/geist/GeistSans-Variable.woff2") format("woff2");
-  font-weight: 100 900;
+  font-family: "BM Text";
+  src: url("/fonts/bm-text/bm-text-roman-latin.woff2") format("woff2");
+  font-weight: 400 600;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2195, U+2212, U+2215, U+2264-2265, U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: "JetBrains Mono";
-  src: url("/fonts/jetbrains-mono/jetbrainsmono-roman.woff2") format("woff2");
-  font-weight: 100 800;
+  font-family: "BM Text";
+  src: url("/fonts/bm-text/bm-text-roman-latin-ext.woff2") format("woff2");
+  font-weight: 400 600;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+1D00-1DBF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @font-face {
-  font-family: "JetBrains Mono";
-  src: url("/fonts/jetbrains-mono/jetbrainsmono-italic.woff2") format("woff2");
-  font-weight: 100 800;
+  font-family: "BM Text";
+  src: url("/fonts/bm-text/bm-text-roman-greek.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF, U+1F00-1FFF;
+}
+
+@font-face {
+  font-family: "BM Text";
+  src: url("/fonts/bm-text/bm-text-roman-cyrillic.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0400-052F, U+1C80-1C8A, U+20B4, U+2116, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+@font-face {
+  font-family: "BM Text";
+  src: url("/fonts/bm-text/bm-text-italic-latin.woff2") format("woff2");
+  font-weight: 400;
   font-style: italic;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2195, U+2212, U+2215, U+2264-2265, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "BM Text";
+  src: url("/fonts/bm-text/bm-text-italic-latin-ext.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0100-0130, U+0132-0151, U+0154-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0300-0303, U+0305-0307, U+0309-0328, U+032A-036F, U+1D00-1DBF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "BM Text";
+  src: url("/fonts/bm-text/bm-text-italic-greek.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF, U+1F00-1FFF;
+}
+
+@font-face {
+  font-family: "BM Text";
+  src: url("/fonts/bm-text/bm-text-italic-cyrillic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0400-052F, U+1C80-1C8A, U+20B4, U+2116, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
 }
 
 @theme {
-  --font-sans:
-    "Geist Sans",
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-  --font-mono:
-    "JetBrains Mono",
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    "Liberation Mono",
-    monospace;
+  /* Only the system's own tokens generate utilities. */
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --shadow-*: initial;
 
-  /* Color system. light-dark() resolves via color-scheme, set on <html> below. */
-  --color-bg: light-dark(#faf8f5, #0b0b0d);
-  --color-surface: light-dark(#ffffff, #121215);
-  --color-raised: light-dark(#ffffff, #18181c);
-  --color-edge: light-dark(#e6e1d9, #26262b);
-  --color-edge-strong: light-dark(#cfc8bc, #3a3a42);
-  --color-fg: light-dark(#1c1a17, #ededf0);
-  --color-muted: light-dark(#6f695f, #9b9ba3);
-  --color-faint: light-dark(#767061, #85858d);
-  --color-accent: light-dark(#c22126, #e5484d);
-  --color-accent-hover: light-dark(#a91d21, #f2555a);
-  --color-accent-subtle: color-mix(in oklab, var(--color-accent) 12%, transparent);
-  --color-accent-edge: color-mix(in oklab, var(--color-accent) 35%, transparent);
-  --color-accent-contrast: light-dark(#ffffff, #0b0b0d);
-  --color-code-bg: light-dark(#f4f1ea, #111113);
-  --color-scrim: rgb(0 0 0 / 0.55);
+  /* Three voices: the manual (serif), BetterMan (sans), anything you type (mono). */
+  --font-serif:
+    "BM Text",
+    "Iowan Old Style",
+    "Palatino Linotype",
+    Palatino,
+    Georgia,
+    "Noto Serif",
+    "Noto Serif CJK SC",
+    "Hiragino Mincho ProN",
+    "Songti SC",
+    "Yu Mincho",
+    serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* Typeset-manual grammar: square everywhere. */
+  /* Paper and ink. light-dark() resolves via color-scheme, set on <html> below. */
+  --color-paper: light-dark(#f9f7f2, #131210);
+  --color-added: light-dark(#f1ede3, #1c1a17);
+  --color-raised: light-dark(#ffffff, #1f1d1a);
+  --color-ink: light-dark(#1c1a16, #ece7dd);
+  --color-ink-2: light-dark(#55504a, #b3ac9f);
+  --color-ink-3: light-dark(#6e685d, #9a9385);
+  --color-rule: light-dark(#e4dfd4, #2b2925);
+  --color-rule-2: light-dark(#c9c1b2, #46423b);
+  /* The one red: selection, focus and warnings. */
+  --color-accent: light-dark(#a3261b, #ec8a76);
+  --color-wash: light-dark(rgb(163 38 27 / 0.08), rgb(236 138 118 / 0.12));
+  --color-scrim: rgb(0 0 0 / 0.35);
+
+  --shadow-overlay: light-dark(0 10px 30px rgb(40 30 10 / 0.12), 0 10px 30px rgb(0 0 0 / 0.5));
+
+  /* Square everywhere. */
   --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 0px;
   --radius-xl: 0px;
 
-  /* One type scale, ~1.2 ratio: 12 / 13.5 / 15 / 18 / 21.5 / 26 / 31 px. */
   --text-xs: 0.75rem;
   --text-xs--line-height: 1.4;
-  --text-sm: 0.84375rem;
-  --text-sm--line-height: 1.45;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.5;
   --text-base: 0.9375rem;
-  --text-base--line-height: 1.5;
-  --text-lg: 1.125rem;
-  --text-lg--line-height: 1.45;
-  --text-xl: 1.34375rem;
-  --text-xl--line-height: 1.35;
-  --text-2xl: 1.625rem;
-  --text-2xl--line-height: 1.25;
-  --text-3xl: 1.9375rem;
-  --text-3xl--line-height: 1.2;
+  --text-base--line-height: 1.55;
+  --text-md: 1.0625rem;
+  --text-md--line-height: 1.5;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 2rem;
+  --text-2xl--line-height: 1.15;
+  --text-3xl: 2.75rem;
+  --text-3xl--line-height: 1;
+  --text-4xl: 3.5rem;
+  --text-4xl--line-height: 1;
 
-  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* Measures: the text column and the marginalia beside it. */
+  --container-text: 42.5rem;
+  --container-margin: 14rem;
+  --container-page: 82.5rem;
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* True small caps from the serif, for running heads, labels and manual headings. */
+@utility small-caps {
+  font-family: var(--font-serif);
+  font-variant-caps: all-small-caps;
+  font-variant-numeric: oldstyle-nums;
+  letter-spacing: 0.08em;
 }
 
 @layer base {
   :root {
-    color-scheme: dark;
-
+    color-scheme: light dark;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
-    color: var(--color-fg);
-    background-color: var(--color-bg);
+    color: var(--color-ink);
+    background-color: var(--color-paper);
   }
 
   html[data-theme="dark"] {
@@ -107,51 +180,27 @@
     color-scheme: light;
   }
 
-  @media (prefers-color-scheme: light) {
-    html:not([data-theme]) {
-      color-scheme: light;
-    }
-  }
-
   body {
     margin: 0;
     min-height: 100dvh;
-    font-family: var(--font-sans);
-    font-size: var(--text-base);
-    line-height: 1.5;
-    letter-spacing: 0em;
+    font: 400 1rem/1.55 var(--font-sans);
 
-    --bm-reading-font-size: 15px;
-    --bm-reading-line-height: 1.65;
-    --bm-reading-font-family: var(--font-sans);
-    --bm-reading-column-width: 56rem;
-
-    --bm-code-bg: var(--color-code-bg);
-    --bm-code-surface: var(--color-code-bg);
-    --bm-code-fg: var(--color-fg);
-    --bm-code-muted: var(--color-muted);
-    --bm-code-border: var(--color-edge);
-    --bm-code-accent: var(--color-accent);
-    --bm-code-accent-contrast: var(--color-accent-contrast);
+    --bm-reading-font-size: 1.125rem;
+    --bm-reading-line-height: 1.62;
+    --bm-reading-font-family: var(--font-serif);
+    --bm-reading-column-width: var(--container-text);
   }
 
   body[data-bm-font-size="small"] {
-    --bm-reading-font-size: 13.5px;
+    --bm-reading-font-size: 1rem;
   }
 
   body[data-bm-font-size="large"] {
-    --bm-reading-font-size: 16.5px;
+    --bm-reading-font-size: 1.25rem;
   }
 
   body[data-bm-font-size="xlarge"] {
-    --bm-reading-font-size: 18px;
-  }
-
-  body[data-bm-font-family="serif"] {
-    --bm-reading-font-family:
-      ui-serif,
-      Georgia,
-      serif;
+    --bm-reading-font-size: 1.375rem;
   }
 
   body[data-bm-font-family="sans"] {
@@ -163,31 +212,50 @@
   }
 
   body[data-bm-line-height="compact"] {
-    --bm-reading-line-height: 1.5;
-  }
-
-  body[data-bm-line-height="normal"] {
-    --bm-reading-line-height: 1.65;
+    --bm-reading-line-height: 1.48;
   }
 
   body[data-bm-line-height="relaxed"] {
-    --bm-reading-line-height: 1.7;
+    --bm-reading-line-height: 1.78;
   }
 
   body[data-bm-column-width="narrow"] {
-    --bm-reading-column-width: 42rem;
+    --bm-reading-column-width: 36rem;
   }
 
   body[data-bm-column-width="wide"] {
-    --bm-reading-column-width: 72rem;
+    --bm-reading-column-width: 54rem;
   }
 
-  body[data-bm-code-theme="light"] {
-    --bm-code-accent: #c22126;
+  @media (max-width: 47.99rem) {
+    body:not([data-bm-font-size]),
+    body[data-bm-font-size="medium"] {
+      --bm-reading-font-size: 1.0625rem;
+    }
   }
 
-  body[data-bm-code-theme="dark"] {
-    --bm-code-accent: #e5484d;
+  ::selection {
+    background: var(--color-wash);
+    color: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration-color: var(--color-rule-2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  a:hover {
+    color: var(--color-accent);
+    text-decoration-color: var(--color-accent);
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
   }
 
   /* A clicked link into a route without a loading boundary dims until the payload lands. */
@@ -195,87 +263,44 @@
     opacity: 0.55;
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    a:has(> [data-bm-link-pending]) {
-      transition: opacity 150ms var(--ease-out, ease-out);
-    }
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    html,
-    body,
-    [data-bm-app-header],
-    [data-bm-app-footer],
-    [data-bm-sidebar],
-    [data-bm-findbar],
-    main,
-    article,
-    footer {
-      transition-property: color, background-color, border-color, opacity, transform, fill, stroke;
-      transition-duration: 150ms;
-      transition-timing-function: ease;
-    }
-  }
-
-  code,
-  pre {
-    font-family: var(--font-mono);
-    letter-spacing: 0.01em;
-  }
-
-  a {
-    color: var(--color-accent);
-    text-decoration: none;
-  }
-
-  a:hover {
-    color: var(--color-accent-hover);
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
-  }
-
-  /* One focus system: a solid 2px accent outline on :focus-visible, everywhere. */
+  /* One focus system: a solid 2px red outline on :focus-visible, everywhere. */
   :where(a, button, input, select, textarea, summary, [role="button"], [role="option"], [role="radio"], [tabindex]:not([tabindex="-1"])):focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
 
-  .bm-theme-icon {
-    display: none;
-  }
-
-  html[data-theme="dark"] .bm-theme-icon-sun {
-    display: inline-flex;
-  }
-
-  html[data-theme="light"] .bm-theme-icon-moon {
-    display: inline-flex;
-  }
-
-  html:not([data-theme]) .bm-theme-icon-sun {
-    display: inline-flex;
-  }
-
-  @media (prefers-color-scheme: light) {
-    html:not([data-theme]) .bm-theme-icon-sun {
-      display: none;
-    }
-
-    html:not([data-theme]) .bm-theme-icon-moon {
-      display: inline-flex;
+  /* Controls that need JavaScript are hidden without it; their fallbacks show instead. */
+  @media (scripting: none) {
+    .bm-js {
+      display: none !important;
     }
   }
 
-
-  ::selection {
-    background: var(--color-accent-subtle);
+  @media (scripting: enabled) {
+    .bm-nojs {
+      display: none !important;
+    }
   }
 
   @media (prefers-reduced-motion: no-preference) {
+    a:has(> [data-bm-link-pending]) {
+      transition: opacity 150ms var(--ease-out);
+    }
+
+    html,
+    body,
+    [data-bm-app-header],
+    [data-bm-app-footer],
+    [data-bm-sidebar],
+    [data-bm-findbar] {
+      transition-property: color, background-color, border-color;
+      transition-duration: 150ms;
+      transition-timing-function: ease;
+    }
+
     @keyframes bm-option-flash {
       from {
-        background-color: var(--color-accent-subtle);
+        background-color: var(--color-wash);
       }
       to {
         background-color: transparent;
@@ -338,177 +363,534 @@
     .bm-toc-marker {
       transition: transform 150ms var(--ease-out), height 150ms var(--ease-out);
     }
+  }
 
-    .bm-expand {
-      transition: grid-template-rows 200ms var(--ease-out);
+  /* Highlights. Find and option marks share the wash; the current match is the red. */
+  mark {
+    color: inherit;
+    background: none;
+  }
+
+  .bm-mark {
+    background: var(--color-wash);
+    box-shadow: 0 1px 0 var(--color-accent);
+  }
+
+  mark.bm-find-active {
+    background: var(--color-accent);
+    color: var(--color-paper);
+    box-shadow: none;
+  }
+}
+
+@layer components {
+  /* The running head and foot: TAR(1) · User Commands · TAR(1), in small caps over a hairline. */
+  .bm-rh {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    padding: 0.7rem 0 0.65rem;
+    border-bottom: 1px solid var(--color-rule);
+    font: 400 0.9375rem/1.2 var(--font-serif);
+    font-variant-caps: all-small-caps;
+    font-variant-numeric: oldstyle-nums;
+    letter-spacing: 0.08em;
+    color: var(--color-ink-3);
+  }
+
+  .bm-rh > :nth-child(2) {
+    text-align: center;
+  }
+
+  .bm-rh.bm-rf {
+    border-top: 1px solid var(--color-rule);
+    border-bottom: 0;
+  }
+
+  @media (max-width: 47.99rem) {
+    .bm-rh {
+      font-size: 0.8125rem;
+      letter-spacing: 0.06em;
+    }
+
+    .bm-rh > :nth-child(2) {
+      display: none;
     }
   }
 
-  /* Collapse is structural, so it works under reduced motion; only the
-     transition above is motion-gated. */
-  .bm-expand {
-    display: grid;
-    grid-template-rows: 1fr;
+  /* Underline fields. Focus turns the rule red and thickens it, in place of the outline. */
+  .bm-field {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--color-rule-2);
+    border-radius: 0;
+    background: transparent;
+    appearance: none;
   }
 
-  .bm-expand[data-collapsed="true"] {
-    grid-template-rows: 0fr;
+  .bm-field::placeholder {
+    color: var(--color-ink-3);
   }
 
-  .bm-expand > * {
-    overflow: hidden;
+  .bm-field:focus-visible {
+    outline: none;
+    border-bottom-color: var(--color-accent);
+    box-shadow: 0 1px 0 var(--color-accent);
   }
 
-  /* Man page body: blocks far from the viewport skip style, layout and paint.
-     content-visibility also clips paint to the block's padding box, so the
-     padding leaves room for focus rings and the mobile full-bleed code tint,
-     and the negative margins give it back so the column does not move. The
-     blocks sit 1.25rem apart, like space-y-5. */
+  .bm-field::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  /* The wordmark sets the name the way the manual sets a command: betterman(1). */
+  .bm-wm {
+    font: 600 1.25rem/1 var(--font-serif);
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .bm-wm > span {
+    font-weight: 400;
+    color: var(--color-ink-3);
+    font-variant-numeric: oldstyle-nums;
+  }
+
+  /* BetterMan's own voice: system sans on a quiet tint, never a box. */
+  .bm-added {
+    background: var(--color-added);
+    font-family: var(--font-sans);
+  }
+
+  /* Portability: three cells, GNU/Linux · FreeBSD · macOS. Hollow means absent;
+     half-filled means present but different. */
+  .bm-pg {
+    display: inline-flex;
+    gap: 2px;
+    vertical-align: middle;
+  }
+
+  .bm-pg > i {
+    width: 7px;
+    height: 7px;
+    background: var(--color-ink-2);
+  }
+
+  .bm-pg > i[data-v="no"] {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--color-ink-2);
+  }
+
+  .bm-pg > i[data-v="differs"] {
+    background: linear-gradient(to top right, var(--color-ink-2) 50%, transparent 50%);
+    box-shadow: inset 0 0 0 1px var(--color-ink-2);
+  }
+
+  /* Flags in the index of options are separate elements; the comma is typography. */
+  .bm-flag + .bm-flag::before {
+    content: ", ";
+    font-weight: 400;
+    color: var(--color-ink-2);
+  }
+
+  /* The typeset manual. DocRenderer emits plain elements; the typography lives here. */
+  .bm-manual {
+    font-family: var(--bm-reading-font-family);
+    font-size: var(--bm-reading-font-size);
+    line-height: var(--bm-reading-line-height);
+    font-variant-numeric: oldstyle-nums proportional-nums;
+    font-kerning: normal;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    text-wrap: pretty;
+  }
+
+  /* Long pages wrap each block so far-off blocks skip style, layout and paint.
+     content-visibility clips paint to the padding box, so the padding leaves room
+     for hanging numbers and focus rings and the negative margin gives it back. */
   .bm-doc > * {
+    --bm-bleed: 1.25rem;
     content-visibility: auto;
-    margin: -4px -1rem;
-    padding: 4px 1rem;
+    margin: -4px calc(-1 * var(--bm-bleed));
+    padding: 4px var(--bm-bleed);
   }
 
-  .bm-doc > * + * {
-    margin-block-start: calc(1.25rem - 4px);
+  @media (min-width: 75rem) {
+    .bm-doc > * {
+      --bm-bleed: 4rem;
+    }
   }
 
+  /* Blocks space themselves with a top margin only, so wrapped and plain pages match. */
+  .bm-manual :is(p, ul, ol, dl, .bm-code, .bm-tbl, hr) {
+    margin: 0.85em 0 0;
+  }
+
+  .bm-manual :is(h2, h3, h4, h5, h6) {
+    position: relative;
+    scroll-margin-top: 8rem;
+    text-wrap: balance;
+    hyphens: manual;
+  }
+
+  .bm-manual h2 {
+    margin: 2.6em 0 0;
+    font: 600 1.1em/1.3 var(--font-serif);
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.075em;
+  }
+
+  .bm-manual h3 {
+    margin: 1.9em 0 0;
+    font: italic 400 1.05em/1.35 var(--font-serif);
+  }
+
+  .bm-manual :is(h4, h5, h6) {
+    margin: 1.5em 0 0;
+    font: 600 1em/1.35 var(--font-serif);
+  }
+
+  .bm-manual :is(h2, h3, h4, h5, h6) + * {
+    margin-top: 0.6em;
+  }
+
+  .bm-manual:not(.bm-doc) > :first-child,
+  .bm-doc > :first-child > :first-child {
+    margin-top: 0;
+  }
+
+  /* Hanging section numbers, kept out of the text and the accessible name. */
+  .bm-manual [data-n]::before {
+    content: attr(data-n) / "";
+    position: absolute;
+    right: 100%;
+    margin-right: 1.25rem;
+    font: 400 0.875rem var(--font-serif);
+    font-style: normal;
+    font-variant: normal;
+    font-variant-numeric: oldstyle-nums;
+    letter-spacing: 0;
+    line-height: inherit;
+    color: var(--color-ink-3);
+  }
+
+  .bm-manual h2[data-n]::before {
+    font-size: 1rem;
+  }
+
+  @media (max-width: 74.99rem) {
+    .bm-manual [data-n]::before {
+      position: static;
+      margin-right: 0.6em;
+    }
+  }
+
+  .bm-manual :is(h2, h3, h4, h5, h6) > a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .bm-manual :is(h2, h3, h4, h5, h6) > a::after {
+    content: "#" / "";
+    margin-left: 0.4em;
+    font: 400 0.75rem var(--font-mono);
+    color: var(--color-ink-3);
+    opacity: 0;
+  }
+
+  .bm-manual :is(h2, h3, h4, h5, h6) > a:is(:hover, :focus-visible)::after {
+    opacity: 1;
+  }
+
+  .bm-manual :is(b, strong) {
+    font-weight: 600;
+  }
+
+  /* Literals in running prose stay bold serif, as troff sets them. */
+  .bm-manual code:not(.hljs) {
+    font: inherit;
+    font-weight: 600;
+    hyphens: manual;
+  }
+
+  /* Option terms are bold mono: flags are scanned, not read. */
+  .bm-manual dt {
+    position: relative;
+    margin: 0.95em 0 0;
+    scroll-margin-top: 8rem;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    line-height: 1.6;
+    font-variant-numeric: lining-nums;
+    hyphens: manual;
+    overflow-wrap: anywhere;
+  }
+
+  .bm-manual dl > dt:first-child {
+    margin-top: 0;
+  }
+
+  .bm-manual dt code:not(.hljs) {
+    font-family: var(--font-mono);
+    font-weight: 700;
+  }
+
+  .bm-manual dt em {
+    color: var(--color-ink-2);
+  }
+
+  .bm-manual dd {
+    margin: 0.1em 0 0 2em;
+  }
+
+  .bm-manual dd > :first-child {
+    margin-top: 0;
+  }
+
+  .bm-manual dd dd {
+    margin-left: 1.5em;
+  }
+
+  .bm-manual :is(ul, ol) {
+    padding-left: 1.75em;
+  }
+
+  .bm-manual ul {
+    list-style: disc;
+  }
+
+  .bm-manual ol {
+    list-style: decimal;
+  }
+
+  .bm-manual li + li {
+    margin-top: 0.35em;
+  }
+
+  .bm-manual li > :first-child {
+    margin-top: 0;
+  }
+
+  .bm-manual hr {
+    border: 0;
+    border-top: 1px solid var(--color-rule);
+  }
+
+  .bm-manual a {
+    text-decoration-line: underline;
+  }
+
+  .bm-manual .bm-ext::after {
+    content: "↗" / "";
+    margin-left: 0.2em;
+    font-size: 0.75em;
+    color: var(--color-ink-3);
+  }
+
+  .bm-manual .bm-unresolved {
+    cursor: not-allowed;
+    color: var(--color-ink-2);
+    text-decoration: underline dotted var(--color-rule-2);
+    text-underline-offset: 3px;
+  }
+
+  .bm-tbl {
+    overflow-x: auto;
+  }
+
+  .bm-manual table {
+    border-collapse: collapse;
+    font-size: 0.875em;
+    font-variant-numeric: lining-nums tabular-nums;
+    text-align: left;
+  }
+
+  .bm-manual th {
+    padding: 0.3rem 0.9rem 0.3rem 0;
+    border-bottom: 1px solid var(--color-rule-2);
+    font-weight: 600;
+  }
+
+  .bm-manual td {
+    padding: 0.3rem 0.9rem 0.3rem 0;
+    border-bottom: 1px solid var(--color-rule);
+    vertical-align: top;
+  }
+
+  /* Code: what you type is mono. No tint; the indent sets it apart. */
+  .bm-code {
+    position: relative;
+    scroll-margin-top: 8rem;
+  }
+
+  .bm-code > pre {
+    margin: 0;
+    padding: 0.15rem 2.25rem 0.15rem 1.75em;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    hyphens: manual;
+    tab-size: 8;
+  }
+
+  .bm-added .bm-code > pre {
+    padding-left: 0;
+  }
+
+  .bm-manual .bm-code > pre {
+    font-size: max(0.8125rem, 0.78em);
+  }
+
+  .bm-copy {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-ink-3);
+  }
+
+  .bm-copy:hover {
+    color: var(--color-ink);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .bm-copy {
+      opacity: 0;
+    }
+
+    .bm-code:hover > .bm-copy,
+    .bm-code:focus-within > .bm-copy {
+      opacity: 1;
+    }
+  }
+
+  /* The code-theme preference sets code on its own plate in the other scheme. */
+  body[data-bm-code-theme="light"] .bm-code,
+  body[data-bm-code-theme="dark"] .bm-code {
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  body[data-bm-code-theme="light"] .bm-code {
+    color-scheme: light;
+  }
+
+  body[data-bm-code-theme="dark"] .bm-code {
+    color-scheme: dark;
+  }
+
+  body[data-bm-code-theme="light"] .bm-code > pre,
+  body[data-bm-code-theme="dark"] .bm-code > pre {
+    padding: 0.75rem 2.25rem 0.75rem 1rem;
+  }
+
+  /* Syntax highlighting in ink only: weight and italics, never colour. */
   .hljs {
     background: transparent;
-    color: var(--bm-code-fg);
+    color: inherit;
   }
 
   .hljs-comment,
   .hljs-quote {
-    color: var(--bm-code-muted);
+    color: var(--color-ink-3);
     font-style: italic;
   }
 
   .hljs-keyword,
   .hljs-built_in,
   .hljs-literal,
-  .hljs-symbol {
-    color: color-mix(in srgb, var(--bm-code-accent) 72%, var(--bm-code-fg));
-    font-weight: 600;
+  .hljs-symbol,
+  .hljs-type {
+    font-weight: 700;
   }
 
   .hljs-string,
   .hljs-title,
-  .hljs-attr {
-    color: color-mix(in srgb, var(--bm-code-accent) 38%, var(--bm-code-fg));
+  .hljs-attr,
+  .hljs-meta {
+    color: var(--color-ink-2);
+  }
+}
+
+@media print {
+  :root {
+    --color-paper: #fff;
+    --color-added: #fff;
+    --color-raised: #fff;
+    --color-ink: #000;
+    --color-ink-2: #222;
+    --color-ink-3: #444;
+    --color-rule: #bbb;
+    --color-rule-2: #888;
+    --color-accent: #000;
+    --color-wash: #e6e6e6;
   }
 
-  .bm-mark {
-    padding: 0.08rem 0.22rem;
+  html {
+    background: #fff !important;
+    color-scheme: light;
   }
 
-  .bm-opt {
-    background: var(--color-accent-subtle);
-    color: var(--color-fg);
-    outline: 1px solid var(--color-accent-edge);
-    outline-offset: -1px;
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  .bm-find {
-    background: var(--color-accent-subtle);
-    color: var(--color-fg);
-    outline: 1px solid var(--color-accent-edge);
-    outline-offset: -1px;
+  [data-bm-app-header],
+  [data-bm-app-footer],
+  [data-bm-sidebar],
+  [data-bm-findbar],
+  [role="dialog"],
+  .bm-copy {
+    display: none !important;
   }
 
-  .bm-find-active {
-    outline: 2px solid var(--color-accent-edge);
-    outline-offset: 1px;
-    text-decoration: underline;
-    text-decoration-thickness: 2px;
-    text-underline-offset: 2px;
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
   }
 
-  @media print {
-    :root {
-      --color-bg: #ffffff;
-      --color-surface: #ffffff;
-      --color-raised: #ffffff;
-      --color-edge: #cfcfcf;
-      --color-edge-strong: #cfcfcf;
-      --color-fg: #000000;
-      --color-muted: #333333;
-      --color-faint: #555555;
-      --color-accent: #000000;
-      --color-accent-hover: #000000;
-      --color-accent-subtle: #e6e6e6;
-      --color-accent-edge: #cfcfcf;
-      --color-accent-contrast: #ffffff;
-      --color-code-bg: #f5f5f5;
-    }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
 
-    html {
-      background: #ffffff !important;
-      color-scheme: light;
-    }
+  a {
+    text-decoration: none;
+  }
 
-    body {
-      background: #ffffff !important;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
+  pre,
+  table {
+    break-inside: avoid;
+  }
 
-    [data-bm-app-header],
-    [data-bm-app-footer],
-    [data-bm-sidebar],
-    [data-bm-findbar],
-    [role="dialog"] {
-      display: none !important;
-    }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
 
-    button,
-    input,
-    select,
-    textarea {
-      display: none !important;
-    }
+  .bm-mark,
+  mark.bm-find-active {
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit !important;
+  }
 
-    main {
-      max-width: none !important;
-      padding: 0 !important;
-    }
+  /* Print renders the whole page, not only what was near the viewport. */
+  .bm-doc > * {
+    content-visibility: visible;
+  }
 
-    a {
-      text-decoration: underline;
-    }
-
-    pre,
-    table {
-      break-inside: avoid;
-      page-break-inside: avoid;
-    }
-
-    h1,
-    h2,
-    h3 {
-      break-after: avoid;
-      page-break-after: avoid;
-    }
-
-    .bm-mark {
-      padding: 0 !important;
-      outline: none !important;
-      background: transparent !important;
-    }
-
-    .bm-opt,
-    .bm-find {
-      background: transparent !important;
-    }
-
-    .bm-expand[data-collapsed="true"] {
-      grid-template-rows: 1fr !important;
-    }
-
-    /* Print renders the whole page, not only what was near the viewport. */
-    .bm-doc > * {
-      content-visibility: visible;
-    }
+  .bm-manual [data-n]::before {
+    position: static;
+    margin-right: 6pt;
   }
 }

@@ -3,15 +3,22 @@
 import type { OptionItem } from '../../lib/docModel'
 
 import { parseOptionTerms } from './find'
+import { PortabilityGlyph, type Portability } from './Portability'
 
 function splitFlags(flags: string): string[] {
   const parsed = parseOptionTerms(flags)
   return parsed.length ? parsed : [flags.trim()].filter(Boolean)
 }
 
+/**
+ * Rows of the index of options: the flags in bold mono, the one-line description,
+ * and the number of the section that defines them.
+ */
 export function OptionsTable({
   options,
   rowIds,
+  locators,
+  portability,
   selectedAnchorId,
   flashAnchorId,
   onSelect,
@@ -19,49 +26,62 @@ export function OptionsTable({
   options: OptionItem[]
   /** Row anchor per `anchorId`, distinct from the body definition's id. */
   rowIds: ReadonlyMap<string, string>
+  /** Section number per `anchorId`, from `definitionLocators()`. */
+  locators?: ReadonlyMap<string, string>
+  /** Per `anchorId`; a glyph is drawn only beside flags that are not portable. */
+  portability?: ReadonlyMap<string, Portability>
   selectedAnchorId?: string | null
   flashAnchorId?: string | null
   onSelect?: (opt: OptionItem, event: React.MouseEvent<HTMLAnchorElement>) => void
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-left text-sm" aria-label="Command-line options">
-        <tbody>
-          {options.map((opt) => {
-            const selected = selectedAnchorId === opt.anchorId
-            const flashing = flashAnchorId === opt.anchorId
-            const rowId = rowIds.get(opt.anchorId) ?? `opt-${opt.anchorId}`
-            const flagParts = splitFlags(opt.flags)
-            const flagClass = `font-mono text-sm font-semibold transition-colors group-hover:text-accent ${
-              selected ? 'text-accent underline decoration-2 underline-offset-4' : 'text-fg'
-            }`
+    <table className="w-full border-collapse text-left" aria-label="Command-line options">
+      <thead className="sr-only">
+        <tr>
+          <th scope="col">Option</th>
+          <th scope="col">Description</th>
+          <th scope="col">Section</th>
+        </tr>
+      </thead>
+      <tbody>
+        {options.map((opt) => {
+          const selected = selectedAnchorId === opt.anchorId
+          const rowId = rowIds.get(opt.anchorId) ?? `opt-${opt.anchorId}`
+          const p = portability?.get(opt.anchorId)
 
-            return (
-              <tr
-                key={opt.anchorId}
-                className={`border-b border-edge last:border-b-0 ${flashing ? 'bm-option-flash' : ''}`}
-              >
-                <td className="w-[28ch] py-2.5 pl-0 pr-4 align-top">
-                  <a
-                    href={`#${rowId}`}
-                    id={rowId}
-                    className="group scroll-mt-24 inline-flex flex-wrap gap-x-3 gap-y-1 no-underline"
-                    onClick={(e) => onSelect?.(opt, e)}
-                  >
-                    {flagParts.map((flag) => (
-                      <span key={flag} className={flagClass}>
-                        {flag}
-                      </span>
-                    ))}
-                    {opt.argument ? <span className="font-mono text-sm italic text-muted">{opt.argument}</span> : null}
-                  </a>
-                </td>
-                <td className="py-2.5 pl-0 pr-4 text-muted">{opt.description}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+          return (
+            <tr key={opt.anchorId} className={flashAnchorId === opt.anchorId ? 'bm-option-flash' : undefined}>
+              <td className="w-[45%] py-1 pr-4 align-baseline sm:w-[18rem]">
+                <a
+                  href={`#${rowId}`}
+                  id={rowId}
+                  className={`group scroll-mt-24 font-mono text-[0.8125rem] font-bold no-underline [overflow-wrap:anywhere] ${
+                    selected ? 'text-accent underline decoration-2 underline-offset-4' : 'text-ink hover:text-accent'
+                  }`}
+                  onClick={(e) => onSelect?.(opt, e)}
+                >
+                  {splitFlags(opt.flags).map((flag) => (
+                    <span key={flag} className="bm-flag">
+                      {flag}
+                    </span>
+                  ))}
+                  {opt.argument ? <i className="font-normal text-ink-2"> {opt.argument}</i> : null}
+                </a>
+                {p ? (
+                  <>
+                    {' '}
+                    <PortabilityGlyph portability={p} />
+                  </>
+                ) : null}
+              </td>
+              <td className="py-1 pr-4 align-baseline text-sm text-ink-2">{opt.description}</td>
+              <td className="w-10 py-1 text-right align-baseline font-serif text-sm text-ink-3 oldstyle-nums">
+                {locators?.get(opt.anchorId)}
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
   )
 }

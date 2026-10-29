@@ -1,35 +1,28 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { RunningHead } from '../components/man/RunningHead'
 import { Kbd } from '../components/ui/Kbd'
 
 export const metadata: Metadata = { title: 'Not found — BetterMan' }
 
 export default function NotFound() {
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mt-8 sm:mt-16">
-        <div className="font-mono text-xs tracking-wide text-muted">404 Not Found</div>
-        <h1 className="mt-2 font-mono text-2xl font-semibold leading-tight tracking-tight text-fg">
-          No such file or directory
-        </h1>
-        <p className="mt-3 text-sm text-muted">
+    <div className="mx-auto max-w-[46rem]">
+      <RunningHead title="ERRNO(3)" label="404 Not Found" end="ENOENT" />
+      <div className="pt-[12vh]">
+        <h1 className="break-words font-mono text-[1.625rem] leading-snug">No such file or directory</h1>
+        <p className="mt-4 font-serif text-lg text-ink-2">
           Nothing lives at this address. Press <Kbd>⌘K</Kbd> to search the manual.
         </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href="/"
-            className="inline-flex h-9 items-center justify-center px-1 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
-          >
+        <p className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <Link href="/" className="underline">
             Go home
           </Link>
-          <Link
-            href="/search"
-            className="inline-flex h-9 items-center justify-center px-1 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent"
-          >
+          <Link href="/search" className="underline">
             Search
           </Link>
-        </div>
+        </p>
       </div>
     </div>
   )

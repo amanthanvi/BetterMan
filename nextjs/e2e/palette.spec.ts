@@ -71,7 +71,7 @@ test('command palette: a flag query opens the page at its option row', async ({ 
   const input = page.getByRole('combobox', { name: 'Command palette input' })
   await input.fill('tar --create')
   const option = page.getByRole('option', { name: /tar\(1\)/i })
-  await expect(option.getByText('options', { exact: true })).toBeVisible()
+  await expect(option.getByText('flag', { exact: true })).toBeVisible()
   await option.click()
   await expect(page).toHaveURL(/\/man\/tar\/1#opt-create$/)
   await expect(page.locator('mark[data-bm-opt]').filter({ hasText: '--create' }).first()).toBeVisible()

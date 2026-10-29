@@ -29,7 +29,7 @@ export function ShortcutsDialog({
       title: 'Search',
       items: [
         { keys: ['Ctrl/⌘', 'K'], desc: 'Open command palette' },
-        { keys: ['/'], desc: 'Focus search (or open palette)' },
+        { keys: ['/'], desc: 'Focus search (find, on a man page)' },
       ],
     },
     {
@@ -49,11 +49,15 @@ export function ShortcutsDialog({
     groups.push({
       title: 'Man Page',
       items: [
-        { keys: ['F'], desc: 'Find in page' },
+        { keys: ['/', 'F'], desc: 'Find in page' },
+        { keys: ['n', 'N'], desc: 'Next, previous match' },
+        { keys: ['j', 'k'], desc: 'Scroll down, up' },
+        { keys: ['g', 'G'], desc: 'Top, bottom' },
+        { keys: ['[', ']'], desc: 'Previous, next section' },
         { keys: ['M'], desc: 'Toggle bookmark' },
         { keys: ['P'], desc: 'Open reading preferences' },
-        { keys: ['Enter'], desc: 'Next find match' },
-        { keys: ['Shift', 'Enter'], desc: 'Previous find match' },
+        { keys: ['Enter'], desc: 'Next find match (in find)' },
+        { keys: ['Shift', 'Enter'], desc: 'Previous find match (in find)' },
       ],
     })
   }
@@ -62,10 +66,10 @@ export function ShortcutsDialog({
     <Dialog open={open} onOpenChange={onOpenChange} label="Keyboard shortcuts">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-base font-semibold tracking-tight text-fg">Keyboard shortcuts</div>
-          <div className="mt-1 text-sm text-muted">
-            Press <span className="font-mono">Esc</span> to close.
-          </div>
+          <h2 className="small-caps text-lg font-semibold text-ink">Keyboard shortcuts</h2>
+          <p className="mt-1 text-sm text-ink-3">
+            Press <Kbd>Esc</Kbd> to close.
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} aria-label="Close keyboard shortcuts, Esc">
           Esc
@@ -75,13 +79,13 @@ export function ShortcutsDialog({
       <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
         {groups.map((g) => (
           <section key={g.title} aria-labelledby={shortcutGroupId(g.title)} className="space-y-3">
-            <h3 id={shortcutGroupId(g.title)} className="font-mono text-xs tracking-wide text-muted">
+            <h3 id={shortcutGroupId(g.title)} className="text-sm font-semibold text-ink-2">
               {g.title}
             </h3>
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {g.items.map((it) => (
                 <li key={`${g.title}:${it.desc}`} className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 text-sm text-muted">{it.desc}</div>
+                  <div className="min-w-0 text-sm text-ink-2">{it.desc}</div>
                   <div className="flex flex-wrap items-center justify-end gap-1">
                     {it.keys.map((k) => (
                       <Kbd key={k}>{k}</Kbd>

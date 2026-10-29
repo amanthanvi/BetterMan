@@ -80,7 +80,7 @@ test('search: a flag finds the page that defines it and links to the option row'
   const result = page.getByRole('list', { name: 'Search results' }).getByRole('listitem').first()
   const link = result.getByRole('link', { name: 'tar(1)', exact: true })
   await expect(link).toHaveAttribute('href', '/man/tar/1#opt-create')
-  await expect(result.getByText('options', { exact: true })).toBeVisible()
+  await expect(result.getByText('flag', { exact: true })).toBeVisible()
   await expect(result.getByText('-c, --create')).toBeVisible()
 
   await link.click()

@@ -5,8 +5,8 @@ import { cx } from './cx'
 /* Unboxed glyphs: hover is an ink change, never a border or fill. The size
    classes preserve the hit target. */
 const VARIANT = {
-  outline: 'text-muted hover:text-fg',
-  ghost: 'text-muted hover:text-fg',
+  outline: 'text-ink-2 hover:text-ink',
+  ghost: 'text-ink-3 hover:text-ink',
 } as const
 
 const SIZE = {

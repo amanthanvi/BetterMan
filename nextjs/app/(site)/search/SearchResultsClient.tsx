@@ -80,33 +80,55 @@ function buildSynopsisSnippet(r: SearchResult): string {
     .join('\n')
 }
 
+/** Small-caps kind label: a flag match, or what the page's section documents. */
+export function resultKind(r: SearchResult): string {
+  if (r.match === 'option') return 'flag'
+  switch (r.section.charAt(0)) {
+    case '1':
+    case '6':
+    case '8':
+      return 'command'
+    case '2':
+      return 'system call'
+    case '3':
+      return 'function'
+    case '4':
+      return 'device'
+    case '5':
+      return 'file format'
+    case '7':
+      return 'concept'
+    case '9':
+      return 'kernel'
+    default:
+      return 'page'
+  }
+}
+
 function ResultCard({ urlDistro, q, r }: { urlDistro: Distro | null; q: string; r: SearchResult }) {
   const anchorId = r.match === 'option' ? r.anchorId : undefined
   const href = useMemo(() => manPageHref(r.name, r.section, urlDistro, anchorId), [anchorId, urlDistro, r.name, r.section])
   const synopsis = useMemo(() => buildSynopsisSnippet(r), [r])
 
   return (
-    <li className="border-b border-edge py-4 first:pt-1 last:border-b-0">
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-baseline gap-3">
+    <li className="grid gap-x-4 gap-y-0.5 border-t border-rule py-3.5 sm:grid-cols-[6.5rem_minmax(0,1fr)]">
+      <span className="small-caps text-[0.9375rem] leading-[1.6] text-ink-3">{resultKind(r)}</span>
+      <div className="min-w-0">
+        <p className="font-serif text-[1.125rem] leading-[1.45]">
           <Link
             href={href}
-            className="font-mono text-sm font-semibold"
+            className="no-underline hover:text-accent"
             aria-label={`${r.name}(${r.section})`}
             title={`${r.name}(${r.section})`}
           >
-            {r.name}({r.section})
+            <b className="font-semibold">{r.name}</b>({r.section})
             <LinkPendingHint />
-          </Link>
-          {anchorId ? (
-            <span className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-muted">options</span>
-          ) : null}
-        </div>
-
-        <div className="text-sm text-muted">{highlight(r.description, q)}</div>
+          </Link>{' '}
+          <span className="text-ink-2">{highlight(r.description, q)}</span>
+        </p>
 
         {synopsis ? (
-          <pre className="mt-1 whitespace-pre-wrap break-words bg-code-bg p-3 font-mono text-xs leading-[1.6] text-fg">
+          <pre className="mt-1 whitespace-pre-wrap break-words text-xs leading-[1.6] text-ink-2">
             <code>{highlight(synopsis, q)}</code>
           </pre>
         ) : null}
@@ -197,30 +219,30 @@ export function SearchResultsClient({
 
   if (!q) {
     return (
-      <div className="mt-8 text-sm text-muted">
+      <p className="mt-10 text-sm text-ink-2">
         Search by command name or by what it does. Try{' '}
         <Link
           href={withDistro(`/search?q=${encodeURIComponent('tar')}`, urlDistro)}
-          className="font-mono"
+          className="font-mono underline"
         >
           tar
         </Link>
         ,{' '}
         <Link
           href={withDistro(`/search?q=${encodeURIComponent('ssh')}`, urlDistro)}
-          className="font-mono"
+          className="font-mono underline"
         >
           ssh
         </Link>
         ,{' '}
         <Link
           href={withDistro(`/search?q=${encodeURIComponent('copy files')}`, urlDistro)}
-          className="font-mono"
+          className="font-mono underline"
         >
           copy files
         </Link>
         .
-      </div>
+      </p>
     )
   }
 
@@ -228,8 +250,10 @@ export function SearchResultsClient({
 
   if (!results.length) {
     return (
-      <div className="mt-8 text-sm text-muted">
-        No results for <span className="font-mono text-fg">{q}</span>.
+      <div className="mt-10 text-sm text-ink-2">
+        <p className="font-serif text-lg text-ink">
+          No results for <q className="font-mono text-base">{q}</q>.
+        </p>
         {q.trim().includes(' ') ? (
           <span> Search command names, flags, or words from a page’s description. Full shell commands and natural-language questions are not supported yet.</span>
         ) : null}
@@ -238,13 +262,13 @@ export function SearchResultsClient({
         )}
         {suggestions.length ? (
           <div className="mt-3">
-            <span className="text-muted">Did you mean:</span>{' '}
+            <span>Did you mean:</span>{' '}
             {suggestions.map((s, idx) => (
               <span key={s}>
                 {idx ? ', ' : ''}
                 <Link
                   href={withDistro(`/search?q=${encodeURIComponent(s)}`, urlDistro)}
-                  className="font-mono"
+                  className="font-mono underline"
                 >
                   {s}
                 </Link>
@@ -258,16 +282,16 @@ export function SearchResultsClient({
   }
 
   return (
-    <div className="mt-8">
+    <div className="mt-10">
       {suggestions.length ? (
-        <div className="mb-4 text-xs text-muted">
+        <div className="mb-4 text-sm text-ink-2">
           Did you mean:{' '}
           {suggestions.map((s, idx) => (
             <span key={s}>
               {idx ? ', ' : ''}
               <Link
                 href={withDistro(`/search?q=${encodeURIComponent(s)}`, urlDistro)}
-                className="font-mono"
+                className="font-mono underline"
               >
                 {s}
               </Link>
@@ -277,19 +301,23 @@ export function SearchResultsClient({
         </div>
       ) : null}
 
-      <ol aria-label="Search results">
+      <h2 className="mb-3 font-serif text-xl">
+        Results for <q>{q}</q>
+        {section ? <span className="ml-2 font-sans text-sm text-ink-3">section {section}</span> : null}
+      </h2>
+      <ol aria-label="Search results" className="border-b border-rule">
         {results.map((r) => (
           <ResultCard key={`${r.name}:${r.section}`} urlDistro={urlDistro} q={q} r={r} />
         ))}
       </ol>
 
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <div className="text-xs text-muted" aria-live="polite">
+      <div className="mt-5 flex items-baseline justify-between gap-3">
+        <div className="text-xs text-ink-3" aria-live="polite">
           {results.length.toLocaleString()} results loaded
         </div>
         <button
           type="button"
-          className="inline-flex items-center justify-center px-1 py-2 font-mono text-sm font-medium text-fg underline decoration-edge-strong underline-offset-4 transition-colors hover:decoration-accent disabled:pointer-events-none disabled:no-underline disabled:opacity-50"
+          className="text-sm text-ink underline decoration-rule-2 underline-offset-[3px] hover:text-accent hover:decoration-accent disabled:pointer-events-none disabled:text-ink-3 disabled:no-underline"
           onClick={onLoadMore}
           disabled={!canLoadMore || loading}
           aria-label={

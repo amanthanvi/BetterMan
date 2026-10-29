@@ -22,18 +22,18 @@ export function ManDistroAvailability({
   const path = `/man/${encodeURIComponent(name)}${section ? `/${encodeURIComponent(section)}` : ''}`
 
   return (
-    <section aria-label="Other distributions" className="mt-6 text-sm text-muted">
+    <section aria-label="Other distributions" className="mt-8 text-sm text-ink-2">
       <p>
-        Not in {DISTRO_LABEL[distro]}. <span className="font-mono">{section ? `${name}(${section})` : name}</span> is
-        available in:
+        Not in {DISTRO_LABEL[distro]}. <span className="font-serif text-base">{section ? `${name}(${section})` : name}</span>{' '}
+        is available in:
       </p>
-      <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+      <ul className="mt-1.5 flex flex-wrap gap-x-5 gap-y-2">
         {others.map((d) => (
           <li key={d}>
             {/* A document load: client navigation to the same path keeps the not-found boundary up. */}
             <a
               href={`${path}?distro=${d}`}
-              className="font-mono text-sm font-semibold tracking-tight underline underline-offset-4"
+              className="text-base text-ink underline"
             >
               {DISTRO_LABEL[d]}
             </a>
