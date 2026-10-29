@@ -166,6 +166,8 @@ def test_single_quotes_keep_substitutions_literal():
         ("sudo tar -xf a.tar", "wrapper prefix sudo"),
         ("env tar -xf a.tar", "wrapper prefix env"),
         ("xargs tar -xf", "wrapper prefix xargs"),
+        ("/usr/bin/sudo tar -xf a.tar", "wrapper prefix /usr/bin/sudo"),
+        ("'/usr/bin/env' tar -xf a.tar", "wrapper prefix /usr/bin/env"),
         ("gzip -d a.gz", "does not start with tar"),
         ('tar -tf "$(ls)"', "unsupported shell syntax: command substitution"),
         ("tar -tf a.tar #; rm -rf ~", "unsupported shell syntax: comment"),

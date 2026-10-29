@@ -67,43 +67,55 @@ export const upsertRecords = internalMutation({
  * Give B7 the verified flag counts for every page with these content hashes.
  * Each run schedules at most `flagUsageSchedules` updates, well under Convex's
  * 1,000 scheduled functions per mutation, then continues itself from the
- * hash and page offset where it stopped.
+ * hash and the last page it handled.
  */
 export const propagateFlagUsage = internalMutation({
-  args: { contentSha256s: v.array(v.string()), offset: v.optional(v.number()) },
+  args: {
+    contentSha256s: v.array(v.string()),
+    // Where the first hash stopped: the last page handled and how many of
+    // that hash's pages were seen. A stable key, so pages removed between
+    // runs cannot shift a later page out of reach.
+    after: v.optional(v.object({ creationTime: v.number(), id: v.id("manPages"), seen: v.number() })),
+  },
   handler: async (ctx, args) => {
     if (args.contentSha256s.length > GENERATED_LIMITS.recordsPerRequest) {
       throw new GeneratedRecordError(`at most ${GENERATED_LIMITS.recordsPerRequest} hashes per request`);
     }
     const hashes = [...new Set(args.contentSha256s)];
-    let offset = Math.max(0, Math.floor(args.offset ?? 0));
     let scheduled = 0;
     for (let index = 0; index < hashes.length; index++) {
       const contentSha256 = hashes[index];
+      const after = index === 0 ? args.after : undefined;
+      let seen = after?.seen ?? 0;
+      let last = after ? { creationTime: after.creationTime, id: after.id } : null;
       const row = await ctx.db
         .query("manPageGenerated")
         .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
         .unique();
       const usage = flagUsageFor(row);
-      const pages = await ctx.db
+      const pages = ctx.db
         .query("manPages")
-        .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
-        .take(GENERATED_LIMITS.flagUsagePages);
-      for (let p = offset; p < pages.length; p++) {
+        .withIndex("by_contentSha256", (q) => after
+          ? q.eq("contentSha256", contentSha256).gte("_creationTime", after.creationTime)
+          : q.eq("contentSha256", contentSha256));
+      for await (const page of pages) {
+        if (after && page._creationTime === after.creationTime && page._id === after.id) continue;
+        if (seen >= GENERATED_LIMITS.flagUsagePages) break;
         if (scheduled >= GENERATED_LIMITS.flagUsageSchedules) {
           await ctx.scheduler.runAfter(0, internal.generated.propagateFlagUsage, {
-            contentSha256s: hashes.slice(index), offset: p,
+            contentSha256s: hashes.slice(index),
+            ...(last ? { after: { ...last, seen } } : {}),
           });
           return { scheduled, continued: true };
         }
-        const page = pages[p];
+        seen += 1;
+        last = { creationTime: page._creationTime, id: page._id };
         if (sameFlagUsage(page.verifiedFlagUsage, usage)) continue;
         const release = await ctx.db.get(page.releaseId);
         if (!release || release.pruning) continue;
         await ctx.scheduler.runAfter(0, internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage });
         scheduled += 1;
       }
-      offset = 0;
     }
     return { scheduled, continued: false };
   },

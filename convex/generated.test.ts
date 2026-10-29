@@ -528,6 +528,54 @@ describe("B7 propagation at scale and after suppression", () => {
     // 1,600 B7 updates run in memory; CI machines need more than the default 5 s.
   }, 120_000);
 
+  it("resumes after the last handled page when a page is pruned between runs", async () => {
+    vi.useFakeTimers();
+    // Final re-check of #434: an offset over a re-queried list skipped a live page.
+    const t = convexTest({ schema, modules, transactionLimits: { functionsScheduled: 1000 } });
+    const hashes = Array.from({ length: 5 }, (_, i) => i.toString(16).padStart(64, "0"));
+    const ids = await t.run(async (ctx) => {
+      const releaseId = await release(ctx, "debian", "staging");
+      const byHash: Id<"manPages">[][] = [];
+      for (const [h, sha] of hashes.entries()) {
+        await ctx.db.insert("manPageGenerated", {
+          contentSha256: sha, updatedAt: "now", page: { examples: [], flagUsage: [{ flag: "-c", count: 1 }] },
+        });
+        byHash.push([]);
+        for (let i = 0; i < GENERATED_LIMITS.flagUsagePages; i++) {
+          byHash[h].push(await ctx.db.insert("manPages", {
+            releaseId, datasetReleaseId: "debian-staging", externalId: `${h}-${i}`, locale: "en", distro: "debian",
+            name: `p${h}-${i}`, section: "1", sitemapPage: 0, title: "p", description: "p", sourcePath: "p",
+            contentSha256: sha, hasParseWarnings: false,
+            // Ten pages of the first hash are already current.
+            ...(h === 0 && i < 10 ? { verifiedFlagUsage: [{ flag: "-c", count: 1, source: "examples" as const }] } : {}),
+          }));
+        }
+      }
+      return byHash;
+    });
+    // 54 + 3 x 64 = 246 updates, then 10 into the last hash before the cap.
+    expect(await t.mutation(internal.generated.propagateFlagUsage, { contentSha256s: hashes }))
+      .toEqual({ scheduled: GENERATED_LIMITS.flagUsageSchedules, continued: true });
+    const [continuation] = await t.run((ctx) => ctx.db.system.query("_scheduled_functions")
+      .filter((q) => q.eq(q.field("name"), "generated:propagateFlagUsage")).collect());
+    expect(continuation.args[0]).toMatchObject({ contentSha256s: [hashes[4]], after: { id: ids[4][9], seen: 10 } });
+    // Prune the in-progress hash's first page before the continuation runs.
+    await t.run((ctx) => ctx.db.delete(ids[4][0]));
+    await finish(t);
+
+    const updates = await t.run((ctx) => ctx.db.system.query("_scheduled_functions")
+      .filter((q) => q.eq(q.field("name"), "derived:setVerifiedFlagUsage")).collect());
+    const counts = new Map<string, number>();
+    for (const job of updates) counts.set(job.args[0].pageId, (counts.get(job.args[0].pageId) ?? 0) + 1);
+    expect([...counts.values()].every((n) => n === 1)).toBe(true);
+    const live = await t.run((ctx) => ctx.db.query("manPages").take(400));
+    expect(live).toHaveLength(5 * 64 - 1);
+    expect(live.every((page) => page.verifiedFlagUsage?.[0]?.flag === "-c")).toBe(true);
+    // 320 pages, 10 already current: every other page, including the pruned one
+    // that was handled before it went, was updated exactly once.
+    expect(counts.size).toBe(310);
+  }, 120_000);
+
   it("recomputes B7's ranking when page and tldr sources are suppressed", async () => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);

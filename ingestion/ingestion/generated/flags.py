@@ -185,8 +185,11 @@ def _command_start(
     if PLACEHOLDER in texts[i]:
         return None, "placeholder in command position"
     mentions = any(text.rsplit("/", 1)[-1] in heads for text in texts[i + 1 :])
-    if texts[i] in _WRAPPERS and texts[i] not in heads:
-        if texts[i] in _BARE_WRAPPERS:
+    # Wrappers are recognised by executable name (`/usr/bin/env` is env).
+    # Only a bare, path-free `sudo`/`env` is followed to the target.
+    name = texts[i].rsplit("/", 1)[-1]
+    if name in _WRAPPERS and name not in heads:
+        if name in _BARE_WRAPPERS and "/" not in texts[i]:
             start = _matches(texts, i + 1, invocations)
             if start is not None:
                 return start, None
@@ -360,7 +363,7 @@ def simple_invocation_problems(command: str, invocations: Sequence[Sequence[str]
     first = words[0]
     if not first.quoted and _ASSIGNMENT_RE.match(first.text):
         problems.append("variable assignment")
-    elif first.text in _WRAPPERS | _KEYWORDS:
+    elif first.text in _KEYWORDS or first.text.rsplit("/", 1)[-1] in _WRAPPERS:
         problems.append(f"wrapper prefix {first.text}")
     texts = [word.text for word in words]
     if not any(texts[: len(form)] == list(form) for form in invocations):

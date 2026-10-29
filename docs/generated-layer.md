@@ -120,7 +120,9 @@ command is in that table:
   tar`, `ssh host tar`) is rejected: the verifier cannot check that call.
 - A placeholder stands only for an argument. One in a command position (the
   first word of a segment, or anywhere behind a wrapper that is not followed,
-  as in `env -- {{tar}}` or `xargs {{tar}}`) rejects the example.
+  as in `env -- {{tar}}` or `xargs {{tar}}`) rejects the example. Wrappers
+  are recognised by executable name, so `/usr/bin/env` is `env`, and a
+  wrapper named by path is never followed.
 - A tldr placeholder must be one of two shapes. A flag list
   (`{{--flag}}`, `{{-v|--verbose}}`, `{{[-c|--create]}}`) is verified like any
   flag, and a subcommand list (`{{[a|address]}}`) shows its full word. A value
@@ -344,8 +346,9 @@ Separate from the release ingest contract, behind the same ingest secret:
   every page with that content hash (up to 64), skips releases being pruned
   and pages already current, and schedules B7's own
   `derived.setVerifiedFlagUsage` for the rest. One run schedules at most 256
-  updates, well under Convex's 1,000 per mutation, then continues itself from
-  where it stopped. Candidates
+  updates, well under Convex's 1,000 per mutation, then continues itself after
+  the last page it handled (an indexed range on that page's creation time and
+  id), so pages pruned between runs cannot push a live page out of reach. Candidates
   report `flagUsageCurrent`, so a run that skips an unchanged hash still
   refreshes the pages of a new release through `/ingest/generated/flag-usage`.
 - **B5 (#397):** task phrases are in `generated.taskPhrases`.

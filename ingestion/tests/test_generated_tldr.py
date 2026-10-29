@@ -289,3 +289,28 @@ def test_placeholders_as_arguments_still_work():
         not result.rejected
         and result.examples[0].command == "sudo tar -xf a.tar -C dir | grep name"
     )
+
+
+# Final re-check of #434: a wrapper named by path is still a wrapper, and never bare.
+@pytest.mark.parametrize(
+    "wrapper", ["/usr/bin/env --", "/usr/bin/xargs", "/usr/bin/sudo", "/bin/env -i"]
+)
+def test_path_named_wrappers_cannot_hide_a_placeholder_command(wrapper):
+    page = parse_page(
+        f"# tar\n- Do it:\n`tar --create | {wrapper} {{{{tar}}}} --invented`", "common/tar.md"
+    )
+    result = tldr_examples(page, name="tar", table=TAR.table)
+    assert result.examples == []
+    assert any("placeholder in command position" in p for p in result.rejected[0][1])
+
+
+@pytest.mark.parametrize(
+    "wrapper", ["/usr/bin/env", "/usr/bin/sudo", "'/usr/bin/env' --", '"/bin/sudo"']
+)
+def test_path_named_wrappers_around_the_target_are_rejected(wrapper):
+    page = parse_page(
+        f"# tar\n- Do it:\n`tar --create | {wrapper} tar --invented`", "common/tar.md"
+    )
+    result = tldr_examples(page, name="tar", table=TAR.table)
+    assert result.examples == []
+    assert any(p.startswith("wrapped invocation") for p in result.rejected[0][1])
