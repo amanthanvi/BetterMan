@@ -3,13 +3,18 @@
 All measurements use public Debian archives and this worktree's loopback Convex.
 No shared import, runner dispatch, repository-variable change, promotion, billing
 change or production access was performed. The download-only GitHub dispatch is
-prepared but was not executed. PR #436 remains draft on its existing base;
-rebase/deploy order is B7 #429 v3 → B5 #430 v4 → archive providers v5.
+prepared but was not executed. PR #436 remains draft, rebased onto main
+`b38c9581029c4bb7d92210ea08c449569f1a1f39` after B7 #429, generated layer #434
+and B5 #430. Ingest contract v5 retains every v4 field and adds providers;
+the independent generated-layer contract remains v2.
 
 [Machine-readable measurements](b1-debian-measurements.json) and the fixed
 [2,000-package selection](b1-debian-sample-selection.json) make the runs inspectable.
 The historical cold acquisition, previous-policy local storage probe and current
-parser/provider audits are recorded separately.
+parser/provider audits are recorded separately. Archive sample measurements are
+from correction head `196639a1aaad31a18eb80b0a8272dd9ed4fbae2a`; the v5 rebase's
+page-view measurements and integration checks are recorded separately below.
+The storage probe is not a combined v5 derived/symbol storage measurement.
 
 ## Defaults and approval boundary
 
@@ -226,10 +231,14 @@ unique physical content. JSON excludes index/internal encoding, search indexes,
 backups, other releases/distros, orphans and B7/B5 data. Retention multiplies
 usage; prune/sweep previews still matter.
 
-Canonical metadata measured **3 documents / 1,721 JSON bytes**,
+In the historical storage probe, canonical metadata measured **3 documents / 1,721 JSON bytes**,
 including an **828-byte release row**.
-It does not read provenance. The unchanged `perf:check` passed page-view
-calls/documents/storage/HTML/JS limits; explicit provider reads are separate.
+It does not read provenance. The rebased `perf:check` passed the current main page-view limits on Node 26:
+**5 calls / 29 documents / 1 storage read** for the man-page navigation, including
+derived/generated data. Data payload 36,842 B and derived summary 846 B match
+main's baseline. HTML 97,378 B, JS 634,344 B (gzip 202,700 B) remain below existing
+budgets. No performance rules or recorded baselines changed; explicit provider
+reads are separate.
 
 [Convex pricing](https://www.convex.dev/pricing) and
 [accounting limits](https://docs.convex.dev/production/state/limits), checked
@@ -243,6 +252,38 @@ allowance/region were not inspected; this is not an invoice quote.
 **Owner approval is required before shared execution or increased spend.**
 Review the combined v5 schema and actual authorized staging usage before first
 promotion. No plan, billing setting, repository switch or shared data changed.
+
+## v5 integration and index audit
+
+The combined upload/seal regression includes license-package batches, packed
+option signatures, extractor provenance, symbols, optional argument metadata,
+real providers and alias providers. Python v5 refuses a v4 deployment, and a
+simulated v4 client refuses the v5 response. The cross-language alignment test
+remains the single version/functions/declarations merge check. Generated
+contract v2 is tested independently and unchanged.
+
+Canonical reads retain main's `{ derived, brief }` extras. Alternate providers
+load their own content-hash brief and return no canonical route-derived summary;
+package-qualified aliases do not borrow another provider's portability. Name-only
+alias redirects retain their target package. Fresh-fixture E2E covers HTML,
+JSON, text and OG package selection, including case-only routes. Prune regressions
+retire releases through a real replacement derived build before deletion, honoring
+durable dependency pins. Generated rows are content-hash owned, not release
+children; symbols, all B7 children and all provider children remain registered.
+
+Schema diff against the rebased main adds **no index on an existing table**.
+The only new indexes are on these new tables:
+
+| New table | Indexes |
+| --- | --- |
+| `manPageProviders` | `by_releaseId_and_externalId`, `by_releaseId_and_route_and_package_and_path`, `by_blobId` |
+| `releaseProviderUploadShards` | `by_releaseId_and_bucket` |
+| `manPageAliasProviders` | `by_releaseId_and_route_and_package_and_path` |
+
+Existing-table changes are only optional `datasetReleases.providerCount` and
+`manPageAliases.targetPackage`. Registry enumeration, storage-field enumeration,
+provider-aware orphan sweep and derived pin protections are covered locally.
+All main CHANGELOG entries were preserved during the rebase.
 
 ## Checkpoints and validation
 
@@ -272,10 +313,11 @@ An abrupt VM loss can prevent saving; this does not claim all 18+ GB survive a
 new runner. The download-only dispatch has no production environment or secrets,
 suppresses regular ingest/promote and was not run.
 
-Validation: 535 Python tests (86.51% coverage), 197 Convex tests/typecheck,
-532 Next tests/lint/grammar/build, 123 fresh-fixture browser E2E tests, 112 ops
-tests, unchanged performance budgets and public-API/PR diff guards. Fixture
-coverage includes the real postinst templates, binary-link/manual attribution,
+Validation: 819 ingestion tests (89.33% coverage), 3,226 Convex tests/typecheck,
+570 Next tests/lint/grammar/build, 134 fresh-fixture local E2E tests and 119 ops
+tests passed, along with current main performance budgets and public-API/PR
+guards. Fixture coverage includes the real postinst templates, binary-link/manual
+attribution,
 cache corruption/version/file replay, Retry-After, include isolation, aliases,
 provider completeness/seals/prune and all response formats. No runner config or
 budget rules changed.

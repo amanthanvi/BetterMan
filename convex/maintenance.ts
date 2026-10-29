@@ -1007,6 +1007,7 @@ export const measureReleaseBatch = internalQuery({
       : args.table === "manPages" ? ctx.db.query("manPages").withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", id))
       : args.table === "manPageSearchDocuments" ? ctx.db.query("manPageSearchDocuments").withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", id))
       : args.table === "manPageLinks" ? ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", id))
+      : args.table === "manPageSymbols" ? ctx.db.query("manPageSymbols").withIndex("by_releaseId_and_termNorm", q => q.eq("releaseId", id))
       : args.table === "manPageOptionFlags" ? ctx.db.query("manPageOptionFlags").withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", id))
       : args.table === "licensePackages" ? ctx.db.query("licensePackages").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", id))
       : args.table === "licenses" ? ctx.db.query("licenses").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", id))

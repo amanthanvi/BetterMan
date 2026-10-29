@@ -40,6 +40,18 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
   expect(await activate()).toMatchObject({ pending: false });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1" }))
     .toMatchObject({ kind: "page", data: { page: { sourcePackage: "popular", description: "canonical" } } });
+  await t.run(async ctx => {
+    for (const [contentSha256, summary] of [["canonical", "Canonical brief"], ["case-A", "Alternate brief"]]) {
+      await ctx.db.insert("manPageGenerated", { contentSha256, updatedAt: "now", generated: {
+        provider: "fixture", model: "fixture", promptVersion: "fixture", generatedAt: "now", summary,
+        examples: [], taskPhrases: [], rejected: 0,
+      } });
+    }
+  });
+  expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "alternate" }))
+    .toMatchObject({ kind: "page", data: { brief: { summary: "Alternate brief" } } });
+  expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1" }))
+    .toMatchObject({ kind: "page", data: { brief: { summary: "Canonical brief" } } });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "alternate" }))
     .toMatchObject({ kind: "page", data: { page: { sourcePackage: "alternate", description: "case-A" } } });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "absent" })).toBeNull();
@@ -52,7 +64,22 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
     .toMatchObject({ orphans: 0 });
   await expect(t.mutation(internal.maintenance.deleteInactiveReleaseBatch, { datasetReleaseId: "providers", confirmDatasetReleaseId: "providers" }))
     .rejects.toThrow("REFUSING_TO_DELETE_ACTIVE_RELEASE");
-  await t.run(async ctx => { for (const pointer of await ctx.db.query("activeReleases").take(2)) await ctx.db.delete(pointer._id); });
+  // Retire through a real replacement build so B7 releases durable pins/rows;
+  // deleting a prod pointer alone is intentionally insufficient for pruning.
+  await t.mutation(internal.ingest.createRelease, { datasetReleaseId: "providers-replacement", locale: "en", distro: "debian",
+    imageRef: "fixture", imageDigest: "fixture", ingestedAt: "2026-10-29T00:00:00Z", packageManifest: null,
+    pageCount: 1, aliasCount: 0, licenseCount: 0, sectionTotals: [{section: "1", total: 1}], packageBatches: [],
+  });
+  await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "providers-replacement", pages: [{
+    externalId: "replacement", name: "replacement", section: "1", sitemapPage: 0, title: "replacement", description: "replacement",
+    sourcePath: "replacement.1", sourcePackage: null, sourcePackageVersion: null, contentSha256: "replacement", hasParseWarnings: false,
+    extractorVersion: 1, doc: {toc: [], blocks: []}, synopsis: null, options: [], seeAlso: null, searchText: "", snippetText: "", links: [],
+  }] });
+  const replace = () => t.mutation(internal.ingest.activateRelease, { datasetReleaseId: "providers-replacement", stage: "prod", activatedAt: "now" });
+  await replace();
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  await replace();
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   let done = false;
   while (!done) done = (await t.mutation(internal.maintenance.deleteInactiveReleaseBatch, { datasetReleaseId: "providers", confirmDatasetReleaseId: "providers", maxDocs: 5 })).deletedRelease;
   expect(await t.run(ctx => ctx.db.query("manPageProviders").take(1))).toEqual([]);

@@ -32,7 +32,22 @@ it('stores stub providers without page/search duplicates, verifies counts and re
   expect(await t.run(ctx=>ctx.db.query('manPageSearchDocuments').take(5))).toHaveLength(1);
   expect(await t.run(ctx=>ctx.db.query('manPageAliasProviders').take(5))).toHaveLength(2);
   await expect(t.mutation(internal.ingest.insertAliases,{datasetReleaseId:'stub-providers',aliases:[{...alias,sourcePackage:'late',providerOnly:true}]})).rejects.toThrow('RELEASE_SEALED');
-  await t.run(async ctx=>{for(const p of await ctx.db.query('activeReleases').take(5))await ctx.db.delete(p._id);});
+  // Retire through a real replacement build so B7 releases durable pins/rows;
+  // deleting a prod pointer alone is intentionally insufficient for pruning.
+  await t.mutation(internal.ingest.createRelease, { datasetReleaseId: "stub-providers-replacement", locale: "en", distro: "debian",
+    imageRef: "fixture", imageDigest: "fixture", ingestedAt: "2026-10-29T00:00:00Z", packageManifest: null,
+    pageCount: 1, aliasCount: 0, licenseCount: 0, sectionTotals: [{section: "1", total: 1}], packageBatches: [],
+  });
+  await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "stub-providers-replacement", pages: [{
+    externalId: "replacement", name: "replacement", section: "1", sitemapPage: 0, title: "replacement", description: "replacement",
+    sourcePath: "replacement.1", sourcePackage: null, sourcePackageVersion: null, contentSha256: "replacement", hasParseWarnings: false,
+    extractorVersion: 1, doc: {toc: [], blocks: []}, synopsis: null, options: [], seeAlso: null, searchText: "", snippetText: "", links: [],
+  }] });
+  const replace = () => t.mutation(internal.ingest.activateRelease, { datasetReleaseId: "stub-providers-replacement", stage: "prod", activatedAt: "now" });
+  await replace();
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  await replace();
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   while (!(await t.mutation(internal.maintenance.deleteInactiveReleaseBatch,{datasetReleaseId:'stub-providers',confirmDatasetReleaseId:'stub-providers',maxDocs:5})).deletedRelease) { /* resumable batches */ }
   expect(await t.run(ctx=>ctx.db.query('manPageAliasProviders').take(1))).toHaveLength(0);
 });

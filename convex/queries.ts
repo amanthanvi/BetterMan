@@ -199,7 +199,7 @@ export const resolveManByName = query({
       kind: v.literal("ambiguous"),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
     }),
-    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string() }),
+    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()) }),
     v.object({ kind: v.literal("not_found") }),
   ),
   handler: async (ctx, args) => {

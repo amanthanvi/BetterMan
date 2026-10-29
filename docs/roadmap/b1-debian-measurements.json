@@ -2072,7 +2072,8 @@
     "workers": 2,
     "pinsSha256": "172d0e358555dcf1c1c97d0afaab8d2f627eaeb4e92bbb4a592e1079f727f7a7",
     "failures": [],
-    "missing": []
+    "missing": [],
+    "measuredAtHead": "196639a1aaad31a18eb80b0a8272dd9ed4fbae2a"
   },
   "copyrightStress": {
     "seconds": 7.944788082968444,
@@ -7403,5 +7404,46 @@
     "previousPolicyLocalPublish": "Historical local Convex storage probe before this fix round. Retained as an planning reference, not a newly measured upload.",
     "previousPolicyVerifiedPublicRoutes": "Historical routes under superseded election policy; cc/c++ no longer publish alternatives under the current policy.",
     "providerAndRoffAudit": "Current fixed 2000 plus the requested competitors. No upload. Complete verified Contents case-collision audit is a separate referenced report."
+  },
+  "v5Integration": {
+    "base": "b38c9581029c4bb7d92210ea08c449569f1a1f39",
+    "ingestContract": 5,
+    "generatedContract": 2,
+    "canonicalPageView": {
+      "calls": 5,
+      "documents": 29,
+      "storageReads": 1,
+      "dataBytes": 36842,
+      "derivedBytes": 846,
+      "htmlBytes": 97378,
+      "jsBytes": 634344,
+      "jsGzipBytes": 202700
+    },
+    "indexes": {
+      "base": "b38c9581029c4bb7d92210ea08c449569f1a1f39",
+      "addedIndexesOnExistingTables": {},
+      "newTables": {
+        "manPageProviders": [
+          "by_releaseId_and_externalId",
+          "by_releaseId_and_route_and_package_and_path",
+          "by_blobId"
+        ],
+        "releaseProviderUploadShards": [
+          "by_releaseId_and_bucket"
+        ],
+        "manPageAliasProviders": [
+          "by_releaseId_and_route_and_package_and_path"
+        ]
+      }
+    },
+    "storageProjectionScope": "Historical sample storage predates merged derived/symbol data; not a measured combined v5 storage projection. No shared capacity/spend authorization.",
+    "checks": {
+      "ingestion": 819,
+      "coveragePercent": 89.33,
+      "convex": 3226,
+      "next": 570,
+      "e2e": 134,
+      "ops": 119
+    }
   }
 }

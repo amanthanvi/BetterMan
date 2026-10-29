@@ -387,7 +387,7 @@ export async function fetchManByName(opts: {
     return { kind: 'ambiguous', options: result.options as AmbiguousPageResponse['options'] }
   }
   if (result.kind === 'alias') {
-    return { kind: 'alias', name: result.name, section: result.section }
+    return { kind: 'alias', name: result.name, section: result.section, ...(result.pkg ? { pkg: result.pkg } : {}) }
   }
   return { kind: 'page', data: result.data as ManPageResponse }
 }

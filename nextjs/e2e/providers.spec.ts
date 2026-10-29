@@ -32,6 +32,8 @@ test('stub providers redirect to their actual package without a duplicate search
   await page.goto('/man/foo%3A%3Astub/3pm')
   await expect(page).toHaveURL(/foo%3A%3Abar\/3pm\?pkg=alternate-perl$/)
   await expect(page.getByText('Alternate provider documentation.', { exact: true })).toBeVisible()
+  await page.goto('/man/foo%3A%3Astub')
+  await expect(page).toHaveURL(/foo%3A%3Abar\/3pm\?pkg=alternate-perl$/)
   for (const suffix of ['', '?pkg=stub-perl']) {
     const api = await request.get(`/api/v1/man/foo%3A%3Astub/3pm${suffix}`, { maxRedirects: 0 })
     expect(api.status()).toBe(308)

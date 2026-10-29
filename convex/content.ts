@@ -553,9 +553,15 @@ export const getManByNameAndSectionReadModel = internalQuery({
           .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id).eq("name", name).eq("section", section).eq("sourcePackage", args.pkg!)).first();
         return alias ? { kind: "alias" as const, name: alias.targetName, section: alias.targetSection, pkg: alias.targetPackage } : null;
       }
-      const blob = await ctx.db.get(provider.blobId);
+      const [blob, generated] = await Promise.all([
+        ctx.db.get(provider.blobId),
+        ctx.db.query("manPageGenerated").withIndex("by_contentSha256", q => q.eq("contentSha256", provider.contentSha256)).unique(),
+      ]);
       if (!blob) return null;
+      // B7 summaries are keyed to the canonical route/signature, not this
+      // provider. B6 briefs are content-hash keyed and can safely follow it.
       return { kind: "page" as const, data: { release, page: provider, variants: [],
+        derived: null, brief: briefFromRecord(generated),
         content: blob.storageId ? { storageId: blob.storageId, fields: null }
           : { storageId: null, fields: await readAllContentBlobFields(ctx, blob) } } };
     }

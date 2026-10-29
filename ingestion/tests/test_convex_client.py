@@ -257,6 +257,7 @@ def test_require_deployed_contract_accepts_extra_functions(monkeypatch):
         ({"schemaVersion": 1}, "schemaVersion"),
         ({"schemaVersion": 2}, "schemaVersion"),
         ({"schemaVersion": 3}, "schemaVersion"),
+        ({"schemaVersion": REQUIRED_SCHEMA_VERSION - 1}, "schemaVersion"),
         ({"schemaVersion": REQUIRED_SCHEMA_VERSION + 1}, "schemaVersion"),
         ({"functions": ["ingest.createRelease"]}, "missing functions"),
         ({"declarationCounts": ["pageCount"]}, "declaration counts"),
@@ -516,11 +517,14 @@ def test_expired_job_budget_makes_no_activation_post(monkeypatch):
     post.assert_not_called()
 
 
-def test_v3_client_rejects_current_server_contract(monkeypatch):
+@pytest.mark.parametrize("old_version", [3, REQUIRED_SCHEMA_VERSION - 1])
+def test_old_client_rejects_current_server_contract(monkeypatch, old_version):
     from ingestion import convex_client
 
     payload = _contract_body()
-    monkeypatch.setattr(convex_client, "REQUIRED_SCHEMA_VERSION", 3)
+    monkeypatch.setattr(convex_client, "REQUIRED_SCHEMA_VERSION", old_version)
     monkeypatch.setattr(convex_client, "urlopen", Mock(return_value=BytesIO(payload)))
-    with pytest.raises(ConvexContractError, match=f"schemaVersion {REQUIRED_SCHEMA_VERSION} != 3"):
+    with pytest.raises(
+        ConvexContractError, match=f"schemaVersion {REQUIRED_SCHEMA_VERSION} != {old_version}"
+    ):
         ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()

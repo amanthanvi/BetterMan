@@ -199,14 +199,16 @@ async function physicalPageByName(ctx: QueryCtx, releaseId: Id<"datasetReleases"
 }
 async function pageByName(ctx: QueryCtx, releaseId: Id<"datasetReleases">, name: string, section: string) {
   const seen = new Set<string>();
+  let targetPackage: string | undefined;
   for (let depth = 0; depth < 4; depth++) {
     const key = JSON.stringify([name, section]);
     if (seen.has(key)) return null;
     seen.add(key);
     const page = await physicalPageByName(ctx, releaseId, name, section);
-    if (page) return page;
+    if (page) return !targetPackage || page.sourcePackage === targetPackage ? page : null;
     const alias = await ctx.db.query("manPageAliases").withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).eq("name", name).eq("section", section)).unique();
     if (!alias) return null;
+    targetPackage = alias.targetPackage ?? targetPackage;
     name = alias.targetName; section = alias.targetSection;
   }
   return null;
@@ -299,7 +301,8 @@ async function processName(ctx: MutationCtx, build: Doc<"derivedBuilds">, name: 
     if (source?.name === name && source.section === section) {
       const aliases = await ctx.db.query("manPageAliases").withIndex("by_releaseId_and_targetName_and_targetSection", (q) =>
         q.eq("releaseId", source.releaseId).eq("targetName", source.name).eq("targetSection", source.section)).take(8);
-      comparison.aliases = aliases.map(({ name, section }) => ({ name, section }));
+      comparison.aliases = aliases.filter(alias => !alias.targetPackage || alias.targetPackage === source.sourcePackage)
+        .map(({ name, section }) => ({ name, section }));
       comparison.reads += aliases.length;
       for (const [i, pointer] of build.pointers.entries()) if (!pages[i]) {
         for (const alias of comparison.aliases) {

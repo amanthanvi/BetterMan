@@ -375,7 +375,15 @@ It is prepared for an owner-authorized runner measurement and **was not run**:
 runner measurements count as shared execution. The [evidence document](../docs/roadmap/b1-debian-evidence.md)
 contains local results, audit dispositions and projections.
 
-Contract **v5** is reserved after B7 #429 v3 and B5 #430 v4. Rebase only after
-both, preserving their symbols/derived payloads, lease fence, typed release-child
-registry and exhaustive storage stats alongside both provider tables. Deploy
-the combined Convex contract before ingestion. Do not deploy during update-docs.
+Contract **v5** combines the merged v4 license batches, extractor provenance,
+packed signatures, symbols and optional-argument metadata with real/alias
+provider declarations. The generated layer keeps its separate **v2** contract.
+The single TS/Python alignment test and bidirectional mismatch tests guard deploy
+ordering. All provider and symbol tables are in the schema-checked release-child
+registry; derived dependency pins protect pruning. Deploy the combined Convex
+contract before ingestion. Do not deploy during update-docs.
+
+Alternate reads retain their own content-hash generated brief, without borrowing
+canonical portability/history. Alias redirects preserve the target package,
+including name-only redirects. Shared full-Debian switches remain explicit and
+were not enabled during integration.
