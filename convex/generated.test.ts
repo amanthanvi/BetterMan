@@ -525,7 +525,8 @@ describe("B7 propagation at scale and after suppression", () => {
     // Everything is current: nothing more to schedule.
     expect(await t.mutation(internal.generated.propagateFlagUsage, { contentSha256s: hashes }))
       .toEqual({ scheduled: 0, continued: false });
-  });
+    // 1,600 B7 updates run in memory; CI machines need more than the default 5 s.
+  }, 120_000);
 
   it("recomputes B7's ranking when page and tldr sources are suppressed", async () => {
     vi.useFakeTimers();
