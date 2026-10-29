@@ -10,7 +10,7 @@ const completed = {
   complete: true,
   releases: ['staging', 'prod'].flatMap((stage) => ['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos'].map((distro) => ({
     datasetReleaseId: `release-${distro}`, stage, distro,
-    complete: true, manifestVerified: true, manifestError: null, sealed: true, currentVersion: 0, completedVersion: 0,
+    complete: true, backfillStopped: false, manifestVerified: true, manifestError: null, sealed: true, currentVersion: 0, completedVersion: 0,
   }))),
 }
 const pending = { complete: false, releases: completed.releases.map((release) => ({ ...release, complete: false, completedVersion: null })) }
@@ -107,4 +107,16 @@ test('rejects malformed manifest errors instead of accepting a completion claim'
   for (const manifestError of [undefined, false, {}, '', '   ']) {
     await assert.rejects(waitForRelatedMetadata(async () => changedFirst({ manifestError }), clock()), /Invalid.*manifest error/)
   }
+})
+
+
+test('reports stopped backfills immediately with repair instructions', async () => {
+  let reads = 0
+  let pauses = 0
+  await assert.rejects(waitForRelatedMetadata(async () => {
+    reads++
+    return changedFirst({ backfillStopped: true })
+  }, { ...clock(), pause: async () => { pauses++ } }), /RELATED_METADATA_BACKFILL_FAILED.*staging\/debian.*release-debian.*retryFailedBackfill/)
+  assert.equal(reads, 1)
+  assert.equal(pauses, 0)
 })

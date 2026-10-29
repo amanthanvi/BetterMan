@@ -465,3 +465,48 @@ def test_activation_terminal_backfill_error_is_not_polled(monkeypatch):
         )
     assert post.call_count == 1
     sleep.assert_not_called()
+
+
+@pytest.mark.parametrize("raw", ["", "oops", "0", "-1", "nan", "inf"])
+def test_invalid_job_deadline_rejected_at_startup(monkeypatch, raw):
+    monkeypatch.setenv("BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS", raw)
+    with pytest.raises(ValueError, match="BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS"):
+        ConvexIngestClient("http://127.0.0.1:33411", "local")
+
+
+@pytest.mark.parametrize(
+    "job_minutes,elapsed_minutes,expected",
+    [(60, 50, 420), (90, 80, 420), (300, 270, 1620), (60, 5, 2700)],
+)
+def test_activation_uses_remaining_platform_job_budget(
+    monkeypatch, job_minutes, elapsed_minutes, expected
+):
+    started = 1800000000
+    monkeypatch.setenv(
+        "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS", str(started + job_minutes * 60 - 180)
+    )
+    client = ConvexIngestClient("http://127.0.0.1:33411", "local")
+    # Client construction precedes expensive parsing/upload. Budget is computed
+    # at activation, not construction, so that work cannot extend the deadline.
+    monkeypatch.setattr("ingestion.convex_client.time.time", lambda: started + elapsed_minutes * 60)
+    clock = Mock(side_effect=[0, 0, expected, expected])
+    monkeypatch.setattr("ingestion.convex_client.time.monotonic", clock)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    post = Mock(return_value={"pending": True})
+    monkeypatch.setattr(ConvexIngestClient, "post", post)
+    with pytest.raises(RuntimeError, match="remains sealed and resumable"):
+        client.activate_release({"datasetReleaseId": "budgeted"})
+    assert post.call_count == 1
+    assert post.call_args.kwargs["timeout_seconds"] == min(120, expected)
+
+
+def test_expired_job_budget_makes_no_activation_post(monkeypatch):
+    monkeypatch.setenv("BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS", "1000")
+    monkeypatch.setattr("ingestion.convex_client.time.time", lambda: 1001)
+    post = Mock()
+    monkeypatch.setattr(ConvexIngestClient, "post", post)
+    with pytest.raises(RuntimeError, match="job budget exhausted.*remains resumable"):
+        ConvexIngestClient("http://127.0.0.1:33411", "local").activate_release(
+            {"datasetReleaseId": "late"}
+        )
+    post.assert_not_called()

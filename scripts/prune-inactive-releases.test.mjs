@@ -304,3 +304,20 @@ test('manifest orphan sweep traverses pages and fails on stalled cursors', async
   assert.equal(calls[1][1].cursor, 'next')
   await assert.rejects(cleanupOrphanManifestFiles(async () => ({ scanned: 1, isDone: false, continueCursor: null }), { ...quiet, retry: noPause }), /did not advance/)
 })
+
+
+test('dry-run manifest file diagnostics include id, age and size, capped across pages', async () => {
+  const logs = []
+  let page = 0
+  const run = async () => {
+    page++
+    return { scanned: 70, orphans: 70, storageDeletes: 0, isDone: page === 2, continueCursor: 'next',
+      files: Array.from({ length: 70 }, (_, i) => ({ storageId: `file-${page}-${i}`, ageMs: 86400001, size: 42 })) }
+  }
+  assert.deepEqual(await cleanupOrphanManifestFiles(run, { dryRun: true, retry: noPause, log: line => logs.push(JSON.parse(line)) }),
+    { scanned: 140, orphans: 140, storageDeletes: 0 })
+  const files = logs.filter(row => row.event === 'manifest_orphan_preview')
+  assert.equal(files.length, 100)
+  assert.deepEqual(files[0], { event: 'manifest_orphan_preview', storageId: 'file-1-0', ageMs: 86400001, size: 42 })
+  assert.deepEqual(logs.at(-1), { event: 'manifest_orphan_preview_truncated', omitted: 40, maxFiles: 100 })
+})

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { LicensesClient } from './LicensesClient'
 import { FastApiError, fetchLicenses, withDistroFallback } from '../../../lib/api'
-import { resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
 export function generateMetadata(): Metadata {
   return {
@@ -27,7 +27,11 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
     // Repeated promotions can exhaust the in-request restarts. Begin a fresh
     // request rather than returning an HTML 500 or mixing release generations.
     if (error instanceof FastApiError && error.code === 'RELEASE_CHANGED') {
-      redirect(`/licenses?distro=${requestedDistro}`)
+      const urlDistro = explicitDistro(sp)
+      // (site)/loading.tsx may already have streamed HTTP 200. Next then emits
+      // a client/meta redirect; before streaming it returns HTTP 307. This is
+      // request recovery, not a permanent URL move. Carry only URL state (#417).
+      redirect(urlDistro ? `/licenses?distro=${urlDistro}` : '/licenses')
     }
     throw error
   })

@@ -6,7 +6,11 @@ import os
 import subprocess
 from pathlib import Path
 
-from ingestion.convex_client import ConvexIngestClient, activation_timeout_seconds
+from ingestion.convex_client import (
+    ConvexIngestClient,
+    activation_timeout_seconds,
+    ingest_activation_deadline,
+)
 from ingestion.db import iso_utc_now, json_dumps
 from ingestion.docker_runner import run_ingest_container
 from ingestion.ingest_runner import ingest as ingest_dataset
@@ -53,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         activation_timeout_seconds()
+        ingest_activation_deadline()
     except ValueError as exc:
         _log("ingest_error", error=str(exc))
         return 2

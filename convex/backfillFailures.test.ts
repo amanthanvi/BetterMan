@@ -36,6 +36,26 @@ it("stops after three failed attempts at one cursor, and re-arms only explicitly
   const stopped = await t.run((ctx) => ctx.db.get(releaseId));
   for (let poll = 0; poll < 2; poll++) await expect(activate()).rejects.toThrow("RELATED_METADATA_BACKFILL_FAILED");
   expect(await t.run((ctx) => ctx.db.get(releaseId))).toEqual(stopped);
+  const healthyId = await t.run(async (ctx) => {
+    const healthyId = await ctx.db.insert("datasetReleases", {
+      datasetReleaseId: "healthy", locale: "en", distro: "ubuntu", imageRef: "test", imageDigest: "test",
+      ingestedAt: "now", pageCount: 1, sealed: true, manifestBasis: "declared", manifestVerified: true,
+    });
+    for (const [id, datasetReleaseId, distro] of [[releaseId, "failed", "debian"], [healthyId, "healthy", "ubuntu"]] as const) {
+      await ctx.db.insert("activeReleases", { releaseId: id, datasetReleaseId, distro, stage: "prod", locale: "en", activatedAt: "now" });
+    }
+    return healthyId;
+  });
+  expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({
+    scheduled: 1, skipped: 0, stopped: [{ datasetReleaseId: "failed", distro: "debian", error: "RELATED_METADATA_BACKFILL_FAILED" }],
+  });
+  expect(await t.run((ctx) => ctx.db.get(releaseId))).toEqual(stopped);
+  expect((await t.query(internal.related.activeMetadataStatus, {})).releases).toEqual(expect.arrayContaining([
+    expect.objectContaining({ datasetReleaseId: "failed", backfillStopped: true, complete: false }),
+    expect.objectContaining({ datasetReleaseId: "healthy", backfillStopped: false }),
+  ]));
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect((await t.run((ctx) => ctx.db.get(healthyId)))?.relatedMetadataCompletedVersion).toBe(0);
   await t.run((ctx) => ctx.db.delete(duplicate));
   await t.mutation(internal.related.retryFailedBackfill, { datasetReleaseId: "failed" });
   expect(await activate()).toMatchObject({ pending: true });

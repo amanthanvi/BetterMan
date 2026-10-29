@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { pageByNameAndSection } from "./_releaseLookups";
 import { cachedRelatedItem } from "./_relatedLinks";
@@ -11,6 +11,14 @@ import { startLegacyManifestVerification } from "./manifest";
 
 const BACKFILL_BATCH_SIZE = 500;
 export const MAX_BACKFILL_ATTEMPTS = 3;
+
+async function backfillStopped(ctx: QueryCtx | MutationCtx, release: Doc<"datasetReleases">): Promise<boolean> {
+  const version = release.relatedMetadataVersion ?? 0;
+  if (release.relatedMetadataCompletedVersion === version || release.relatedMetadataBackfillVersion !== version
+    || (release.relatedMetadataBackfillAttempts ?? 1) < MAX_BACKFILL_ATTEMPTS || !release.relatedMetadataBackfillJobId) return false;
+  const job = await ctx.db.system.get(release.relatedMetadataBackfillJobId);
+  return job?.state.kind === "failed";
+}
 
 export const activeMetadataStatus = internalQuery({
   args: {},
@@ -25,6 +33,7 @@ export const activeMetadataStatus = internalQuery({
       sealed: v.boolean(),
       manifestVerified: v.boolean(),
       manifestError: v.union(v.string(), v.null()),
+      backfillStopped: v.boolean(),
       complete: v.boolean(),
     })),
   }),
@@ -54,6 +63,7 @@ export const activeMetadataStatus = internalQuery({
           sealed,
           manifestVerified: release?.manifestVerified === true,
           manifestError: release?.manifestError ?? null,
+          backfillStopped: release ? await backfillStopped(ctx, release) : false,
           complete: sealed && release?.manifestVerified === true && !release?.pruning && currentVersion !== null && completedVersion === currentVersion,
         });
       }
@@ -96,11 +106,15 @@ export async function scheduleRelatedMetadataBackfill(
 // Deployment entrypoint: at most two stage pointers per supported distro.
 export const backfillActiveReleases = internalMutation({
   args: {},
-  returns: v.object({ scheduled: v.number(), skipped: v.number() }),
+  returns: v.object({ scheduled: v.number(), skipped: v.number(),
+    stopped: v.array(v.object({ datasetReleaseId: v.string(), distro: distroValidator,
+      error: v.literal("RELATED_METADATA_BACKFILL_FAILED") })),
+  }),
   handler: async (ctx) => {
     const seen = new Set<Doc<"datasetReleases">["_id"]>();
     let scheduled = 0;
     let skipped = 0;
+    const stopped: Array<{ datasetReleaseId: string; distro: Doc<"datasetReleases">["distro"]; error: "RELATED_METADATA_BACKFILL_FAILED" }> = [];
     for (const stage of DATASET_STAGES) {
       for (const distro of DISTROS) {
         const pointer = await ctx.db
@@ -115,6 +129,12 @@ export const backfillActiveReleases = internalMutation({
         const release = await ctx.db.get(pointer.releaseId);
         if (!release) throw new Error("RELEASE_NOT_FOUND");
         if (release.pruning) throw new Error("RELEASE_PRUNING");
+        // A terminal batch is an operator repair, not a reason to roll back
+        // scheduling for every other distro in this deployment transaction.
+        if (await backfillStopped(ctx, release)) {
+          stopped.push({ datasetReleaseId: release.datasetReleaseId, distro: release.distro, error: "RELATED_METADATA_BACKFILL_FAILED" });
+          continue;
+        }
         let manifestPending = false;
         if (release.manifestBasis === "declared") await verifyDeclaredManifest(ctx, release);
         else manifestPending = await startLegacyManifestVerification(ctx, release);
@@ -124,7 +144,7 @@ export const backfillActiveReleases = internalMutation({
         else skipped += 1;
       }
     }
-    return { scheduled, skipped };
+    return { scheduled, skipped, stopped };
   },
 });
 

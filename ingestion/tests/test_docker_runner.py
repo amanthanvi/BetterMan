@@ -320,10 +320,21 @@ def test_run_ingest_container_builds_alpine_command(monkeypatch) -> None:
 def test_run_ingest_container_defaults_to_supported_image(
     monkeypatch, distro, image, optional_set
 ) -> None:
-    optional = ("BETTERMAN_INGEST_UPLOAD_WORKERS", "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS")
+    optional = (
+        "BETTERMAN_INGEST_UPLOAD_WORKERS",
+        "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS",
+        "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS",
+    )
     for name in optional:
         if optional_set:
-            monkeypatch.setenv(name, "3" if name.endswith("WORKERS") else "900")
+            monkeypatch.setenv(
+                name,
+                "1800000000"
+                if name.endswith("UNIX_SECONDS")
+                else "3"
+                if name.endswith("WORKERS")
+                else "900",
+            )
         else:
             monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("BETTERMAN_DOCKER_PLATFORM", "linux/amd64")

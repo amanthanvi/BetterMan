@@ -250,13 +250,23 @@ export async function cleanupOrphanBlobs(run, { dryRun, log = console.log, retry
 export async function cleanupOrphanManifestFiles(run, { dryRun, log = console.log, retry = {} } = {}) {
   let cursor = null
   const totals = { scanned: 0, orphans: 0, storageDeletes: 0 }
+  let previewed = 0
   for (let page = 0; page < 1_000_000; page++) {
     const result = await withRetry(() => run('maintenance:cleanupOrphanManifestFilesBatch', {
       cursor, limit: 100, dryRun,
     }), { ...retry, log, label: 'manifest orphan sweep' })
     if (typeof result?.isDone !== 'boolean' || !Number.isSafeInteger(result.scanned)) throw new Error('Invalid manifest orphan response')
     for (const key of Object.keys(totals)) totals[key] += result[key] ?? 0
-    if (result.isDone) return totals
+    if (dryRun) {
+      for (const file of (result.files ?? []).slice(0, 100 - previewed)) {
+        log(JSON.stringify({ event: 'manifest_orphan_preview', storageId: file.storageId, ageMs: file.ageMs, size: file.size }))
+        previewed++
+      }
+    }
+    if (result.isDone) {
+      if (dryRun && totals.orphans > previewed) log(JSON.stringify({ event: 'manifest_orphan_preview_truncated', omitted: totals.orphans - previewed, maxFiles: 100 }))
+      return totals
+    }
     if (!result.continueCursor || result.continueCursor === cursor) throw new Error('Manifest orphan sweep did not advance')
     cursor = result.continueCursor
   }

@@ -32,6 +32,23 @@ The job is not `continue-on-error`. A failed deployment or verification leaves t
 
 After an automatic Convex deployment, `related:backfillActiveReleases` validates
 active release manifests and schedules bounded hydration batches where needed.
+A release stopped after three failed attempts is returned in `stopped` with its
+ID and distro; healthy releases still schedule in the same transaction.
+`pnpm convex:related-check` detects `backfillStopped` immediately and fails with
+that ID and repair instructions instead of waiting five minutes. Convex code is
+already deployed at this point; the frontend deployment remains blocked.
+Inspect the failed scheduled batch and repair its cause, then run:
+
+```bash
+pnpm exec convex run --prod related:retryFailedBackfill '{"datasetReleaseId":"<stopped-id>"}'
+pnpm exec convex run --prod related:backfillActiveReleases '{}'
+pnpm convex:related-check
+```
+
+Use the protected deployment's securely configured CLI credentials. Re-arm each
+reported stopped ID; healthy release completion is retained. Retry the deployment
+only after readiness passes. Re-arming does not mark metadata complete or move
+an active pointer.
 Before deploying the frontend, `pnpm convex:related-check` requires every active
 pointer to reference a manifest-verified, sealed release with a matching completed
 metadata version. Missing or unverified manifests, duplicate pointers, empty status, query failures, or a

@@ -278,3 +278,15 @@ def test_activate_client_value_error_is_clean(monkeypatch, caplog):
     with caplog.at_level("INFO"):
         assert cli.main(["activate", "--release-id", "large"]) == 2
     assert "invalid client settings" in caplog.text
+
+
+def test_invalid_job_deadline_exits_before_ingestion(monkeypatch, caplog):
+    monkeypatch.setenv("BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS", "not-a-timestamp")
+
+    def forbidden(**_kwargs):
+        raise AssertionError("must validate before Docker or writes")
+
+    monkeypatch.setattr(cli, "run_ingest_container", forbidden)
+    with caplog.at_level("INFO"):
+        assert cli.main(["ingest"]) == 2
+    assert "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS must be a Unix timestamp" in caplog.text

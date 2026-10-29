@@ -64,17 +64,17 @@ const storageStatsTableValidator = v.union(
 
 type StorageStatsTable = TableNames;
 
-export const STORAGE_STATS_FIELDS: Record<StorageStatsTable, string[]> = {
+export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<keyof Doc<T>, string>> } = {
   activeReleases: ["distro", "datasetReleaseId"],
   datasetReleases: ["datasetReleaseId", "packageManifestJson"],
-  licensePackages: ["packageName", "licenseId", "packageManifestJson"],
+  licensePackages: ["packageName", "version"],
   licenses: ["licenseId", "licenseName", "licenseText"],
   manPageContentBlobChunks: ["chunk"],
   manPageContentBlobs: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageContentChunks: ["chunk"],
   manPageContents: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageAliases: ["name", "section", "targetName", "targetSection"],
-  manPageLinks: ["fromName", "fromSection", "toName", "toSection", "linkType"],
+  manPageLinks: ["fromExternalId", "toName", "toSection", "toTitle", "toDescription", "linkType"],
   manPageOptionFlags: ["nameNorm", "section", "flag", "anchorId", "flags"],
   manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
   manPages: [
@@ -89,7 +89,7 @@ export const STORAGE_STATS_FIELDS: Record<StorageStatsTable, string[]> = {
     "datasetReleaseId",
     "contentSha256",
   ],
-  rateLimitBuckets: ["bucketKey"],
+  rateLimitBuckets: ["key"],
   releaseSectionStats: ["section"],
   releaseManifests: ["json"],
   releasePackageBatches: ["digest"],
@@ -933,20 +933,24 @@ export const measurePageLookup = internalQuery({
 // and every live upload action; indexed reference checks serialize with linking.
 export const cleanupOrphanManifestFilesBatch = internalMutation({
   args: { cursor: v.union(v.string(), v.null()), limit: v.optional(v.number()), dryRun: v.optional(v.boolean()) },
-  returns: v.object({ scanned: v.number(), orphans: v.number(), storageDeletes: v.number(), isDone: v.boolean(), continueCursor: v.string() }),
+  returns: v.object({ scanned: v.number(), orphans: v.number(), storageDeletes: v.number(), isDone: v.boolean(), continueCursor: v.string(),
+    files: v.array(v.object({ storageId: v.id("_storage"), ageMs: v.number(), size: v.number() })),
+  }),
   handler: async (ctx, args) => {
     const batch = await ctx.db.system.query("_storage").paginate({ cursor: args.cursor,
       numItems: bounded(args.limit, 50, 100) });
     let orphans = 0;
     let storageDeletes = 0;
+    const files = [];
     for (const file of batch.page) {
       if (file.contentType !== MANIFEST_CONTENT_TYPE || file._creationTime > Date.now() - MANIFEST_ORPHAN_MIN_AGE_MS) continue;
       const ref = await ctx.db.query("releaseManifests")
         .withIndex("by_storageId", (q) => q.eq("storageId", file._id)).first();
       if (ref) continue;
       orphans++;
+      if (args.dryRun) files.push({ storageId: file._id, ageMs: Date.now() - file._creationTime, size: file.size });
       if (!args.dryRun) { await ctx.storage.delete(file._id); storageDeletes++; }
     }
-    return { scanned: batch.page.length, orphans, storageDeletes, isDone: batch.isDone, continueCursor: batch.continueCursor };
+    return { scanned: batch.page.length, orphans, storageDeletes, files, isDone: batch.isDone, continueCursor: batch.continueCursor };
   },
 });

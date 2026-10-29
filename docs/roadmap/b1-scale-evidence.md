@@ -15,7 +15,7 @@ and real-package throughput remain outside this evidence.
 | Perl names | `::` accepted by source/href filters and typo candidate recognition. Scan, link, spool-equivalence tests plus live `Foo::Bar(3)` search/lookup. A red/green browser regression caught encoded HTML params (`foo%3A%3Abar`) reaching lookups unchanged; HTML, plain-text and OG route boundaries decode exactly once. Raw/encoded URLs, name-only redirects and citation search pass. Names keep today's lowercase normalization. |
 | Serial uploads | Four workers by default, at most eight; per-request item/byte limits remain. Queue advances only when a future completes. Sixteen counter shards avoid a shared release/stat write from every worker; seal verifies aggregate and section sums atomically. |
 | In-memory parsing | Temporary SQLite spool (8 MiB cache), lightweight route/package references, bounded parse futures, one-page link-resolution pass, disk-backed notices and two-pass license validation. A >128 MiB-body regression holds tracked Python peak below 12 MiB. |
-| 300-second activation wait | Short polls with a startup-validated 45-minute default and maximum, server-owned cursor and 500-link batches. New `ingest:activate` resumes the same release without parsing/uploading; tests cover >300 seconds, canceled jobs, immutable seals, failed/excess declarations, and a three-failure stop/re-arm at the same cursor. |
+| 300-second activation wait | Short polls with a startup-validated 45-minute cap further bounded by remaining CI job time, server-owned cursor and 500-link batches. New `ingest:activate` resumes the same release without parsing/uploading; tests cover >300 seconds, canceled jobs, immutable seals, failed/excess declarations, and a three-failure stop/re-arm at the same cursor. |
 | 200-document prune transactions | Start at 1,000, maximum 2,000, ten shrinking attempts down to five. Existing durable pruning fence, active/rollback protection, and orphan-file separation retained. New declaration/manifest/shard rows are removed too. >16k-child restart and manifest-file cleanup regression. |
 | Contract/deployment ordering | TypeScript/Python contract version 2 and required function list agree; old/missing contracts still fail before writes. No shared deploy or migration run. |
 
@@ -100,23 +100,30 @@ required before any spend increase.
   Normal fixture counts stay home 3 calls/7 docs, man 5/28 plus one file read,
   search 3/32, section 2/37. No `perf-budget-change` label or Budget section needed.
 
-## Review-fix validation
+## Regression validation
 
-The PR #431 fix round passed `pnpm convex:test` (190), `pnpm ingest:test` (433,
-86.38% coverage), `pnpm next:test` (468), `pnpm next:e2e` (113) and `pnpm ops:test`
-(109). Convex typecheck, ingestion/Next lint, visual grammar, public-API guard and
-production build passed. E2E used a worktree-local anonymous backend on
-33410/33411 and a production Next server on 33412 with CI's required origin
-configuration and a fresh disposable fetch cache. Encoded and literal Perl text
-routes returned 200; share images returned PNG; deep legacy section links
-returned 308. The local backend's `_storage` metadata confirmed the manifest MIME
-tag used by the age-gated orphan sweep.
+The local regression suites pass `pnpm convex:test` (190), `pnpm ingest:test`
+(445, 86.48% coverage), `pnpm next:test` (470) and `pnpm ops:test` (112). Convex
+typecheck, ingestion/Next lint, visual grammar and the public-API guard pass. The
+platform-deadline shell step is exercised for 60-, 90- and 300-minute budgets;
+client tests account for elapsed acquisition/parse/upload time. Backfill tests
+verify that healthy releases schedule while stopped releases retain their cursor
+and report immediate recovery errors.
+
+The browser baseline is 113 passing tests, using a worktree-local anonymous
+backend on 33410/33411 and a production Next server on 33412 with CI's required
+origin configuration and a fresh disposable fetch cache. Encoded and literal
+Perl text routes returned 200; share images returned PNG; deep legacy section
+links returned 308. The local backend's `_storage` metadata confirmed the
+manifest MIME tag used by the age-gated orphan sweep. License recovery carries
+only explicit URL distro state; its existing loading boundary may stream HTTP
+200 before Next emits its client/meta redirect.
 
 `pnpm perf:check` passed with unchanged budgets, fixture and enforcement. Ordinary
 page views retain home 3 calls/7 documents, man 5/28 plus one file read, search
 3/32 and section 2/37. The synthetic scale measurements above were retained from
-the original local experiment; the fix round did not repeat the 20k-page probe or
-exercise shared deployments.
+the original local experiment; these regressions did not repeat the 20k-page
+probe or exercise shared deployments.
 
 ## Scope and review limits
 
@@ -128,10 +135,10 @@ synthetic probe cannot establish full-Debian parse/download throughput, real pag
 B5 #397 overlaps `convex/queries.ts`, the option/search indexes and ingest payloads.
 B7 #399 overlaps `convex/schema.ts`, `convex/ingest.ts` and Python ingestion. Rebase
 those changes with the declaration/shard lifecycle and immutable seal in view.
-PR #431 received independent review with a merge-after-fixes recommendation.
-The follow-up regressions cover Docker argv grammar, legacy offset redirects,
-activation failure limits, schema-enumerated release children, promotion-safe
-licenses, manifest orphan cleanup and encoded plain-text/OG routes.
+Regression coverage includes Docker argv grammar, legacy offset redirects,
+activation failure limits and remaining-job deadlines, schema-enumerated release
+tables and storage-stat fields, promotion-safe licenses, bounded manifest orphan
+previews and encoded plain-text/OG routes.
 
 ## Merge compatibility
 

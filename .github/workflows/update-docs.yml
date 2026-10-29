@@ -129,6 +129,17 @@ jobs:
     environment: production
     timeout-minutes: ${{ matrix.timeout }}
     steps:
+      - name: Reserve time for dataset reporting
+        id: activation_deadline
+        if: ${{ needs.plan.outputs.ingest == 'true' }}
+        shell: bash
+        env:
+          BETTERMAN_JOB_TIMEOUT_MINUTES: ${{ matrix.timeout }}
+        run: |
+          # Start before setup, Docker pulls or VM boot. Leave 3 minutes for
+          # promotion checks, result recording and artifact upload.
+          echo "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS=$(( $(date +%s) + BETTERMAN_JOB_TIMEOUT_MINUTES * 60 - 180 ))" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -193,7 +204,7 @@ jobs:
         with:
           # pkg builds for the newest 15.x minor; bump when a new minor ships.
           release: "15.1"
-          envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA BETTERMAN_INGEST_SAMPLE"
+          envs: "CONVEX_HTTP_URL CONVEX_INGEST_SECRET BETTERMAN_DATASET_STAGE BETTERMAN_INGEST_GIT_SHA BETTERMAN_INGEST_SAMPLE BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS"
           usesh: true
           run: |
             set -euo pipefail

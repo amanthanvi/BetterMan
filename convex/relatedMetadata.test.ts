@@ -103,7 +103,7 @@ describe("related metadata backfill", () => {
     }
     expect((await t.query(api.queries.getRelated, { distro: "debian", name: "source", section: "1" }))?.items.map((item) => item.name)).toEqual(["target"]);
     expect(await t.run((ctx) => ctx.db.get(releaseId))).toEqual(completed);
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1, stopped: [] });
   });
 
   it("bounds batches and schedules the remainder", async () => {
@@ -208,9 +208,9 @@ describe("related metadata backfill", () => {
         });
       }
     });
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 1, skipped: 0 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 1, skipped: 0, stopped: [] });
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1, stopped: [] });
     const before = await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(100));
     await t.mutation(internal.ingest.activateRelease, {
       stage: "prod", datasetReleaseId: "active", activatedAt: "2026-09-07T01:00:00Z",
@@ -268,7 +268,7 @@ describe("active metadata readiness", () => {
       complete: false,
       releases: ["staging", "prod"].map((stage) => ({
         datasetReleaseId: "readiness", stage, distro: "debian",
-        currentVersion: 1, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null,
+        currentVersion: 1, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null, backfillStopped: false,
       })),
     };
     expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual(pending);
@@ -303,7 +303,7 @@ describe("active metadata readiness", () => {
       complete: false,
       releases: [{
         datasetReleaseId: "missing", stage: "prod", distro: "debian",
-        currentVersion: null, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null,
+        currentVersion: null, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null, backfillStopped: false,
       }],
     });
   });

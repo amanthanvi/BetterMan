@@ -30,6 +30,10 @@ export async function waitForRelatedMetadata(readStatus, {
       const pair = `${release.stage}/${release.distro}`
       if (seen.has(pair)) throw new Error(`Duplicate active release pointer: ${pair}`)
       seen.add(pair)
+      if (typeof release.backfillStopped !== 'boolean') throw new Error(`Invalid backfill state for ${pair}`)
+      if (release.backfillStopped) {
+        throw new Error(`RELATED_METADATA_BACKFILL_FAILED for ${pair} (${release.datasetReleaseId}): repair the failed batch, then run related:retryFailedBackfill with its datasetReleaseId and related:backfillActiveReleases; rerun convex:related-check before retrying deployment`)
+      }
       if (release.manifestError !== null) {
         if (typeof release.manifestError !== 'string' || !release.manifestError.trim()) {
           throw new Error(`Invalid manifest error for ${pair}`)

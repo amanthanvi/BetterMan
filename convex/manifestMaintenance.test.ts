@@ -30,9 +30,13 @@ it("sweeps aged unlinked manifest files, preserving references, in-flight upload
     await ctx.db.insert("releaseManifests", { releaseId, storageId: files.live });
   });
   expect(await t.mutation(internal.maintenance.cleanupOrphanManifestFilesBatch, { cursor: null, dryRun: true }))
-    .toMatchObject({ scanned: 4, orphans: 1, storageDeletes: 0 });
+    .toMatchObject({ scanned: 4, orphans: 1, storageDeletes: 0,
+      files: [{ storageId: files.orphan, size: 6, ageMs: expect.any(Number) }],
+    });
+  const preview = await t.mutation(internal.maintenance.cleanupOrphanManifestFilesBatch, { cursor: null, dryRun: true });
+  expect(preview.files[0].ageMs).toBeGreaterThanOrEqual(MANIFEST_ORPHAN_MIN_AGE_MS);
   expect(await t.mutation(internal.maintenance.cleanupOrphanManifestFilesBatch, { cursor: null }))
-    .toMatchObject({ orphans: 1, storageDeletes: 1 });
+    .toMatchObject({ orphans: 1, storageDeletes: 1, files: [] });
   expect(await t.run((ctx) => ctx.db.system.get(files.orphan))).toBeNull();
   for (const id of [files.live, files.page, young]) expect(await t.run((ctx) => ctx.db.system.get(id))).not.toBeNull();
 });

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import ssl
 import time
@@ -167,11 +168,27 @@ def activation_timeout_seconds() -> float:
     return value
 
 
+def ingest_activation_deadline() -> float | None:
+    raw = os.environ.get("BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS")
+    if raw is None:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError(
+            "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS must be a Unix timestamp"
+        ) from None
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError("BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS must be finite and positive")
+    return value
+
+
 @dataclass(frozen=True)
 class ConvexIngestClient:
     http_url: str
     ingest_secret: str
     activation_timeout: float = field(default_factory=activation_timeout_seconds)
+    activation_deadline: float | None = field(default_factory=ingest_activation_deadline)
 
     def __post_init__(self) -> None:
         if not 0 < self.activation_timeout <= MAX_ACTIVATION_TIMEOUT_SECONDS:
@@ -259,6 +276,16 @@ class ConvexIngestClient:
             timeout_seconds = self.activation_timeout
         if not 0 < timeout_seconds <= MAX_ACTIVATION_TIMEOUT_SECONDS:
             raise ValueError("Activation timeout must be >0 and <=2700 seconds")
+        # The matrix records this absolute deadline before checkout/setup,
+        # including Docker/VM acquisition and parse/upload in the job budget.
+        if self.activation_deadline is not None:
+            timeout_seconds = min(timeout_seconds, self.activation_deadline - time.time())
+            if timeout_seconds <= 0:
+                raise RuntimeError(
+                    "Ingestion job budget exhausted before activation; "
+                    f"release {payload.get('datasetReleaseId')} remains resumable. "
+                    "Use the activate command with the same release ID and stage."
+                )
         deadline = time.monotonic() + timeout_seconds
         while (remaining := deadline - time.monotonic()) > 0:
             try:

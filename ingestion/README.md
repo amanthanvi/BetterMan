@@ -179,7 +179,11 @@ original body terms and anchors intact.
 
 
 The activation timeout is validated at CLI startup and client construction.
-Choose a shorter timeout when parse/upload leaves less than 45 minutes in a CI
-job. Resume a timed-out release with `pnpm ingest:activate`; three failed attempts
+CI records `BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS` before setup from the platform
+job limit (Linux 300 minutes, FreeBSD 90, macOS 60), reserving three minutes for
+reporting/promotion. Activation caps the configured wait by the actual time
+remaining after parse/upload. The deadline is forwarded unchanged into Docker
+and the FreeBSD VM. Standalone CLI runs without that variable retain the
+45-minute cap; set it to an absolute Unix timestamp when supplying a job budget. Resume a timed-out release with `pnpm ingest:activate`; three failed attempts
 at one hydration cursor require operator repair and explicit re-arming as
 described in [the operations runbook](../docs/runbooks/multi-distro-ops.md#deploy-and-activation-recovery).
