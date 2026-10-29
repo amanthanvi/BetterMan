@@ -301,6 +301,81 @@
       "relative": 0.02,
       "absolute": 0,
       "cap": 32000
+    },
+    "searchSymbol.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchSymbol.documents": {
+      "baseline": 10,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchSymbol.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArchive.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArchive.documents": {
+      "baseline": 8,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArchive.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainPipeline.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainPipeline.documents": {
+      "baseline": 12,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainPipeline.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSubcommand.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSubcommand.documents": {
+      "baseline": 7,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSubcommand.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainBounded.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainBounded.documents": {
+      "baseline": 66,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainBounded.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
     }
   },
   "sourceHead": "90f087485dfa33bbcd4cf3ab729143ffc7d871fc",

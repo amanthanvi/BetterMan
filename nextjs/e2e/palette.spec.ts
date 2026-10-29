@@ -156,3 +156,24 @@ test('keyboard shortcuts dialog: a11y after immediate reopen', async ({ page }) 
   await expect(dialog).toBeVisible()
   await expectNoCriticalOrSeriousViolations(page)
 })
+
+test('command palette: a symbol result keeps its definition anchor', async ({ browser, baseURL }) => {
+  // Service-worker fetches bypass Playwright routes; isolate this mocked-response case.
+  const context = await browser.newContext({ baseURL, serviceWorkers: 'block' })
+  const page = await context.newPage()
+  try {
+    await page.route(/\/api\/v1\/search\?/, route => route.fulfill({
+      json: { query: 'LD_PRELOAD', results: [{ name: 'bash', section: '1', title: 'bash(1)', description: 'Shell environment', highlights: ['LD_PRELOAD'], anchorId: 'description' }], suggestions: [], hasMore: false },
+    }))
+    await page.goto('/')
+    await waitForInteractiveShell(page)
+    await page.getByRole('button', { name: 'Search' }).click()
+    await page.getByRole('combobox', { name: 'Command palette input' }).fill('LD_PRELOAD')
+    const result = page.getByRole('option', { name: /bash\(1\)/i })
+    await expect(result.getByText('definition', { exact: true })).toBeVisible()
+    await result.click()
+    await expect(page).toHaveURL(/\/man\/bash\/1#description$/)
+  } finally {
+    await context.close()
+  }
+})

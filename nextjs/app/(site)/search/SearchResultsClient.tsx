@@ -106,7 +106,7 @@ export function resultKind(r: SearchResult): string {
 }
 
 function ResultCard({ urlDistro, q, r }: { urlDistro: Distro | null; q: string; r: SearchResult }) {
-  const anchorId = r.match === 'option' ? r.anchorId : undefined
+  const anchorId = r.anchorId
   const href = useMemo(() => manPageHref(r.name, r.section, urlDistro, anchorId), [anchorId, urlDistro, r.name, r.section])
   const synopsis = useMemo(() => buildSynopsisSnippet(r), [r])
 

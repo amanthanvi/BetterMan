@@ -1,9 +1,8 @@
 // Option flags are indexed one row per (page, flag) in manPageOptionFlags so a
 // query such as `--create`, `tar -c`, or `-C` is one exact index lookup.
 
-// Ingestion uploads 20 pages per mutation. 20 x 400 rows leaves 8,000 of the
-// 16,000 documents-written transaction limit for the pages and links the same
-// mutation already writes; links per page are not capped upstream.
+// Ingestion uploads 20 pages per mutation: 400 flags + 64 symbols per page
+// leaves 6,720 of the 16,000 writes for existing page/content/link metadata.
 export const MAX_OPTION_FLAG_ROWS_PER_PAGE = 400;
 const MAX_FLAG_CHARS = 80;
 
@@ -16,7 +15,7 @@ const FLAG_RE = /^(?:-{1,2}|\+)[A-Za-z0-9?#@%:!][A-Za-z0-9_.+:#-]*$/;
 const ATTACHED_PLACEHOLDER_RE =
   /^(-[A-Za-z])(?:NUM|N|FILE|FILES|PATTERN|PATTERNS|ACTION|DIR|DIRECTORY|STRING|COMMAND|TYPE|LEVEL|SIZE|LIST|GLOB|FORMAT|WHEN|MODE|NAME|ARG|ARGS|VALUE|KEY|PATH|COUNT|WIDTH|SEP|SECS|SECONDS|TIME|DATE|CHARS|LINES|BYTES|DEPTH)$/;
 
-export type OptionFlagRow = { flag: string; anchorId: string; flags: string; takesArgument?: boolean };
+export type OptionFlagRow = { flag: string; anchorId: string; flags: string; takesArgument?: boolean; excerpt?: string };
 
 export function flagTakesArgument(flags: string): boolean {
   return /[=<]|(?:^|[\s,|])\[?[A-Z][A-Z_]*\b/.test(flags) ||
@@ -57,13 +56,13 @@ export function optionFlagRows(options: unknown): OptionFlagRow[] {
   const seen = new Set<string>();
   for (const option of options) {
     if (!option || typeof option !== "object") continue;
-    const { flags, anchorId, argument } = option as { flags?: unknown; anchorId?: unknown; argument?: unknown };
+    const { flags, anchorId, argument, description } = option as { flags?: unknown; anchorId?: unknown; argument?: unknown; description?: unknown };
     if (typeof flags !== "string" || typeof anchorId !== "string" || !anchorId) continue;
     for (const flag of optionKeys(flags)) {
       if (seen.has(flag)) continue;
       seen.add(flag);
       const takesArgument = (typeof argument === "string" && argument.trim().length > 0) || flagTakesArgument(flags);
-      rows.push({ flag, anchorId, flags: flags.trim().slice(0, MAX_FLAG_CHARS), ...(takesArgument ? { takesArgument: true } : {}) });
+      rows.push({ flag, anchorId, flags: flags.trim().slice(0, MAX_FLAG_CHARS), ...(takesArgument ? { takesArgument: true } : {}), ...(typeof description === 'string' && description ? { excerpt: description.slice(0, 160) } : {}) });
       if (rows.length >= MAX_OPTION_FLAG_ROWS_PER_PAGE) return rows;
     }
   }

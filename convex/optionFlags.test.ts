@@ -141,6 +141,7 @@ function page(name: string, options: Option[] | null, overrides: Partial<{ secti
     contentSha256: `${name}-${section}`, hasParseWarnings: false,
     doc: { toc: [], blocks: [] }, synopsis: null, options, seeAlso: null,
     searchText: description, snippetText: description, links: [],
+    symbols: [{ term: 'LD_PRELOAD', anchorId: 'environment', excerpt: 'Preload libraries.', kind: 'environment' as const }],
   };
 }
 
@@ -280,6 +281,9 @@ describe("option search", () => {
       ["tar", "-C", "opt-directory"], ["tar", "--directory", "opt-directory"],
       ["tar", "--version", "opt-version"],
     ]);
+    const symbols = await t.run(ctx => ctx.db.query('manPageSymbols').take(3));
+    expect(symbols).toHaveLength(2);
+    expect(symbols[0]).toMatchObject({ term: 'LD_PRELOAD', termNorm: 'ld_preload', anchorId: 'environment' });
   });
 
   it("derives the same rows through the legacy inline page mutation", async () => {

@@ -1,0 +1,249 @@
+{
+  "diagnostics": [],
+  "input": "find . -name '*.log' -mtime +7 -print0 | xargs -0 rm -f",
+  "shareUrl": "/explain?cmd=find%20.%20-name%20'*.log'%20-mtime%20%2B7%20-print0%20%7C%20xargs%20-0%20rm%20-f",
+  "stages": [
+    {
+      "destructive": [],
+      "id": 0,
+      "parent": null,
+      "relation": "list",
+      "tokens": [
+        {
+          "anchor": null,
+          "end": 4,
+          "excerpt": "Manual for find",
+          "kind": "command",
+          "page": {
+            "distro": "debian",
+            "name": "find",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 0,
+          "takesArgument": null,
+          "text": "find",
+          "value": "find"
+        },
+        {
+          "anchor": null,
+          "end": 6,
+          "excerpt": "",
+          "kind": "argument",
+          "page": null,
+          "portability": null,
+          "shell": null,
+          "start": 5,
+          "takesArgument": null,
+          "text": ".",
+          "value": "."
+        },
+        {
+          "anchor": "name",
+          "end": 12,
+          "excerpt": "-name",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "find",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 7,
+          "takesArgument": true,
+          "text": "-name",
+          "value": "-name"
+        },
+        {
+          "anchor": "name",
+          "end": 20,
+          "excerpt": "-name",
+          "kind": "optionArgument",
+          "page": {
+            "distro": "debian",
+            "name": "find",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": {
+            "anchor": "shell-quoting",
+            "excerpt": "Shell quoting",
+            "page": {
+              "distro": "debian",
+              "name": "bash",
+              "section": "1"
+            }
+          },
+          "start": 13,
+          "takesArgument": null,
+          "text": "'*.log'",
+          "value": "*.log"
+        },
+        {
+          "anchor": "mtime",
+          "end": 27,
+          "excerpt": "-mtime",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "find",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 21,
+          "takesArgument": true,
+          "text": "-mtime",
+          "value": "-mtime"
+        },
+        {
+          "anchor": "mtime",
+          "end": 30,
+          "excerpt": "-mtime",
+          "kind": "optionArgument",
+          "page": {
+            "distro": "debian",
+            "name": "find",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 28,
+          "takesArgument": null,
+          "text": "+7",
+          "value": "+7"
+        },
+        {
+          "anchor": "print0",
+          "end": 38,
+          "excerpt": "-print0",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "find",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 31,
+          "takesArgument": false,
+          "text": "-print0",
+          "value": "-print0"
+        },
+        {
+          "anchor": null,
+          "end": 40,
+          "excerpt": "",
+          "kind": "operator",
+          "page": null,
+          "portability": null,
+          "shell": {
+            "anchor": "shell-pipeline",
+            "excerpt": "Shell pipeline",
+            "page": {
+              "distro": "debian",
+              "name": "bash",
+              "section": "1"
+            }
+          },
+          "start": 39,
+          "takesArgument": null,
+          "text": "|",
+          "value": "|"
+        }
+      ]
+    },
+    {
+      "destructive": [],
+      "id": 1,
+      "parent": null,
+      "relation": "list",
+      "tokens": [
+        {
+          "anchor": null,
+          "end": 46,
+          "excerpt": "Manual for xargs",
+          "kind": "command",
+          "page": {
+            "distro": "debian",
+            "name": "xargs",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 41,
+          "takesArgument": null,
+          "text": "xargs",
+          "value": "xargs"
+        },
+        {
+          "anchor": "null",
+          "end": 49,
+          "excerpt": "-0",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "xargs",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 47,
+          "takesArgument": false,
+          "text": "-0",
+          "value": "-0"
+        }
+      ]
+    },
+    {
+      "destructive": [
+        {
+          "description": "rm requests file removal with force, suppressing prompts and ignoring nonexistent operands.",
+          "dryRun": null
+        }
+      ],
+      "id": 2,
+      "parent": 1,
+      "relation": "wrapper",
+      "tokens": [
+        {
+          "anchor": null,
+          "end": 52,
+          "excerpt": "Manual for rm",
+          "kind": "command",
+          "page": {
+            "distro": "debian",
+            "name": "rm",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 50,
+          "takesArgument": null,
+          "text": "rm",
+          "value": "rm"
+        },
+        {
+          "anchor": "force",
+          "end": 55,
+          "excerpt": "-f, --force",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "rm",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 53,
+          "takesArgument": false,
+          "text": "-f",
+          "value": "-f"
+        }
+      ]
+    }
+  ],
+  "version": 1
+}

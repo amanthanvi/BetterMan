@@ -63,6 +63,7 @@ const storageStatsTableValidator = v.union(
   v.literal("manPageAliases"),
   v.literal("manPageGenerated"),
   v.literal("manPageLinks"),
+  v.literal("manPageSymbols"),
   v.literal("manPageOptionFlags"),
   v.literal("manPageSearchDocuments"),
   v.literal("manPages"),
@@ -100,6 +101,7 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   // Content-hash rows, not release-owned; parts are bounded objects.
   manPageGenerated: ["contentSha256", "updatedAt", "tldrCommit"],
   manPageLinks: ["fromExternalId", "toName", "toSection", "toTitle", "toDescription", "linkType"],
+  manPageSymbols: ["term", "termNorm", "anchorId", "excerpt"],
   manPageOptionFlags: ["nameNorm", "section", "flag", "anchorId", "flags"],
   manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
   manPages: [
@@ -967,7 +969,8 @@ export const measureReleaseBatch = internalQuery({
   args: {
     datasetReleaseId: v.string(), cursor: v.union(v.string(), v.null()),
     table: v.union(v.literal("manPages"), v.literal("manPageSearchDocuments"), v.literal("manPageLinks"),
-      v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
+      v.literal("manPageSymbols"),
+  v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
       v.literal("releaseSectionStats"), v.literal("releaseManifests"), v.literal("releasePackageBatches"), v.literal("releasePageUploadShards")),
   },
   returns: v.object({ documents: v.number(), jsonBytes: v.number(), storageBytes: v.number(), isDone: v.boolean(), continueCursor: v.string() }),

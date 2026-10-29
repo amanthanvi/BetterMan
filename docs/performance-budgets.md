@@ -168,3 +168,26 @@ These counters model fixture request work, not Convex invoices, internal index
 scan bytes, retries or full-corpus behavior. Lab vitals do not represent field
 latency or later interaction. The query-only supplemental pages have no stored
 document body: these cases cover search resolution, not destination rendering.
+
+## Explain and symbol query cases
+
+An isolated B5 fixture adds definition symbols and explain-command metadata
+after the earlier cases have completed. It leaves all existing browser and
+query corpora unchanged. Direct Convex measurements (one function call and
+zero blob reads each) record saturated `ForwardAgent` symbol search at 10
+documents, `tar -xzvf backup.tar.gz -C /srv/www` at 8, the find/xargs kit
+pipeline at 12, and `git commit -m "message"` at 7. A 100-option overflow
+workload resolves 63 flag rows then stops at the shared 64-lookup ceiling,
+using 66 documents including release/page selection. The symbol fixture has
+12 matching pages, exceeding the eight-row read bound; option, command and
+subcommand identities and ordered anchors are asserted. These counts include
+release resolution and repeated reads, with zero growth tolerance. Existing
+43-document single-flag and 66-document typo cases remain enforced.
+
+The explain resolver additionally caps 64 indexed lookups (at most four rows
+each) and 4,096 characters / 128 lexical tokens / 24 stages / eight nested
+levels. Its conservative whole-query ceiling is 258 document reads including
+release selection. These direct-query budgets exclude HTTP rate limiting,
+SSR/hydration and destination rendering; no explain UI is shipped in B5. The
+[JSON contract](explain-contract.md) documents unresolved and unsupported
+syntax, safety uncertainty and ingest dependencies.

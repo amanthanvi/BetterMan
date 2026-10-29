@@ -190,3 +190,38 @@ export async function createDerivedResponseFixture(onCall: () => void) {
   if (!status.healthy) throw new Error('Response fixture must publish every derived summary')
   return t
 }
+
+// Isolated B5 fixtures do not change earlier browser/search budget workloads.
+export async function createExplainFixture(onCall: () => void) {
+  const t = await createSearchFixture(onCall)
+  await t.run(async ctx => {
+    const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q => q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique()
+    const { releaseId, datasetReleaseId } = active!
+    const specs = [
+      { name: 'find', section: '1', options: [{ flags: '-name', anchorId: 'name', argument: 'PATTERN' }, { flags: '-mtime', anchorId: 'mtime', argument: 'N' }, { flags: '-print0', anchorId: 'print0' }] },
+      { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' }] },
+      { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' }] },
+      { name: 'git', section: '1', options: [] },
+      { name: 'git-commit', section: '1', options: [{ flags: '-m', anchorId: 'message', argument: 'MESSAGE' }] },
+      { name: 'ssh_config', section: '5', options: [] },
+      { name: 'bounded', section: '1', options: Array.from({ length: 100 }, (_, i) => ({ flags: `--limit${i}`, anchorId: `limit${i}` })) },
+    ]
+    for (const spec of specs) {
+      const pageId = await ctx.db.insert('manPages', { releaseId, datasetReleaseId, externalId: `b5-${spec.name}`, locale: 'en', distro: 'debian', name: spec.name, section: spec.section, sitemapPage: 1, title: `${spec.name}(${spec.section})`, description: `Manual for ${spec.name}`, sourcePath: spec.name, contentSha256: spec.name, hasParseWarnings: false })
+      for (const row of optionFlagRows(spec.options)) await ctx.db.insert('manPageOptionFlags', { ...row, releaseId, pageId, nameNorm: spec.name, section: spec.section })
+      if (spec.name === 'ssh_config') {
+        for (let i = 0; i < 12; i++) {
+          const name = i ? `ssh_config${i}` : 'ssh_config'
+          const targetId = i ? await ctx.db.insert('manPages', { releaseId, datasetReleaseId, externalId: `b5-${name}`, locale: 'en', distro: 'debian', name, section: '5', sitemapPage: 1, title: `${name}(5)`, description: 'Client configuration', sourcePath: name, contentSha256: name, hasParseWarnings: false }) : pageId
+          await ctx.db.insert('manPageSymbols', { releaseId, pageId: targetId, name, section: '5', title: `${name}(5)`, description: 'Client configuration', term: 'ForwardAgent', termNorm: 'forwardagent', anchorId: 'ForwardAgent', excerpt: 'Forward authentication agent connections.', kind: 'config' })
+        }
+      }
+      if (spec.name === 'git-commit') await ctx.db.insert('manPageSymbols', { releaseId, pageId, name: spec.name, section: '1', title: 'git-commit(1)', description: 'Commit changes', term: 'git commit', termNorm: 'git commit', anchorId: '', excerpt: 'Commit changes', kind: 'subcommand' })
+    }
+    const tar = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'tar').eq('section', '1')).unique()
+    for (const row of optionFlagRows([{ flags: '-v, --verbose', anchorId: 'verbose' }, { flags: '-C, --directory', anchorId: 'directory', argument: 'DIR' }])) await ctx.db.insert('manPageOptionFlags', { ...row, releaseId, pageId: tar!._id, nameNorm: 'tar', section: '1' })
+    const bash = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'bash').eq('section', '1')).unique()
+    for (const kind of ['pipeline', 'quoting', 'glob', 'substitution', 'list', 'redirect', 'subshell', 'assignment', 'expansion']) await ctx.db.insert('manPageSymbols', { releaseId, pageId: bash!._id, name: 'bash', section: '1', title: 'bash(1)', description: 'Shell syntax', term: `shell:${kind}`, termNorm: `shell:${kind}`, anchorId: `shell-${kind}`, excerpt: `Shell ${kind}`, kind: 'shell' })
+  })
+  return t
+}

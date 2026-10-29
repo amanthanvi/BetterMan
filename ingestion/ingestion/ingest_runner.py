@@ -79,6 +79,7 @@ from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import read_roff, render_html
 from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
+from ingestion.symbols import symbol_rows
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+:-]*$")
@@ -1511,6 +1512,7 @@ def _page_payload(
         "searchText": "",
         "snippetText": snippet_text,
         "links": links,
+        "symbols": symbol_rows(row.name, row.section, row.doc, row.description),
     }
 
 

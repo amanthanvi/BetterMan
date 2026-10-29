@@ -35,6 +35,7 @@ async function seededRelease(completed = true) {
         await ctx.db.insert("manPageOptionFlags", {
           releaseId, pageId, nameNorm: name, section: "1", flag: "-c", anchorId: "c", flags: "-c",
         });
+        await ctx.db.insert('manPageSymbols', { releaseId, pageId, name, section: '1', title: `${name}(1)`, description: 'symbol source', term: 'VARIABLE', termNorm: 'variable', anchorId: 'variable', excerpt: 'Definition', kind: 'environment' });
       }
     }
     return releaseId;
@@ -107,6 +108,7 @@ describe("release pruning safety", () => {
       datasetReleaseId: "pruning-test", confirmDatasetReleaseId: "pruning-test", maxDocs: 20,
     })).toMatchObject({ deletedRelease: true, hasMore: false });
     expect(await t.run((ctx) => ctx.db.get(releaseId))).toBeNull();
+    expect(await t.run(ctx => ctx.db.query('manPageSymbols').take(1))).toEqual([]);
   });
 
   it("deletes unpinned derived status and scan rows with release children in bounded batches", async () => {

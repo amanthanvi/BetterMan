@@ -39,6 +39,7 @@ type PaletteItem =
       highlights?: string[]
       distro?: Distro
       anchorId?: string
+      match?: 'option'
       run: () => void
     }
   | {
@@ -121,7 +122,7 @@ function bookmarksToItems(
 }
 
 function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro; runMan: (name: string, section: string, distroOverride?: Distro, anchorId?: string) => void }): PaletteItem {
-  const anchorId = result.match === 'option' ? result.anchorId : undefined
+  const anchorId = result.anchorId
   return {
     kind: 'page',
     id: `page:${result.name}:${result.section}`,
@@ -132,6 +133,7 @@ function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro
     highlights: result.highlights,
     distro: ctx.distro,
     anchorId,
+    match: result.match,
     run: () => {
       recordRecentSearch(ctx.query)
       ctx.runMan(result.name, result.section, undefined, anchorId)
@@ -522,7 +524,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                       )}
                     </div>
                     {item.kind === 'page' && item.anchorId ? (
-                      <span className="shrink-0 small-caps text-sm text-ink-3">flag</span>
+                      <span className="shrink-0 small-caps text-sm text-ink-3">{item.match === 'option' ? 'flag' : 'definition'}</span>
                     ) : null}
                     {item.kind === 'page' ? (
                       <div className="min-w-0 flex-1 truncate text-sm text-ink-2">{item.description}</div>

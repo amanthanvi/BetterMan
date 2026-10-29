@@ -1,0 +1,152 @@
+{
+  "diagnostics": [],
+  "input": "tar -xzvf backup.tar.gz -C /srv/www",
+  "shareUrl": "/explain?cmd=tar%20-xzvf%20backup.tar.gz%20-C%20%2Fsrv%2Fwww",
+  "stages": [
+    {
+      "destructive": [],
+      "id": 0,
+      "parent": null,
+      "relation": "list",
+      "tokens": [
+        {
+          "anchor": null,
+          "end": 3,
+          "excerpt": "archive files",
+          "kind": "command",
+          "page": {
+            "distro": "debian",
+            "name": "tar",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 0,
+          "takesArgument": null,
+          "text": "tar",
+          "value": "tar"
+        },
+        {
+          "anchor": "extract",
+          "end": 9,
+          "excerpt": "-x, --extract",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "tar",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 4,
+          "takesArgument": false,
+          "text": "-xzvf",
+          "value": "-x"
+        },
+        {
+          "anchor": "gzip",
+          "end": 9,
+          "excerpt": "-z, --gzip",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "tar",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 4,
+          "takesArgument": false,
+          "text": "-xzvf",
+          "value": "-z"
+        },
+        {
+          "anchor": "verbose",
+          "end": 9,
+          "excerpt": "-v, --verbose",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "tar",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 4,
+          "takesArgument": false,
+          "text": "-xzvf",
+          "value": "-v"
+        },
+        {
+          "anchor": "file",
+          "end": 9,
+          "excerpt": "-f, --file",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "tar",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 4,
+          "takesArgument": true,
+          "text": "-xzvf",
+          "value": "-f"
+        },
+        {
+          "anchor": "file",
+          "end": 23,
+          "excerpt": "-f, --file",
+          "kind": "optionArgument",
+          "page": {
+            "distro": "debian",
+            "name": "tar",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 10,
+          "takesArgument": null,
+          "text": "backup.tar.gz",
+          "value": "backup.tar.gz"
+        },
+        {
+          "anchor": "directory",
+          "end": 26,
+          "excerpt": "-C, --directory",
+          "kind": "option",
+          "page": {
+            "distro": "debian",
+            "name": "tar",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 24,
+          "takesArgument": true,
+          "text": "-C",
+          "value": "-C"
+        },
+        {
+          "anchor": "directory",
+          "end": 35,
+          "excerpt": "-C, --directory",
+          "kind": "optionArgument",
+          "page": {
+            "distro": "debian",
+            "name": "tar",
+            "section": "1"
+          },
+          "portability": null,
+          "shell": null,
+          "start": 27,
+          "takesArgument": null,
+          "text": "/srv/www",
+          "value": "/srv/www"
+        }
+      ]
+    }
+  ],
+  "version": 1
+}

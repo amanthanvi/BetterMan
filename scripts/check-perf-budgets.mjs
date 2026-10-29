@@ -175,7 +175,7 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
 try {
   process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
-  const { createFixture, createSearchFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
+  const { createFixture, createSearchFixture, createExplainFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
   let fixture = await createFixture(() => metrics.calls++)
   metrics = { calls: 0, documents: 0, storageReads: 0 }
   const runtime = globalThis.Convex
@@ -351,6 +351,38 @@ try {
     }
     for (const [metric, value] of Object.entries(metrics)) actual[`${name}.${metric}`] = value
     details[name] = { q, scope: 'direct Convex search query', costs: { ...metrics }, resultCount: result.results.length }
+    console.log(`${name}: ${JSON.stringify(metrics)}`)
+  }
+  fixture = await createExplainFixture(() => metrics.calls++)
+  for (const [name, path, args] of [
+    ['searchSymbol', 'queries:search', { distro: 'debian', q: 'ForwardAgent', section: null, limit: 20, offset: 0 }],
+    ['explainArchive', 'explain:explain', { distro: 'debian', cmd: 'tar -xzvf backup.tar.gz -C /srv/www' }],
+    ['explainPipeline', 'explain:explain', { distro: 'debian', cmd: "find . -name '*.log' -mtime +7 -print0 | xargs -0 rm -f" }],
+    ['explainSubcommand', 'explain:explain', { distro: 'debian', cmd: 'git commit -m "message"' }],
+    ['explainBounded', 'explain:explain', { distro: 'debian', cmd: 'bounded ' + Array.from({ length: 100 }, (_, i) => `--limit${i}`).join(' ') }],
+  ]) {
+    metrics = { calls: 0, documents: 0, storageReads: 0 }
+    const result = await fixture.query(makeFunctionReference(path), args)
+    if (name === 'searchSymbol') {
+      assert.equal(result.results.length, 8)
+      assert.equal(result.results[0].anchorId, 'ForwardAgent')
+      assert.equal(result.results[0].name, 'ssh_config')
+    } else {
+      assert.deepEqual(result.diagnostics, name === 'explainBounded' ? ['Resolution lookup limit reached'] : [])
+      const tokens = result.stages.flatMap(stage => stage.tokens)
+      if (name === 'explainBounded') {
+        assert.equal(tokens.filter(token => token.kind === 'option').length, 63)
+        assert.ok(metrics.documents <= 66, 'Explanation lookup ceiling exceeded')
+      } else assert.ok(tokens.every(token => token.kind !== 'unknown'))
+      if (name === 'explainArchive') assert.deepEqual(tokens.filter(token => token.kind === 'option').map(token => token.anchor), ['extract', 'gzip', 'verbose', 'file', 'directory'])
+      if (name === 'explainPipeline') {
+        assert.ok(result.stages.some(stage => stage.destructive.length === 1))
+        assert.equal(tokens.find(token => token.value === '|').shell.anchor, 'shell-pipeline')
+      }
+      if (name === 'explainSubcommand') assert.equal(tokens.find(token => token.kind === 'subcommand').page.name, 'git-commit')
+    }
+    for (const [metric, value] of Object.entries(metrics)) actual[`${name}.${metric}`] = value
+    details[name] = { scope: 'direct Convex query', args, costs: { ...metrics }, result }
     console.log(`${name}: ${JSON.stringify(metrics)}`)
   }
   const report = {

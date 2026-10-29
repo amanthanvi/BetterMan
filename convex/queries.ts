@@ -441,6 +441,9 @@ function searchDocumentHit(doc: Doc<"manPageSearchDocuments">, queryText: string
 function compareHits(a: RankedHit, b: RankedHit): number {
   const rank = b.rank - a.rank;
   if (rank) return rank;
+  const sectionPriority = (section: string) => section === '1' || section === '8' ? 0 : section.startsWith('3') ? 2 : 1;
+  const section = sectionPriority(a.section) - sectionPriority(b.section);
+  if (section) return section;
   const len = a.name.length - b.name.length;
   if (len) return len;
   const name = a.name.localeCompare(b.name);
@@ -530,11 +533,11 @@ async function clusterHits(ctx: QueryCtx, releaseId: Id<"datasetReleases">, name
 function rankSearchDocument(
   doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
   queryNorm: string,
-  index: number,
 ): number {
-  let rank = 1000 - index;
+  let rank = 1000;
   if (doc.nameNorm === queryNorm) rank += 10_000;
   if (doc.nameNorm.startsWith(queryNorm)) rank += 2_000;
+  if (doc.nameNorm !== queryNorm && /^[_-]/.test(doc.nameNorm.slice(queryNorm.length))) rank -= 100;
   if (doc.descNorm.includes(queryNorm)) rank += 500;
   return rank;
 }
@@ -587,12 +590,16 @@ async function textHits(
   // Always merge the same description candidates so every offset slices one
   // stable ranked set. The index read is bounded by MAX_DESCRIPTION_HITS.
   const descriptionDocs = await searchDocsByDescription(ctx, { releaseId, section, queryNorm });
+  // Exact symbols only: never scan definitions or fetch document bodies at query time.
+  const symbols = section === null
+    ? await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', releaseId).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8)
+    : await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_section_and_termNorm', q => q.eq('releaseId', releaseId).eq('section', section).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8);
   const contentWords = queryNorm.split(/[^a-z0-9_]+/).filter((word) => word && !SEARCH_STOP_WORDS.has(word));
 
   const ranked = new Map<Id<"manPages">, RankedHit>();
-  prefixDocs.forEach((doc, index) => {
+  prefixDocs.forEach((doc) => {
     const current = ranked.get(doc.pageId);
-    const rank = rankSearchDocument(doc, queryNorm, index);
+    const rank = rankSearchDocument(doc, queryNorm);
     if (!current || rank > current.rank) ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rank));
   });
   descriptionDocs.forEach((doc, index) => {
@@ -604,6 +611,12 @@ async function textHits(
     if (queryNorm.includes(" ") && overlap === 0) return;
     ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rankDescriptionDocument(doc, queryNorm, index) + overlap * 50));
   });
+  for (const symbol of symbols) {
+    const existing = ranked.get(symbol.pageId);
+    if (existing?.name.toLowerCase() === queryNorm) continue;
+    ranked.set(symbol.pageId, { name: symbol.name, section: symbol.section, title: symbol.title, description: symbol.description,
+      highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, rank: Math.max(existing?.rank ?? 0, 2_500) });
+  }
   return [...ranked.values()].sort(compareHits);
 }
 
@@ -777,7 +790,7 @@ export const search = query({
         title: hit.title,
         description: hit.description,
         highlights: hit.highlights,
-        ...(hit.anchorId ? { match: "option" as const, anchorId: hit.anchorId } : {}),
+        ...(hit.anchorId ? { anchorId: hit.anchorId, ...(hit.match === 'option' ? { match: 'option' as const } : {}) } : {}),
       })),
       suggestions,
       ...(suggestions.length ? { correctedQuery: suggestions[0] } : {}),

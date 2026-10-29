@@ -9,6 +9,7 @@ import { scheduleDerivedBuild } from "./derived";
 import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
+import { insertSymbols, symbolInput } from './_symbols';
 import {
   compactManPageSearchText,
   DATASET_STAGES,
@@ -55,6 +56,7 @@ const pageInput = v.object({
   searchText: v.string(),
   snippetText: v.string(),
   links: v.array(pageLinkInput),
+  symbols: v.optional(v.array(symbolInput)),
 });
 
 // Derived by the /ingest/pages/storage action from page.options, which the
@@ -64,6 +66,7 @@ const optionFlagInput = v.object({
   anchorId: v.string(),
   flags: v.string(),
   takesArgument: v.optional(v.boolean()),
+  excerpt: v.optional(v.string()),
 });
 
 const storedPageInput = v.object({
@@ -82,6 +85,7 @@ const storedPageInput = v.object({
   contentStorageId: v.id("_storage"),
   optionFlags: v.optional(v.array(optionFlagInput)),
   optionsSignature: v.optional(v.string()),
+  symbols: v.optional(v.array(symbolInput)),
   searchText: v.string(),
   snippetText: v.string(),
   links: v.array(pageLinkInput),
@@ -165,6 +169,7 @@ async function insertOptionFlags(
       anchorId: row.anchorId,
       flags: row.flags,
       ...(row.takesArgument ? { takesArgument: true } : {}),
+      ...(row.excerpt ? { excerpt: row.excerpt } : {}),
     });
   }
 }
@@ -490,6 +495,7 @@ export const insertPages = internalMutation({
       });
       await persistOptionSignature(ctx, pageId, page.options, page.extractorVersion ?? null);
       await insertOptionFlags(ctx, { releaseId: release._id, pageId, page, rows: optionFlagRows(page.options) });
+      await insertSymbols(ctx, release, pageId, page, page.symbols ?? []);
 
       for (const link of page.links) {
         await ctx.db.insert("manPageLinks", {
@@ -589,6 +595,7 @@ export const insertStoredPages = internalMutation({
       });
       if (page.optionsSignature !== undefined) await persistPackedSignature(ctx, pageId, page.optionsSignature, page.extractorVersion ?? null);
       await insertOptionFlags(ctx, { releaseId: release._id, pageId, page, rows: page.optionFlags ?? [] });
+      await insertSymbols(ctx, release, pageId, page, page.symbols ?? []);
 
       for (const link of page.links) {
         await ctx.db.insert("manPageLinks", {

@@ -21,6 +21,11 @@ function render(q: string, overrides: Partial<SearchResponse> = {}) {
 }
 
 describe('search result copy', () => {
+  it('deep-links symbol definitions without labelling them command-line options', () => {
+    const html = render('ForwardAgent', { results: [{ name: 'ssh_config', section: '5', title: 'ssh_config(5)', description: 'Client configuration', highlights: ['ForwardAgent'], anchorId: 'ForwardAgent' }] })
+    expect(html).toContain('/man/ssh_config/5#ForwardAgent')
+    expect(html).not.toContain('Command-line options')
+  })
   it('gives honest guidance for unsupported multi-word queries', () => {
     const html = render('how do I extract a tarball')
     expect(html).toContain('No results for')
