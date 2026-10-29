@@ -16,7 +16,7 @@ Optional: `BETTERMAN_INGEST_WORKERS` sets the number of parse processes, clamped
 
 ## Large releases and recovery
 
-Ingest contract **5** must be deployed before this client writes. Release
+Ingest contract **6** must be deployed before this client writes. Release
 provenance is a JSON file in Convex storage, referenced from `releaseManifests`;
 page views read only the small release row. Page-upload counters use 16 shards;
 sealing folds their per-section counts in one bounded verification transaction,
@@ -457,3 +457,10 @@ Alternate reads retain their own content-hash generated brief, without borrowing
 canonical portability/history. Alias redirects preserve the target package,
 including name-only redirects. Shared full-Debian switches remain explicit and
 were not enabled during integration.
+
+## Index-by-demand
+
+Every release computes demand scores and tier membership from pinned popcon
+and optional aggregate pageviews. See the [B4 runbook](../docs/roadmap/b4-index-by-demand.md)
+for thresholds, monthly evaluation, `BETTERMAN_PLAUSIBLE_COUNTS`, deployment
+ordering and the required fresh v6 ingestion before full-Debian promotion.

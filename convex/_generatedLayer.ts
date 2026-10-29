@@ -8,7 +8,7 @@ import type { Doc } from "./_generated/dataModel";
 
 // Advertised by GET /ingest/generated/contract. Keep aligned with
 // ingestion/ingestion/generated/store.py.
-export const GENERATED_CONTRACT_VERSION = 2;
+export const GENERATED_CONTRACT_VERSION = 3;
 
 export const GENERATED_ROUTES = [
   "/ingest/generated/candidates",

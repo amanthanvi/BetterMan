@@ -134,3 +134,27 @@ test('identity: the icons are the print-manual mark, declared on both renderers'
     expect((await request.get(path)).status(), path).toBe(200)
   }
 })
+
+test('seo: index-by-demand keeps long-tail HTML and alternate formats served but noindex', async ({ request }) => {
+  const tail = '/man/foo%3A%3Abar/3pm'
+  const html = await request.get(tail)
+  expect(html.status()).toBe(200)
+  expect(await html.text()).toMatch(/<meta name="robots" content="noindex, follow"/)
+  const txt = await request.get(`${tail}.txt`)
+  expect(txt.status()).toBe(200)
+  expect(txt.headers()['x-robots-tag']).toBe('noindex, follow')
+  expect(txt.headers()['link']).toContain('/man/foo%3A%3Abar/3pm>')
+  const json = await request.get('/api/v1/man/foo%3A%3Abar/3pm')
+  expect(json.status()).toBe(200)
+  expect(json.headers()['x-robots-tag']).toBe('noindex, follow')
+  expect((await json.json()).page.indexable).toBe(false)
+  const og = await request.get(`${tail}/og`)
+  expect(og.status()).toBe(200)
+  expect(og.headers()['x-robots-tag']).toBe('noindex, follow')
+  const sitemap = await request.get('/sitemap-debian-1.xml')
+  const xml = await sitemap.text()
+  expect(xml).toContain('/man/tar/1')
+  expect(xml).not.toContain('foo%3A%3Abar')
+  const indexed = await request.get('/man/tar/1')
+  expect(await indexed.text()).toMatch(/<meta name="robots" content="index, follow"/)
+})

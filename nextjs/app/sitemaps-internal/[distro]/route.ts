@@ -36,10 +36,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
   if (!release) return new Response(null, { status: 404 })
 
   const urlsPerFile = releases.urlsPerFile || 10000
-  const pageCount = Math.max(1, Math.ceil(release.pageCount / urlsPerFile))
+  const pageCount = Math.ceil(release.pageCount / urlsPerFile)
   const lastmod = toIsoZ(release.ingestedAt)
 
-  const etag = weakEtag(['sitemap-distro-index', distro, release.datasetReleaseId, String(pageCount)])
+  const etag = weakEtag(['sitemap-distro-index-b4-v1', distro, release.datasetReleaseId, String(pageCount)])
   const ifNoneMatch = request.headers.get('if-none-match')
   if (ifNoneMatch && ifNoneMatch === etag) {
     return new Response(null, {

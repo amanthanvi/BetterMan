@@ -146,6 +146,7 @@ export const getManMetaByNameAndSection = query({
         description: v.string(),
         sourcePackage: v.union(v.string(), v.null()),
         sourcePackageVersion: v.union(v.string(), v.null()),
+        indexable: v.boolean(),
         datasetReleaseId: v.string(),
       }),
     }),
@@ -176,6 +177,7 @@ export const getManMetaByNameAndSection = query({
         description: page.description,
         sourcePackage: page.sourcePackage ?? null,
         sourcePackageVersion: page.sourcePackageVersion ?? null,
+        indexable: page.indexable === true,
         datasetReleaseId: release.datasetReleaseId,
       },
     };
@@ -1052,6 +1054,10 @@ export const listSeoReleases = query({
   args: {
     stage: publicStageCompatibilityValidator,
   },
+  returns: v.object({
+    urlsPerFile: v.number(),
+    items: v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string(), ingestedAt: v.string(), pageCount: v.number() })),
+  }),
   handler: async (ctx) => {
     const releases = await Promise.all(
       DISTROS.map(async (distro) => {
@@ -1061,7 +1067,7 @@ export const listSeoReleases = query({
           distro,
           datasetReleaseId: release.datasetReleaseId,
           ingestedAt: release.ingestedAt,
-          pageCount: release.pageCount,
+          pageCount: release.indexablePageCount ?? 0,
         };
       }),
     );
@@ -1080,12 +1086,18 @@ export const listSitemapPageChunk = query({
     page: v.number(),
     paginationOpts: paginationOptsValidator,
   },
+  returns: v.union(v.null(), v.object({
+    datasetReleaseId: v.string(), items: v.array(v.object({ name: v.string(), section: v.string() })),
+    page: v.number(), isDone: v.boolean(), continueCursor: v.string(),
+  })),
   handler: async (ctx, args) => {
     const release = await activeRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
     if (!release) return null;
+    if (!Number.isSafeInteger(args.page) || args.page < 1 ||
+        args.page > Math.ceil((release.indexablePageCount ?? 0) / SITEMAP_URLS_PER_FILE)) return null;
     const paginationOpts = {
       ...args.paginationOpts,
       numItems: boundedInt(args.paginationOpts.numItems, 1, SITEMAP_CHUNK_ITEMS),
@@ -1099,7 +1111,7 @@ export const listSitemapPageChunk = query({
     if (!result.page.length && args.paginationOpts.cursor === null) return null;
     return {
       datasetReleaseId: release.datasetReleaseId,
-      items: result.page.map((page) => ({ name: page.name, section: page.section })),
+      items: result.page.filter((page) => page.indexable === true).map((page) => ({ name: page.name, section: page.section })),
       page: args.page,
       isDone: result.isDone,
       continueCursor: result.continueCursor,

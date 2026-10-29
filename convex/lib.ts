@@ -101,7 +101,7 @@ export type ManProviders = { packages: string[]; defaultPackage: string | null; 
 
 export function pageResponse(
   release: Doc<"datasetReleases">,
-  page: Pick<Doc<"manPages">, "externalId" | "name" | "section" | "title" | "description" | "sourcePackage" | "sourcePackageVersion" | "hasParseWarnings"> & { indexable?: boolean },
+  page: Pick<Doc<"manPages">, "externalId" | "name" | "section" | "title" | "description" | "sourcePackage" | "sourcePackageVersion" | "hasParseWarnings"> & { indexable?: boolean; popularityScore?: number },
   content: ManPageContentPayload,
   variants: Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>,
   // Enrichment beside the upstream content, each part optional and independent.
@@ -131,6 +131,8 @@ export function pageResponse(
       sourcePackageVersion: page.sourcePackageVersion ?? null,
       datasetReleaseId: release.datasetReleaseId,
       hasParseWarnings: page.hasParseWarnings,
+      indexable: page.indexable === true,
+      popularityScore: page.popularityScore ?? 0,
     },
     content: contentPayload,
     variants,

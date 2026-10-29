@@ -57,6 +57,9 @@ export type ManPage = {
   description: string
   sourcePackage?: string | null
   sourcePackageVersion?: string | null
+  /** B4 ingest-time policy. Absent legacy signals fail closed. */
+  indexable?: boolean
+  popularityScore?: number
   hasParseWarnings?: boolean
 }
 
