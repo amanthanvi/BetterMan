@@ -559,3 +559,24 @@ test('Perl module URLs render encoded names, name-only redirects, and search cit
   expect(search.status()).toBe(200)
   expect((await search.json()).results).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'foo::bar', section: '3pm' })]))
 })
+
+test('Perl text exports and share images accept encoded and literal module names', async ({ request }) => {
+  for (const name of ['foo%3A%3Abar', 'foo::bar']) {
+    for (const path of [`/man/${name}/3pm.txt`, `/${name}.txt`, `/${name}.3pm.txt`]) {
+      const text = await request.get(path)
+      expect(text.status(), path).toBe(200)
+      expect(text.headers()['content-type']).toContain('text/plain')
+      expect(await text.text()).toContain('FOO::BAR(3pm)')
+    }
+    const image = await request.get(`/man/${name}/3pm/og`)
+    expect(image.status()).toBe(200)
+    expect(image.headers()['content-type']).toContain('image/png')
+    expect((await image.body()).subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
+  }
+})
+
+test('legacy deep section bookmarks redirect to the first page', async ({ request }) => {
+  const response = await request.get('/section/1?offset=5200&distro=ubuntu', { maxRedirects: 0 })
+  expect(response.status()).toBe(308)
+  expect(response.headers().location).toBe('/section/1?distro=ubuntu')
+})

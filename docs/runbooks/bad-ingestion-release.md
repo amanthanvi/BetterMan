@@ -40,7 +40,7 @@ client.activate_release({
 '
 ```
 
-This uses the existing activation endpoint's manifest and seal checks and the client's hydration polling (configurable up to six hours), returning only after `pending: false` for the requested ID. On timeout or a lost response, re-check public `getInfo` before retrying the same saved ID. After success, confirm the prod ID and smoke-test representative pages and search. No staging activation or promotion is required for this rollback.
+This uses the existing activation endpoint's manifest and seal checks and the client's hydration polling (up to 45 minutes), returning only after `pending: false` for the requested ID. On timeout or a lost response, re-check public `getInfo` before retrying the same saved ID. After success, confirm the prod ID and smoke-test representative pages and search. No staging activation or promotion is required for this rollback.
 
 **Follow-ups**
 

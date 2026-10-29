@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import { ingestClientError } from "./_ingestErrors";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { optionFlagRows } from "./_optionFlags";
+import { MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
 import { INGEST_CONTRACT } from "./ingestContract";
 import { canonicalJson } from "./ingest";
 import { secretsMatch } from "./lib";
@@ -83,7 +84,7 @@ http.route({
     // JSON is a storage blob, so a 17k-package manifest never crosses the
     // document or Convex array-value limits or burdens a page-view read.
     const text = canonicalJson(packageManifest ?? null);
-    const storageId = await ctx.storage.store(new Blob([text], { type: "application/json" }));
+    const storageId = await ctx.storage.store(new Blob([text], { type: MANIFEST_CONTENT_TYPE }));
     try {
       const result = await ctx.runMutation(internal.ingest.createRelease, {
         ...metadata, packageManifestStorageId: storageId, packageManifestDigest: await storedPayloadDigest(text),

@@ -9,6 +9,7 @@
 		"convex:typecheck": "tsc --noEmit -p convex/tsconfig.json",
 		"convex:prod-check": "node scripts/check-convex-production.mjs",
 		"convex:related-check": "node scripts/check-related-metadata.mjs",
+		"convex:detach-manifests": "node scripts/detach-legacy-manifests.mjs",
 		"convex:prune-releases": "node scripts/prune-inactive-releases.mjs",
 		"ops:test": "node --test scripts/*.test.mjs",
 		"perf:check": "node scripts/check-perf-budgets.mjs",

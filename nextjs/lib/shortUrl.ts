@@ -19,7 +19,7 @@ const NOT_A_PAGE = new Set([
   'zip', 'gz', 'tgz', 'rar', 'sql', 'bak', 'env',
 ])
 
-/** Next's HTML page params preserve percent escapes; decode only at that boundary. */
+/** Next route params can preserve percent escapes; decode once at the route boundary. */
 export function decodeManParam(segment: string): string {
   try {
     return decodeURIComponent(segment)

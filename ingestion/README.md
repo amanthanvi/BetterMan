@@ -38,8 +38,8 @@ in addition to source archives.
 serial uploads. The existing page-count and exact-byte limits still apply per
 request. These variables are forwarded through the curated Docker path.
 
-Activation polls for up to six hours, configurable with
-`BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS` (positive, at most 21600). Each
+Activation polls for up to 45 minutes, configurable with
+`BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS` (positive, at most 2700; validated before any work). Each
 request is short; the server persists and schedules batches of 500 link rows.
 A failed/canceled job resumes its cursor for the same metadata version. Until
 all work completes, the previous pointer stays active. A timeout or disconnect
@@ -176,3 +176,10 @@ Bare tokens nested inside option definitions or their indented argument lists ar
 values, not options. A mixed field-range or compatibility-entry list cannot
 establish CLI context solely through one flag-shaped peer; extraction keeps the
 original body terms and anchors intact.
+
+
+The activation timeout is validated at CLI startup and client construction.
+Choose a shorter timeout when parse/upload leaves less than 45 minutes in a CI
+job. Resume a timed-out release with `pnpm ingest:activate`; three failed attempts
+at one hydration cursor require operator repair and explicit re-arming as
+described in [the operations runbook](../docs/runbooks/multi-distro-ops.md#deploy-and-activation-recovery).

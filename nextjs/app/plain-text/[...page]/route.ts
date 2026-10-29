@@ -9,7 +9,7 @@ import { renderManText } from '@/lib/manText'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
 import { nonHtmlSecurityHeaders } from '@/lib/securityHeaders'
-import { isManName, manPath, parseShortUrl } from '@/lib/shortUrl'
+import { decodeManParam, isManName, manPath, parseShortUrl } from '@/lib/shortUrl'
 
 export const runtime = 'nodejs'
 
@@ -30,7 +30,7 @@ function text(body: string, status = 200, headers?: HeadersInit): Response {
 
 export async function GET(request: Request, ctx: Context): Promise<Response> {
   const { page } = await ctx.params
-  let [name, section] = page
+  let [name, section] = page.map(decodeManParam)
   if (!name || page.length > 2 || !isManName(name) || (section !== undefined && !/^\d[a-z]{0,9}$/i.test(section))) {
     return text('Page not found\n', 404)
   }

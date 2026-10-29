@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import {
-  adaptiveLimit, cleanupOrphanBlobs, describeError, limitForAttempt, listInactiveReleases, mapWithConcurrency, parseOptions, prune,
+  adaptiveLimit, cleanupOrphanBlobs, cleanupOrphanManifestFiles, describeError, limitForAttempt, listInactiveReleases, mapWithConcurrency, parseOptions, prune,
   pruneRelease, selectPrunable, withRetry,
 } from './prune-inactive-releases.mjs'
 
@@ -235,6 +235,7 @@ test('dry run never deletes or sweeps, apply deletes only the selected releases 
   const dryResult = await prune(dry.run, { ...parseOptions({}, now), concurrency: 2 }, { ...quiet, retry: noPause })
   assert.equal(dryResult.selection.prune.length, 1)
   assert.equal(dryResult.orphans, null)
+  assert.equal(dryResult.manifestFiles, null)
   assert.deepEqual([...new Set(dry.calls.map(([name]) => name))], ['maintenance:previewInactiveReleases'])
 
   const preview = runner()
@@ -249,6 +250,7 @@ test('dry run never deletes or sweeps, apply deletes only the selected releases 
   assert.deepEqual(deletions.map(([, args]) => args.datasetReleaseId), ['legacy'])
   assert.equal(wetResult.pruned.length, 1)
   assert.ok(wet.calls.some(([name, args]) => name === 'maintenance:cleanupOrphanContentBlobsBatch' && args.dryRun === false), 'apply with the workflow default sweeps')
+  assert.ok(wet.calls.some(([name, args]) => name === 'maintenance:cleanupOrphanManifestFilesBatch' && args.dryRun === false))
   const plan = logged.find((entry) => entry.event === 'prune_plan')
   assert.ok(plan.prune.every((entry) => typeof entry.createdAt === 'string' && !('ingestedAt' in entry)))
   assert.equal(logged.filter((entry) => entry.event === 'prune_release').length, 1)
@@ -287,4 +289,18 @@ test('pruning is wired as a manual, dry-run-default workflow that cannot overlap
   const provenance = steps.findIndex((step) => step.includes('deps:provenance'))
   const secret = steps.findIndex((step) => step.includes('CONVEX_DEPLOY_KEY'))
   assert.ok(provenance >= 0 && secret > provenance, 'provenance gate must precede deploy-key exposure')
+})
+
+
+test('manifest orphan sweep traverses pages and fails on stalled cursors', async () => {
+  const calls = []
+  const pages = [
+    { scanned: 100, orphans: 2, storageDeletes: 0, isDone: false, continueCursor: 'next' },
+    { scanned: 2, orphans: 1, storageDeletes: 0, isDone: true, continueCursor: '' },
+  ]
+  const result = await cleanupOrphanManifestFiles(async (name, args) => { calls.push([name, args]); return pages.shift() }, { dryRun: true, ...quiet, retry: noPause })
+  assert.deepEqual(result, { scanned: 102, orphans: 3, storageDeletes: 0 })
+  assert.ok(calls.every(([name, args]) => name === 'maintenance:cleanupOrphanManifestFilesBatch' && args.dryRun && args.limit === 100))
+  assert.equal(calls[1][1].cursor, 'next')
+  await assert.rejects(cleanupOrphanManifestFiles(async () => ({ scanned: 1, isDone: false, continueCursor: null }), { ...quiet, retry: noPause }), /did not advance/)
 })

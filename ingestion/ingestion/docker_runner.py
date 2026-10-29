@@ -64,8 +64,6 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "CONVEX_INGEST_SECRET",
         "-e",
         "BETTERMAN_INGEST_WORKERS",
-        "BETTERMAN_INGEST_UPLOAD_WORKERS",
-        "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS",
         "-e",
         f"BETTERMAN_DATASET_STAGE={dataset_stage}",
         "-e",
@@ -82,6 +80,8 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
     # Pass by name (`-e NAME`) only when the host set the variable. Docker
     # copies the value from this process, and an unset name would arrive empty.
     for name in (
+        "BETTERMAN_INGEST_UPLOAD_WORKERS",
+        "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS",
         "BETTERMAN_INGEST_PAGE_BATCH_ITEMS",
         "BETTERMAN_INGEST_PAGE_BATCH_BYTES",
         "BETTERMAN_ALLOW_MISSING_COMMAND_PAGES",

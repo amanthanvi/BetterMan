@@ -248,7 +248,22 @@ const cachedLicensePage = unstable_cache(
 // Cache bounded pages, not a joined 17k-package response (>Next's 2 MiB entry
 // limit). The license surface can join them without repeating backend reads.
 async function cachedLicenses(distro: Distro) {
-  const first = await cachedLicensePage(distro, null, null)
+  // A promotion between package pages invalidates the pinned generation. Read
+  // page one uncached on retry rather than joining stale cached generations.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await licensesForRelease(distro, attempt > 0)
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('RELEASE_CHANGED')) throw error
+    }
+  }
+  throw new FastApiError(503, 'RELEASE_CHANGED', 'Dataset changed during pagination; retry shortly')
+}
+
+async function licensesForRelease(distro: Distro, fresh: boolean) {
+  const first = fresh
+    ? await convex().query(api.queries.listLicenses, { distro })
+    : await cachedLicensePage(distro, null, null)
   const packages = [...first.packages]
   let cursor = first.nextCursor
   while (cursor) {

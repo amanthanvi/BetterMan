@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
 import { LicensesClient } from './LicensesClient'
-import { fetchLicenses, withDistroFallback } from '../../../lib/api'
+import { FastApiError, fetchLicenses, withDistroFallback } from '../../../lib/api'
 import { resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
 
 export function generateMetadata(): Metadata {
@@ -22,6 +23,13 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
 
   const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
     fetchLicenses({ distro: activeDistro }),
-  )
+  ).catch((error: unknown) => {
+    // Repeated promotions can exhaust the in-request restarts. Begin a fresh
+    // request rather than returning an HTML 500 or mixing release generations.
+    if (error instanceof FastApiError && error.code === 'RELEASE_CHANGED') {
+      redirect(`/licenses?distro=${requestedDistro}`)
+    }
+    throw error
+  })
   return <LicensesClient distro={distro} data={data} />
 }

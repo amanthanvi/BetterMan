@@ -65,6 +65,7 @@ export default defineSchema({
     // Successful page batches invalidate completion, including resumed uploads.
     relatedMetadataVersion: v.optional(v.number()),
     relatedMetadataCompletedVersion: v.optional(v.number()),
+    relatedMetadataBackfillAttempts: v.optional(v.number()),
     relatedMetadataBackfillJobId: v.optional(v.id("_scheduled_functions")),
     relatedMetadataBackfillCursor: v.optional(v.union(v.string(), v.null())),
     relatedMetadataBackfillVersion: v.optional(v.number()),
@@ -77,7 +78,7 @@ export default defineSchema({
     releaseId: v.id("datasetReleases"),
     json: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
-  }).index("by_releaseId", ["releaseId"]),
+  }).index("by_releaseId", ["releaseId"]).index("by_storageId", ["storageId"]),
 
   // Upload writers touch one of 16 shards instead of every writer patching
   // the same release/stat row. Seal folds and verifies all shards atomically.

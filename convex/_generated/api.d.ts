@@ -10,8 +10,10 @@
 
 import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
+import type * as _manifestStorage from "../_manifestStorage.js";
 import type * as _optionFlags from "../_optionFlags.js";
 import type * as _relatedLinks from "../_relatedLinks.js";
+import type * as _releaseChildren from "../_releaseChildren.js";
 import type * as _releaseIntegrity from "../_releaseIntegrity.js";
 import type * as _releaseLookups from "../_releaseLookups.js";
 import type * as _releaseManifest from "../_releaseManifest.js";
@@ -38,8 +40,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
+  _manifestStorage: typeof _manifestStorage;
   _optionFlags: typeof _optionFlags;
   _relatedLinks: typeof _relatedLinks;
+  _releaseChildren: typeof _releaseChildren;
   _releaseIntegrity: typeof _releaseIntegrity;
   _releaseLookups: typeof _releaseLookups;
   _releaseManifest: typeof _releaseManifest;

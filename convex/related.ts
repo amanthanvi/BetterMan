@@ -10,6 +10,7 @@ import { verifyDeclaredManifest } from "./_releaseManifest";
 import { startLegacyManifestVerification } from "./manifest";
 
 const BACKFILL_BATCH_SIZE = 500;
+export const MAX_BACKFILL_ATTEMPTS = 3;
 
 export const activeMetadataStatus = internalQuery({
   args: {},
@@ -68,16 +69,23 @@ export async function scheduleRelatedMetadataBackfill(
   if (release.pruning) throw new Error("RELEASE_PRUNING");
   const version = release.relatedMetadataVersion ?? 0;
   if (release.relatedMetadataCompletedVersion === version) return false;
+  let failed = false;
   if (release.relatedMetadataBackfillJobId) {
     const job = await ctx.db.system.get(release.relatedMetadataBackfillJobId);
     if (job && (job.state.kind === "pending" || job.state.kind === "inProgress")) return true;
+    failed = job?.state.kind === "failed";
   }
+  const sameVersion = release.relatedMetadataBackfillVersion === version;
+  const previousAttempts = sameVersion ? release.relatedMetadataBackfillAttempts ?? 1 : 0;
+  if (failed && previousAttempts >= MAX_BACKFILL_ATTEMPTS) throw new Error("RELATED_METADATA_BACKFILL_FAILED");
+  const attempts = failed ? previousAttempts + 1 : Math.max(1, previousAttempts);
   // Polls join the live chain; failed/canceled jobs resume from the persisted
   // cursor for this version. Completed entries remain idempotent.
   const jobId = await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
     datasetReleaseId: release.datasetReleaseId,
   });
   await ctx.db.patch(release._id, {
+    relatedMetadataBackfillAttempts: attempts,
     relatedMetadataBackfillJobId: jobId,
     relatedMetadataBackfillCursor: release.relatedMetadataBackfillVersion === version ? release.relatedMetadataBackfillCursor ?? null : null,
     relatedMetadataBackfillVersion: version,
@@ -178,6 +186,7 @@ export const backfillRelease = internalMutation({
         datasetReleaseId: args.datasetReleaseId,
       });
       await ctx.db.patch(release._id, {
+        relatedMetadataBackfillAttempts: 1,
         relatedMetadataBackfillJobId: jobId,
         relatedMetadataBackfillCursor: batch.continueCursor,
         relatedMetadataBackfillVersion: version,
@@ -185,6 +194,7 @@ export const backfillRelease = internalMutation({
     } else {
       await ctx.db.patch(release._id, {
         relatedMetadataCompletedVersion: version,
+        relatedMetadataBackfillAttempts: undefined,
         relatedMetadataBackfillJobId: undefined,
         relatedMetadataBackfillCursor: undefined,
         relatedMetadataBackfillVersion: undefined,
@@ -196,5 +206,24 @@ export const backfillRelease = internalMutation({
       isDone: batch.isDone,
       continueCursor: batch.isDone ? null : batch.continueCursor,
     };
+  },
+});
+
+
+// After repairing a terminal failure, an operator explicitly re-arms the same
+// cursor. Ordinary activation polling cannot grant itself another retry budget.
+export const retryFailedBackfill = internalMutation({
+  args: { datasetReleaseId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const release = await ctx.db.query("datasetReleases")
+      .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId)).unique();
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+    if (release.pruning) throw new Error("RELEASE_PRUNING");
+    if (!release.sealed || !release.manifestVerified) throw new Error("RELEASE_MANIFEST_UNVERIFIED");
+    const job = release.relatedMetadataBackfillJobId ? await ctx.db.system.get(release.relatedMetadataBackfillJobId) : null;
+    if (job && (job.state.kind === "pending" || job.state.kind === "inProgress")) throw new Error("RELATED_METADATA_BACKFILL_RUNNING");
+    await ctx.db.patch(release._id, { relatedMetadataBackfillAttempts: 0 });
+    return null;
   },
 });

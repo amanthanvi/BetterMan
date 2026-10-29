@@ -31,9 +31,7 @@ it('retains inline legacy provenance without a storage fetch', async () => {
   expect(fetch).not.toHaveBeenCalled()
 })
 
-it('fails on release changes, a stalled cursor, or unreadable provenance', async () => {
-  mocks.query.mockResolvedValueOnce({ ...first, nextCursor: 'a' }).mockRejectedValueOnce(new Error('RELEASE_CHANGED'))
-  await expect(fetchLicenses({ distro: 'debian' })).rejects.toThrow('RELEASE_CHANGED')
+it('fails on a stalled cursor or unreadable provenance', async () => {
   mocks.query.mockResolvedValue({ ...first, nextCursor: 'a' })
   await expect(fetchLicenses({ distro: 'debian' })).rejects.toThrow('did not advance')
   mocks.query.mockResolvedValue({ ...first, packageManifestUrl: 'https://files.example/manifest' })
@@ -49,4 +47,23 @@ it('keeps a large manifest as a separate download instead of embedding it in HTM
   expect(result.packageManifest).toBeNull()
   expect(result.packageManifestUrl).toBe('https://files.example/large')
   expect(fetch).not.toHaveBeenCalled()
+})
+
+
+it('restarts at the new release after promotion without mixing package generations', async () => {
+  mocks.query.mockResolvedValueOnce({ ...first, nextCursor: 'a' })
+    .mockRejectedValueOnce(new Error('RELEASE_CHANGED'))
+    .mockResolvedValueOnce({ ...first, datasetReleaseId: 'new', packages: [pkg('new-a')], nextCursor: 'new-a' })
+    .mockResolvedValueOnce({ ...first, datasetReleaseId: 'new', packages: [pkg('new-b')] })
+  const result = await fetchLicenses({ distro: 'debian' })
+  expect(result.datasetReleaseId).toBe('new')
+  expect(result.packages.map(p => p.name)).toEqual(['new-a', 'new-b'])
+  expect(mocks.query.mock.calls[2][1]).toEqual({ distro: 'debian' })
+  expect(mocks.query.mock.calls[3][1]).toEqual({ distro: 'debian', datasetReleaseId: 'new', cursor: 'new-a' })
+})
+
+it('returns a retryable 503 if promotions repeatedly interrupt pagination', async () => {
+  mocks.query.mockRejectedValue(new Error('RELEASE_CHANGED'))
+  await expect(fetchLicenses({ distro: 'debian' })).rejects.toMatchObject({ status: 503, code: 'RELEASE_CHANGED' })
+  expect(mocks.query).toHaveBeenCalledTimes(3)
 })

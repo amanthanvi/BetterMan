@@ -1,14 +1,8 @@
-# BM2 B1 current work
+# BM2 B1 scale evidence
 
-Goal: PR 1 `bm2/b1a-scale-fixes` for #393, then stop for owner instruction.
-Constraints: local Convex only; no shared deployment, secrets, infrastructure,
-spend changes, merging or CI watching. No nested delegation (implementation child).
-Preserve curated ingest and immutable release/promotion guarantees. PR 2 alone
-adds .deb extraction and provider collision policy; retain every provider there.
-
-Status: implementation, regression suites and local scale measurements complete;
-PR 1 delivery only. PR 2 awaits owner instruction. Baseline main is
-`17cf16270da36cfa813f7ef34e449f3b80fc2935`; re-fetched before delivery.
+Measurements below come exclusively from an isolated local Convex deployment.
+They establish synthetic ingestion and storage behavior; Debian archive extraction
+and real-package throughput remain outside this evidence.
 
 ## Implemented boundaries
 
@@ -17,11 +11,11 @@ PR 1 delivery only. PR 2 awaits owner instruction. Baseline main is
 | >1 MiB release manifest / large per-query reads | Stored JSON file plus `releaseManifests`; only counts, digests and lifecycle state on `datasetReleases`. Optional cursor migration detaches existing inline manifests. A >2 MiB/20k-entry unit fixture preserves provenance and reclaims duplicate replay files. |
 | 8,192-element license array / 16k transaction writes | Creation commits at most 200-package batch digests, then uploads each separately. Missing, changed, duplicate, and replayed batches are checked. A 9k-package regression enforces 256 writes/transaction; the live run uses 17,300 package declarations and notices. License listing paginates and pins one active release; Next caches bounded package pages and joins them for filtering; large provenance stays a separate JSON link. Above 5k packages the initial DOM renders 200 rows and offers more. |
 | >100 sections | Lists all declared sections up to the existing 256-section declaration bound; 114-section regression. |
-| Deep pagination | Existing name cursors retained and tested at page 19,001 of 20k under a seven-document read limit. Unsupported deep legacy offsets now fail explicitly instead of silently repeating offset 5,000; forward/backward cursor traversal has no such cap. |
-| Perl names | `::` accepted by source/href filters and typo candidate recognition. Scan, link, spool-equivalence tests plus live `Foo::Bar(3)` search/lookup. A red/green browser regression caught encoded HTML params (`foo%3A%3Abar`) reaching lookups unchanged; HTML route boundaries now decode exactly once. Raw/encoded URLs, name-only redirects and citation search pass. Names keep today's lowercase normalization. |
+| Deep pagination | Existing name cursors retained and tested at page 19,001 of 20k under a seven-document read limit. Legacy offset-only URLs above 5,000 redirect to the first page; forward/backward cursor traversal has no such cap. |
+| Perl names | `::` accepted by source/href filters and typo candidate recognition. Scan, link, spool-equivalence tests plus live `Foo::Bar(3)` search/lookup. A red/green browser regression caught encoded HTML params (`foo%3A%3Abar`) reaching lookups unchanged; HTML, plain-text and OG route boundaries decode exactly once. Raw/encoded URLs, name-only redirects and citation search pass. Names keep today's lowercase normalization. |
 | Serial uploads | Four workers by default, at most eight; per-request item/byte limits remain. Queue advances only when a future completes. Sixteen counter shards avoid a shared release/stat write from every worker; seal verifies aggregate and section sums atomically. |
 | In-memory parsing | Temporary SQLite spool (8 MiB cache), lightweight route/package references, bounded parse futures, one-page link-resolution pass, disk-backed notices and two-pass license validation. A >128 MiB-body regression holds tracked Python peak below 12 MiB. |
-| 300-second activation wait | Short polls with a configurable six-hour maximum, server-owned cursor and 500-link batches. New `ingest:activate` resumes the same release without parsing/uploading; tests cover >300 seconds, canceled jobs, immutable seals, and failed/excess declarations. |
+| 300-second activation wait | Short polls with a startup-validated 45-minute default and maximum, server-owned cursor and 500-link batches. New `ingest:activate` resumes the same release without parsing/uploading; tests cover >300 seconds, canceled jobs, immutable seals, failed/excess declarations, and a three-failure stop/re-arm at the same cursor. |
 | 200-document prune transactions | Start at 1,000, maximum 2,000, ten shrinking attempts down to five. Existing durable pruning fence, active/rollback protection, and orphan-file separation retained. New declaration/manifest/shard rows are removed too. >16k-child restart and manifest-file cleanup regression. |
 | Contract/deployment ordering | TypeScript/Python contract version 2 and required function list agree; old/missing contracts still fail before writes. No shared deploy or migration run. |
 
@@ -79,7 +73,7 @@ usage and actual overages were not inspected. No plan, limit, spending cap,
 deployment, secret, staging or production data was changed; owner sign-off is
 required before any spend increase.
 
-## Validation and commands
+## Initial measurement validation
 
 - `pnpm install --frozen-lockfile`; `uv sync --frozen` in `ingestion/`.
 - `pnpm convex:check` and `pnpm convex:dev`: verified anonymous loopback deployment
@@ -106,60 +100,55 @@ required before any spend increase.
   Normal fixture counts stay home 3 calls/7 docs, man 5/28 plus one file read,
   search 3/32, section 2/37. No `perf-budget-change` label or Budget section needed.
 
+## Review-fix validation
+
+The PR #431 fix round passed `pnpm convex:test` (190), `pnpm ingest:test` (433,
+86.38% coverage), `pnpm next:test` (468), `pnpm next:e2e` (113) and `pnpm ops:test`
+(109). Convex typecheck, ingestion/Next lint, visual grammar, public-API guard and
+production build passed. E2E used a worktree-local anonymous backend on
+33410/33411 and a production Next server on 33412 with CI's required origin
+configuration and a fresh disposable fetch cache. Encoded and literal Perl text
+routes returned 200; share images returned PNG; deep legacy section links
+returned 308. The local backend's `_storage` metadata confirmed the manifest MIME
+tag used by the age-gated orphan sweep.
+
+`pnpm perf:check` passed with unchanged budgets, fixture and enforcement. Ordinary
+page views retain home 3 calls/7 documents, man 5/28 plus one file read, search
+3/32 and section 2/37. The synthetic scale measurements above were retained from
+the original local experiment; the fix round did not repeat the 20k-page probe or
+exercise shared deployments.
+
 ## Scope and review limits
 
-PR 1 does not acquire Debian archives, rank package popularity, or implement a
-provider switch. PR 2 follows only after the owner confirms PR 1 merged. It must
-retain every provider, preserve curated alternatives, and measure a real package
-sample against runner limits. This synthetic probe cannot establish full-Debian
-parse/download throughput, real page-size distribution, or a cloud invoice.
+Debian archive acquisition, package popularity ranking and the provider switch
+are separate changes. Extraction must retain every provider, preserve curated
+alternatives, and measure a real package sample against runner limits. This
+synthetic probe cannot establish full-Debian parse/download throughput, real page-size distribution, or a cloud invoice.
 
 B5 #397 overlaps `convex/queries.ts`, the option/search indexes and ingest payloads.
 B7 #399 overlaps `convex/schema.ts`, `convex/ingest.ts` and Python ingestion. Rebase
 those changes with the declaration/shard lifecycle and immutable seal in view.
-No independent sub-review was run from this implementation-child task; the parent
-should obtain independent review of the PR. Self-review is not independent proof.
+PR #431 received independent review with a merge-after-fixes recommendation.
+The follow-up regressions cover Docker argv grammar, legacy offset redirects,
+activation failure limits, schema-enumerated release children, promotion-safe
+licenses, manifest orphan cleanup and encoded plain-text/OG routes.
 
-## Changed files
+## Merge compatibility
 
-```text
-CHANGELOG.md
-convex/_releaseManifest.ts
-convex/http.ts
-convex/ingest.ts
-convex/ingestContract.ts
-convex/ingestScale.test.ts
-convex/maintenance.ts
-convex/queries.ts
-convex/related.ts
-convex/relatedMetadata.test.ts
-convex/schema.ts
-docs/ARCHITECTURE.md
-docs/roadmap/b1-scale-evidence.md
-docs/roadmap/b1-scale-measurements.json
-docs/runbooks/bad-ingestion-release.md
-docs/runbooks/multi-distro-ops.md
-ingestion/README.md
-ingestion/ingestion/cli.py
-ingestion/ingestion/convex_client.py
-ingestion/ingestion/docker_runner.py
-ingestion/ingestion/ingest_runner.py
-ingestion/scripts/check_scale.py
-ingestion/tests/test_cli.py
-ingestion/tests/test_convex_client.py
-ingestion/tests/test_docker_runner.py
-ingestion/tests/test_ingest_runner_helpers.py
-nextjs/app/(site)/licenses/LicensesClient.test.tsx
-nextjs/app/(site)/licenses/LicensesClient.tsx
-nextjs/app/man/[name]/[section]/page.tsx
-nextjs/app/man/[name]/page.tsx
-nextjs/e2e/man.spec.ts
-nextjs/lib/api.ts
-nextjs/lib/licenseApi.test.ts
-nextjs/lib/shortUrl.test.ts
-nextjs/lib/shortUrl.ts
-package.json
-scripts/prune-inactive-releases.mjs
-scripts/prune-inactive-releases.test.mjs
-scripts/seed-convex-e2e.mjs
-```
+B7 PR #429 adds `derivedPageInputs` and `manPageDerived`, indexed by
+`by_releaseId_and_pageId`, and a `derivedLeaseUntil` pruning fence. Merge both
+children into `_releaseChildren.ts` and retain B7's lease check before setting
+`pruning` or deleting rows. The typed registry and runtime schema enumeration
+fail when any release-owned table is omitted; storage-stat coverage is also
+schema exhaustive. Keep manifest-file deletion and man-page payload accounting
+when reconciling maintenance helpers. Preserve the independent derived-build and
+related-link cursor/version state when merging schema and ingest changes.
+
+B5 PR #430 and B1 PR #431 independently introduce contract version 2 for different
+payloads. Whichever merges second must rebase and bump both TypeScript/Python
+constants to version 3, preserving B1 package batching and B5 stored-page
+`symbols` together. Resolve the advertised contract in `convex/ingestContract.ts`
+and its cross-language alignment check in
+`ingestion/tests/test_ingest_contract.py`; retain the union of functions,
+validators and Python payload fields. Version 2 stays unchanged until that merge
+order is known.

@@ -5,7 +5,7 @@ import logging
 import os
 import ssl
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -37,7 +37,9 @@ class ConvexContractError(RuntimeError):
 
 # Keep these aligned with convex/ingestContract.ts. Ingestion refuses to write
 # until GET /ingest/contract advertises the same schema version, functions,
-# declaration counts, and activate-pending flag.
+# declaration counts, and activate-pending flag. Alignment test:
+# tests/test_ingest_contract.py. MERGE #430/#431: the second to land rebases and
+# bumps both constants to v3, retaining package batches AND stored-page symbols.
 REQUIRED_SCHEMA_VERSION = 2
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",
@@ -148,12 +150,32 @@ def convex_http_url(raw: str) -> str:
     return value
 
 
+DEFAULT_ACTIVATION_TIMEOUT_SECONDS = 45 * 60
+MAX_ACTIVATION_TIMEOUT_SECONDS = 45 * 60
+
+
+def activation_timeout_seconds() -> float:
+    raw = os.environ.get(
+        "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", str(DEFAULT_ACTIVATION_TIMEOUT_SECONDS)
+    )
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS must be a number") from None
+    if not 0 < value <= MAX_ACTIVATION_TIMEOUT_SECONDS:
+        raise ValueError("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS must be >0 and <=2700")
+    return value
+
+
 @dataclass(frozen=True)
 class ConvexIngestClient:
     http_url: str
     ingest_secret: str
+    activation_timeout: float = field(default_factory=activation_timeout_seconds)
 
     def __post_init__(self) -> None:
+        if not 0 < self.activation_timeout <= MAX_ACTIVATION_TIMEOUT_SECONDS:
+            raise ValueError("Activation timeout must be >0 and <=2700 seconds")
         if not self.ingest_secret.strip():
             raise ValueError("CONVEX_INGEST_SECRET is required")
 
@@ -234,11 +256,9 @@ class ConvexIngestClient:
 
     def activate_release(self, payload: dict, *, timeout_seconds: float | None = None) -> dict:
         if timeout_seconds is None:
-            timeout_seconds = float(
-                os.environ.get("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", "21600")
-            )
-        if not 0 < timeout_seconds <= 21600:
-            raise ValueError("Activation timeout must be between 0 and 21600 seconds")
+            timeout_seconds = self.activation_timeout
+        if not 0 < timeout_seconds <= MAX_ACTIVATION_TIMEOUT_SECONDS:
+            raise ValueError("Activation timeout must be >0 and <=2700 seconds")
         deadline = time.monotonic() + timeout_seconds
         while (remaining := deadline - time.monotonic()) > 0:
             try:

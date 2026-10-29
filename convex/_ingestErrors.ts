@@ -32,6 +32,7 @@ const DOMAIN_ERROR_STATUS: Record<string, number> = {
   RELEASE_MANIFEST_UNVERIFIED: 409,
   RELEASE_MANIFEST_INCOMPLETE: 409,
   RELATED_METADATA_INCOMPLETE: 409,
+  RELATED_METADATA_BACKFILL_FAILED: 409,
 };
 
 // The validation message repeats the rejected value, which may be a whole page.
@@ -47,5 +48,6 @@ export function ingestClientError(error: unknown): IngestClientError | null {
   }
   const code = firstLine.startsWith(UNCAUGHT_PREFIX) ? firstLine.slice(UNCAUGHT_PREFIX.length) : firstLine;
   if (!Object.hasOwn(DOMAIN_ERROR_STATUS, code)) return null;
-  return { status: DOMAIN_ERROR_STATUS[code], code, message: code };
+  return { status: DOMAIN_ERROR_STATUS[code], code, message: code === "RELATED_METADATA_BACKFILL_FAILED"
+    ? "Related metadata batch failed three attempts without progress; repair the cause and re-arm the backfill before resuming activation." : code };
 }

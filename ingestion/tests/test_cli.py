@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 import ingestion.cli as cli
 
 
@@ -238,3 +240,41 @@ def test_activation_resume_does_not_reingest(monkeypatch):
     assert cli.main(["activate", "--release-id", "large", "--stage", "staging"]) == 0
     assert calls[0]["datasetReleaseId"] == "large"
     assert calls[0]["stage"] == "staging"
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["ingest"],
+        ["ingest", "--distro", "macos"],
+        ["ingest", "--in-container"],
+        ["activate", "--release-id", "large"],
+    ],
+)
+def test_invalid_timeout_stops_at_startup_without_any_work(monkeypatch, caplog, args):
+    monkeypatch.setenv("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", "invalid")
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("startup validation must precede Docker, parsing and network writes")
+
+    monkeypatch.setattr(cli, "run_ingest_container", forbidden)
+    monkeypatch.setattr(cli, "ingest_dataset", forbidden)
+    monkeypatch.setattr(cli, "ConvexIngestClient", forbidden)
+    with caplog.at_level("INFO"):
+        assert cli.main(args) == 2
+    assert "ingest_error" in caplog.text
+    assert "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS must be a number" in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+def test_activate_client_value_error_is_clean(monkeypatch, caplog):
+    monkeypatch.setenv("CONVEX_HTTP_URL", "http://127.0.0.1:33411")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "local")
+
+    def invalid(*_args):
+        raise ValueError("invalid client settings")
+
+    monkeypatch.setattr(cli, "ConvexIngestClient", invalid)
+    with caplog.at_level("INFO"):
+        assert cli.main(["activate", "--release-id", "large"]) == 2
+    assert "invalid client settings" in caplog.text

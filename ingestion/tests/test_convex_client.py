@@ -1,9 +1,7 @@
 import json
-import re
 import ssl
 from http.client import HTTPException, IncompleteRead, RemoteDisconnected
 from io import BytesIO
-from pathlib import Path
 from unittest.mock import Mock
 from urllib.error import HTTPError, URLError
 
@@ -403,24 +401,6 @@ def test_require_deployed_contract_reports_an_unreachable_deployment(monkeypatch
         ConvexIngestClient("https://test.convex.site", "test-secret").require_deployed_contract()
 
 
-def test_required_contract_matches_convex_source():
-    source = (Path(__file__).resolve().parents[2] / "convex" / "ingestContract.ts").read_text(
-        encoding="utf-8"
-    )
-    version = re.search(r"INGEST_CONTRACT_SCHEMA_VERSION = (\d+);", source)
-    functions = re.search(r"functions: \[([^\]]+)\]", source)
-    counts = re.search(r"declarationCounts: \[([^\]]+)\]", source)
-    pending = re.search(r"activatePending: (true|false)", source)
-    assert version is not None
-    assert functions is not None
-    assert counts is not None
-    assert pending is not None
-    assert int(version.group(1)) == REQUIRED_SCHEMA_VERSION
-    assert re.findall(r'"([^"]+)"', functions.group(1)) == list(REQUIRED_FUNCTIONS)
-    assert re.findall(r'"([^"]+)"', counts.group(1)) == list(REQUIRED_DECLARATION_COUNTS)
-    assert pending.group(1) == "true"
-
-
 def test_confirmed_activation_is_accepted_at_deadline(monkeypatch):
     clock = Mock(return_value=0)
 
@@ -458,3 +438,30 @@ def test_default_activation_survives_more_than_five_minutes(monkeypatch):
         is False
     )
     assert post.call_count == 2
+
+
+@pytest.mark.parametrize("raw", ["nope", "", "0", "-1", "nan", "inf", "2701", "21600"])
+def test_activation_timeout_env_rejected_at_client_construction(monkeypatch, raw):
+    monkeypatch.setenv("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", raw)
+    with pytest.raises(ValueError, match="BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS"):
+        ConvexIngestClient("http://127.0.0.1:33411", "local")
+
+
+def test_activation_timeout_default_and_override(monkeypatch):
+    monkeypatch.delenv("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", raising=False)
+    assert ConvexIngestClient("http://127.0.0.1:33411", "local").activation_timeout == 2700
+    monkeypatch.setenv("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", "90.5")
+    assert ConvexIngestClient("http://127.0.0.1:33411", "local").activation_timeout == 90.5
+
+
+def test_activation_terminal_backfill_error_is_not_polled(monkeypatch):
+    post = Mock(side_effect=RuntimeError("RELATED_METADATA_BACKFILL_FAILED: repair and re-arm"))
+    monkeypatch.setattr(ConvexIngestClient, "post", post)
+    sleep = Mock()
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", sleep)
+    with pytest.raises(RuntimeError, match="RELATED_METADATA_BACKFILL_FAILED"):
+        ConvexIngestClient("http://127.0.0.1:33411", "local").activate_release(
+            {"datasetReleaseId": "large"}
+        )
+    assert post.call_count == 1
+    sleep.assert_not_called()

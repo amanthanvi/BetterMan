@@ -145,3 +145,20 @@ it('keeps security headers on denied HEAD requests even when prefetch skips the 
   expect(res.headers.get('x-content-type-options')).toBe('nosniff')
   expect(res.headers.get('strict-transport-security')).toContain('max-age=31536000')
 })
+
+
+it('decodes Perl route parameters exactly once for text payloads and name-only redirects', async () => {
+  const perl = { ...manual, page: { ...manual.page, name: 'foo::bar', section: '3pm' } }
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: perl })
+  const response = await GET(req(), ctx(['foo%3A%3Abar', '3pm']))
+  expect(response.status).toBe(200)
+  expect(await response.text()).toContain('FOO::BAR(3pm)')
+  expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm' })
+  vi.mocked(fetchManResolve).mockResolvedValue({ kind: 'page', name: 'foo::bar', section: '3pm', title: '', description: '' })
+  expect((await GET(req(), ctx(['foo%3A%3Abar']))).headers.get('location')).toBe('/man/foo%3A%3Abar/3pm.txt')
+})
+
+it.each(['foo%253A%253Abar', 'foo%ZZ'])('rejects malformed or doubly encoded text names %s', async name => {
+  expect((await GET(req(), ctx([name, '3pm']))).status).toBe(404)
+  expect(fetchManByNameAndSectionOrAlias).not.toHaveBeenCalled()
+})

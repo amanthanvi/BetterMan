@@ -6,7 +6,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from ingestion.convex_client import ConvexIngestClient
+from ingestion.convex_client import ConvexIngestClient, activation_timeout_seconds
 from ingestion.db import iso_utc_now, json_dumps
 from ingestion.docker_runner import run_ingest_container
 from ingestion.ingest_runner import ingest as ingest_dataset
@@ -51,6 +51,11 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = _build_parser()
     args = parser.parse_args(argv)
+    try:
+        activation_timeout_seconds()
+    except ValueError as exc:
+        _log("ingest_error", error=str(exc))
+        return 2
 
     if args.cmd == "activate":
         url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
@@ -58,8 +63,8 @@ def main(argv: list[str] | None = None) -> int:
         if not url or not secret:
             _log("ingest_error", error="Missing Convex URL or ingest secret")
             return 2
-        client = ConvexIngestClient(url, secret)
         try:
+            client = ConvexIngestClient(url, secret)
             client.require_deployed_contract()
             result = client.activate_release(
                 {
@@ -68,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
                     "activatedAt": iso_utc_now(),
                 }
             )
-        except RuntimeError as exc:
+        except (RuntimeError, ValueError) as exc:
             _log("ingest_error", error=str(exc))
             return 2
         _log("activation_done", **result)
@@ -145,7 +150,7 @@ def _run_ingest(
             git_sha=git_sha,
             distro=distro,
         )
-    except RuntimeError as exc:
+    except (RuntimeError, ValueError) as exc:
         _log("ingest_error", error=str(exc))
         return 2
     except Exception as exc:  # noqa: BLE001
