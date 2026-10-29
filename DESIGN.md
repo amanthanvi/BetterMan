@@ -212,3 +212,18 @@ combinator.
     (`aria-modal="true"`) is open.
 - Print forces light monochrome through the colour tokens and renders every
   block. A full print stylesheet is later work.
+
+## Derived corpus metadata
+
+The manual can add Referenced by, Command family and Package links without
+filtering upstream text. Missing data adds no empty heading. Lists cap at 20,
+exclude the current page, and link to a prefix search when family members remain.
+Package links preserve distro and open a paginated `/pkg/<name>` route.
+
+Option portability adds three cells for GNU/Linux (with a usable dataset
+representative), FreeBSD and macOS. Available, flag absent and different are
+distinct states; an em dash means the manual is not included, and ? means
+unknown/unloaded. Fully available rows omit the glyph; unloaded rows cannot
+borrow that convention. A legend explains that availability does not prove
+identical behavior. Stale copy describes evidence without promising that a failed
+build is running. No reader link opens raw JSON and no detail request runs on load.

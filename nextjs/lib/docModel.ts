@@ -68,7 +68,11 @@ export type ManPageContent = {
 }
 
 export type ManPageVariant = { distro: string; datasetReleaseId: string; contentSha256: string }
-export type ManPageResponse = { page: ManPage; content: ManPageContent; variants: ManPageVariant[] }
+// Response enrichment is separate from the upstream Python/TS document model.
+export type ManPageResponse = {
+  page: ManPage; content: ManPageContent; variants: ManPageVariant[]
+  derived?: import('../../convex/_derivedEncoding').PageDerivedResponse
+}
 
 export type ErrorDetail = { code: string; message: string }
 export type ApiErrorEnvelope = { error: ErrorDetail }

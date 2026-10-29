@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 
+import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
 import { withDistro, type Distro } from '../../lib/distro'
@@ -12,18 +13,20 @@ export function ManPageFooterSections({
   urlDistro,
   seeAlso,
   relatedItems,
+  derived,
   hasParseWarnings = false,
 }: {
   reportHref: string
   urlDistro: Distro | null
   seeAlso?: ManPageContent['seeAlso']
   relatedItems: SectionPage[]
+  derived?: Pick<PageDerivedResponse, 'referencedBy' | 'family' | 'package'>
   hasParseWarnings?: boolean
 }) {
   const seeAlsoItems = (seeAlso ?? []).slice(0, 24)
   const related = relatedItems.slice(0, 24)
 
-  const hasAddendum = seeAlsoItems.length > 0 || related.length > 0
+  const hasAddendum = seeAlsoItems.length > 0 || related.length > 0 || Boolean(derived?.referencedBy.items.length || derived?.family?.items.length || derived?.package)
 
   return (
     <>
@@ -83,6 +86,38 @@ export function ManPageFooterSections({
                 ))}
               </ul>
             </aside>
+          ) : null}
+          {[
+            { label: 'Referenced by', data: derived?.referencedBy },
+            { label: 'Command family', data: derived?.family },
+          ].map(({ label, data }) => data?.items.length ? (
+            <aside key={label} className={ROW} aria-label={label}>
+              <h2 className={LABEL}>{label}</h2>
+              <div>
+                <ul className="flex flex-wrap gap-x-4 gap-y-1 font-serif text-base">
+                  {data.items.map((item) => (
+                    <li key={`${item.name}:${item.section}`}>
+                      <Link href={withDistro(`/man/${encodeURIComponent(item.name)}/${encodeURIComponent(item.section)}`, urlDistro)} className="underline">
+                        <b className="font-semibold">{item.name}</b>({item.section})
+                        <LinkPendingHint />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {data.hasMore ? <p className="mt-1 text-xs text-ink-3">
+                  Showing the first {data.items.length}; additional pages are omitted.{' '}
+                  {label === 'Command family' && derived?.family ? <Link className="underline" href={withDistro(`/search?q=${encodeURIComponent(`${derived.family.name}-`)}`, urlDistro)}>Browse the family</Link> : null}
+                </p> : null}
+              </div>
+            </aside>
+          ) : null)}
+          {derived?.package ? (
+            <p className={ROW}>
+              <span className={LABEL}>Package</span>
+              <Link className="w-fit font-mono underline" href={withDistro(`/pkg/${encodeURIComponent(derived.package.name)}`, urlDistro)}>
+                {derived.package.name}{derived.package.version ? ` ${derived.package.version}` : ''}
+              </Link>
+            </p>
           ) : null}
         </div>
       ) : null}

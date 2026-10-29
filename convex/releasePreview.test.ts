@@ -17,10 +17,11 @@ describe("inactive release preview", () => {
       await ctx.db.insert("activeReleases", {
         stage: "prod", locale: "en", distro: "debian", releaseId: active, datasetReleaseId: "active", activatedAt: "2026-09-14T00:00:00Z",
       });
-      await ctx.db.insert("datasetReleases", {
+      const legacyId = await ctx.db.insert("datasetReleases", {
         ...base, datasetReleaseId: "legacy", ingestedAt: "2026-09-01T00:00:00Z", sealed: true,
         manifestBasis: "legacy_unverified_aliases", manifestVerified: false, manifestError: "LEGACY_ALIAS_EXPECTATION_UNKNOWN",
       });
+      await ctx.db.insert("derivedReleaseStatus", { releaseId: legacyId, locale: "en", required: false, pendingRefs: 0, readyRows: 2, leaseUntil: 0, updatedAt: 0 });
       await ctx.db.insert("datasetReleases", {
         ...base, datasetReleaseId: "draft", ingestedAt: "2026-09-13T00:00:00Z", manifestBasis: "declared",
         aliasCount: 0, licenseCount: 0, uploadedPageCount: 0, uploadedAliasCount: 0, uploadedLicenseCount: 0,
@@ -41,6 +42,8 @@ describe("inactive release preview", () => {
 
     const inactive = [...first.inactive, ...second.inactive];
     expect(inactive.map((release) => release.datasetReleaseId)).toEqual(["legacy", "draft", "verified"]);
+    expect(inactive[0].derivedPins).toEqual({ required: false, pendingRefs: 0, readyRows: 2, pinned: true });
+    expect(inactive[1].derivedPins).toEqual({ required: false, pendingRefs: 0, readyRows: 0, pinned: false });
     for (const release of inactive) expect(Number.isFinite(Date.parse(release.createdAt))).toBe(true);
     expect(inactive).toMatchObject([
       { sealed: true, pruning: false, manifestBasis: "legacy_unverified_aliases", manifestVerified: false, manifestError: "LEGACY_ALIAS_EXPECTATION_UNKNOWN", uploadComplete: false },

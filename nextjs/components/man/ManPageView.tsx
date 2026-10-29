@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
+
 import type { SectionPage } from '../../lib/api'
 import { DISTRO_LABEL, type Distro } from '../../lib/distro'
 import type { BlockNode, HeadingBlock, ManPage, ManPageContent, ManPageVariant, OptionItem, TocItem } from '../../lib/docModel'
@@ -95,6 +97,8 @@ export function ManPageView({
   variants,
   servedDistro,
   relatedItems,
+  derivedLinks,
+  portability,
   reportHref,
 }: {
   page: ManPage
@@ -103,6 +107,8 @@ export function ManPageView({
   /** The distro the server rendered, which differs from the preference after a fallback. */
   servedDistro: Distro
   relatedItems: SectionPage[]
+  derivedLinks?: Pick<PageDerivedResponse, 'referencedBy' | 'family' | 'package'>
+  portability?: Pick<PageDerivedResponse, 'portability' | 'stale'>
   /** A prefilled GitHub issue for this page, built on the server with the public origin. */
   reportHref: string
 }) {
@@ -407,6 +413,7 @@ export function ManPageView({
             <ManPageExamples examples={examples} codeLanguage={codeLanguage} />
 
             <ManPageOptionsSection
+              portability={portability}
               optionTerms={optionTerms}
               onClearHighlight={() => setSelectedOption(null)}
               options={content.options}
@@ -434,6 +441,7 @@ export function ManPageView({
               urlDistro={distro.urlDistro}
               seeAlso={content.seeAlso}
               relatedItems={relatedItems}
+              derived={derivedLinks}
               hasParseWarnings={page.hasParseWarnings === true}
             />
           </article>

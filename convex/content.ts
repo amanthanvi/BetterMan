@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { decodeSummary, publicSummary } from "./_derivedEncoding";
+import { variantGroups } from "./_derivedModel";
 import {
   action,
   internalAction,
@@ -445,22 +447,32 @@ async function pageReadModel(
   ctx: QueryCtx,
   args: { stage: DatasetStage; release: Doc<"datasetReleases">; page: Doc<"manPages"> },
 ) {
+  const readable = args.stage === PUBLIC_DATASET_STAGE && (args.release.derivedCompletedKey !== undefined || args.release.derivedInitialized === true);
+  const row = readable ? await ctx.db.query("manPageDerived")
+    .withIndex("by_locale_and_distro_and_name_and_section", (q) => q.eq("locale", args.release.locale).eq("distro", args.page.distro).eq("name", args.page.name).eq("section", args.page.section)).unique() : null;
+  const matches = row && !row.cleanupPending && row.sourceContentSha256 === args.page.contentSha256 &&
+    args.page.optionSignatureHash && row.sourceSignatureHash === args.page.optionSignatureHash;
+  const stored = matches ? decodeSummary(row.summaryJson) : null;
+  const stale = row?.key !== args.release.derivedExpectedKey && args.release.derivedExpectedKey !== args.release.derivedCompletedKey;
+  const derived = stored && row ? publicSummary(stored, row.key, stale) : null;
+  if (derived) {
+    derived.package = args.page.sourcePackage ? { name: args.page.sourcePackage, version: args.page.sourcePackageVersion ?? null } : null;
+    // A matching source/signature can reuse portability across releases, but the
+    // active release's link graph may differ (including after rollback).
+    if (row?.releaseId !== args.release._id) {
+      derived.referencedBy = { items: [], hasMore: false };
+      derived.family = null;
+    }
+  }
   const [content, variants] = await Promise.all([
     contentPointer(ctx, args.page._id),
     variantsForPage(ctx, {
-      stage: args.stage,
-      locale: args.release.locale,
-      name: args.page.name,
-      section: args.page.section,
+      stage: args.stage, locale: args.release.locale, name: args.page.name, section: args.page.section, knownPage: args.page,
     }),
   ]);
+  if (derived) derived.variantGroups = variantGroups(variants);
   if (!content) return null;
-  return {
-    release: args.release,
-    page: args.page,
-    content,
-    variants,
-  };
+  return { release: args.release, page: args.page, content, variants, derived };
 }
 
 export const getManByNameReadModel = internalQuery({
@@ -523,7 +535,7 @@ export const getManByNameAndSectionReadModel = internalQuery({
   },
 });
 
-async function resolveContent(
+export async function resolveContent(
   ctx: { storage: { get: (id: Id<"_storage">) => Promise<Blob | null> } },
   pointer: { storageId: Id<"_storage"> | null; fields: StoredContentFields | null },
 ): Promise<ManPageContentPayload | null> {
@@ -550,7 +562,7 @@ export const getManByName = action({
 
     return {
       kind: "page" as const,
-      data: pageResponse(result.data.release, result.data.page, content, result.data.variants),
+      data: pageResponse(result.data.release, result.data.page, content, result.data.variants, result.data.derived),
     };
   },
 });
@@ -577,7 +589,7 @@ export const getManByNameAndSection = action({
 
     return {
       kind: "page" as const,
-      data: pageResponse(result.data.release, result.data.page, content, result.data.variants),
+      data: pageResponse(result.data.release, result.data.page, content, result.data.variants, result.data.derived),
     };
   },
 });

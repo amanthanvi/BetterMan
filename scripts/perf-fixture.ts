@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
 import schema from '../convex/schema'
+import { internal } from '../convex/_generated/api'
+import { persistOptionSignature } from '../convex/_derivedInputs'
 import { serializeStoredPayload } from '../convex/_storedPayload'
 import { optionFlagRows } from '../convex/_optionFlags'
 import { instrumentModules } from './perf-metrics.mjs'
@@ -31,7 +33,7 @@ export async function createFixture(onCall: () => void) {
       const datasetReleaseId = `2026-10-26+perf-v1-${distro}`
       const releaseId = await ctx.db.insert('datasetReleases', {
         datasetReleaseId, distro, locale: 'en', imageRef: 'fixture', imageDigest: 'fixture',
-        ingestedAt: '2026-10-26T00:00:00Z', pageCount: 32, sealed: true,
+        ingestedAt: '2026-10-26T00:00:00Z', pageCount: 32, sealed: true, manifestVerified: true,
       })
       await ctx.db.insert('activeReleases', {
         stage: 'prod', locale: 'en', distro, releaseId, datasetReleaseId, activatedAt: '2026-10-26T00:00:00Z',
@@ -48,6 +50,7 @@ export async function createFixture(onCall: () => void) {
           sourcePath: `/fixture/${name}.1`, contentSha256, hasParseWarnings: false,
         })
         pages.push({ pageId, name, description })
+        await persistOptionSignature(ctx, pageId, [], 1)
         await ctx.db.insert('manPageSearchDocuments', {
           pageId, releaseId, datasetReleaseId, name, nameNorm: name, section: '1', title: `${name}(1)`,
           description, descNorm: description.toLowerCase(), searchText: `${name} ${description}`, snippetText: description,
@@ -74,6 +77,10 @@ export async function createFixture(onCall: () => void) {
       })
     }
   })
+  await t.mutation(internal.derived.rebuildActive, {})
+  await t.finishAllScheduledFunctions(() => new Promise(resolve => setTimeout(resolve, 0)))
+  const status = await t.query(internal.derived.status, {})
+  if (!status.healthy) throw new Error('Performance fixture must publish a ready derived snapshot')
   return t
 }
 
@@ -132,5 +139,32 @@ export async function createSearchFixture(onCall: () => void) {
       else await ctx.db.insert('releaseSectionStats', { releaseId, datasetReleaseId, section, label: `Section ${section}`, total })
     }
   })
+  return t
+}
+
+// Supplemental response-only cases exercise nonempty and pathological portability,
+// without changing the browser's long-document/HTML baseline.
+export async function createDerivedResponseFixture(onCall: () => void) {
+  const t = convexTest(schema, instrumentModules(import.meta.glob('../convex/**/*.ts'), onCall))
+  const { readFile } = await import('node:fs/promises')
+  const tar = JSON.parse(await readFile('ingestion/tests/fixtures/golden/tar.1.json', 'utf8'))
+  const largeOptions = Array.from({ length: 3009 }, (_, i) => ({ flags: `--flag-${i}`, anchorId: `flag-${i}`, argument: i % 2 ? 'VALUE' : null, description: `Documented option ${i}.` }))
+  await t.run(async ctx => {
+    for (const distro of ['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos'] as const) {
+      const datasetReleaseId = `derived-response-${distro}`
+      const releaseId = await ctx.db.insert('datasetReleases', { datasetReleaseId, distro, locale: 'en', imageRef: 'fixture', imageDigest: 'fixture', ingestedAt: '2026-10-28T00:00:00Z', pageCount: 2, sealed: true, manifestVerified: true })
+      await ctx.db.insert('activeReleases', { stage: 'prod', locale: 'en', distro, releaseId, datasetReleaseId, activatedAt: '2026-10-28T00:00:00Z' })
+      for (const [name, options, doc] of [['tar', tar.options, tar.doc], ['large', largeOptions, { toc: [], blocks: [] }]] as const) {
+        const pageId = await ctx.db.insert('manPages', { releaseId, datasetReleaseId, externalId: `${distro}-${name}`, locale: 'en', distro, name, section: '1', sitemapPage: 0, title: name, description: 'response fixture', sourcePath: name, contentSha256: name, hasParseWarnings: false })
+        const storageId = await ctx.storage.store(new Blob([serializeStoredPayload(name, { docJson: JSON.stringify(doc), optionsJson: JSON.stringify(options) })]))
+        await ctx.db.insert('manPageContents', { pageId, storageId })
+        await persistOptionSignature(ctx, pageId, options, 1)
+      }
+    }
+  })
+  await t.mutation(internal.derived.rebuildActive, {})
+  await t.finishAllScheduledFunctions(() => new Promise(resolve => setTimeout(resolve, 0)))
+  const status = await t.query(internal.derived.status, {})
+  if (!status.healthy) throw new Error('Response fixture must publish every derived summary')
   return t
 }

@@ -114,10 +114,20 @@ function isMissingActiveReleaseError(err: unknown): boolean {
   return err instanceof Error && err.message.includes('ACTIVE_RELEASE_NOT_FOUND')
 }
 
+// Next's data cache rejects entries above 2 MiB; return large manuals once without a retry.
+class UncacheableManPage extends Error {
+  constructor(readonly value: unknown) { super('Man page exceeds the shared data-cache entry limit') }
+}
+function cacheableManPage<T>(value: T): T {
+  if (new TextEncoder().encode(JSON.stringify(value)).length > 1_900_000) throw new UncacheableManPage(value)
+  return value
+}
+
 async function mapConvexError<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn()
   } catch (err) {
+    if (err instanceof UncacheableManPage) return err.value as T
     if (isMissingActiveReleaseError(err)) {
       throw apiError(404, 'RELEASE_NOT_FOUND', 'Dataset release not found')
     }
@@ -188,8 +198,8 @@ const cachedSection = unstable_cache(
 
 const cachedManByName = unstable_cache(
   async (distro: Distro, name: string) =>
-    await convex().action(api.content.getManByName, { distro, name }),
-  ['betterman', 'convex', 'man-by-name', 'v2'],
+    cacheableManPage(await convex().action(api.content.getManByName, { distro, name })),
+  ['betterman', 'convex', 'man-by-name', 'v3'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -202,8 +212,8 @@ const cachedResolveManByName = unstable_cache(
 
 const cachedManByNameAndSection = unstable_cache(
   async (distro: Distro, name: string, section: string) =>
-    await convex().action(api.content.getManByNameAndSection, { distro, name, section }),
-  ['betterman', 'convex', 'man-by-name-and-section', 'v2'],
+    cacheableManPage(await convex().action(api.content.getManByNameAndSection, { distro, name, section })),
+  ['betterman', 'convex', 'man-by-name-and-section', 'v3'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
@@ -536,4 +546,19 @@ export async function fetchSeoSitemapPage(opts: { distro: string; page: number }
     if (err instanceof SitemapReleaseMismatch) return err.data
     throw err
   }
+}
+
+const cachedPackage = unstable_cache(
+  async (distro: Distro, name: string, cursor: string | null) =>
+    await convex().query(api.packages.getPackage, { distro, name, paginationOpts: { numItems: 100, cursor } }),
+  ['betterman', 'convex', 'package', 'v2'],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+)
+
+export async function fetchPackage(opts: { distro: Distro; name: string; cursor?: string }) {
+  return await mapConvexError(() => cachedPackage(opts.distro, opts.name, opts.cursor ?? null))
+}
+
+export async function fetchPortability(opts: { distro: Distro; name: string; section: string; offset: number }) {
+  return await mapConvexError(() => convex().query(api.portability.getDetails, opts))
 }

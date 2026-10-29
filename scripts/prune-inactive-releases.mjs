@@ -79,6 +79,11 @@ export function selectPrunable(inactive, { keepPerDistro, minAgeMs, unsealedMinA
       || typeof release.distro !== 'string' || typeof release.locale !== 'string') {
       throw new Error('Invalid inactive release preview entry')
     }
+    const pins = release.derivedPins
+    if (pins?.pinned === true || pins?.required === true || pins?.pendingRefs > 0 || pins?.readyRows > 0) {
+      skipped.push({ ...release, reason: `derived dependencies pinned (required=${pins.required === true}, pending=${pins.pendingRefs ?? 0}, ready=${pins.readyRows ?? 0})` })
+      continue
+    }
     if (release.pruning === true) {
       prune.push({ ...release, reason: 'pruning already started' })
       continue
@@ -136,14 +141,14 @@ function releaseTime(release) {
 
 // Retry transient failures with backoff. Every function we call is idempotent
 // per batch: previews and dry runs read, deletions remove whatever remains.
-export async function withRetry(operation, { attempts = MAX_ATTEMPTS, pause = sleep, log = console.log, label } = {}) {
+export async function withRetry(operation, { attempts = MAX_ATTEMPTS, pause = sleep, log = console.log, label, shouldRetry = () => true } = {}) {
   let lastError
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       return await operation(attempt)
     } catch (error) {
       lastError = error
-      if (attempt === attempts) break
+      if (attempt === attempts || !shouldRetry(error)) break
       log(JSON.stringify({ event: 'retry', label, attempt, error: describeError(error) }))
       await pause(Math.min(30_000, 1_000 * 2 ** (attempt - 1)))
     }
@@ -197,6 +202,10 @@ export async function listInactiveReleases(run, retry = {}) {
   throw new Error('Inactive release preview did not terminate')
 }
 
+export function isDerivedPinnedError(error) {
+  return /\bRELEASE_DERIVED_BUILD_IN_PROGRESS\b/.test(describeError(error))
+}
+
 export async function pruneRelease(run, datasetReleaseId, { log = console.log, retry = {} } = {}) {
   let deleted = 0
   let storageDeletes = 0
@@ -205,7 +214,7 @@ export async function pruneRelease(run, datasetReleaseId, { log = console.log, r
   for (let batch = 0; batch < MAX_BATCHES_PER_RELEASE; batch += 1) {
     const result = await withRetry((attempt) => run('maintenance:deleteInactiveReleaseBatch', {
       datasetReleaseId, confirmDatasetReleaseId: datasetReleaseId, maxDocs: limit.forAttempt(attempt),
-    }), { ...retry, log, label: `delete ${datasetReleaseId}` })
+    }), { ...retry, log, label: `delete ${datasetReleaseId}`, shouldRetry: (error) => !isDerivedPinnedError(error) })
     limit.succeeded()
     if (result?.datasetReleaseId !== datasetReleaseId || !Number.isSafeInteger(result.deleted)
       || typeof result.deletedRelease !== 'boolean' || typeof result.hasMore !== 'boolean') {
@@ -273,6 +282,28 @@ export async function cleanupOrphanManifestFiles(run, { dryRun, log = console.lo
   throw new Error('Manifest orphan sweep did not terminate')
 }
 
+export async function cleanupOrphanDerivedCaches(run, { dryRun, log = console.log, retry = {} } = {}) {
+  const totals = { scanned: 0, orphans: 0, deleted: 0, unknownSkipped: 0, pages: 0 }
+  for (const table of ['derivedSignatureCache', 'derivedLegacySignatures']) {
+    let cursor = null
+    const limit = adaptiveLimit({ start: 5, min: 1 })
+    for (let page = 0; page < 1_000_000; page += 1) {
+      const result = await withRetry((attempt) => run('maintenance:cleanupOrphanDerivedCachesBatch', {
+        table, cursor, limit: limit.forAttempt(attempt), dryRun,
+      }), { ...retry, log, label: `orphan derived cache ${table}` })
+      limit.succeeded()
+      if (typeof result?.isDone !== 'boolean' || !Number.isSafeInteger(result.scanned)) throw new Error('Invalid orphan derived cache cleanup response')
+      totals.pages++
+      for (const key of ['scanned', 'orphans', 'deleted', 'unknownSkipped']) totals[key] += result[key] ?? 0
+      if (result.isDone) break
+      if (typeof result.continueCursor !== 'string' || !result.continueCursor) throw new Error('Derived cache cleanup did not return a continuation cursor')
+      if (page === 999_999) throw new Error('Derived cache cleanup did not terminate')
+      cursor = result.continueCursor
+    }
+  }
+  return totals
+}
+
 // Bounded concurrency that stops handing out new work after the first failure.
 // In-flight workers finish their current item, then the first error is thrown.
 export async function mapWithConcurrency(items, concurrency, worker) {
@@ -298,7 +329,7 @@ export async function mapWithConcurrency(items, concurrency, worker) {
 export async function prune(run, options, { log = console.log, retry = {} } = {}) {
   const inactive = await listInactiveReleases(run, retry)
   const selection = selectPrunable(inactive, options)
-  const summary = (entries) => entries.map(({ datasetReleaseId, distro, createdAt, ingestedAt, reason }) => ({ datasetReleaseId, distro, createdAt: createdAt ?? ingestedAt, reason }))
+  const summary = (entries) => entries.map(({ datasetReleaseId, distro, createdAt, ingestedAt, reason, derivedPins }) => ({ datasetReleaseId, distro, createdAt: createdAt ?? ingestedAt, reason, ...(derivedPins ? { derivedPins } : {}) }))
   log(JSON.stringify({
     event: 'prune_plan', apply: options.apply, keepPerDistro: options.keepPerDistro, minAgeHours: options.minAgeMs / 3_600_000,
     unsealedMinAgeHours: options.unsealedMinAgeMs === null ? null : options.unsealedMinAgeMs / 3_600_000, sweepOrphans: options.sweepOrphans,
@@ -307,16 +338,30 @@ export async function prune(run, options, { log = console.log, retry = {} } = {}
 
   let pruned = []
   if (options.apply) {
-    pruned = await mapWithConcurrency(selection.prune, options.concurrency, async (release) => {
-      const result = await pruneRelease(run, release.datasetReleaseId, { log, retry })
-      log(JSON.stringify({ event: 'prune_release', ...result }))
-      return result
+    const results = await mapWithConcurrency(selection.prune, options.concurrency, async (release) => {
+      try {
+        const result = await pruneRelease(run, release.datasetReleaseId, { log, retry })
+        log(JSON.stringify({ event: 'prune_release', ...result }))
+        return { release, result }
+      } catch (error) {
+        if (!isDerivedPinnedError(error)) throw error
+        const skipped = { ...release, reason: 'derived dependency pin acquired after preview' }
+        log(JSON.stringify({ event: 'prune_skipped', datasetReleaseId: release.datasetReleaseId, reason: skipped.reason }))
+        return { release: skipped, result: null }
+      }
     })
+    for (const entry of results) {
+      if (entry.result) pruned.push(entry.result)
+      else selection.skipped.push(entry.release)
+    }
+    const raced = new Set(results.filter((entry) => !entry.result).map((entry) => entry.release.datasetReleaseId))
+    selection.prune = selection.prune.filter((release) => !raced.has(release.datasetReleaseId))
   }
   // The sweep walks the whole blob table, so it is opt-in for previews.
   const orphans = options.sweepOrphans ? await cleanupOrphanBlobs(run, { dryRun: !options.apply, log, retry }) : null
   const manifestFiles = options.sweepOrphans ? await cleanupOrphanManifestFiles(run, { dryRun: !options.apply, log, retry }) : null
-  return { inactive: inactive.length, selection, pruned, orphans, manifestFiles }
+  const derivedCaches = options.sweepOrphans ? await cleanupOrphanDerivedCaches(run, { dryRun: !options.apply, log, retry }) : null
+  return { inactive: inactive.length, selection, pruned, orphans, manifestFiles, derivedCaches }
 }
 
 // Surface the provider's error text without echoing credentials. Deploy keys
@@ -350,9 +395,10 @@ async function main() {
   const message = options.apply
     ? `Pruned ${result.pruned.length} inactive release(s) (${deleted} documents, ${files} stored files), retained ${result.selection.retained.length}, skipped ${result.selection.skipped.length}; ${orphanNote}.`
     : `Dry run: ${result.selection.prune.length} inactive release(s) would be pruned, ${result.selection.retained.length} retained, ${result.selection.skipped.length} skipped; ${orphanNote}.`
-  console.log(message)
+  const cacheNote = result.derivedCaches === null ? '' : ` Derived caches: ${result.derivedCaches.orphans} orphan(s), ${result.derivedCaches.deleted} removed, ${result.derivedCaches.unknownSkipped} unknown-format key(s) preserved.`
+  console.log(message + cacheNote)
   if (result.manifestFiles) console.log(JSON.stringify({ event: 'manifest_orphans', ...result.manifestFiles }))
-  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}\n`)
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}${cacheNote}\n`)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

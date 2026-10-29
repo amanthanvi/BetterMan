@@ -11,7 +11,14 @@ from pathlib import Path
 import pytest
 
 from ingestion import ingest_runner
-from ingestion.convex_client import ConvexContractError, ConvexIngestClient, encode_json
+from ingestion.convex_client import (
+    REQUIRED_DECLARATION_COUNTS,
+    REQUIRED_FUNCTIONS,
+    REQUIRED_SCHEMA_VERSION,
+    ConvexContractError,
+    ConvexIngestClient,
+    encode_json,
+)
 from ingestion.ingest_runner import (
     _AliasRow,
     _build_page_links,
@@ -404,7 +411,7 @@ def test_ingest_declares_uploaded_aliases_and_licenses(
     monkeypatch.setattr(
         ingest_runner.ConvexIngestClient,
         "require_deployed_contract",
-        lambda _self: events.append("contract") or {"schemaVersion": 1},
+        lambda _self: events.append("contract") or {"schemaVersion": REQUIRED_SCHEMA_VERSION},
     )
 
     def post(_self, path, payload):
@@ -491,11 +498,14 @@ def test_ingest_declares_uploaded_aliases_and_licenses(
 
 
 def test_page_payload_sends_only_what_the_server_stores() -> None:
+    from ingestion.extractor_provenance import OPTION_EXTRACTOR_VERSION
+
     row = replace(_page("real", "1"), description="desc", plain_text="word " * 100)
     payload = _page_payload(row, sitemap_page=1, links=[])
     assert payload["searchText"] == ""
     assert len(payload["snippetText"]) == 240
     assert payload["snippetText"].startswith("desc word word")
+    assert payload["extractorVersion"] == OPTION_EXTRACTOR_VERSION
 
 
 def test_page_payload_keeps_definition_opening_in_options_and_search_snippet() -> None:
@@ -614,6 +624,38 @@ def test_ingest_fails_before_writing_when_convex_contract_is_missing(monkeypatch
             git_sha="test",
         )
 
+    assert calls == []
+
+
+def test_ingest_rejects_the_license_batch_v2_contract_before_any_write(monkeypatch):
+    monkeypatch.setattr(
+        ingest_runner.ConvexIngestClient,
+        "_get_json",
+        lambda _self, _path: {
+            "schemaVersion": 2,
+            "functions": list(REQUIRED_FUNCTIONS),
+            "declarationCounts": list(REQUIRED_DECLARATION_COUNTS),
+            "activatePending": True,
+        },
+    )
+    calls = []
+    monkeypatch.setattr(
+        ingest_runner.ConvexIngestClient,
+        "post",
+        lambda *_args, **_kwargs: calls.append("post"),
+    )
+    monkeypatch.setattr(ingest_runner, "apt_install", lambda _packages: calls.append("apt"))
+    with pytest.raises(ConvexContractError, match="schemaVersion 2"):
+        ingest_runner.ingest(
+            sample=True,
+            activate=True,
+            convex_url="https://example.convex.site",
+            ingest_secret="test-secret",
+            dataset_stage="staging",
+            image_ref="test",
+            image_digest="test",
+            git_sha="test",
+        )
     assert calls == []
 
 

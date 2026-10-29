@@ -1,4 +1,5 @@
 import type { Doc } from "./_generated/dataModel";
+import type { PageDerivedResponse } from "./_derivedEncoding";
 
 export const DISTROS = [
   "debian",
@@ -100,6 +101,7 @@ export function pageResponse(
   page: Doc<"manPages">,
   content: ManPageContentPayload,
   variants: Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>,
+  derived: PageDerivedResponse | null = null,
 ) {
   const doc = parseJsonField(content.docJson);
   const contentPayload: Record<string, unknown> =
@@ -127,6 +129,7 @@ export function pageResponse(
     },
     content: contentPayload,
     variants,
+    ...(derived ? { derived } : {}),
   };
 }
 

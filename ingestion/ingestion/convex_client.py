@@ -39,9 +39,9 @@ class ConvexContractError(RuntimeError):
 # Keep these aligned with convex/ingestContract.ts. Ingestion refuses to write
 # until GET /ingest/contract advertises the same schema version, functions,
 # declaration counts, and activate-pending flag. Alignment test:
-# tests/test_ingest_contract.py. MERGE #430/#431: the second to land rebases and
-# bumps both constants to v3, retaining package batches AND stored-page symbols.
-REQUIRED_SCHEMA_VERSION = 2
+# tests/test_ingest_contract.py. Contract v3 retains license-package batches and
+# adds extractor provenance; #430 follows at v4 and must retain both.
+REQUIRED_SCHEMA_VERSION = 3
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",
     "ingest.insertStoredPages",

@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
+import { getFunctionName } from "convex/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -219,7 +220,10 @@ describe("related metadata backfill", () => {
       fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "2026-09-07T01:00:00Z",
     });
     const after = await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(100));
-    expect(after).toHaveLength(before.length);
+    const relatedFunction = getFunctionName(internal.related.backfillRelease);
+    expect(after.filter((job) => job.name === relatedFunction))
+      .toHaveLength(before.filter((job) => job.name === relatedFunction).length);
+    expect(after.filter((job) => job.name === getFunctionName(internal.derived.runBatch))).toHaveLength(1);
   });
 
   it("rejects uploads between hydration batches while preserving duplicate replays", async () => {

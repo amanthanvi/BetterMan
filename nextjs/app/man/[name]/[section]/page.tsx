@@ -121,6 +121,8 @@ async function ManPageBody(opts: Lookup, origin: string) {
       page={pageData.page}
       content={pageData.content}
       variants={pageData.variants}
+      portability={pageData.derived ? { portability: pageData.derived.portability, stale: pageData.derived.stale } : undefined}
+      derivedLinks={pageData.derived ? { referencedBy: pageData.derived.referencedBy, family: pageData.derived.family, package: pageData.derived.package } : undefined}
       servedDistro={opts.distro}
       relatedItems={related.items}
       reportHref={reportProblemHref({ page: pageData.page, distro: opts.distro, origin })}

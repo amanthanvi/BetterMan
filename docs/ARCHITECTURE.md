@@ -47,6 +47,21 @@ this PR does not execute it on shared deployments.
 
 Legacy releases without original alias declarations are not assumed complete by counting their current rows. They require original ingestion evidence and explicit validation, or fresh ingestion under a new release ID. Search/content maintenance is not an exception to release immutability; shared content must not be changed indirectly through another mutable release.
 
+## Derived corpus metadata
+
+Uploads persist versioned option signatures; a separate hourly migration bootstraps
+legacy inputs once per exact stored source. After prod pointers change, B7 scans
+only changed releases in bounded mutation batches and reuses unchanged dependency
+fingerprints. Compact sidecars hold portability, variants, version marks, rankings,
+backlinks and families. Matching old summaries remain available with explicit
+snapshot provenance when stale. Healthy pages finish independently of failed inputs.
+Reads use one indexed summary plus live variant membership within the original
+view budget; per-distro API details paginate on demand. Durable pins/progress live
+outside frequently read release records.
+[Derived data](derived-data.md) documents matching semantics, limits, recovery,
+verified example frequency inputs and the package index. Derived completion/provenance fields
+are metadata exceptions to sealing; source content and shared blobs stay immutable.
+
 ## Deploy
 
 CI runs on every push and pull request (`.github/workflows/ci.yml`). A successful CI run on `main` triggers `.github/workflows/deploy.yml`, which deploys the Convex functions for that exact SHA, builds and stages the Next.js app, verifies it, and promotes it. `docs/runbooks/vercel-ops.md` covers rollback.

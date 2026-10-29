@@ -61,6 +61,13 @@ export default defineSchema({
       jobId: v.optional(v.id("_scheduled_functions")),
     })),
     sealed: v.optional(v.boolean()),
+    previousProdReleaseId: v.optional(v.id("datasetReleases")),
+    previousProdReleaseRecorded: v.optional(v.boolean()),
+    derivedExpectedKey: v.optional(v.string()),
+    derivedCompletedKey: v.optional(v.string()),
+    derivedInitialized: v.optional(v.boolean()),
+    derivedPointers: v.optional(v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string() }))),
+    derivedLeaseUntil: v.optional(v.number()),
     pruning: v.optional(v.boolean()),
     // Successful page batches invalidate completion, including resumed uploads.
     relatedMetadataVersion: v.optional(v.number()),
@@ -131,9 +138,20 @@ export default defineSchema({
     sourcePackage: v.optional(v.string()),
     sourcePackageVersion: v.optional(v.string()),
     contentSha256: v.string(),
+    optionSignatureHash: v.optional(v.string()),
+    optionSignatureBytes: v.optional(v.number()),
+    optionInputBytes: v.optional(v.number()),
+    optionContentBytes: v.optional(v.number()),
+    optionExtractorVersion: v.optional(v.number()),
     hasParseWarnings: v.boolean(),
+    verifiedFlagUsage: v.optional(v.array(v.object({
+      flag: v.string(), count: v.number(), source: v.union(v.literal("examples"), v.literal("tldr")),
+    }))),
   })
+    .index("by_releaseId_and_sourcePackage_and_name_and_section", ["releaseId", "sourcePackage", "name", "section"])
     .index("by_contentSha256", ["contentSha256"])
+    .index("by_optionSignatureHash", ["optionSignatureHash"])
+    .index("by_contentSha256_and_optionExtractorVersion", ["contentSha256", "optionExtractorVersion"])
     .index("by_releaseId_and_externalId", ["releaseId", "externalId"])
     // by_releaseId_and_name_and_section also covers releaseId+name lookups.
     .index("by_releaseId_and_name_and_section", ["releaseId", "name", "section"])
@@ -151,7 +169,8 @@ export default defineSchema({
     seeAlsoJson: v.optional(v.string()),
   })
     .index("by_pageId", ["pageId"])
-    .index("by_blobId", ["blobId"]),
+    .index("by_blobId", ["blobId"])
+    .index("by_storageId", ["storageId"]),
 
   manPageContentBlobs: defineTable({
     contentSha256: v.string(),
@@ -245,7 +264,8 @@ export default defineSchema({
     targetSection: v.string(),
   })
     .index("by_releaseId_and_name_and_section", ["releaseId", "name", "section"])
-    .index("by_releaseId_and_name", ["releaseId", "name"]),
+    .index("by_releaseId_and_name", ["releaseId", "name"])
+    .index("by_releaseId_and_targetName_and_targetSection", ["releaseId", "targetName", "targetSection"]),
 
   manPageLinks: defineTable({
     releaseId: v.id("datasetReleases"),
@@ -261,7 +281,8 @@ export default defineSchema({
     linkType: v.union(v.literal("see_also"), v.literal("xref")),
   })
     .index("by_releaseId", ["releaseId"])
-    .index("by_fromPageId_and_linkType", ["fromPageId", "linkType"]),
+    .index("by_fromPageId_and_linkType", ["fromPageId", "linkType"])
+    .index("by_releaseId_and_toName_and_toSection", ["releaseId", "toName", "toSection"]),
 
   licensePackages: defineTable({
     releaseId: v.id("datasetReleases"),
@@ -281,6 +302,83 @@ export default defineSchema({
     licenseText: v.string(),
     sourceUrl: v.optional(v.string()),
   }).index("by_releaseId_and_packageName", ["releaseId", "packageName"]),
+
+  // Operational progress and pins are separate from frequently-read release records.
+  derivedBuilds: defineTable({
+    locale: v.string(), key: v.string(), fingerprint: v.string(), revision: v.number(),
+    pointers: v.array(v.object({ distro: distroValidator, releaseId: v.id("datasetReleases"), datasetReleaseId: v.string() })),
+    inputReleaseIds: v.array(v.id("datasetReleases")),
+    phase: v.union(v.literal("inputs"), v.literal("summaries"), v.literal("complete"), v.literal("blocked"), v.literal("failed")),
+    releaseIndex: v.number(), cursor: v.union(v.string(), v.null()),
+    retrying: v.optional(v.boolean()), retryCursor: v.optional(v.union(v.string(), v.null())), failedPages: v.optional(v.number()),
+    pendingJobs: v.optional(v.number()), scanned: v.optional(v.number()), recomputed: v.optional(v.number()),
+    cacheHits: v.optional(v.number()), skipped: v.optional(v.number()), batches: v.optional(v.number()),
+    lastProgressAt: v.optional(v.number()), startedAt: v.optional(v.number()),
+    errorSamples: v.optional(v.array(v.object({ name: v.string(), section: v.string(), code: v.string() }))),
+    jobId: v.optional(v.id("_scheduled_functions")), error: v.optional(v.string()),
+    batchPageLimit: v.optional(v.number()), isolateNext: v.optional(v.boolean()),
+  }).index("by_locale", ["locale"]),
+
+  derivedScanJobs: defineTable({
+    locale: v.string(), releaseId: v.id("datasetReleases"), cursor: v.union(v.string(), v.null()),
+    createdForKey: v.string(), scanned: v.number(), kind: v.union(v.literal("pages"), v.literal("aliases")),
+  }).index("by_locale", ["locale"])
+    .index("by_locale_and_releaseId_and_kind", ["locale", "releaseId", "kind"])
+    .index("by_releaseId", ["releaseId"]),
+
+  derivedRetryPages: defineTable({
+    locale: v.string(), key: v.string(), releaseId: v.id("datasetReleases"), distro: distroValidator,
+    name: v.string(), section: v.string(), error: v.string(),
+  }).index("by_locale_and_key", ["locale", "key"])
+    .index("by_releaseId", ["releaseId"]),
+
+  derivedReleaseStatus: defineTable({
+    releaseId: v.id("datasetReleases"), locale: v.string(), required: v.boolean(),
+    pendingRefs: v.number(), readyRows: v.number(), leaseUntil: v.number(), updatedAt: v.number(),
+  }).index("by_releaseId", ["releaseId"]),
+
+  derivedPortabilityChunks: defineTable({
+    releaseId: v.id("datasetReleases"), derivedId: v.id("manPageDerived"), key: v.string(), chunkIndex: v.number(), json: v.string(),
+  }).index("by_derivedId_and_chunkIndex", ["derivedId", "chunkIndex"])
+    .index("by_releaseId", ["releaseId"]),
+
+  derivedSignatureBackfills: defineTable({
+    releaseId: v.id("datasetReleases"), locale: v.string(), cursor: v.union(v.string(), v.null()),
+    state: v.union(v.literal("pending"), v.literal("complete"), v.literal("failed")),
+    processed: v.number(), cacheHits: v.number(), failures: v.number(), error: v.optional(v.string()),
+    jobId: v.optional(v.id("_scheduled_functions")), revision: v.number(), lastProgressAt: v.number(), migrationPin: v.optional(v.boolean()), refreshNeeded: v.optional(v.boolean()),
+    phase: v.optional(v.union(v.literal("scan"), v.literal("retry"))),
+  }).index("by_releaseId", ["releaseId"])
+    .index("by_state_and_locale", ["state", "locale"]),
+
+  derivedSignatureFailures: defineTable({ releaseId: v.id("datasetReleases"), pageId: v.id("manPages"), error: v.string() })
+    .index("by_releaseId_and_pageId", ["releaseId", "pageId"]),
+
+  derivedLegacySignatures: defineTable({ sourceKey: v.string(), optionsJson: v.string() }).index("by_sourceKey", ["sourceKey"]),
+
+  derivedSignatureCache: defineTable({
+    key: v.string(), contentSha256: v.string(), extractorVersion: v.union(v.number(), v.null()),
+    signatureHash: v.string(), optionsJson: v.string(),
+  }).index("by_key", ["key"])
+    .index("by_contentSha256_and_extractorVersion", ["contentSha256", "extractorVersion"]),
+
+  derivedPageInputs: defineTable({
+    releaseId: v.id("datasetReleases"), pageId: v.id("manPages"),
+    name: v.string(), section: v.string(), contentSha256: v.string(),
+    optionsJson: v.string(), truncated: v.boolean(),
+    signatureHash: v.optional(v.string()), extractorVersion: v.optional(v.union(v.number(), v.null())),
+    status: v.optional(v.union(v.literal("ready"), v.literal("unavailable"))), error: v.optional(v.string()),
+  }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
+    .index("by_releaseId_and_name_and_section", ["releaseId", "name", "section"])
+    .index("by_signatureHash", ["signatureHash"]),
+
+  manPageDerived: defineTable({
+    releaseId: v.id("datasetReleases"), pageId: v.id("manPages"), key: v.string(), summaryJson: v.string(),
+    locale: v.optional(v.string()), distro: v.optional(distroValidator), name: v.optional(v.string()), section: v.optional(v.string()),
+    sourceContentSha256: v.optional(v.string()), sourceSignatureHash: v.optional(v.string()), dependencyFingerprint: v.optional(v.string()),
+    detailBytes: v.optional(v.number()), detailChunkCount: v.optional(v.number()), cleanupPending: v.optional(v.boolean()),
+  }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
+    .index("by_locale_and_distro_and_name_and_section", ["locale", "distro", "name", "section"]),
 
   rateLimitBuckets: defineTable({
     key: v.string(),

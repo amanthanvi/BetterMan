@@ -38,7 +38,7 @@ function bracketVariants(part: string): string[] {
   return [without, withGroup];
 }
 
-function optionKeys(flags: string): string[] {
+export function optionKeys(flags: string): string[] {
   const keys: string[] = [];
   for (const part of flags.trim().split(/[\s,|/]+/)) {
     for (const variant of bracketVariants(part)) {
