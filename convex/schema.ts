@@ -37,6 +37,9 @@ export default defineSchema({
     imageDigest: v.string(),
     ingestedAt: v.string(),
     packageManifestJson: v.optional(v.string()),
+    shardedPageUploads: v.optional(v.boolean()),
+    packageBatchCount: v.optional(v.number()),
+    uploadedPackageBatchCount: v.optional(v.number()),
     pageCount: v.number(),
     aliasCount: v.optional(v.number()),
     licenseCount: v.optional(v.number()),
@@ -67,6 +70,32 @@ export default defineSchema({
     relatedMetadataBackfillVersion: v.optional(v.number()),
   })
     .index("by_datasetReleaseId", ["datasetReleaseId"]),
+
+  // Large provenance is read only by the license/provenance surface, never
+  // by ordinary release lookups. Legacy rows retain their old optional field.
+  releaseManifests: defineTable({
+    releaseId: v.id("datasetReleases"),
+    json: v.optional(v.string()),
+    storageId: v.optional(v.id("_storage")),
+  }).index("by_releaseId", ["releaseId"]),
+
+  // Upload writers touch one of 16 shards instead of every writer patching
+  // the same release/stat row. Seal folds and verifies all shards atomically.
+  releasePageUploadShards: defineTable({
+    releaseId: v.id("datasetReleases"),
+    bucket: v.number(),
+    pageCount: v.number(),
+    sections: v.array(v.object({ section: v.string(), uploaded: v.number() })),
+  }).index("by_releaseId_and_bucket", ["releaseId", "bucket"]),
+
+  releasePackageBatches: defineTable({
+    releaseId: v.id("datasetReleases"),
+    batchIndex: v.number(),
+    digest: v.string(),
+    count: v.number(),
+    licenseCount: v.number(),
+    uploaded: v.boolean(),
+  }).index("by_releaseId_and_batchIndex", ["releaseId", "batchIndex"]),
 
   activeReleases: defineTable({
     stage: datasetStageValidator,

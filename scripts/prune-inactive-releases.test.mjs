@@ -144,7 +144,7 @@ test('deletes one release in bounded confirmed batches until the release row is 
   const run = async (name, args) => { calls.push([name, args]); return responses.shift() }
   const result = await pruneRelease(run, 'r', { ...quiet, retry: noPause })
   assert.deepEqual(result, { datasetReleaseId: 'r', batches: 2, deleted: 103, storageDeletes: 41, deletedByTable: { manPages: 62, manPageLinks: 40, datasetReleases: 1 } })
-  assert.deepEqual(calls[0], ['maintenance:deleteInactiveReleaseBatch', { datasetReleaseId: 'r', confirmDatasetReleaseId: 'r', maxDocs: 100 }])
+  assert.deepEqual(calls[0], ['maintenance:deleteInactiveReleaseBatch', { datasetReleaseId: 'r', confirmDatasetReleaseId: 'r', maxDocs: 1000 }])
 })
 
 test('shrinks the deletion batch after a failed attempt and keeps the smaller size', async () => {
@@ -157,8 +157,8 @@ test('shrinks the deletion batch after a failed attempt and keeps the smaller si
     return { datasetReleaseId: 'r', deleted: 25, deletedByTable: { manPages: 25 }, deletedRelease: batches === 3, hasMore: batches !== 3 }
   }
   await pruneRelease(run, 'r', { ...quiet, retry: noPause })
-  // First batch degrades 100 -> 50 -> 25; later batches start at 25 directly.
-  assert.deepEqual(sizes, [100, 50, 25, 25, 25])
+  // Large batches shrink to a safe size, which later batches retain.
+  assert.deepEqual(sizes, [1000, 500, 250, 125, 62, 31, 15, 15, 15])
 
   const limit = adaptiveLimit({ start: 100, min: 5 })
   assert.equal(limit.forAttempt(1), 100)

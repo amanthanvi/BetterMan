@@ -4,7 +4,7 @@ import { internalMutation, internalQuery, type MutationCtx } from "./_generated/
 import { contentChunks, splitContentFields, type ContentField, type ContentJsonKind } from "./_legacyContent";
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
-import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, verifyDeclaredManifest } from "./_releaseManifest";
+import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
 import {
@@ -124,7 +124,7 @@ function jsonField(value: unknown): string | undefined {
   return JSON.stringify(value);
 }
 
-function canonicalJson(value: unknown): string {
+export function canonicalJson(value: unknown): string {
   return JSON.stringify(value, (_key, nested) => {
     if (!nested || typeof nested !== "object" || Array.isArray(nested)) return nested;
     return Object.fromEntries(Object.entries(nested).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0));
@@ -276,19 +276,40 @@ export const createRelease = internalMutation({
     imageRef: v.string(),
     imageDigest: v.string(),
     ingestedAt: v.string(),
-    packageManifest: v.any(),
+    packageManifest: v.optional(v.any()),
+    packageManifestStorageId: v.optional(v.id("_storage")),
+    packageManifestDigest: v.optional(v.string()),
+    packageBatches: v.optional(v.array(v.object({ digest: v.string(), count: v.number(), licenseCount: v.number() }))),
     pageCount: v.number(),
     aliasCount: v.number(),
     licenseCount: v.number(),
     sectionTotals: v.array(sectionStatInput),
-    licensePackages: v.array(licensePackageInput),
+    licensePackages: v.optional(v.array(licensePackageInput)),
   },
   handler: async (ctx, args) => {
-    validateReleaseDeclaration(args);
+    const packages = args.licensePackages ?? [];
+    if (args.packageBatches !== undefined) {
+      validateManifestSections(args.pageCount, args.sectionTotals);
+      if (packages.length || !validManifestCount(args.aliasCount) || !validManifestCount(args.licenseCount) ||
+          args.packageBatches.length > 2048 || args.packageBatches.some((batch) =>
+            !/^[A-Za-z0-9+/]{43}=$/.test(batch.digest) || !validManifestCount(batch.count) || batch.count < 1 || batch.count > 200 ||
+            !validManifestCount(batch.licenseCount) || batch.licenseCount > batch.count) ||
+          args.packageBatches.reduce((sum, batch) => sum + batch.licenseCount, 0) !== args.licenseCount) {
+        throw new Error("INVALID_RELEASE_MANIFEST");
+      }
+    } else {
+      // Retain the small legacy mutation API for queued jobs and local fixtures.
+      validateReleaseDeclaration({ ...args, licensePackages: packages });
+      if (packages.length > 200) throw new Error("INVALID_RELEASE_MANIFEST");
+    }
+    if (args.packageManifestStorageId && (!args.packageManifestDigest || args.packageManifest !== undefined)) {
+      throw new Error("INVALID_RELEASE_MANIFEST");
+    }
+    const { packageManifestStorageId, ...declaration } = args;
     const manifestDeclarationDigest = await storedPayloadDigest(canonicalJson({
-      ...args,
+      ...declaration,
       sectionTotals: [...args.sectionTotals].sort((a, b) => a.section.localeCompare(b.section)),
-      licensePackages: args.licensePackages.map((pkg) => ({ ...pkg, name: pkg.name.trim().toLowerCase() }))
+      licensePackages: packages.map((pkg) => ({ ...pkg, name: pkg.name.trim().toLowerCase() }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     }));
     const existing = await ctx.db
@@ -308,7 +329,9 @@ export const createRelease = internalMutation({
       imageRef: args.imageRef,
       imageDigest: args.imageDigest,
       ingestedAt: args.ingestedAt,
-      packageManifestJson: jsonField(args.packageManifest),
+      ...(args.packageBatches !== undefined ? { shardedPageUploads: true, relatedMetadataVersion: 1 } : {}),
+      packageBatchCount: args.packageBatches?.length ?? 0,
+      uploadedPackageBatchCount: 0,
       pageCount: args.pageCount,
       aliasCount: args.aliasCount,
       licenseCount: args.licenseCount,
@@ -319,6 +342,12 @@ export const createRelease = internalMutation({
       manifestDeclarationDigest,
     });
 
+    if (packageManifestStorageId || args.packageManifest !== undefined) {
+      await ctx.db.insert("releaseManifests", { releaseId, storageId: packageManifestStorageId, json: jsonField(args.packageManifest) });
+    }
+    for (const [batchIndex, batch] of (args.packageBatches ?? []).entries()) {
+      await ctx.db.insert("releasePackageBatches", { releaseId, batchIndex, ...batch, uploaded: false });
+    }
     for (const stat of args.sectionTotals) {
       await ctx.db.insert("releaseSectionStats", {
         releaseId,
@@ -330,7 +359,7 @@ export const createRelease = internalMutation({
       });
     }
 
-    for (const pkg of args.licensePackages) {
+    for (const pkg of packages) {
       await ctx.db.insert("licensePackages", {
         releaseId,
         datasetReleaseId: args.datasetReleaseId,
@@ -341,6 +370,38 @@ export const createRelease = internalMutation({
     }
 
     return { releaseId, existed: false };
+  },
+});
+
+// A batch's digest is committed at release creation. Replays cannot change
+// package identities or pretend a partial declaration was complete.
+export const insertLicensePackages = internalMutation({
+  args: { datasetReleaseId: v.string(), batchIndex: v.number(), packages: v.array(licensePackageInput) },
+  returns: v.object({ inserted: v.number(), skipped: v.number() }),
+  handler: async (ctx, args) => {
+    const release = await ctx.db.query("datasetReleases")
+      .withIndex("by_datasetReleaseId", (q) => q.eq("datasetReleaseId", args.datasetReleaseId)).unique();
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const immutable = await releaseIsImmutable(ctx, release);
+    const batch = await ctx.db.query("releasePackageBatches")
+      .withIndex("by_releaseId_and_batchIndex", (q) => q.eq("releaseId", release._id).eq("batchIndex", args.batchIndex)).unique();
+    if (!batch || args.packages.length !== batch.count ||
+        args.packages.filter((pkg) => pkg.hasLicenseText).length !== batch.licenseCount ||
+        await storedPayloadDigest(canonicalJson(args.packages)) !== batch.digest) throw new Error("RELEASE_MANIFEST_CONFLICT");
+    if (batch.uploaded) return { inserted: 0, skipped: batch.count };
+    if (immutable) throw new Error("RELEASE_SEALED");
+    for (const pkg of args.packages) {
+      const packageName = pkg.name.trim().toLowerCase();
+      if (!packageName || !pkg.version.trim()) throw new Error("INVALID_RELEASE_MANIFEST");
+      const existing = await ctx.db.query("licensePackages")
+        .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", release._id).eq("packageName", packageName)).unique();
+      if (existing) throw new Error("INVALID_RELEASE_MANIFEST");
+      await ctx.db.insert("licensePackages", { releaseId: release._id, datasetReleaseId: release.datasetReleaseId,
+        packageName, version: pkg.version, hasLicenseText: pkg.hasLicenseText });
+    }
+    await ctx.db.patch(batch._id, { uploaded: true });
+    await ctx.db.patch(release._id, { uploadedPackageBatchCount: (release.uploadedPackageBatchCount ?? 0) + 1 });
+    return { inserted: batch.count, skipped: 0 };
   },
 });
 
@@ -441,8 +502,8 @@ export const insertPages = internalMutation({
     }
 
     if (inserted > 0) {
-      await recordPageUploads(ctx, release, bySection);
-      await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
+      await recordPageUploads(ctx, release, bySection, args.pages[0].externalId);
+      if (!release.shardedPageUploads) await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
     }
     return { inserted, skipped };
   },
@@ -539,8 +600,8 @@ export const insertStoredPages = internalMutation({
     }
 
     if (inserted > 0) {
-      await recordPageUploads(ctx, release, bySection);
-      await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
+      await recordPageUploads(ctx, release, bySection, args.pages[0].externalId);
+      if (!release.shardedPageUploads) await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
     }
     const unusedStorageIds: Id<"_storage">[] = [];
     for (const storageId of new Set(args.pages.map((page) => page.contentStorageId))) {

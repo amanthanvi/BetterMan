@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import ssl
 import time
 from dataclasses import dataclass
@@ -15,7 +16,13 @@ logger = logging.getLogger("betterman.ingestion")
 # the existing release for an identical manifest and skips rows it already
 # stored, so a 5xx, 429, or transport failure is retried a bounded number of
 # times. Activation posts once; its caller owns the pending-hydration loop.
-_RETRIED_PATHS = ("/ingest/release", "/ingest/pages", "/ingest/aliases", "/ingest/licenses")
+_RETRIED_PATHS = (
+    "/ingest/release",
+    "/ingest/pages",
+    "/ingest/aliases",
+    "/ingest/licenses",
+    "/ingest/license-packages",
+)
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = 1.0
 
@@ -31,10 +38,11 @@ class ConvexContractError(RuntimeError):
 # Keep these aligned with convex/ingestContract.ts. Ingestion refuses to write
 # until GET /ingest/contract advertises the same schema version, functions,
 # declaration counts, and activate-pending flag.
-REQUIRED_SCHEMA_VERSION = 1
+REQUIRED_SCHEMA_VERSION = 2
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",
     "ingest.insertStoredPages",
+    "ingest.insertLicensePackages",
     "ingest.insertAliases",
     "ingest.insertLicenses",
     "ingest.activateRelease",
@@ -224,7 +232,13 @@ class ConvexIngestClient:
                 "Deploy Convex before ingestion writes."
             ) from exc
 
-    def activate_release(self, payload: dict, *, timeout_seconds: float = 300) -> dict:
+    def activate_release(self, payload: dict, *, timeout_seconds: float | None = None) -> dict:
+        if timeout_seconds is None:
+            timeout_seconds = float(
+                os.environ.get("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", "21600")
+            )
+        if not 0 < timeout_seconds <= 21600:
+            raise ValueError("Activation timeout must be between 0 and 21600 seconds")
         deadline = time.monotonic() + timeout_seconds
         while (remaining := deadline - time.monotonic()) > 0:
             try:
@@ -238,7 +252,11 @@ class ConvexIngestClient:
             if result.get("pending") is not True:
                 raise RuntimeError("Activation response is missing readiness status")
             time.sleep(min(2, max(0, deadline - time.monotonic())))
-        raise RuntimeError("Release activation did not finish within the hydration deadline")
+        raise RuntimeError(
+            "Release activation did not finish within the hydration deadline; "
+            f"release {payload.get('datasetReleaseId')} remains sealed and resumable. "
+            "Use the activate command with the same release ID and stage; do not re-ingest."
+        )
 
     def post(self, path: str, payload: object, *, timeout_seconds: float = 120) -> dict:
         url = f"{convex_http_url(self.http_url)}/{path.lstrip('/')}"

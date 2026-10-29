@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { distroValidator } from "./schema";
+import { pageUploadProgress } from "./_releaseManifest";
 import { requireMutableRelease } from "./_releaseIntegrity";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
@@ -26,8 +27,8 @@ const DEFAULT_RELEASE_LIMIT = 5;
 const MAX_RELEASE_LIMIT = 10;
 const DEFAULT_CHILD_SAMPLE_LIMIT = 5;
 const MAX_CHILD_SAMPLE_LIMIT = 10;
-const DEFAULT_DELETE_LIMIT = 50;
-const MAX_DELETE_LIMIT = 200;
+const DEFAULT_DELETE_LIMIT = 1000;
+const MAX_DELETE_LIMIT = 2000;
 const DEFAULT_COMPACT_LIMIT = 10;
 const MAX_COMPACT_LIMIT = 25;
 const DEFAULT_CONTENT_DEDUPE_LIMIT = 5;
@@ -39,6 +40,9 @@ const DEFAULT_STORAGE_STATS_LIMIT = 25;
 const MAX_STORAGE_STATS_LIMIT = 100;
 
 type ReleaseChildTable =
+  | "releaseManifests"
+  | "releasePackageBatches"
+  | "releasePageUploadShards"
   | "releaseSectionStats"
   | "manPages"
   | "manPageSearchDocuments"
@@ -49,6 +53,9 @@ type ReleaseChildTable =
   | "licenses";
 
 const RELEASE_CHILD_TABLES: ReleaseChildTable[] = [
+  "releaseManifests",
+  "releasePackageBatches",
+  "releasePageUploadShards",
   "releaseSectionStats",
   "manPageSearchDocuments",
   "manPageOptionFlags",
@@ -277,7 +284,13 @@ async function sampleReleaseChildren(
 ): Promise<{ count: number; hasMore: boolean }> {
   const takeLimit = limit + 1;
   const rows =
-    table === "releaseSectionStats"
+    table === "releaseManifests"
+      ? await ctx.db.query("releaseManifests").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(takeLimit)
+    : table === "releasePackageBatches"
+      ? await ctx.db.query("releasePackageBatches").withIndex("by_releaseId_and_batchIndex", (q) => q.eq("releaseId", releaseId)).take(takeLimit)
+    : table === "releasePageUploadShards"
+      ? await ctx.db.query("releasePageUploadShards").withIndex("by_releaseId_and_bucket", (q) => q.eq("releaseId", releaseId)).take(takeLimit)
+    : table === "releaseSectionStats"
       ? await ctx.db
           .query("releaseSectionStats")
           .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", releaseId))
@@ -336,6 +349,27 @@ async function deleteReleaseChildrenByTable(
   releaseId: Id<"datasetReleases">,
   limit: number,
 ): Promise<number> {
+  if (table === "releaseManifests") {
+    const rows = await ctx.db.query("releaseManifests")
+      .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(limit);
+    for (const row of rows) {
+      if (row.storageId) await ctx.storage.delete(row.storageId);
+      await ctx.db.delete(row._id);
+    }
+    return rows.length;
+  }
+  if (table === "releasePackageBatches") {
+    const rows = await ctx.db.query("releasePackageBatches")
+      .withIndex("by_releaseId_and_batchIndex", (q) => q.eq("releaseId", releaseId)).take(limit);
+    for (const row of rows) await ctx.db.delete(row._id);
+    return rows.length;
+  }
+  if (table === "releasePageUploadShards") {
+    const rows = await ctx.db.query("releasePageUploadShards")
+      .withIndex("by_releaseId_and_bucket", (q) => q.eq("releaseId", releaseId)).take(limit);
+    for (const row of rows) await ctx.db.delete(row._id);
+    return rows.length;
+  }
   if (table === "releaseSectionStats") {
     const rows = await ctx.db
       .query("releaseSectionStats")
@@ -444,6 +478,27 @@ async function deletePagePayload(
   return { deleted, storageDeletes, deletedByTable };
 }
 
+// Optional admin migration after deployment; ordinary reads of new releases
+// never include provenance. Cursor and batch size keep legacy migration bounded.
+export const detachLegacyManifests = internalMutation({
+  args: { cursor: v.union(v.string(), v.null()) },
+  returns: v.object({ moved: v.number(), isDone: v.boolean(), continueCursor: v.string() }),
+  handler: async (ctx, args) => {
+    const batch = await ctx.db.query("datasetReleases").paginate({ cursor: args.cursor, numItems: 5 });
+    let moved = 0;
+    for (const release of batch.page) {
+      if (!release.packageManifestJson || release.pruning) continue;
+      const existing = await ctx.db.query("releaseManifests")
+        .withIndex("by_releaseId", (q) => q.eq("releaseId", release._id)).unique();
+      if (existing && existing.json !== release.packageManifestJson) throw new Error("RELEASE_MANIFEST_CONFLICT");
+      if (!existing) await ctx.db.insert("releaseManifests", { releaseId: release._id, json: release.packageManifestJson });
+      await ctx.db.patch(release._id, { packageManifestJson: undefined });
+      moved += 1;
+    }
+    return { moved, isDone: batch.isDone, continueCursor: batch.continueCursor };
+  },
+});
+
 export const previewInactiveReleases = internalQuery({
   args: {
     cursor: v.optional(v.union(v.string(), v.null())),
@@ -473,6 +528,7 @@ export const previewInactiveReleases = internalQuery({
         children[table] = await sampleReleaseChildren(ctx, table, release._id, childSampleLimit);
       }
 
+      const progress = await pageUploadProgress(ctx, release);
       inactive.push({
         datasetReleaseId: release.datasetReleaseId,
         releaseId: release._id,
@@ -482,6 +538,9 @@ export const previewInactiveReleases = internalQuery({
         // Server-assigned creation time; ingestedAt is client-supplied.
         createdAt: new Date(release._creationTime).toISOString(),
         pageCount: release.pageCount,
+        uploadedPageCount: progress.pageCount ?? null,
+        uploadedLicenseCount: release.uploadedLicenseCount ?? null,
+        uploadedPackageBatchCount: release.uploadedPackageBatchCount ?? null,
         // Rollback eligibility: only sealed, verified, declared releases can be
         // activated again. Legacy or failed manifests never can.
         sealed: release.sealed === true,
@@ -491,8 +550,9 @@ export const previewInactiveReleases = internalQuery({
         manifestError: release.manifestError ?? null,
         // Declared uploads are complete when every counter matches its
         // declaration; such a release is still activatable even if unsealed.
-        uploadComplete: release.manifestBasis === "declared"
-          && release.uploadedPageCount === release.pageCount
+        uploadComplete: (release.packageBatchCount ?? 0) === (release.uploadedPackageBatchCount ?? 0)
+          && release.manifestBasis === "declared"
+          && progress.pageCount === release.pageCount
           && release.aliasCount !== undefined && release.uploadedAliasCount === release.aliasCount
           && release.licenseCount !== undefined && release.uploadedLicenseCount === release.licenseCount,
         children,
@@ -541,7 +601,7 @@ export const deleteInactiveReleaseBatch = internalMutation({
         const pages = await ctx.db
           .query("manPages")
           .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", release._id))
-          .take(Math.min(maxDocs - deleted, 50));
+          .take(Math.min(Math.ceil((maxDocs - deleted) / 2), 500));
         for (const page of pages) {
           if (deleted >= maxDocs) break;
           const result = await deletePagePayload(ctx, page, maxDocs - deleted);
@@ -981,5 +1041,69 @@ export const releaseStats = internalQuery({
       });
     }
     return { stage: args.stage, releases };
+  },
+});
+
+// Admin-only measurement for the local scale probe. JSON bytes describe stored
+// values, excluding index/internal encoding overhead; storage bytes use actual
+// file metadata. No stage pointer or release data is changed by these queries.
+export const measureReleaseBatch = internalQuery({
+  args: {
+    datasetReleaseId: v.string(), cursor: v.union(v.string(), v.null()),
+    table: v.union(v.literal("manPages"), v.literal("manPageSearchDocuments"), v.literal("manPageLinks"),
+      v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
+      v.literal("releaseSectionStats"), v.literal("releaseManifests"), v.literal("releasePackageBatches"), v.literal("releasePageUploadShards")),
+  },
+  returns: v.object({ documents: v.number(), jsonBytes: v.number(), storageBytes: v.number(), isDone: v.boolean(), continueCursor: v.string() }),
+  handler: async (ctx, args) => {
+    const release = await releaseByDatasetReleaseId(ctx, args.datasetReleaseId);
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const id = release._id;
+    const query = args.table === "manPages" ? ctx.db.query("manPages").withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", id))
+      : args.table === "manPageSearchDocuments" ? ctx.db.query("manPageSearchDocuments").withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", id))
+      : args.table === "manPageLinks" ? ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", id))
+      : args.table === "manPageOptionFlags" ? ctx.db.query("manPageOptionFlags").withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", id))
+      : args.table === "licensePackages" ? ctx.db.query("licensePackages").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", id))
+      : args.table === "licenses" ? ctx.db.query("licenses").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", id))
+      : args.table === "releaseSectionStats" ? ctx.db.query("releaseSectionStats").withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", id))
+      : args.table === "releaseManifests" ? ctx.db.query("releaseManifests").withIndex("by_releaseId", (q) => q.eq("releaseId", id))
+      : args.table === "releasePageUploadShards" ? ctx.db.query("releasePageUploadShards").withIndex("by_releaseId_and_bucket", (q) => q.eq("releaseId", id))
+      : ctx.db.query("releasePackageBatches").withIndex("by_releaseId_and_batchIndex", (q) => q.eq("releaseId", id));
+    const batch = await query.paginate({ cursor: args.cursor, numItems: 500, maximumBytesRead: 4 * 1024 * 1024 });
+    const encoder = new TextEncoder();
+    const bytes = (value: unknown) => encoder.encode(JSON.stringify(value)).length;
+    let documents = batch.page.length;
+    let jsonBytes = batch.page.reduce((sum, row) => sum + bytes(row), 0);
+    let storageBytes = 0;
+    for (const row of batch.page) {
+      if (args.table === "manPages") {
+        const content = await ctx.db.query("manPageContents")
+          .withIndex("by_pageId", (q) => q.eq("pageId", row._id as Id<"manPages">)).unique();
+        if (content) { documents++; jsonBytes += bytes(content); }
+        const blob = content?.blobId ? await ctx.db.get(content.blobId) : null;
+        if (blob) { documents++; jsonBytes += bytes(blob); }
+        if (blob?.storageId) storageBytes += (await ctx.db.system.get(blob.storageId))?.size ?? 0;
+      } else if (args.table === "releaseManifests" && "storageId" in row && row.storageId) {
+        storageBytes += (await ctx.db.system.get(row.storageId))?.size ?? 0;
+      }
+    }
+    return { documents, jsonBytes, storageBytes, isDone: batch.isDone, continueCursor: batch.continueCursor };
+  },
+});
+
+export const measurePageLookup = internalQuery({
+  args: { distro: distroValidator, name: v.string(), section: v.string() },
+  returns: v.object({ documents: v.number(), jsonBytes: v.number(), releaseJsonBytes: v.number() }),
+  handler: async (ctx, args) => {
+    const pointer = await ctx.db.query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", (q) => q.eq("stage", "prod").eq("locale", "en").eq("distro", args.distro)).unique();
+    if (!pointer) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    const release = await ctx.db.get(pointer.releaseId);
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const page = await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", (q) =>
+      q.eq("releaseId", release._id).eq("name", args.name).eq("section", args.section)).unique();
+    if (!page) throw new Error("PAGE_NOT_FOUND");
+    const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
+    return { documents: 3, jsonBytes: [pointer, release, page].reduce((sum, row) => sum + bytes(row), 0), releaseJsonBytes: bytes(release) };
   },
 });

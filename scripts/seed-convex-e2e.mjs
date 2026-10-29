@@ -234,7 +234,11 @@ function makePages(distro) {
 
   tar.links.push({ toExternalId: bash.externalId, toName: 'bash', toSection: '1', linkType: 'xref' })
 
-  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash]
+  const perl = page({
+    name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)', description: 'Perl module route fixture',
+    toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Perl module documentation.' }] }],
+  })
+  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl]
   // Linux only, so FreeBSD and macOS have a page another distro carries.
   if (distro !== 'freebsd' && distro !== 'macos') {
     pages.push(

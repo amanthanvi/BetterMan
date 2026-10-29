@@ -6,6 +6,7 @@ import os
 import subprocess
 from pathlib import Path
 
+from ingestion.convex_client import ConvexIngestClient
 from ingestion.db import iso_utc_now, json_dumps
 from ingestion.docker_runner import run_ingest_container
 from ingestion.ingest_runner import ingest as ingest_dataset
@@ -37,6 +38,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     ingest.add_argument("--in-container", action="store_true", help=argparse.SUPPRESS)
 
+    activation = sub.add_parser(
+        "activate", help="Resume activation of an uploaded release without re-ingestion"
+    )
+    activation.add_argument("--release-id", required=True)
+    activation.add_argument("--stage", choices=["staging", "prod"], default="staging")
     return parser
 
 
@@ -45,6 +51,28 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    if args.cmd == "activate":
+        url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
+        secret = os.environ.get("CONVEX_INGEST_SECRET")
+        if not url or not secret:
+            _log("ingest_error", error="Missing Convex URL or ingest secret")
+            return 2
+        client = ConvexIngestClient(url, secret)
+        try:
+            client.require_deployed_contract()
+            result = client.activate_release(
+                {
+                    "datasetReleaseId": args.release_id,
+                    "stage": args.stage,
+                    "activatedAt": iso_utc_now(),
+                }
+            )
+        except RuntimeError as exc:
+            _log("ingest_error", error=str(exc))
+            return 2
+        _log("activation_done", **result)
+        return 0
 
     if args.cmd == "ingest":
         activate = bool(args.activate) if args.activate is not None else (not args.sample)

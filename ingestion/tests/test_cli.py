@@ -215,3 +215,26 @@ def test_run_ingest_on_host_defaults_image_fields(monkeypatch) -> None:
     assert called["image_ref"] == "host:macos"
     assert called["image_digest"] == "unknown"
     assert called["git_sha"] == "abc123"
+
+
+def test_activation_resume_does_not_reingest(monkeypatch):
+    from ingestion import cli
+
+    calls = []
+    monkeypatch.setenv("CONVEX_HTTP_URL", "http://127.0.0.1:33311")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "local")
+    monkeypatch.setattr(cli.ConvexIngestClient, "require_deployed_contract", lambda _self: {})
+
+    def activate(_self, payload):
+        calls.append(payload)
+        return {"pending": False, "datasetReleaseId": payload["datasetReleaseId"]}
+
+    monkeypatch.setattr(cli.ConvexIngestClient, "activate_release", activate)
+
+    def no_ingest(**_kwargs):
+        raise AssertionError("must not re-ingest")
+
+    monkeypatch.setattr(cli, "ingest_dataset", no_ingest)
+    assert cli.main(["activate", "--release-id", "large", "--stage", "staging"]) == 0
+    assert calls[0]["datasetReleaseId"] == "large"
+    assert calls[0]["stage"] == "staging"

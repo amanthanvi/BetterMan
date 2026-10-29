@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
 import logging
 import os
 import platform
 import re
+import sqlite3
 import subprocess
-from collections import Counter
-from collections.abc import Iterator
-from concurrent.futures import ProcessPoolExecutor
+from collections import Counter, deque
+from collections.abc import Iterable, Iterator, MutableMapping, Sequence
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from time import monotonic
 
 from ingestion.alpine import (
@@ -75,7 +80,7 @@ from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_nam
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.util import normalize_ws, sha256_hex
 
-_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+-]*$")
+_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+:-]*$")
 _PKG_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
 _DOC_ROOT = Path("/usr/share/doc")
 _LICENSE_ROOT = Path("/usr/share/licenses")
@@ -93,7 +98,7 @@ _BASE_PROVENANCE = {
     ),
 }
 _MAN_HREF_RE = re.compile(
-    r"^/man/(?P<name>[a-z0-9][a-z0-9._+-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
+    r"^/man/(?P<name>[a-z0-9][a-z0-9._+:-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
 )
 
 logger = logging.getLogger("betterman.ingestion")
@@ -136,6 +141,7 @@ def ingest(
     _log("ingest_contract_ok", schemaVersion=contract.get("schemaVersion"))
     workers = _ingest_worker_count()
     batch_limits = _page_batch_limits()
+    upload_workers = _upload_worker_count()
 
     requested = _content_packages(sample=sample, distro=distro)
     if distro in {"debian", "ubuntu"}:
@@ -223,142 +229,174 @@ def ingest(
     if distro == "macos":
         package_manifest["osVersion"] = macos_version()
 
-    parsed_pages, aliases, parse_failed = _parse_sources(
-        sources,
-        _ParseContext(distro=distro, arch=arch, packages=packages, manpath_to_pkg=manpath_to_pkg),
-        workers=workers,
-    )
-
-    total = len(sources)
-
-    _resolve_doc_links_and_see_also(pages=parsed_pages)
-    aliases = _resolve_aliases(aliases=aliases, pages=parsed_pages)
-    allowed_missing = _require_command_pages(
-        distro=distro, requested=requested, pages=parsed_pages, aliases=aliases, sample=sample
-    )
-    package_manifest["commandPageCheck"] = {
-        "allowMissingCommandPages": os.environ.get("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES") == "1",
-        "allowedMissingPages": allowed_missing,
-    }
-
-    # Aliases count as handled sources for the success gate, but the release
-    # page count, section totals, and sitemaps only cover parsed pages.
-    succeeded = len(parsed_pages)
-    handled = succeeded + len(aliases)
-    hard_failed = parse_failed
-    hard_fail_rate = (hard_failed / total) if total else 0.0
-    success_rate = (handled / total) if total else 0.0
-    publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
-
-    page_links = _build_page_links(pages=parsed_pages)
-    sitemap_pages = _build_sitemap_page_map(pages=parsed_pages)
-    licenses = _collect_licenses(pages=parsed_pages, distro=distro)
-    license_items = _license_items(
-        licenses=licenses, distro=distro, dataset_release_id=dataset_release_id
-    )
-    license_packages = _build_license_packages(
-        package_manifest=package_manifest,
-        packages_with_text=set(licenses),
-    )
-
-    client.post(
-        "/ingest/release",
-        {
-            "datasetReleaseId": dataset_release_id,
-            "locale": locale,
-            "distro": distro,
-            "imageRef": image_ref,
-            "imageDigest": image_digest,
-            "ingestedAt": datetime.now(tz=UTC).isoformat(),
-            "packageManifest": package_manifest,
-            "pageCount": succeeded,
-            "aliasCount": len(aliases),
-            "licenseCount": len(licenses),
-            "sectionTotals": [
-                {"section": section, "total": total}
-                for section, total in sorted(Counter(p.section for p in parsed_pages).items())
-            ],
-            "licensePackages": license_packages,
-        },
-    )
-
-    _upload_pages(
-        client,
-        dataset_release_id=dataset_release_id,
-        limits=batch_limits,
-        pages=[
-            _page_payload(
-                row,
-                sitemap_page=sitemap_pages[row.page_id],
-                links=page_links.get(row.page_id, []),
-            )
-            for row in parsed_pages
-        ],
-    )
-
-    if licenses:
-        for start in range(0, len(license_items), 10):
-            client.post(
-                "/ingest/licenses",
-                {
-                    "datasetReleaseId": dataset_release_id,
-                    "licenses": license_items[start : start + 10],
-                },
+    with TemporaryDirectory(prefix="betterman-parse-") as spool_directory:
+        with _PageSpool(Path(spool_directory) / "pages.sqlite3") as spool:
+            parsed_pages, aliases, parse_failed = _parse_sources(
+                sources,
+                _ParseContext(
+                    distro=distro, arch=arch, packages=packages, manpath_to_pkg=manpath_to_pkg
+                ),
+                workers=workers,
+                spool=spool,
             )
 
-    if aliases:
-        alias_items = [
-            {
-                "name": alias.name,
-                "section": alias.section,
-                "targetName": alias.target_name,
-                "targetSection": alias.target_section,
+            total = len(sources)
+
+            page_refs = list(spool.refs())
+            aliases = _resolve_aliases(aliases=aliases, pages=page_refs)
+            allowed_missing = _require_command_pages(
+                distro=distro, requested=requested, pages=page_refs, aliases=aliases, sample=sample
+            )
+            package_manifest["commandPageCheck"] = {
+                "allowMissingCommandPages": os.environ.get("BETTERMAN_ALLOW_MISSING_COMMAND_PAGES")
+                == "1",
+                "allowedMissingPages": allowed_missing,
             }
-            for alias in aliases
-        ]
-        for start in range(0, len(alias_items), 200):
+
+            # Aliases count as handled sources for the success gate, but the release
+            # page count, section totals, and sitemaps only cover parsed pages.
+            succeeded = len(parsed_pages)
+            handled = succeeded + len(aliases)
+            hard_failed = parse_failed
+            hard_fail_rate = (hard_failed / total) if total else 0.0
+            success_rate = (handled / total) if total else 0.0
+            publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
+
+            sitemap_pages = _build_sitemap_page_map(pages=page_refs)
+            licenses = _collect_licenses(
+                pages=page_refs, distro=distro, sink=_LicenseSpool(spool.connection)
+            )
+            # Validate every notice before the first write, then replay from disk.
+            for _item in _iter_license_items(
+                licenses=licenses, distro=distro, dataset_release_id=dataset_release_id
+            ):
+                pass
+            license_packages = _build_license_packages(
+                package_manifest=package_manifest,
+                packages_with_text=set(licenses),
+            )
+
+            package_batches = [
+                license_packages[i : i + 200] for i in range(0, len(license_packages), 200)
+            ]
             client.post(
-                "/ingest/aliases",
+                "/ingest/release",
                 {
                     "datasetReleaseId": dataset_release_id,
-                    "aliases": alias_items[start : start + 200],
+                    "locale": locale,
+                    "distro": distro,
+                    "imageRef": image_ref,
+                    "imageDigest": image_digest,
+                    "ingestedAt": datetime.now(tz=UTC).isoformat(),
+                    "packageManifest": package_manifest,
+                    "pageCount": succeeded,
+                    "aliasCount": len(aliases),
+                    "licenseCount": len(licenses),
+                    "sectionTotals": [
+                        {"section": section, "total": total}
+                        for section, total in sorted(Counter(p.section for p in page_refs).items())
+                    ],
+                    "packageBatches": [
+                        {
+                            "digest": _package_batch_digest(batch),
+                            "count": len(batch),
+                            "licenseCount": sum(bool(pkg["hasLicenseText"]) for pkg in batch),
+                        }
+                        for batch in package_batches
+                    ],
                 },
             )
 
-    published = False
-    if publish_allowed and activate:
-        client.activate_release(
-            {
-                "stage": dataset_stage,
-                "datasetReleaseId": dataset_release_id,
-                "activatedAt": datetime.now(tz=UTC).isoformat(),
-            },
-        )
-        published = True
+            for batch_index, batch in enumerate(package_batches):
+                client.post(
+                    "/ingest/license-packages",
+                    {
+                        "datasetReleaseId": dataset_release_id,
+                        "batchIndex": batch_index,
+                        "packages": batch,
+                    },
+                )
 
-    _log(
-        "ingest_summary",
-        datasetReleaseId=dataset_release_id,
-        total=total,
-        succeeded=succeeded,
-        aliases=len(aliases),
-        failed=hard_failed,
-        published=published,
-        publishAllowed=publish_allowed,
-    )
+            _upload_pages(
+                client,
+                dataset_release_id=dataset_release_id,
+                limits=batch_limits,
+                pages=_resolved_page_payloads(parsed_pages, page_refs, sitemap_pages),
+                total=succeeded,
+                workers=upload_workers,
+            )
 
-    if not publish_allowed:
-        raise RuntimeError(
-            f"publish blocked: success_rate={success_rate:.3f}, hard_fail_rate={hard_fail_rate:.3f}"
-        )
+            license_batch = []
+            for item in _iter_license_items(
+                licenses=licenses, distro=distro, dataset_release_id=dataset_release_id
+            ):
+                license_batch.append(item)
+                if len(license_batch) == 10:
+                    client.post(
+                        "/ingest/licenses",
+                        {"datasetReleaseId": dataset_release_id, "licenses": license_batch},
+                    )
+                    license_batch = []
+            if license_batch:
+                client.post(
+                    "/ingest/licenses",
+                    {"datasetReleaseId": dataset_release_id, "licenses": license_batch},
+                )
 
-    return IngestResult(
-        dataset_release_id=dataset_release_id,
-        total=total,
-        succeeded=succeeded,
-        hard_failed=hard_failed,
-        published=published,
-    )
+            if aliases:
+                alias_items = [
+                    {
+                        "name": alias.name,
+                        "section": alias.section,
+                        "targetName": alias.target_name,
+                        "targetSection": alias.target_section,
+                    }
+                    for alias in aliases
+                ]
+                for start in range(0, len(alias_items), 200):
+                    client.post(
+                        "/ingest/aliases",
+                        {
+                            "datasetReleaseId": dataset_release_id,
+                            "aliases": alias_items[start : start + 200],
+                        },
+                    )
+
+            published = False
+            if publish_allowed and activate:
+                client.activate_release(
+                    {
+                        "stage": dataset_stage,
+                        "datasetReleaseId": dataset_release_id,
+                        "activatedAt": datetime.now(tz=UTC).isoformat(),
+                    },
+                )
+                published = True
+
+            _log(
+                "ingest_summary",
+                datasetReleaseId=dataset_release_id,
+                total=total,
+                succeeded=succeeded,
+                aliases=len(aliases),
+                failed=hard_failed,
+                published=published,
+                publishAllowed=publish_allowed,
+            )
+
+            if not publish_allowed:
+                raise RuntimeError(
+                    f"publish blocked: success_rate={success_rate:.3f}, "
+                    f"hard_fail_rate={hard_fail_rate:.3f}"
+                )
+
+            return IngestResult(
+                dataset_release_id=dataset_release_id,
+                total=total,
+                succeeded=succeeded,
+                hard_failed=hard_failed,
+                published=published,
+            )
 
 
 @dataclass(frozen=True)
@@ -380,6 +418,105 @@ class _PageRow:
     see_also: list[dict] | None
     headings_text: str
     see_also_refs: list[tuple[str, str | None]]
+
+
+@dataclass(frozen=True)
+class _PageRef:
+    page_id: str
+    name: str
+    section: str
+    source_package: str | None
+    source_package_version: str | None
+
+
+class _PageSpool:
+    """Replayable document iterator; SQLite's cache is capped at 8 MiB."""
+
+    def __init__(self, path: Path):
+        self.connection = sqlite3.connect(path)
+        self.connection.execute("PRAGMA cache_size=-8192")
+        self.connection.execute(
+            "CREATE TABLE pages (position INTEGER PRIMARY KEY, body TEXT, ref TEXT)"
+        )
+        self.count = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        self.connection.close()
+
+    def append(self, page: _PageRow) -> None:
+        ref = {key: getattr(page, key) for key in _PageRef.__dataclass_fields__}
+        self.connection.execute(
+            "INSERT INTO pages VALUES (?, ?, ?)",
+            (self.count, json_dumps(asdict(page)), json_dumps(ref)),
+        )
+        self.count += 1
+        if self.count % 100 == 0:
+            self.connection.commit()
+
+    def __len__(self) -> int:
+        return self.count
+
+    def __iter__(self) -> Iterator[_PageRow]:
+        for (body,) in self.connection.execute("SELECT body FROM pages ORDER BY position"):
+            yield _PageRow(**json.loads(body))
+
+    def refs(self) -> Iterator[_PageRef]:
+        for (ref,) in self.connection.execute("SELECT ref FROM pages ORDER BY position"):
+            yield _PageRef(**json.loads(ref))
+
+
+class _LicenseSpool(MutableMapping[str, str]):
+    def __init__(self, connection):
+        self.connection = connection
+        self.connection.execute("CREATE TABLE licenses (name TEXT PRIMARY KEY, text TEXT)")
+
+    def __setitem__(self, name, text):
+        self.connection.execute("INSERT OR REPLACE INTO licenses VALUES (?, ?)", (name, text))
+
+    def __getitem__(self, name):
+        row = self.connection.execute("SELECT text FROM licenses WHERE name=?", (name,)).fetchone()
+        if row is None:
+            raise KeyError(name)
+        return row[0]
+
+    def __delitem__(self, name):
+        self.connection.execute("DELETE FROM licenses WHERE name=?", (name,))
+
+    def __iter__(self):
+        return (
+            row[0] for row in self.connection.execute("SELECT name FROM licenses ORDER BY name")
+        )
+
+    def __len__(self):
+        return self.connection.execute("SELECT count(*) FROM licenses").fetchone()[0]
+
+
+def _package_batch_digest(packages: list[dict]) -> str:
+    # Same recursively sorted JSON as Convex canonicalJson.
+    return base64.b64encode(
+        hashlib.sha256(
+            json.dumps(packages, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
+        ).digest()
+    ).decode("ascii")
+
+
+def _resolved_page_payloads(
+    pages: Iterable[_PageRow], refs: list[_PageRef], sitemap_pages: dict[str, int]
+) -> Iterator[dict[str, object]]:
+    index = {(p.name, p.section): p for p in refs}
+    by_id = {p.page_id: p for p in refs}
+    by_name: dict[str, list[str]] = {}
+    for p in refs:
+        by_name.setdefault(p.name, []).append(p.section)
+    for page in pages:
+        _resolve_doc_links_and_see_also(pages=[page], route_index=index, names=by_name)
+        links = _build_page_links(pages=[page], route_index=index, ids=by_id, names=by_name)
+        yield _page_payload(
+            page, sitemap_page=sitemap_pages[page.page_id], links=links.get(page.page_id, [])
+        )
 
 
 @dataclass
@@ -411,7 +548,9 @@ def _alias_for_source(src: ManSource, raw: bytes) -> _AliasRow | None:
     )
 
 
-def _resolve_aliases(*, aliases: list[_AliasRow], pages: list[_PageRow]) -> list[_AliasRow]:
+def _resolve_aliases(
+    *, aliases: list[_AliasRow], pages: Sequence[_PageRow | _PageRef]
+) -> list[_AliasRow]:
     """Keep aliases whose target is a parsed page, following stub chains.
 
     A stub may point at another stub. Follow the chain until it reaches a
@@ -504,9 +643,13 @@ def _ingest_worker_count() -> int:
 
 
 def _parse_sources(
-    sources: list[ManSource], context: _ParseContext, *, workers: int
-) -> tuple[list[_PageRow], list[_AliasRow], int]:
-    pages: list[_PageRow] = []
+    sources: list[ManSource],
+    context: _ParseContext,
+    *,
+    workers: int,
+    spool: _PageSpool | None = None,
+) -> tuple[list[_PageRow] | _PageSpool, list[_AliasRow], int]:
+    pages: list[_PageRow] | _PageSpool = spool if spool is not None else []
     aliases: list[_AliasRow] = []
     failed = 0
     started = monotonic()
@@ -534,6 +677,19 @@ def _parse_sources(
     return pages, aliases, failed
 
 
+def _bounded_futures(executor, function, items, limit):
+    pending = deque()
+    for _ in range(limit):
+        item = next(items, None)
+        if item is not None:
+            pending.append((item, executor.submit(function, item)))
+    while pending:
+        yield pending.popleft()
+        item = next(items, None)
+        if item is not None:
+            pending.append((item, executor.submit(function, item)))
+
+
 def _parse_results(
     sources: list[ManSource], context: _ParseContext, *, workers: int
 ) -> Iterator[_ParseResult]:
@@ -550,7 +706,10 @@ def _parse_results(
         # come out exactly as the sequential path produces them.
         delivered = 0
         try:
-            for result in executor.map(_parse_in_worker, sources):
+            for _source, future in _bounded_futures(
+                executor, _parse_in_worker, iter(sources), workers * 2
+            ):
+                result = future.result()
                 yield result
                 delivered += 1
         except BrokenProcessPool as exc:
@@ -779,7 +938,7 @@ def _require_command_pages(
     *,
     distro: str,
     requested: list[str],
-    pages: list[_PageRow],
+    pages: Sequence[_PageRow | _PageRef],
     aliases: list[_AliasRow],
     sample: bool,
 ) -> list[dict[str, str]]:
@@ -870,11 +1029,12 @@ def _iter_internal_doc_links(obj: object):
             yield from _iter_internal_doc_links(v)
 
 
-def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
-    index: dict[tuple[str, str], str] = {(p.name, p.section): p.page_id for p in pages}
-    by_name: dict[str, list[str]] = {}
-    for p in pages:
-        by_name.setdefault(p.name, []).append(p.section)
+def _resolve_doc_links_and_see_also(*, pages: list[_PageRow], route_index=None, names=None) -> None:
+    index = route_index if route_index is not None else {(p.name, p.section): p for p in pages}
+    by_name: dict[str, list[str]] = names if names is not None else {}
+    if names is None:
+        for p in pages:
+            by_name.setdefault(p.name, []).append(p.section)
 
     for page in pages:
         from_id = page.page_id
@@ -899,7 +1059,8 @@ def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
                 if section_resolved is None:
                     continue
 
-                to_id = index.get((name, section_resolved))
+                target = index.get((name, section_resolved))
+                to_id = target.page_id if target else None
                 if to_id is None or to_id == from_id:
                     continue
 
@@ -923,12 +1084,15 @@ def _resolve_doc_links_and_see_also(*, pages: list[_PageRow]) -> None:
             link["linkType"] = "internal" if (name, section) in index else "unresolved"
 
 
-def _build_page_links(*, pages: list[_PageRow]) -> dict[str, list[dict[str, str | None]]]:
-    index: dict[tuple[str, str], _PageRow] = {(p.name, p.section): p for p in pages}
-    by_id: dict[str, _PageRow] = {p.page_id: p for p in pages}
-    by_name: dict[str, list[str]] = {}
-    for p in pages:
-        by_name.setdefault(p.name, []).append(p.section)
+def _build_page_links(
+    *, pages: list[_PageRow], route_index=None, ids=None, names=None
+) -> dict[str, list[dict[str, str | None]]]:
+    index = route_index if route_index is not None else {(p.name, p.section): p for p in pages}
+    by_id = ids if ids is not None else {p.page_id: p for p in pages}
+    by_name: dict[str, list[str]] = names if names is not None else {}
+    if names is None:
+        for p in pages:
+            by_name.setdefault(p.name, []).append(p.section)
 
     out: dict[str, list[dict[str, str | None]]] = {}
     seen: set[tuple[str, str, str]] = set()
@@ -1002,9 +1166,14 @@ def _build_page_links(*, pages: list[_PageRow]) -> dict[str, list[dict[str, str 
     return out
 
 
-def _collect_licenses(*, pages: list[_PageRow], distro: str) -> dict[str, str]:
+def _collect_licenses(
+    *,
+    pages: Sequence[_PageRow | _PageRef],
+    distro: str,
+    sink: MutableMapping[str, str] | None = None,
+) -> MutableMapping[str, str]:
     packages = {p.source_package for p in pages if p.source_package}
-    licenses: dict[str, str] = {}
+    licenses: MutableMapping[str, str] = sink if sink is not None else {}
     if distro in _BASE_PROVENANCE:
         package, label, url = _BASE_PROVENANCE[distro]
         version = next(
@@ -1038,9 +1207,19 @@ def _collect_licenses(*, pages: list[_PageRow], distro: str) -> dict[str, str]:
     return licenses
 
 
-def _license_items(*, licenses: dict[str, str], distro: str, dataset_release_id: str) -> list[dict]:
-    items: list[dict] = []
-    for package, text in sorted(licenses.items()):
+def _license_items(
+    *, licenses: MutableMapping[str, str], distro: str, dataset_release_id: str
+) -> list[dict]:
+    return list(
+        _iter_license_items(licenses=licenses, distro=distro, dataset_release_id=dataset_release_id)
+    )
+
+
+def _iter_license_items(
+    *, licenses: MutableMapping[str, str], distro: str, dataset_release_id: str
+) -> Iterator[dict]:
+    for package in sorted(licenses):
+        text = licenses[package]
         base = _BASE_PROVENANCE.get(distro)
         item = {
             "packageName": package,
@@ -1058,8 +1237,7 @@ def _license_items(*, licenses: dict[str, str], distro: str, dataset_release_id:
                 f"license document exceeds Convex 1 MiB limit: package={package}, "
                 f"encodedBytes={size}, budget={_LICENSE_DOCUMENT_MAX_BYTES}; text is not truncated"
             )
-        items.append(item)
-    return items
+        yield item
 
 
 def _rpm_license_files() -> dict[str, list[Path]]:
@@ -1169,11 +1347,15 @@ def _build_license_packages(
     return out
 
 
-def _build_sitemap_page_map(*, pages: list[_PageRow]) -> dict[str, int]:
+def _build_sitemap_page_map(*, pages: Sequence[_PageRow | _PageRef]) -> dict[str, int]:
     out: dict[str, int] = {}
     for index, page in enumerate(sorted(pages, key=lambda p: (p.name, p.section)), start=1):
         out[page.page_id] = ((index - 1) // 10_000) + 1
     return out
+
+
+def _upload_worker_count() -> int:
+    return min(8, _positive_int_env("BETTERMAN_INGEST_UPLOAD_WORKERS", 4))
 
 
 def _page_batch_limits() -> tuple[int, int]:
@@ -1199,7 +1381,7 @@ def _positive_int_env(name: str, default: int) -> int:
 
 
 def _page_batches(
-    pages: list[dict[str, object]], *, dataset_release_id: str, max_items: int, max_bytes: int
+    pages: Iterable[dict[str, object]], *, dataset_release_id: str, max_items: int, max_bytes: int
 ) -> Iterator[list[dict[str, object]]]:
     """Group page payloads so each request stays within max_items and max_bytes.
 
@@ -1225,7 +1407,9 @@ def _upload_pages(
     *,
     dataset_release_id: str,
     limits: tuple[int, int],
-    pages: list[dict[str, object]],
+    pages: Iterable[dict[str, object]],
+    total: int | None = None,
+    workers: int = 1,
 ) -> None:
     """Post page batches; abort after three consecutive failures.
 
@@ -1238,43 +1422,57 @@ def _upload_pages(
     processed = 0
     failed_batches = 0
     consecutive_failures = 0
-    for batch in _page_batches(
+    if total is None and hasattr(pages, "__len__"):
+        total = len(pages)
+    batches = _page_batches(
         pages, dataset_release_id=dataset_release_id, max_items=max_items, max_bytes=max_bytes
-    ):
-        try:
-            client.post(
-                "/ingest/pages/storage", {"datasetReleaseId": dataset_release_id, "pages": batch}
-            )
-        except RuntimeError as exc:
-            failed_batches += 1
-            consecutive_failures += 1
-            _log(
-                "page_batch_failed",
-                pages=[f"{page['name']}({page['section']})" for page in batch],
-                consecutiveFailures=consecutive_failures,
-                error=str(exc)[:500],
-            )
-            if consecutive_failures >= _PAGE_BATCH_FAILURE_LIMIT:
-                raise RuntimeError(
-                    f"page upload aborted after {consecutive_failures} consecutive failed batches"
-                ) from exc
-            continue
-        consecutive_failures = 0
+    )
+    # The producer advances only when an in-flight batch has been consumed.
+    with ThreadPoolExecutor(max_workers=workers) as executor:
 
-        before = processed
-        processed += len(batch)
-        if processed // 100 > before // 100 or processed == len(pages):
-            elapsed = monotonic() - started
-            rate = processed / elapsed if elapsed > 0 else 0.0
-            remaining = max(0, len(pages) - processed)
-            eta_s = int(remaining / rate) if rate > 0 else None
-            _log(
-                "insert_progress",
-                processed=processed,
-                total=len(pages),
-                pct=round((processed / len(pages)) * 100.0, 2) if pages else 0.0,
-                etaSeconds=eta_s,
+        def upload(batch):
+            return client.post(
+                "/ingest/pages/storage",
+                {
+                    "datasetReleaseId": dataset_release_id,
+                    "pages": batch,
+                },
             )
+
+        for batch, future in _bounded_futures(executor, upload, batches, workers):
+            try:
+                future.result()
+            except RuntimeError as exc:
+                failed_batches += 1
+                consecutive_failures += 1
+                _log(
+                    "page_batch_failed",
+                    pages=[f"{page['name']}({page['section']})" for page in batch],
+                    consecutiveFailures=consecutive_failures,
+                    error=str(exc)[:500],
+                )
+                if consecutive_failures >= _PAGE_BATCH_FAILURE_LIMIT:
+                    raise RuntimeError(
+                        f"page upload aborted after {consecutive_failures} "
+                        "consecutive failed batches"
+                    ) from exc
+                continue
+            consecutive_failures = 0
+
+            before = processed
+            processed += len(batch)
+            if processed // 100 > before // 100 or processed == total:
+                elapsed = monotonic() - started
+                rate = processed / elapsed if elapsed > 0 else 0.0
+                remaining = max(0, (total or processed) - processed)
+                eta_s = int(remaining / rate) if rate > 0 else None
+                _log(
+                    "insert_progress",
+                    processed=processed,
+                    total=total,
+                    pct=round((processed / total) * 100.0, 2) if total else 0.0,
+                    etaSeconds=eta_s,
+                )
 
     if failed_batches:
         raise RuntimeError(

@@ -64,6 +64,8 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "CONVEX_INGEST_SECRET",
         "-e",
         "BETTERMAN_INGEST_WORKERS",
+        "BETTERMAN_INGEST_UPLOAD_WORKERS",
+        "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS",
         "-e",
         f"BETTERMAN_DATASET_STAGE={dataset_stage}",
         "-e",

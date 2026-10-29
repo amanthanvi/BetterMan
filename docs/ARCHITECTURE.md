@@ -34,6 +34,17 @@ A `.so` include stub is recorded as an alias rather than a page; its URL permane
 
 A release is one distro at one point in time. Before uploading, ingestion declares its page count, per-section totals, alias count, and license count with the package identities that require license text. Activation verifies these declarations against completed uploads before sealing, hydrating related metadata, and atomically changing the `staging` pointer. Promotion copies only manifest-verified, sealed, complete release pointers to `prod`. New rows cannot be appended after sealing, and pruning marks a release ineligible for activation before deleting any children. Superseded releases are removed by the manual `prune-releases` workflow, which keeps the newest verified inactive release per distro as a rollback target, never deletes active or recently created declared releases, and leaves unsealed drafts alone unless an operator opts in.
 
+Ingest contract 2 stores large package provenance in Convex file storage via a
+`releaseManifests` row. The release document contains counts, digests and lifecycle
+state. Digest-bound package batches populate `licensePackages` in transactions of
+at most 200 packages; activation also requires every declared batch. Page uploads
+write one of 16 counter shards; seal verifies their total and per-section sums
+atomically without contending on release/stat counters during parallel upload. The license
+surface paginates those rows and Next.js retrieves provenance separately, so page
+lookups do not read it. Existing inline manifests can be detached with the
+cursor-based internal `maintenance:detachLegacyManifests` migration after deploy;
+this PR does not execute it on shared deployments.
+
 Legacy releases without original alias declarations are not assumed complete by counting their current rows. They require original ingestion evidence and explicit validation, or fresh ingestion under a new release ID. Search/content maintenance is not an exception to release immutability; shared content must not be changed indirectly through another mutable release.
 
 ## Deploy

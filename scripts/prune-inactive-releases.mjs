@@ -9,15 +9,15 @@ import { promisify } from 'node:util'
 const exec = promisify(execFile)
 
 // Convex bounds: previewInactiveReleases pages at most 10 releases,
-// deleteInactiveReleaseBatch removes at most 200 documents per transaction,
+// deleteInactiveReleaseBatch removes at most 2,000 documents per transaction,
 // and cleanupOrphanContentBlobsBatch scans at most 100 blobs. Batches start
 // below the maximum and halve on failure so a heavy page (large inline
 // payloads, many chunks) degrades instead of stalling the run.
 const PREVIEW_LIMIT = 10
-const DELETE_LIMIT = { start: 100, min: 5 }
+const DELETE_LIMIT = { start: 1000, min: 5 }
 const ORPHAN_LIMIT = { start: 50, min: 5 }
 const MAX_BATCHES_PER_RELEASE = 100_000
-const MAX_ATTEMPTS = 4
+const MAX_ATTEMPTS = 10
 
 export function parseOptions(env = process.env, now = Date.now()) {
   const apply = env.BETTERMAN_PRUNE_APPLY === 'true'

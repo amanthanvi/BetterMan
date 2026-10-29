@@ -442,3 +442,19 @@ def test_activation_propagates_failure(monkeypatch):
         ConvexIngestClient("https://test.convex.site", "test-secret").activate_release(
             {"datasetReleaseId": "new"}
         )
+
+
+def test_default_activation_survives_more_than_five_minutes(monkeypatch):
+    post = Mock(side_effect=[{"pending": True}, {"pending": False, "datasetReleaseId": "large"}])
+    monkeypatch.setattr(ConvexIngestClient, "post", post)
+    monkeypatch.setattr("ingestion.convex_client.time.sleep", Mock())
+    monkeypatch.setattr(
+        "ingestion.convex_client.time.monotonic", Mock(side_effect=[0, 0, 301, 302])
+    )
+    assert (
+        ConvexIngestClient("http://127.0.0.1:33311", "local").activate_release(
+            {"datasetReleaseId": "large"}
+        )["pending"]
+        is False
+    )
+    assert post.call_count == 2

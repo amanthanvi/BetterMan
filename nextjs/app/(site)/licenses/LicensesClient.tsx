@@ -13,6 +13,7 @@ function buildLicenseTextUrl(opts: { distro: string; pkg: string }) {
 
 export function LicensesClient({ distro, data }: { distro: string; data: LicensesResponse }) {
   const [filter, setFilter] = useState('')
+  const [visibleLimit, setVisibleLimit] = useState(data.packages.length <= 5000 ? 5000 : 200)
   const [selected, setSelected] = useState<string | null>(null)
   const [license, setLicense] = useState<LicenseTextResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -79,9 +80,15 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
           <summary className="w-fit cursor-pointer text-sm text-ink-2 underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
             Package manifest
           </summary>
+          {data.packageManifest === null && data.packageManifestUrl ? (
+            <a href={data.packageManifestUrl} className="mt-3 inline-block font-mono text-xs text-ink-2 underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
+              View full package manifest (JSON)
+            </a>
+          ) : (
           <pre tabIndex={0} role="group" aria-label="Package manifest" className="mt-3 overflow-x-auto pl-[1.75em] text-xs leading-relaxed text-ink-2">
             {JSON.stringify(data.packageManifest, null, 2)}
           </pre>
+          )}
         </details>
       </header>
 
@@ -90,7 +97,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
           <input
             name="bm-licenses-filter"
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            onChange={(e) => { setFilter(e.target.value); setVisibleLimit(data.packages.length <= 5000 ? 5000 : 200) }}
             placeholder="Filter packages…"
             className="bm-field py-1.5 text-sm"
             aria-label="Filter packages"
@@ -98,7 +105,7 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
 
           <div className="border-t border-rule">
             <ul className="max-h-[70vh] overflow-y-auto">
-              {packages.map((p) => {
+              {packages.slice(0, visibleLimit).map((p) => {
                 const isSelected = p.name === selected
                 return (
                   <li key={p.name} className="border-b border-rule last:border-b-0">
@@ -124,6 +131,12 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
                 )
               })}
             </ul>
+            {packages.length > visibleLimit ? (
+              <button type="button" onClick={() => setVisibleLimit((count) => count + 200)}
+                className="mt-3 font-mono text-xs text-ink-2 underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
+                Load more packages ({visibleLimit} of {packages.length})
+              </button>
+            ) : null}
           </div>
         </aside>
 

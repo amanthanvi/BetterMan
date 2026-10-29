@@ -98,6 +98,8 @@ def test_run_ingest_container_forwards_page_batch_limits_by_name(monkeypatch) ->
     monkeypatch.setenv("BETTERMAN_DEBIAN_IMAGE_REF", "debian:custom")
     monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
     monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
+    monkeypatch.setenv("BETTERMAN_INGEST_UPLOAD_WORKERS", "3")
+    monkeypatch.setenv("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", "900")
     monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", "7")
     monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", "1024")
     monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)

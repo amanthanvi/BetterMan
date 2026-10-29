@@ -545,3 +545,17 @@ test('man: phones under 400px drop the running head; wider screens keep it', asy
   await page.setViewportSize({ width: 768, height: 900 })
   await expect(head).toBeVisible()
 })
+
+test('Perl module URLs render encoded names, name-only redirects, and search citations', async ({ page, request }) => {
+  for (const path of ['/man/foo%3A%3Abar/3pm', '/man/foo::bar/3pm', '/man/foo%3A%3Abar']) {
+    const response = await page.goto(path)
+    expect(response?.status(), path).toBe(200)
+    await expect(page.getByRole('heading', { name: 'foo::bar(3pm)', exact: true })).toBeVisible()
+    await expect(page.getByText('Perl module documentation.', { exact: true })).toBeVisible()
+  }
+  const api = await request.get('/api/v1/man/foo%3A%3Abar/3pm')
+  expect(api.status()).toBe(200)
+  const search = await request.get('/api/v1/search?q=Foo%3A%3ABar(3pm)')
+  expect(search.status()).toBe(200)
+  expect((await search.json()).results).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'foo::bar', section: '3pm' })]))
+})

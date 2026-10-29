@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { manPath, parseShortUrl } from './shortUrl'
+import { decodeManParam, manPath, parseShortUrl } from './shortUrl'
 
 const reserved = new Set(['api', 'man', 'search', 'section', 'fonts', 'robots.txt', '_next'])
 const parse = (path: string) => parseShortUrl(path.split('/').slice(1), reserved)
@@ -84,4 +84,12 @@ describe('manPath', () => {
     expect(manPath('foo::bar', '3pm')).toBe('/man/foo%3A%3Abar/3pm')
     expect(manPath('tar', null)).toBe('/man/tar')
   })
+})
+
+
+it.each([
+  ['Foo%3A%3ABar', 'Foo::Bar'], ['c%2B%2B', 'c++'], ['tar', 'tar'],
+  ['foo%253A%253Abar', 'foo%3A%3Abar'], ['malformed%', 'malformed%'],
+])('decodes HTML param %s exactly once', (encoded, decoded) => {
+  expect(decodeManParam(encoded)).toBe(decoded)
 })

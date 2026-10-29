@@ -9,7 +9,7 @@ import { datasetStageValidator, distroValidator } from "./schema";
 import { verifyDeclaredManifest } from "./_releaseManifest";
 import { startLegacyManifestVerification } from "./manifest";
 
-const BACKFILL_BATCH_SIZE = 100;
+const BACKFILL_BATCH_SIZE = 500;
 
 export const activeMetadataStatus = internalQuery({
   args: {},
@@ -72,13 +72,15 @@ export async function scheduleRelatedMetadataBackfill(
     const job = await ctx.db.system.get(release.relatedMetadataBackfillJobId);
     if (job && (job.state.kind === "pending" || job.state.kind === "inProgress")) return true;
   }
-  // Polls join the live chain; failed/canceled jobs may restart from the first
-  // bounded batch. Completed entries are skipped, so restarts are idempotent.
+  // Polls join the live chain; failed/canceled jobs resume from the persisted
+  // cursor for this version. Completed entries remain idempotent.
   const jobId = await ctx.scheduler.runAfter(0, internal.related.backfillRelease, {
     datasetReleaseId: release.datasetReleaseId,
   });
   await ctx.db.patch(release._id, {
-    relatedMetadataBackfillJobId: jobId, relatedMetadataBackfillCursor: null, relatedMetadataBackfillVersion: version,
+    relatedMetadataBackfillJobId: jobId,
+    relatedMetadataBackfillCursor: release.relatedMetadataBackfillVersion === version ? release.relatedMetadataBackfillCursor ?? null : null,
+    relatedMetadataBackfillVersion: version,
   });
   return true;
 }
