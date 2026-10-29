@@ -79,6 +79,7 @@ export async function variantsForPage(
     locale: string;
     name: string;
     section: string;
+    knownPage?: Doc<"manPages">;
   },
 ): Promise<Array<{ distro: Distro; datasetReleaseId: string; contentSha256: string }>> {
   const active = await ctx.db
@@ -91,7 +92,7 @@ export async function variantsForPage(
   const variants = (
     await Promise.all(
       active.map(async (item) => {
-        const page = await pageByNameAndSection(ctx, {
+        const page = args.knownPage?.releaseId === item.releaseId ? args.knownPage : await pageByNameAndSection(ctx, {
           releaseId: item.releaseId,
           name: args.name,
           section: args.section,

@@ -57,6 +57,7 @@ from ingestion.debian import (
     mandoc_pkg_version as mandoc_pkg_version_dpkg,
 )
 from ingestion.doc_model import OptionItem, SeeAlsoRef
+from ingestion.extractor_provenance import OPTION_EXTRACTOR_VERSION
 from ingestion.fedora import (
     build_manpath_to_package as build_manpath_to_package_rpm,
 )
@@ -1501,6 +1502,8 @@ def _page_payload(
         "sourcePackageVersion": row.source_package_version,
         "contentSha256": row.content_sha256,
         "hasParseWarnings": row.has_parse_warnings,
+        # Unknown source provenance must never establish a first-observed mark.
+        **({"extractorVersion": OPTION_EXTRACTOR_VERSION} if OPTION_EXTRACTOR_VERSION else {}),
         "doc": row.doc,
         "synopsis": row.synopsis,
         "options": row.options,

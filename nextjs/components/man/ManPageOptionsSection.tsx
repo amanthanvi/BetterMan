@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 
+import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
+
 import type { OptionItem } from '../../lib/docModel'
 
 import { Button } from '../ui/Button'
 import { OptionsTable } from './OptionsTable'
-import { PortabilityLegend, type Portability } from './Portability'
+import { PortabilityLegend } from './Portability'
 
 export const OPTIONS_COLLAPSE_THRESHOLD = 20
 export const OPTIONS_PREVIEW_COUNT = 10
@@ -40,7 +42,7 @@ export function ManPageOptionsSection({
   options?: OptionItem[] | null
   rowIds: ReadonlyMap<string, string>
   locators?: ReadonlyMap<string, string>
-  portability?: ReadonlyMap<string, Portability>
+  portability?: Pick<PageDerivedResponse, 'portability' | 'stale'>
   optionsCount: number
   optionsExpanded: boolean
   onOptionsExpandedChange: (expanded: boolean) => void
@@ -56,7 +58,7 @@ export function ManPageOptionsSection({
   const collapsible = !filtered && optionsCount > OPTIONS_COLLAPSE_THRESHOLD
   const previewOptions = filtered ?? (collapsible ? allOptions.slice(0, OPTIONS_PREVIEW_COUNT) : allOptions)
   const restOptions = collapsible ? allOptions.slice(OPTIONS_PREVIEW_COUNT) : []
-  const hasPortability = Boolean(portability?.size)
+  const hasPortability = Boolean(portability?.portability.rows.some(([, codes]) => codes !== 'aaa') || portability && portability.portability.rows.length < portability.portability.total)
   const hasLocators = Boolean(locators?.size)
 
   const table = (list: OptionItem[]) => (
@@ -64,7 +66,7 @@ export function ManPageOptionsSection({
       options={list}
       rowIds={rowIds}
       locators={locators}
-      portability={portability}
+      portability={portability?.portability}
       selectedAnchorId={selectedAnchorId}
       onSelect={onSelectOption}
       flashAnchorId={flashAnchorId}
@@ -112,7 +114,11 @@ export function ManPageOptionsSection({
             </div>
           ) : null}
 
-          {hasPortability ? <div className="mt-3"><PortabilityLegend /></div> : null}
+          {hasPortability ? <div className="mt-3">
+            <PortabilityLegend />
+            <p className="mt-1 text-xs text-ink-3">A dash means the manual is not included in that dataset; ? means unknown or not loaded.</p>
+          </div> : null}
+          {portability?.stale ? <p className="mt-2 text-xs text-ink-3">Portability reflects an earlier snapshot. Some comparison data may be unavailable.</p> : null}
 
           <div className="mt-3">
             {previewOptions.length ? table(previewOptions) : <p className="font-serif italic text-ink-2">No option matches.</p>}

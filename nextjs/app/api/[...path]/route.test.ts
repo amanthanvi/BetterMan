@@ -6,6 +6,7 @@ import type * as Api from '@/lib/api'
 const apiMocks = vi.hoisted(() => ({
   fetchManByNameAndSectionOrAlias: vi.fn(),
   fetchManDistros: vi.fn(),
+  fetchPortability: vi.fn(),
   fetchManMetaByNameAndSection: vi.fn(),
   search: vi.fn(),
   listSection: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('@/lib/api', async () => {
     fetchManDistros: apiMocks.fetchManDistros,
     fetchManMetaByNameAndSection: apiMocks.fetchManMetaByNameAndSection,
     fetchRelated: vi.fn(),
+    fetchPortability: apiMocks.fetchPortability,
     fetchSeoReleases: vi.fn(),
     fetchSeoSitemapPage: vi.fn(),
     listSection: apiMocks.listSection,
@@ -495,5 +497,28 @@ describe('public API property checks', () => {
       }),
       { numRuns: 100 },
     )
+  })
+})
+
+describe('bounded on-demand portability details', () => {
+  it.each(['garbage', '-1', '8193', '1.5'])('rejects invalid offset %s before querying details', async (offset) => {
+    const response = await GET(request(`/api/v1/man/tar/1/portability?offset=${offset}`), context(['v1', 'man', 'tar', '1', 'portability']))
+    expect(response.status).toBe(400)
+    expect(apiMocks.fetchPortability).not.toHaveBeenCalled()
+  })
+  it('validates distro and uses the page rate limiter', async () => {
+    const bad = await GET(request('/api/v1/man/tar/1/portability?distro=bogus'), context(['v1', 'man', 'tar', '1', 'portability']))
+    expect(bad.status).toBe(400)
+    convexMocks.mutation.mockResolvedValue({ allowed: false })
+    const limited = await GET(request('/api/v1/man/tar/1/portability'), context(['v1', 'man', 'tar', '1', 'portability']))
+    expect(limited.status).toBe(429)
+  })
+  it('returns one requested detail page or a graceful missing response', async () => {
+    apiMocks.fetchPortability.mockResolvedValue({ rows: [['c', ['-c', '--create'], 'aapuuuu', false]], nextOffset: 128 })
+    const response = await GET(request('/api/v1/man/tar/1/portability?distro=freebsd&offset=0'), context(['v1', 'man', 'tar', '1', 'portability']))
+    expect(response.status).toBe(200)
+    expect(apiMocks.fetchPortability).toHaveBeenCalledWith({ distro: 'freebsd', name: 'tar', section: '1', offset: 0 })
+    apiMocks.fetchPortability.mockResolvedValue(null)
+    expect((await GET(request('/api/v1/man/tar/1/portability'), context(['v1', 'man', 'tar', '1', 'portability']))).status).toBe(404)
   })
 })

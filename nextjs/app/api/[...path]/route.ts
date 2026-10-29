@@ -10,6 +10,7 @@ import {
   fetchManDistros,
   fetchManMetaByNameAndSection,
   fetchRelated,
+  fetchPortability,
   fetchSeoReleases,
   fetchSeoSitemapPage,
   listSection,
@@ -259,6 +260,20 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
         fetchManMetaByNameAndSection({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
       )
       return cachedJson(result)
+    }
+
+    if (parts.length === 4 && parts[0] === 'man' && parts[3] === 'portability') {
+      const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'page'))
+      if (limited) return limited
+      const distro = distroFrom(req)
+      if (distro instanceof Response) return distro
+      const raw = req.nextUrl.searchParams.get('offset') ?? '0'
+      const offset = Number(raw)
+      if (!/^\d+$/.test(raw) || !Number.isSafeInteger(offset) || offset < 0 || offset > 8192) {
+        return json({ error: { code: 'INVALID_OFFSET', message: 'Invalid portability offset' } }, { status: 400 })
+      }
+      const result = await measure(metrics, 'convex_portability', () => fetchPortability({ distro, name: parts[1].toLowerCase(), section: parts[2], offset }))
+      return result ? cachedJson(result) : json({ error: { code: 'NOT_FOUND', message: 'Portability is not available' } }, { status: 404 })
     }
 
     if (parts.length === 4 && parts[0] === 'man' && parts[3] === 'related') {

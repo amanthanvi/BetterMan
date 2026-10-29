@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v2: original 7 distros x 32 browser pages; extended direct search fixture with options, alias and saturated typo buckets",
+  "fixture": "scripts/perf-fixture.ts v3: 7 distros x32 browser pages with a production-built ready derived snapshot; extended direct-search fixture",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -267,16 +267,50 @@
       "baseline": 0,
       "relative": 0,
       "absolute": 0
+    },
+    "man.dataBytes": {
+      "baseline": 35123,
+      "relative": 0.02,
+      "absolute": 0,
+      "cap": 128000
+    },
+    "man.derivedBytes": {
+      "baseline": 846,
+      "relative": 0.02,
+      "absolute": 0,
+      "cap": 32000
+    },
+    "man.tarDataBytes": {
+      "baseline": 168478,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "man.largeDataBytes": {
+      "baseline": 318303,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "man.tarDerivedBytes": {
+      "baseline": 3879,
+      "relative": 0.02,
+      "absolute": 0,
+      "cap": 32000
+    },
+    "man.largeDerivedBytes": {
+      "baseline": 6216,
+      "relative": 0.02,
+      "absolute": 0,
+      "cap": 32000
     }
   },
-  "sourceHead": "a52a444e88d693bf4a00c8f88f6fcf1cb4b9456a",
+  "sourceHead": "894b7ba65b008207503b7c7fe88e61f24e66bea2",
   "toolchain": {
     "next": "16.4.2",
     "playwright": "1.64.1",
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "c8a0818667a4b0152936620b131180e4e01819217c6bb3a24dd0f6691980dc55",
+  "fixtureSha256": "30898df56d8f2645c167648c890782374ab9fc9df207478b5476e8ece8d0687c",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

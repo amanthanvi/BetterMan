@@ -26,7 +26,9 @@
 		"ingest:sample": "cd ingestion && uv run python -m ingestion.cli ingest --sample",
 		"ingest:scale": "cd ingestion && uv run python -m scripts.check_scale",
 		"ingest:activate": "cd ingestion && uv run python -m ingestion.cli activate",
-		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest"
+		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest",
+		"derived:benchmark": "node scripts/benchmark-derived.mjs",
+		"convex:derived-check": "node scripts/check-derived-data.mjs"
 	},
 	"dependencies": {
 		"convex": "^1.48.0"

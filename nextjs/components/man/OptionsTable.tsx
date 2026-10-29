@@ -1,9 +1,10 @@
 'use client'
 
+import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 import type { OptionItem } from '../../lib/docModel'
 
 import { parseOptionTerms } from './find'
-import { PortabilityGlyph, type Portability } from './Portability'
+import { PortabilityGlyph } from './PortabilityGlyph'
 
 function splitFlags(flags: string): string[] {
   const parsed = parseOptionTerms(flags)
@@ -29,11 +30,12 @@ export function OptionsTable({
   /** Section number per `anchorId`, from `definitionLocators()`. */
   locators?: ReadonlyMap<string, string>
   /** Per `anchorId`; a glyph is drawn only beside flags that are not portable. */
-  portability?: ReadonlyMap<string, Portability>
+  portability?: PageDerivedResponse['portability']
   selectedAnchorId?: string | null
   flashAnchorId?: string | null
   onSelect?: (opt: OptionItem, event: React.MouseEvent<HTMLAnchorElement>) => void
 }) {
+  const portabilityByAnchor = new Map(portability?.rows ?? [])
   return (
     <table className="w-full border-collapse text-left" aria-label="Command-line options">
       <thead className="sr-only">
@@ -47,7 +49,7 @@ export function OptionsTable({
         {options.map((opt) => {
           const selected = selectedAnchorId === opt.anchorId
           const rowId = rowIds.get(opt.anchorId) ?? `opt-${opt.anchorId}`
-          const p = portability?.get(opt.anchorId)
+          const codes = portability ? portabilityByAnchor.get(opt.anchorId) ?? 'lll' : null
 
           return (
             <tr key={opt.anchorId} className={flashAnchorId === opt.anchorId ? 'bm-option-flash' : undefined}>
@@ -67,10 +69,10 @@ export function OptionsTable({
                   ))}
                   {opt.argument ? <i className="font-normal text-ink-2"> {opt.argument}</i> : null}
                 </a>
-                {p ? (
+                {portability && codes ? (
                   <>
                     {' '}
-                    <PortabilityGlyph portability={p} />
+                    <PortabilityGlyph codes={codes} systems={portability.systems} />
                   </>
                 ) : null}
               </td>

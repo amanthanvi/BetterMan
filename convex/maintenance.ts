@@ -44,6 +44,16 @@ const MAX_STORAGE_STATS_LIMIT = 100;
 const storageStatsTableValidator = v.union(
   v.literal("activeReleases"),
   v.literal("datasetReleases"),
+  v.literal("derivedBuilds"),
+  v.literal("derivedScanJobs"),
+  v.literal("derivedSignatureBackfills"),
+  v.literal("derivedSignatureFailures"),
+  v.literal("derivedLegacySignatures"),
+  v.literal("derivedRetryPages"),
+  v.literal("derivedReleaseStatus"),
+  v.literal("derivedSignatureCache"),
+  v.literal("derivedPortabilityChunks"),
+  v.literal("derivedPageInputs"),
   v.literal("licensePackages"),
   v.literal("licenses"),
   v.literal("manPageContentBlobChunks"),
@@ -55,6 +65,7 @@ const storageStatsTableValidator = v.union(
   v.literal("manPageOptionFlags"),
   v.literal("manPageSearchDocuments"),
   v.literal("manPages"),
+  v.literal("manPageDerived"),
   v.literal("rateLimitBuckets"),
   v.literal("releaseSectionStats"),
   v.literal("releaseManifests"),
@@ -67,6 +78,17 @@ type StorageStatsTable = TableNames;
 export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<keyof Doc<T>, string>> } = {
   activeReleases: ["distro", "datasetReleaseId"],
   datasetReleases: ["datasetReleaseId", "packageManifestJson"],
+  derivedBuilds: ["locale", "key", "fingerprint"],
+  derivedScanJobs: ["locale", "cursor", "createdForKey"],
+  derivedSignatureBackfills: ["locale", "cursor", "error"],
+  derivedSignatureFailures: ["error"],
+  derivedLegacySignatures: ["sourceKey", "optionsJson"],
+  derivedRetryPages: ["locale", "key", "name", "section", "error"],
+  derivedReleaseStatus: ["locale"],
+  derivedSignatureCache: ["key", "contentSha256", "signatureHash", "optionsJson"],
+  derivedPortabilityChunks: ["key", "json"],
+  derivedPageInputs: ["name", "section", "contentSha256", "optionsJson"],
+  manPageDerived: ["key", "summaryJson"],
   licensePackages: ["packageName", "version"],
   licenses: ["licenseId", "licenseName", "licenseText"],
   manPageContentBlobChunks: ["chunk"],
@@ -375,7 +397,15 @@ export const previewInactiveReleases = internalQuery({
       }
 
       const progress = await pageUploadProgress(ctx, release);
+      const status = await ctx.db.query("derivedReleaseStatus").withIndex("by_releaseId", (q) => q.eq("releaseId", release._id)).unique();
+      const derivedPins = {
+        required: status?.required ?? false,
+        pendingRefs: status?.pendingRefs ?? 0,
+        readyRows: status?.readyRows ?? 0,
+        pinned: !!status && (status.required || status.pendingRefs > 0 || status.readyRows > 0),
+      };
       inactive.push({
+        derivedPins,
         datasetReleaseId: release.datasetReleaseId,
         releaseId: release._id,
         locale: release.locale,
@@ -434,6 +464,8 @@ export const deleteInactiveReleaseBatch = internalMutation({
     const release = await releaseByDatasetReleaseId(ctx, args.datasetReleaseId);
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (await isActiveRelease(ctx, release)) throw new Error("REFUSING_TO_DELETE_ACTIVE_RELEASE");
+    const derived = await ctx.db.query("derivedReleaseStatus").withIndex("by_releaseId", (q) => q.eq("releaseId", release._id)).unique();
+    if (derived && (derived.required || derived.pendingRefs > 0 || derived.readyRows > 0)) throw new Error("RELEASE_DERIVED_BUILD_IN_PROGRESS");
     // Activation must never publish a release between its deletion batches.
     if (!release.pruning) await ctx.db.patch(release._id, { pruning: true });
 
@@ -783,6 +815,68 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
       isDone: result.isDone,
       continueCursor: result.continueCursor,
     };
+  },
+});
+
+
+// These are optional caches, not release children. Delete a cache only after
+// proving that no live page/input or exact legacy content identity references
+// it in the same transaction. Small pages bound the worst-case signature bytes.
+export const cleanupOrphanDerivedCachesBatch = internalMutation({
+  args: {
+    table: v.union(v.literal("derivedSignatureCache"), v.literal("derivedLegacySignatures")),
+    cursor: v.union(v.string(), v.null()),
+    limit: v.optional(v.number()),
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const limit = bounded(args.limit, 5, 8);
+    const dryRun = args.dryRun ?? false;
+    let orphans = 0;
+    let deleted = 0;
+    let unknownSkipped = 0;
+    if (args.table === "derivedSignatureCache") {
+      const page = await ctx.db.query("derivedSignatureCache").paginate({ cursor: args.cursor, numItems: limit });
+      for (const row of page.page) {
+        const input = await ctx.db.query("derivedPageInputs").withIndex("by_signatureHash", (q) => q.eq("signatureHash", row.signatureHash)).first();
+        if (input) continue;
+        const source = await ctx.db.query("manPages").withIndex("by_optionSignatureHash", (q) => q.eq("optionSignatureHash", row.signatureHash)).first();
+        if (source) continue;
+        // Versioned pages without a stored signature may still hydrate this
+        // cache by source/version when that identity has exactly one candidate.
+        if (row.extractorVersion !== null && await ctx.db.query("manPages").withIndex("by_contentSha256_and_optionExtractorVersion", (q) => q.eq("contentSha256", row.contentSha256).eq("optionExtractorVersion", row.extractorVersion!)).first()) continue;
+        orphans++;
+        if (!dryRun) { await ctx.db.delete(row._id); deleted++; }
+      }
+      return { table: args.table, dryRun, limit, scanned: page.page.length, orphans, deleted, unknownSkipped,
+        isDone: page.isDone, continueCursor: page.continueCursor };
+    }
+    const page = await ctx.db.query("derivedLegacySignatures").paginate({ cursor: args.cursor, numItems: limit });
+    for (const row of page.page) {
+      const key = /^options-v2:(blob|storage|content):(.+)$/.exec(row.sourceKey);
+      // Preserve keys written by an unknown migration format, rather than
+      // guessing their reference semantics and invalidating an in-flight job.
+      if (!key) { unknownSkipped++; continue; }
+      let referenced = false;
+      if (key[1] === "blob") {
+        const id = ctx.db.normalizeId("manPageContentBlobs", key[2]);
+        if (!id) { unknownSkipped++; continue; }
+        referenced = !!await ctx.db.query("manPageContents").withIndex("by_blobId", (q) => q.eq("blobId", id)).first();
+      } else if (key[1] === "storage") {
+        const id = ctx.db.system.normalizeId("_storage", key[2]);
+        if (!id) { unknownSkipped++; continue; }
+        referenced = !!await ctx.db.query("manPageContents").withIndex("by_storageId", (q) => q.eq("storageId", id)).first();
+      } else {
+        const id = ctx.db.normalizeId("manPageContents", key[2]);
+        if (!id) { unknownSkipped++; continue; }
+        referenced = !!await ctx.db.get(id);
+      }
+      if (referenced) continue;
+      orphans++;
+      if (!dryRun) { await ctx.db.delete(row._id); deleted++; }
+    }
+    return { table: args.table, dryRun, limit, scanned: page.page.length, orphans, deleted, unknownSkipped,
+      isDone: page.isDone, continueCursor: page.continueCursor };
   },
 });
 

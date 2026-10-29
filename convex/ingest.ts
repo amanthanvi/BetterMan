@@ -1,9 +1,11 @@
 import { v } from "convex/values";
+import { persistOptionSignature, persistPackedSignature } from "./_derivedInputs";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { contentChunks, splitContentFields, type ContentField, type ContentJsonKind } from "./_legacyContent";
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
+import { scheduleDerivedBuild } from "./derived";
 import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
@@ -45,6 +47,7 @@ const pageInput = v.object({
   sourcePackageVersion: v.union(v.string(), v.null()),
   contentSha256: v.string(),
   hasParseWarnings: v.boolean(),
+  extractorVersion: v.optional(v.number()),
   doc: v.any(),
   synopsis: v.any(),
   options: v.any(),
@@ -75,8 +78,10 @@ const storedPageInput = v.object({
   sourcePackageVersion: v.union(v.string(), v.null()),
   contentSha256: v.string(),
   hasParseWarnings: v.boolean(),
+  extractorVersion: v.optional(v.number()),
   contentStorageId: v.id("_storage"),
   optionFlags: v.optional(v.array(optionFlagInput)),
+  optionsSignature: v.optional(v.string()),
   searchText: v.string(),
   snippetText: v.string(),
   links: v.array(pageLinkInput),
@@ -483,6 +488,7 @@ export const insertPages = internalMutation({
         searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
       });
+      await persistOptionSignature(ctx, pageId, page.options, page.extractorVersion ?? null);
       await insertOptionFlags(ctx, { releaseId: release._id, pageId, page, rows: optionFlagRows(page.options) });
 
       for (const link of page.links) {
@@ -581,6 +587,7 @@ export const insertStoredPages = internalMutation({
         searchText: compactManPageSearchText(page),
         snippetText: truncateText(page.snippetText, MAX_SNIPPET_TEXT_CHARS),
       });
+      if (page.optionsSignature !== undefined) await persistPackedSignature(ctx, pageId, page.optionsSignature, page.extractorVersion ?? null);
       await insertOptionFlags(ctx, { releaseId: release._id, pageId, page, rows: page.optionFlags ?? [] });
 
       for (const link of page.links) {
@@ -716,6 +723,22 @@ export const insertLicenses = internalMutation({
   },
 });
 
+async function recordProdPredecessor(
+  ctx: MutationCtx,
+  release: Doc<"datasetReleases">,
+  previous: Doc<"datasetReleases"> | null,
+) {
+  if (release.previousProdReleaseRecorded || release.previousProdReleaseId !== undefined) return;
+  const eligible = previous && previous._id !== release._id
+    && previous.distro === release.distro && previous.locale === release.locale
+    && Number.isFinite(Date.parse(previous.ingestedAt)) && Number.isFinite(Date.parse(release.ingestedAt))
+    && Date.parse(previous.ingestedAt) < Date.parse(release.ingestedAt);
+  await ctx.db.patch(release._id, {
+    previousProdReleaseRecorded: true,
+    ...(eligible ? { previousProdReleaseId: previous._id } : {}),
+  });
+}
+
 export const activateRelease = internalMutation({
   args: {
     stage: datasetStageValidator,
@@ -769,10 +792,16 @@ export const activateRelease = internalMutation({
       if (previousRelease && !previousRelease.sealed) {
         await ctx.db.patch(previousRelease._id, { sealed: true });
       }
+      if (args.stage === "prod" && existing.releaseId !== release._id) {
+        await recordProdPredecessor(ctx, release, previousRelease);
+      }
       await ctx.db.replace(existing._id, payload);
     } else {
+      if (args.stage === "prod") await recordProdPredecessor(ctx, release, null);
       await ctx.db.insert("activeReleases", payload);
     }
+
+    if (args.stage === "prod") await scheduleDerivedBuild(ctx, release.locale);
 
     return result;
   },
@@ -828,13 +857,19 @@ export const promoteActiveReleases = internalMutation({
         if (previousRelease && !previousRelease.sealed) {
           await ctx.db.patch(previousRelease._id, { sealed: true });
         }
+        if (args.toStage === "prod" && target.releaseId !== release._id) {
+          await recordProdPredecessor(ctx, release, previousRelease);
+        }
         await ctx.db.replace(target._id, payload);
       } else {
+        if (args.toStage === "prod") await recordProdPredecessor(ctx, release, null);
         await ctx.db.insert("activeReleases", payload);
       }
 
       promoted.push({ distro, datasetReleaseId: source.datasetReleaseId });
     }
+
+    if (args.toStage === "prod" && promoted.length) await scheduleDerivedBuild(ctx, "en");
 
     return { promoted };
   },

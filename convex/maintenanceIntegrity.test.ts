@@ -382,3 +382,57 @@ describe("maintenance release integrity", () => {
     expect(await t.run((ctx) => ctx.db.query("manPageContentChunks").take(102))).toHaveLength(101);
   });
 });
+
+describe("derived cache cleanup", () => {
+  it("retains shared input and page-metadata signatures, then cleans them after their release is pruned", async () => {
+    const { t, releaseId, pages } = await seed("draft");
+    const ids = await t.run(async (ctx) => {
+      await ctx.db.patch(pages[0].pageId, { optionSignatureHash: "metadata-kept", optionExtractorVersion: 1 });
+      await ctx.db.insert("derivedPageInputs", { releaseId, pageId: pages[1].pageId,
+        name: "duplicate", section: "1", contentSha256: "same-hash", optionsJson: "[]", truncated: false,
+        signatureHash: "input-kept", extractorVersion: 1, status: "ready" });
+      const ids = [];
+      for (const signatureHash of ["metadata-kept", "input-kept", "orphan", "source-version-kept"]) ids.push(await ctx.db.insert("derivedSignatureCache", {
+        key: `hash:1:${signatureHash}`, contentSha256: signatureHash === "source-version-kept" ? "same-hash" : "hash", extractorVersion: 1, signatureHash, optionsJson: "[]",
+      }));
+      return ids;
+    });
+    const args = { table: "derivedSignatureCache" as const, cursor: null, limit: 100 };
+    expect(await t.mutation(internal.maintenance.cleanupOrphanDerivedCachesBatch, { ...args, dryRun: true }))
+      .toMatchObject({ limit: 8, scanned: 4, orphans: 1, deleted: 0 });
+    expect(await t.run((ctx) => ctx.db.get(ids[2]))).not.toBeNull();
+    expect(await t.mutation(internal.maintenance.cleanupOrphanDerivedCachesBatch, args)).toMatchObject({ orphans: 1, deleted: 1 });
+    expect(await t.run((ctx) => Promise.all(ids.slice(0, 2).map((id) => ctx.db.get(id))))).not.toContain(null);
+    expect(await t.mutation(internal.maintenance.deleteInactiveReleaseBatch, { datasetReleaseId: "maintenance", confirmDatasetReleaseId: "maintenance", maxDocs: 200 })).toMatchObject({ deletedRelease: true });
+    expect(await t.mutation(internal.maintenance.cleanupOrphanDerivedCachesBatch, args)).toMatchObject({ scanned: 3, orphans: 3, deleted: 3 });
+  });
+
+  it("preserves shared legacy blobs across releases and deletes only identities with no source references", async () => {
+    const { t, pages } = await seed("draft");
+    const ids = await t.run(async (ctx) => {
+      const second = await ctx.db.insert("datasetReleases", { datasetReleaseId: "other", locale: "en", distro: "ubuntu", imageRef: "test", imageDigest: "test", ingestedAt: "2026-09-07", pageCount: 1 });
+      const pageId = await ctx.db.insert("manPages", { releaseId: second, datasetReleaseId: "other", externalId: "other", locale: "en", distro: "ubuntu", name: "other", section: "1", sitemapPage: 0, title: "other", description: "other", sourcePath: "other.1", contentSha256: "same-hash", hasParseWarnings: false });
+      const shared = await ctx.db.insert("manPageContentBlobs", { contentSha256: "same-hash", optionsJson: "[]" });
+      await ctx.db.patch(pages[0].contentId, { blobId: shared });
+      const contentId = await ctx.db.insert("manPageContents", { pageId, blobId: shared });
+      const legacy = await ctx.db.insert("derivedLegacySignatures", { sourceKey: `options-v2:blob:${shared}`, optionsJson: "[]" });
+      const oldContent = await ctx.db.insert("derivedLegacySignatures", { sourceKey: `options-v2:content:${pages[1].contentId}`, optionsJson: "[]" });
+      const unknown = await ctx.db.insert("derivedLegacySignatures", { sourceKey: "future-format:keep", optionsJson: "[]" });
+      const storageId = await ctx.storage.store(new Blob(["payload"]));
+      const directContent = await ctx.db.insert("manPageContents", { pageId, storageId });
+      const storageCache = await ctx.db.insert("derivedLegacySignatures", { sourceKey: `options-v2:storage:${storageId}`, optionsJson: "[]" });
+      return { legacy, oldContent, unknown, storageCache, contentId, directContent };
+    });
+    await t.mutation(internal.maintenance.deleteInactiveReleaseBatch, { datasetReleaseId: "maintenance", confirmDatasetReleaseId: "maintenance", maxDocs: 200 });
+    const args = { table: "derivedLegacySignatures" as const, cursor: null };
+    expect(await t.mutation(internal.maintenance.cleanupOrphanDerivedCachesBatch, { ...args, dryRun: true }))
+      .toMatchObject({ scanned: 4, orphans: 1, deleted: 0, unknownSkipped: 1 });
+    expect(await t.mutation(internal.maintenance.cleanupOrphanDerivedCachesBatch, args)).toMatchObject({ orphans: 1, deleted: 1, unknownSkipped: 1 });
+    expect(await t.run((ctx) => ctx.db.get(ids.oldContent))).toBeNull();
+    expect(await t.run((ctx) => ctx.db.get(ids.legacy))).not.toBeNull();
+    expect(await t.run((ctx) => ctx.db.get(ids.storageCache))).not.toBeNull();
+    await t.run(async (ctx) => { await ctx.db.delete(ids.contentId); await ctx.db.delete(ids.directContent); });
+    expect(await t.mutation(internal.maintenance.cleanupOrphanDerivedCachesBatch, args)).toMatchObject({ orphans: 2, deleted: 2, unknownSkipped: 1 });
+    expect(await t.run((ctx) => ctx.db.get(ids.unknown))).not.toBeNull();
+  });
+});

@@ -321,3 +321,43 @@ test('dry-run manifest file diagnostics include id, age and size, capped across 
   assert.deepEqual(files[0], { event: 'manifest_orphan_preview', storageId: 'file-1-0', ageMs: 86400001, size: 42 })
   assert.deepEqual(logs.at(-1), { event: 'manifest_orphan_preview_truncated', omitted: 40, maxFiles: 100 })
 })
+
+test('skips visible durable pins even when leases expired or pruning already started', () => {
+  const result = selectPrunable([
+    release({ datasetReleaseId: 'required', ingestedAt: at(30), derivedPins: { required: true, pendingRefs: 0, readyRows: 0, pinned: true } }),
+    release({ datasetReleaseId: 'pending', ingestedAt: at(30), derivedPins: { required: false, pendingRefs: 1, readyRows: 0, pinned: true } }),
+    release({ datasetReleaseId: 'ready', ingestedAt: at(30), pruning: true, derivedPins: { required: false, pendingRefs: 0, readyRows: 2, pinned: true } }),
+  ], policy)
+  assert.equal(result.prune.length, 0)
+  assert.equal(result.retained.length, 0)
+  assert.equal(result.skipped.length, 3)
+  assert.ok(result.skipped.every((r) => /derived dependencies pinned/.test(r.reason)))
+})
+
+test('a pin acquired after preview is skipped without retry and does not abort either orphan sweep', async () => {
+  const calls = []
+  const logs = []
+  const run = async (name, args) => {
+    calls.push([name, args])
+    if (name === 'maintenance:previewInactiveReleases') return { inactive: [
+      release({ datasetReleaseId: 'pinned-race', ingestedAt: at(20), manifestError: 'old-invalid' }),
+      release({ datasetReleaseId: 'remove', ingestedAt: at(20), manifestError: 'old-invalid' }),
+      release({ datasetReleaseId: 'pinned-preview', ingestedAt: at(20), derivedPins: { required: false, pendingRefs: 0, readyRows: 1, pinned: true } }),
+    ], isDone: true }
+    if (name === 'maintenance:deleteInactiveReleaseBatch') {
+      if (args.datasetReleaseId === 'pinned-race') throw Object.assign(new Error('Command failed'), { stderr: 'Server Error: RELEASE_DERIVED_BUILD_IN_PROGRESS' })
+      return { datasetReleaseId: args.datasetReleaseId, deleted: 1, storageDeletes: 0, deletedByTable: { datasetReleases: 1 }, deletedRelease: true, hasMore: false }
+    }
+    return { scanned: 0, orphans: 0, deleted: 0, isDone: true }
+  }
+  const result = await prune(run, parseOptions({ BETTERMAN_PRUNE_APPLY: 'true' }, now), { log: (line) => logs.push(JSON.parse(line)), retry: noPause })
+  assert.deepEqual(result.pruned.map((r) => r.datasetReleaseId), ['remove'])
+  assert.equal(result.selection.skipped.length, 2)
+  assert.equal(calls.filter(([name, args]) => name === 'maintenance:deleteInactiveReleaseBatch' && args.datasetReleaseId === 'pinned-race').length, 1)
+  assert.ok(!calls.some(([name, args]) => name === 'maintenance:deleteInactiveReleaseBatch' && args.datasetReleaseId === 'pinned-preview'))
+  assert.ok(calls.some(([name]) => name === 'maintenance:cleanupOrphanContentBlobsBatch'))
+  assert.ok(calls.some(([name]) => name === 'maintenance:cleanupOrphanManifestFilesBatch'))
+  assert.deepEqual(calls.filter(([name]) => name === 'maintenance:cleanupOrphanDerivedCachesBatch').map(([, args]) => args.table), ['derivedSignatureCache', 'derivedLegacySignatures'])
+  assert.ok(logs.some((entry) => entry.event === 'prune_skipped' && entry.datasetReleaseId === 'pinned-race'))
+  assert.ok(!logs.some((entry) => entry.event === 'retry'))
+})

@@ -254,6 +254,8 @@ def test_require_deployed_contract_accepts_extra_functions(monkeypatch):
     ("payload", "match"),
     [
         ({"schemaVersion": 0}, "schemaVersion"),
+        ({"schemaVersion": 1}, "schemaVersion"),
+        ({"schemaVersion": 2}, "schemaVersion"),
         ({"functions": ["ingest.createRelease"]}, "missing functions"),
         ({"declarationCounts": ["pageCount"]}, "declaration counts"),
         ({"activatePending": False}, "activatePending"),

@@ -57,6 +57,8 @@ Object.assign(env, {
   NEXT_PUBLIC_PLAUSIBLE_DOMAIN: '', NEXT_PUBLIC_SENTRY_DSN: '', SENTRY_DSN: '',
 })
 let metrics = { calls: 0, documents: 0, storageReads: 0 }
+let manDataBytes = 0
+let manDerivedBytes = 0
 let delayManFixture = false
 let backendErrors = 0
 let next, browser, backend, vite
@@ -173,8 +175,9 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
 try {
   process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
-  const { createFixture, createSearchFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
+  const { createFixture, createSearchFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
   let fixture = await createFixture(() => metrics.calls++)
+  metrics = { calls: 0, documents: 0, storageReads: 0 }
   const runtime = globalThis.Convex
   globalThis.Convex = new Proxy(runtime, {
     get(target, key) {
@@ -214,6 +217,11 @@ try {
       // Force any future loading/Suspense fallback to flush during the cold HTML guard.
       if (delayManFixture) await sleep(150)
       const value = await fixture[method](makeFunctionReference(path), jsonToConvex(args[0]))
+      if (path.startsWith('content:getMan') && value?.kind === 'page') {
+        assert.ok(value.data.derived?.version === 2, 'Man data must exercise a ready compact derived snapshot')
+        manDataBytes = Math.max(manDataBytes, Buffer.byteLength(JSON.stringify(value.data)))
+        manDerivedBytes = Math.max(manDerivedBytes, Buffer.byteLength(JSON.stringify(value.data.derived)))
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ status: 'success', value: convexToJson(value), logLines: [] }))
     } catch {
@@ -241,6 +249,8 @@ try {
     await ready(baseUrl)
     fixture = await createFixture(() => metrics.calls++)
     metrics = { calls: 0, documents: 0, storageReads: 0 }
+    manDataBytes = 0
+    manDerivedBytes = 0
     delayManFixture = name === 'man'
     const pageView = await sample(`${baseUrl}${path}`, name, { cost: true })
     delayManFixture = false
@@ -250,6 +260,11 @@ try {
     assert.ok(!html.includes('NEXT_HTTP_ERROR_FALLBACK') && !html.includes('"digest"'), `${name} streamed an error`)
     assert.ok(costs.calls > 0 && costs.documents > 0, `${name} must exercise cold Convex reads`)
     actual[`${name}.htmlBytes`] = Buffer.byteLength(html)
+    if (name === 'man') {
+      assert.ok(manDataBytes > 0 && manDerivedBytes > 0, 'Ready man API response bytes must be measured')
+      actual['man.dataBytes'] = manDataBytes
+      actual['man.derivedBytes'] = manDerivedBytes
+    }
     for (const [metric, value] of Object.entries(costs)) actual[`${name}.${metric}`] = value
     const samples = []
     for (let i = 0; i < (name === 'home' || name === 'man' ? 5 : 0); i++) samples.push(await sample(`${baseUrl}${path}`, name))
@@ -286,6 +301,19 @@ try {
     assert.equal(backendErrors, 0, 'Convex fixture error (including errors swallowed by the app)')
     console.log(`${name}: ${JSON.stringify(Object.fromEntries(Object.entries(actual).filter(([k]) => k.startsWith(`${name}.`))))}`)
   }
+  const derivedFixture = await createDerivedResponseFixture(() => metrics.calls++)
+  for (const name of ['tar', 'large']) {
+    metrics = { calls: 0, documents: 0, storageReads: 0 }
+    const result = await derivedFixture.action(makeFunctionReference('content:getManByNameAndSection'), { distro: 'debian', name, section: '1' })
+    assert.equal(result?.kind, 'page')
+    assert.equal(result.data.derived?.version, 2)
+    assert.ok(result.data.derived.portability.total >= (name === 'large' ? 3009 : 100))
+    assert.ok(result.data.derived.portability.rows.length <= 256)
+    actual[`man.${name}DataBytes`] = Buffer.byteLength(JSON.stringify(result.data))
+    actual[`man.${name}DerivedBytes`] = Buffer.byteLength(JSON.stringify(result.data.derived))
+    details[`manData${name}`] = { scope: 'ready page data with nonempty options', costs: { ...metrics }, totalOptions: result.data.derived.portability.total, firstPageRows: result.data.derived.portability.rows.length }
+  }
+
   // Direct query costs exclude SSR, hydration and rate-limit work; the original
   // search page-view case above continues to count that complete request scope.
   fixture = await createSearchFixture(() => metrics.calls++)

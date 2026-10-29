@@ -1,9 +1,9 @@
 """Single cross-language ingest contract merge/alignment check.
 
 Resolve protocol changes in convex/ingestContract.ts and convex_client.py together.
-B1 #431 and B5 #430 independently use v2: the second to merge must rebase and
-bump both constants to v3, retaining B1 package batches and B5 stored-page symbols.
-Do not resolve the overlap by taking one branch's functions or payload fields.
+Contract v3 combines #431 package batches and derived extractor provenance.
+When #430 follows at v4, retain both while adding stored-page symbols. Do not
+resolve the overlap by taking one branch's functions or payload fields.
 """
 
 import re
