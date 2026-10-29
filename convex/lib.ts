@@ -99,7 +99,7 @@ export function releasePackageManifest(release: Doc<"datasetReleases">): unknown
 
 export function pageResponse(
   release: Doc<"datasetReleases">,
-  page: Doc<"manPages">,
+  page: Pick<Doc<"manPages">, "externalId" | "name" | "section" | "title" | "description" | "sourcePackage" | "sourcePackageVersion" | "hasParseWarnings">,
   content: ManPageContentPayload,
   variants: Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>,
   // Enrichment beside the upstream content, each part optional and independent.

@@ -40,6 +40,9 @@ def _build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         help="Mark the dataset release as active after ingestion",
     )
+    ingest.add_argument(
+        "--debian-full", action="store_true", help="Opt in to full Debian archive ingestion"
+    )
     ingest.add_argument("--in-container", action="store_true", help=argparse.SUPPRESS)
 
     activation = sub.add_parser(
@@ -85,7 +88,31 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "ingest":
+        if (
+            args.debian_full
+            and os.environ.get("BETTERMAN_DATASET_STAGE", "staging").strip().lower() == "prod"
+        ):
+            _log(
+                "ingest_error",
+                error="--debian-full cannot use stage prod; ingest to staging "
+                "and use the gated promotion workflow",
+            )
+            return 2
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
+        if (
+            args.distro == "debian"
+            and args.debian_full
+            and not args.sample
+            and not args.in_container
+        ):
+            return _run_ingest(
+                sample=False,
+                activate=activate,
+                distro="debian",
+                image_ref="deb-archives",
+                image_digest="pinned",
+                archive_mode=True,
+            )
         if args.in_container:
             return _run_ingest_in_container(
                 sample=args.sample,
@@ -131,7 +158,13 @@ def _run_ingest_on_host(*, sample: bool, activate: bool, distro: str) -> int:
 
 
 def _run_ingest(
-    *, sample: bool, activate: bool, distro: str, image_ref: str, image_digest: str
+    *,
+    sample: bool,
+    activate: bool,
+    distro: str,
+    image_ref: str,
+    image_digest: str,
+    archive_mode: bool = False,
 ) -> int:
     convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
     ingest_secret = os.environ.get("CONVEX_INGEST_SECRET")
@@ -144,7 +177,12 @@ def _run_ingest(
     git_sha = os.environ.get("BETTERMAN_INGEST_GIT_SHA") or _git_sha(repo_root)
 
     try:
-        result = ingest_dataset(
+        ingest_function = ingest_dataset
+        if archive_mode:
+            from ingestion.debian_publish import ingest_debian
+
+            ingest_function = ingest_debian
+        result = ingest_function(
             sample=sample,
             activate=activate,
             convex_url=convex_url,

@@ -103,6 +103,81 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual(values['promote'], 'false')
 
+    def test_full_debian_requires_opt_in_and_separate_initial_promotion(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                values, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                    BETTERMAN_INGEST_ENABLED='true', BETTERMAN_INGEST_SAMPLE='false',
+                    BETTERMAN_LINUX_ENABLED='true', BETTERMAN_BSD_ENABLED='false',
+                    BETTERMAN_LINUX_DISTRO='all', BETTERMAN_PROMOTE_ENABLED='true',
+                    BETTERMAN_DEBIAN_FULL='1' if enabled or event == 'workflow_dispatch' else '',
+                    BETTERMAN_DEBIAN_FULL_INPUT='true' if enabled or event == 'schedule' else 'false',
+                    BETTERMAN_DEBIAN_FULL_PROMOTE='')
+                debian = next(r for r in rows if r['distro'] == 'debian')
+                self.assertEqual(debian['full_debian'], enabled)
+                self.assertEqual(debian['promote'], not enabled)
+                self.assertTrue(next(r for r in rows if r['distro'] == 'ubuntu')['promote'])
+        _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT='schedule', BETTERMAN_DEBIAN_FULL_PROMOTE='1')
+        self.assertTrue(next(r for r in rows if r['distro'] == 'debian')['promote'])
+        _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT='workflow_dispatch',
+            BETTERMAN_DEBIAN_FULL_PROMOTE='', BETTERMAN_INGEST_ENABLED='false')
+        self.assertTrue(next(r for r in rows if r['distro'] == 'debian')['promote'])
+        values, rows = self.plan(BETTERMAN_DEBIAN_DOWNLOAD_ONLY='true')
+        self.assertEqual(rows, [])
+        self.assertEqual((values['ingest'],values['promote']), ('false','false'))
+
+    def test_full_debian_promotion_hold_and_explicit_recovery(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for variable, manual, allowed in [('', 'false', False), ('true', 'false', False), ('1', 'false', True), ('', 'true', True)]:
+            os.environ.update(BETTERMAN_DEBIAN_FULL_PROMOTE=variable, BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT=manual)
+            def response(request, **kwargs):
+                payload = json.loads(request.data)
+                self.assertEqual(payload['allowFullDebian'], allowed)
+                body = {'promoted': [{'distro':'debian','datasetReleaseId':'full'}]} if allowed else {
+                    'promoted': [], 'skipped': [{'distro':'debian','datasetReleaseId':'full','reason':'FULL_DEBIAN_PROMOTION_HELD'}]}
+                return io.BytesIO(json.dumps(body).encode())
+            with self.post_mock(response), contextlib.redirect_stdout(io.StringIO()) as log:
+                self.assertEqual(w.promote('debian'), 0)
+            self.assertEqual(w.load('debian')['stage'], 'promoted' if allowed else 'full Debian promotion held')
+            if not allowed:
+                self.assertIn('Skipping held full-Debian', log.getvalue())
+                self.assertIn('skipped=true', Path('output').read_text())
+
+    def test_misspelled_gate_values_warn_and_stay_off(self):
+        for name in ['BETTERMAN_DEBIAN_FULL', 'BETTERMAN_DEBIAN_FULL_PROMOTE']:
+            for value in ['true', '0', 'yes', ' 1', '1 ']:
+                os.environ[name] = value
+                with contextlib.redirect_stdout(io.StringIO()) as log:
+                    self.assertFalse(w.gate(name))
+                self.assertIn('::warning::' + name, log.getvalue())
+
+    def test_empty_and_unset_gates_are_silent(self):
+        for name in ['BETTERMAN_DEBIAN_FULL', 'BETTERMAN_DEBIAN_FULL_PROMOTE']:
+            for value in [None, '']:
+                os.environ.pop(name, None)
+                if value is not None:
+                    os.environ[name] = value
+                with contextlib.redirect_stdout(io.StringIO()) as log:
+                    self.assertFalse(w.gate(name))
+                self.assertEqual(log.getvalue(), '')
+
+    def test_combined_dispatch_honors_explicit_promotion_but_cron_ignores_input(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for variable in ['', '1']:
+                for manual in ['false', 'true']:
+                    values, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_INGEST_ENABLED='true', BETTERMAN_INGEST_SAMPLE='false',
+                        BETTERMAN_LINUX_ENABLED='true', BETTERMAN_BSD_ENABLED='false',
+                        BETTERMAN_LINUX_DISTRO='debian', BETTERMAN_PROMOTE_ENABLED='true',
+                        BETTERMAN_DEBIAN_FULL='1', BETTERMAN_DEBIAN_FULL_INPUT='true',
+                        BETTERMAN_DEBIAN_FULL_PROMOTE=variable,
+                        BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT=manual)
+                    debian = next(r for r in rows if r['distro'] == 'debian')
+                    allowed = variable == '1' or (event == 'workflow_dispatch' and manual == 'true')
+                    self.assertTrue(debian['full_debian'])
+                    self.assertEqual(debian['promote'], allowed)
+                    self.assertEqual(w.full_promotion_enabled(), allowed)
+
     def test_early_middle_and_all_failures(self):
         for failed in ({'debian'}, {'fedora'}, set(w.LINUX)):
             with self.subTest(failed=failed):
@@ -345,6 +420,23 @@ test('dependency-free workflow parser preserves structure and literal shell comm
 
 function assertWorkflowWiring(workflow) {
   const { plan, ingest, summary } = workflow.jobs
+  const download = workflow.jobs.debian_download_only
+  assert.equal(download.if, "${{ github.event_name == 'workflow_dispatch' && inputs.debian_download_only }}")
+  assert.equal(download.environment, undefined)
+  assert.ok(!JSON.stringify(download).includes('secrets.'))
+  assert.ok(!JSON.stringify(download).includes('--local-upload'))
+  assert.match(download.steps.find(s => s.name === 'Acquire only; never create a Convex client').run, /--download-only$/)
+  assert.equal(workflow.on.workflow_dispatch.inputs.debian_full.default, false)
+  assert.equal(workflow.on.workflow_dispatch.inputs.debian_download_only.default, false)
+  assert.equal(workflow.on.workflow_dispatch.inputs.debian_full_promote.default, false)
+  const release = JSON.parse(readFileSync('ingestion/data/debian-trixie.json', 'utf8')).releaseSha256
+  for (const job of [download, ingest]) {
+    for (const cache of job.steps.filter(s => s.uses?.startsWith('actions/cache/'))) {
+      assert.equal(cache.with.key, `debian-debs-${release}`)
+      assert.equal(cache.with['restore-keys'], undefined)
+      assert.ok(!cache.with.key.includes('run_id'))
+    }
+  }
   assert.equal(ingest.strategy['fail-fast'], false)
   assert.equal(ingest.strategy['max-parallel'], 2)
   assert.deepEqual(workflow.concurrency, { group: 'update-dataset', 'cancel-in-progress': false })
@@ -357,8 +449,12 @@ function assertWorkflowWiring(workflow) {
   assert.equal(step('activation_deadline').env.BETTERMAN_JOB_TIMEOUT_MINUTES, '${{ matrix.timeout }}')
   assert.match(step('activation_deadline').run, /BETTERMAN_JOB_TIMEOUT_MINUTES \* 60 - 180/)
   assert.match(step('freebsd').with.envs, /BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS/)
-  const promotion = "${{ needs.plan.outputs.promote == 'true' }}"
-  for (const id of ['promote', 'verify_prod']) assert.equal(step(id).if, promotion)
+  assert.equal(step('debian_renderer').if, "${{ needs.plan.outputs.ingest == 'true' && matrix.full_debian }}")
+  assert.match(step('debian_renderer').run, /--no-install-recommends mandoc/)
+  assert.ok(index('dependencies') < index('debian_renderer') && index('debian_renderer') < index('staging'))
+  const promotion = "${{ matrix.promote }}"
+  assert.equal(step('promote').if, promotion)
+  assert.equal(step('verify_prod').if, "${{ matrix.promote && steps.promote.outputs.skipped != 'true' }}")
   assert.equal(step('promote').env.BETTERMAN_INGEST_ENABLED, '${{ needs.plan.outputs.ingest }}')
   assert.equal(step('promote').env.CONVEX_URL, '${{ vars.CONVEX_URL }}')
   assert.equal(step('verify_prod').env.BETTERMAN_EXPECTED_RELEASE_IDS, '${{ steps.promote.outputs.release_ids }}')

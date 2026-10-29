@@ -16,7 +16,7 @@ Optional: `BETTERMAN_INGEST_WORKERS` sets the number of parse processes, clamped
 
 ## Large releases and recovery
 
-Ingest contract **2** must be deployed before this client writes. Release
+Ingest contract **5** must be deployed before this client writes. Release
 provenance is a JSON file in Convex storage, referenced from `releaseManifests`;
 page views read only the small release row. Page-upload counters use 16 shards;
 sealing folds their per-section counts in one bounded verification transaction,
@@ -206,3 +206,184 @@ no Convex deployment. `--source convex` reads the active release through the
 ingest secret. Model calls need `OPENCODE_GO_API_KEY`; without it, model text is
 only estimated. Design, verifier rules and cost model: `docs/generated-layer.md`.
 Operations: `docs/runbooks/generated-layer.md`.
+
+## Full Debian from archives
+
+Full archive ingestion is **off by default**. `pnpm ingest:run --distro debian`
+uses the existing curated Docker path, just like Debian samples and other distros.
+Only `--debian-full` selects the native archive pipeline. It requires Python 3.14
+(including standard-library zstd support) and host `mandoc`. The documented
+benchmarks below write only an explicitly selected worktree-local deployment;
+shared execution requires owner approval.
+
+The monthly workflow has two independent switches:
+
+| Invocation | Full import opt-in | Promotion |
+| --- | --- | --- |
+| Cron | Repository variable `BETTERMAN_DEBIAN_FULL=1` | Held unless `BETTERMAN_DEBIAN_FULL_PROMOTE=1` |
+| Manual dispatch | `debian_full: true` input; repository import variable is ignored | With the promotion variable off, requires a separate `ingest: false, promote: true, debian_full_promote: true` dispatch |
+
+Both import controls default off/unset. Default dispatches and cron use curated
+Debian, which retains its existing promotion behavior. Even `promote: true` on a
+full ingest dispatch cannot combine the first full ingest and promotion while
+the second variable is off. Flip the second variable only after the owner has
+reviewed the first full release and approved recurring full promotions. No
+switch or shared deployment was changed while implementing this pipeline.
+Promotion-only recovery skips an actual full-Debian staging pointer unless
+`debian_full_promote: true` (default false) or the promotion repository variable
+is exactly `1`. This check happens atomically with pointer promotion, including
+when the import switch is off. Held Debian logs a clear skip; other distros
+continue. Non-`1` values, including an explicitly empty value, warn and stay off;
+raw values are never printed.
+
+`data/debian-trixie.json` pins snapshot, suite/component/architecture and the
+Release SHA256. Verified Release SHA256/size entries bind Contents-all,
+Contents-amd64 and Packages.xz, which bind every archive filename/version/size/SHA256.
+English root manuals and the OpenJDK archive manual root are selected. The curated
+package pass also captures runtime postinst data when a command's manual lives
+in another package (vim/vim-tiny and vim-common) or is absent (G++). These runtime
+packages must participate in elections even without owning a manual in Contents.
+Nothing is installed.
+
+`control.tar` postinst scripts are read as text, never executed. The bounded
+static parser recognizes literal `update-alternatives --install` registrations
+only as a simple command's command word. It excludes heredoc bodies and
+`echo`/`printf` arguments. Literal variables/loops/wrapper calls and checked
+OpenJDK/xz templates are supported. Values assigned only in some conditional
+branches stay unresolved after the branch joins. Unknown expressions are
+skipped with package/line/reason evidence.
+
+A package-owned manual wins over a generated alternative only for an exact-case
+basename match. A case-only variant stays an explicit provider: lowercase ftp
+follows tnftp, uppercase FTP and `?pkg=ftp.app` serve GNUstep's manual. Original
+spelling is retained in source paths; request case survives HTML/API/text/OG.
+For elections, treat Debian's `required`/`important`/`standard` Priority values
+as one installed-by-default group. Pick its highest alternatives priority,
+with pinned popcon `by_inst` breaking ties, as update-alternatives would on a
+default install. Only if that group is absent, rank by popcon then alternatives
+priority. Existing awk/vi/nc policy preferences break exact
+remaining ties only. Elect before resolving documentation: an undocumented
+winner suppresses the alternative route, with no fallback to a less-installed
+provider. GCC/G++ therefore suppress `cc`/`c++` when their manuals are absent
+from main. Binary masters need a unique exact-basename manual in the same
+package; archive-owned executable symlinks may prove a shared target (clang++
+and clang). Binary contents are never extracted or executed.
+
+The bundled `popcon-by-inst.tsv.gz` contains a fixed, checksum-verified public
+`https://popcon.debian.org/by_inst` snapshot. The lock records source and normalized
+hashes and acquisition date. Runtime never fetches mutable popularity data.
+`pnpm ingest:debian-pin-popcon` deliberately refreshes it: review and commit the
+lock/data together. Normalization keeps package/inst columns, sorts by package,
+and writes gzip with empty filename, mtime zero, compression level 6. Refresh
+Release pins only after verifying Debian's signed archive metadata, not to bypass
+an integrity failure.
+
+Archive links remain SQLite records; only hashed regular documentation files
+are written. Sources and expanded inputs have a 16 MiB cap. Same-package links
+resolve first, then indexed owners; cross-package directory links and missing
+owners are resolved on demand. Exact `SOURCE_TARGETS` repairs document four pinned
+packaging mismatches. Mandoc runs in a fresh empty temporary directory. After
+safe archive include expansion, remaining executable includes are rejected,
+including conditional bodies and command aliases. The scanner tracks the current
+control, no-break control and escape characters through `.cc`, `.c2`, `.ec`,
+`.eo` and resets. An old control character becomes text; escapes-off makes
+`\*` literal. Literal strings are tracked and checked when expanded in request
+positions, while macro definitions are scanned under their current syntax.
+Syntax changes alone do not reject real pages. Ordinary macro prose and
+interpolation in formatting arguments remain text. Literal documentation such
+as `.B .so` is retained. The optional groff-only
+`www.tmac`/`pic.tmac` requests are omitted without reading host macro files.
+The empty cwd is the primary boundary against accidental relative host includes;
+the source checks are defence in depth. A temporary cwd is **not an OS filesystem
+sandbox** and does not revoke access to absolute paths. Explicit unresolved
+includes are refused before spawning mandoc. Regression tests independently
+check the empty cwd/parent sentinel and the request checks. The current cached
+2,000-package audit rejects **0/13,243** renderable owner sources, and the expanded
+provider/dependency audit rejects **0/13,423**. The full parser replay also has
+zero failures; sqlite3, nomarch, mjpegtools and tio all render. See the evidence
+and full Contents case-collision report.
+
+Bare `.so` stubs and manual symlinks/hardlinks whose target has another route
+register redirect aliases. They create no duplicate canonical page or search
+row. `manPageAliasProviders` retains every source/package/target provider;
+`manPageProviders` retains alternate real pages. Provider counters cover both.
+`?pkg=` selects a bounded Debian package name on HTML/JSON/text/OG; invalid values
+are ignored before persistent cache keys. A redirect can carry its actual target
+package. Same-package case/path variants remain stored and select their first
+original path. B10 #402 owns the switch UI. Canonical browse/search/sitemap reads
+stay on the existing tables.
+
+Copyright files are resolved from the selected archives and every published
+provider's package, including linked doc directories. Missing/blank or oversized
+notices block publishing and are never truncated. Required curated command pages
+and the two-percent parse/unresolved-source gate still apply.
+
+### Acquisition checkpoints and runner measurements
+
+Production archive acquisition uses a persistent pin-keyed workspace under
+`.cache/debian/`, or `BETTERMAN_DEBIAN_WORKDIR/<lock-sha256>`. Completed extraction
+receipts bind package SHA256, extractor version and retained files. A failed
+process retains completed packages; restarting on the same workspace fetches
+only missing/invalid packages. Parse/publish spools are temporary and rebuilt;
+uploaded release activation remains separately resumable through `ingest:activate`.
+
+`BETTERMAN_DEBIAN_CACHE_DIR` selects an external-to-spool, SHA256-named archive
+cache (2 GiB LRU by default; `BETTERMAN_DEBIAN_CACHE_MAX_BYTES` accepts 1–2 GiB).
+Total retained extracted files have a separate 4 GiB ceiling, counting existing
+and partial files, replacements and concurrent writes. Reservations happen before
+writes under one shared lock. `BETTERMAN_DEBIAN_EXTRACTED_MAX_BYTES` can lower
+this to at least 16 MiB, but cannot raise it past 4 GiB. Exhaustion stops acquisition
+with completed receipts retained. Free-space checks remain an additional guard.
+Every cache hit is rehashed and size-checked. There are at most two downloads per
+pipeline. Each file gets eight attempts with exponential backoff and jitter,
+up to minutes, honoring Retry-After on 429/503 and respecting the job deadline.
+A Retry-After over fifteen minutes stops with the checkpoint retained rather
+than retrying early. Integrity failures do not retry or publish bad bytes.
+
+The workflow restores and saves only verified `.deb` files under one stable
+`debian-debs-<Release SHA256>` key, without run IDs or broad restore prefixes.
+An always-run save step can preserve successful files after a recoverable failure.
+GitHub cache entries are immutable: the first saved bounded subset for that
+Release/branch remains the reusable snapshot; later attempts do not replace it.
+No new 2 GiB entry is created per run. A new Release gets a new key; GitHub's
+repository-wide 10 GB LRU quota evicts old keys. Old run-ID keys from this draft
+are not reused and may be removed by the owner or age out. Local archive LRU
+eviction skips in-use files. It never caches trusted
+extracted SQLite state. A fresh runner reuses retained cache files and re-extracts
+them; evicted files are downloaded again. The 18+ GB full archive set cannot be
+kept in a 2 GiB cache or a 14 GB runner, so cross-runner reuse is bounded, not a
+promise that an entire interrupted full job survives a new VM. Abrupt VM loss
+can prevent the final cache save; the same-runner checkpoint is the stronger
+guarantee. Source/body queues and acquisition remain bounded.
+
+```bash
+pnpm ingest:debian-benchmark --workdir /absolute/path/to/sample --packages 2000 --workers 2
+```
+
+This defaults to acquisition/parsing only. `--local-upload` additionally requires
+this worktree's matching loopback Convex configuration, refuses deploy keys, and
+writes `local-upload.json`; never point it at a shared backend. `--download-only`
+cannot be combined with upload and never creates a Convex client.
+`--audit-alternatives` extends the fixed sample with the competing providers
+listed in the evidence, elects routes, and audits renderable sources against the
+roff checks. It also performs no Convex writes and records every rejection.
+
+The workflow's `debian_download_only: true` dispatch runs that acquisition-only
+mode for 2,000 packages in a separate job with no production environment or Convex
+secrets. It suppresses normal ingest/promotion regardless of their default inputs.
+It is prepared for an owner-authorized runner measurement and **was not run**:
+runner measurements count as shared execution. The [evidence document](../docs/roadmap/b1-debian-evidence.md)
+contains local results, audit dispositions and projections.
+
+Contract **v5** combines the merged v4 license batches, extractor provenance,
+packed signatures, symbols and optional-argument metadata with real/alias
+provider declarations. The generated layer keeps its separate **v2** contract.
+The single TS/Python alignment test and bidirectional mismatch tests guard deploy
+ordering. All provider and symbol tables are in the schema-checked release-child
+registry; derived dependency pins protect pruning. Deploy the combined Convex
+contract before ingestion. Do not deploy during update-docs.
+
+Alternate reads retain their own content-hash generated brief, without borrowing
+canonical portability/history. Alias redirects preserve the target package,
+including name-only redirects. Shared full-Debian switches remain explicit and
+were not enabled during integration.

@@ -12,7 +12,7 @@
 
 **Mitigations**
 
-- Roll back by activating the saved previous known-good release directly on `prod` using the command below. Require manifest verification, sealing, and completed related metadata; wait for `pending: false`. Do not edit active pointers or completeness fields directly.
+- Roll back a curated release by activating the saved previous known-good release directly on `prod` using the command below. For full-Debian archive releases, use staging activation and explicitly gated promotion as described below. Require manifest verification, sealing, and completed related metadata; wait for `pending: false`. Do not edit active pointers or completeness fields directly.
 - Re-run ingestion with fixes; validate on staging first.
 - If the previous release lacks its original alias declaration, do not infer completeness from the aliases currently stored. Recover original ingestion evidence and validate it explicitly, or re-ingest under a new release ID. Keep the current data available until a verified replacement is ready.
 - Rollback targets must still exist. `prune-releases` retains the newest verified inactive release per distro by default (`keep_per_distro`); raise it before pruning if a longer rollback window is wanted.
@@ -40,7 +40,37 @@ client.activate_release({
 '
 ```
 
-This uses the existing activation endpoint's manifest and seal checks and the client's hydration polling (up to 45 minutes), returning only after `pending: false` for the requested ID. On timeout or a lost response, re-check public `getInfo` before retrying the same saved ID. After success, confirm the prod ID and smoke-test representative pages and search. No staging activation or promotion is required for this rollback.
+This uses the existing activation endpoint's manifest and seal checks and the client's hydration polling (up to 45 minutes), returning only after `pending: false` for the requested ID. On timeout or a lost response, re-check public `getInfo` before retrying the same saved ID. After success, confirm the prod ID and smoke-test representative pages and search. Curated-release rollback does not require staging activation or promotion.
+
+## Full-Debian archive rollback
+
+An earlier full-Debian release still carries `acquisition: "deb-extraction"`.
+`/ingest/activate` refuses to activate it directly on prod with
+`409 FULL_DEBIAN_PROMOTION_HELD`, including during rollback. Do not change its
+identity or bypass the hold by editing pointers.
+
+With the same intended deployment configured, and no refresh, pruning or other
+manual activation running, activate the saved full-Debian rollback ID on staging:
+
+```bash
+pnpm ingest:activate --release-id '<previous-full-debian-prod-id>' --stage staging
+```
+
+Wait for successful completion (`pending: false`) and confirm Debian's staging
+ID is the saved rollback target. Inspect **all seven** staging pointers before
+the next command: promote-only dispatches attempt all distros and ignore distro
+selectors. Once the owner authorizes the rollback, use the explicit promotion
+input without enabling a recurring repository switch:
+
+```bash
+gh workflow run update-dataset -f ingest=false -f promote=true -f debian_full_promote=true
+```
+
+The promotion transaction verifies the staged release and supplies the required
+full-Debian authorization. Confirm the returned Debian prod ID matches the saved
+rollback ID, then smoke-test pages and search. On a lost response, check public
+`getInfo` before retrying. Keep the staging pointer unchanged until promotion
+finishes; manual activation is outside workflow concurrency protection.
 
 **Follow-ups**
 

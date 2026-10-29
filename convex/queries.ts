@@ -199,7 +199,7 @@ export const resolveManByName = query({
       kind: v.literal("ambiguous"),
       options: v.array(v.object({ section: v.string(), title: v.string(), description: v.string() })),
     }),
-    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string() }),
+    v.object({ kind: v.literal("alias"), name: v.string(), section: v.string(), pkg: v.optional(v.string()) }),
     v.object({ kind: v.literal("not_found") }),
   ),
   handler: async (ctx, args) => {
@@ -759,7 +759,7 @@ export const search = query({
           const target = await pageByNameAndSection(ctx, {
             releaseId: release._id, name: alias.targetName, section: alias.targetSection,
           });
-          if (target) ordered.unshift({
+          if (target && (!alias.targetPackage || alias.targetPackage === target.sourcePackage)) ordered.unshift({
             name: alias.name, section: alias.section, title: `${alias.name}(${alias.section})`,
             description: target.description, highlights: [], rank: 20_000,
           });

@@ -42,12 +42,14 @@ export default defineSchema({
     distro: distroValidator,
     imageRef: v.string(),
     imageDigest: v.string(),
+    acquisition: v.optional(v.literal("deb-extraction")),
     ingestedAt: v.string(),
     packageManifestJson: v.optional(v.string()),
     shardedPageUploads: v.optional(v.boolean()),
     packageBatchCount: v.optional(v.number()),
     uploadedPackageBatchCount: v.optional(v.number()),
     pageCount: v.number(),
+    providerCount: v.optional(v.number()),
     aliasCount: v.optional(v.number()),
     licenseCount: v.optional(v.number()),
     uploadedPageCount: v.optional(v.number()),
@@ -129,6 +131,22 @@ export default defineSchema({
     total: v.number(),
     uploaded: v.optional(v.number()),
   }).index("by_releaseId_and_section", ["releaseId", "section"]),
+
+  // Alternate providers are not search/browse/sitemap rows. Canonical routes
+  // keep the existing unique lookup and page-view read budget.
+  manPageProviders: defineTable({
+    releaseId: v.id("datasetReleases"), datasetReleaseId: v.string(),
+    externalId: v.string(), name: v.string(), section: v.string(),
+    title: v.string(), description: v.string(), sourcePath: v.string(),
+    sourcePackage: v.string(), sourcePackageVersion: v.optional(v.string()),
+    contentSha256: v.string(), hasParseWarnings: v.boolean(), blobId: v.id("manPageContentBlobs"),
+  }).index("by_releaseId_and_externalId", ["releaseId", "externalId"])
+    .index("by_releaseId_and_route_and_package_and_path", ["releaseId", "name", "section", "sourcePackage", "sourcePath"])
+    .index("by_blobId", ["blobId"]),
+
+  releaseProviderUploadShards: defineTable({
+    releaseId: v.id("datasetReleases"), bucket: v.number(), count: v.number(),
+  }).index("by_releaseId_and_bucket", ["releaseId", "bucket"]),
 
   manPages: defineTable({
     releaseId: v.id("datasetReleases"),
@@ -272,6 +290,11 @@ export default defineSchema({
     .index('by_releaseId_and_section_and_termNorm', ['releaseId', 'section', 'termNorm']),
 
   // `.so` include stubs: /man/<name>/<section> redirects to the target page.
+  manPageAliasProviders: defineTable({
+    releaseId: v.id("datasetReleases"), name: v.string(), section: v.string(),
+    sourcePackage: v.string(), sourcePath: v.string(), targetName: v.string(), targetSection: v.string(), targetPackage: v.string(),
+  }).index("by_releaseId_and_route_and_package_and_path", ["releaseId", "name", "section", "sourcePackage", "sourcePath"]),
+
   manPageAliases: defineTable({
     releaseId: v.id("datasetReleases"),
     datasetReleaseId: v.string(),
@@ -279,6 +302,7 @@ export default defineSchema({
     section: v.string(),
     targetName: v.string(),
     targetSection: v.string(),
+    targetPackage: v.optional(v.string()),
   })
     .index("by_releaseId_and_name_and_section", ["releaseId", "name", "section"])
     .index("by_releaseId_and_name", ["releaseId", "name"])

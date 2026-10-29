@@ -1,3 +1,4 @@
+import { packageName } from '@/lib/packageName'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
@@ -56,9 +57,10 @@ export default async function ManByNamePage({
   if (result.kind !== 'ambiguous') {
     // 307, not 308: the target depends on the distro cookie and on which sections
     // the current release has, so browsers must not cache it.
-    redirect(
-      withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, urlDistro),
-    )
+    let target = withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, urlDistro)
+    const pkg = result.kind === 'alias' ? packageName(result.pkg) : undefined
+    if (pkg) target += `${target.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}`
+    redirect(target)
   }
 
   return (

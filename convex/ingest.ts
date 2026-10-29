@@ -6,7 +6,8 @@ import { contentChunks, splitContentFields, type ContentField, type ContentJsonK
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { scheduleDerivedBuild } from "./derived";
-import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
+import { fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
+import { insertProvider, recordProviderUploads } from "./_providers";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
 import { insertSymbols, symbolInput } from './_symbols';
@@ -71,6 +72,7 @@ const optionFlagInput = v.object({
 });
 
 const storedPageInput = v.object({
+  providerOnly: v.optional(v.boolean()),
   externalId: v.string(),
   name: v.string(),
   section: v.string(),
@@ -93,6 +95,8 @@ const storedPageInput = v.object({
 });
 
 const aliasInput = v.object({
+  sourcePackage: v.optional(v.string()), sourcePath: v.optional(v.string()),
+  targetPackage: v.optional(v.string()), providerOnly: v.optional(v.boolean()),
   name: v.string(),
   section: v.string(),
   targetName: v.string(),
@@ -291,7 +295,9 @@ export const createRelease = internalMutation({
     packageManifest: v.optional(v.any()),
     packageManifestStorageId: v.optional(v.id("_storage")),
     packageManifestDigest: v.optional(v.string()),
+    acquisition: v.optional(v.literal("deb-extraction")),
     packageBatches: v.optional(v.array(v.object({ digest: v.string(), count: v.number(), licenseCount: v.number() }))),
+    providerCount: v.optional(v.number()),
     pageCount: v.number(),
     aliasCount: v.number(),
     licenseCount: v.number(),
@@ -299,7 +305,10 @@ export const createRelease = internalMutation({
     licensePackages: v.optional(v.array(licensePackageInput)),
   },
   handler: async (ctx, args) => {
+    const acquisition = args.packageManifest !== undefined ? releaseAcquisition(args.packageManifest) : args.acquisition;
+    if (args.acquisition !== undefined && acquisition !== args.acquisition) throw new Error("INVALID_RELEASE_MANIFEST");
     const packages = args.licensePackages ?? [];
+    if (args.providerCount !== undefined && (!validManifestCount(args.providerCount) || args.packageBatches === undefined)) throw new Error("INVALID_RELEASE_MANIFEST");
     if (args.packageBatches !== undefined) {
       validateManifestSections(args.pageCount, args.sectionTotals);
       if (packages.length || !validManifestCount(args.aliasCount) || !validManifestCount(args.licenseCount) ||
@@ -320,6 +329,7 @@ export const createRelease = internalMutation({
     const { packageManifestStorageId, ...declaration } = args;
     const manifestDeclarationDigest = await storedPayloadDigest(canonicalJson({
       ...declaration,
+      acquisition,
       sectionTotals: [...args.sectionTotals].sort((a, b) => a.section.localeCompare(b.section)),
       licensePackages: packages.map((pkg) => ({ ...pkg, name: pkg.name.trim().toLowerCase() }))
         .sort((a, b) => a.name.localeCompare(b.name)),
@@ -340,11 +350,13 @@ export const createRelease = internalMutation({
       distro: args.distro,
       imageRef: args.imageRef,
       imageDigest: args.imageDigest,
+      acquisition,
       ingestedAt: args.ingestedAt,
       ...(args.packageBatches !== undefined ? { shardedPageUploads: true, relatedMetadataVersion: 1 } : {}),
       packageBatchCount: args.packageBatches?.length ?? 0,
       uploadedPackageBatchCount: 0,
       pageCount: args.pageCount,
+      ...(args.providerCount !== undefined ? { providerCount: args.providerCount } : {}),
       aliasCount: args.aliasCount,
       licenseCount: args.licenseCount,
       uploadedPageCount: 0,
@@ -538,8 +550,16 @@ export const insertStoredPages = internalMutation({
 
     let inserted = 0;
     let skipped = 0;
+    let providerInserted = 0;
     const bySection = new Map<string, number>();
     for (const page of args.pages) {
+      if (page.providerOnly) {
+        const added = await insertProvider(ctx, release, page, immutable, () => findOrCreateStoredContentBlob(ctx, {
+          contentSha256: page.contentSha256, storageId: page.contentStorageId,
+        }));
+        if (added) { inserted++; providerInserted++; } else skipped++;
+        continue;
+      }
       const existing = await ctx.db
         .query("manPages")
         .withIndex("by_releaseId_and_externalId", (q) =>
@@ -615,7 +635,8 @@ export const insertStoredPages = internalMutation({
       bySection.set(page.section, (bySection.get(page.section) ?? 0) + 1);
     }
 
-    if (inserted > 0) {
+    if (providerInserted > 0) await recordProviderUploads(ctx, release, providerInserted, args.pages[0].externalId);
+    if (bySection.size > 0) {
       await recordPageUploads(ctx, release, bySection, args.pages[0].externalId);
       if (!release.shardedPageUploads) await ctx.db.patch(release._id, { relatedMetadataVersion: (release.relatedMetadataVersion ?? 0) + 1 });
     }
@@ -644,9 +665,27 @@ export const insertAliases = internalMutation({
 
     let inserted = 0;
     let skipped = 0;
+    let providerInserted = 0;
     for (const alias of args.aliases) {
       const name = alias.name.trim().toLowerCase();
       const section = alias.section.trim().toLowerCase();
+      if (alias.sourcePackage !== undefined) {
+        if (!release.providerCount || !alias.sourcePath || !alias.targetPackage) throw new Error("INVALID_ALIAS_PROVIDER");
+        const owner = await ctx.db.query("manPageAliasProviders").withIndex("by_releaseId_and_route_and_package_and_path", q =>
+          q.eq("releaseId", release._id).eq("name", name).eq("section", section).eq("sourcePackage", alias.sourcePackage!).eq("sourcePath", alias.sourcePath!)).unique();
+        if (owner) {
+          if (owner.targetName !== alias.targetName || owner.targetSection !== alias.targetSection || owner.targetPackage !== alias.targetPackage) throw new Error("RELEASE_MANIFEST_CONFLICT");
+        } else {
+          if (immutable) throw new Error("RELEASE_SEALED");
+        const canonicalTarget = await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", q => q.eq("releaseId", release._id).eq("name", alias.targetName).eq("section", alias.targetSection)).unique();
+        const alternateTarget = canonicalTarget?.sourcePackage === alias.targetPackage ? null : await ctx.db.query("manPageProviders")
+          .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id).eq("name", alias.targetName).eq("section", alias.targetSection).eq("sourcePackage", alias.targetPackage!)).first();
+        if (canonicalTarget?.sourcePackage !== alias.targetPackage && !alternateTarget) throw new Error("ALIAS_TARGET_NOT_FOUND");
+          await ctx.db.insert("manPageAliasProviders", { releaseId: release._id, name, section, sourcePackage: alias.sourcePackage, sourcePath: alias.sourcePath, targetName: alias.targetName, targetSection: alias.targetSection, targetPackage: alias.targetPackage });
+          providerInserted++;
+        }
+        if (alias.providerOnly) { skipped++; continue; }
+      } else if (alias.providerOnly) throw new Error("INVALID_ALIAS_PROVIDER");
       const existing = await ctx.db
         .query("manPageAliases")
         .withIndex("by_releaseId_and_name_and_section", (q) =>
@@ -666,7 +705,9 @@ export const insertAliases = internalMutation({
       if (canonical) throw new Error("DUPLICATE_MAN_PAGE_ROUTE");
       const target = await ctx.db.query("manPages")
         .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", release._id).eq("name", targetName).eq("section", targetSection)).unique();
-      if (!target) throw new Error("ALIAS_TARGET_NOT_FOUND");
+      const providerTarget = !target && alias.targetPackage ? await ctx.db.query("manPageProviders")
+        .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id).eq("name", targetName).eq("section", targetSection).eq("sourcePackage", alias.targetPackage!)).first() : null;
+      if (!target && !providerTarget) throw new Error("ALIAS_TARGET_NOT_FOUND");
       await ctx.db.insert("manPageAliases", {
         releaseId: release._id,
         datasetReleaseId: release.datasetReleaseId,
@@ -674,9 +715,11 @@ export const insertAliases = internalMutation({
         section,
         targetName,
         targetSection,
+        ...(alias.targetPackage && target?.sourcePackage !== alias.targetPackage ? { targetPackage: alias.targetPackage } : {}),
       });
       inserted += 1;
     }
+    if (providerInserted > 0) await recordProviderUploads(ctx, release, providerInserted, args.aliases[0].name);
     if (inserted > 0) await recordOtherUploads(ctx, release, "aliases", inserted);
     return { inserted, skipped };
   },
@@ -753,6 +796,7 @@ export const activateRelease = internalMutation({
     stage: datasetStageValidator,
     datasetReleaseId: v.string(),
     activatedAt: v.string(),
+    allowFullDebian: v.optional(v.boolean()),
   },
   returns: v.object({
     stage: datasetStageValidator,
@@ -767,6 +811,8 @@ export const activateRelease = internalMutation({
       .unique();
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (release.pruning) throw new Error("RELEASE_PRUNING");
+
+    if (fullDebianPromotionHeld(release, args.stage, args.allowFullDebian)) throw new Error("FULL_DEBIAN_PROMOTION_HELD");
 
     await verifyDeclaredManifest(ctx, release);
     if (!release.sealed) await ctx.db.patch(release._id, { sealed: true });
@@ -822,12 +868,15 @@ export const promoteActiveReleases = internalMutation({
     toStage: datasetStageValidator,
     distros: v.array(distroValidator),
     activatedAt: v.string(),
+    allowFullDebian: v.optional(v.boolean()),
   },
   returns: v.object({
     promoted: v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string() })),
+    skipped: v.optional(v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string(), reason: v.string() }))),
   }),
   handler: async (ctx, args) => {
     const promoted = [];
+    const skipped = [];
     for (const distro of new Set(args.distros)) {
       const source = await ctx.db
         .query("activeReleases")
@@ -838,6 +887,12 @@ export const promoteActiveReleases = internalMutation({
       if (!source) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
       const release = await ctx.db.get(source.releaseId);
       if (!release) throw new Error("RELEASE_NOT_FOUND");
+      // Check persisted acquisition identity in the pointer transaction; a
+      // preflight read or mirror URL would not enforce the release's hold.
+      if (fullDebianPromotionHeld(release, args.toStage, args.allowFullDebian)) {
+        skipped.push({ distro, datasetReleaseId: source.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
+        continue;
+      }
       if (release.pruning) throw new Error("RELEASE_PRUNING");
       if (!release.sealed) throw new Error("RELEASE_NOT_SEALED");
       if (!release.manifestVerified) throw new Error("RELEASE_MANIFEST_UNVERIFIED");
@@ -880,6 +935,7 @@ export const promoteActiveReleases = internalMutation({
 
     if (args.toStage === "prod" && promoted.length) await scheduleDerivedBuild(ctx, "en");
 
-    return { promoted };
+
+    return skipped.length ? { promoted, skipped } : { promoted };
   },
 });

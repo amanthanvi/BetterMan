@@ -204,3 +204,57 @@ request, carrying only an explicit URL `?distro=`. A cookie/default never enters
 the recovery URL. The `(site)/loading.tsx` boundary can already have streamed
 HTTP 200; in that case Next emits its client/meta redirect. Before streaming,
 Next returns HTTP 307. This recovery is not a permanent canonical redirect.
+
+## Debian archive imports: explicit approval switches
+
+Default Debian jobs use the curated container path. Full imports require either
+cron repository variable `BETTERMAN_DEBIAN_FULL=1`, or manual input
+`debian_full: true` (default false). The dispatch input, not the repository import
+variable, controls manual jobs. The CLI likewise requires `--debian-full`.
+
+Leave `BETTERMAN_DEBIAN_FULL_PROMOTE` unset and `debian_full_promote` false for
+the first full release. Cron and combined full-ingest/promote dispatches then
+stop at verified staging while healthy curated distros keep their existing promotion behavior. Record the full
+release ID and inspect actual staging storage, reads, license coverage and cost
+before the owner authorizes a separate promotion-only dispatch (`ingest: false`,
+`promote: true`, **`debian_full_promote: true`**). The latter input defaults
+false. Routine promote-only recovery without that input skips an actual
+full-Debian staging pointer, logs `Skipping held full-Debian staging release`,
+and continues the other distros. An explicit manual `debian_full_promote: true`
+also authorizes promotion in a combined ingest+promote dispatch; cron ignores
+dispatch inputs and uses only the repository variable. The backend checks
+persisted `acquisition: "deb-extraction"` identity from the creation manifest
+in every prod-pointer transaction, independently of the mirror URL. HTTP/CLI
+activation cannot authorize full-Debian prod activation; use the gated promote
+workflow. `--debian-full` with `BETTERMAN_DATASET_STAGE=prod` fails before work.
+A changed import switch, mirror or rerun cannot bypass the hold. The workflow
+skips the Debian prod smoke check when held. The promotion-only workflow covers all seven distros; review every staging
+pointer before dispatching it. Only after this approval
+should the owner set `BETTERMAN_DEBIAN_FULL_PROMOTE=1` to enable recurring full
+promotions. Setting it alone does not opt into full ingestion. Non-empty
+repository values other than exactly `1` emit a workflow warning and remain off. Empty
+values are treated as unset without warning; warnings never echo supplied values.
+
+The verified archive cache is capped at 2 GiB and keyed only by pinned Release
+SHA256; there is no run-ID fan-out. GitHub keeps the first immutable cache entry
+for that Release/branch and evicts older keys through its repository-wide 10 GB
+LRU quota. Later runs reuse that subset and fetch evicted/missing archives;
+they do not replace the saved entry. Retained extracted files have a separate
+4 GiB limit, including resumed/partial files and concurrent extraction. Hitting
+it stops resumably instead of consuming the runner's disk. See ingestion/README
+for lower-limit configuration and same-runner checkpoint guarantees.
+
+The `debian_download_only: true` input suppresses normal ingest/promote and runs
+an isolated, secrets-free 2,000-package acquisition benchmark. It never creates
+a Convex client. Executing it is a shared runner measurement and requires owner
+authorization; this implementation did not run it. A bounded checksum-verified
+archive cache is saved even after recoverable acquisition failures. See the
+[checkpoint limits](../../ingestion/README.md#acquisition-checkpoints-and-runner-measurements):
+new VMs only reuse retained cached archives, not an entire extracted full corpus.
+
+The existing 300-minute Linux job deadline includes setup/download/parse/upload.
+Activation uses only the remaining budget, capped at 45 minutes, and can resume
+without another import. Never deploy Convex during a dataset run. Merge B7 v3,
+then B5 v4, then rebase/deploy archive providers v5 with the combined contract,
+symbols, derived state, lease fence and all child tables. No switch, billing
+setting or shared dataset was changed for the local evidence.

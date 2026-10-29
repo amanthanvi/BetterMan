@@ -3,6 +3,18 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 export const MAX_MANIFEST_SECTIONS = 256;
 
+// Persist acquisition identity independently of the mirror and large manifest.
+export function releaseAcquisition(manifest: unknown): "deb-extraction" | undefined {
+  const acquisition = manifest && typeof manifest === "object" && "acquisition" in manifest
+    ? manifest.acquisition : undefined;
+  if (acquisition !== undefined && acquisition !== "deb-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
+  return acquisition;
+}
+
+export function fullDebianPromotionHeld(release: Doc<"datasetReleases">, stage: "prod" | "staging", allowFullDebian?: boolean): boolean {
+  return stage === "prod" && release.distro === "debian" && release.acquisition === "deb-extraction" && allowFullDebian !== true;
+}
+
 export function validManifestCount(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }
@@ -117,6 +129,13 @@ export async function verifyDeclaredManifest(ctx: MutationCtx, release: Doc<"dat
     .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", release._id)).take(MAX_MANIFEST_SECTIONS + 1);
   validateManifestSections(release.pageCount, stats);
   const progress = await pageUploadProgress(ctx, release);
+  if (release.providerCount !== undefined) {
+    const shards = await ctx.db.query("releaseProviderUploadShards")
+      .withIndex("by_releaseId_and_bucket", q => q.eq("releaseId", release._id)).take(PAGE_UPLOAD_SHARDS + 1);
+    const count = shards.reduce((sum, shard) => sum + shard.count, 0);
+    if (shards.length > PAGE_UPLOAD_SHARDS || count > release.providerCount) throw new Error("RELEASE_MANIFEST_EXCEEDED");
+    if (count !== release.providerCount) throw new Error("RELEASE_MANIFEST_INCOMPLETE");
+  }
   if ((progress.pageCount !== undefined && progress.pageCount > release.pageCount) ||
       stats.some((stat) => (progress.sections.get(stat.section) ?? 0) > stat.total)) {
     throw new Error("RELEASE_MANIFEST_EXCEEDED");

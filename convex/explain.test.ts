@@ -98,6 +98,21 @@ describe('bounded explain resolution', () => {
     expect(pipeline.shareUrl).toBe(`/explain?cmd=${encodeURIComponent(pipeline.input)}`);
     expect(pipeline.diagnostics).toEqual([]);
   });
+  it('respects alias targetPackage instead of borrowing canonical options and symbols', async () => {
+    const t = await explainFixture(30);
+    await t.run(async ctx => {
+      const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q => q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique();
+      const page = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', active!.releaseId).eq('name', 'git-commit').eq('section', '1')).unique();
+      await ctx.db.patch(page!._id, {sourcePackage:'canonical'});
+      for (const targetPackage of ['canonical', 'alternate']) {
+        await ctx.db.insert('manPageAliases', {releaseId:active!.releaseId, datasetReleaseId:'debian', name:`g${targetPackage}`, section:'1', targetName:'git-commit', targetSection:'1', targetPackage});
+      }
+    });
+    expect((await explain(t, 'gcanonical -m message')).stages[0].tokens[0].page).toMatchObject({name:'git-commit'});
+    const alternate = await explain(t, 'galternate -m message');
+    expect(alternate.stages[0].tokens[0].page).toBeNull();
+    expect(alternate.stages[0].tokens.every((token: {page: unknown; anchor: unknown}) => token.page === null && token.anchor === null)).toBe(true);
+  });
   it('resolves subcommands, distro variants, attached values and real find flags', async () => {
     const t = await explainFixture(30);
     for (const [cmd, name] of [['git commit -m "message"', 'git-commit'], ['ip addr', 'ip-address'], ['openssl x509', 'openssl-x509']]) {

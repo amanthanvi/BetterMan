@@ -67,7 +67,8 @@ export async function resolvePageByName(
     )
     .take(2);
   if (aliases.length === 1) {
-    return { kind: "alias" as const, name: aliases[0].targetName, section: aliases[0].targetSection };
+    return { kind: "alias" as const, name: aliases[0].targetName, section: aliases[0].targetSection,
+      ...(aliases[0].targetPackage ? { pkg: aliases[0].targetPackage } : {}) };
   }
   return { kind: "not_found" as const };
 }

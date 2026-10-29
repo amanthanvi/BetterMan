@@ -9,6 +9,7 @@ import { optionFlagRows } from "./_optionFlags";
 import { MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
 import { INGEST_CONTRACT } from "./ingestContract";
 import { canonicalJson } from "./ingest";
+import { releaseAcquisition } from "./_releaseManifest";
 import { GENERATED_CONTRACT, GENERATED_LIMITS, generationDoc } from "./_generatedLayer";
 import { resolveContent } from "./content";
 import { secretsMatch } from "./lib";
@@ -84,13 +85,14 @@ http.route({
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
     const { packageManifest, ...metadata } = body as Record<string, unknown>;
+    const acquisition = releaseAcquisition(packageManifest);
     // JSON is a storage blob, so a 17k-package manifest never crosses the
     // document or Convex array-value limits or burdens a page-view read.
     const text = canonicalJson(packageManifest ?? null);
     const storageId = await ctx.storage.store(new Blob([text], { type: MANIFEST_CONTENT_TYPE }));
     try {
       const result = await ctx.runMutation(internal.ingest.createRelease, {
-        ...metadata, packageManifestStorageId: storageId, packageManifestDigest: await storedPayloadDigest(text),
+        ...metadata, acquisition, packageManifestStorageId: storageId, packageManifestDigest: await storedPayloadDigest(text),
       } as never);
       if (result.existed) await ctx.storage.delete(storageId);
       return jsonResponse(result);
@@ -217,7 +219,8 @@ http.route({
   path: "/ingest/activate",
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
-    const result = await ctx.runMutation(internal.ingest.activateRelease, body as never);
+    // Full-Debian production authorization belongs to the gated promote path.
+    const result = await ctx.runMutation(internal.ingest.activateRelease, { ...body as object, allowFullDebian: false } as never);
     return jsonResponse(result, result.pending ? 409 : 200);
   }),
 });

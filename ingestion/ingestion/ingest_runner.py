@@ -82,7 +82,7 @@ from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.symbols import MAX_SYMBOLS, symbol_rows
 from ingestion.util import normalize_ws, sha256_hex
 
-_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+:-]*$")
+_NAME_RE = re.compile(r"^[a-z0-9_+\[][\w.+:@\[\]-]{0,199}$", re.ASCII)
 _PKG_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
 _DOC_ROOT = Path("/usr/share/doc")
 _LICENSE_ROOT = Path("/usr/share/licenses")
@@ -100,7 +100,7 @@ _BASE_PROVENANCE = {
     ),
 }
 _MAN_HREF_RE = re.compile(
-    r"^/man/(?P<name>[a-z0-9][a-z0-9._+:-]*)(?:/(?P<section>[1-9][a-z0-9]*))?$"
+    r"^/man/(?P<name>[a-z0-9_+\[][\w.+:@\[\]-]{0,199})(?:/(?P<section>[1-9][a-z0-9]*))?$", re.ASCII
 )
 
 logger = logging.getLogger("betterman.ingestion")

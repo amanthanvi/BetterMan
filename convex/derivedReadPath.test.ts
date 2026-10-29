@@ -94,3 +94,22 @@ it("stops serving old enrichment immediately when signature validation fails", a
   expect(result?.kind === "page" && result.data.derived).toBeNull();
   expect(await t.query(api.portability.getDetails, { distro: "debian", name: "tar", section: "1" })).toBeNull();
 });
+
+
+it("does not borrow canonical portability through a package-qualified alternate alias", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  await t.run(async ctx => {
+    const r = await release(ctx, "debian", "alias-provider", ["tar", "other"]);
+    await ctx.db.insert("activeReleases", { releaseId: r.id, datasetReleaseId: r.datasetReleaseId,
+      stage: "prod", locale: "en", distro: "debian", activatedAt: "now" });
+    await ctx.db.insert("manPageAliases", { releaseId: r.id, datasetReleaseId: r.datasetReleaseId,
+      name: "alternate-alias", section: "1", targetName: "tar", targetSection: "1", targetPackage: "alternate-tar" });
+  });
+  await t.mutation(internal.derived.rebuildActive, {});
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  const row = await t.run(ctx => ctx.db.query("manPageDerived")
+    .withIndex("by_locale_and_distro_and_name_and_section", q => q.eq("locale", "en").eq("distro", "debian")
+      .eq("name", "alternate-alias").eq("section", "1")).unique());
+  expect(row).toBeNull();
+});

@@ -7,6 +7,22 @@ import pytest
 import ingestion.cli as cli
 
 
+@pytest.mark.parametrize("extra", [[], ["--sample"], ["--no-activate"], ["--in-container"]])
+@pytest.mark.parametrize("stage", ["prod", " PROD ", "Prod", "\tprod\n"])
+def test_full_debian_cannot_target_prod_before_any_work(monkeypatch, extra, stage):
+    monkeypatch.setenv("BETTERMAN_DATASET_STAGE", stage)
+
+    def forbidden(**_kwargs):
+        pytest.fail("full prod ingest must fail before acquisition or writes")
+
+    monkeypatch.setattr(cli, "_run_ingest", forbidden)
+    monkeypatch.setattr(cli, "run_ingest_container", forbidden)
+    events = []
+    monkeypatch.setattr(cli, "_log", lambda event, **fields: events.append((event, fields)))
+    assert cli.main(["ingest", "--debian-full", *extra]) == 2
+    assert "cannot use stage prod" in events[-1][1]["error"]
+
+
 def test_main_invokes_run_ingest_container_for_host(monkeypatch) -> None:
     called: dict[str, object] = {}
 
@@ -290,3 +306,33 @@ def test_invalid_job_deadline_exits_before_ingestion(monkeypatch, caplog):
     with caplog.at_level("INFO"):
         assert cli.main(["ingest"]) == 2
     assert "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS must be a Unix timestamp" in caplog.text
+
+
+def test_full_debian_uses_archive_path_before_docker(monkeypatch):
+    calls = []
+
+    def run(**kwargs):
+        calls.append(kwargs)
+        return 0
+
+    monkeypatch.setattr(cli, "_run_ingest", run)
+    monkeypatch.setattr(
+        cli, "run_ingest_container", lambda **_: pytest.fail("must not install Debian packages")
+    )
+    assert cli.main(["ingest", "--distro", "debian", "--debian-full", "--no-activate"]) == 0
+    assert calls[0]["archive_mode"] is True
+    assert calls[0]["activate"] is False
+
+
+def test_debian_sample_keeps_curated_docker_path(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli, "run_ingest_container", lambda **kwargs: calls.append(kwargs) or 0)
+    assert cli.main(["ingest", "--distro", "debian", "--sample"]) == 0
+    assert calls == [{"sample": True, "activate": False, "distro": "debian"}]
+
+
+def test_default_debian_keeps_curated_docker_path(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli, "run_ingest_container", lambda **kw: calls.append(kw) or 0)
+    assert cli.main(["ingest", "--distro", "debian"]) == 0
+    assert calls == [{"sample": False, "activate": True, "distro": "debian"}]

@@ -50,11 +50,33 @@ def load(distro):
     )
 
 
+def gate(name):
+    value = os.environ.get(name, "")
+    if value and value != "1":
+        print(f"::warning::{name} is not exactly 1; treating it as off", flush=True)
+    return value == "1"
+
+
+def full_promotion_enabled():
+    return gate("BETTERMAN_DEBIAN_FULL_PROMOTE") or (
+        os.environ["BETTERMAN_WORKFLOW_EVENT"] == "workflow_dispatch"
+        and os.environ.get("BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT") == "true"
+    )
+
+
 def selection():
     dispatch = os.environ["BETTERMAN_WORKFLOW_EVENT"] == "workflow_dispatch"
     ingest = not dispatch or os.environ["BETTERMAN_INGEST_ENABLED"] == "true"
     promote = not dispatch or os.environ["BETTERMAN_PROMOTE_ENABLED"] == "true"
     sample = dispatch and os.environ["BETTERMAN_INGEST_SAMPLE"] == "true"
+    cron_full = gate("BETTERMAN_DEBIAN_FULL")
+    auto_full = full_promotion_enabled()
+    if dispatch and os.environ.get("BETTERMAN_DEBIAN_DOWNLOAD_ONLY") == "true":
+        return {"include": []}, False, False
+    full_debian = not sample and (
+        os.environ.get("BETTERMAN_DEBIAN_FULL_INPUT") == "true" if dispatch
+        else cron_full
+    )
     distros = []
     if ingest:
         for group, key in ((BSD, "BSD"), (LINUX, "LINUX")):
@@ -69,6 +91,10 @@ def selection():
         "include": [
             {
                 "distro": distro,
+                "full_debian": distro == "debian" and full_debian,
+                "promote": promote and not sample and (
+                    distro != "debian" or not full_debian or auto_full or (dispatch and not ingest)
+                ),
                 "runner": "macos-latest" if distro == "macos" and ingest else "ubuntu-latest",
                 "timeout": (60 if distro == "macos" else 90 if distro == "freebsd" else 300)
                 if ingest
@@ -163,7 +189,9 @@ def request_json(request):
 
 def promote(distro):
     record = load(distro)
-    _, ingest, enabled = selection()
+    matrix, ingest, enabled = selection()
+    selected = next((item for item in matrix["include"] if item["distro"] == distro), None)
+    enabled = enabled and selected is not None and selected["promote"]
     if not enabled:
         raise ValueError("Refusing to promote when promotion is disabled or this is a sample")
     if ingest and (record["result"] != "success" or record.get("stagingVerified") is not True):
@@ -175,6 +203,7 @@ def promote(distro):
         "toStage": "prod",
         "distros": [distro],
         "activatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
+        "allowFullDebian": full_promotion_enabled(),
     }
     request = urllib.request.Request(
         f"{os.environ['CONVEX_HTTP_URL'].rstrip('/')}/ingest/promote",
@@ -207,6 +236,17 @@ def promote(distro):
         save(distro, record)
         result = request_json(request)
         promoted = result["promoted"]
+        skipped = result.get("skipped", [])
+        if (not promoted and distro == "debian" and len(skipped) == 1
+            and skipped[0].get("distro") == "debian"
+            and skipped[0].get("datasetReleaseId")
+            and skipped[0].get("reason") == "FULL_DEBIAN_PROMOTION_HELD"):
+            print("[dataset] Skipping held full-Debian staging release: authorize debian_full_promote or BETTERMAN_DEBIAN_FULL_PROMOTE=1", flush=True)
+            record.update(stage="full Debian promotion held", result="success")
+            save(distro, record)
+            with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                output.write("skipped=true\n")
+            return 0
         if (
             len(promoted) != 1
             or promoted[0]["distro"] != distro

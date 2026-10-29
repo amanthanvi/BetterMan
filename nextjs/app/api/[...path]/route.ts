@@ -1,3 +1,4 @@
+import { packageName } from '@/lib/packageName'
 import type { NextRequest } from 'next/server'
 
 import {
@@ -71,8 +72,10 @@ function cachedJson(value: unknown, seconds = PUBLIC_CACHE_SECONDS, init?: Respo
   })
 }
 
-function aliasRedirect(req: Request, distro: string, name: string, section: string): Response {
+function aliasRedirect(req: Request, distro: string, name: string, section: string, pkg?: string): Response {
   const url = new URL(req.url)
+  url.searchParams.delete('pkg')
+  if (packageName(pkg)) url.searchParams.set('pkg', pkg!)
   url.pathname = `/api/v1/man/${encodeURIComponent(name)}/${encodeURIComponent(section)}`
   if (distro === 'debian') url.searchParams.delete('distro')
   else url.searchParams.set('distro', distro)
@@ -225,7 +228,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
           { status: 409 },
         )
       }
-      if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section)
+      if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section, result.pkg)
       return cachedJson(result.data)
     }
 
@@ -245,9 +248,9 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const result = await measure(metrics, 'convex_man', () =>
-        fetchManByNameAndSectionOrAlias({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+        fetchManByNameAndSectionOrAlias({ distro, name: parts[1], section: parts[2], ...(packageName(new URL(req.url).searchParams.get('pkg')) ? { pkg: packageName(new URL(req.url).searchParams.get('pkg'))! } : {}) }),
       )
-      if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section)
+      if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section, result.pkg)
       return cachedJson(result.data)
     }
 
@@ -257,7 +260,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const result = await measure(metrics, 'convex_man_meta', () =>
-        fetchManMetaByNameAndSection({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+        fetchManMetaByNameAndSection({ distro, name: parts[1], section: parts[2] }),
       )
       return cachedJson(result)
     }
