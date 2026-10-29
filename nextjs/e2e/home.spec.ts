@@ -26,9 +26,12 @@ test('home: typing shows results inline, with the top hit, and keeps the box', a
   await page.goto('/')
   await waitForInteractiveShell(page)
   const box = page.getByRole('searchbox', { name: 'Search man pages' })
-  await box.click()
-  await box.pressSequentially('tar')
-  await expect(page).toHaveURL(/\/\?q=tar$/)
+  // The box sits under home's loading boundary and can hydrate after the shell.
+  await expect(async () => {
+    await box.fill('')
+    await box.pressSequentially('tar')
+    await expect(page).toHaveURL(/\/\?q=tar$/, { timeout: 1_500 })
+  }).toPass()
   await expect(box).toBeFocused()
   const results = page.getByRole('list', { name: 'Search results' })
   await expect(results.getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
