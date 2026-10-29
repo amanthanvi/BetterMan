@@ -1,14 +1,15 @@
 import { test, expect } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
-import { pressShortcutUntilVisible, waitForInteractiveShell } from './shortcuts'
+import { waitForInteractiveShell } from './shortcuts'
 
 test('command palette: opens with keyboard shortcut', async ({ page }) => {
   await page.goto('/')
   await waitForInteractiveShell(page)
 
   const input = page.getByRole('combobox', { name: 'Command palette input' })
-  await pressShortcutUntilVisible(page, 'ControlOrMeta+K', input)
+  await page.keyboard.press('ControlOrMeta+K')
+  await expect(input).toBeVisible()
 })
 
 test('command palette: opens and navigates to a page', async ({ page }) => {
@@ -31,7 +32,8 @@ test('command palette: focuses the input on every open and returns focus on clos
   const searchButton = page.getByRole('button', { name: 'Search' })
   await searchButton.focus()
 
-  await pressShortcutUntilVisible(page, 'ControlOrMeta+K', input)
+  await page.keyboard.press('ControlOrMeta+K')
+  await expect(input).toBeVisible()
   await expect(input).toBeFocused()
 
   // The closing panel is aria-hidden until its exit animation ends and it unmounts.

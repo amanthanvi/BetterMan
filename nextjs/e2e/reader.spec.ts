@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 
-import { pressShortcutUntilVisible, waitForInteractiveShell } from './shortcuts'
+import { waitForInteractiveShell } from './shortcuts'
 
 const MACOS_MARKER = 'macOS variant: this page is intentionally different for E2E testing.'
 const UBUNTU_MARKER = 'Ubuntu variant: this page is intentionally different for E2E testing.'
@@ -64,7 +64,8 @@ test('reader: f opens find; typing shows match 1 and the first Enter goes to mat
 
   const findbar = page.locator('[data-bm-findbar]')
   const input = findbar.getByRole('textbox', { name: 'Find in page' })
-  await pressShortcutUntilVisible(page, 'f', input)
+  await page.keyboard.press('f')
+  await expect(input).toBeVisible()
   await expect(input).toBeFocused()
   await input.fill('')
   await input.pressSequentially('known issue')

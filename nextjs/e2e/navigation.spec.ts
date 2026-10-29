@@ -127,6 +127,11 @@ test('navigation: distro replacement shows feedback until its query-only payload
 })
 
 test('navigation: a link into a man page dims while its payload is pending', async ({ page }) => {
+  // A completed prefetch can satisfy the navigation before the pending state appears.
+  await page.route('**/*', async (route) => {
+    if (new URL(route.request().url()).pathname === '/man/tar/1' && isPrefetch(route.request())) await route.abort()
+    else await route.continue()
+  })
   await page.goto('/section/1')
   await waitForInteractiveShell(page)
   const link = page.getByRole('link', { name: /^tar\(1\)/ })
