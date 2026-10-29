@@ -128,6 +128,7 @@ test('navigation: distro replacement shows feedback until its query-only payload
 
 test('navigation: a link into a man page dims while its payload is pending', async ({ page }) => {
   await page.goto('/section/1')
+  await waitForInteractiveShell(page)
   const link = page.getByRole('link', { name: /^tar\(1\)/ })
   await expect(link).toHaveCSS('opacity', '1')
 

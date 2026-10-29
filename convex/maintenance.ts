@@ -63,6 +63,7 @@ const storageStatsTableValidator = v.union(
   v.literal("manPageAliases"),
   v.literal("manPageGenerated"),
   v.literal("manPageLinks"),
+  v.literal("manPageSymbols"),
   v.literal("manPageOptionFlags"),
   v.literal("manPageSearchDocuments"),
   v.literal("manPages"),
@@ -100,6 +101,7 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   // Content-hash rows, not release-owned; parts are bounded objects.
   manPageGenerated: ["contentSha256", "updatedAt", "tldrCommit"],
   manPageLinks: ["fromExternalId", "toName", "toSection", "toTitle", "toDescription", "linkType"],
+  manPageSymbols: ["term", "termNorm", "anchorId", "excerpt"],
   manPageOptionFlags: ["nameNorm", "section", "flag", "anchorId", "flags"],
   manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
   manPages: [
@@ -822,12 +824,12 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
 });
 
 
-// These are optional caches, not release children. Delete a cache only after
+// Signature caches are optional; symbols are release/page-owned. Delete only after
 // proving that no live page/input or exact legacy content identity references
 // it in the same transaction. Small pages bound the worst-case signature bytes.
 export const cleanupOrphanDerivedCachesBatch = internalMutation({
   args: {
-    table: v.union(v.literal("derivedSignatureCache"), v.literal("derivedLegacySignatures")),
+    table: v.union(v.literal("derivedSignatureCache"), v.literal("derivedLegacySignatures"), v.literal("manPageSymbols")),
     cursor: v.union(v.string(), v.null()),
     limit: v.optional(v.number()),
     dryRun: v.optional(v.boolean()),
@@ -838,6 +840,17 @@ export const cleanupOrphanDerivedCachesBatch = internalMutation({
     let orphans = 0;
     let deleted = 0;
     let unknownSkipped = 0;
+    if (args.table === "manPageSymbols") {
+      const page = await ctx.db.query("manPageSymbols").paginate({cursor: args.cursor, numItems: limit});
+      for (const row of page.page) {
+        const [release, owner] = await Promise.all([ctx.db.get(row.releaseId), ctx.db.get(row.pageId)]);
+        if (release && owner?.releaseId === row.releaseId) continue;
+        orphans++;
+        if (!dryRun) {await ctx.db.delete(row._id); deleted++;}
+      }
+      return {table: args.table, dryRun, limit, scanned: page.page.length, orphans, deleted, unknownSkipped,
+        isDone: page.isDone, continueCursor: page.continueCursor};
+    }
     if (args.table === "derivedSignatureCache") {
       const page = await ctx.db.query("derivedSignatureCache").paginate({ cursor: args.cursor, numItems: limit });
       for (const row of page.page) {
@@ -967,7 +980,8 @@ export const measureReleaseBatch = internalQuery({
   args: {
     datasetReleaseId: v.string(), cursor: v.union(v.string(), v.null()),
     table: v.union(v.literal("manPages"), v.literal("manPageSearchDocuments"), v.literal("manPageLinks"),
-      v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
+      v.literal("manPageSymbols"),
+  v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
       v.literal("releaseSectionStats"), v.literal("releaseManifests"), v.literal("releasePackageBatches"), v.literal("releasePageUploadShards")),
   },
   returns: v.object({ documents: v.number(), jsonBytes: v.number(), storageBytes: v.number(), isDone: v.boolean(), continueCursor: v.string() }),

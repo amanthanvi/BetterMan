@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { api, internal } from "./_generated/api";
-import { flagTakesArgument, MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, parseOptionQuery } from "./_optionFlags";
+import { flagTakesArgument, flagArgumentOptional, flagAllowsShortEquals, MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, parseOptionQuery } from "./_optionFlags";
 import { nameEditDistance } from "./_searchTypos";
 import schema from "./schema";
 
@@ -27,6 +27,14 @@ function keys(options: Option[]): string[] {
 }
 
 describe("option flag derivation", () => {
+  it.each(['--interactive [WHEN]','--color[=WHEN]','-i[ARG]'])('detects optional arguments: %s',flags=>expect(flagArgumentOptional(flags)).toBe(true));
+  it('preserves argument-column optionality without turning bracket aliases into arguments',()=>{
+    expect(optionFlagRows([{flags:'--interactive',anchorId:'interactive',argument:'[WHEN]'}])[0]).toMatchObject({takesArgument:true,argumentOptional:true});
+    expect(flagArgumentOptional('--[no-]color')).toBe(false);
+    expect(flagAllowsShortEquals('-s=SIZE','-s')).toBe(true);
+    expect(flagAllowsShortEquals('-s, --size=SIZE','-s')).toBe(false);
+  });
+
   it("indexes every tar(1) option by each of its flags, keeping anchors with ~ and =", () => {
     const rows = optionFlagRows(tarGolden.options);
     expect(rows).toHaveLength(215);
@@ -141,6 +149,7 @@ function page(name: string, options: Option[] | null, overrides: Partial<{ secti
     contentSha256: `${name}-${section}`, hasParseWarnings: false,
     doc: { toc: [], blocks: [] }, synopsis: null, options, seeAlso: null,
     searchText: description, snippetText: description, links: [],
+    symbols: [{ term: 'LD_PRELOAD', anchorId: 'environment', excerpt: 'Preload libraries.', kind: 'environment' as const }],
   };
 }
 
@@ -280,6 +289,23 @@ describe("option search", () => {
       ["tar", "-C", "opt-directory"], ["tar", "--directory", "opt-directory"],
       ["tar", "--version", "opt-version"],
     ]);
+    const symbols = await t.run(ctx => ctx.db.query('manPageSymbols').take(3));
+    expect(symbols).toHaveLength(2);
+    expect(symbols[0]).toMatchObject({ term: 'LD_PRELOAD', termNorm: 'ld_preload', anchorId: 'environment' });
+  });
+
+  it('stores a Unicode-heavy page batch without rejecting or splitting excerpts', async () => {
+    const pages = Array.from({length: 10}, (_, i) => ({...page(`unicode${i}`, null), symbols: [{term:'UNICODE', anchorId:'env', excerpt:'a'.repeat(159)+'😀', kind:'environment' as const}]}));
+    const t = await seeded(pages);
+    const rows = await t.run(ctx => ctx.db.query('manPageSymbols').take(20));
+    expect(rows).toHaveLength(10);
+    expect(rows.every(row => row.excerpt === 'a'.repeat(159))).toBe(true);
+  });
+
+  it('preserves optional argument-column metadata through stored uploads', async()=>{
+    const t=await seeded([page('rm',[{flags:'--interactive',argument:'[WHEN]',anchorId:'interactive'}])]);
+    const rows=await t.run(ctx=>ctx.db.query('manPageOptionFlags').take(2));
+    expect(rows[0]).toMatchObject({flag:'--interactive',argumentOptional:true});
   });
 
   it("derives the same rows through the legacy inline page mutation", async () => {

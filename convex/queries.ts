@@ -3,6 +3,7 @@ import { paginationOptsValidator } from "convex/server";
 import { MAX_MANIFEST_SECTIONS } from "./_releaseManifest";
 import { resolveRelatedItems } from "./_relatedLinks";
 import { flagTakesArgument, parseOptionQuery } from "./_optionFlags";
+import { symbolInput } from './_symbols';
 import { nameEditDistance } from "./_searchTypos";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -423,6 +424,7 @@ type SearchHit = {
   highlights: string[];
   match?: "option";
   anchorId?: string;
+  symbolKind?: 'environment' | 'files' | 'errors' | 'config' | 'subcommand' | 'shell';
 };
 
 type RankedHit = SearchHit & { rank: number };
@@ -441,6 +443,9 @@ function searchDocumentHit(doc: Doc<"manPageSearchDocuments">, queryText: string
 function compareHits(a: RankedHit, b: RankedHit): number {
   const rank = b.rank - a.rank;
   if (rank) return rank;
+  const sectionPriority = (section: string) => section === '1' || section === '8' ? 0 : section.startsWith('3') ? 2 : 1;
+  const section = sectionPriority(a.section) - sectionPriority(b.section);
+  if (section) return section;
   const len = a.name.length - b.name.length;
   if (len) return len;
   const name = a.name.localeCompare(b.name);
@@ -532,10 +537,13 @@ function rankSearchDocument(
   queryNorm: string,
   index: number,
 ): number {
-  let rank = 1000 - index;
-  if (doc.nameNorm === queryNorm) rank += 10_000;
-  if (doc.nameNorm.startsWith(queryNorm)) rank += 2_000;
-  if (doc.descNorm.includes(queryNorm)) rank += 500;
+  // Fixed five-row windows preserve the scan's total order across offset sizes.
+  // Prefixes always precede the fixed description/symbol set; only a complete
+  // window is reordered for relevance and section ties.
+  let rank = 10_000 - Math.floor(index / 5) * 100;
+  if (doc.nameNorm === queryNorm) rank += 40;
+  if (doc.nameNorm !== queryNorm && /^[_-]/.test(doc.nameNorm.slice(queryNorm.length))) rank -= 20;
+  if (doc.descNorm.includes(queryNorm)) rank += 10;
   return rank;
 }
 
@@ -581,12 +589,16 @@ async function textHits(
   const queryNorm = queryText.toLowerCase();
   // Name prefix first, then the description search index (one line per page).
   const prefixDocs = await searchDocsByNamePrefix(ctx, {
-    releaseId, section, prefix: queryNorm, takeCount: args.takeCount,
+    releaseId, section, prefix: queryNorm, takeCount: Math.ceil(args.takeCount / 5) * 5,
   });
 
   // Always merge the same description candidates so every offset slices one
   // stable ranked set. The index read is bounded by MAX_DESCRIPTION_HITS.
   const descriptionDocs = await searchDocsByDescription(ctx, { releaseId, section, queryNorm });
+  // Exact symbols only: never scan definitions or fetch document bodies at query time.
+  const symbols = section === null
+    ? await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', releaseId).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8)
+    : await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_section_and_termNorm', q => q.eq('releaseId', releaseId).eq('section', section).eq('termNorm', queryNorm.replace(/=$/, ''))).take(8);
   const contentWords = queryNorm.split(/[^a-z0-9_]+/).filter((word) => word && !SEARCH_STOP_WORDS.has(word));
 
   const ranked = new Map<Id<"manPages">, RankedHit>();
@@ -604,6 +616,12 @@ async function textHits(
     if (queryNorm.includes(" ") && overlap === 0) return;
     ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rankDescriptionDocument(doc, queryNorm, index) + overlap * 50));
   });
+  for (const symbol of symbols) {
+    const existing = ranked.get(symbol.pageId);
+    if (existing?.name.toLowerCase() === queryNorm) continue;
+    ranked.set(symbol.pageId, { name: symbol.name, section: symbol.section, title: symbol.title, description: symbol.description,
+      symbolKind: symbol.kind, highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, rank: Math.max(existing?.rank ?? 0, symbol.kind === 'subcommand' && symbol.name.toLowerCase() === queryNorm.replace(' ', '-') ? 2_600 : 2_500) });
+  }
   return [...ranked.values()].sort(compareHits);
 }
 
@@ -656,7 +674,7 @@ export const search = query({
     results: v.array(v.object({
       name: v.string(), section: v.string(), title: v.string(), description: v.string(),
       highlights: v.array(v.string()),
-      match: v.optional(v.literal("option")), anchorId: v.optional(v.string()),
+      match: v.optional(v.literal("option")), anchorId: v.optional(v.string()), symbolKind: v.optional(symbolInput.fields.kind),
     })),
     suggestions: v.array(v.string()),
     correctedQuery: v.optional(v.string()),
@@ -777,7 +795,8 @@ export const search = query({
         title: hit.title,
         description: hit.description,
         highlights: hit.highlights,
-        ...(hit.anchorId ? { match: "option" as const, anchorId: hit.anchorId } : {}),
+        ...(hit.symbolKind ? {symbolKind: hit.symbolKind} : {}),
+        ...(hit.anchorId ? { anchorId: hit.anchorId, ...(hit.match === 'option' ? { match: 'option' as const } : {}) } : {}),
       })),
       suggestions,
       ...(suggestions.length ? { correctedQuery: suggestions[0] } : {}),

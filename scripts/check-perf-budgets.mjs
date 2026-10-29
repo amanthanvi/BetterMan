@@ -175,7 +175,7 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
 try {
   process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
-  const { createFixture, createSearchFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
+  const { createFixture, createSearchFixture, createExplainFixture, createExplainMultiFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
   let fixture = await createFixture(() => metrics.calls++)
   metrics = { calls: 0, documents: 0, storageReads: 0 }
   const runtime = globalThis.Convex
@@ -351,6 +351,89 @@ try {
     }
     for (const [metric, value] of Object.entries(metrics)) actual[`${name}.${metric}`] = value
     details[name] = { q, scope: 'direct Convex search query', costs: { ...metrics }, resultCount: result.results.length }
+    console.log(`${name}: ${JSON.stringify(metrics)}`)
+  }
+  fixture = await createExplainFixture(() => metrics.calls++)
+  for (const [name, path, args] of [
+    ['searchSymbol', 'queries:search', { distro: 'debian', q: 'ForwardAgent', section: null, limit: 20, offset: 0 }],
+    ['explainArchive', 'explain:explain', { distro: 'debian', cmd: 'tar -xzvf backup.tar.gz -C /srv/www' }],
+    ['explainPipeline', 'explain:explain', { distro: 'debian', cmd: "find . -name '*.log' -mtime +7 -print0 | xargs -0 rm -f" }],
+    ['explainSubcommand', 'explain:explain', { distro: 'debian', cmd: 'git commit -m "message"' }],
+    ['explainParentCommand','explain:explain',{distro:'debian',cmd:'systemctl restart nginx'}],
+    ['explainMkfsAlias','explain:explain',{distro:'debian',cmd:'mkfs.ext4 /dev/sdb1'}],
+    ['explainExecTemplate','explain:explain',{distro:'debian',cmd:'find . -exec truncate -s 0 {} \\;'}],
+    ['explainOptional','explain:explain',{distro:'debian',cmd:'rm --interactive never -f file'}],
+    ['explainReplace','explain:explain',{distro:'debian',cmd:'xargs -I={} rm ={}'}],
+    ['explainRedirectGlob','explain:explain',{distro:'debian',cmd:'echo > *.txt'}],
+    ['explainClusterBounded','explain:explain',{distro:'debian',cmd:'rm -'+'r'.repeat(4090)+' x'}],
+    ['explainByteBounded','explain:explain',{distro:'debian',cmd:"rm '"+'\u0001'.repeat(4090)+"'"}],
+    ['explainOptionalWrapper','explain:explain',{distro:'debian',cmd:'xargs --max-lines rm item'}],
+    ['explainInterleaved','explain:explain',{distro:'debian',cmd:'env >out rm item'}],
+    ['explainInvalidWrapper','explain:explain',{distro:'debian',cmd:'timeout invalid rm item'}],
+    ['explainArgvAssignment','explain:explain',{distro:'debian',cmd:'timeout 1 VAR=value rm item'}],
+    ['explainEnvOptions','explain:explain',{distro:'debian',cmd:'env VAR=value -- rm item'}],
+    ['explainSudoBoundary','explain:explain',{distro:'debian',cmd:'sudo -- VAR=1 rm item'}],
+    ['explainExternalBuiltin','explain:explain',{distro:'debian',cmd:'env command rm item'}],
+    ['explainDelimiter','explain:explain',{distro:'debian',cmd:"xargs -d '\\400' rm item"}],
+    ['explainMulti', 'explain:explain', { distro: 'debian', cmd: [...'abcdefghijklmnopqrstuvwx'].map(verb=>`git ${verb}`).join('|') }],
+    ['explainBounded', 'explain:explain', { distro: 'debian', cmd: 'bounded ' + Array.from({ length: 100 }, (_, i) => `--limit${i}`).join(' ') }],
+  ]) {
+    if (name === 'explainMulti') fixture = await createExplainMultiFixture(() => metrics.calls++)
+    if (name === 'explainBounded') fixture = await createExplainFixture(() => metrics.calls++)
+    metrics = { calls: 0, documents: 0, storageReads: 0 }
+    const result = await fixture.query(makeFunctionReference(path), args)
+    if (name === 'searchSymbol') {
+      assert.equal(result.results.length, 8)
+      assert.equal(result.results[0].anchorId, 'ForwardAgent')
+      assert.equal(result.results[0].name, 'ssh_config')
+    } else {
+      assert.deepEqual(result.diagnostics, ['explainBounded','explainMulti','explainClusterBounded'].includes(name) ? ['Resolution lookup limit reached','Explanation truncated: lookup limit reached'] : name==='explainByteBounded' ? ['Explanation truncated: output limit reached'] : name==='explainReplace' ? ['Unsupported shell grammar: unquoted opening brace','Unsupported shell grammar: unquoted opening brace'] : name==='explainInvalidWrapper' ? ['Cannot statically unwrap timeout: invalid or missing duration'] : ['explainArgvAssignment','explainEnvOptions','explainSudoBoundary'].includes(name) ? ['Unsupported wrapper executable: assignment or option-like program name'] : name==='explainExternalBuiltin' ? ['Unsupported external executable: shell builtin name'] : name==='explainDelimiter' ? ['Cannot statically unwrap xargs: invalid value for -d'] : [])
+      const tokens = result.stages.flatMap(stage => stage.tokens)
+      if (name === 'explainBounded') {
+        assert.equal(tokens.filter(token => token.kind === 'option').length, 63)
+        assert.ok(metrics.documents <= 66, 'Explanation lookup ceiling exceeded')
+      } else if(name === 'explainMulti') {
+        assert.ok(metrics.documents <= 66, 'Multi-document explanation ceiling exceeded')
+        assert.ok(tokens.some(token=>token.kind==='unknown'))
+        assert.equal(metrics.documents, 64, 'Saturated multi-row fixture changed its read accounting')
+        assert.equal(tokens.filter(token=>token.kind==='subcommand').length, 11, 'Widened lookup ranges changed resolution coverage')
+      } else if(['explainClusterBounded','explainByteBounded'].includes(name)) {
+        assert.ok(Buffer.byteLength(JSON.stringify(result),'utf8')<=65536,'Serialized response exceeded 64 KiB')
+        assert.ok(tokens.length<=256,'Decoded output exceeded 256 tokens')
+        assert.ok(result.stages.every(stage=>stage.destructive.length===0))
+        if(name==='explainClusterBounded') assert.ok(tokens.filter(token=>token.kind==='option').every(token=>token.text.length<=2))
+      } else if(['explainArgvAssignment','explainEnvOptions','explainSudoBoundary','explainExternalBuiltin'].includes(name)) {
+        assert.ok(tokens.some(token=>token.kind==='unknown'))
+        assert.equal(result.stages.flatMap(s=>s.destructive).length,0)
+      } else assert.ok(tokens.every(token => token.kind !== 'unknown'))
+      if(name==='explainInterleaved') {
+        assert.equal(result.stages[1].tokens[0].value,'rm')
+        assert.deepEqual(result.stages.flatMap(s=>s.destructive).map(n=>n.description),['> replaces the contents of the file it writes to.','rm deletes files.'])
+      }
+      if(name==='explainDelimiter') assert.equal(result.stages.flatMap(s=>s.destructive).length,0)
+      if(name==='explainInvalidWrapper') assert.equal(result.stages.flatMap(s=>s.destructive).length,0)
+      if (name === 'explainArchive') assert.deepEqual(tokens.filter(token => token.kind === 'option').map(token => token.anchor), ['extract', 'gzip', 'verbose', 'file', 'directory'])
+      if (name === 'explainPipeline') {
+        assert.ok(result.stages.some(stage => stage.destructive.length === 1))
+        assert.equal(tokens.find(token => token.value === '|').shell.anchor, 'shell-pipeline')
+      }
+      if(name === 'explainParentCommand') {
+        assert.equal(tokens.find(token=>token.kind==='subcommand').anchor,'unit-commands-introspection-and-modification')
+        assert.equal(tokens.find(token=>token.kind==='subcommand').page.name,'systemctl')
+      }
+      if(name === 'explainMkfsAlias') assert.equal(result.stages[0].destructive[0].dryRun,'Add `-n` to see what it would do.')
+      if(name === 'explainExecTemplate' || name === 'explainReplace') {
+        const expansion=tokens.find(token=>token.kind==='expansion')
+        assert.equal(expansion.page.name,name === 'explainExecTemplate' ? 'find' : 'xargs')
+        assert.equal(expansion.shell,null)
+      }
+      if(name === 'explainOptionalWrapper') assert.ok(result.stages.some(stage=>stage.destructive.some(note=>note.description==='rm deletes files.')))
+      if(name === 'explainOptional') assert.equal(tokens.find(token=>token.value==='never').kind,'argument')
+      if(name === 'explainRedirectGlob') {assert.equal(tokens.at(-1).kind,'glob');assert.deepEqual(result.stages[0].destructive,[])}
+      if (name === 'explainSubcommand') assert.equal(tokens.find(token => token.kind === 'subcommand').page.name, 'git-commit')
+    }
+    for (const [metric, value] of Object.entries(metrics)) actual[`${name}.${metric}`] = value
+    details[name] = { scope: 'direct Convex query', args, costs: { ...metrics }, result }
     console.log(`${name}: ${JSON.stringify(metrics)}`)
   }
   const report = {

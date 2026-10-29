@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v3: 7 distros x32 browser pages with a production-built ready derived snapshot; extended direct-search fixture",
+  "fixture": "scripts/perf-fixture.ts v11: external builtin dispatch and sudo delimiter admission",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -301,16 +301,346 @@
       "relative": 0.02,
       "absolute": 0,
       "cap": 32000
+    },
+    "searchSymbol.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchSymbol.documents": {
+      "baseline": 10,
+      "relative": 0,
+      "absolute": 0
+    },
+    "searchSymbol.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArchive.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArchive.documents": {
+      "baseline": 8,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArchive.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainPipeline.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainPipeline.documents": {
+      "baseline": 12,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainPipeline.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSubcommand.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSubcommand.documents": {
+      "baseline": 7,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSubcommand.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainBounded.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainBounded.documents": {
+      "baseline": 66,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainBounded.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainMulti.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainMulti.documents": {
+      "baseline": 64,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainMulti.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainParentCommand.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainParentCommand.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainParentCommand.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainMkfsAlias.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainMkfsAlias.documents": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainMkfsAlias.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainExecTemplate.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainExecTemplate.documents": {
+      "baseline": 7,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainExecTemplate.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptional.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptional.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptional.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainReplace.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainReplace.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainReplace.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainRedirectGlob.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainRedirectGlob.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainRedirectGlob.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainClusterBounded.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainClusterBounded.documents": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainClusterBounded.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainByteBounded.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainByteBounded.documents": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainByteBounded.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptionalWrapper.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptionalWrapper.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptionalWrapper.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInterleaved.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInterleaved.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInterleaved.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInvalidWrapper.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInvalidWrapper.documents": {
+      "baseline": 3,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainInvalidWrapper.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArgvAssignment.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArgvAssignment.documents": {
+      "baseline": 3,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainArgvAssignment.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainEnvOptions.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainEnvOptions.documents": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainEnvOptions.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainDelimiter.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainDelimiter.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainDelimiter.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSudoBoundary.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSudoBoundary.documents": {
+      "baseline": 3,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainSudoBoundary.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainExternalBuiltin.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainExternalBuiltin.documents": {
+      "baseline": 3,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainExternalBuiltin.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
     }
   },
-  "sourceHead": "90f087485dfa33bbcd4cf3ab729143ffc7d871fc",
+  "sourceHead": "a67c36ed74fa210f84ea5425132285990ed5cb5e",
   "toolchain": {
     "next": "16.4.2",
     "playwright": "1.64.1",
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "1e39625cfc97a54341364ca78df84923f4a130784f3ea1166899d6c39af68125",
+  "fixtureSha256": "6385a414c2a20842ffcd70a5e1b5627af30949bcd5360ddf8d0163cd93b44909",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

@@ -79,6 +79,7 @@ from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import read_roff, render_html
 from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
+from ingestion.symbols import MAX_SYMBOLS, symbol_rows
 from ingestion.util import normalize_ws, sha256_hex
 
 _NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._+:-]*$")
@@ -1362,12 +1363,15 @@ def _upload_worker_count() -> int:
 def _page_batch_limits() -> tuple[int, int]:
     """Pages and exact request bytes per batch, each overridable by environment.
 
-    Twenty pages keep each mutation small; eight MiB keeps a batch of large
-    pages well under Convex's 16 MiB function-argument limit. Read before the
-    release is created so a bad value cannot strand a half-uploaded release.
+    Reserve at most 7,000 derived writes per batch (400 option rows plus
+    MAX_SYMBOLS per page), leaving room for page/content/link metadata.
+    Eight MiB keeps large batches below Convex's 16 MiB argument limit.
+    Read before release creation so a bad value cannot strand an upload.
     """
+    max_option_rows = 400  # Keep aligned with convex/_optionFlags.ts.
+    safe_items = min(20, 7_000 // (max_option_rows + MAX_SYMBOLS))
     return (
-        _positive_int_env("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", 20),
+        min(_positive_int_env("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", safe_items), safe_items),
         _positive_int_env("BETTERMAN_INGEST_PAGE_BATCH_BYTES", 8 * 1024 * 1024),
     )
 
@@ -1511,6 +1515,7 @@ def _page_payload(
         "searchText": "",
         "snippetText": snippet_text,
         "links": links,
+        "symbols": symbol_rows(row.name, row.section, row.doc, row.description),
     }
 
 

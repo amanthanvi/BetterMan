@@ -168,3 +168,102 @@ These counters model fixture request work, not Convex invoices, internal index
 scan bytes, retries or full-corpus behavior. Lab vitals do not represent field
 latency or later interaction. The query-only supplemental pages have no stored
 document body: these cases cover search resolution, not destination rendering.
+
+## Explain and symbol query cases
+
+An isolated B5 fixture adds definition symbols and explain-command metadata
+after the earlier cases have completed. It leaves all existing browser and
+query corpora unchanged. Direct Convex measurements (one function call and
+zero blob reads each) record saturated `ForwardAgent` symbol search at 10
+documents, `tar -xzvf backup.tar.gz -C /srv/www` at 8, the find/xargs kit
+pipeline at 12, and `git commit -m "message"` at 7. A 100-option overflow
+workload resolves 63 flag rows then stops at the shared 64-lookup ceiling,
+using 66 documents including release/page selection. A separate saturated
+24-stage `git a|…|git x` corpus uses multiple page/symbol rows per lookup:
+it resolves 11 subcommands at 64 document reads, then honestly marks further
+tokens unknown. Four page variants and five symbol rows per term exceed the
+three/four-row ranges. Exact read/coverage assertions catch widening them. The symbol fixture has
+12 matching pages, exceeding the eight-row read bound; option, command and
+subcommand identities and ordered anchors are asserted. These counts include
+release resolution and repeated reads, with zero growth tolerance. Existing
+43-document single-flag and 66-document typo cases remain enforced.
+
+The explain resolver additionally caps 64 indexed lookups and shares one
+64-document allowance across all stages (each query reserves its maximum) and 4,096 characters / 128 lexical tokens / 24 stages / eight nested
+levels. Its conservative whole-query ceiling is 66 document reads including
+release selection. These direct-query budgets exclude HTTP rate limiting,
+SSR/hydration and destination rendering; no explain UI is shipped in B5. The
+[JSON contract](explain-contract.md) documents unresolved and unsupported
+syntax, safety uncertainty and ingest dependencies.
+
+The round-2 supplement resolves `systemctl restart nginx` through the parent
+page COMMANDS symbol (5 document reads) and `mkfs.ext4 /dev/sdb1` through the
+mke2fs alias (4). Both make one call and zero blob reads. Assertions pin the
+parent section anchor and alias-specific inspection hint. Prior descriptors,
+tolerances and document counts remain unchanged; these cases also share the
+66-document whole-request ceiling.
+
+The round-3 supplement measures find-exec replacement templates (7 reads),
+optional --interactive arguments (5), xargs -I={} replacement (5) and redirect
+globs (5). Each is one call and zero blob reads. Assertions pin expansion,
+operand and glob kinds rather than accepting an unrelated lookup. Existing
+metric descriptors, tolerances and read counts remain unchanged. The stored
+option index carries optional-argument metadata; legacy inline flag syntax
+and exact known optional forms remain supported without additional reads.
+
+Round 4 adds long repeated-flag decoding and serialized-output amplification
+cases (4 documents each) and xargs' optional `--max-lines` argument (5). Each
+uses one call and zero storage reads. Assertions enforce 256 decoded tokens,
+65,536 UTF-8 JSON bytes, a truncated diagnostic and no facts on truncated
+responses; individual cluster flags cannot copy the full cluster source text.
+All previous budget descriptors, tolerances and read counts are preserved.
+
+Round 5 adds interleaved-wrapper redirect resolution (`env >out rm item`,
+5 document reads) and invalid wrapper-duration admission (`timeout invalid rm
+item`, 3 reads), one call and zero storage reads each. Assertions pin the rm
+child and both facts for the valid form, and a diagnostic with no facts for the
+invalid form. Every prior metric descriptor and document count is unchanged.
+The earlier unquoted attached-brace replacement case retains safe token
+resolution at five reads but now diagnoses unsupported brace syntax; it cannot
+authorize facts or hints.
+
+## Combined B5 and derived-data integration
+
+The fixture retains the production-built ready derived snapshot and the compact
+man response assertions from #429 alongside every B5 search/explain case.
+Re-recording on main f17816b with both features keeps browser document reads
+(home/man/search/section) at 7/28/32/37, with calls 3/5/3/2 and storage reads
+0/1/0/0. The man response is 35,123 bytes including 846 derived bytes; the
+nonempty tar response is 168,478 / 3,879 derived bytes, and the pathological
+large response is 318,303 / 6,216 derived bytes. These match the derived-data
+baselines. B5 query counts remain symbol 10, kit archive/pipeline 8/12, and
+whole-request ceilings 64 (saturated multi-row) / 66 (overflow). Every prior
+metric descriptor/tolerance is retained after recording; measured browser byte
+variation stays within the existing 2% limits, without raising baselines.
+
+For a subsequent local E2E run against a real local Convex seed, stop this
+worktree's Next server and clean the generated `nextjs/.next` directory before
+rebuilding. Next's persistent data/route cache can otherwise retain the perf
+fixture's section listing across builds even after the backend URL changes.
+The perf report remains in `.perf-results/measurements.json`.
+
+Round 6 adds three direct-query admission cases: a wrapper child whose
+executable is assignment-shaped (3 documents), env's option-like executable
+after assignments (4), and an out-of-range xargs delimiter (5). Each uses one
+call and zero storage reads. Assertions pin the diagnostics, unknown executable
+markers where applicable, and absence of facts/hints. Existing metric
+descriptors, tolerances and measured read counts remain unchanged.
+
+Round 7 adds isolated direct-query cases for sudo's assignment boundary after
+`--` and shell-builtin names below an external wrapper. Both must return a
+diagnostic, an unknown executable and no facts or hints. Each reads three documents in one call with no blob reads. Their counts are
+recorded alongside the earlier admission cases; the original browser fixture
+and all existing metric policies remain intact. Main's generated brief and
+its `{ derived, brief }` page response are retained during the rebase.
+
+The integrated man page measures five calls, 29 documents and one blob read:
+main's generated-brief lookup adds one document to the earlier derived-only
+28-document case. Symbol search remains ten documents and the explanation
+ceiling remains 66. All pre-existing metric descriptors and tolerances are
+preserved from the rebased main/branch baselines; measured bytes stay within
+them without raising a threshold.

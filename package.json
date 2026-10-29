@@ -5,6 +5,7 @@
 	"scripts": {
 		"convex:dev": "convex dev",
 		"convex:check": "CONVEX_AGENT_MODE=anonymous convex dev --once",
+		"explain:record-gnu": "node scripts/record-explain-differential.mjs",
 		"convex:test": "vitest run --config vitest.config.ts",
 		"convex:typecheck": "tsc --noEmit -p convex/tsconfig.json",
 		"convex:prod-check": "node scripts/check-convex-production.mjs",

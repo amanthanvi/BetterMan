@@ -551,10 +551,15 @@ def test_page_batches_bound_items_and_exact_request_bytes() -> None:
 def test_page_batch_limits_come_from_the_environment(monkeypatch) -> None:
     monkeypatch.delenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", raising=False)
     monkeypatch.delenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", raising=False)
-    assert _page_batch_limits() == (20, 8 * 1024 * 1024)
+    assert _page_batch_limits() == (10, 8 * 1024 * 1024)
     monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", "7")
     monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", "1024")
     assert _page_batch_limits() == (7, 1024)
+    monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", "20")
+    assert _page_batch_limits() == (10, 1024)
+    monkeypatch.setattr(ingest_runner, "MAX_SYMBOLS", 64)
+    assert _page_batch_limits() == (15, 1024)
+    monkeypatch.setattr(ingest_runner, "MAX_SYMBOLS", 256)
     for value in ["0", "-1", "abc", "1.5"]:
         monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", value)
         with pytest.raises(RuntimeError, match="BETTERMAN_INGEST_PAGE_BATCH_ITEMS must be"):
@@ -627,12 +632,13 @@ def test_ingest_fails_before_writing_when_convex_contract_is_missing(monkeypatch
     assert calls == []
 
 
-def test_ingest_rejects_the_license_batch_v2_contract_before_any_write(monkeypatch):
+@pytest.mark.parametrize("version", [2, 3, REQUIRED_SCHEMA_VERSION + 1])
+def test_ingest_rejects_incompatible_contract_before_any_write(monkeypatch, version):
     monkeypatch.setattr(
         ingest_runner.ConvexIngestClient,
         "_get_json",
         lambda _self, _path: {
-            "schemaVersion": 2,
+            "schemaVersion": version,
             "functions": list(REQUIRED_FUNCTIONS),
             "declarationCounts": list(REQUIRED_DECLARATION_COUNTS),
             "activatePending": True,
@@ -645,7 +651,7 @@ def test_ingest_rejects_the_license_batch_v2_contract_before_any_write(monkeypat
         lambda *_args, **_kwargs: calls.append("post"),
     )
     monkeypatch.setattr(ingest_runner, "apt_install", lambda _packages: calls.append("apt"))
-    with pytest.raises(ConvexContractError, match="schemaVersion 2"):
+    with pytest.raises(ConvexContractError, match=f"schemaVersion {version}"):
         ingest_runner.ingest(
             sample=True,
             activate=True,
@@ -998,3 +1004,29 @@ def test_spooled_link_resolution_matches_the_in_memory_path(tmp_path):
         assert list(ingest_runner._resolved_page_payloads(spool, refs, sitemap)) == expected
         # Reading/resolving a replay does not mutate the stored original bodies.
         assert asdict(next(iter(spool))) == {**asdict(pages[0]), "see_also_refs": []}
+
+
+def test_ingest_rejects_old_contract_before_creating_release(monkeypatch):
+    import io
+    import json
+
+    from ingestion.convex_client import ConvexContractError
+
+    monkeypatch.setattr(
+        "ingestion.convex_client.urlopen",
+        lambda *_args, **_kwargs: io.BytesIO(json.dumps({"schemaVersion": 1}).encode()),
+    )
+    writes = []
+    monkeypatch.setattr(ingest_runner.ConvexIngestClient, "post", lambda *args: writes.append(args))
+    with pytest.raises(ConvexContractError, match="schemaVersion"):
+        ingest_runner.ingest(
+            sample=True,
+            activate=False,
+            convex_url="https://example.convex.site",
+            ingest_secret="test-secret",
+            dataset_stage="staging",
+            image_ref="test",
+            image_digest="test",
+            git_sha="test",
+        )
+    assert writes == []

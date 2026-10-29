@@ -2,11 +2,10 @@
 // must see a new Convex deploy before it writes. Keep the same values in
 // ingestion/ingestion/convex_client.py. Cross-language alignment lives in
 // ingestion/tests/test_ingest_contract.py (no duplicate version expectation).
-// v3 retains #431 license-package batches and adds derived option extractor
-// provenance. #430 follows at v4 and must retain both when adding stored-page
-// symbols across the contract functions, validators, and Python payloads.
+// v4 retains license-package batches and derived option extractor provenance,
+// and adds stored-page symbols and optional option-argument metadata.
 
-export const INGEST_CONTRACT_SCHEMA_VERSION = 3;
+export const INGEST_CONTRACT_SCHEMA_VERSION = 4;
 
 export const INGEST_CONTRACT = {
   schemaVersion: INGEST_CONTRACT_SCHEMA_VERSION,

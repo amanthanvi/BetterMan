@@ -357,7 +357,7 @@ test('a pin acquired after preview is skipped without retry and does not abort e
   assert.ok(!calls.some(([name, args]) => name === 'maintenance:deleteInactiveReleaseBatch' && args.datasetReleaseId === 'pinned-preview'))
   assert.ok(calls.some(([name]) => name === 'maintenance:cleanupOrphanContentBlobsBatch'))
   assert.ok(calls.some(([name]) => name === 'maintenance:cleanupOrphanManifestFilesBatch'))
-  assert.deepEqual(calls.filter(([name]) => name === 'maintenance:cleanupOrphanDerivedCachesBatch').map(([, args]) => args.table), ['derivedSignatureCache', 'derivedLegacySignatures'])
+  assert.deepEqual(calls.filter(([name]) => name === 'maintenance:cleanupOrphanDerivedCachesBatch').map(([, args]) => args.table), ['derivedSignatureCache', 'derivedLegacySignatures', 'manPageSymbols'])
   assert.ok(logs.some((entry) => entry.event === 'prune_skipped' && entry.datasetReleaseId === 'pinned-race'))
   assert.ok(!logs.some((entry) => entry.event === 'retry'))
 })

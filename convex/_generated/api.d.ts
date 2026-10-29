@@ -8,9 +8,12 @@
  * @module
  */
 
+import type * as _commandConventions from "../_commandConventions.js";
 import type * as _derivedEncoding from "../_derivedEncoding.js";
 import type * as _derivedInputs from "../_derivedInputs.js";
 import type * as _derivedModel from "../_derivedModel.js";
+import type * as _destructive from "../_destructive.js";
+import type * as _explainBounds from "../_explainBounds.js";
 import type * as _generatedLayer from "../_generatedLayer.js";
 import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
@@ -22,11 +25,16 @@ import type * as _releaseIntegrity from "../_releaseIntegrity.js";
 import type * as _releaseLookups from "../_releaseLookups.js";
 import type * as _releaseManifest from "../_releaseManifest.js";
 import type * as _searchTypos from "../_searchTypos.js";
+import type * as _shellGrammar from "../_shellGrammar.js";
+import type * as _shellParser from "../_shellParser.js";
+import type * as _shellWrappers from "../_shellWrappers.js";
 import type * as _storedPayload from "../_storedPayload.js";
+import type * as _symbols from "../_symbols.js";
 import type * as content from "../content.js";
 import type * as crons from "../crons.js";
 import type * as derived from "../derived.js";
 import type * as derivedSignatures from "../derivedSignatures.js";
+import type * as explain from "../explain.js";
 import type * as generated from "../generated.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
@@ -47,9 +55,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  _commandConventions: typeof _commandConventions;
   _derivedEncoding: typeof _derivedEncoding;
   _derivedInputs: typeof _derivedInputs;
   _derivedModel: typeof _derivedModel;
+  _destructive: typeof _destructive;
+  _explainBounds: typeof _explainBounds;
   _generatedLayer: typeof _generatedLayer;
   _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
@@ -61,11 +72,16 @@ declare const fullApi: ApiFromModules<{
   _releaseLookups: typeof _releaseLookups;
   _releaseManifest: typeof _releaseManifest;
   _searchTypos: typeof _searchTypos;
+  _shellGrammar: typeof _shellGrammar;
+  _shellParser: typeof _shellParser;
+  _shellWrappers: typeof _shellWrappers;
   _storedPayload: typeof _storedPayload;
+  _symbols: typeof _symbols;
   content: typeof content;
   crons: typeof crons;
   derived: typeof derived;
   derivedSignatures: typeof derivedSignatures;
+  explain: typeof explain;
   generated: typeof generated;
   http: typeof http;
   ingest: typeof ingest;

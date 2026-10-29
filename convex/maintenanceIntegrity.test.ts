@@ -436,3 +436,24 @@ describe("derived cache cleanup", () => {
     expect(await t.run((ctx) => ctx.db.get(ids.unknown))).not.toBeNull();
   });
 });
+
+it("sweeps orphan symbols in bounded batches while retaining live production ownership", async () => {
+  const {t, releaseId, pages} = await seed("prod");
+  const ids = await t.run(async ctx => {
+    const missingRelease = await ctx.db.insert("datasetReleases", {datasetReleaseId:"gone",locale:"en",distro:"ubuntu",imageRef:"test",imageDigest:"test",ingestedAt:"now",pageCount:0});
+    const symbol = (owner: typeof releaseId, pageId: typeof pages[number]['pageId'], term: string) => ctx.db.insert("manPageSymbols", {releaseId:owner,pageId,name:"source",section:"1",title:"source",description:"source",term,termNorm:term,anchorId:term,excerpt:"definition",kind:"environment"});
+    const live=await symbol(releaseId,pages[0].pageId,"live");
+    const missingPage=await symbol(releaseId,pages[1].pageId,"missing-page");
+    const gone=await symbol(missingRelease,pages[0].pageId,"missing-release");
+    await ctx.db.delete(pages[1].pageId);
+    await ctx.db.delete(missingRelease);
+    return {live,missingPage,gone};
+  });
+  const args={table:"manPageSymbols" as const,cursor:null,limit:100};
+  expect(await t.mutation(internal.maintenance.cleanupOrphanDerivedCachesBatch,{...args,dryRun:true})).toMatchObject({limit:8,scanned:3,orphans:2,deleted:0});
+  expect(await t.run(ctx=>ctx.db.get(ids.gone))).not.toBeNull();
+  expect(await t.mutation(internal.maintenance.cleanupOrphanDerivedCachesBatch,args)).toMatchObject({scanned:3,orphans:2,deleted:2});
+  expect(await t.run(ctx=>ctx.db.get(ids.live))).not.toBeNull();
+  expect(await t.run(ctx=>ctx.db.get(ids.missingPage))).toBeNull();
+  expect(await t.run(ctx=>ctx.db.get(ids.gone))).toBeNull();
+});

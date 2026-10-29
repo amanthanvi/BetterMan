@@ -1,8 +1,8 @@
 """Single cross-language ingest contract merge/alignment check.
 
 Resolve protocol changes in convex/ingestContract.ts and convex_client.py together.
-Contract v3 combines #431 package batches and derived extractor provenance.
-When #430 follows at v4, retain both while adding stored-page symbols. Do not
+Contract v4 combines package batches, derived extractor provenance and stored-page
+symbols. Do not
 resolve the overlap by taking one branch's functions or payload fields.
 """
 

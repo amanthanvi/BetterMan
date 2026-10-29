@@ -8,6 +8,8 @@ import type { Distro } from "./lib";
 import { decodeSummary } from "./_derivedEncoding";
 import { persistOptionSignature } from "./_derivedInputs";
 import schema from "./schema";
+import {insertSymbols} from "./_symbols";
+import {optionFlagRows} from "./_optionFlags";
 const modules = import.meta.glob("./**/*.ts");
 type Harness = TestConvex<typeof schema>;
 const option = (flags: string, anchorId: string, argument: string | null = null) => ({ flags, anchorId, argument, description: "A real option." });
@@ -376,4 +378,27 @@ describe("incremental derived snapshots", () => {
     expect(record.value.variantGroups).toEqual([{ contentSha256: "bsd", distros: ["freebsd"] }]);
   });
 
+});
+
+
+it("serves derived-aware man responses alongside symbol search and explain from the same release", async () => {
+  vi.useFakeTimers();
+  const t=convexTest(schema,modules);
+  await t.run(async ctx=>{
+    for(const distro of ["debian","ubuntu"] as const) {
+      const releaseId=await release(ctx,distro,"09");
+      const pageId=await page(ctx,releaseId,"tar",gnu);
+      const source=(await ctx.db.get(pageId))!;
+      for(const row of optionFlagRows(gnu)) await ctx.db.insert("manPageOptionFlags",{...row,releaseId,pageId,nameNorm:"tar",section:"1"});
+      await insertSymbols(ctx,(await ctx.db.get(releaseId))!,pageId,source,[{term:"TAR_OPTIONS",anchorId:"environment",excerpt:"Default archive options",kind:"environment"}]);
+    }
+  });
+  await t.mutation(internal.derived.rebuildActive,{});await finish(t);
+  const result=await t.action(api.content.getManByNameAndSection,{distro:"debian",name:"tar",section:"1"});
+  expect(result).toMatchObject({kind:"page",data:{derived:{version:2,stale:false},content:{options:gnu},page:{name:"tar"}}});
+  const search=await t.query(api.queries.search,{distro:"debian",q:"TAR_OPTIONS",section:null,limit:20,offset:0});
+  expect(search.results[0]).toMatchObject({name:"tar",symbolKind:"environment",anchorId:"environment"});
+  const explanation=await t.query(api.explain.explain,{distro:"debian",cmd:"tar -c"});
+  expect(explanation.diagnostics).toEqual([]);
+  expect(explanation.stages[0].tokens[1]).toMatchObject({kind:"option",anchor:"c",page:{name:"tar",distro:"debian"}});
 });

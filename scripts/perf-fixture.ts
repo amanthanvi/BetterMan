@@ -190,3 +190,69 @@ export async function createDerivedResponseFixture(onCall: () => void) {
   if (!status.healthy) throw new Error('Response fixture must publish every derived summary')
   return t
 }
+
+// Isolated B5 fixtures do not change earlier browser/search budget workloads.
+export async function createExplainFixture(onCall: () => void) {
+  const t = await createSearchFixture(onCall)
+  await t.run(async ctx => {
+    const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q => q.eq('stage', 'prod').eq('locale', 'en').eq('distro', 'debian')).unique()
+    const { releaseId, datasetReleaseId } = active!
+    const specs = [
+      { name: 'find', section: '1', options: [{ flags: '-name', anchorId: 'name', argument: 'PATTERN' }, { flags: '-mtime', anchorId: 'mtime', argument: 'N' }, { flags: '-print0', anchorId: 'print0' }, {flags:'-exec',anchorId:'exec',argument:'COMMAND'}] },
+      { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' },{flags:'-I',anchorId:'replace',argument:'REPLACE'},{flags:'--max-lines',anchorId:'max-lines',argument:'[N]'},{flags:'-d, --delimiter',anchorId:'delimiter',argument:'CHAR'}] },
+      { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' },{flags:'-r, --recursive',anchorId:'recursive'},{flags:'--interactive',anchorId:'interactive',argument:'[WHEN]'}] },
+      { name: 'truncate', section: '1', options: [{flags:'-s, --size',anchorId:'size',argument:'SIZE'}] },
+      {name:'echo',section:'1',options:[]},
+      {name:'sudo',section:'1',options:[{flags:'-u',anchorId:'user',argument:'USER'}]},
+      {name:'env',section:'1',options:[]}, {name:'timeout',section:'1',options:[]},
+      { name: 'git', section: '1', options: [] },
+      { name: 'git-commit', section: '1', options: [{ flags: '-m', anchorId: 'message', argument: 'MESSAGE' }] },
+      { name: 'systemctl', section: '1', options: [] },
+      { name: 'mke2fs', section: '8', options: [] },
+      { name: 'ssh_config', section: '5', options: [] },
+      { name: 'bounded', section: '1', options: Array.from({ length: 100 }, (_, i) => ({ flags: `--limit${i}`, anchorId: `limit${i}` })) },
+    ]
+    for (const spec of specs) {
+      const pageId = await ctx.db.insert('manPages', { releaseId, datasetReleaseId, externalId: `b5-${spec.name}`, locale: 'en', distro: 'debian', name: spec.name, section: spec.section, sitemapPage: 1, title: `${spec.name}(${spec.section})`, description: `Manual for ${spec.name}`, sourcePath: spec.name, contentSha256: spec.name, hasParseWarnings: false })
+      for (const row of optionFlagRows(spec.options)) await ctx.db.insert('manPageOptionFlags', { ...row, releaseId, pageId, nameNorm: spec.name, section: spec.section })
+      if (spec.name === 'ssh_config') {
+        for (let i = 0; i < 12; i++) {
+          const name = i ? `ssh_config${i}` : 'ssh_config'
+          const targetId = i ? await ctx.db.insert('manPages', { releaseId, datasetReleaseId, externalId: `b5-${name}`, locale: 'en', distro: 'debian', name, section: '5', sitemapPage: 1, title: `${name}(5)`, description: 'Client configuration', sourcePath: name, contentSha256: name, hasParseWarnings: false }) : pageId
+          await ctx.db.insert('manPageSymbols', { releaseId, pageId: targetId, name, section: '5', title: `${name}(5)`, description: 'Client configuration', term: 'ForwardAgent', termNorm: 'forwardagent', anchorId: 'ForwardAgent', excerpt: 'Forward authentication agent connections.', kind: 'config' })
+        }
+      }
+      if (spec.name === 'systemctl') await ctx.db.insert('manPageSymbols',{releaseId,pageId,name:'systemctl',section:'1',title:'systemctl(1)',description:'Control the system manager',term:'systemctl restart',termNorm:'systemctl restart',anchorId:'unit-commands-introspection-and-modification',excerpt:'Stop and then start one or more units specified on the command line.',kind:'subcommand'})
+      if (spec.name === 'mke2fs') await ctx.db.insert('manPageAliases',{releaseId,datasetReleaseId,name:'mkfs.ext4',section:'8',targetName:'mke2fs',targetSection:'8'})
+      if (spec.name === 'git-commit') await ctx.db.insert('manPageSymbols', { releaseId, pageId, name: spec.name, section: '1', title: 'git-commit(1)', description: 'Commit changes', term: 'git commit', termNorm: 'git commit', anchorId: '', excerpt: 'Commit changes', kind: 'subcommand' })
+    }
+    const tar = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'tar').eq('section', '1')).unique()
+    for (const row of optionFlagRows([{ flags: '-v, --verbose', anchorId: 'verbose' }, { flags: '-C, --directory', anchorId: 'directory', argument: 'DIR' }])) await ctx.db.insert('manPageOptionFlags', { ...row, releaseId, pageId: tar!._id, nameNorm: 'tar', section: '1' })
+    const bash = await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', releaseId).eq('name', 'bash').eq('section', '1')).unique()
+    for (const kind of ['pipeline', 'quoting', 'glob', 'substitution', 'list', 'redirect', 'subshell', 'assignment', 'expansion']) await ctx.db.insert('manPageSymbols', { releaseId, pageId: bash!._id, name: 'bash', section: '1', title: 'bash(1)', description: 'Shell syntax', term: `shell:${kind}`, termNorm: `shell:${kind}`, anchorId: `shell-${kind}`, excerpt: `Shell ${kind}`, kind: 'shell' })
+  })
+  return t
+}
+
+// Independent saturated corpus: widening page/symbol ranges changes the resolved
+// stage count even if the request-wide allowance stops the next lookup earlier.
+export async function createExplainMultiFixture(onCall: () => void) {
+  const t = await createExplainFixture(onCall)
+  await t.run(async ctx => {
+    const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q=>q.eq('stage','prod').eq('locale','en').eq('distro','debian')).unique()
+    const git = (await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q=>q.eq('releaseId',active!.releaseId).eq('name','git')).first())!
+    const {_id,_creationTime,...fields} = git
+    void _id; void _creationTime
+    for (const section of ['1ssl','3','8']) await ctx.db.insert('manPages',{...fields,section,externalId:`git-${section}`})
+    for (const verb of 'abcdefghijklmnopqrstuvwx') {
+      for (let i=0;i<5;i++) {
+        const name=`git-${verb}${i || ''}`
+        const pageId=await ctx.db.insert('manPages',{...fields,name,externalId:name})
+        await ctx.db.insert('manPageSymbols',{releaseId:git.releaseId,pageId,name,section:'1',title:`${name}(1)`,description:'Saturated subcommand',term:`git ${verb}`,termNorm:`git ${verb}`,anchorId:'',excerpt:'Subcommand',kind:'subcommand'})
+      }
+    }
+    const bash=(await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section',q=>q.eq('releaseId',git.releaseId).eq('name','bash')).first())!
+    for(let i=0;i<4;i++) await ctx.db.insert('manPageSymbols',{releaseId:git.releaseId,pageId:bash._id,name:'bash',section:'1',title:'bash(1)',description:'Syntax',term:'shell:pipeline',termNorm:'shell:pipeline',anchorId:`pipeline${i}`,excerpt:'Pipeline',kind:'shell'})
+  })
+  return t
+}

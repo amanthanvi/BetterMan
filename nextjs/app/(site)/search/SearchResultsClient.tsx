@@ -82,6 +82,7 @@ function buildSynopsisSnippet(r: SearchResult): string {
 
 /** Small-caps kind label: a flag match, or what the page's section documents. */
 export function resultKind(r: SearchResult): string {
+  if(r.symbolKind) return ({config:'directive',environment:'environment',files:'file',errors:'errno',subcommand:'subcommand',shell:'shell'} as const)[r.symbolKind]
   if (r.match === 'option') return 'flag'
   switch (r.section.charAt(0)) {
     case '1':
@@ -106,7 +107,7 @@ export function resultKind(r: SearchResult): string {
 }
 
 function ResultCard({ urlDistro, q, r }: { urlDistro: Distro | null; q: string; r: SearchResult }) {
-  const anchorId = r.match === 'option' ? r.anchorId : undefined
+  const anchorId = r.anchorId
   const href = useMemo(() => manPageHref(r.name, r.section, urlDistro, anchorId), [anchorId, urlDistro, r.name, r.section])
   const synopsis = useMemo(() => buildSynopsisSnippet(r), [r])
 

@@ -6,6 +6,7 @@ import {
   pageExamplesPartValidator,
   tldrPartValidator,
 } from "./_generatedLayer";
+import { symbolInput } from './_symbols';
 
 export const distroValidator = v.union(
   v.literal("debian"),
@@ -251,14 +252,24 @@ export default defineSchema({
     // The option's flag text as written, for the result snippet.
     flags: v.string(),
     takesArgument: v.optional(v.boolean()),
+    argumentOptional: v.optional(v.boolean()),
+    excerpt: v.optional(v.string()),
   })
     .index("by_releaseId_and_flag_and_nameNorm", ["releaseId", "flag", "nameNorm"])
+    .index("by_pageId_and_flag", ["pageId", "flag"])
     .index("by_releaseId_and_section_and_flag_and_nameNorm", [
       "releaseId",
       "section",
       "flag",
       "nameNorm",
     ]),
+
+  manPageSymbols: defineTable({
+    ...symbolInput.fields,
+    releaseId: v.id('datasetReleases'), pageId: v.id('manPages'),
+    termNorm: v.string(), name: v.string(), section: v.string(), title: v.string(), description: v.string(),
+  }).index('by_releaseId_and_termNorm', ['releaseId', 'termNorm'])
+    .index('by_releaseId_and_section_and_termNorm', ['releaseId', 'section', 'termNorm']),
 
   // `.so` include stubs: /man/<name>/<section> redirects to the target page.
   manPageAliases: defineTable({
