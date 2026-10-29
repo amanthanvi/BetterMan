@@ -14,6 +14,8 @@ import { insertSymbols, symbolInput } from './_symbols';
 import {
   compactManPageSearchText,
   DATASET_STAGES,
+  DISTROS,
+  type Distro,
   MAX_SNIPPET_TEXT_CHARS,
   sectionLabel,
   truncateText,
@@ -871,6 +873,12 @@ function requirePromotableRelease(release: Doc<"datasetReleases">) {
   }
 }
 
+// Object validators retain optional key types (v.record infers every union key
+// as required). Derive the allowed fields from the shared distro vocabulary.
+const expectedReleaseIdsValidator = v.object(Object.fromEntries(
+  DISTROS.map(distro => [distro, v.string()]),
+) as Record<Distro, ReturnType<typeof v.string>>).partial();
+
 // Authenticated workflow preflight only. Staging never enters the public API.
 export const getPromotionSource = internalQuery({
   args: { distro: distroValidator },
@@ -894,11 +902,7 @@ export const promoteActiveReleases = internalMutation({
     distros: v.array(distroValidator),
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
-    expectedDatasetReleaseId: v.optional(v.object({
-      debian: v.optional(v.string()), ubuntu: v.optional(v.string()),
-      fedora: v.optional(v.string()), arch: v.optional(v.string()),
-      alpine: v.optional(v.string()), freebsd: v.optional(v.string()), macos: v.optional(v.string()),
-    })),
+    expectedDatasetReleaseId: v.optional(expectedReleaseIdsValidator),
   },
   returns: v.object({
     promoted: v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string() })),
@@ -907,10 +911,13 @@ export const promoteActiveReleases = internalMutation({
   handler: async (ctx, args) => {
     const promoted = [];
     const skipped = [];
-    let changed = false;
+    for (const [distro, expected] of Object.entries(args.expectedDatasetReleaseId ?? {})) {
+      if (!args.distros.includes(distro as Distro) || typeof expected !== "string" || !expected.trim()) {
+        throw new Error("INVALID_PROMOTION_EXPECTATION: IDs must be nonempty and keys must be selected distros");
+      }
+    }
     for (const distro of new Set(args.distros)) {
       const expected = args.expectedDatasetReleaseId?.[distro];
-      if (expected !== undefined && !expected.trim()) throw new Error("INVALID_RELEASE_MANIFEST");
       const target = await ctx.db
         .query("activeReleases")
         .withIndex("by_stage_and_locale_and_distro", (q) =>
@@ -918,8 +925,8 @@ export const promoteActiveReleases = internalMutation({
         )
         .unique();
       // A lost response can be retried after staging advances. Acknowledge the
-      // already committed target without writing pointers/history or scheduling
-      // derived work, but still enforce the persisted full-Debian hold below.
+      // already committed target without writing pointers/history. The shared
+      // scheduler still recovers failed derived work without forcing a rebuild.
       const alreadyPromoted = expected !== undefined && target?.datasetReleaseId === expected;
       const source = await ctx.db
         .query("activeReleases")
@@ -971,11 +978,10 @@ export const promoteActiveReleases = internalMutation({
         await ctx.db.insert("activeReleases", payload);
       }
 
-      changed = true;
       promoted.push({ distro, datasetReleaseId: candidate.datasetReleaseId });
     }
 
-    if (args.toStage === "prod" && changed) await scheduleDerivedBuild(ctx, "en");
+    if (args.toStage === "prod" && promoted.length) await scheduleDerivedBuild(ctx, "en");
 
 
     return skipped.length ? { promoted, skipped } : { promoted };

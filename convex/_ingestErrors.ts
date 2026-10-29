@@ -13,6 +13,7 @@ const UNCAUGHT_PREFIX = "Uncaught Error: ";
 // server fault. The client must not retry these; anything else stays a 500.
 const DOMAIN_ERROR_STATUS: Record<string, number> = {
   INVALID_RELEASE_MANIFEST: 400,
+  INVALID_PROMOTION_EXPECTATION: 400,
   INVALID_MAN_PAGE_ROUTE: 400,
   INVALID_ALIAS_ROUTE: 400,
   EMPTY_LICENSE_TEXT: 400,

@@ -124,11 +124,26 @@ Or use the workflow:
 gh workflow run update-dataset -f ingest=false -f promote=true
 ```
 
+For a release you inspected before dispatching, supply its saved ID explicitly:
+
+```bash
+gh workflow run update-dataset -f ingest=false -f promote=true \
+  -f 'expected_release_ids={"debian":"<inspected-debian-release-id>"}'
+```
+
+This pins Debian through any concurrency-queue wait. A different staging source
+fails that distro before POST. A partial map pins only listed distros; all seven
+are still attempted, with unlisted distros capturing verified staging at job
+time. Supply all seven IDs to pin all of them. Full-Debian authorization remains
+separate (`-f debian_full_promote=true`). See the input validation limits in the
+[multi-distro runbook](multi-distro-ops.md#run-ingestion--promotion-github-actions).
+
 The expected-ID map is optional for manual callers, but supply an entry for
 every selected distro to prevent a concurrent activation from replacing a
 verified candidate. A mismatch returns `409 STAGING_RELEASE_CONFLICT` and rolls
 back the entire request. An expected ID already on prod is acknowledged without
-writes, even if staging has since advanced. Full-Debian releases still require
+pointer/history writes, even if staging has since advanced. The nonforced derived
+scheduler deduplicates healthy work and re-arms failed work. Full-Debian releases still require
 explicit approval through `debian_full_promote` / `BETTERMAN_DEBIAN_FULL_PROMOTE`;
 CAS never authorizes the held release. The contract header is mandatory:
 `409 INGEST_CONTRACT_MISMATCH` means use matching code/deployment, not omit CAS.

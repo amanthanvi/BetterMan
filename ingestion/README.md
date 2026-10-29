@@ -375,9 +375,12 @@ It is prepared for an owner-authorized runner measurement and **was not run**:
 runner measurements count as shared execution. The [evidence document](../docs/roadmap/b1-debian-evidence.md)
 contains local results, audit dispositions and projections.
 
-Contract **v5** combines the merged v4 license batches, extractor provenance,
+Contract **v6** retains the merged v4 license batches, extractor provenance,
 packed signatures, symbols and optional-argument metadata with real/alias
-provider declarations. The generated layer keeps its separate **v2** contract.
+provider declarations from v5, adding verified staging-source reads and CAS
+promotion. Promotion requires the matching v6 header; optional dispatch
+`expected_release_ids` pins inspected releases through queue waits. The generated
+layer keeps its separate **v2** contract.
 The single TS/Python alignment test and bidirectional mismatch tests guard deploy
 ordering. All provider and symbol tables are in the schema-checked release-child
 registry; derived dependency pins protect pruning. Deploy the combined Convex

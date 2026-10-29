@@ -38,6 +38,7 @@ class WorkflowTest(unittest.TestCase):
             'BETTERMAN_LINUX_ENABLED': 'true', 'BETTERMAN_LINUX_DISTRO': 'all',
             'BETTERMAN_BSD_ENABLED': 'true', 'BETTERMAN_BSD_DISTRO': 'all',
             'BETTERMAN_INGEST_SAMPLE': 'false', 'BETTERMAN_MATRIX_RESULT': 'success',
+            'BETTERMAN_EXPECTED_RELEASE_IDS_INPUT': '',
             'CONVEX_HTTP_URL': 'https://never-contact.invalid',
             'CONVEX_URL': 'https://public-never-contact.invalid',
             'CONVEX_INGEST_SECRET': 'test-secret-do-not-print',
@@ -399,6 +400,85 @@ class WorkflowTest(unittest.TestCase):
                 self.assertEqual(w.promote('arch'), 1)
             self.assertEqual(http.call_count, 1)
 
+    def test_operator_pins_survive_queued_dispatch_and_never_fall_back(self):
+        os.environ.update(BETTERMAN_INGEST_ENABLED='false', BETTERMAN_EXPECTED_RELEASE_IDS_INPUT='{"debian":"inspected-full"}', BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT='true')
+        self.plan() # Dispatch plan is prepared before a manual activation.
+        self.source_ids['debian'] = 'replacement-full'
+        with self.post_mock(lambda *args, **kwargs: self.fail('Must not promote a replacement')) as http:
+            self.assertEqual(w.promote('debian'), 1)
+        self.assertEqual(http.call_count, 1)
+        self.assertIn('operator-pinned', w.load('debian')['error'])
+        self.assertEqual(w.load('debian')['result'], 'failure')
+        self.sleep.assert_not_called()
+        self.assertNotIn('release_ids=', Path('output').read_text())
+        self.source_ids['debian'] = 'inspected-full'
+        def response(request, **kwargs):
+            payload = json.loads(request.data)
+            self.assertEqual(payload['expectedDatasetReleaseId'], {'debian': 'inspected-full'})
+            self.assertTrue(payload['allowFullDebian'])
+            return io.BytesIO(b'{"promoted":[{"distro":"debian","datasetReleaseId":"inspected-full"}]}')
+        with self.post_mock(response):
+            self.assertEqual(w.promote('debian'), 0)
+        self.assertEqual(w.load('debian')['releaseId'], 'inspected-full')
+        # A partial map pins only listed distros; siblings keep capturing staging.
+        self.assertEqual(self.promote('arch'), 0)
+
+    def test_combined_dispatch_cannot_override_its_completed_ingest_id(self):
+        self.ingest('arch')
+        os.environ['BETTERMAN_EXPECTED_RELEASE_IDS_INPUT'] = '{"arch":"other"}'
+        self.assertEqual(w.promote('arch'), 1)
+        self.assertIn('operator-pinned', w.load('arch')['error'])
+
+    def test_expected_release_input_is_strict_bounded_and_never_executes(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        valid = '2026-10-29T21:25:00Z+debian+614714a6+mandoc:1.14.6'
+        os.environ['BETTERMAN_EXPECTED_RELEASE_IDS_INPUT'] = json.dumps({'debian': valid})
+        self.assertEqual(w.expected_release_ids(), {'debian': valid})
+        for raw in ['[]', 'null', '1', '"debian"', '{', '{"debian":"one","debian":"two"}',
+                    '{"gentoo":"release"}', '{"debian":null}', '{"debian":1}', '{"debian":[]}',
+                    '{"debian":""}', '{"debian":" spaced "}', '{"debian":"has space"}',
+                    '{"debian":"$(touch injected)"}', json.dumps({'debian':chr(96)+'touch injected'+chr(96)}),
+                    '{"debian":"é"}', json.dumps({'debian':'x'*257}), ' '*4097,
+                    json.dumps({'debian':'é'*2049})]:
+            os.environ['BETTERMAN_EXPECTED_RELEASE_IDS_INPUT'] = raw
+            with self.assertRaisesRegex(ValueError, 'expected_release_ids'):
+                w.expected_release_ids()
+            with self.assertRaises(ValueError):
+                w.plan()
+            self.assertEqual(w.promote('debian'), 1)
+        self.assertFalse(Path('injected').exists())
+        os.environ.update(BETTERMAN_INGEST_ENABLED='true', BETTERMAN_EXPECTED_RELEASE_IDS_INPUT='{"debian":"valid"}', BETTERMAN_LINUX_DISTRO='arch', BETTERMAN_BSD_ENABLED='false')
+        with self.assertRaisesRegex(ValueError, 'not selected'):
+            w.plan()
+
+    def test_contract_transients_retry_but_schema_auth_and_client_errors_do_not(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        payload = self.contract.return_value
+        self.contract.side_effect = [w.urllib.error.URLError('offline'), w.urllib.error.HTTPError('unused', 503, 'Unavailable', {}, io.BytesIO(b'blip')), payload]
+        self.assertEqual(self.promote('arch'), 0)
+        self.assertEqual(self.contract.call_count, 3)
+        self.assertEqual(self.sleep.call_args_list, [call(2), call(4)])
+        for failure in [TimeoutError('timeout'), http.client.IncompleteRead(b'', 10)]:
+            self.contract.reset_mock()
+            self.sleep.reset_mock()
+            self.contract.side_effect = [failure, failure, failure]
+            self.assertEqual(w.promote('arch'), 1)
+            self.assertEqual(self.contract.call_count, 3)
+            self.assertEqual(self.sleep.call_args_list, [call(2), call(4)])
+        for status in [400, 401, 404, 409, 429]:
+            self.contract.reset_mock()
+            self.sleep.reset_mock()
+            self.contract.side_effect = w.urllib.error.HTTPError('unused', status, 'Rejected', {}, io.BytesIO(b'rejected'))
+            self.assertEqual(w.promote('arch'), 1)
+            self.assertEqual(self.contract.call_count, 1)
+            self.sleep.assert_not_called()
+        self.contract.reset_mock()
+        self.contract.side_effect = None
+        self.contract.return_value = {**payload, 'schemaVersion': REQUIRED_SCHEMA_VERSION - 1}
+        self.assertEqual(w.promote('arch'), 1)
+        self.assertEqual(self.contract.call_count, 1)
+        self.sleep.assert_not_called()
+
 unittest.main(verbosity=2)
 `], { encoding: 'utf8' })
   assert.equal(result.status, 0, result.stderr + result.stdout)
@@ -509,6 +589,10 @@ function assertWorkflowWiring(workflow) {
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_download_only.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full_promote.default, false)
+  assert.equal(workflow.on.workflow_dispatch.inputs.expected_release_ids.type, 'string')
+  assert.equal(workflow.on.workflow_dispatch.inputs.expected_release_ids.default, '')
+  assert.equal(workflow.env.BETTERMAN_EXPECTED_RELEASE_IDS_INPUT, "${{ inputs.expected_release_ids || '' }}")
+  assert.ok(!Object.values(workflow.jobs).some(job => job.steps?.some(step => step.run?.includes('inputs.expected_release_ids'))), 'untrusted input must be passed only through env')
   const release = JSON.parse(readFileSync('ingestion/data/debian-trixie.json', 'utf8')).releaseSha256
   for (const job of [download, ingest]) {
     for (const cache of job.steps.filter(s => s.uses?.startsWith('actions/cache/'))) {

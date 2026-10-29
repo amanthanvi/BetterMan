@@ -189,7 +189,7 @@ describe("release sealing", () => {
     });
   });
 
-  it("promotes matching expectations and retries without pointer, history or scheduler writes even after staging advances", async () => {
+  it("promotes matching expectations and retries without pointer/history writes or duplicate healthy jobs even after staging advances", async () => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);
     const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("expected"));
@@ -198,6 +198,7 @@ describe("release sealing", () => {
     const args = { fromStage: "staging" as const, toStage: "prod" as const, distros: ["debian" as const], activatedAt: "now", expectedDatasetReleaseId: { debian: "expected" } };
     expect(await t.query(internal.ingest.getPromotionSource, { distro: "debian" })).toEqual({ distro: "debian", datasetReleaseId: "expected" });
     expect(await t.mutation(internal.ingest.promoteActiveReleases, args)).toEqual({ promoted: [{ distro: "debian", datasetReleaseId: "expected" }] });
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     const state = () => t.run(async ctx => ({
       pointers: await ctx.db.query("activeReleases").take(10),
       release: await ctx.db.get(releaseId),
@@ -212,6 +213,57 @@ describe("release sealing", () => {
     const advanced = await state();
     expect(await t.mutation(internal.ingest.promoteActiveReleases, args)).toEqual({ promoted: [{ distro: "debian", datasetReleaseId: "expected" }] });
     expect(await state()).toEqual(advanced);
+  });
+
+  it("acknowledges expected prod while re-arming a failed derived build without force", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("retry-derived"));
+    await t.run(ctx => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
+    await pointRelease(t, releaseId, "staging");
+    const args = { fromStage: "staging" as const, toStage: "prod" as const, distros: ["debian" as const], activatedAt: "now", expectedDatasetReleaseId: { debian: "retry-derived" } };
+    await t.mutation(internal.ingest.promoteActiveReleases, args);
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    const before = await t.run(async ctx => ({
+      pointers: await ctx.db.query("activeReleases").take(10),
+      release: await ctx.db.get(releaseId),
+      build: await ctx.db.query("derivedBuilds").withIndex("by_locale", q => q.eq("locale", "en")).unique(),
+    }));
+    if (!before.build) throw new Error("missing derived fixture");
+    await t.mutation(internal.derived.failBuild, { locale: "en", key: before.build.key, error: "fixture failure" });
+    await t.mutation(internal.ingest.promoteActiveReleases, { ...args, activatedAt: "retry" });
+    const after = await t.run(async ctx => ({
+      pointers: await ctx.db.query("activeReleases").take(10),
+      release: await ctx.db.get(releaseId),
+      build: await ctx.db.query("derivedBuilds").withIndex("by_locale", q => q.eq("locale", "en")).unique(),
+    }));
+    expect(after.pointers).toEqual(before.pointers);
+    expect(after.release).toEqual(before.release);
+    expect(after.build).toMatchObject({ key: before.build.key, revision: before.build.revision, fingerprint: before.build.fingerprint, retrying: true, phase: "summaries", jobId: expect.any(String) });
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    expect(await t.query(internal.derived.status, {})).toMatchObject({ state: "complete", healthy: true });
+  });
+
+  it.each([{ ubuntu: "extra" }, { debian: "" }, { debian: " " }])("rejects invalid promotion expectations before any writes: %j", async (expectedDatasetReleaseId) => {
+    vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
+    const t = convexTest(schema, modules);
+    const response = await t.fetch("/ingest/promote", {
+      method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json", "x-betterman-ingest-contract": String(INGEST_CONTRACT.schemaVersion) },
+      body: JSON.stringify({ fromStage: "staging", toStage: "prod", distros: ["debian"], activatedAt: "now", expectedDatasetReleaseId }),
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "INVALID_PROMOTION_EXPECTATION" } });
+    expect(await t.run(ctx => ctx.db.query("activeReleases").take(10))).toEqual([]);
+    expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").take(10))).toEqual([]);
+  });
+
+  it("reports readiness errors for full-Debian sources before evaluating the promotion hold", async () => {
+    const t = convexTest(schema, modules);
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, { ...releaseInput("unready-full"), packageManifest: debianManifest });
+    await t.run(ctx => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true }));
+    await pointRelease(t, releaseId, "staging");
+    await expect(t.query(internal.ingest.getPromotionSource, { distro: "debian" })).rejects.toThrow("RELATED_METADATA_INCOMPLETE");
+    expect(await t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod").eq("locale", "en").eq("distro", "debian")).unique())).toBeNull();
   });
 
   it.each(["changed", "missing"])("returns HTTP 409 for a %s expected staging pointer and rolls back every distro", async (source) => {

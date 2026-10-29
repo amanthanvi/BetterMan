@@ -40,7 +40,10 @@ signature, symbol and optional-argument fields, adding real and alias package
 providers from v5, adding an authenticated fixed-staging promotion-source read
 and per-distro `expectedDatasetReleaseId` compare-and-swap. A mismatch aborts
 the entire promotion transaction with HTTP 409; an already-committed expected
-prod release is acknowledged without writes. Both paths retain the persisted
+prod release is acknowledged without pointer/history writes and rechecks the
+deduplicating derived scheduler for failed work. Dispatches can pin inspected
+release IDs through concurrency-queue waits with `expected_release_ids`; a
+job-time source mismatch fails before promotion. Both paths retain the persisted
 full-Debian acquisition hold. Promotion requests carry the exact contract
 version header so old in-flight workflows fail before moving prod. The
 generated layer advertises its own independent v2 contract.

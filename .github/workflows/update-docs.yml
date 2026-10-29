@@ -68,6 +68,11 @@ on:
         type: boolean
         required: false
         default: false
+      expected_release_ids:
+        description: 'Optional JSON map of distro to inspected release ID; listed distros must match before promotion'
+        type: string
+        required: false
+        default: ''
   schedule:
     # Monthly on the 1st at 05:00 UTC
     - cron: "0 5 1 * *"
@@ -91,6 +96,7 @@ env:
   BETTERMAN_WORKFLOW_EVENT: ${{ github.event_name }}
   BETTERMAN_INGEST_ENABLED: ${{ inputs.ingest && 'true' || 'false' }}
   BETTERMAN_PROMOTE_ENABLED: ${{ inputs.promote && 'true' || 'false' }}
+  BETTERMAN_EXPECTED_RELEASE_IDS_INPUT: ${{ inputs.expected_release_ids || '' }}
   BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
   BETTERMAN_LINUX_ENABLED: ${{ inputs.linux && 'true' || 'false' }}
   BETTERMAN_LINUX_DISTRO: ${{ inputs.linux_distro || 'all' }}
