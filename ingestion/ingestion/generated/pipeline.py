@@ -145,6 +145,8 @@ class GenerationStats:
     rejected_examples: Counter[str] = field(default_factory=Counter)
     invalid_responses: Counter[str] = field(default_factory=Counter)
     failed_pages: int = 0
+    finish_reasons: Counter[str] = field(default_factory=Counter)
+    content_shapes: Counter[str] = field(default_factory=Counter)
 
 
 def _estimate_tokens(messages: list[dict[str, str]]) -> int:
@@ -157,7 +159,7 @@ class Generator:
         provider: Provider,
         governor: BudgetGovernor,
         *,
-        max_output_tokens: int = 700,
+        max_output_tokens: int = 2048,
         max_attempts: int = 2,
         today: Callable[[], str] = lambda: datetime.now(UTC).date().isoformat(),
         sleep: Callable[[float], None] = time.sleep,
@@ -270,8 +272,15 @@ class Generator:
             part.prompt_tokens += completion.prompt_tokens
             part.completion_tokens += completion.completion_tokens
             part.usd += completion.billed_usd or 0.0
+            self._count("finish_reasons", completion.finish_reason)
+            self._count("content_shapes", completion.content_shape)
             parsed = parse_response(completion.text, name=page.name)
             for problem in parsed.problems:
+                if problem == "response is not JSON":
+                    problem = (
+                        f"{problem} (finish_reason={completion.finish_reason}, "
+                        f"content_shape={completion.content_shape})"
+                    )
                 self._count("invalid_responses", problem)
             summary = summary or parsed.summary
             phrases = phrases or parsed.task_phrases

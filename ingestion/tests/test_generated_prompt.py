@@ -109,7 +109,7 @@ def test_fenced_json_is_accepted():
             {"examples": [{"description": "x", "command": "tar -x\nrm -rf /"}]},
             "example has control characters",
         ),
-        ({"extra": 1}, "unexpected keys: extra"),
+        ({"extra": 1}, "unexpected keys"),
     ],
 )
 def test_invalid_parts_are_dropped_not_repaired(overrides, problem):
@@ -145,3 +145,48 @@ def test_control_characters_are_rejected_and_markup_stays_text():
                 response(summary=f"Creates archives{bad} on disk and tape."), name="tar"
             ).problems
         )
+
+
+@pytest.mark.parametrize(
+    ("name", "rows"),
+    [
+        (
+            "cat",
+            [
+                ("cat f - g", "Output f's contents, then standard input, then g's contents."),
+                ("cat", "Copy standard input to standard output."),
+            ],
+        ),
+        (
+            "chgrp",
+            [
+                ("chgrp staff /u", 'Change the group of /u to "staff".'),
+                ("chgrp -hR staff /u", 'Change the group of /u and subfiles to "staff".'),
+            ],
+        ),
+        (
+            "chown",
+            [
+                ("chown root /u", 'Change the owner of /u to "root".'),
+                ("chown root:staff /u", 'Likewise, but also change its group to "staff".'),
+                ("chown -hR root /u", 'Change the owner of /u and subfiles to "root".'),
+            ],
+        ),
+    ],
+)
+def test_tagged_examples_pair_each_term_with_its_body(name, rows):
+    from html import escape
+
+    from ingestion.generated.page import PageInput
+    from ingestion.mandoc_parser import parse_mandoc_html
+
+    # The dt/dd structure and content are from cached Debian mandoc HTML.
+    items = "".join(
+        f'<dt><a class="permalink">{escape(command)}</a></dt><dd>{escape(description)}</dd>'
+        for command, description in rows
+    )
+    html = f'<div class="manual-text"><h1>EXAMPLES</h1><dl class="Bl-tag">{items}</dl></div>'
+    parsed = parse_mandoc_html(html)
+    page = PageInput("debian", name, "1", "a" * 64, "", [], [], parsed.doc.model_dump())
+    examples, _ = page_examples(page)
+    assert [(e.command, e.description) for e in examples] == rows

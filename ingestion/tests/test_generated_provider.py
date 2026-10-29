@@ -170,3 +170,38 @@ def test_recorded_provider_replays_by_prompt():
     assert recorded.send(MESSAGES, max_tokens=1).text == "ok"
     with pytest.raises(ProviderError):
         recorded.send([{"role": "user", "content": "other"}], max_tokens=1)
+
+
+@pytest.mark.parametrize(
+    ("content", "reasoning", "finish", "shape"),
+    [
+        ('{"summary":', None, "length", "object_start"),
+        (None, "private reasoning", "length", "empty_with_reasoning"),
+        ("", None, "stop", "empty"),
+        ('Here is JSON: {"summary": 1}', None, "stop", "text_before_object"),
+        ("```json\n{}\n```", None, "stop", "fenced"),
+        ("not JSON", None, "stop", "other"),
+    ],
+)
+def test_recorded_completion_shapes_are_bounded(content, reasoning, finish, shape):
+    payload = {
+        "choices": [
+            {
+                "finish_reason": finish,
+                "message": {
+                    "content": content,
+                    "reasoning_content": reasoning,
+                },
+            }
+        ]
+    }
+    recorded = RecordedProvider({RecordedProvider.key(MESSAGES): payload})
+    result = recorded.send(MESSAGES, max_tokens=2048)
+    assert result.finish_reason == finish
+    assert result.content_shape == shape
+    assert "private reasoning" not in repr(result)
+
+
+def test_untrusted_finish_reason_is_not_returned():
+    payload = {"choices": [{"finish_reason": "private text", "message": {"content": ""}}]}
+    assert parse_completion(payload).finish_reason == "unknown"
