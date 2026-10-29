@@ -203,7 +203,7 @@ combinator.
     is not one, so `/` stays search there), the pager keys work as in less:
     `/` or `f` find in page · `n` / `N` next / previous match, resuming from the
     last match shown even after the find bar closes · `j` / `k` scroll about
-    three lines · `g` / `G` top / bottom (`G` holds the true end while a long
+    three lines · `g` / `G` jump to the top / bottom at once (`G` holds the true end while a long
     page's off-screen blocks finish laying out) · `[` / `]` previous / next section ·
     `b` contents sidebar (drawer under `lg`) · `p` reading preferences · `m`
     bookmark. In the find field, Enter / Shift+Enter step through matches.
