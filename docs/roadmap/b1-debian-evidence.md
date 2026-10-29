@@ -47,11 +47,14 @@ and download-only isolation. No switch was enabled during this work.
 Registrations are read from postinst as data, never executed. Accept only simple
 command words; skip heredoc/echo/printf data and unresolved branch variables.
 Literal variables/loops/wrappers and checked OpenJDK/xz templates remain supported.
-Choose a provider before checking its manual. Rank the default-installed
-`required`/`important`/`standard` package Priority group first, then pinned popcon
-`by_inst`, then alternatives priority. Curated awk/vi/nc preferences break exact
+Choose a provider before checking its manual. Treat Debian
+`required`/`important`/`standard` as one installed-by-default group and elect its
+highest alternatives priority, with popcon breaking ties. Only when that group
+is empty, use pinned popcon `by_inst` first and alternatives priority second. Curated awk/vi/nc preferences break exact
 remaining ties only. If the winner has no attributable manual, omit the route
-and report it; do not fall back. A real archive manual always retains its route.
+and report it; do not fall back. A real archive manual beats an alternative only
+when its original basename matches exactly, case included. A case-only variant
+stays in the provider table instead of displacing a lowercase command.
 
 The audit uses the fixed **2,000-package corpus plus 22 competing packages**,
 with **2,107 acquired packages including retained dependency/audit cache**.
@@ -65,22 +68,49 @@ competitors. It is not a claim that all catalog archives were downloaded.
 | Route | Audited default | Why |
 | --- | --- | --- |
 | `editor(1)` | `nano(1)` — nano | important, 290,480 installed; joe's priority 70 cannot override it |
-| `pager(1)` | `more(1)` — util-linux | required, 295,050 installed; wins before less/most and alternatives priority |
+| `pager(1)` | `less(1)` — less | important; priority 77 beats required util-linux/more's 50 within the same default group |
 | `cc(1)` | omitted — winner gcc | winning GCC provider has no manual in main; no Clang fallback |
 | `c++(1)` | omitted — winner g++ | winning G++ provider has no manual in main; no Clang fallback |
 | `java(1)` | OpenJDK 21 JRE headless | package-owned `java(1)`; 36,467 installed beats OpenJDK 25 |
-| `awk(1)` | `mawk(1)` — mawk | required, 294,539 installed; alternatives priority 5 is considered last |
+| `awk(1)` | `mawk(1)` — mawk | required; the only audited default-group provider, priority 5 |
 | `x-terminal-emulator(1)` | `lxterm(1)` — xterm | optional, 117,460 installed; ahead of GNOME Terminal and terminator |
-| `ftp(1)` | `FTP(1)` — ftp.app | package-owned manual retains the lowercased route; the tnftp alternative cannot displace it |
+| `ftp(1)` | `tnftp(1)` — tnftp | optional-group installed count 10,576 wins; uppercase `FTP` is a separate provider |
 | `yacc(1)` | `bison.yacc(1)` — bison | optional, 20,605 installed; ahead of byacc/9base |
 | `view(1)` | `vim(1)` — vim-common, via vim-tiny | important provider, 289,379 installed; alternatives priority 15 |
 | `ex(1)` | `vim(1)` — vim-common, via vim-tiny | same election as view |
 
-The ftp disposition follows the requested real-page precedence even though its
-popcon count is only 54. Its source spelling is `FTP`; URL normalization makes
-that the occupied `ftp` route. Both its real manual and tnftp's own manual remain
-stored. This consequence is explicit rather than hidden by a provider override.
-The discarded 27-package reviewer cohort was not reconstructed, per owner direction.
+Lowercase `/man/ftp/1` follows the tnftp alias. `/man/FTP/1` selects the
+exact-case GNUstep real provider; `/man/ftp/1?pkg=ftp.app` also retains access.
+HTML, API, text and OG handlers preserve request case. Case-specific lookups
+use the existing provider index with a bounded 100-candidate prefix read;
+canonical lowercase page views retain their previous reads and cost. The full
+Contents audit finds at most four owner/path combinations per collided route.
+
+G++ and vim-tiny own no manual files in the pinned Contents indexes. The full
+pipeline explicitly acquires their control scripts alongside the curated pass,
+so the full election includes them as the audit does. No maintainer script runs.
+
+## Full Contents case-collision audit
+
+Both complete, Release-verified Contents-all and Contents-amd64 indexes contain
+**142,608 normalized English manual routes**, including **162 routes with two
+case spellings**. This is a full index audit, not a sample or an archive-content
+comparison; links/stubs can make two names refer to the same text. Architecture
+repetitions and compression variants are deduplicated by route/spelling.
+All routes, paths and owners are in [the collision report](b1-debian-case-collisions.json).
+
+| Normalized route | Original spellings | Packages |
+| --- | --- | --- |
+| `4pane(1)` | `4Pane`, `4pane` | 4pane |
+| `_exit(2)` | `_Exit`, `_exit` | manpages-dev |
+| `atropos(1)` | `Atropos`, `atropos` | ants; atropos |
+| `basename(3)` | `baseName`, `basename` | libcdk5-dev; manpages-dev |
+| `authen::krb5::keyblock(3pm)` | `Authen::Krb5::KeyBlock`, `Authen::Krb5::Keyblock` | libauthen-krb5-perl |
+
+Comparing the audited generated alternatives with those full indexes adds
+**one alternative-versus-real case collision: `ftp(1)` versus `FTP(1)`**.
+Contents itself contains only uppercase `FTP`; lowercase ftp is generated from
+postinst and therefore is not one of the 162 real-versus-real pairs.
 
 ## Alias semantics and parser boundary
 
@@ -93,29 +123,34 @@ target package. The B10 switch UI remains separate.
 Archive includes resolve only through the indexed, verified store. Mandoc runs
 with stdin in a fresh empty temporary cwd. This is the primary boundary against
 accidental relative host includes; it is not an OS filesystem sandbox and does
-not revoke absolute-path permissions. Source checks are defence in depth:
-reject unresolved includes, escape/control changes (`ec`, `eo`, `cc`, `c2`),
-request-position `\*` interpolation, include requests in macro bodies and
-strings defining `so`. Normal prose in macro bodies, inline comments and
-formatting-argument interpolation are preserved after auditing false positives.
-Optional `www.tmac`/`pic.tmac` requests are omitted without host lookup.
+not revoke absolute-path permissions. The bounded scanner is defence in depth,
+not a complete roff interpreter.
+
+The scanner tracks the current control, no-break control and escape characters,
+including `.cc`, `.c2`, `.ec`, `.eo`, and resets. Old control characters become
+ordinary text. Escapes-off means `\*` is literal. Literal strings are tracked
+and checked when expanded in a request position; macro bodies and aliases are
+checked under their current syntax. Conditional syntax changes retain possible
+states instead of assuming an unknown condition ran. Verified direct archive
+includes use the same scanner; nested/unresolved includes are refused before
+mandoc. Optional `www.tmac`/`pic.tmac` requests are omitted without host lookup.
 
 The final audit checks **13,243 renderable sources owned by the original 2,000
 packages**, and **13,423 including added provider/dependency sources**. Both
-sets reject exactly **four (0.030%)**. No additional include/interpolation or
-macro-definition rejection remains after narrowing the false positives.
+sets have **zero rejections**. The full parser replay also has zero failures.
+All four formerly excluded pages pass the scanner and render through mandoc:
 
-| Rejected source | Package | Actual request |
+| Restored source | Package | Tracked request |
 | --- | --- | --- |
 | `usr/share/man/man1/mjpegtools.1.gz` | mjpegtools | `.ec` |
 | `usr/share/man/man1/nomarch.1.gz` | nomarch | `.cc @` |
 | `usr/share/man/man1/sqlite3.1.gz` | sqlite3 | `.cc \|` |
 | `usr/share/man/man1/tio.1.gz` | tio | `.eo` |
 
-These are intentional failures of the explicit control/escape policy; they stay
-below the existing 2% publish gate. Sentinel regressions separately verify fresh
-empty cwd, failure to resolve a parent-relative sentinel with the filter bypassed,
-and refusal of absolute/conditional/dynamic includes before process invocation.
+Sentinel regressions independently verify fresh empty cwd/parent-relative
+isolation, direct and conditional includes under changed controls/escapes,
+resets, inactive escape syntax, and safe literal string expansion. Formatting
+arguments and ordinary prose remain intact.
 
 ## Local sample and projections
 
@@ -127,19 +162,19 @@ not an unbiased statistical sample.
 | Metric | Current local result |
 | --- | ---: |
 | Fixed selected packages / previously acquired cache | 2,000 / 2,107 (includes provider audit) |
-| Canonical pages / alternate real pages | 13,281 / 14 |
-| Redirect routes / retained alias providers | 3,372 / 3,393 |
-| Intentional control-rule rejections / unresolved sources / missing selected notices | 4 / 0 / 0 |
-| Parse with two workers, including dependency resolution | 64.30 s |
-| Parent / largest-child peak RSS | 204,652,544 / 145,522,688 B |
-| Retained source files / parse spool | 51,234,139 / 283,316,224 B |
+| Canonical pages / alternate real pages | 13,286 / 13 |
+| Redirect routes / retained alias providers | 3,371 / 3,397 |
+| Parse failures / unresolved sources / missing selected notices | 0 / 0 / 0 |
+| Parse with two workers, including dependency resolution | 64.01 s |
+| Parent / largest-child peak RSS | 205,307,904 / 144,539,648 B |
+| Retained source files / parse spool | 51,234,139 / 283,758,592 B |
 | Restored alternative names in the fixed cohort | 50 |
 
-The fixed cohort parser accepts 13,295 real pages plus aliases. The earlier local
+The fixed cohort parser accepts 13,299 real pages plus aliases. The earlier local
 publish used the previous policy and is retained separately in the measurement
 JSON: 46.37 s real-page upload with reused blobs, 4.36 s notices, 22.60 s activation,
 and 2,031 notices including providers/dependencies. Those are historical upload
-measurements, not a new upload or a claim of zero rejections under the new guard.
+measurements, not a new upload or a fresh storage measurement under the current election.
 
 The historical cold acquisition transferred 1,997,753,706 bytes for 2,000 selected
 plus 66 dependency packages in 249.83 s. It precedes the alias change and is used
@@ -149,8 +184,8 @@ a separate six-package browser/office/compiler stress check also resolved all
 notices. Missing/oversized text fails closed without truncation.
 
 The old **143k page** projection counted materialized aliases. Applying the
-current package ratio ×8.657 projects about **114,975 canonical pages
-and 29,191 redirect routes**, plus retained providers. This is a projection;
+current package ratio ×8.657 projects about **115,019 canonical pages
+and 29,182 redirect routes**, plus retained providers. This is a projection;
 the full corpus was not executed. Alias concentration and curated bias limit
 straight-line extrapolation.
 
@@ -237,8 +272,8 @@ An abrupt VM loss can prevent saving; this does not claim all 18+ GB survive a
 new runner. The download-only dispatch has no production environment or secrets,
 suppresses regular ingest/promote and was not run.
 
-Validation: 508 Python tests (86% coverage), 196 Convex tests/typecheck,
-531 Next tests/lint/grammar/build, 122 fresh-fixture browser E2E tests, 112 ops
+Validation: 535 Python tests (86.51% coverage), 197 Convex tests/typecheck,
+532 Next tests/lint/grammar/build, 123 fresh-fixture browser E2E tests, 112 ops
 tests, unchanged performance budgets and public-API/PR diff guards. Fixture
 coverage includes the real postinst templates, binary-link/manual attribution,
 cache corruption/version/file replay, Retry-After, include isolation, aliases,

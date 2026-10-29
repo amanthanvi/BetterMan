@@ -1,6 +1,7 @@
 """Acquisition/parser benchmark; explicit upload is hard-confined to local Convex."""
 
 import argparse
+import gzip
 import json
 import time
 from pathlib import Path
@@ -39,6 +40,60 @@ def audit_routes(admin):
         else:
             raise RuntimeError(f"Alias cycle during audit: {name}")
     return report
+
+
+def audit_case_collisions(indexes, alternatives=()):
+    """Scan both complete, Release-verified English Contents indexes, no archives."""
+    from ingestion.debian_indexes import MAN_PATH
+
+    spellings = {}
+    for filename in ["main-Contents-all.gz", "main-Contents-amd64.gz"]:
+        with gzip.open(indexes / filename, "rt") as lines:
+            for line in lines:
+                fields = line.rstrip().rsplit(None, 1)
+                match = MAN_PATH.fullmatch(fields[0]) if len(fields) == 2 else None
+                if match:
+                    key = (match[1].lower(), match[2].lower())
+                    spellings.setdefault(key, set()).add(match[1])
+    collisions = {key: names for key, names in spellings.items() if len(names) > 1}
+    affected_alternatives = {
+        (a["name"], a["section"]): spellings[(a["name"], a["section"])]
+        for a in alternatives
+        if (a["name"], a["section"]) in spellings
+        and any(
+            name != a.get("spelling", a["name"]) for name in spellings[(a["name"], a["section"])]
+        )
+    }
+    examples = {key: set() for key in collisions.keys() | affected_alternatives.keys()}
+    for filename in ["main-Contents-all.gz", "main-Contents-amd64.gz"]:
+        with gzip.open(indexes / filename, "rt") as lines:
+            for line in lines:
+                fields = line.rstrip().rsplit(None, 1)
+                match = MAN_PATH.fullmatch(fields[0]) if len(fields) == 2 else None
+                if match and (match[1].lower(), match[2].lower()) in examples:
+                    examples[(match[1].lower(), match[2].lower())].add((fields[0], fields[1]))
+
+    def records(routes):
+        return [
+            {
+                "name": key[0],
+                "section": key[1],
+                "spellings": sorted(routes[key]),
+                "sources": [
+                    {"path": path, "owners": packages} for path, packages in sorted(examples[key])
+                ],
+            }
+            for key in sorted(routes)
+        ]
+
+    return {
+        "scope": "complete Release-verified Contents-all and Contents-amd64, English manual roots",
+        "normalizedRoutes": len(spellings),
+        "realPageCollisionCount": len(collisions),
+        "realPageCollisions": records(collisions),
+        "auditedAlternativeCollisionCount": len(affected_alternatives),
+        "auditedAlternativeCollisions": records(affected_alternatives),
+    }
 
 
 def audit_alternatives(workspace):
@@ -127,6 +182,9 @@ def audit_alternatives(workspace):
             }
     return {
         "routes": routes,
+        "caseCollisions": audit_case_collisions(
+            workspace.root / "indexes", workspace.alternatives_audit
+        ),
         "scope": "fixed 2000-package corpus plus competing providers from pinned trixie/main",
         "selectedPackages": len(workspace.packages),
         "acquiredPackages": len(workspace.acquired),

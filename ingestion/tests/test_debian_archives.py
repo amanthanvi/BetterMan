@@ -472,3 +472,75 @@ def test_extraction_stops_before_exceeding_shared_file_quota(tmp_path):
     with pytest.raises(RuntimeError, match="extracted-file disk limit"):
         extract(FIXTURES / "gawk.deb", package("gawk"), tmp_path, quota=quota)
     assert sum(p.stat().st_size for p in (tmp_path / "files").iterdir()) <= 1
+
+
+def test_default_installed_alternatives_use_priority_before_popularity(archive_workspace):
+    from dataclasses import replace
+
+    obj = archive_workspace
+    obj.available["provider-low"] = replace(obj.available["provider-low"], priority="standard")
+    obj.available["provider-high"] = replace(obj.available["provider-high"], priority="required")
+    assert obj.alternative_rank("provider-low", 77, "pager", "1") < obj.alternative_rank(
+        "provider-high", 50, "pager", "1"
+    )
+    obj.available["provider-low"] = replace(obj.available["provider-low"], priority="optional")
+    obj.available["provider-high"] = replace(obj.available["provider-high"], priority="optional")
+    assert obj.alternative_rank("provider-high", 50, "pager", "1") < obj.alternative_rank(
+        "provider-low", 999, "pager", "1"
+    )
+
+
+def test_lowercase_alternative_beats_uppercase_real_page_but_keeps_provider(
+    archive_workspace, tmp_path
+):
+    from ingestion.debian_pipeline import parse_workspace
+    from ingestion.ingest_runner import _PageSpool
+
+    obj = archive_workspace
+    obj.store.db.execute("DELETE FROM entries WHERE kind='control'")
+    script = tmp_path / "ftp.postinst"
+    script.write_text(
+        "update-alternatives --install /usr/share/man/man1/ftp.1 ftp.1 "
+        "/usr/share/man/man1/shared.1 120"
+    )
+    obj.store.db.execute(
+        "INSERT INTO entries VALUES (?,?,?,?,?)",
+        ("provider-high", "@control/postinst", "control", None, str(script)),
+    )
+    obj.store.db.execute(
+        "INSERT INTO entries SELECT pkg,replace(path,'shared.1.gz','FTP.1.gz'),kind,target,file "
+        "FROM entries WHERE pkg='provider-low' AND path LIKE '%shared.1.gz'"
+    )
+    with _PageSpool(tmp_path / "parsed.sqlite3") as spool:
+        providers, failures = parse_workspace(obj, spool, workers=1)
+        assert not failures
+        assert obj.route_winners[("ftp", "1")][0] == "provider-high"
+        assert any(a.name == "ftp" and a.target_name == "shared" for a in obj.aliases)
+        assert any(
+            p.name == "ftp" and p.source_package == "provider-low" and p.page_id in providers
+            for p in spool.refs()
+        )
+    # A genuinely lowercase owned manual still beats the generated alternative.
+    obj.store.db.execute(
+        "UPDATE entries SET path=replace(path,'FTP.1.gz','ftp.1.gz') WHERE path LIKE '%/FTP.1.gz'"
+    )
+    list(obj.sources())
+    assert obj.route_winners[("ftp", "1")][0] == "provider-low"
+
+
+def test_acquisition_deduplicates_manual_and_runtime_control_selections(
+    archive_workspace, monkeypatch
+):
+    obj = archive_workspace
+    obj.acquired.clear()
+    obj.downloaded = 0
+    seen = []
+
+    def acquire(pkg):
+        seen.append(pkg.name)
+        return pkg, [], 0
+
+    monkeypatch.setattr(obj, "_acquire", acquire)
+    pkg = obj.packages[0]
+    obj.acquire([pkg, pkg], workers=2)
+    assert seen == [pkg.name]

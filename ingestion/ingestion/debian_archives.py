@@ -315,22 +315,12 @@ class ArchiveStore:
             if not follow_stubs:
                 return (owner, path, data) if details else data
             return include(stub, details)
-        # Never let mandoc open host files for non-stub .so requests either.
-        lines = data.splitlines(keepends=True)
-        expanded_size = len(data)
-        for index, line in enumerate(lines):
-            if re.match(rb"^[.']\s*so(?:\s|$)", line):
-                match = re.fullmatch(rb"[.']\s*so\s+(\S+)\s*", line.strip())
-                if not match:
-                    raise ValueError("Unsupported roff include syntax")
-                replacement = include(match.group(1).decode("utf-8")) + b"\n"
-                expanded_size += len(replacement) - len(line)
-                if expanded_size > MAX_SOURCE_BYTES:
-                    raise ValueError("Expanded roff source exceeds limit")
-                lines[index] = replacement
-        if sum(map(len, lines)) > MAX_SOURCE_BYTES:
-            raise ValueError("Expanded roff source exceeds limit")
-        data = b"".join(lines)
+        # Use the same syntax state as the final guard: a `.so` after `.cc |`
+        # is text, while `|so` is a real request. Resolve verified archive includes
+        # before mandoc sees them; never consult the host filesystem.
+        from ingestion.mandoc import checked_source
+
+        data = checked_source(data, include=include)
         return (owner, path, data) if details else data
 
     def manuals(self):

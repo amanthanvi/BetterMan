@@ -530,8 +530,22 @@ export const getManByNameAndSectionReadModel = internalQuery({
       name,
       section,
     });
-    if (args.pkg && page?.sourcePackage !== args.pkg) {
-      const provider = await ctx.db.query("manPageProviders")
+    // Lowercase/canonical page views retain their existing reads. A case-specific
+    // request can select a retained real provider by its original archive path,
+    // including when the normalized route is a generated alternative alias.
+    const requestedName = args.name.trim();
+    const sourceName = (path: string) => path.match(/(?:^|\/)([^/]+)\.[1-9][A-Za-z0-9]*(?:\.(?:gz|xz|bz2|zst))?$/i)?.[1];
+    let caseProvider: Doc<"manPageProviders"> | null = null;
+    if (requestedName !== name && (sourceName(page?.sourcePath ?? "") !== requestedName
+      || (args.pkg && page?.sourcePackage !== args.pkg))) {
+      const candidates = await ctx.db.query("manPageProviders")
+        .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id)
+          .eq("name", name).eq("section", section)).take(100);
+      caseProvider = candidates.find(candidate => (!args.pkg || candidate.sourcePackage === args.pkg)
+        && sourceName(candidate.sourcePath) === requestedName) ?? null;
+    }
+    if (caseProvider || (args.pkg && page?.sourcePackage !== args.pkg)) {
+      const provider = caseProvider ?? await ctx.db.query("manPageProviders")
         .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id)
           .eq("name", name).eq("section", section).eq("sourcePackage", args.pkg!)).first();
       if (!provider) {

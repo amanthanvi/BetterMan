@@ -45,8 +45,8 @@ export const locateManPage = cache(
   async (name: string, section: string, requestedDistro: Distro, pkg?: string): Promise<LocatedManPage | null> =>
     await orMissing(
       withDistroFallback(requestedDistro, async (distro): Promise<LocatedManPage['data']> => {
-        const opts = { distro, name: name.toLowerCase(), section, ...(pkg ? { pkg } : {}) }
-        if (pkg) {
+        const opts = { distro, name, section, ...(pkg ? { pkg } : {}) }
+        if (pkg || name !== name.toLowerCase()) {
           const provider = await fetchManByNameAndSectionOrAlias(opts)
           return provider.kind === 'alias' ? provider : { kind: 'page', page: provider.data.page }
         }

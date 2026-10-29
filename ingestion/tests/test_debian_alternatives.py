@@ -83,3 +83,32 @@ def test_multiline_echo_argument_is_not_a_command():
         "update-alternatives --install /bin/safe safe /bin/target 1"
     )
     assert [offer.name for offer in offers] == ["safe"]
+
+
+def test_alternative_registration_keeps_case_for_real_page_precedence():
+    offers, _ = parse_alternatives(
+        "update-alternatives --install /usr/share/man/man1/Mail.1 Mail.1 "
+        "/usr/share/man/man1/target.1 10"
+    )
+    assert offers[0].name == "Mail"
+
+
+def test_full_contents_collision_audit_deduplicates_architectures_and_keeps_case(tmp_path):
+    import gzip
+
+    from scripts.check_debian_archives import audit_case_collisions
+
+    payload = (
+        "usr/share/man/man1/FTP.1.gz net/ftp.app\n"
+        "usr/share/man/man2/_Exit.2.gz doc/manpages-dev\n"
+        "usr/share/man/man2/_exit.2.gz doc/manpages-dev\n"
+    )
+    for name in ["main-Contents-all.gz", "main-Contents-amd64.gz"]:
+        with gzip.open(tmp_path / name, "wt") as stream:
+            stream.write(payload)
+    result = audit_case_collisions(tmp_path, [{"name": "ftp", "section": "1"}])
+    assert result["normalizedRoutes"] == 2
+    assert result["realPageCollisionCount"] == 1
+    assert result["realPageCollisions"][0]["spellings"] == ["_Exit", "_exit"]
+    assert len(result["realPageCollisions"][0]["sources"]) == 2
+    assert result["auditedAlternativeCollisionCount"] == 1

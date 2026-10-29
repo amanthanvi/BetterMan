@@ -36,3 +36,25 @@ it('stores stub providers without page/search duplicates, verifies counts and re
   while (!(await t.mutation(internal.maintenance.deleteInactiveReleaseBatch,{datasetReleaseId:'stub-providers',confirmDatasetReleaseId:'stub-providers',maxDocs:5})).deletedRelease) { /* resumable batches */ }
   expect(await t.run(ctx=>ctx.db.query('manPageAliasProviders').take(1))).toHaveLength(0);
 });
+
+it('selects an exact-case real provider ahead of a normalized alternative alias', async () => {
+  vi.useFakeTimers(); vi.stubEnv('CONVEX_INGEST_SECRET', 'local');
+  const t = convexTest(schema, modules);
+  await t.mutation(internal.ingest.createRelease, { datasetReleaseId:'case-providers',locale:'en',distro:'debian',imageRef:'pinned',imageDigest:'sha',ingestedAt:'now',packageManifest:null,
+    pageCount:1,aliasCount:1,providerCount:2,licenseCount:0,packageBatches:[],sectionTotals:[{section:'1',total:1}] });
+  const metadata = { section:'1',sourcePackageVersion:'1',sitemapPage:1,hasParseWarnings:false,doc:{blocks:[],toc:[]},synopsis:null,options:null,seeAlso:null,searchText:'fixture',snippetText:'fixture',links:[] };
+  const response = await t.fetch('/ingest/pages/storage', { method:'POST',headers:{authorization:'Bearer local','content-type':'application/json'},body:JSON.stringify({datasetReleaseId:'case-providers',pages:[
+    {...metadata,externalId:'tnftp',name:'tnftp',title:'tnftp(1)',description:'terminal FTP',sourcePackage:'tnftp',sourcePath:'usr/share/man/man1/tnftp.1.gz',contentSha256:'terminal'},
+    {...metadata,externalId:'FTP',name:'ftp',title:'FTP(1)',description:'GNUstep FTP',sourcePackage:'ftp.app',sourcePath:'usr/share/man/man1/FTP.1.gz',contentSha256:'gui',providerOnly:true},
+  ]}) });
+  expect(response.status).toBe(200);
+  await t.mutation(internal.ingest.insertAliases,{datasetReleaseId:'case-providers',aliases:[{name:'ftp',section:'1',targetName:'tnftp',targetSection:'1',sourcePackage:'tnftp',sourcePath:'usr/share/man/man1/tnftp.1.gz',targetPackage:'tnftp',providerOnly:false}]});
+  await t.mutation(internal.ingest.activateRelease,{datasetReleaseId:'case-providers',stage:'prod',activatedAt:'now'});
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  await t.mutation(internal.ingest.activateRelease,{datasetReleaseId:'case-providers',stage:'prod',activatedAt:'now'});
+  const args = { distro:'debian' as const, section:'1' };
+  expect(await t.action(api.content.getManByNameAndSection,{...args,name:'ftp'})).toEqual({kind:'alias',name:'tnftp',section:'1'});
+  for (const lookup of [{name:'FTP'}, {name:'ftp',pkg:'ftp.app'}]) {
+    expect(await t.action(api.content.getManByNameAndSection,{...args,...lookup})).toMatchObject({kind:'page',data:{page:{sourcePackage:'ftp.app',description:'GNUstep FTP'}}});
+  }
+});

@@ -262,6 +262,9 @@ function makePages(distro) {
 const now = new Date().toISOString()
 for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
   const pages = makePages(distro)
+  pages.push(page({ name: 'tnftp', section: '1', title: 'tnftp(1)', description: 'Terminal FTP fixture',
+    sourcePackage: 'tnftp', toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Terminal FTP documentation.' }] }],
+  }))
   const datasetReleaseId = `e2e-${distro}-${Date.now()}`
   const sectionTotals = Object.entries(
     pages.reduce((acc, p) => {
@@ -279,9 +282,9 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
-    providerCount: 2,
+    providerCount: 4,
     packageBatches: [],
-    aliasCount: 2,
+    aliasCount: 3,
     licenseCount: 0,
     sectionTotals,
     licensePackages: [],
@@ -292,12 +295,17 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
       description: 'Alternate package provider', sourcePackage: 'alternate-perl',
       toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Alternate provider documentation.' }] }],
     }), providerOnly: true,
+  }, {
+    ...page({ name: 'ftp', section: '1', title: 'FTP(1)', description: 'GNUstep FTP fixture', sourcePackage: 'ftp.app',
+      toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'GNUstep FTP documentation.' }] }],
+    }), sourcePath: '/e2e/FTP.1', providerOnly: true,
   }] })
   // `.so` stub: /man/gunzip/1 redirects to gzip(1).
   await post('/ingest/aliases', {
     datasetReleaseId,
     aliases: [
       { name: 'gunzip', section: '1', targetName: 'gzip', targetSection: '1' },
+      { name: 'ftp', section: '1', targetName: 'tnftp', targetSection: '1', targetPackage: 'tnftp', sourcePackage: 'tnftp', sourcePath: '/e2e/tnftp.1', providerOnly: false },
       { name: 'foo::stub', section: '3pm', targetName: 'foo::bar', targetSection: '3pm', sourcePackage: 'stub-perl', sourcePath: 'man3/stub.3pm', targetPackage: 'alternate-perl', providerOnly: false },
     ],
   })

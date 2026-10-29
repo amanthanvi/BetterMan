@@ -241,7 +241,9 @@ Release SHA256. Verified Release SHA256/size entries bind Contents-all,
 Contents-amd64 and Packages.xz, which bind every archive filename/version/size/SHA256.
 English root manuals and the OpenJDK archive manual root are selected. The curated
 package pass also captures runtime postinst data when a command's manual lives
-in another package (for example vim and vim-common). Nothing is installed.
+in another package (vim/vim-tiny and vim-common) or is absent (G++). These runtime
+packages must participate in elections even without owning a manual in Contents.
+Nothing is installed.
 
 `control.tar` postinst scripts are read as text, never executed. The bounded
 static parser recognizes literal `update-alternatives --install` registrations
@@ -251,10 +253,15 @@ OpenJDK/xz templates are supported. Values assigned only in some conditional
 branches stay unresolved after the branch joins. Unknown expressions are
 skipped with package/line/reason evidence.
 
-A package-owned manual always occupies its route before generated alternatives.
-For unoccupied routes, rank candidates by membership in Debian's
-`required`/`important`/`standard` Priority group, then pinned popcon `by_inst`,
-then alternatives priority. Existing awk/vi/nc policy preferences break exact
+A package-owned manual wins over a generated alternative only for an exact-case
+basename match. A case-only variant stays an explicit provider: lowercase ftp
+follows tnftp, uppercase FTP and `?pkg=ftp.app` serve GNUstep's manual. Original
+spelling is retained in source paths; request case survives HTML/API/text/OG.
+For elections, treat Debian's `required`/`important`/`standard` Priority values
+as one installed-by-default group. Pick its highest alternatives priority,
+with pinned popcon `by_inst` breaking ties, as update-alternatives would on a
+default install. Only if that group is absent, rank by popcon then alternatives
+priority. Existing awk/vi/nc policy preferences break exact
 remaining ties only. Elect before resolving documentation: an undocumented
 winner suppresses the alternative route, with no fallback to a less-installed
 provider. GCC/G++ therefore suppress `cc`/`c++` when their manuals are absent
@@ -277,9 +284,12 @@ resolve first, then indexed owners; cross-package directory links and missing
 owners are resolved on demand. Exact `SOURCE_TARGETS` repairs document four pinned
 packaging mismatches. Mandoc runs in a fresh empty temporary directory. After
 safe archive include expansion, remaining executable includes are rejected,
-including conditional bodies and command aliases. Escape/control requests
-`.ec`, `.eo`, `.cc`, `.c2`, request-position string interpolation, and include
-requests in macro/string definitions are rejected. Ordinary macro prose and
+including conditional bodies and command aliases. The scanner tracks the current
+control, no-break control and escape characters through `.cc`, `.c2`, `.ec`,
+`.eo` and resets. An old control character becomes text; escapes-off makes
+`\*` literal. Literal strings are tracked and checked when expanded in request
+positions, while macro definitions are scanned under their current syntax.
+Syntax changes alone do not reject real pages. Ordinary macro prose and
 interpolation in formatting arguments remain text. Literal documentation such
 as `.B .so` is retained. The optional groff-only
 `www.tmac`/`pic.tmac` requests are omitted without reading host macro files.
@@ -288,8 +298,10 @@ the source checks are defence in depth. A temporary cwd is **not an OS filesyste
 sandbox** and does not revoke access to absolute paths. Explicit unresolved
 includes are refused before spawning mandoc. Regression tests independently
 check the empty cwd/parent sentinel and the request checks. The current cached
-2,000-package audit rejects 4/13,243 renderable sources (0.030%), all actual
-escape/control changes; see the evidence for all four paths.
+2,000-package audit rejects **0/13,243** renderable owner sources, and the expanded
+provider/dependency audit rejects **0/13,423**. The full parser replay also has
+zero failures; sqlite3, nomarch, mjpegtools and tio all render. See the evidence
+and full Contents case-collision report.
 
 Bare `.so` stubs and manual symlinks/hardlinks whose target has another route
 register redirect aliases. They create no duplicate canonical page or search

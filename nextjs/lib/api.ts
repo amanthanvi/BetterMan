@@ -444,7 +444,7 @@ export async function fetchManMetaByNameAndSection(opts: {
   section: string
   pkg?: string
 }): Promise<ManPageMetaResponse> {
-  if (packageName(opts.pkg)) {
+  if (packageName(opts.pkg) || opts.name !== opts.name.toLowerCase()) {
     const provider = await fetchManByNameAndSectionOrAlias(opts)
     if (provider.kind !== 'page') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
     return { page: provider.data.page }

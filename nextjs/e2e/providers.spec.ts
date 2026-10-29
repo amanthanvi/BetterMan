@@ -41,3 +41,23 @@ test('stub providers redirect to their actual package without a duplicate search
     expect(await text.text()).toContain('Alternate provider documentation.')
   }
 })
+
+
+test('case-only providers: lowercase ftp redirects to tnftp, uppercase FTP and package selector serve GNUstep', async ({ page, request }) => {
+  await page.goto('/man/ftp/1')
+  await expect(page).toHaveURL(/\/man\/tnftp\/1(?:\?pkg=tnftp)?$/)
+  await expect(page.getByText('Terminal FTP documentation.', { exact: true })).toBeVisible()
+  for (const route of ['/man/FTP/1', '/man/ftp/1?pkg=ftp.app']) {
+    await page.goto(route)
+    await expect(page.getByText('GNUstep FTP documentation.', { exact: true })).toBeVisible()
+  }
+  for (const [name, suffix] of [['FTP', ''], ['ftp', '?pkg=ftp.app']]) {
+    const api = await request.get(`/api/v1/man/${name}/1${suffix}`)
+    expect(api.status()).toBe(200)
+    expect((await api.json()).page.sourcePackage).toBe('ftp.app')
+    const text = await request.get(`/man/${name}/1.txt${suffix}`)
+    expect(await text.text()).toContain('GNUstep FTP documentation.')
+    const og = await request.get(`/man/${name}/1/og${suffix}`)
+    expect(og.status()).toBe(200)
+  }
+})

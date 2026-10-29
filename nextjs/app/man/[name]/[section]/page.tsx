@@ -106,7 +106,7 @@ export default async function ManByNameAndSectionPage({
   return (
     <>
       <JsonLdHead id={`bm-jsonld:${data.page.id}`} nonce={nonce} jsonLd={jsonLd} />
-      {await ManPageBody({ distro, name: name.toLowerCase(), section, ...(packageName(getFirst(sp.pkg)) ? { pkg: packageName(getFirst(sp.pkg)) } : {}) }, origin)}
+      {await ManPageBody({ distro, name, section, ...(packageName(getFirst(sp.pkg)) ? { pkg: packageName(getFirst(sp.pkg)) } : {}) }, origin)}
     </>
   )
 }

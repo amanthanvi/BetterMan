@@ -39,16 +39,23 @@ def test_render_html_times_out(monkeypatch) -> None:
         b".cc !\n!so sentinel.txt",
         b".cc!\n!so sentinel.txt",
         b".do so sentinel.txt",
+        b".als X so\n.X sentinel.txt",
+        b".rn so X\n.X sentinel.txt",
+        b".cc |\n|rn so X\n|X sentinel.txt",
         b".if 1.so sentinel.txt",
+        b".if 0+1 .so sentinel.txt",
+        b".cc |\n|if 1|so sentinel.txt",
         b". \\*X sentinel.txt",
         b".if 1 .\\*X sentinel.txt",
         b".ds X so\n.\\*X sentinel.txt",
         b".de X\n.so sentinel.txt\n..\n.X",
         b".ec @\n.@*X sentinel.txt",
-        b".eo",
-        b".do ec @",
-        b".if 1 .ec @",
-        b".c2 !",
+        b".ec @\n.ds X so\n.@*X sentinel.txt",
+        b".do ec @\n.ds X so\n.@*X sentinel.txt",
+        b".if 1 .ec @\n.ds X so\n.@*X sentinel.txt",
+        b".c2 !\n!so sentinel.txt",
+        b".eo\n.so sentinel.txt",
+        b".cc |\n|ec @\n|ds X so\n|@*X sentinel.txt",
     ],
 )
 def test_conditional_host_includes_are_rejected(tmp_path, monkeypatch, roff_request):
@@ -120,3 +127,52 @@ def test_formatting_argument_interpolations_and_macro_comment_are_not_commands(m
         b'.TH DOC 1\n.ie n .IP "quoted.\\*(Aq" 4\n'
         b'.de URL \\" comment\nso this prose stays text\n..\n'
     )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        b".ec\n.TH SAFE 1\n",
+        b".eo\n.\\*X sentinel.txt\n",
+        b".eo\n.ds X so\n.\\*X sentinel.txt\n",
+        b".cc |\n.so literal text under the old control\n|TH SAFE 1\n",
+        b".c2 !\n' so literal text under the old no-break control\n!TH SAFE 1\n",
+        b".ec @\n.\\*X is no longer an interpolation\n",
+        b".ds X B\n.\\*X safe formatting\n",
+        b".if 0 .so ignored.txt\n",
+        b".if 0 .cc |\n.TH SAFE 1\n",
+        b".eo\n.ec\n.TH SAFE 1\n",
+    ],
+)
+def test_syntax_changes_and_inactive_escape_requests_are_preserved(source):
+    assert mandoc.checked_source(source) == source
+
+
+def test_control_and_escape_resets_restore_include_checks():
+    for source in [
+        b".cc |\n|cc\n.so sentinel.txt\n",
+        b".c2 !\n!c2\n'so sentinel.txt\n",
+        b".eo\n.ec\n.ds X so\n.\\*X sentinel.txt\n",
+        b".if n .cc |\n|so sentinel.txt\n",
+    ]:
+        with pytest.raises(RuntimeError, match="include request|definition"):
+            mandoc.checked_source(source)
+
+
+def test_literal_archive_include_resolver_obeys_current_controls():
+    seen = []
+    source = b".cc |\n.so ordinary text\n|so man1/target.1\n"
+    result = mandoc.checked_source(source, include=lambda path: seen.append(path) or b"resolved")
+    assert seen == ["man1/target.1"]
+    assert b".so ordinary text" in result and b"resolved" in result
+
+
+@pytest.mark.parametrize("body", [b"text\\\n.so sentinel.txt\n", b".s\\\no sentinel.txt\n"])
+def test_conditional_escape_changes_check_both_continuation_interpretations(body):
+    with pytest.raises(RuntimeError, match="include request"):
+        mandoc.checked_source(b".if n .eo\n" + body)
+
+
+def test_conditional_escape_changes_preserve_benign_physical_lines():
+    source = b".if n .eo\nordinary\\\nprose\n"
+    assert mandoc.checked_source(source) == source

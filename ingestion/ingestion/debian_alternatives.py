@@ -321,7 +321,7 @@ def parse_alternatives(
                     match = MAN_PATH.fullmatch(destination)
                     if match and MAN_PATH.fullmatch(source):
                         batch.append(
-                            Alternative(match[1].lower(), match[2].lower(), source, priority, group)
+                            Alternative(match[1], match[2].lower(), source, priority, group)
                         )
                 if (
                     not batch
@@ -330,7 +330,7 @@ def parse_alternatives(
                 ):
                     # The pipeline must prove a unique exact target-basename
                     # manual in this package before turning this into a route.
-                    batch.append(Alternative(group.lower(), "1", target, priority, group, True))
+                    batch.append(Alternative(group, "1", target, priority, group, True))
                 offers.extend(batch)
                 if not batch:
                     skipped.append(

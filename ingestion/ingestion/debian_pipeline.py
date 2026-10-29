@@ -121,7 +121,9 @@ class Workspace:
         selected_names = {p.name for p in self.packages}
         self.curated_packages = [
             self.available[n]
-            for n in FULL_PACKAGE_SET_DEBIAN
+            # G++ and vim-tiny have alternatives but no manual-owned archive
+            # paths. Their control scripts still participate in a full election.
+            for n in sorted(set(FULL_PACKAGE_SET_DEBIAN) | {"g++", "vim-tiny"})
             if n in self.available and n not in selected_names
         ]
         self.store = ArchiveStore(self.root)
@@ -195,11 +197,13 @@ class Workspace:
 
     def acquire(self, packages=None, *, workers=2):
         workers = min(2, max(1, workers))
-        pending = [
-            p
-            for p in (self.packages + self.curated_packages if packages is None else packages)
-            if p.name not in self.acquired
-        ]
+        pending = list(
+            {
+                p.name: p
+                for p in (self.packages + self.curated_packages if packages is None else packages)
+                if p.name not in self.acquired
+            }.values()
+        )
         with ThreadPoolExecutor(max_workers=workers) as executor:
             for _pkg, future in _bounded_futures(executor, self._acquire, iter(pending), workers):
                 package, entries, size = future.result()
@@ -293,10 +297,11 @@ class Workspace:
     def alternative_rank(self, package, priority, name, section):
         metadata = self.available[package]
         preferred = CURATED_ALTERNATIVES.get((name, section), (None,))[0] == package
+        default_installed = metadata.priority in {"required", "important", "standard"}
         return (
-            metadata.priority not in {"required", "important", "standard"},
-            -metadata.installed,
-            -priority,
+            not default_installed,
+            -priority if default_installed else -metadata.installed,
+            -metadata.installed if default_installed else -priority,
             not preferred,
             package,
         )
@@ -311,6 +316,10 @@ class Workspace:
             if pkg in selected
         ]
         ordinary_routes = {(row[2], row[3]) for row in rows}
+        # Route keys remain normalized, but an uppercase archive basename must
+        # not displace a generated lowercase command (FTP versus ftp).
+        ordinary_spellings = {(MAN_PATH.fullmatch(row[1])[1], row[3]) for row in rows}
+        alternative_spellings = {}
         self.alternatives_skipped = []
         self.alternatives_audit = []
         candidates = {}
@@ -356,7 +365,7 @@ class Workspace:
                     (pkg, target, offer.priority)
                 )
         for (name, section), offers in sorted(candidates.items()):
-            if (name, section) in ordinary_routes:
+            if (name, section) in ordinary_spellings:
                 self.alternatives_skipped.append(
                     {
                         "name": name,
@@ -386,7 +395,9 @@ class Workspace:
                 continue
             for pkg, path, priority in ranked:
                 if path is not None:
-                    rows.append((pkg, path, name, section, priority))
+                    normalized = name.lower()
+                    rows.append((pkg, path, normalized, section, priority))
+                    alternative_spellings[(pkg, path, normalized, section, priority)] = name
         prepared = []
         extras = set()
         for pkg, path, name, section, priority in sorted(
@@ -420,9 +431,15 @@ class Workspace:
                         alias = False
                     elif target_owner not in selected:
                         extras.add((target_owner, target_path, *target[:2]))
+                spelling = (
+                    alternative_spellings[(pkg, path, name, section, priority)]
+                    if priority is not None
+                    else MAN_PATH.fullmatch(path)[1]
+                )
                 rank = (
                     name,
                     section,
+                    spelling != name,
                     priority is not None,
                     *(
                         self.alternative_rank(pkg, priority, name, section)
@@ -439,6 +456,7 @@ class Workspace:
                             "section": section,
                             "package": pkg,
                             "priority": priority,
+                            "spelling": spelling,
                             "target": target,
                             "sourcePath": path,
                         }
@@ -450,6 +468,7 @@ class Workspace:
             rank = (
                 name,
                 section,
+                MAN_PATH.fullmatch(path)[1] != name,
                 False,
                 False,
                 -self.available[pkg].installed,
@@ -547,8 +566,8 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
         pages=refs,
     )
     workspace.aliases = aliases
-    # Archive-owned aliases can still have other package providers; generated
-    # alternatives are excluded whenever a package already owns the route.
+    # An exact-case alternative may own the normalized route ahead of a real
+    # differently-cased page. That real page remains an explicit provider.
     alias_keys = {(a.name, a.section) for a in aliases}
     for key in alias_keys:
         if key in canonical:

@@ -1,0 +1,2941 @@
+{
+  "scope": "complete Release-verified Contents-all and Contents-amd64, English manual roots",
+  "normalizedRoutes": 142608,
+  "realPageCollisionCount": 162,
+  "realPageCollisions": [
+    {
+      "name": "4pane",
+      "section": "1",
+      "spellings": [
+        "4Pane",
+        "4pane"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/4Pane.1.gz",
+          "owners": "x11/4pane"
+        },
+        {
+          "path": "usr/share/man/man1/4pane.1.gz",
+          "owners": "x11/4pane"
+        }
+      ]
+    },
+    {
+      "name": "_exit",
+      "section": "2",
+      "spellings": [
+        "_Exit",
+        "_exit"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man2/_Exit.2.gz",
+          "owners": "doc/manpages-dev"
+        },
+        {
+          "path": "usr/share/man/man2/_exit.2.gz",
+          "owners": "doc/manpages-dev"
+        }
+      ]
+    },
+    {
+      "name": "alq",
+      "section": "9freebsd",
+      "spellings": [
+        "ALQ",
+        "alq"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/ALQ.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/alq.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "altq",
+      "section": "4freebsd",
+      "spellings": [
+        "ALTQ",
+        "altq"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man4/ALTQ.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man4/altq.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "altq",
+      "section": "9freebsd",
+      "spellings": [
+        "ALTQ",
+        "altq"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/ALTQ.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/altq.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "atropos",
+      "section": "1",
+      "spellings": [
+        "Atropos",
+        "atropos"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Atropos.1.gz",
+          "owners": "science/ants"
+        },
+        {
+          "path": "usr/share/man/man1/atropos.1.gz",
+          "owners": "science/atropos"
+        }
+      ]
+    },
+    {
+      "name": "authen::krb5::keyblock",
+      "section": "3pm",
+      "spellings": [
+        "Authen::Krb5::KeyBlock",
+        "Authen::Krb5::Keyblock"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/Authen::Krb5::KeyBlock.3pm.gz",
+          "owners": "perl/libauthen-krb5-perl"
+        },
+        {
+          "path": "usr/share/man/man3/Authen::Krb5::Keyblock.3pm.gz",
+          "owners": "perl/libauthen-krb5-perl"
+        }
+      ]
+    },
+    {
+      "name": "autodia",
+      "section": "3pm",
+      "spellings": [
+        "Autodia",
+        "autodia"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/Autodia.3pm.gz",
+          "owners": "devel/autodia"
+        },
+        {
+          "path": "usr/share/man/man3/autodia.3pm.gz",
+          "owners": "devel/autodia"
+        }
+      ]
+    },
+    {
+      "name": "basename",
+      "section": "3",
+      "spellings": [
+        "baseName",
+        "basename"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/baseName.3.gz",
+          "owners": "libdevel/libcdk5-dev"
+        },
+        {
+          "path": "usr/share/man/man3/basename.3.gz",
+          "owners": "doc/manpages-dev"
+        }
+      ]
+    },
+    {
+      "name": "bus_bind_intr",
+      "section": "9freebsd",
+      "spellings": [
+        "BUS_BIND_INTR",
+        "bus_bind_intr"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/BUS_BIND_INTR.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/bus_bind_intr.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "bus_describe_intr",
+      "section": "9freebsd",
+      "spellings": [
+        "BUS_DESCRIBE_INTR",
+        "bus_describe_intr"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/BUS_DESCRIBE_INTR.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/bus_describe_intr.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "bus_get_cpus",
+      "section": "9freebsd",
+      "spellings": [
+        "BUS_GET_CPUS",
+        "bus_get_cpus"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/BUS_GET_CPUS.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/bus_get_cpus.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "bus_setup_intr",
+      "section": "9freebsd",
+      "spellings": [
+        "BUS_SETUP_INTR",
+        "bus_setup_intr"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/BUS_SETUP_INTR.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/bus_setup_intr.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "bus_teardown_intr",
+      "section": "9freebsd",
+      "spellings": [
+        "BUS_TEARDOWN_INTR",
+        "bus_teardown_intr"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/BUS_TEARDOWN_INTR.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/bus_teardown_intr.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "callback",
+      "section": "3",
+      "spellings": [
+        "Callback",
+        "callback"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/Callback.3.gz",
+          "owners": "libdevel/libvolpack1-dev"
+        },
+        {
+          "path": "usr/share/man/man3/callback.3.gz",
+          "owners": "libdevel/libffcall-dev"
+        }
+      ]
+    },
+    {
+      "name": "cam",
+      "section": "4freebsd",
+      "spellings": [
+        "CAM",
+        "cam"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man4/CAM.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man4/cam.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "cat",
+      "section": "1",
+      "spellings": [
+        "CAT",
+        "cat"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/CAT.1.gz",
+          "owners": "science/cat-bat"
+        },
+        {
+          "path": "usr/share/man/man1/cat.1.gz",
+          "owners": "utils/coreutils"
+        }
+      ]
+    },
+    {
+      "name": "charmap",
+      "section": "1",
+      "spellings": [
+        "Charmap",
+        "charmap"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Charmap.1.gz",
+          "owners": "gnustep/charmap.app"
+        },
+        {
+          "path": "usr/share/man/man1/charmap.1.gz",
+          "owners": "gnome/gucharmap"
+        }
+      ]
+    },
+    {
+      "name": "chimeraslayer",
+      "section": "1",
+      "spellings": [
+        "ChimeraSlayer",
+        "chimeraslayer"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/ChimeraSlayer.1.gz",
+          "owners": "science/microbiomeutil"
+        },
+        {
+          "path": "usr/share/man/man1/chimeraslayer.1.gz",
+          "owners": "science/chimeraslayer"
+        }
+      ]
+    },
+    {
+      "name": "color_map",
+      "section": "3alleg4",
+      "spellings": [
+        "COLOR_MAP",
+        "color_map"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/COLOR_MAP.3alleg4.gz",
+          "owners": "doc/allegro4-doc"
+        },
+        {
+          "path": "usr/share/man/man3/color_map.3alleg4.gz",
+          "owners": "doc/allegro4-doc"
+        }
+      ]
+    },
+    {
+      "name": "cultivation",
+      "section": "6",
+      "spellings": [
+        "Cultivation",
+        "cultivation"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man6/Cultivation.6.gz",
+          "owners": "games/cultivation"
+        },
+        {
+          "path": "usr/share/man/man6/cultivation.6.gz",
+          "owners": "games/cultivation"
+        }
+      ]
+    },
+    {
+      "name": "dirname",
+      "section": "3",
+      "spellings": [
+        "dirName",
+        "dirname"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/dirName.3.gz",
+          "owners": "libdevel/libcdk5-dev"
+        },
+        {
+          "path": "usr/share/man/man3/dirname.3.gz",
+          "owners": "doc/manpages-dev"
+        }
+      ]
+    },
+    {
+      "name": "dockerfile",
+      "section": "5",
+      "spellings": [
+        "Dockerfile",
+        "dockerfile"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man5/Dockerfile.5.gz",
+          "owners": "admin/docker.io"
+        },
+        {
+          "path": "usr/share/man/man5/dockerfile.5.gz",
+          "owners": "admin/podman-docker"
+        }
+      ]
+    },
+    {
+      "name": "error",
+      "section": "3",
+      "spellings": [
+        "Error",
+        "error"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/Error.3.gz",
+          "owners": "libdevel/libvolpack1-dev"
+        },
+        {
+          "path": "usr/share/man/man3/error.3.gz",
+          "owners": "doc/manpages-dev"
+        }
+      ]
+    },
+    {
+      "name": "eventhandler_deregister",
+      "section": "9freebsd",
+      "spellings": [
+        "EVENTHANDLER_DEREGISTER",
+        "eventhandler_deregister"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/EVENTHANDLER_DEREGISTER.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/eventhandler_deregister.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "eventhandler_register",
+      "section": "9freebsd",
+      "spellings": [
+        "EVENTHANDLER_REGISTER",
+        "eventhandler_register"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/EVENTHANDLER_REGISTER.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/eventhandler_register.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "fasttree",
+      "section": "1",
+      "spellings": [
+        "FastTree",
+        "fasttree"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/FastTree.1.gz",
+          "owners": "science/fasttree"
+        },
+        {
+          "path": "usr/share/man/man1/fasttree.1.gz",
+          "owners": "science/fasttree"
+        }
+      ]
+    },
+    {
+      "name": "fbreader",
+      "section": "1",
+      "spellings": [
+        "FBReader",
+        "fbreader"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/FBReader.1.gz",
+          "owners": "text/fbreader"
+        },
+        {
+          "path": "usr/share/man/man1/fbreader.1.gz",
+          "owners": "text/fbreader"
+        }
+      ]
+    },
+    {
+      "name": "fdev_setup_stream",
+      "section": "3avr",
+      "spellings": [
+        "FDEV_SETUP_STREAM",
+        "fdev_setup_stream"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/FDEV_SETUP_STREAM.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/fdev_setup_stream.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "fdt",
+      "section": "4freebsd",
+      "spellings": [
+        "FDT",
+        "fdt"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man4/FDT.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man4/fdt.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "fileinfo",
+      "section": "1",
+      "spellings": [
+        "FileInfo",
+        "fileinfo"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/FileInfo.1.gz",
+          "owners": "science/topp"
+        },
+        {
+          "path": "usr/share/man/man1/fileinfo.1.gz",
+          "owners": "graphics/leptonica-progs"
+        }
+      ]
+    },
+    {
+      "name": "finger",
+      "section": "1",
+      "spellings": [
+        "Finger",
+        "finger"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Finger.1.gz",
+          "owners": "gnustep/gnustep-examples"
+        },
+        {
+          "path": "usr/share/man/man1/finger.1.gz",
+          "owners": "net/finger"
+        }
+      ]
+    },
+    {
+      "name": "font",
+      "section": "3alleg4",
+      "spellings": [
+        "FONT",
+        "font"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/FONT.3alleg4.gz",
+          "owners": "doc/allegro4-doc"
+        },
+        {
+          "path": "usr/share/man/man3/font.3alleg4.gz",
+          "owners": "doc/allegro4-doc"
+        }
+      ]
+    },
+    {
+      "name": "freefilesync",
+      "section": "1",
+      "spellings": [
+        "FreeFileSync",
+        "freefilesync"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/FreeFileSync.1.gz",
+          "owners": "utils/freefilesync"
+        },
+        {
+          "path": "usr/share/man/man1/freefilesync.1.gz",
+          "owners": "utils/freefilesync"
+        }
+      ]
+    },
+    {
+      "name": "genders",
+      "section": "3",
+      "spellings": [
+        "Genders",
+        "genders"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/Genders.3.gz",
+          "owners": "perl/libgenders-perl"
+        },
+        {
+          "path": "usr/share/man/man3/genders.3.gz",
+          "owners": "libdevel/libgenders0-dev"
+        }
+      ]
+    },
+    {
+      "name": "genpat",
+      "section": "1",
+      "spellings": [
+        "GenPat",
+        "genpat"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/GenPat.1.gz",
+          "owners": "devel/nsis"
+        },
+        {
+          "path": "usr/share/man/man1/genpat.1.gz",
+          "owners": "devel/nsis"
+        }
+      ]
+    },
+    {
+      "name": "geom",
+      "section": "4freebsd",
+      "spellings": [
+        "GEOM",
+        "geom"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man4/GEOM.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man4/geom.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "globus_gsi_authz_callout_error",
+      "section": "3",
+      "spellings": [
+        "GLOBUS_GSI_AUTHZ_CALLOUT_ERROR",
+        "globus_gsi_authz_callout_error"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/GLOBUS_GSI_AUTHZ_CALLOUT_ERROR.3.gz",
+          "owners": "doc/libglobus-authz-callout-error-doc"
+        },
+        {
+          "path": "usr/share/man/man3/globus_gsi_authz_callout_error.3.gz",
+          "owners": "doc/libglobus-authz-callout-error-doc"
+        }
+      ]
+    },
+    {
+      "name": "globus_gsi_sysconfig_get_unique_proxy_filename",
+      "section": "3",
+      "spellings": [
+        "GLOBUS_GSI_SYSCONFIG_GET_UNIQUE_PROXY_FILENAME",
+        "globus_gsi_sysconfig_get_unique_proxy_filename"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/GLOBUS_GSI_SYSCONFIG_GET_UNIQUE_PROXY_FILENAME.3.gz",
+          "owners": "doc/libglobus-gsi-sysconfig-doc"
+        },
+        {
+          "path": "usr/share/man/man3/globus_gsi_sysconfig_get_unique_proxy_filename.3.gz",
+          "owners": "doc/libglobus-gsi-sysconfig-doc"
+        }
+      ]
+    },
+    {
+      "name": "globus_gsi_sysconfig_get_vhost_cred_dir",
+      "section": "3",
+      "spellings": [
+        "GLOBUS_GSI_SYSCONFIG_GET_VHOST_CRED_DIR",
+        "globus_gsi_sysconfig_get_vhost_cred_dir"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/GLOBUS_GSI_SYSCONFIG_GET_VHOST_CRED_DIR.3.gz",
+          "owners": "doc/libglobus-gsi-sysconfig-doc"
+        },
+        {
+          "path": "usr/share/man/man3/globus_gsi_sysconfig_get_vhost_cred_dir.3.gz",
+          "owners": "doc/libglobus-gsi-sysconfig-doc"
+        }
+      ]
+    },
+    {
+      "name": "globus_net_manager_null_attr",
+      "section": "3",
+      "spellings": [
+        "GLOBUS_NET_MANAGER_NULL_ATTR",
+        "globus_net_manager_null_attr"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/GLOBUS_NET_MANAGER_NULL_ATTR.3.gz",
+          "owners": "doc/libglobus-net-manager-doc"
+        },
+        {
+          "path": "usr/share/man/man3/globus_net_manager_null_attr.3.gz",
+          "owners": "doc/libglobus-net-manager-doc"
+        }
+      ]
+    },
+    {
+      "name": "globus_openssl_module",
+      "section": "3",
+      "spellings": [
+        "GLOBUS_OPENSSL_MODULE",
+        "globus_openssl_module"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/GLOBUS_OPENSSL_MODULE.3.gz",
+          "owners": "doc/libglobus-openssl-module-doc"
+        },
+        {
+          "path": "usr/share/man/man3/globus_openssl_module.3.gz",
+          "owners": "doc/libglobus-openssl-module-doc"
+        }
+      ]
+    },
+    {
+      "name": "globus_tilde_expand",
+      "section": "3",
+      "spellings": [
+        "GLOBUS_TILDE_EXPAND",
+        "globus_tilde_expand"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/GLOBUS_TILDE_EXPAND.3.gz",
+          "owners": "doc/libglobus-common-doc"
+        },
+        {
+          "path": "usr/share/man/man3/globus_tilde_expand.3.gz",
+          "owners": "doc/libglobus-common-doc"
+        }
+      ]
+    },
+    {
+      "name": "gomoku",
+      "section": "6",
+      "spellings": [
+        "Gomoku",
+        "gomoku"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man6/Gomoku.6.gz",
+          "owners": "gnustep/gomoku.app"
+        },
+        {
+          "path": "usr/share/man/man6/gomoku.6.gz",
+          "owners": "games/bsdgames"
+        }
+      ]
+    },
+    {
+      "name": "gravitation",
+      "section": "6",
+      "spellings": [
+        "Gravitation",
+        "gravitation"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man6/Gravitation.6.gz",
+          "owners": "games/gravitation"
+        },
+        {
+          "path": "usr/share/man/man6/gravitation.6.gz",
+          "owners": "games/gravitation"
+        }
+      ]
+    },
+    {
+      "name": "helpviewer",
+      "section": "1",
+      "spellings": [
+        "HelpViewer",
+        "helpviewer"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/HelpViewer.1.gz",
+          "owners": "gnustep/helpviewer.app"
+        },
+        {
+          "path": "usr/share/man/man1/helpviewer.1.gz",
+          "owners": "python/wxpython-tools"
+        }
+      ]
+    },
+    {
+      "name": "inifile",
+      "section": "1",
+      "spellings": [
+        "INIFILE",
+        "inifile"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/INIFILE.1.gz",
+          "owners": "database/virtuoso-opensource-7-common"
+        },
+        {
+          "path": "usr/share/man/man1/inifile.1.gz",
+          "owners": "database/virtuoso-opensource-7-common"
+        }
+      ]
+    },
+    {
+      "name": "ink",
+      "section": "1",
+      "spellings": [
+        "Ink",
+        "ink"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Ink.1.gz",
+          "owners": "gnustep/gnustep-examples"
+        },
+        {
+          "path": "usr/share/man/man1/ink.1.gz",
+          "owners": "admin/ink"
+        }
+      ]
+    },
+    {
+      "name": "io_uring_check_version",
+      "section": "3",
+      "spellings": [
+        "IO_URING_CHECK_VERSION",
+        "io_uring_check_version"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/IO_URING_CHECK_VERSION.3.gz",
+          "owners": "libdevel/liburing-dev"
+        },
+        {
+          "path": "usr/share/man/man3/io_uring_check_version.3.gz",
+          "owners": "libdevel/liburing-dev"
+        }
+      ]
+    },
+    {
+      "name": "isql-vt",
+      "section": "1",
+      "spellings": [
+        "ISQL-VT",
+        "isql-vt"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/ISQL-VT.1.gz",
+          "owners": "database/virtuoso-opensource-7-bin"
+        },
+        {
+          "path": "usr/share/man/man1/isql-vt.1.gz",
+          "owners": "database/virtuoso-opensource-7-bin"
+        }
+      ]
+    },
+    {
+      "name": "iv_fd_pump_init",
+      "section": "3",
+      "spellings": [
+        "IV_FD_PUMP_INIT",
+        "iv_fd_pump_init"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/IV_FD_PUMP_INIT.3.gz",
+          "owners": "libdevel/libivykis-dev"
+        },
+        {
+          "path": "usr/share/man/man3/iv_fd_pump_init.3.gz",
+          "owners": "libdevel/libivykis-dev"
+        }
+      ]
+    },
+    {
+      "name": "j1f",
+      "section": "3",
+      "spellings": [
+        "J1F",
+        "j1f"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/J1F.3.gz",
+          "owners": "libdevel/libjudy-dev"
+        },
+        {
+          "path": "usr/share/man/man3/j1f.3.gz",
+          "owners": "doc/manpages-dev"
+        }
+      ]
+    },
+    {
+      "name": "j1l",
+      "section": "3",
+      "spellings": [
+        "J1L",
+        "j1l"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/J1L.3.gz",
+          "owners": "libdevel/libjudy-dev"
+        },
+        {
+          "path": "usr/share/man/man3/j1l.3.gz",
+          "owners": "doc/manpages-dev"
+        }
+      ]
+    },
+    {
+      "name": "lacheck",
+      "section": "1",
+      "spellings": [
+        "LAcheck",
+        "lacheck"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/LAcheck.1.gz",
+          "owners": "science/daligner"
+        },
+        {
+          "path": "usr/share/man/man1/lacheck.1.gz",
+          "owners": "tex/lacheck"
+        }
+      ]
+    },
+    {
+      "name": "lam",
+      "section": "7",
+      "spellings": [
+        "LAM",
+        "lam"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man7/LAM.7.gz",
+          "owners": "utils/lam-runtime"
+        },
+        {
+          "path": "usr/share/man/man7/lam.7.gz",
+          "owners": "utils/lam-runtime"
+        }
+      ]
+    },
+    {
+      "name": "log",
+      "section": "3",
+      "spellings": [
+        "LOG",
+        "log"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/LOG.3.gz",
+          "owners": "libdevel/libg2c-dev"
+        },
+        {
+          "path": "usr/share/man/man3/log.3.gz",
+          "owners": "doc/manpages-dev"
+        }
+      ]
+    },
+    {
+      "name": "lolcat",
+      "section": "6",
+      "spellings": [
+        "LOLCAT",
+        "lolcat"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man6/LOLCAT.6.gz",
+          "owners": "games/filters"
+        },
+        {
+          "path": "usr/share/man/man6/lolcat.6.gz",
+          "owners": "games/lolcat"
+        }
+      ]
+    },
+    {
+      "name": "m_align",
+      "section": "9freebsd",
+      "spellings": [
+        "M_ALIGN",
+        "m_align"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/M_ALIGN.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/m_align.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "m_move_pkthdr",
+      "section": "9freebsd",
+      "spellings": [
+        "M_MOVE_PKTHDR",
+        "m_move_pkthdr"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/M_MOVE_PKTHDR.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/m_move_pkthdr.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "m_prepend",
+      "section": "9freebsd",
+      "spellings": [
+        "M_PREPEND",
+        "m_prepend"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/M_PREPEND.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/m_prepend.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "maelstrom",
+      "section": "6",
+      "spellings": [
+        "Maelstrom",
+        "maelstrom"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man6/Maelstrom.6.gz",
+          "owners": "games/maelstrom"
+        },
+        {
+          "path": "usr/share/man/man6/maelstrom.6.gz",
+          "owners": "games/maelstrom"
+        }
+      ]
+    },
+    {
+      "name": "mailsound",
+      "section": "1",
+      "spellings": [
+        "Mailsound",
+        "mailsound"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Mailsound.1.gz",
+          "owners": "sound/rplay-contrib"
+        },
+        {
+          "path": "usr/share/man/man1/mailsound.1.gz",
+          "owners": "sound/rplay-contrib"
+        }
+      ]
+    },
+    {
+      "name": "markdown",
+      "section": "3",
+      "spellings": [
+        "Markdown",
+        "markdown"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/Markdown.3.gz",
+          "owners": "web/markdown"
+        },
+        {
+          "path": "usr/share/man/man3/markdown.3.gz",
+          "owners": "libdevel/libmarkdown2-dev"
+        }
+      ]
+    },
+    {
+      "name": "mhdr",
+      "section": "1",
+      "spellings": [
+        "mHdr",
+        "mhdr"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/mHdr.1.gz",
+          "owners": "science/montage"
+        },
+        {
+          "path": "usr/share/man/man1/mhdr.1.gz",
+          "owners": "utils/mblaze"
+        }
+      ]
+    },
+    {
+      "name": "mpi",
+      "section": "7",
+      "spellings": [
+        "MPI",
+        "mpi"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man7/MPI.7.gz",
+          "owners": "utils/lam-runtime"
+        },
+        {
+          "path": "usr/share/man/man7/mpi.7.gz",
+          "owners": "utils/lam-runtime"
+        }
+      ]
+    },
+    {
+      "name": "mpicc.lam",
+      "section": "1",
+      "spellings": [
+        "mpiCC.lam",
+        "mpicc.lam"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/mpiCC.lam.1.gz",
+          "owners": "devel/lam4-dev"
+        },
+        {
+          "path": "usr/share/man/man1/mpicc.lam.1.gz",
+          "owners": "devel/lam4-dev"
+        }
+      ]
+    },
+    {
+      "name": "mpicc.openmpi",
+      "section": "1",
+      "spellings": [
+        "mpiCC.openmpi",
+        "mpicc.openmpi"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/mpiCC.openmpi.1.gz",
+          "owners": "net/openmpi-bin"
+        },
+        {
+          "path": "usr/share/man/man1/mpicc.openmpi.1.gz",
+          "owners": "net/openmpi-bin"
+        }
+      ]
+    },
+    {
+      "name": "mysecureshell",
+      "section": "8",
+      "spellings": [
+        "MySecureShell",
+        "mysecureshell"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man8/MySecureShell.8.gz",
+          "owners": "net/mysecureshell"
+        },
+        {
+          "path": "usr/share/man/man8/mysecureshell.8.gz",
+          "owners": "net/mysecureshell"
+        }
+      ]
+    },
+    {
+      "name": "nan",
+      "section": "3",
+      "spellings": [
+        "NAN",
+        "nan"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/NAN.3.gz",
+          "owners": "doc/manpages-dev"
+        },
+        {
+          "path": "usr/share/man/man3/nan.3.gz",
+          "owners": "doc/manpages-dev"
+        }
+      ]
+    },
+    {
+      "name": "nan",
+      "section": "3avr",
+      "spellings": [
+        "NAN",
+        "nan"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/NAN.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/nan.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "nast-ier",
+      "section": "1",
+      "spellings": [
+        "NAST-iEr",
+        "nast-ier"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/NAST-iEr.1.gz",
+          "owners": "science/microbiomeutil"
+        },
+        {
+          "path": "usr/share/man/man1/nast-ier.1.gz",
+          "owners": "science/nast-ier"
+        }
+      ]
+    },
+    {
+      "name": "openssl_version_build_metadata",
+      "section": "3ssl",
+      "spellings": [
+        "OPENSSL_VERSION_BUILD_METADATA",
+        "OPENSSL_version_build_metadata"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OPENSSL_VERSION_BUILD_METADATA.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OPENSSL_version_build_metadata.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "openssl_version_major",
+      "section": "3ssl",
+      "spellings": [
+        "OPENSSL_VERSION_MAJOR",
+        "OPENSSL_version_major"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OPENSSL_VERSION_MAJOR.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OPENSSL_version_major.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "openssl_version_minor",
+      "section": "3ssl",
+      "spellings": [
+        "OPENSSL_VERSION_MINOR",
+        "OPENSSL_version_minor"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OPENSSL_VERSION_MINOR.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OPENSSL_version_minor.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "openssl_version_patch",
+      "section": "3ssl",
+      "spellings": [
+        "OPENSSL_VERSION_PATCH",
+        "OPENSSL_version_patch"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OPENSSL_VERSION_PATCH.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OPENSSL_version_patch.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "openssl_version_pre_release",
+      "section": "3ssl",
+      "spellings": [
+        "OPENSSL_VERSION_PRE_RELEASE",
+        "OPENSSL_version_pre_release"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OPENSSL_VERSION_PRE_RELEASE.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OPENSSL_version_pre_release.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "ortecc",
+      "section": "1",
+      "spellings": [
+        "orteCC",
+        "ortecc"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/orteCC.1.gz",
+          "owners": "net/openmpi-bin"
+        },
+        {
+          "path": "usr/share/man/man1/ortecc.1.gz",
+          "owners": "net/openmpi-bin"
+        }
+      ]
+    },
+    {
+      "name": "ossl_trace_begin",
+      "section": "3ssl",
+      "spellings": [
+        "OSSL_TRACE_BEGIN",
+        "OSSL_trace_begin"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OSSL_TRACE_BEGIN.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OSSL_trace_begin.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "ossl_trace_enabled",
+      "section": "3ssl",
+      "spellings": [
+        "OSSL_TRACE_ENABLED",
+        "OSSL_trace_enabled"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OSSL_TRACE_ENABLED.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OSSL_trace_enabled.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "ossl_trace_end",
+      "section": "3ssl",
+      "spellings": [
+        "OSSL_TRACE_END",
+        "OSSL_trace_end"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OSSL_TRACE_END.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OSSL_trace_end.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "ossl_trace_string",
+      "section": "3ssl",
+      "spellings": [
+        "OSSL_TRACE_STRING",
+        "OSSL_trace_string"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OSSL_TRACE_STRING.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        },
+        {
+          "path": "usr/share/man/man3/OSSL_trace_string.3ssl.gz",
+          "owners": "doc/libssl-doc"
+        }
+      ]
+    },
+    {
+      "name": "ownet",
+      "section": "3",
+      "spellings": [
+        "OWNet",
+        "ownet"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/OWNet.3.gz",
+          "owners": "perl/libownet-perl"
+        },
+        {
+          "path": "usr/share/man/man3/ownet.3.gz",
+          "owners": "libdevel/libownet-dev"
+        }
+      ]
+    },
+    {
+      "name": "pae",
+      "section": "4freebsd",
+      "spellings": [
+        "PAE",
+        "pae"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man4/PAE.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man4/pae.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "pam",
+      "section": "7",
+      "spellings": [
+        "PAM",
+        "pam"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man7/PAM.7.gz",
+          "owners": "admin/libpam-runtime"
+        },
+        {
+          "path": "usr/share/man/man7/pam.7.gz",
+          "owners": "admin/libpam-runtime"
+        }
+      ]
+    },
+    {
+      "name": "passage",
+      "section": "6",
+      "spellings": [
+        "Passage",
+        "passage"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man6/Passage.6.gz",
+          "owners": "games/passage"
+        },
+        {
+          "path": "usr/share/man/man6/passage.6.gz",
+          "owners": "games/passage"
+        }
+      ]
+    },
+    {
+      "name": "perm",
+      "section": "1",
+      "spellings": [
+        "PerM",
+        "perm"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/PerM.1.gz",
+          "owners": "science/perm"
+        },
+        {
+          "path": "usr/share/man/man1/perm.1.gz",
+          "owners": "science/perm"
+        }
+      ]
+    },
+    {
+      "name": "posterazor",
+      "section": "1",
+      "spellings": [
+        "PosteRazor",
+        "posterazor"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/PosteRazor.1.gz",
+          "owners": "graphics/posterazor"
+        },
+        {
+          "path": "usr/share/man/man1/posterazor.1.gz",
+          "owners": "graphics/posterazor"
+        }
+      ]
+    },
+    {
+      "name": "primrose",
+      "section": "6",
+      "spellings": [
+        "Primrose",
+        "primrose"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man6/Primrose.6.gz",
+          "owners": "games/primrose"
+        },
+        {
+          "path": "usr/share/man/man6/primrose.6.gz",
+          "owners": "games/primrose"
+        }
+      ]
+    },
+    {
+      "name": "prix16",
+      "section": "3avr",
+      "spellings": [
+        "PRIX16",
+        "PRIx16"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIX16.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIx16.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prix32",
+      "section": "3avr",
+      "spellings": [
+        "PRIX32",
+        "PRIx32"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIX32.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIx32.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prix8",
+      "section": "3avr",
+      "spellings": [
+        "PRIX8",
+        "PRIx8"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIX8.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIx8.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prixfast16",
+      "section": "3avr",
+      "spellings": [
+        "PRIXFAST16",
+        "PRIxFAST16"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIXFAST16.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIxFAST16.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prixfast32",
+      "section": "3avr",
+      "spellings": [
+        "PRIXFAST32",
+        "PRIxFAST32"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIXFAST32.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIxFAST32.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prixfast8",
+      "section": "3avr",
+      "spellings": [
+        "PRIXFAST8",
+        "PRIxFAST8"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIXFAST8.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIxFAST8.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prixleast16",
+      "section": "3avr",
+      "spellings": [
+        "PRIXLEAST16",
+        "PRIxLEAST16"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIXLEAST16.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIxLEAST16.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prixleast32",
+      "section": "3avr",
+      "spellings": [
+        "PRIXLEAST32",
+        "PRIxLEAST32"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIXLEAST32.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIxLEAST32.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prixleast8",
+      "section": "3avr",
+      "spellings": [
+        "PRIXLEAST8",
+        "PRIxLEAST8"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIXLEAST8.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIxLEAST8.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "prixptr",
+      "section": "3avr",
+      "spellings": [
+        "PRIXPTR",
+        "PRIxPTR"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/PRIXPTR.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        },
+        {
+          "path": "usr/share/man/man3/PRIxPTR.3avr.gz",
+          "owners": "otherosfs/avr-libc"
+        }
+      ]
+    },
+    {
+      "name": "r",
+      "section": "1",
+      "spellings": [
+        "R",
+        "r"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/R.1.gz",
+          "owners": "gnu-r/r-base-core"
+        },
+        {
+          "path": "usr/share/man/man1/r.1.gz",
+          "owners": "gnu-r/r-cran-littler"
+        }
+      ]
+    },
+    {
+      "name": "realtimesync",
+      "section": "1",
+      "spellings": [
+        "RealTimeSync",
+        "realtimesync"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/RealTimeSync.1.gz",
+          "owners": "utils/freefilesync"
+        },
+        {
+          "path": "usr/share/man/man1/realtimesync.1.gz",
+          "owners": "utils/freefilesync"
+        }
+      ]
+    },
+    {
+      "name": "regexp",
+      "section": "3tcl",
+      "spellings": [
+        "RegExp",
+        "regexp"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RegExp.3tcl.gz",
+          "owners": "doc/tcl8.6-doc,doc/tcl9.0-doc"
+        },
+        {
+          "path": "usr/share/man/man3/regexp.3tcl.gz",
+          "owners": "doc/tcl8.6-doc,doc/tcl9.0-doc"
+        }
+      ]
+    },
+    {
+      "name": "rgb_map",
+      "section": "3alleg4",
+      "spellings": [
+        "RGB_MAP",
+        "rgb_map"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RGB_MAP.3alleg4.gz",
+          "owners": "doc/allegro4-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rgb_map.3alleg4.gz",
+          "owners": "doc/allegro4-doc"
+        }
+      ]
+    },
+    {
+      "name": "ripperx",
+      "section": "1",
+      "spellings": [
+        "ripperX",
+        "ripperx"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/ripperX.1.gz",
+          "owners": "sound/ripperx"
+        },
+        {
+          "path": "usr/share/man/man1/ripperx.1.gz",
+          "owners": "sound/ripperx"
+        }
+      ]
+    },
+    {
+      "name": "rte_atomic16_init",
+      "section": "3",
+      "spellings": [
+        "RTE_ATOMIC16_INIT",
+        "rte_atomic16_init"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_ATOMIC16_INIT.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_atomic16_init.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_atomic32_init",
+      "section": "3",
+      "spellings": [
+        "RTE_ATOMIC32_INIT",
+        "rte_atomic32_init"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_ATOMIC32_INIT.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_atomic32_init.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_atomic64_init",
+      "section": "3",
+      "spellings": [
+        "RTE_ATOMIC64_INIT",
+        "rte_atomic64_init"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_ATOMIC64_INIT.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_atomic64_init.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_bbdev_op_fft",
+      "section": "3",
+      "spellings": [
+        "RTE_BBDEV_OP_FFT",
+        "rte_bbdev_op_fft"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_BBDEV_OP_FFT.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_bbdev_op_fft.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_bbdev_op_ldpc_dec",
+      "section": "3",
+      "spellings": [
+        "RTE_BBDEV_OP_LDPC_DEC",
+        "rte_bbdev_op_ldpc_dec"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_BBDEV_OP_LDPC_DEC.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_bbdev_op_ldpc_dec.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_bbdev_op_ldpc_enc",
+      "section": "3",
+      "spellings": [
+        "RTE_BBDEV_OP_LDPC_ENC",
+        "rte_bbdev_op_ldpc_enc"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_BBDEV_OP_LDPC_ENC.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_bbdev_op_ldpc_enc.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_bbdev_op_mldts",
+      "section": "3",
+      "spellings": [
+        "RTE_BBDEV_OP_MLDTS",
+        "rte_bbdev_op_mldts"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_BBDEV_OP_MLDTS.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_bbdev_op_mldts.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_bbdev_op_turbo_dec",
+      "section": "3",
+      "spellings": [
+        "RTE_BBDEV_OP_TURBO_DEC",
+        "rte_bbdev_op_turbo_dec"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_BBDEV_OP_TURBO_DEC.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_bbdev_op_turbo_dec.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_bbdev_op_turbo_enc",
+      "section": "3",
+      "spellings": [
+        "RTE_BBDEV_OP_TURBO_ENC",
+        "rte_bbdev_op_turbo_enc"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_BBDEV_OP_TURBO_ENC.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_bbdev_op_turbo_enc.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_is_power_of_2",
+      "section": "3",
+      "spellings": [
+        "RTE_IS_POWER_OF_2",
+        "rte_is_power_of_2"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_IS_POWER_OF_2.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_is_power_of_2.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_lcore_var_alloc",
+      "section": "3",
+      "spellings": [
+        "RTE_LCORE_VAR_ALLOC",
+        "rte_lcore_var_alloc"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_LCORE_VAR_ALLOC.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_lcore_var_alloc.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_lcore_var_lcore",
+      "section": "3",
+      "spellings": [
+        "RTE_LCORE_VAR_LCORE",
+        "rte_lcore_var_lcore"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_LCORE_VAR_LCORE.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_lcore_var_lcore.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_log",
+      "section": "3",
+      "spellings": [
+        "RTE_LOG",
+        "rte_log"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_LOG.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_log.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_log_register",
+      "section": "3",
+      "spellings": [
+        "RTE_LOG_REGISTER",
+        "rte_log_register"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_LOG_REGISTER.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_log_register.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_mbuf_dynfield",
+      "section": "3",
+      "spellings": [
+        "RTE_MBUF_DYNFIELD",
+        "rte_mbuf_dynfield"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_MBUF_DYNFIELD.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_mbuf_dynfield.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_mempool_register_ops",
+      "section": "3",
+      "spellings": [
+        "RTE_MEMPOOL_REGISTER_OPS",
+        "rte_mempool_register_ops"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_MEMPOOL_REGISTER_OPS.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_mempool_register_ops.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_node_register",
+      "section": "3",
+      "spellings": [
+        "RTE_NODE_REGISTER",
+        "rte_node_register"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_NODE_REGISTER.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_node_register.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_rand_max",
+      "section": "3",
+      "spellings": [
+        "RTE_RAND_MAX",
+        "rte_rand_max"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_RAND_MAX.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_rand_max.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_tailq_entry",
+      "section": "3",
+      "spellings": [
+        "RTE_TAILQ_ENTRY",
+        "rte_tailq_entry"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_TAILQ_ENTRY.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_tailq_entry.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_tailq_head",
+      "section": "3",
+      "spellings": [
+        "RTE_TAILQ_HEAD",
+        "rte_tailq_head"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_TAILQ_HEAD.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_tailq_head.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_timer_pending",
+      "section": "3",
+      "spellings": [
+        "RTE_TIMER_PENDING",
+        "rte_timer_pending"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_TIMER_PENDING.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_timer_pending.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_timer_stop",
+      "section": "3",
+      "spellings": [
+        "RTE_TIMER_STOP",
+        "rte_timer_stop"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_TIMER_STOP.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_timer_stop.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rte_version",
+      "section": "3",
+      "spellings": [
+        "RTE_VERSION",
+        "rte_version"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTE_VERSION.3.gz",
+          "owners": "doc/dpdk-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rte_version.3.gz",
+          "owners": "doc/dpdk-doc"
+        }
+      ]
+    },
+    {
+      "name": "rtfree",
+      "section": "9freebsd",
+      "spellings": [
+        "RTFREE",
+        "rtfree"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/RTFREE.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/rtfree.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "rtppacket",
+      "section": "3",
+      "spellings": [
+        "RTPPacket",
+        "rtppacket"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/RTPPacket.3.gz",
+          "owners": "doc/libccrtp-doc"
+        },
+        {
+          "path": "usr/share/man/man3/rtppacket.3.gz",
+          "owners": "doc/libccrtp-doc"
+        }
+      ]
+    },
+    {
+      "name": "scite",
+      "section": "1",
+      "spellings": [
+        "SciTE",
+        "scite"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/SciTE.1.gz",
+          "owners": "editors/scite"
+        },
+        {
+          "path": "usr/share/man/man1/scite.1.gz",
+          "owners": "editors/scite"
+        }
+      ]
+    },
+    {
+      "name": "scsi",
+      "section": "4freebsd",
+      "spellings": [
+        "SCSI",
+        "scsi"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man4/SCSI.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man4/scsi.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "sd_bus_error_map",
+      "section": "3",
+      "spellings": [
+        "SD_BUS_ERROR_MAP",
+        "sd_bus_error_map"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/SD_BUS_ERROR_MAP.3.gz",
+          "owners": "libdevel/libsystemd-dev"
+        },
+        {
+          "path": "usr/share/man/man3/sd_bus_error_map.3.gz",
+          "owners": "libdevel/libsystemd-dev"
+        }
+      ]
+    },
+    {
+      "name": "sd_id128_to_string",
+      "section": "3",
+      "spellings": [
+        "SD_ID128_TO_STRING",
+        "sd_id128_to_string"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/SD_ID128_TO_STRING.3.gz",
+          "owners": "libdevel/libsystemd-dev"
+        },
+        {
+          "path": "usr/share/man/man3/sd_id128_to_string.3.gz",
+          "owners": "libdevel/libsystemd-dev"
+        }
+      ]
+    },
+    {
+      "name": "sd_id128_to_uuid_string",
+      "section": "3",
+      "spellings": [
+        "SD_ID128_TO_UUID_STRING",
+        "sd_id128_to_uuid_string"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/SD_ID128_TO_UUID_STRING.3.gz",
+          "owners": "libdevel/libsystemd-dev"
+        },
+        {
+          "path": "usr/share/man/man3/sd_id128_to_uuid_string.3.gz",
+          "owners": "libdevel/libsystemd-dev"
+        }
+      ]
+    },
+    {
+      "name": "sdl_log",
+      "section": "3",
+      "spellings": [
+        "SDL_Log",
+        "SDL_log"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/SDL_Log.3.gz",
+          "owners": "doc/libsdl3-doc"
+        },
+        {
+          "path": "usr/share/man/man3/SDL_log.3.gz",
+          "owners": "doc/libsdl3-doc"
+        }
+      ]
+    },
+    {
+      "name": "sdl_malloc",
+      "section": "3",
+      "spellings": [
+        "SDL_MALLOC",
+        "SDL_malloc"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/SDL_MALLOC.3.gz",
+          "owners": "doc/libsdl3-doc"
+        },
+        {
+          "path": "usr/share/man/man3/SDL_malloc.3.gz",
+          "owners": "doc/libsdl3-doc"
+        }
+      ]
+    },
+    {
+      "name": "sdl_prillx",
+      "section": "3",
+      "spellings": [
+        "SDL_PRILLX",
+        "SDL_PRILLx"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/SDL_PRILLX.3.gz",
+          "owners": "doc/libsdl3-doc"
+        },
+        {
+          "path": "usr/share/man/man3/SDL_PRILLx.3.gz",
+          "owners": "doc/libsdl3-doc"
+        }
+      ]
+    },
+    {
+      "name": "sdl_prix32",
+      "section": "3",
+      "spellings": [
+        "SDL_PRIX32",
+        "SDL_PRIx32"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/SDL_PRIX32.3.gz",
+          "owners": "doc/libsdl3-doc"
+        },
+        {
+          "path": "usr/share/man/man3/SDL_PRIx32.3.gz",
+          "owners": "doc/libsdl3-doc"
+        }
+      ]
+    },
+    {
+      "name": "sdl_prix64",
+      "section": "3",
+      "spellings": [
+        "SDL_PRIX64",
+        "SDL_PRIx64"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/SDL_PRIX64.3.gz",
+          "owners": "doc/libsdl3-doc"
+        },
+        {
+          "path": "usr/share/man/man3/SDL_PRIx64.3.gz",
+          "owners": "doc/libsdl3-doc"
+        }
+      ]
+    },
+    {
+      "name": "sendemail",
+      "section": "1",
+      "spellings": [
+        "sendEmail",
+        "sendemail"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/sendEmail.1.gz",
+          "owners": "mail/sendemail"
+        },
+        {
+          "path": "usr/share/man/man1/sendemail.1.gz",
+          "owners": "mail/sendemail"
+        }
+      ]
+    },
+    {
+      "name": "setcdkbuttonbox",
+      "section": "3",
+      "spellings": [
+        "setCDKButtonBox",
+        "setCDKButtonbox"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/setCDKButtonBox.3.gz",
+          "owners": "libdevel/libcdk5-dev"
+        },
+        {
+          "path": "usr/share/man/man3/setCDKButtonbox.3.gz",
+          "owners": "libdevel/libcdk5-dev"
+        }
+      ]
+    },
+    {
+      "name": "smp",
+      "section": "4freebsd",
+      "spellings": [
+        "SMP",
+        "smp"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man4/SMP.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man4/smp.4freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "swarp",
+      "section": "1",
+      "spellings": [
+        "SWarp",
+        "swarp"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/SWarp.1.gz",
+          "owners": "science/swarp"
+        },
+        {
+          "path": "usr/share/man/man1/swarp.1.gz",
+          "owners": "x11/suckless-tools"
+        }
+      ]
+    },
+    {
+      "name": "tclx",
+      "section": "3tclx",
+      "spellings": [
+        "TclX",
+        "tclx"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/TclX.3tclx.gz",
+          "owners": "doc/tclx8.4-doc"
+        },
+        {
+          "path": "usr/share/man/man3/tclx.3tclx.gz",
+          "owners": "doc/tclx8.4-doc"
+        }
+      ]
+    },
+    {
+      "name": "text::ngrams",
+      "section": "3pm",
+      "spellings": [
+        "Text::Ngrams",
+        "Text::ngrams"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/Text::Ngrams.3pm.gz",
+          "owners": "perl/libtext-ngrams-perl"
+        },
+        {
+          "path": "usr/share/man/man3/Text::ngrams.3pm.gz",
+          "owners": "perl/libtext-ngrams-perl"
+        }
+      ]
+    },
+    {
+      "name": "thunar",
+      "section": "1",
+      "spellings": [
+        "Thunar",
+        "thunar"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Thunar.1.gz",
+          "owners": "xfce/thunar"
+        },
+        {
+          "path": "usr/share/man/man1/thunar.1.gz",
+          "owners": "xfce/thunar"
+        }
+      ]
+    },
+    {
+      "name": "tk_strictmotif",
+      "section": "3tk",
+      "spellings": [
+        "Tk_StrictMotif",
+        "tk_strictMotif"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/Tk_StrictMotif.3tk.gz",
+          "owners": "doc/tk8.6-doc,doc/tk9.0-doc"
+        },
+        {
+          "path": "usr/share/man/man3/tk_strictMotif.3tk.gz",
+          "owners": "doc/tk8.6-doc,doc/tk9.0-doc"
+        }
+      ]
+    },
+    {
+      "name": "transcend",
+      "section": "6",
+      "spellings": [
+        "Transcend",
+        "transcend"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man6/Transcend.6.gz",
+          "owners": "games/transcend"
+        },
+        {
+          "path": "usr/share/man/man6/transcend.6.gz",
+          "owners": "games/transcend"
+        }
+      ]
+    },
+    {
+      "name": "trinity",
+      "section": "1",
+      "spellings": [
+        "Trinity",
+        "trinity"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Trinity.1.gz",
+          "owners": "science/trinityrnaseq"
+        },
+        {
+          "path": "usr/share/man/man1/trinity.1.gz",
+          "owners": "utils/trinity"
+        }
+      ]
+    },
+    {
+      "name": "ul",
+      "section": "1",
+      "spellings": [
+        "UL",
+        "ul"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/UL.1.gz",
+          "owners": "gnustep/adun.app"
+        },
+        {
+          "path": "usr/share/man/man1/ul.1.gz",
+          "owners": "utils/bsdextrautils"
+        }
+      ]
+    },
+    {
+      "name": "virt_mail",
+      "section": "1",
+      "spellings": [
+        "VIRT_MAIL",
+        "virt_mail"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/VIRT_MAIL.1.gz",
+          "owners": "database/virtuoso-opensource-7-bin"
+        },
+        {
+          "path": "usr/share/man/man1/virt_mail.1.gz",
+          "owners": "database/virtuoso-opensource-7-bin"
+        }
+      ]
+    },
+    {
+      "name": "virtuoso-t",
+      "section": "1",
+      "spellings": [
+        "VIRTUOSO-T",
+        "virtuoso-t"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/VIRTUOSO-T.1.gz",
+          "owners": "database/virtuoso-opensource-7-bin"
+        },
+        {
+          "path": "usr/share/man/man1/virtuoso-t.1.gz",
+          "owners": "database/virtuoso-opensource-7-bin"
+        }
+      ]
+    },
+    {
+      "name": "vref",
+      "section": "9freebsd",
+      "spellings": [
+        "VREF",
+        "vref"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man9/VREF.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        },
+        {
+          "path": "usr/share/man/man9/vref.9freebsd.gz",
+          "owners": "doc/freebsd-manpages"
+        }
+      ]
+    },
+    {
+      "name": "w",
+      "section": "1",
+      "spellings": [
+        "W",
+        "w"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/W.1.gz",
+          "owners": "web/surfraw"
+        },
+        {
+          "path": "usr/share/man/man1/w.1.gz",
+          "owners": "admin/procps"
+        }
+      ]
+    },
+    {
+      "name": "wapua",
+      "section": "1p",
+      "spellings": [
+        "wApua",
+        "wapua"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/wApua.1p.gz",
+          "owners": "web/wapua"
+        },
+        {
+          "path": "usr/share/man/man1/wapua.1p.gz",
+          "owners": "web/wapua"
+        }
+      ]
+    },
+    {
+      "name": "welcome2l",
+      "section": "1",
+      "spellings": [
+        "Welcome2L",
+        "welcome2l"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Welcome2L.1.gz",
+          "owners": "misc/welcome2l"
+        },
+        {
+          "path": "usr/share/man/man1/welcome2l.1.gz",
+          "owners": "misc/welcome2l"
+        }
+      ]
+    },
+    {
+      "name": "wigeon",
+      "section": "1",
+      "spellings": [
+        "WigeoN",
+        "wigeon"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/WigeoN.1.gz",
+          "owners": "science/microbiomeutil"
+        },
+        {
+          "path": "usr/share/man/man1/wigeon.1.gz",
+          "owners": "science/wigeon"
+        }
+      ]
+    },
+    {
+      "name": "window",
+      "section": "3ncurses",
+      "spellings": [
+        "WINDOW",
+        "window"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man3/WINDOW.3ncurses.gz",
+          "owners": "doc/ncurses-doc"
+        },
+        {
+          "path": "usr/share/man/man3/window.3ncurses.gz",
+          "owners": "doc/ncurses-doc"
+        }
+      ]
+    },
+    {
+      "name": "wmcalclock",
+      "section": "1",
+      "spellings": [
+        "wmCalClock",
+        "wmcalclock"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/wmCalClock.1.gz",
+          "owners": "x11/wmcalclock"
+        },
+        {
+          "path": "usr/share/man/man1/wmcalclock.1.gz",
+          "owners": "x11/wmcalclock"
+        }
+      ]
+    },
+    {
+      "name": "wmmoonclock",
+      "section": "1",
+      "spellings": [
+        "wmMoonClock",
+        "wmmoonclock"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/wmMoonClock.1.gz",
+          "owners": "x11/wmmoonclock"
+        },
+        {
+          "path": "usr/share/man/man1/wmmoonclock.1.gz",
+          "owners": "x11/wmmoonclock"
+        }
+      ]
+    },
+    {
+      "name": "wmweather",
+      "section": "1",
+      "spellings": [
+        "wmWeather",
+        "wmweather"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/wmWeather.1.gz",
+          "owners": "x11/wmweather"
+        },
+        {
+          "path": "usr/share/man/man1/wmweather.1.gz",
+          "owners": "x11/wmweather"
+        }
+      ]
+    },
+    {
+      "name": "xalan",
+      "section": "1",
+      "spellings": [
+        "Xalan",
+        "xalan"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Xalan.1.gz",
+          "owners": "text/xalan"
+        },
+        {
+          "path": "usr/share/man/man1/xalan.1.gz",
+          "owners": "text/xalan"
+        }
+      ]
+    },
+    {
+      "name": "xtract",
+      "section": "1",
+      "spellings": [
+        "Xtract",
+        "xtract"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/Xtract.1.gz",
+          "owners": "haskell/haxml"
+        },
+        {
+          "path": "usr/share/man/man1/xtract.1.gz",
+          "owners": "science/ncbi-entrez-direct"
+        }
+      ]
+    }
+  ],
+  "auditedAlternativeCollisionCount": 1,
+  "auditedAlternativeCollisions": [
+    {
+      "name": "ftp",
+      "section": "1",
+      "spellings": [
+        "FTP"
+      ],
+      "sources": [
+        {
+          "path": "usr/share/man/man1/FTP.1.gz",
+          "owners": "gnustep/ftp.app"
+        }
+      ]
+    }
+  ],
+  "maxOwnerPathCombinationsPerCollision": 4,
+  "releaseSha256": "ed56aac47e7911e65ee63aae8d67e29f20e023f840e49f8ed037043a33de138a"
+}

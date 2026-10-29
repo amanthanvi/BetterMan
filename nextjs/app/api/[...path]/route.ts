@@ -248,7 +248,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const result = await measure(metrics, 'convex_man', () =>
-        fetchManByNameAndSectionOrAlias({ distro, name: parts[1].toLowerCase(), section: parts[2], ...(packageName(new URL(req.url).searchParams.get('pkg')) ? { pkg: packageName(new URL(req.url).searchParams.get('pkg'))! } : {}) }),
+        fetchManByNameAndSectionOrAlias({ distro, name: parts[1], section: parts[2], ...(packageName(new URL(req.url).searchParams.get('pkg')) ? { pkg: packageName(new URL(req.url).searchParams.get('pkg'))! } : {}) }),
       )
       if (result.kind === 'alias') return aliasRedirect(req, distro, result.name, result.section, result.pkg)
       return cachedJson(result.data)
@@ -260,7 +260,7 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const distro = distroFrom(req)
       if (distro instanceof Response) return distro
       const result = await measure(metrics, 'convex_man_meta', () =>
-        fetchManMetaByNameAndSection({ distro, name: parts[1].toLowerCase(), section: parts[2] }),
+        fetchManMetaByNameAndSection({ distro, name: parts[1], section: parts[2] }),
       )
       return cachedJson(result)
     }
