@@ -36,6 +36,7 @@ class Package:
     sha256: str
     size: int
     installed: int = 0
+    priority: str = "optional"
 
     def __post_init__(self):
         if not re.fullmatch(r"[a-z0-9][a-z0-9+.-]*", self.name) or not self.version.strip():
@@ -229,6 +230,7 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
                     record["SHA256"],
                     int(record["Size"]),
                     counts.get(record["Package"], 0),
+                    record.get("Priority", "optional"),
                 )
             )
     missing = selected - {package.name for package in packages}
@@ -247,6 +249,7 @@ def available_packages(root: Path, counts: dict[str, int]) -> dict[str, Package]
                 record["SHA256"],
                 int(record["Size"]),
                 counts.get(record["Package"], 0),
+                record.get("Priority", "optional"),
             )
             for record in records(lines)
         }

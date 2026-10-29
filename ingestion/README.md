@@ -221,7 +221,7 @@ The monthly workflow has two independent switches:
 | Invocation | Full import opt-in | Promotion |
 | --- | --- | --- |
 | Cron | Repository variable `BETTERMAN_DEBIAN_FULL=1` | Held unless `BETTERMAN_DEBIAN_FULL_PROMOTE=1` |
-| Manual dispatch | `debian_full: true` input; repository import variable is ignored | With the promotion variable off, requires a separate `ingest: false, promote: true` dispatch |
+| Manual dispatch | `debian_full: true` input; repository import variable is ignored | With the promotion variable off, requires a separate `ingest: false, promote: true, debian_full_promote: true` dispatch |
 
 Both import controls default off/unset. Default dispatches and cron use curated
 Debian, which retains its existing promotion behavior. Even `promote: true` on a
@@ -229,6 +229,12 @@ full ingest dispatch cannot combine the first full ingest and promotion while
 the second variable is off. Flip the second variable only after the owner has
 reviewed the first full release and approved recurring full promotions. No
 switch or shared deployment was changed while implementing this pipeline.
+Promotion-only recovery skips an actual full-Debian staging pointer unless
+`debian_full_promote: true` (default false) or the promotion repository variable
+is exactly `1`. This check happens atomically with pointer promotion, including
+when the import switch is off. Held Debian logs a clear skip; other distros
+continue. Non-`1` values, including an explicitly empty value, warn and stay off;
+raw values are never printed.
 
 `data/debian-trixie.json` pins snapshot, suite/component/architecture and the
 Release SHA256. Verified Release SHA256/size entries bind Contents-all,
@@ -238,17 +244,23 @@ package pass also captures runtime postinst data when a command's manual lives
 in another package (for example vim and vim-common). Nothing is installed.
 
 `control.tar` postinst scripts are read as text, never executed. The bounded
-static parser recognizes literal `update-alternatives --install` registrations,
-manual slaves, literal variables/loops, literal wrapper calls, and checked
-OpenJDK/xz helper templates. For binary masters without a manual slave, the target executable must have a
-unique exact-basename manual in the same selected package. Archive-owned binary
-symlink chains can prove two command names use the same executable (clang++ and
-clang); binaries are never extracted or executed. Otherwise the registration is
-skipped. This can expose Clang manuals for cc/c++ without inventing unavailable
-GCC documentation. Unknown dynamic or ambiguous registrations are
-skipped with a package/line/reason report. Priorities rank before popcon installed
-counts, then package/path break ties; only awk/vi/nc retain explicit policy
-overrides. Editor and pager follow the declared Debian priorities.
+static parser recognizes literal `update-alternatives --install` registrations
+only as a simple command's command word. It excludes heredoc bodies and
+`echo`/`printf` arguments. Literal variables/loops/wrapper calls and checked
+OpenJDK/xz templates are supported. Values assigned only in some conditional
+branches stay unresolved after the branch joins. Unknown expressions are
+skipped with package/line/reason evidence.
+
+A package-owned manual always occupies its route before generated alternatives.
+For unoccupied routes, rank candidates by membership in Debian's
+`required`/`important`/`standard` Priority group, then pinned popcon `by_inst`,
+then alternatives priority. Existing awk/vi/nc policy preferences break exact
+remaining ties only. Elect before resolving documentation: an undocumented
+winner suppresses the alternative route, with no fallback to a less-installed
+provider. GCC/G++ therefore suppress `cc`/`c++` when their manuals are absent
+from main. Binary masters need a unique exact-basename manual in the same
+package; archive-owned executable symlinks may prove a shared target (clang++
+and clang). Binary contents are never extracted or executed.
 
 The bundled `popcon-by-inst.tsv.gz` contains a fixed, checksum-verified public
 `https://popcon.debian.org/by_inst` snapshot. The lock records source and normalized
@@ -265,10 +277,19 @@ resolve first, then indexed owners; cross-package directory links and missing
 owners are resolved on demand. Exact `SOURCE_TARGETS` repairs document four pinned
 packaging mismatches. Mandoc runs in a fresh empty temporary directory. After
 safe archive include expansion, remaining executable includes are rejected,
-including conditional bodies, command aliases and changed control characters.
-Literal documentation such as `.B .so` is retained. The optional groff-only
+including conditional bodies and command aliases. Escape/control requests
+`.ec`, `.eo`, `.cc`, `.c2`, request-position string interpolation, and include
+requests in macro/string definitions are rejected. Ordinary macro prose and
+interpolation in formatting arguments remain text. Literal documentation such
+as `.B .so` is retained. The optional groff-only
 `www.tmac`/`pic.tmac` requests are omitted without reading host macro files.
-No request may open host documentation or files through an unresolved include.
+The empty cwd is the primary boundary against accidental relative host includes;
+the source checks are defence in depth. A temporary cwd is **not an OS filesystem
+sandbox** and does not revoke access to absolute paths. Explicit unresolved
+includes are refused before spawning mandoc. Regression tests independently
+check the empty cwd/parent sentinel and the request checks. The current cached
+2,000-package audit rejects 4/13,243 renderable sources (0.030%), all actual
+escape/control changes; see the evidence for all four paths.
 
 Bare `.so` stubs and manual symlinks/hardlinks whose target has another route
 register redirect aliases. They create no duplicate canonical page or search
@@ -295,15 +316,27 @@ only missing/invalid packages. Parse/publish spools are temporary and rebuilt;
 uploaded release activation remains separately resumable through `ingest:activate`.
 
 `BETTERMAN_DEBIAN_CACHE_DIR` selects an external-to-spool, SHA256-named archive
-cache (2 GiB LRU by default, configurable with `BETTERMAN_DEBIAN_CACHE_MAX_BYTES`).
+cache (2 GiB LRU by default; `BETTERMAN_DEBIAN_CACHE_MAX_BYTES` accepts 1–2 GiB).
+Total retained extracted files have a separate 4 GiB ceiling, counting existing
+and partial files, replacements and concurrent writes. Reservations happen before
+writes under one shared lock. `BETTERMAN_DEBIAN_EXTRACTED_MAX_BYTES` can lower
+this to at least 16 MiB, but cannot raise it past 4 GiB. Exhaustion stops acquisition
+with completed receipts retained. Free-space checks remain an additional guard.
 Every cache hit is rehashed and size-checked. There are at most two downloads per
 pipeline. Each file gets eight attempts with exponential backoff and jitter,
 up to minutes, honoring Retry-After on 429/503 and respecting the job deadline.
 A Retry-After over fifteen minutes stops with the checkpoint retained rather
 than retrying early. Integrity failures do not retry or publish bad bytes.
 
-The workflow restores and saves only verified `.deb` files, with a lock-hash key
-and an always-run save step after recoverable failures. It never caches trusted
+The workflow restores and saves only verified `.deb` files under one stable
+`debian-debs-<Release SHA256>` key, without run IDs or broad restore prefixes.
+An always-run save step can preserve successful files after a recoverable failure.
+GitHub cache entries are immutable: the first saved bounded subset for that
+Release/branch remains the reusable snapshot; later attempts do not replace it.
+No new 2 GiB entry is created per run. A new Release gets a new key; GitHub's
+repository-wide 10 GB LRU quota evicts old keys. Old run-ID keys from this draft
+are not reused and may be removed by the owner or age out. Local archive LRU
+eviction skips in-use files. It never caches trusted
 extracted SQLite state. A fresh runner reuses retained cache files and re-extracts
 them; evicted files are downloaded again. The 18+ GB full archive set cannot be
 kept in a 2 GiB cache or a 14 GB runner, so cross-runner reuse is bounded, not a
@@ -319,6 +352,9 @@ This defaults to acquisition/parsing only. `--local-upload` additionally require
 this worktree's matching loopback Convex configuration, refuses deploy keys, and
 writes `local-upload.json`; never point it at a shared backend. `--download-only`
 cannot be combined with upload and never creates a Convex client.
+`--audit-alternatives` extends the fixed sample with the competing providers
+listed in the evidence, elects routes, and audits renderable sources against the
+roff checks. It also performs no Convex writes and records every rejection.
 
 The workflow's `debian_download_only: true` dispatch runs that acquisition-only
 mode for 2,000 packages in a separate job with no production environment or Convex

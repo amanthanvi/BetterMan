@@ -860,12 +860,15 @@ export const promoteActiveReleases = internalMutation({
     toStage: datasetStageValidator,
     distros: v.array(distroValidator),
     activatedAt: v.string(),
+    allowFullDebian: v.optional(v.boolean()),
   },
   returns: v.object({
     promoted: v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string() })),
+    skipped: v.optional(v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string(), reason: v.string() }))),
   }),
   handler: async (ctx, args) => {
     const promoted = [];
+    const skipped = [];
     for (const distro of new Set(args.distros)) {
       const source = await ctx.db
         .query("activeReleases")
@@ -876,6 +879,14 @@ export const promoteActiveReleases = internalMutation({
       if (!source) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
       const release = await ctx.db.get(source.releaseId);
       if (!release) throw new Error("RELEASE_NOT_FOUND");
+      // Archive ingestion records its pinned mirror, unlike curated Docker images.
+      // Check this in the pointer transaction: a preflight read could race activation.
+      if (distro === "debian" && args.toStage === "prod"
+        && release.imageRef.startsWith("https://snapshot.debian.org/archive/debian/")
+        && !args.allowFullDebian) {
+        skipped.push({ distro, datasetReleaseId: source.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
+        continue;
+      }
       if (release.pruning) throw new Error("RELEASE_PRUNING");
       if (!release.sealed) throw new Error("RELEASE_NOT_SEALED");
       if (!release.manifestVerified) throw new Error("RELEASE_MANIFEST_UNVERIFIED");
@@ -918,6 +929,7 @@ export const promoteActiveReleases = internalMutation({
 
     if (args.toStage === "prod" && promoted.length) await scheduleDerivedBuild(ctx, "en");
 
-    return { promoted };
+
+    return skipped.length ? { promoted, skipped } : { promoted };
   },
 });

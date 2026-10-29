@@ -55,6 +55,1867 @@
   },
   "sample": {
     "samplePackages": 2000,
+    "dependencyPackages": 107,
+    "fullPackages": 17314,
+    "fullDownloadBytes": 18391405004,
+    "sampleArchiveBytes": 0,
+    "parsedPages": 13295,
+    "aliases": 3372,
+    "aliasProviders": 3393,
+    "alternatives": [
+      {
+        "name": "pico",
+        "section": "1",
+        "package": "alpine-pico",
+        "priority": 40,
+        "target": [
+          "pico.alpine",
+          "1",
+          "alpine-pico"
+        ],
+        "sourcePath": "usr/share/man/man1/pico.alpine.1.gz"
+      },
+      {
+        "name": "arptables",
+        "section": "8",
+        "package": "arptables",
+        "priority": 10,
+        "target": [
+          "arptables-legacy",
+          "8",
+          "arptables"
+        ],
+        "sourcePath": "usr/share/man/man8/arptables-legacy.8.gz"
+      },
+      {
+        "name": "autokey",
+        "section": "1",
+        "package": "autokey-qt",
+        "priority": 60,
+        "target": [
+          "autokey-qt",
+          "1",
+          "autokey-qt"
+        ],
+        "sourcePath": "usr/share/man/man1/autokey-qt.1.gz"
+      },
+      {
+        "name": "builtins",
+        "section": "7",
+        "package": "bash",
+        "priority": 10,
+        "target": [
+          "bash-builtins",
+          "7",
+          "bash"
+        ],
+        "sourcePath": "usr/share/man/man7/bash-builtins.7.gz"
+      },
+      {
+        "name": "x-window-manager",
+        "section": "1",
+        "package": "blackbox",
+        "priority": 50,
+        "target": [
+          "blackbox",
+          "1",
+          "blackbox"
+        ],
+        "sourcePath": "usr/share/man/man1/blackbox.1.gz"
+      },
+      {
+        "name": "scheme",
+        "section": "1",
+        "package": "chezscheme",
+        "priority": 20,
+        "target": [
+          "chezscheme",
+          "1",
+          "chezscheme"
+        ],
+        "sourcePath": "usr/share/man/man1/chezscheme.1.gz"
+      },
+      {
+        "name": "scheme-script",
+        "section": "1",
+        "package": "chezscheme",
+        "priority": 20,
+        "target": [
+          "chezscheme",
+          "1",
+          "chezscheme"
+        ],
+        "sourcePath": "usr/share/man/man1/scheme-script-chez.1.gz"
+      },
+      {
+        "name": "x-session-manager",
+        "section": "1",
+        "package": "cinnamon-session",
+        "priority": 50,
+        "target": [
+          "cinnamon-session",
+          "1",
+          "cinnamon-session"
+        ],
+        "sourcePath": "usr/share/man/man1/cinnamon-session.1.gz"
+      },
+      {
+        "name": "zcode-interpreter",
+        "section": "6",
+        "package": "fizmo-console",
+        "priority": 50,
+        "target": [
+          "fizmo-console",
+          "6",
+          "fizmo-console"
+        ],
+        "sourcePath": "usr/share/man/man6/fizmo-console.6.gz"
+      },
+      {
+        "name": "fuse",
+        "section": "1",
+        "package": "fuse-emulator-sdl",
+        "priority": 6,
+        "target": [
+          "fuse",
+          "1",
+          "fuse-emulator-common"
+        ],
+        "sourcePath": "usr/share/man/man1/fuse-sdl.1.gz"
+      },
+      {
+        "name": "awk",
+        "section": "1",
+        "package": "gawk",
+        "priority": 10,
+        "target": [
+          "gawk",
+          "1",
+          "gawk"
+        ],
+        "sourcePath": "usr/share/man/man1/gawk.1.gz"
+      },
+      {
+        "name": "nawk",
+        "section": "1",
+        "package": "gawk",
+        "priority": 10,
+        "target": [
+          "gawk",
+          "1",
+          "gawk"
+        ],
+        "sourcePath": "usr/share/man/man1/gawk.1.gz"
+      },
+      {
+        "name": "c89",
+        "section": "1",
+        "package": "gcc",
+        "priority": 20,
+        "target": [
+          "c89-gcc",
+          "1",
+          "gcc"
+        ],
+        "sourcePath": "usr/share/man/man1/c89-gcc.1.gz"
+      },
+      {
+        "name": "c99",
+        "section": "1",
+        "package": "gcc",
+        "priority": 20,
+        "target": [
+          "c99-gcc",
+          "1",
+          "gcc"
+        ],
+        "sourcePath": "usr/share/man/man1/c99-gcc.1.gz"
+      },
+      {
+        "name": "hy",
+        "section": "1",
+        "package": "hy",
+        "priority": 60,
+        "target": [
+          "hy3",
+          "1",
+          "hy"
+        ],
+        "sourcePath": "usr/share/man/man1/hy3.1.gz"
+      },
+      {
+        "name": "talk",
+        "section": "1",
+        "package": "inetutils-talk",
+        "priority": 100,
+        "target": [
+          "inetutils-talk",
+          "1",
+          "inetutils-talk"
+        ],
+        "sourcePath": "usr/share/man/man1/inetutils-talk.1.gz"
+      },
+      {
+        "name": "infobrowser",
+        "section": "1",
+        "package": "info",
+        "priority": 60,
+        "target": [
+          "info",
+          "1",
+          "info"
+        ],
+        "sourcePath": "usr/share/man/man1/info.1.gz"
+      },
+      {
+        "name": "arptables",
+        "section": "8",
+        "package": "iptables",
+        "priority": 20,
+        "target": [
+          "arptables-nft",
+          "8",
+          "iptables"
+        ],
+        "sourcePath": "usr/share/man/man8/arptables-nft.8.gz"
+      },
+      {
+        "name": "ebtables",
+        "section": "8",
+        "package": "iptables",
+        "priority": 20,
+        "target": [
+          "ebtables-nft",
+          "8",
+          "iptables"
+        ],
+        "sourcePath": "usr/share/man/man8/ebtables-nft.8.gz"
+      },
+      {
+        "name": "pico",
+        "section": "1",
+        "package": "joe-jupp",
+        "priority": 2,
+        "target": [
+          "jupp",
+          "1",
+          "jupp"
+        ],
+        "sourcePath": "usr/share/man/man1/jpico.1.gz"
+      },
+      {
+        "name": "zcode-interpreter",
+        "section": "6",
+        "package": "jzip",
+        "priority": 50,
+        "target": [
+          "jzip",
+          "6",
+          "jzip"
+        ],
+        "sourcePath": "usr/share/man/man6/jzip.6.gz"
+      },
+      {
+        "name": "pager",
+        "section": "1",
+        "package": "less",
+        "priority": 77,
+        "target": [
+          "less",
+          "1",
+          "less"
+        ],
+        "sourcePath": "usr/share/man/man1/less.1.gz"
+      },
+      {
+        "name": "editor",
+        "section": "1",
+        "package": "levee",
+        "priority": 5,
+        "target": [
+          "levee",
+          "1",
+          "levee"
+        ],
+        "sourcePath": "usr/share/man/man1/levee.1.gz"
+      },
+      {
+        "name": "vi",
+        "section": "1",
+        "package": "levee",
+        "priority": 10,
+        "target": [
+          "levee",
+          "1",
+          "levee"
+        ],
+        "sourcePath": "usr/share/man/man1/levee.1.gz"
+      },
+      {
+        "name": "lzip",
+        "section": "1",
+        "package": "lunzip",
+        "priority": -1000,
+        "target": [
+          "lzip.lunzip",
+          "1",
+          "lunzip"
+        ],
+        "sourcePath": "usr/share/man/man1/lzip.lunzip.1.gz"
+      },
+      {
+        "name": "lzip-decompressor",
+        "section": "1",
+        "package": "lunzip",
+        "priority": -1000,
+        "target": [
+          "lzip.lunzip",
+          "1",
+          "lunzip"
+        ],
+        "sourcePath": "usr/share/man/man1/lzip.lunzip.1.gz"
+      },
+      {
+        "name": "x-window-manager",
+        "section": "1",
+        "package": "lwm",
+        "priority": 40,
+        "target": [
+          "lwm",
+          "1",
+          "lwm"
+        ],
+        "sourcePath": "usr/share/man/man1/lwm.1.gz"
+      },
+      {
+        "name": "x-terminal-emulator",
+        "section": "1",
+        "package": "lxterminal",
+        "priority": 20,
+        "target": [
+          "lxterminal",
+          "1",
+          "lxterminal"
+        ],
+        "sourcePath": "usr/share/man/man1/lxterminal.1.gz"
+      },
+      {
+        "name": "editor",
+        "section": "1",
+        "package": "micro",
+        "priority": 40,
+        "target": [
+          "micro",
+          "1",
+          "micro"
+        ],
+        "sourcePath": "usr/share/man/man1/micro.1"
+      },
+      {
+        "name": "cli-ildasm",
+        "section": "1",
+        "package": "mono-utils",
+        "priority": 10,
+        "target": [
+          "monodis",
+          "1",
+          "mono-utils"
+        ],
+        "sourcePath": "usr/share/man/man1/monodis.1.gz"
+      },
+      {
+        "name": "mp3-decoder",
+        "section": "1",
+        "package": "mpg321",
+        "priority": 50,
+        "target": [
+          "mpg321",
+          "1",
+          "mpg321"
+        ],
+        "sourcePath": "usr/share/man/man1/mpg321.1.gz"
+      },
+      {
+        "name": "mpg123",
+        "section": "1",
+        "package": "mpg321",
+        "priority": 50,
+        "target": [
+          "mpg321",
+          "1",
+          "mpg321"
+        ],
+        "sourcePath": "usr/share/man/man1/mpg321.1.gz"
+      },
+      {
+        "name": "traceroute6",
+        "section": "8",
+        "package": "ndisc6",
+        "priority": 110,
+        "target": [
+          "rltraceroute6",
+          "8",
+          "ndisc6"
+        ],
+        "sourcePath": "usr/share/man/man8/rltraceroute6.8.gz"
+      },
+      {
+        "name": "nc",
+        "section": "1",
+        "package": "netcat-openbsd",
+        "priority": 50,
+        "target": [
+          "nc_openbsd",
+          "1",
+          "netcat-openbsd"
+        ],
+        "sourcePath": "usr/share/man/man1/nc_openbsd.1.gz"
+      },
+      {
+        "name": "netcat",
+        "section": "1",
+        "package": "netcat-openbsd",
+        "priority": 50,
+        "target": [
+          "nc_openbsd",
+          "1",
+          "netcat-openbsd"
+        ],
+        "sourcePath": "usr/share/man/man1/nc_openbsd.1.gz"
+      },
+      {
+        "name": "editor",
+        "section": "1",
+        "package": "ng-common",
+        "priority": 80,
+        "target": [
+          "ng",
+          "1",
+          "ng-common"
+        ],
+        "sourcePath": "usr/share/man/man1/ng.1.gz"
+      },
+      {
+        "name": "ex",
+        "section": "1",
+        "package": "nvi",
+        "priority": 20,
+        "target": [
+          "nvi",
+          "1",
+          "nvi"
+        ],
+        "sourcePath": "usr/share/man/man1/nex.1.gz"
+      },
+      {
+        "name": "editor",
+        "section": "1",
+        "package": "nvi",
+        "priority": 19,
+        "target": [
+          "nvi",
+          "1",
+          "nvi"
+        ],
+        "sourcePath": "usr/share/man/man1/nvi.1.gz"
+      },
+      {
+        "name": "vi",
+        "section": "1",
+        "package": "nvi",
+        "priority": 20,
+        "target": [
+          "nvi",
+          "1",
+          "nvi"
+        ],
+        "sourcePath": "usr/share/man/man1/nvi.1.gz"
+      },
+      {
+        "name": "view",
+        "section": "1",
+        "package": "nvi",
+        "priority": 20,
+        "target": [
+          "nvi",
+          "1",
+          "nvi"
+        ],
+        "sourcePath": "usr/share/man/man1/nview.1.gz"
+      },
+      {
+        "name": "pagsh",
+        "section": "1",
+        "package": "openafs-client",
+        "priority": 100,
+        "target": [
+          "pagsh.openafs",
+          "1",
+          "openafs-client"
+        ],
+        "sourcePath": "usr/share/man/man1/pagsh.openafs.1.gz"
+      },
+      {
+        "name": "x-session-manager",
+        "section": "1",
+        "package": "openbox-lxde-session",
+        "priority": 50,
+        "target": [
+          "startlxde",
+          "1",
+          "openbox-lxde-session"
+        ],
+        "sourcePath": "usr/share/man/man1/startlxde.1.gz"
+      },
+      {
+        "name": "php-cgi",
+        "section": "1",
+        "package": "php-cgi",
+        "priority": 100,
+        "target": [
+          "php8.4",
+          "1",
+          "php8.4-cli"
+        ],
+        "sourcePath": "usr/share/man/man1/php-cgi.default.1.gz"
+      },
+      {
+        "name": "pinentry",
+        "section": "1",
+        "package": "pinentry-tty",
+        "priority": 30,
+        "target": [
+          "pinentry-tty",
+          "1",
+          "pinentry-tty"
+        ],
+        "sourcePath": "usr/share/man/man1/pinentry-tty.1.gz"
+      },
+      {
+        "name": "locate",
+        "section": "1",
+        "package": "plocate",
+        "priority": 90,
+        "target": [
+          "plocate",
+          "1",
+          "plocate"
+        ],
+        "sourcePath": "usr/share/man/man1/plocate.1.gz"
+      },
+      {
+        "name": "updatedb",
+        "section": "8",
+        "package": "plocate",
+        "priority": 90,
+        "target": [
+          "updatedb.plocate",
+          "8",
+          "plocate"
+        ],
+        "sourcePath": "usr/share/man/man8/updatedb.plocate.8.gz"
+      },
+      {
+        "name": "policy-rc.d",
+        "section": "8",
+        "package": "policyrcd-script-zg2",
+        "priority": 10,
+        "target": [
+          "zg-policy-rc.d",
+          "8",
+          "policyrcd-script-zg2"
+        ],
+        "sourcePath": "usr/share/man/man8/zg-policy-rc.d.8.gz"
+      },
+      {
+        "name": "poedit",
+        "section": "1",
+        "package": "potool",
+        "priority": 80,
+        "target": [
+          "potooledit",
+          "1",
+          "potool"
+        ],
+        "sourcePath": "usr/share/man/man1/potooledit.1.gz"
+      },
+      {
+        "name": "x-terminal-emulator",
+        "section": "1",
+        "package": "pterm",
+        "priority": 20,
+        "target": [
+          "pterm",
+          "1",
+          "pterm"
+        ],
+        "sourcePath": "usr/share/man/man1/pterm.1.gz"
+      },
+      {
+        "name": "cymruwhois",
+        "section": "1",
+        "package": "python3-cymruwhois",
+        "priority": 200,
+        "target": [
+          "python3-cymruwhois",
+          "1",
+          "python3-cymruwhois"
+        ],
+        "sourcePath": "usr/share/man/man1/python3-cymruwhois.1.gz"
+      },
+      {
+        "name": "qalculate",
+        "section": "1",
+        "package": "qalculate-gtk",
+        "priority": 20,
+        "target": [
+          "qalculate-gtk",
+          "1",
+          "qalculate-gtk"
+        ],
+        "sourcePath": "usr/share/man/man1/qalculate-gtk.1.gz"
+      },
+      {
+        "name": "rt",
+        "section": "1",
+        "package": "rt5-clients",
+        "priority": 240,
+        "target": [
+          "rt-5",
+          "1",
+          "rt5-clients"
+        ],
+        "sourcePath": "usr/share/man/man1/rt-5.1.gz"
+      },
+      {
+        "name": "rt-mailgate",
+        "section": "1",
+        "package": "rt5-clients",
+        "priority": 240,
+        "target": [
+          "rt-mailgate-5",
+          "1",
+          "rt5-clients"
+        ],
+        "sourcePath": "usr/share/man/man1/rt-mailgate-5.1.gz"
+      },
+      {
+        "name": "rt::extension::resetpassword",
+        "section": "3pm",
+        "package": "rt5-extension-resetpassword",
+        "priority": 890,
+        "target": [
+          "rt::extension::resetpassword-5",
+          "3pm",
+          "rt5-extension-resetpassword"
+        ],
+        "sourcePath": "usr/share/man/man3/RT::Extension::ResetPassword-5.3pm.gz"
+      },
+      {
+        "name": "x-window-manager",
+        "section": "1",
+        "package": "sawfish",
+        "priority": 70,
+        "target": [
+          "sawfish",
+          "1",
+          "sawfish"
+        ],
+        "sourcePath": "usr/share/man/man1/sawfish.1.gz"
+      },
+      {
+        "name": "ssh-askpass",
+        "section": "1",
+        "package": "ssh-askpass-fullscreen",
+        "priority": 30,
+        "target": [
+          "ssh-askpass-fullscreen",
+          "1",
+          "ssh-askpass-fullscreen"
+        ],
+        "sourcePath": "usr/share/man/man1/ssh-askpass-fullscreen.1.gz"
+      },
+      {
+        "name": "x-www-browser",
+        "section": "1",
+        "package": "surf",
+        "priority": 30,
+        "target": [
+          "surf",
+          "1",
+          "surf"
+        ],
+        "sourcePath": "usr/share/man/man1/surf.1.gz"
+      },
+      {
+        "name": "rmt",
+        "section": "8",
+        "package": "tar",
+        "priority": 50,
+        "target": [
+          "rmt-tar",
+          "8",
+          "tar"
+        ],
+        "sourcePath": "usr/share/man/man8/rmt-tar.8.gz"
+      },
+      {
+        "name": "xvnc",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "xtightvnc",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/Xtightvnc.1.gz"
+      },
+      {
+        "name": "vncconnect",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "tightvncconnect",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/tightvncconnect.1.gz"
+      },
+      {
+        "name": "vncserver",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "tightvncserver",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/tightvncserver.1.gz"
+      },
+      {
+        "name": "pager",
+        "section": "1",
+        "package": "util-linux",
+        "priority": 50,
+        "target": [
+          "more",
+          "1",
+          "util-linux"
+        ],
+        "sourcePath": "usr/share/man/man1/more.1.gz"
+      },
+      {
+        "name": "uwsgi",
+        "section": "1",
+        "package": "uwsgi-core",
+        "priority": 75,
+        "target": [
+          "uwsgi-core",
+          "1",
+          "uwsgi-core"
+        ],
+        "sourcePath": "usr/share/man/man1/uwsgi-core.1.gz"
+      },
+      {
+        "name": "uwsgi",
+        "section": "1",
+        "package": "uwsgi-plugin-php",
+        "priority": 35,
+        "target": [
+          "uwsgi_php",
+          "1",
+          "uwsgi-plugin-php"
+        ],
+        "sourcePath": "usr/share/man/man1/uwsgi_php.1.gz"
+      },
+      {
+        "name": "editor",
+        "section": "1",
+        "package": "vim",
+        "priority": 30,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "ex",
+        "section": "1",
+        "package": "vim",
+        "priority": 30,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "vi",
+        "section": "1",
+        "package": "vim",
+        "priority": 30,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "view",
+        "section": "1",
+        "package": "vim",
+        "priority": 30,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "x-window-manager",
+        "section": "1",
+        "package": "w9wm",
+        "priority": 20,
+        "target": [
+          "w9wm",
+          "1x",
+          "w9wm"
+        ],
+        "sourcePath": "usr/share/man/man1/w9wm.1x.gz"
+      },
+      {
+        "name": "x-window-manager",
+        "section": "1",
+        "package": "xfwm4",
+        "priority": 60,
+        "target": [
+          "xfwm4",
+          "1",
+          "xfwm4"
+        ],
+        "sourcePath": "usr/share/man/man1/xfwm4.1.gz"
+      },
+      {
+        "name": "zcode-interpreter",
+        "section": "6",
+        "package": "xzip",
+        "priority": 0,
+        "target": [
+          "xzip",
+          "6",
+          "xzip"
+        ],
+        "sourcePath": "usr/share/man/man6/xzip.6.gz"
+      }
+    ],
+    "alternativeDefaults": [
+      {
+        "name": "pico",
+        "section": "1",
+        "package": "alpine-pico",
+        "priority": 40,
+        "target": [
+          "pico.alpine",
+          "1",
+          "alpine-pico"
+        ],
+        "sourcePath": "usr/share/man/man1/pico.alpine.1.gz"
+      },
+      {
+        "name": "autokey",
+        "section": "1",
+        "package": "autokey-qt",
+        "priority": 60,
+        "target": [
+          "autokey-qt",
+          "1",
+          "autokey-qt"
+        ],
+        "sourcePath": "usr/share/man/man1/autokey-qt.1.gz"
+      },
+      {
+        "name": "builtins",
+        "section": "7",
+        "package": "bash",
+        "priority": 10,
+        "target": [
+          "bash-builtins",
+          "7",
+          "bash"
+        ],
+        "sourcePath": "usr/share/man/man7/bash-builtins.7.gz"
+      },
+      {
+        "name": "scheme",
+        "section": "1",
+        "package": "chezscheme",
+        "priority": 20,
+        "target": [
+          "chezscheme",
+          "1",
+          "chezscheme"
+        ],
+        "sourcePath": "usr/share/man/man1/chezscheme.1.gz"
+      },
+      {
+        "name": "scheme-script",
+        "section": "1",
+        "package": "chezscheme",
+        "priority": 20,
+        "target": [
+          "chezscheme",
+          "1",
+          "chezscheme"
+        ],
+        "sourcePath": "usr/share/man/man1/scheme-script-chez.1.gz"
+      },
+      {
+        "name": "x-session-manager",
+        "section": "1",
+        "package": "cinnamon-session",
+        "priority": 50,
+        "target": [
+          "cinnamon-session",
+          "1",
+          "cinnamon-session"
+        ],
+        "sourcePath": "usr/share/man/man1/cinnamon-session.1.gz"
+      },
+      {
+        "name": "awk",
+        "section": "1",
+        "package": "gawk",
+        "priority": 10,
+        "target": [
+          "gawk",
+          "1",
+          "gawk"
+        ],
+        "sourcePath": "usr/share/man/man1/gawk.1.gz"
+      },
+      {
+        "name": "nawk",
+        "section": "1",
+        "package": "gawk",
+        "priority": 10,
+        "target": [
+          "gawk",
+          "1",
+          "gawk"
+        ],
+        "sourcePath": "usr/share/man/man1/gawk.1.gz"
+      },
+      {
+        "name": "c89",
+        "section": "1",
+        "package": "gcc",
+        "priority": 20,
+        "target": [
+          "c89-gcc",
+          "1",
+          "gcc"
+        ],
+        "sourcePath": "usr/share/man/man1/c89-gcc.1.gz"
+      },
+      {
+        "name": "c99",
+        "section": "1",
+        "package": "gcc",
+        "priority": 20,
+        "target": [
+          "c99-gcc",
+          "1",
+          "gcc"
+        ],
+        "sourcePath": "usr/share/man/man1/c99-gcc.1.gz"
+      },
+      {
+        "name": "hy",
+        "section": "1",
+        "package": "hy",
+        "priority": 60,
+        "target": [
+          "hy3",
+          "1",
+          "hy"
+        ],
+        "sourcePath": "usr/share/man/man1/hy3.1.gz"
+      },
+      {
+        "name": "talk",
+        "section": "1",
+        "package": "inetutils-talk",
+        "priority": 100,
+        "target": [
+          "inetutils-talk",
+          "1",
+          "inetutils-talk"
+        ],
+        "sourcePath": "usr/share/man/man1/inetutils-talk.1.gz"
+      },
+      {
+        "name": "infobrowser",
+        "section": "1",
+        "package": "info",
+        "priority": 60,
+        "target": [
+          "info",
+          "1",
+          "info"
+        ],
+        "sourcePath": "usr/share/man/man1/info.1.gz"
+      },
+      {
+        "name": "arptables",
+        "section": "8",
+        "package": "iptables",
+        "priority": 20,
+        "target": [
+          "arptables-nft",
+          "8",
+          "iptables"
+        ],
+        "sourcePath": "usr/share/man/man8/arptables-nft.8.gz"
+      },
+      {
+        "name": "ebtables",
+        "section": "8",
+        "package": "iptables",
+        "priority": 20,
+        "target": [
+          "ebtables-nft",
+          "8",
+          "iptables"
+        ],
+        "sourcePath": "usr/share/man/man8/ebtables-nft.8.gz"
+      },
+      {
+        "name": "lzip",
+        "section": "1",
+        "package": "lunzip",
+        "priority": -1000,
+        "target": [
+          "lzip.lunzip",
+          "1",
+          "lunzip"
+        ],
+        "sourcePath": "usr/share/man/man1/lzip.lunzip.1.gz"
+      },
+      {
+        "name": "lzip-decompressor",
+        "section": "1",
+        "package": "lunzip",
+        "priority": -1000,
+        "target": [
+          "lzip.lunzip",
+          "1",
+          "lunzip"
+        ],
+        "sourcePath": "usr/share/man/man1/lzip.lunzip.1.gz"
+      },
+      {
+        "name": "x-terminal-emulator",
+        "section": "1",
+        "package": "lxterminal",
+        "priority": 20,
+        "target": [
+          "lxterminal",
+          "1",
+          "lxterminal"
+        ],
+        "sourcePath": "usr/share/man/man1/lxterminal.1.gz"
+      },
+      {
+        "name": "cli-ildasm",
+        "section": "1",
+        "package": "mono-utils",
+        "priority": 10,
+        "target": [
+          "monodis",
+          "1",
+          "mono-utils"
+        ],
+        "sourcePath": "usr/share/man/man1/monodis.1.gz"
+      },
+      {
+        "name": "mp3-decoder",
+        "section": "1",
+        "package": "mpg321",
+        "priority": 50,
+        "target": [
+          "mpg321",
+          "1",
+          "mpg321"
+        ],
+        "sourcePath": "usr/share/man/man1/mpg321.1.gz"
+      },
+      {
+        "name": "mpg123",
+        "section": "1",
+        "package": "mpg321",
+        "priority": 50,
+        "target": [
+          "mpg321",
+          "1",
+          "mpg321"
+        ],
+        "sourcePath": "usr/share/man/man1/mpg321.1.gz"
+      },
+      {
+        "name": "traceroute6",
+        "section": "8",
+        "package": "ndisc6",
+        "priority": 110,
+        "target": [
+          "rltraceroute6",
+          "8",
+          "ndisc6"
+        ],
+        "sourcePath": "usr/share/man/man8/rltraceroute6.8.gz"
+      },
+      {
+        "name": "nc",
+        "section": "1",
+        "package": "netcat-openbsd",
+        "priority": 50,
+        "target": [
+          "nc_openbsd",
+          "1",
+          "netcat-openbsd"
+        ],
+        "sourcePath": "usr/share/man/man1/nc_openbsd.1.gz"
+      },
+      {
+        "name": "netcat",
+        "section": "1",
+        "package": "netcat-openbsd",
+        "priority": 50,
+        "target": [
+          "nc_openbsd",
+          "1",
+          "netcat-openbsd"
+        ],
+        "sourcePath": "usr/share/man/man1/nc_openbsd.1.gz"
+      },
+      {
+        "name": "pagsh",
+        "section": "1",
+        "package": "openafs-client",
+        "priority": 100,
+        "target": [
+          "pagsh.openafs",
+          "1",
+          "openafs-client"
+        ],
+        "sourcePath": "usr/share/man/man1/pagsh.openafs.1.gz"
+      },
+      {
+        "name": "php-cgi",
+        "section": "1",
+        "package": "php-cgi",
+        "priority": 100,
+        "target": [
+          "php8.4",
+          "1",
+          "php8.4-cli"
+        ],
+        "sourcePath": "usr/share/man/man1/php-cgi.default.1.gz"
+      },
+      {
+        "name": "pinentry",
+        "section": "1",
+        "package": "pinentry-tty",
+        "priority": 30,
+        "target": [
+          "pinentry-tty",
+          "1",
+          "pinentry-tty"
+        ],
+        "sourcePath": "usr/share/man/man1/pinentry-tty.1.gz"
+      },
+      {
+        "name": "locate",
+        "section": "1",
+        "package": "plocate",
+        "priority": 90,
+        "target": [
+          "plocate",
+          "1",
+          "plocate"
+        ],
+        "sourcePath": "usr/share/man/man1/plocate.1.gz"
+      },
+      {
+        "name": "updatedb",
+        "section": "8",
+        "package": "plocate",
+        "priority": 90,
+        "target": [
+          "updatedb.plocate",
+          "8",
+          "plocate"
+        ],
+        "sourcePath": "usr/share/man/man8/updatedb.plocate.8.gz"
+      },
+      {
+        "name": "policy-rc.d",
+        "section": "8",
+        "package": "policyrcd-script-zg2",
+        "priority": 10,
+        "target": [
+          "zg-policy-rc.d",
+          "8",
+          "policyrcd-script-zg2"
+        ],
+        "sourcePath": "usr/share/man/man8/zg-policy-rc.d.8.gz"
+      },
+      {
+        "name": "poedit",
+        "section": "1",
+        "package": "potool",
+        "priority": 80,
+        "target": [
+          "potooledit",
+          "1",
+          "potool"
+        ],
+        "sourcePath": "usr/share/man/man1/potooledit.1.gz"
+      },
+      {
+        "name": "cymruwhois",
+        "section": "1",
+        "package": "python3-cymruwhois",
+        "priority": 200,
+        "target": [
+          "python3-cymruwhois",
+          "1",
+          "python3-cymruwhois"
+        ],
+        "sourcePath": "usr/share/man/man1/python3-cymruwhois.1.gz"
+      },
+      {
+        "name": "qalculate",
+        "section": "1",
+        "package": "qalculate-gtk",
+        "priority": 20,
+        "target": [
+          "qalculate-gtk",
+          "1",
+          "qalculate-gtk"
+        ],
+        "sourcePath": "usr/share/man/man1/qalculate-gtk.1.gz"
+      },
+      {
+        "name": "rt",
+        "section": "1",
+        "package": "rt5-clients",
+        "priority": 240,
+        "target": [
+          "rt-5",
+          "1",
+          "rt5-clients"
+        ],
+        "sourcePath": "usr/share/man/man1/rt-5.1.gz"
+      },
+      {
+        "name": "rt-mailgate",
+        "section": "1",
+        "package": "rt5-clients",
+        "priority": 240,
+        "target": [
+          "rt-mailgate-5",
+          "1",
+          "rt5-clients"
+        ],
+        "sourcePath": "usr/share/man/man1/rt-mailgate-5.1.gz"
+      },
+      {
+        "name": "rt::extension::resetpassword",
+        "section": "3pm",
+        "package": "rt5-extension-resetpassword",
+        "priority": 890,
+        "target": [
+          "rt::extension::resetpassword-5",
+          "3pm",
+          "rt5-extension-resetpassword"
+        ],
+        "sourcePath": "usr/share/man/man3/RT::Extension::ResetPassword-5.3pm.gz"
+      },
+      {
+        "name": "ssh-askpass",
+        "section": "1",
+        "package": "ssh-askpass-fullscreen",
+        "priority": 30,
+        "target": [
+          "ssh-askpass-fullscreen",
+          "1",
+          "ssh-askpass-fullscreen"
+        ],
+        "sourcePath": "usr/share/man/man1/ssh-askpass-fullscreen.1.gz"
+      },
+      {
+        "name": "x-www-browser",
+        "section": "1",
+        "package": "surf",
+        "priority": 30,
+        "target": [
+          "surf",
+          "1",
+          "surf"
+        ],
+        "sourcePath": "usr/share/man/man1/surf.1.gz"
+      },
+      {
+        "name": "rmt",
+        "section": "8",
+        "package": "tar",
+        "priority": 50,
+        "target": [
+          "rmt-tar",
+          "8",
+          "tar"
+        ],
+        "sourcePath": "usr/share/man/man8/rmt-tar.8.gz"
+      },
+      {
+        "name": "xvnc",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "xtightvnc",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/Xtightvnc.1.gz"
+      },
+      {
+        "name": "vncconnect",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "tightvncconnect",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/tightvncconnect.1.gz"
+      },
+      {
+        "name": "vncserver",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "tightvncserver",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/tightvncserver.1.gz"
+      },
+      {
+        "name": "pager",
+        "section": "1",
+        "package": "util-linux",
+        "priority": 50,
+        "target": [
+          "more",
+          "1",
+          "util-linux"
+        ],
+        "sourcePath": "usr/share/man/man1/more.1.gz"
+      },
+      {
+        "name": "uwsgi",
+        "section": "1",
+        "package": "uwsgi-core",
+        "priority": 75,
+        "target": [
+          "uwsgi-core",
+          "1",
+          "uwsgi-core"
+        ],
+        "sourcePath": "usr/share/man/man1/uwsgi-core.1.gz"
+      },
+      {
+        "name": "editor",
+        "section": "1",
+        "package": "vim",
+        "priority": 30,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "ex",
+        "section": "1",
+        "package": "vim",
+        "priority": 30,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "vi",
+        "section": "1",
+        "package": "vim",
+        "priority": 30,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "view",
+        "section": "1",
+        "package": "vim",
+        "priority": 30,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "x-window-manager",
+        "section": "1",
+        "package": "xfwm4",
+        "priority": 60,
+        "target": [
+          "xfwm4",
+          "1",
+          "xfwm4"
+        ],
+        "sourcePath": "usr/share/man/man1/xfwm4.1.gz"
+      },
+      {
+        "name": "zcode-interpreter",
+        "section": "6",
+        "package": "xzip",
+        "priority": 0,
+        "target": [
+          "xzip",
+          "6",
+          "xzip"
+        ],
+        "sourcePath": "usr/share/man/man6/xzip.6.gz"
+      }
+    ],
+    "restoredNames": [
+      [
+        "arptables",
+        "8"
+      ],
+      [
+        "autokey",
+        "1"
+      ],
+      [
+        "awk",
+        "1"
+      ],
+      [
+        "builtins",
+        "7"
+      ],
+      [
+        "c89",
+        "1"
+      ],
+      [
+        "c99",
+        "1"
+      ],
+      [
+        "cli-ildasm",
+        "1"
+      ],
+      [
+        "cymruwhois",
+        "1"
+      ],
+      [
+        "ebtables",
+        "8"
+      ],
+      [
+        "editor",
+        "1"
+      ],
+      [
+        "ex",
+        "1"
+      ],
+      [
+        "hy",
+        "1"
+      ],
+      [
+        "infobrowser",
+        "1"
+      ],
+      [
+        "locate",
+        "1"
+      ],
+      [
+        "lzip",
+        "1"
+      ],
+      [
+        "lzip-decompressor",
+        "1"
+      ],
+      [
+        "mp3-decoder",
+        "1"
+      ],
+      [
+        "mpg123",
+        "1"
+      ],
+      [
+        "nawk",
+        "1"
+      ],
+      [
+        "nc",
+        "1"
+      ],
+      [
+        "netcat",
+        "1"
+      ],
+      [
+        "pager",
+        "1"
+      ],
+      [
+        "pagsh",
+        "1"
+      ],
+      [
+        "php-cgi",
+        "1"
+      ],
+      [
+        "pico",
+        "1"
+      ],
+      [
+        "pinentry",
+        "1"
+      ],
+      [
+        "poedit",
+        "1"
+      ],
+      [
+        "policy-rc.d",
+        "8"
+      ],
+      [
+        "qalculate",
+        "1"
+      ],
+      [
+        "rmt",
+        "8"
+      ],
+      [
+        "rt",
+        "1"
+      ],
+      [
+        "rt-mailgate",
+        "1"
+      ],
+      [
+        "rt::extension::resetpassword",
+        "3pm"
+      ],
+      [
+        "scheme",
+        "1"
+      ],
+      [
+        "scheme-script",
+        "1"
+      ],
+      [
+        "ssh-askpass",
+        "1"
+      ],
+      [
+        "talk",
+        "1"
+      ],
+      [
+        "traceroute6",
+        "8"
+      ],
+      [
+        "updatedb",
+        "8"
+      ],
+      [
+        "uwsgi",
+        "1"
+      ],
+      [
+        "vi",
+        "1"
+      ],
+      [
+        "view",
+        "1"
+      ],
+      [
+        "vncconnect",
+        "1"
+      ],
+      [
+        "vncserver",
+        "1"
+      ],
+      [
+        "x-session-manager",
+        "1"
+      ],
+      [
+        "x-terminal-emulator",
+        "1"
+      ],
+      [
+        "x-window-manager",
+        "1"
+      ],
+      [
+        "x-www-browser",
+        "1"
+      ],
+      [
+        "xvnc",
+        "1"
+      ],
+      [
+        "zcode-interpreter",
+        "6"
+      ]
+    ],
+    "canonicalPages": 13281,
+    "alternativesSkipped": [
+      {
+        "package": "gcc",
+        "group": "cc",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/gcc"
+      },
+      {
+        "package": "initscripts",
+        "line": 125,
+        "reason": "registration has no English manual slave",
+        "group": "runsystem"
+      },
+      {
+        "package": "joe-jupp",
+        "line": 33,
+        "reason": "dynamic shell expression"
+      },
+      {
+        "package": "lcl-utils-4.0",
+        "line": 32,
+        "reason": "unresolved variable UPDATE_CFG_FILE_ALTERNATIVES"
+      },
+      {
+        "package": "mplayer",
+        "group": "mplayer",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/mplayer-altivec"
+      },
+      {
+        "package": "mplayer",
+        "group": "mplayer",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/mplayer-noaltivec"
+      },
+      {
+        "package": "nethack-qt",
+        "line": 5,
+        "reason": "registration has no English manual slave",
+        "group": "nethack"
+      },
+      {
+        "package": "php-cgi",
+        "line": 8,
+        "reason": "registration has no English manual slave",
+        "group": "php-cgi-bin"
+      },
+      {
+        "package": "tigervnc-tools",
+        "line": 10,
+        "reason": "unresolved variable notiger"
+      },
+      {
+        "package": "vim",
+        "group": "rview",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.basic"
+      },
+      {
+        "package": "vim",
+        "group": "rvim",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.basic"
+      },
+      {
+        "package": "vim",
+        "group": "vim",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.basic"
+      },
+      {
+        "package": "vim",
+        "group": "vimdiff",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.basic"
+      },
+      {
+        "package": "wireless-regdb",
+        "line": 18,
+        "reason": "registration has no English manual slave",
+        "group": "regulatory.db"
+      },
+      {
+        "package": "wireless-regdb",
+        "line": 19,
+        "reason": "registration has no English manual slave",
+        "group": "regulatory.db"
+      },
+      {
+        "package": "gcc",
+        "name": "cc",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "name": "ip6tables",
+        "section": "8",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "iptables",
+        "section": "8",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "mplayer",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "package": "vim",
+        "name": "rview",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "package": "vim",
+        "name": "rvim",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "package": "vim",
+        "name": "vim",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "package": "vim",
+        "name": "vimdiff",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      }
+    ],
+    "alternateProviders": 14,
+    "unresolved": 0,
+    "parseFailures": 4,
+    "indexSeconds": 6.122104250011034,
+    "acquireSeconds": 0.0001973749604076147,
+    "parseSeconds": 64.30452537501696,
+    "licenseSeconds": 0.20158250001259148,
+    "licenses": 2000,
+    "maxLicenseBytes": 622747,
+    "missingLicenses": [],
+    "cachedPackages": 2107,
+    "parentPeakRssBytes": 204652544,
+    "largestChildPeakRssBytes": 145522688,
+    "sourceBytes": 51234139,
+    "spoolBytes": 283316224,
+    "workspaceLogicalBytes": 4848225589,
+    "archiveConcurrencyBoundBytes": 270359640,
+    "workers": 2,
+    "pinsSha256": "172d0e358555dcf1c1c97d0afaab8d2f627eaeb4e92bbb4a592e1079f727f7a7",
+    "failures": [
+      {
+        "package": "mjpegtools",
+        "path": "usr/share/man/man1/mjpegtools.1.gz",
+        "error": "Roff escape/control-character change is unsupported"
+      },
+      {
+        "package": "nomarch",
+        "path": "usr/share/man/man1/nomarch.1.gz",
+        "error": "Roff escape/control-character change is unsupported"
+      },
+      {
+        "package": "sqlite3",
+        "path": "usr/share/man/man1/sqlite3.1.gz",
+        "error": "Roff escape/control-character change is unsupported"
+      },
+      {
+        "package": "tio",
+        "path": "usr/share/man/man1/tio.1.gz",
+        "error": "Roff escape/control-character change is unsupported"
+      }
+    ],
+    "missing": []
+  },
+  "copyrightStress": {
+    "seconds": 7.944788082968444,
+    "notices": {
+      "chromium": 284231,
+      "firefox-esr": 82470,
+      "libreoffice-core": 20199,
+      "texlive-binaries": 27246,
+      "rustc": 147871,
+      "qt6-tools-dev-tools": 12116
+    }
+  },
+  "previousPolicySample": {
+    "samplePackages": 2000,
     "dependencyPackages": 74,
     "fullPackages": 17314,
     "fullDownloadBytes": 18391405004,
@@ -2027,7 +3888,7 @@
     "failures": [],
     "missing": []
   },
-  "localPublish": {
+  "previousPolicyLocalPublish": {
     "releaseId": "2026-10-29T03:47:02Z+debian+local-scale-debs+mandoc:host",
     "seconds": 135.92555812501814,
     "timings": {
@@ -2124,7 +3985,7 @@
     },
     "footprintSeconds": 38.789262040983886
   },
-  "alternativesAudit": {
+  "previousPolicyAlternativesAudit": {
     "samplePackages": 21,
     "dependencyPackages": 33,
     "fullPackages": 17314,
@@ -3656,7 +5517,7 @@
     "failures": [],
     "missing": []
   },
-  "verifiedPublicRoutes": {
+  "previousPolicyVerifiedPublicRoutes": {
     "which": {
       "name": "which.debianutils",
       "section": "1",
@@ -3862,15 +5723,1463 @@
       ]
     }
   },
-  "copyrightStress": {
-    "seconds": 7.944788082968444,
-    "notices": {
-      "chromium": 284231,
-      "firefox-esr": 82470,
-      "libreoffice-core": 20199,
-      "texlive-binaries": 27246,
-      "rustc": 147871,
-      "qt6-tools-dev-tools": 12116
-    }
+  "providerAndRoffAudit": {
+    "routes": {
+      "awk": {
+        "status": "alias",
+        "registrationPackage": "mawk",
+        "packagePriority": "required",
+        "installed": 294539,
+        "manualPackage": "mawk",
+        "manualPath": "usr/share/man/man1/mawk.1.gz"
+      },
+      "c++": {
+        "status": "omitted",
+        "reason": "winning provider has no English manual; route omitted",
+        "registrationPackage": "g++",
+        "packagePriority": "optional",
+        "installed": 156176
+      },
+      "cc": {
+        "status": "omitted",
+        "reason": "winning provider has no English manual; route omitted",
+        "registrationPackage": "gcc",
+        "packagePriority": "optional",
+        "installed": 165444
+      },
+      "editor": {
+        "status": "alias",
+        "registrationPackage": "nano",
+        "packagePriority": "important",
+        "installed": 290480,
+        "manualPackage": "nano",
+        "manualPath": "usr/share/man/man1/nano.1.gz"
+      },
+      "ex": {
+        "status": "alias",
+        "registrationPackage": "vim-tiny",
+        "packagePriority": "important",
+        "installed": 289379,
+        "manualPackage": "vim-common",
+        "manualPath": "usr/share/man/man1/vim.1.gz"
+      },
+      "ftp": {
+        "status": "package-owned page",
+        "registrationPackage": "ftp.app",
+        "packagePriority": "optional",
+        "installed": 54,
+        "manualPackage": "ftp.app",
+        "manualPath": "usr/share/man/man1/FTP.1.gz"
+      },
+      "java": {
+        "status": "package-owned page",
+        "registrationPackage": "openjdk-21-jre-headless",
+        "packagePriority": "optional",
+        "installed": 36467,
+        "manualPackage": "openjdk-21-jre-headless",
+        "manualPath": "usr/lib/jvm/java-21-openjdk-amd64/man/man1/java.1.gz"
+      },
+      "pager": {
+        "status": "alias",
+        "registrationPackage": "util-linux",
+        "packagePriority": "required",
+        "installed": 295050,
+        "manualPackage": "util-linux",
+        "manualPath": "usr/share/man/man1/more.1.gz"
+      },
+      "view": {
+        "status": "alias",
+        "registrationPackage": "vim-tiny",
+        "packagePriority": "important",
+        "installed": 289379,
+        "manualPackage": "vim-common",
+        "manualPath": "usr/share/man/man1/vim.1.gz"
+      },
+      "x-terminal-emulator": {
+        "status": "alias",
+        "registrationPackage": "xterm",
+        "packagePriority": "optional",
+        "installed": 117460,
+        "manualPackage": "xterm",
+        "manualPath": "usr/share/man/man1/lxterm.1.gz"
+      },
+      "yacc": {
+        "status": "alias",
+        "registrationPackage": "bison",
+        "packagePriority": "optional",
+        "installed": 20605,
+        "manualPackage": "bison",
+        "manualPath": "usr/share/man/man1/bison.yacc.1.gz"
+      }
+    },
+    "scope": "fixed 2000-package corpus plus competing providers from pinned trixie/main",
+    "selectedPackages": 2022,
+    "acquiredPackages": 2107,
+    "addedProviders": [
+      "9base",
+      "bison",
+      "byacc",
+      "clang",
+      "ftp.app",
+      "g++",
+      "gnome-terminal",
+      "joe",
+      "mawk",
+      "most",
+      "nano",
+      "openjdk-21-jdk-headless",
+      "openjdk-21-jre-headless",
+      "openjdk-25-jdk-headless",
+      "openjdk-25-jre-headless",
+      "original-awk",
+      "terminator",
+      "tnftp",
+      "vim",
+      "vim-common",
+      "vim-tiny",
+      "xterm"
+    ],
+    "requiredProviders": [
+      "9base",
+      "bison",
+      "byacc",
+      "clang",
+      "ftp.app",
+      "g++",
+      "gawk",
+      "gcc",
+      "gnome-terminal",
+      "joe",
+      "less",
+      "mawk",
+      "most",
+      "nano",
+      "openjdk-21-jdk-headless",
+      "openjdk-21-jre-headless",
+      "openjdk-25-jdk-headless",
+      "openjdk-25-jre-headless",
+      "original-awk",
+      "terminator",
+      "tnftp",
+      "vim",
+      "vim-common",
+      "vim-tiny",
+      "xterm"
+    ],
+    "checkedPages": 13423,
+    "originalCorpusCheckedPages": 13243,
+    "rejectedPages": [
+      {
+        "package": "mjpegtools",
+        "path": "usr/share/man/man1/mjpegtools.1.gz",
+        "name": "mjpegtools",
+        "section": "1",
+        "reason": "Roff escape/control-character change is unsupported",
+        "originalCorpus": true
+      },
+      {
+        "package": "nomarch",
+        "path": "usr/share/man/man1/nomarch.1.gz",
+        "name": "nomarch",
+        "section": "1",
+        "reason": "Roff escape/control-character change is unsupported",
+        "originalCorpus": true
+      },
+      {
+        "package": "sqlite3",
+        "path": "usr/share/man/man1/sqlite3.1.gz",
+        "name": "sqlite3",
+        "section": "1",
+        "reason": "Roff escape/control-character change is unsupported",
+        "originalCorpus": true
+      },
+      {
+        "package": "tio",
+        "path": "usr/share/man/man1/tio.1.gz",
+        "name": "tio",
+        "section": "1",
+        "reason": "Roff escape/control-character change is unsupported",
+        "originalCorpus": true
+      }
+    ],
+    "alternativeDefaults": [
+      {
+        "name": "yacc",
+        "section": "1",
+        "package": "bison",
+        "priority": 100,
+        "target": [
+          "bison.yacc",
+          "1",
+          "bison"
+        ],
+        "sourcePath": "usr/share/man/man1/bison.yacc.1.gz",
+        "packagePriority": "optional",
+        "installed": 20605
+      },
+      {
+        "name": "awk",
+        "section": "1",
+        "package": "mawk",
+        "priority": 5,
+        "target": [
+          "mawk",
+          "1",
+          "mawk"
+        ],
+        "sourcePath": "usr/share/man/man1/mawk.1.gz",
+        "packagePriority": "required",
+        "installed": 294539
+      },
+      {
+        "name": "editor",
+        "section": "1",
+        "package": "nano",
+        "priority": 40,
+        "target": [
+          "nano",
+          "1",
+          "nano"
+        ],
+        "sourcePath": "usr/share/man/man1/nano.1.gz",
+        "packagePriority": "important",
+        "installed": 290480
+      },
+      {
+        "name": "pager",
+        "section": "1",
+        "package": "util-linux",
+        "priority": 50,
+        "target": [
+          "more",
+          "1",
+          "util-linux"
+        ],
+        "sourcePath": "usr/share/man/man1/more.1.gz",
+        "packagePriority": "required",
+        "installed": 295050
+      },
+      {
+        "name": "ex",
+        "section": "1",
+        "package": "vim-tiny",
+        "priority": 15,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz",
+        "packagePriority": "important",
+        "installed": 289379
+      },
+      {
+        "name": "view",
+        "section": "1",
+        "package": "vim-tiny",
+        "priority": 15,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz",
+        "packagePriority": "important",
+        "installed": 289379
+      },
+      {
+        "name": "x-terminal-emulator",
+        "section": "1",
+        "package": "xterm",
+        "priority": 30,
+        "target": [
+          "lxterm",
+          "1",
+          "xterm"
+        ],
+        "sourcePath": "usr/share/man/man1/lxterm.1.gz",
+        "packagePriority": "optional",
+        "installed": 117460
+      }
+    ],
+    "omittedOrOccupied": [
+      {
+        "package": "g++",
+        "name": "c++",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "package": "gcc",
+        "name": "cc",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "name": "ftp",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "java",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      }
+    ],
+    "allAlternativeDefaults": [
+      {
+        "name": "autokey",
+        "section": "1",
+        "package": "autokey-qt",
+        "priority": 60,
+        "target": [
+          "autokey-qt",
+          "1",
+          "autokey-qt"
+        ],
+        "sourcePath": "usr/share/man/man1/autokey-qt.1.gz"
+      },
+      {
+        "name": "builtins",
+        "section": "7",
+        "package": "bash",
+        "priority": 10,
+        "target": [
+          "bash-builtins",
+          "7",
+          "bash"
+        ],
+        "sourcePath": "usr/share/man/man7/bash-builtins.7.gz"
+      },
+      {
+        "name": "yacc",
+        "section": "1",
+        "package": "bison",
+        "priority": 100,
+        "target": [
+          "bison.yacc",
+          "1",
+          "bison"
+        ],
+        "sourcePath": "usr/share/man/man1/bison.yacc.1.gz"
+      },
+      {
+        "name": "scheme",
+        "section": "1",
+        "package": "chezscheme",
+        "priority": 20,
+        "target": [
+          "chezscheme",
+          "1",
+          "chezscheme"
+        ],
+        "sourcePath": "usr/share/man/man1/chezscheme.1.gz"
+      },
+      {
+        "name": "scheme-script",
+        "section": "1",
+        "package": "chezscheme",
+        "priority": 20,
+        "target": [
+          "chezscheme",
+          "1",
+          "chezscheme"
+        ],
+        "sourcePath": "usr/share/man/man1/scheme-script-chez.1.gz"
+      },
+      {
+        "name": "x-session-manager",
+        "section": "1",
+        "package": "cinnamon-session",
+        "priority": 50,
+        "target": [
+          "cinnamon-session",
+          "1",
+          "cinnamon-session"
+        ],
+        "sourcePath": "usr/share/man/man1/cinnamon-session.1.gz"
+      },
+      {
+        "name": "c89",
+        "section": "1",
+        "package": "gcc",
+        "priority": 20,
+        "target": [
+          "c89-gcc",
+          "1",
+          "gcc"
+        ],
+        "sourcePath": "usr/share/man/man1/c89-gcc.1.gz"
+      },
+      {
+        "name": "c99",
+        "section": "1",
+        "package": "gcc",
+        "priority": 20,
+        "target": [
+          "c99-gcc",
+          "1",
+          "gcc"
+        ],
+        "sourcePath": "usr/share/man/man1/c99-gcc.1.gz"
+      },
+      {
+        "name": "hy",
+        "section": "1",
+        "package": "hy",
+        "priority": 60,
+        "target": [
+          "hy3",
+          "1",
+          "hy"
+        ],
+        "sourcePath": "usr/share/man/man1/hy3.1.gz"
+      },
+      {
+        "name": "talk",
+        "section": "1",
+        "package": "inetutils-talk",
+        "priority": 100,
+        "target": [
+          "inetutils-talk",
+          "1",
+          "inetutils-talk"
+        ],
+        "sourcePath": "usr/share/man/man1/inetutils-talk.1.gz"
+      },
+      {
+        "name": "infobrowser",
+        "section": "1",
+        "package": "info",
+        "priority": 60,
+        "target": [
+          "info",
+          "1",
+          "info"
+        ],
+        "sourcePath": "usr/share/man/man1/info.1.gz"
+      },
+      {
+        "name": "arptables",
+        "section": "8",
+        "package": "iptables",
+        "priority": 20,
+        "target": [
+          "arptables-nft",
+          "8",
+          "iptables"
+        ],
+        "sourcePath": "usr/share/man/man8/arptables-nft.8.gz"
+      },
+      {
+        "name": "ebtables",
+        "section": "8",
+        "package": "iptables",
+        "priority": 20,
+        "target": [
+          "ebtables-nft",
+          "8",
+          "iptables"
+        ],
+        "sourcePath": "usr/share/man/man8/ebtables-nft.8.gz"
+      },
+      {
+        "name": "lzip",
+        "section": "1",
+        "package": "lunzip",
+        "priority": -1000,
+        "target": [
+          "lzip.lunzip",
+          "1",
+          "lunzip"
+        ],
+        "sourcePath": "usr/share/man/man1/lzip.lunzip.1.gz"
+      },
+      {
+        "name": "lzip-decompressor",
+        "section": "1",
+        "package": "lunzip",
+        "priority": -1000,
+        "target": [
+          "lzip.lunzip",
+          "1",
+          "lunzip"
+        ],
+        "sourcePath": "usr/share/man/man1/lzip.lunzip.1.gz"
+      },
+      {
+        "name": "awk",
+        "section": "1",
+        "package": "mawk",
+        "priority": 5,
+        "target": [
+          "mawk",
+          "1",
+          "mawk"
+        ],
+        "sourcePath": "usr/share/man/man1/mawk.1.gz"
+      },
+      {
+        "name": "nawk",
+        "section": "1",
+        "package": "mawk",
+        "priority": 5,
+        "target": [
+          "mawk",
+          "1",
+          "mawk"
+        ],
+        "sourcePath": "usr/share/man/man1/mawk.1.gz"
+      },
+      {
+        "name": "cli-ildasm",
+        "section": "1",
+        "package": "mono-utils",
+        "priority": 10,
+        "target": [
+          "monodis",
+          "1",
+          "mono-utils"
+        ],
+        "sourcePath": "usr/share/man/man1/monodis.1.gz"
+      },
+      {
+        "name": "mp3-decoder",
+        "section": "1",
+        "package": "mpg321",
+        "priority": 50,
+        "target": [
+          "mpg321",
+          "1",
+          "mpg321"
+        ],
+        "sourcePath": "usr/share/man/man1/mpg321.1.gz"
+      },
+      {
+        "name": "mpg123",
+        "section": "1",
+        "package": "mpg321",
+        "priority": 50,
+        "target": [
+          "mpg321",
+          "1",
+          "mpg321"
+        ],
+        "sourcePath": "usr/share/man/man1/mpg321.1.gz"
+      },
+      {
+        "name": "editor",
+        "section": "1",
+        "package": "nano",
+        "priority": 40,
+        "target": [
+          "nano",
+          "1",
+          "nano"
+        ],
+        "sourcePath": "usr/share/man/man1/nano.1.gz"
+      },
+      {
+        "name": "pico",
+        "section": "1",
+        "package": "nano",
+        "priority": 10,
+        "target": [
+          "nano",
+          "1",
+          "nano"
+        ],
+        "sourcePath": "usr/share/man/man1/nano.1.gz"
+      },
+      {
+        "name": "traceroute6",
+        "section": "8",
+        "package": "ndisc6",
+        "priority": 110,
+        "target": [
+          "rltraceroute6",
+          "8",
+          "ndisc6"
+        ],
+        "sourcePath": "usr/share/man/man8/rltraceroute6.8.gz"
+      },
+      {
+        "name": "nc",
+        "section": "1",
+        "package": "netcat-openbsd",
+        "priority": 50,
+        "target": [
+          "nc_openbsd",
+          "1",
+          "netcat-openbsd"
+        ],
+        "sourcePath": "usr/share/man/man1/nc_openbsd.1.gz"
+      },
+      {
+        "name": "netcat",
+        "section": "1",
+        "package": "netcat-openbsd",
+        "priority": 50,
+        "target": [
+          "nc_openbsd",
+          "1",
+          "netcat-openbsd"
+        ],
+        "sourcePath": "usr/share/man/man1/nc_openbsd.1.gz"
+      },
+      {
+        "name": "pagsh",
+        "section": "1",
+        "package": "openafs-client",
+        "priority": 100,
+        "target": [
+          "pagsh.openafs",
+          "1",
+          "openafs-client"
+        ],
+        "sourcePath": "usr/share/man/man1/pagsh.openafs.1.gz"
+      },
+      {
+        "name": "php-cgi",
+        "section": "1",
+        "package": "php-cgi",
+        "priority": 100,
+        "target": [
+          "php8.4",
+          "1",
+          "php8.4-cli"
+        ],
+        "sourcePath": "usr/share/man/man1/php-cgi.default.1.gz"
+      },
+      {
+        "name": "pinentry",
+        "section": "1",
+        "package": "pinentry-tty",
+        "priority": 30,
+        "target": [
+          "pinentry-tty",
+          "1",
+          "pinentry-tty"
+        ],
+        "sourcePath": "usr/share/man/man1/pinentry-tty.1.gz"
+      },
+      {
+        "name": "locate",
+        "section": "1",
+        "package": "plocate",
+        "priority": 90,
+        "target": [
+          "plocate",
+          "1",
+          "plocate"
+        ],
+        "sourcePath": "usr/share/man/man1/plocate.1.gz"
+      },
+      {
+        "name": "updatedb",
+        "section": "8",
+        "package": "plocate",
+        "priority": 90,
+        "target": [
+          "updatedb.plocate",
+          "8",
+          "plocate"
+        ],
+        "sourcePath": "usr/share/man/man8/updatedb.plocate.8.gz"
+      },
+      {
+        "name": "policy-rc.d",
+        "section": "8",
+        "package": "policyrcd-script-zg2",
+        "priority": 10,
+        "target": [
+          "zg-policy-rc.d",
+          "8",
+          "policyrcd-script-zg2"
+        ],
+        "sourcePath": "usr/share/man/man8/zg-policy-rc.d.8.gz"
+      },
+      {
+        "name": "poedit",
+        "section": "1",
+        "package": "potool",
+        "priority": 80,
+        "target": [
+          "potooledit",
+          "1",
+          "potool"
+        ],
+        "sourcePath": "usr/share/man/man1/potooledit.1.gz"
+      },
+      {
+        "name": "cymruwhois",
+        "section": "1",
+        "package": "python3-cymruwhois",
+        "priority": 200,
+        "target": [
+          "python3-cymruwhois",
+          "1",
+          "python3-cymruwhois"
+        ],
+        "sourcePath": "usr/share/man/man1/python3-cymruwhois.1.gz"
+      },
+      {
+        "name": "qalculate",
+        "section": "1",
+        "package": "qalculate-gtk",
+        "priority": 20,
+        "target": [
+          "qalculate-gtk",
+          "1",
+          "qalculate-gtk"
+        ],
+        "sourcePath": "usr/share/man/man1/qalculate-gtk.1.gz"
+      },
+      {
+        "name": "rt",
+        "section": "1",
+        "package": "rt5-clients",
+        "priority": 240,
+        "target": [
+          "rt-5",
+          "1",
+          "rt5-clients"
+        ],
+        "sourcePath": "usr/share/man/man1/rt-5.1.gz"
+      },
+      {
+        "name": "rt-mailgate",
+        "section": "1",
+        "package": "rt5-clients",
+        "priority": 240,
+        "target": [
+          "rt-mailgate-5",
+          "1",
+          "rt5-clients"
+        ],
+        "sourcePath": "usr/share/man/man1/rt-mailgate-5.1.gz"
+      },
+      {
+        "name": "rt::extension::resetpassword",
+        "section": "3pm",
+        "package": "rt5-extension-resetpassword",
+        "priority": 890,
+        "target": [
+          "rt::extension::resetpassword-5",
+          "3pm",
+          "rt5-extension-resetpassword"
+        ],
+        "sourcePath": "usr/share/man/man3/RT::Extension::ResetPassword-5.3pm.gz"
+      },
+      {
+        "name": "ssh-askpass",
+        "section": "1",
+        "package": "ssh-askpass-fullscreen",
+        "priority": 30,
+        "target": [
+          "ssh-askpass-fullscreen",
+          "1",
+          "ssh-askpass-fullscreen"
+        ],
+        "sourcePath": "usr/share/man/man1/ssh-askpass-fullscreen.1.gz"
+      },
+      {
+        "name": "x-www-browser",
+        "section": "1",
+        "package": "surf",
+        "priority": 30,
+        "target": [
+          "surf",
+          "1",
+          "surf"
+        ],
+        "sourcePath": "usr/share/man/man1/surf.1.gz"
+      },
+      {
+        "name": "rmt",
+        "section": "8",
+        "package": "tar",
+        "priority": 50,
+        "target": [
+          "rmt-tar",
+          "8",
+          "tar"
+        ],
+        "sourcePath": "usr/share/man/man8/rmt-tar.8.gz"
+      },
+      {
+        "name": "xvnc",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "xtightvnc",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/Xtightvnc.1.gz"
+      },
+      {
+        "name": "vncconnect",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "tightvncconnect",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/tightvncconnect.1.gz"
+      },
+      {
+        "name": "vncserver",
+        "section": "1",
+        "package": "tightvncserver",
+        "priority": 70,
+        "target": [
+          "tightvncserver",
+          "1",
+          "tightvncserver"
+        ],
+        "sourcePath": "usr/share/man/man1/tightvncserver.1.gz"
+      },
+      {
+        "name": "pager",
+        "section": "1",
+        "package": "util-linux",
+        "priority": 50,
+        "target": [
+          "more",
+          "1",
+          "util-linux"
+        ],
+        "sourcePath": "usr/share/man/man1/more.1.gz"
+      },
+      {
+        "name": "uwsgi",
+        "section": "1",
+        "package": "uwsgi-core",
+        "priority": 75,
+        "target": [
+          "uwsgi-core",
+          "1",
+          "uwsgi-core"
+        ],
+        "sourcePath": "usr/share/man/man1/uwsgi-core.1.gz"
+      },
+      {
+        "name": "ex",
+        "section": "1",
+        "package": "vim-tiny",
+        "priority": 15,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "vi",
+        "section": "1",
+        "package": "vim-tiny",
+        "priority": 15,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "view",
+        "section": "1",
+        "package": "vim-tiny",
+        "priority": 15,
+        "target": [
+          "vim",
+          "1",
+          "vim-common"
+        ],
+        "sourcePath": "usr/share/man/man1/vim.1.gz"
+      },
+      {
+        "name": "x-window-manager",
+        "section": "1",
+        "package": "xfwm4",
+        "priority": 60,
+        "target": [
+          "xfwm4",
+          "1",
+          "xfwm4"
+        ],
+        "sourcePath": "usr/share/man/man1/xfwm4.1.gz"
+      },
+      {
+        "name": "x-terminal-emulator",
+        "section": "1",
+        "package": "xterm",
+        "priority": 30,
+        "target": [
+          "lxterm",
+          "1",
+          "xterm"
+        ],
+        "sourcePath": "usr/share/man/man1/lxterm.1.gz"
+      },
+      {
+        "name": "zcode-interpreter",
+        "section": "6",
+        "package": "xzip",
+        "priority": 0,
+        "target": [
+          "xzip",
+          "6",
+          "xzip"
+        ],
+        "sourcePath": "usr/share/man/man6/xzip.6.gz"
+      }
+    ],
+    "skipped": [
+      {
+        "package": "g++",
+        "group": "c++",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/g++"
+      },
+      {
+        "package": "gcc",
+        "group": "cc",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/gcc"
+      },
+      {
+        "package": "initscripts",
+        "line": 125,
+        "reason": "registration has no English manual slave",
+        "group": "runsystem"
+      },
+      {
+        "package": "joe-jupp",
+        "line": 33,
+        "reason": "dynamic shell expression"
+      },
+      {
+        "package": "lcl-utils-4.0",
+        "line": 32,
+        "reason": "unresolved variable UPDATE_CFG_FILE_ALTERNATIVES"
+      },
+      {
+        "package": "mplayer",
+        "group": "mplayer",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/mplayer-altivec"
+      },
+      {
+        "package": "mplayer",
+        "group": "mplayer",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/mplayer-noaltivec"
+      },
+      {
+        "package": "nethack-qt",
+        "line": 5,
+        "reason": "registration has no English manual slave",
+        "group": "nethack"
+      },
+      {
+        "package": "openjdk-21-jre-headless",
+        "group": "jexec",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/lib/jvm/java-21-openjdk-amd64/lib/jexec"
+      },
+      {
+        "package": "openjdk-25-jre-headless",
+        "group": "jexec",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/lib/jvm/java-25-openjdk-amd64/lib/jexec"
+      },
+      {
+        "package": "php-cgi",
+        "line": 8,
+        "reason": "registration has no English manual slave",
+        "group": "php-cgi-bin"
+      },
+      {
+        "package": "tigervnc-tools",
+        "line": 10,
+        "reason": "unresolved variable notiger"
+      },
+      {
+        "package": "vim",
+        "group": "rview",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.basic"
+      },
+      {
+        "package": "vim",
+        "group": "rvim",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.basic"
+      },
+      {
+        "package": "vim",
+        "group": "vim",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.basic"
+      },
+      {
+        "package": "vim",
+        "group": "vimdiff",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.basic"
+      },
+      {
+        "package": "vim-tiny",
+        "group": "rview",
+        "reason": "binary target has no unique same-package English manual",
+        "target": "/usr/bin/vim.tiny"
+      },
+      {
+        "package": "wireless-regdb",
+        "line": 18,
+        "reason": "registration has no English manual slave",
+        "group": "regulatory.db"
+      },
+      {
+        "package": "wireless-regdb",
+        "line": 19,
+        "reason": "registration has no English manual slave",
+        "group": "regulatory.db"
+      },
+      {
+        "package": "g++",
+        "name": "c++",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "package": "gcc",
+        "name": "cc",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "name": "ftp",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "ip6tables",
+        "section": "8",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "iptables",
+        "section": "8",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jar",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jarsigner",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "java",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "javac",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "javadoc",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "javap",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jcmd",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jdb",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jdeprscan",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jdeps",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "package": "openjdk-21-jre-headless",
+        "name": "jexec",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "winning provider has no English manual"
+      },
+      {
+        "name": "jfr",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jhsdb",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "package": "openjdk-21-jdk-headless",
+        "name": "jimage",
+        "section": "1",
+        "reason": "winning provider has no English manual; route omitted",
+        "detail": "openjdk-21-jdk-headless:usr/lib/jvm/java-21-openjdk-amd64/man/man1/jimage.1.gz"
+      },
+      {
+        "name": "jinfo",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jlink",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jmap",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jmod",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jnativescan",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jpackage",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jps",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jrunscript",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jshell",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jstack",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jstat",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jstatd",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "jwebserver",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "keytool",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "mplayer",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "rc",
+        "section": "1plan9",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "rmiregistry",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "rview",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "rvim",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "serialver",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "vim",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      },
+      {
+        "name": "vimdiff",
+        "section": "1",
+        "reason": "package-owned manual occupies route"
+      }
+    ],
+    "restoredNames": [
+      [
+        "arptables",
+        "8"
+      ],
+      [
+        "autokey",
+        "1"
+      ],
+      [
+        "awk",
+        "1"
+      ],
+      [
+        "builtins",
+        "7"
+      ],
+      [
+        "c89",
+        "1"
+      ],
+      [
+        "c99",
+        "1"
+      ],
+      [
+        "cli-ildasm",
+        "1"
+      ],
+      [
+        "cymruwhois",
+        "1"
+      ],
+      [
+        "ebtables",
+        "8"
+      ],
+      [
+        "editor",
+        "1"
+      ],
+      [
+        "ex",
+        "1"
+      ],
+      [
+        "hy",
+        "1"
+      ],
+      [
+        "infobrowser",
+        "1"
+      ],
+      [
+        "locate",
+        "1"
+      ],
+      [
+        "lzip",
+        "1"
+      ],
+      [
+        "lzip-decompressor",
+        "1"
+      ],
+      [
+        "mp3-decoder",
+        "1"
+      ],
+      [
+        "mpg123",
+        "1"
+      ],
+      [
+        "nawk",
+        "1"
+      ],
+      [
+        "nc",
+        "1"
+      ],
+      [
+        "netcat",
+        "1"
+      ],
+      [
+        "pager",
+        "1"
+      ],
+      [
+        "pagsh",
+        "1"
+      ],
+      [
+        "php-cgi",
+        "1"
+      ],
+      [
+        "pico",
+        "1"
+      ],
+      [
+        "pinentry",
+        "1"
+      ],
+      [
+        "poedit",
+        "1"
+      ],
+      [
+        "policy-rc.d",
+        "8"
+      ],
+      [
+        "qalculate",
+        "1"
+      ],
+      [
+        "rmt",
+        "8"
+      ],
+      [
+        "rt",
+        "1"
+      ],
+      [
+        "rt-mailgate",
+        "1"
+      ],
+      [
+        "rt::extension::resetpassword",
+        "3pm"
+      ],
+      [
+        "scheme",
+        "1"
+      ],
+      [
+        "scheme-script",
+        "1"
+      ],
+      [
+        "ssh-askpass",
+        "1"
+      ],
+      [
+        "talk",
+        "1"
+      ],
+      [
+        "traceroute6",
+        "8"
+      ],
+      [
+        "updatedb",
+        "8"
+      ],
+      [
+        "uwsgi",
+        "1"
+      ],
+      [
+        "vi",
+        "1"
+      ],
+      [
+        "view",
+        "1"
+      ],
+      [
+        "vncconnect",
+        "1"
+      ],
+      [
+        "vncserver",
+        "1"
+      ],
+      [
+        "x-session-manager",
+        "1"
+      ],
+      [
+        "x-terminal-emulator",
+        "1"
+      ],
+      [
+        "x-window-manager",
+        "1"
+      ],
+      [
+        "x-www-browser",
+        "1"
+      ],
+      [
+        "xvnc",
+        "1"
+      ],
+      [
+        "yacc",
+        "1"
+      ],
+      [
+        "zcode-interpreter",
+        "6"
+      ]
+    ],
+    "unresolved": []
+  },
+  "measurementNotes": {
+    "sample": "Current two-worker parser replay of the fixed 2000 packages; acquired cache includes the expanded provider audit. Four explicit control/escape policy rejections.",
+    "previousPolicyLocalPublish": "Historical local Convex storage probe before this fix round. Retained as an planning reference, not a newly measured upload.",
+    "previousPolicyVerifiedPublicRoutes": "Historical routes under superseded election policy; cc/c++ no longer publish alternatives under the current policy.",
+    "providerAndRoffAudit": "Current fixed 2000 plus requested competitor packages. No upload. All added archives verified through the standard acquisition path."
   }
 }

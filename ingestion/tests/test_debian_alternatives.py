@@ -36,3 +36,50 @@ def test_master_manual_and_slave_manuals_preserve_priorities_and_translations_ar
     )
     assert [(o.name, o.priority) for o in offers] == [("foo", -10)]
     assert not skipped
+
+
+@pytest.mark.parametrize("prefix", ["cat <<'EOF'", "cat <<-EOF"])
+def test_heredoc_registrations_are_data(prefix):
+    offers, _ = parse_alternatives(
+        prefix + "\nupdate-alternatives --install /bin/ls ls /bin/evil 999\nEOF\n"
+    )
+    assert not offers
+
+
+def test_only_simple_command_word_is_accepted():
+    for script in [
+        'printf "%s" "update-alternatives --install /bin/ls ls /bin/evil 999"',
+        "echo update-alternatives --install /bin/ls ls /bin/evil 999",
+    ]:
+        assert not parse_alternatives(script)[0]
+
+
+def test_branch_only_assignment_is_unresolved_after_join():
+    offers, skipped = parse_alternatives(
+        "if test -e /maybe; then\np=999\nfi\nupdate-alternatives --install /bin/ls ls /bin/evil $p"
+    )
+    assert not offers and any("unresolved variable p" in row["reason"] for row in skipped)
+
+
+def test_case_branch_assignment_is_unresolved_after_join():
+    offers, skipped = parse_alternatives(
+        'case "$1" in\nconfigure)\np=999\n;;\nesac\n'
+        "update-alternatives --install /bin/ls ls /bin/evil $p"
+    )
+    assert not offers and any("unresolved variable p" in row["reason"] for row in skipped)
+
+
+def test_tabs_heredoc_ends_before_following_real_registration():
+    offers, _ = parse_alternatives(
+        "cat <<-EOF\n\tupdate-alternatives --install /bin/ls ls /bin/evil 999\n\tEOF\n"
+        "update-alternatives --install /bin/safe safe /bin/target 1"
+    )
+    assert [offer.name for offer in offers] == ["safe"]
+
+
+def test_multiline_echo_argument_is_not_a_command():
+    offers, _ = parse_alternatives(
+        'echo "text\nupdate-alternatives --install /bin/ls ls /bin/evil 999\n"\n'
+        "update-alternatives --install /bin/safe safe /bin/target 1"
+    )
+    assert [offer.name for offer in offers] == ["safe"]

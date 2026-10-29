@@ -63,8 +63,8 @@ def test_real_debs_resolve_cross_package_stubs_links_hardlinks_and_copyright(
 def test_provider_defaults_popcon_curated_names_and_case_collisions(archive_workspace, tmp_path):
     assert indexes.MAN_PATH.fullmatch("usr/share/man/man3/EmitVertex.3G.gz")
     obj = archive_workspace
-    # A less popular curated gawk still supplies awk, while unrelated shared(1)
-    # picks the most installed package. Every other provider/file survives.
+    # Package-owned pages always retain their route; alternatives only fill gaps.
+    # Unrelated shared(1) still picks the most installed package.
     obj.store.db.execute(
         "INSERT INTO entries SELECT 'provider-high',replace(path,'gawk.1.gz','awk.1.gz'),"
         "'file',NULL,file FROM entries WHERE pkg='gawk' AND path LIKE '%gawk.1.gz'"
@@ -75,7 +75,7 @@ def test_provider_defaults_popcon_curated_names_and_case_collisions(archive_work
         ("provider-high", False),
         ("provider-low", False),
     ]
-    assert next(row for row in sources if row[2] == "awk")[0] == "gawk"
+    assert next(row for row in sources if row[2] == "awk")[0] == "provider-high"
     cases = [row for row in sources if row[2] == "foo::bar"]
     assert len(cases) == 2
     assert [row[4] for row in cases] == [False, False]
@@ -430,3 +430,45 @@ def test_binary_link_chain_proves_an_alternative_uses_the_same_documented_execut
     )
     assert obj.binary_target("provider-high", "/usr/bin/compiler++") == "usr/bin/shared"
     assert any(row[2] == "c++" and row[4] for row in obj.sources())
+
+
+def test_alternative_ranking_elects_before_manual_availability(archive_workspace, tmp_path):
+    from dataclasses import replace
+
+    obj = archive_workspace
+    obj.store.db.execute("DELETE FROM entries WHERE kind='control'")
+    for pkg in ["provider-low", "provider-high"]:
+        script = tmp_path / (pkg + ".postinst")
+        script.write_text(
+            "update-alternatives --install /usr/bin/editor editor /usr/bin/shared 10 "
+            "--slave /usr/share/man/man1/editor.1 editor.1 /usr/share/man/man1/shared.1"
+        )
+        obj.store.db.execute(
+            "INSERT INTO entries VALUES (?,?,?,?,?)",
+            (pkg, "@control/postinst", "control", None, str(script)),
+        )
+    obj.available["provider-low"] = replace(obj.available["provider-low"], priority="standard")
+    list(obj.sources())
+    assert obj.route_winners[("editor", "1")][0] == "provider-low"
+    obj.available["provider-high"] = replace(obj.available["provider-high"], priority="important")
+    list(obj.sources())
+    assert obj.route_winners[("editor", "1")][0] == "provider-high"
+    # Missing top-provider manual must not fall back to the documented lower one.
+    (tmp_path / "provider-high.postinst").write_text(
+        "update-alternatives --install /usr/bin/editor editor /usr/bin/undocumented 999"
+    )
+    list(obj.sources())
+    assert ("editor", "1") not in obj.route_winners
+    assert any(
+        r.get("name") == "editor" and "winning provider" in r["reason"]
+        for r in obj.alternatives_skipped
+    )
+
+
+def test_extraction_stops_before_exceeding_shared_file_quota(tmp_path):
+    from ingestion.debian_archives import ExtractedQuota
+
+    quota = ExtractedQuota(tmp_path / "files", 1)
+    with pytest.raises(RuntimeError, match="extracted-file disk limit"):
+        extract(FIXTURES / "gawk.deb", package("gawk"), tmp_path, quota=quota)
+    assert sum(p.stat().st_size for p in (tmp_path / "files").iterdir()) <= 1

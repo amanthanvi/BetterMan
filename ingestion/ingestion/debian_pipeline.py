@@ -19,7 +19,7 @@ from pathlib import Path
 
 from ingestion.convex_client import ingest_activation_deadline
 from ingestion.debian_alternatives import parse_alternatives
-from ingestion.debian_archives import ArchiveStore, MissingSource, extract
+from ingestion.debian_archives import ArchiveStore, ExtractedQuota, MissingSource, extract
 from ingestion.debian_indexes import (
     MAN_PATH,
     PINS,
@@ -145,9 +145,15 @@ class Workspace:
         ).resolve()
         self.cache.mkdir(parents=True, exist_ok=True)
         self.cache_limit = int(os.environ.get("BETTERMAN_DEBIAN_CACHE_MAX_BYTES", str(2 * 1024**3)))
-        if self.cache_limit < 1024**3:
-            raise ValueError("Archive cache must allow at least 1 GiB")
+        if not 1024**3 <= self.cache_limit <= 2 * 1024**3:
+            raise ValueError("Archive cache limit must be between 1 GiB and 2 GiB")
 
+        extracted_limit = int(
+            os.environ.get("BETTERMAN_DEBIAN_EXTRACTED_MAX_BYTES", str(4 * 1024**3))
+        )
+        if not 16 * 1024**2 <= extracted_limit <= 4 * 1024**3:
+            raise ValueError("Extracted-file disk limit must be between 16 MiB and 4 GiB")
+        self.extracted_quota = ExtractedQuota(self.root / "files", extracted_limit)
         self._disk_lock = threading.Lock()
         self._reserved = 0
         self._inflight = set()
@@ -171,7 +177,7 @@ class Workspace:
                 f"{self.pins['mirror']}/{package.filename}", archive, package.sha256, package.size
             )
             archive.touch()
-            return package, extract(archive, package, self.root), size
+            return package, extract(archive, package, self.root, quota=self.extracted_quota), size
         finally:
             with self._disk_lock:
                 self._reserved -= package.size
@@ -284,6 +290,17 @@ class Workspace:
             path = target
         raise ValueError("Executable link depth exceeds limit")
 
+    def alternative_rank(self, package, priority, name, section):
+        metadata = self.available[package]
+        preferred = CURATED_ALTERNATIVES.get((name, section), (None,))[0] == package
+        return (
+            metadata.priority not in {"required", "important", "standard"},
+            -metadata.installed,
+            -priority,
+            not preferred,
+            package,
+        )
+
     def sources(self):
         selected = {p.name for p in self.packages} | {
             p.name for p in getattr(self, "curated_packages", [])
@@ -296,6 +313,7 @@ class Workspace:
         ordinary_routes = {(row[2], row[3]) for row in rows}
         self.alternatives_skipped = []
         self.alternatives_audit = []
+        candidates = {}
         for pkg, file in self.store.db.execute(
             "SELECT pkg,file FROM entries WHERE kind='control' ORDER BY pkg"
         ).fetchall():
@@ -331,9 +349,44 @@ class Workspace:
                                 "target": target,
                             }
                         )
-                        continue
-                    target, section = matches[0]
-                rows.append((pkg, target, offer.name, section, offer.priority))
+                        target = None
+                    else:
+                        target, section = matches[0]
+                candidates.setdefault((offer.name, section), []).append(
+                    (pkg, target, offer.priority)
+                )
+        for (name, section), offers in sorted(candidates.items()):
+            if (name, section) in ordinary_routes:
+                self.alternatives_skipped.append(
+                    {
+                        "name": name,
+                        "section": section,
+                        "reason": "package-owned manual occupies route",
+                    }
+                )
+                continue
+            ranked = sorted(
+                offers, key=lambda item: self.alternative_rank(item[0], item[2], name, section)
+            )
+            winner, target, _priority = ranked[0]
+            try:
+                if target is None:
+                    raise ValueError("winning provider has no English manual")
+                self.resolve(winner, target)
+            except (ValueError, FileNotFoundError) as exc:
+                self.alternatives_skipped.append(
+                    {
+                        "package": winner,
+                        "name": name,
+                        "section": section,
+                        "reason": "winning provider has no English manual; route omitted",
+                        "detail": str(exc),
+                    }
+                )
+                continue
+            for pkg, path, priority in ranked:
+                if path is not None:
+                    rows.append((pkg, path, name, section, priority))
         prepared = []
         extras = set()
         for pkg, path, name, section, priority in sorted(
@@ -367,15 +420,15 @@ class Workspace:
                         alias = False
                     elif target_owner not in selected:
                         extras.add((target_owner, target_path, *target[:2]))
-                preferred = CURATED_ALTERNATIVES.get((name, section), (None,))[0] in {pkg, owner}
                 rank = (
                     name,
                     section,
-                    not preferred,
-                    priority is None,
-                    -(priority or 0),
-                    -self.available[pkg].installed,
-                    pkg,
+                    priority is not None,
+                    *(
+                        self.alternative_rank(pkg, priority, name, section)
+                        if priority is not None
+                        else (False, -self.available[pkg].installed, 0, False, pkg)
+                    ),
                     path,
                 )
                 prepared.append((rank, pkg, path, name, section, alias, target))
@@ -394,7 +447,17 @@ class Workspace:
                 item = {"package": pkg, "path": path, "error": str(exc)}
                 (self.alternatives_skipped if priority is not None else self.missing).append(item)
         for pkg, path, name, section in extras:
-            rank = (name, section, True, True, 0, -self.available[pkg].installed, pkg, path)
+            rank = (
+                name,
+                section,
+                False,
+                False,
+                -self.available[pkg].installed,
+                0,
+                False,
+                pkg,
+                path,
+            )
             prepared.append((rank, pkg, path, name, section, False, None))
         self.alias_candidates = []
         self.route_winners = {}
@@ -484,8 +547,8 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
         pages=refs,
     )
     workspace.aliases = aliases
-    # An alternatives alias owns its clean route even when an unrelated package
-    # ships a real page under that name. Keep that page as an explicit provider.
+    # Archive-owned aliases can still have other package providers; generated
+    # alternatives are excluded whenever a package already owns the route.
     alias_keys = {(a.name, a.section) for a in aliases}
     for key in alias_keys:
         if key in canonical:

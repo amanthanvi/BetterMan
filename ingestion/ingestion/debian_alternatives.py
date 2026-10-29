@@ -115,6 +115,52 @@ def _literal_functions(script):
     return "\n".join(expanded)
 
 
+def _without_heredocs(script):
+    """Discard heredoc data before recognizing commands, variables or wrappers."""
+    pending = []
+    quoted = ""
+    lines = []
+    for line in script.splitlines():
+        if pending:
+            delimiter, tabs = pending[0]
+            if (line.lstrip("\t") if tabs else line) == delimiter:
+                pending.pop(0)
+            lines.append("")
+            continue
+        try:
+            lexer = shlex.shlex(quoted + line, posix=True, punctuation_chars="<>&;|()")
+            lexer.whitespace_split = True
+            tokens = list(lexer)
+            if quoted:
+                quoted = ""
+                lines.append("")
+                continue
+            for i, token in enumerate(tokens[:-1]):
+                if token == "<<" and tokens[i + 1].startswith("-"):
+                    pending.append((tokens[i + 1][1:], True))
+                elif token in {"<<", "<<-"}:
+                    pending.append((tokens[i + 1], token == "<<-"))
+        except ValueError as exc:
+            if "No closing quotation" in str(exc):
+                quoted += line + "\n"
+                lines.append("")
+                continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _simple_tokens(command):
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|<>()")
+    lexer.whitespace_split = True
+    args = list(lexer)
+    for end, token in enumerate(args):
+        if token in {"||", "&&", ";"}:
+            return args[:end]
+        if any(c in token for c in "<>()"):
+            raise ValueError("unsupported command redirection or subshell")
+    return args
+
+
 def parse_alternatives(
     script: str, *, architecture="amd64"
 ) -> tuple[list[Alternative], list[dict]]:
@@ -123,6 +169,7 @@ def parse_alternatives(
     Configure/upgrade guards are not executed: offers describe selected packages.
     """
     script = re.sub(r"\\\n", " ", script)
+    script = _without_heredocs(script)
     script = _xz_helper(script)
     script = _literal_functions(script)
     # Native (not cross-architecture) installation: this exact OpenJDK branch
@@ -136,7 +183,17 @@ def parse_alternatives(
             script,
         )
     script = re.sub(r"if false && [^\n]+; then\n.*?\n\s*fi", "", script, flags=re.S)
+    # OpenJDK's exact file-existence template describes a potential slave.
+    # Remove only that guard; the pipeline must prove its archived target exists.
+    script = re.sub(
+        r"if \[ -e \$mandir/man1/\$i\.\$srcext \]; then\s*"
+        r'(slave1="--slave\s+/usr/share/man/man1/\$i\.\$dstext\s+'
+        r'\$i\.\$dstext\s+\$mandir/man1/\$i\.\$srcext")\s*fi',
+        r"\1",
+        script,
+    )
     values = {}
+    branches = []
     ambiguous = set()
     lists = {}
     loop_stack = []
@@ -145,6 +202,29 @@ def parse_alternatives(
         line = line.strip()
         if not line or line.startswith("#"):
             continue
+        if re.match(r"if\s", line):
+            branches.append(("if", values.copy(), []))
+        elif re.match(r"case\s", line):
+            branches.append(("case", values.copy(), []))
+        elif re.match(r"(?:else|elif)(?:\s|;|$)", line) and branches:
+            _kind, initial, arms = branches[-1]
+            arms.append(values.copy())
+            values = initial.copy()
+        elif line == ";;" and branches and branches[-1][0] == "case":
+            _kind, initial, arms = branches[-1]
+            arms.append(values.copy())
+            values = initial.copy()
+        elif re.match(r"(?:fi|esac)(?:\s|;|$)", line) and branches:
+            _kind, initial, arms = branches.pop()
+            arms.append(values.copy())
+            # Include an implicit unchanged arm: this data reader never proves
+            # which conditions match, or that a case/if is exhaustive.
+            arms.append(initial)
+            values = {
+                key: value
+                for key, value in arms[0].items()
+                if all(arm.get(key) == value for arm in arms)
+            }
         unset = re.match(r"unset ([\w ]+?)(?: \|\||$)", line)
         if unset:
             for name in unset[1].split():
@@ -208,11 +288,12 @@ def parse_alternatives(
                 raise ValueError("too many static expansions")
             for row in combinations:
                 expanded = _expand(command, values | dict(zip(relevant, row, strict=True)))
-                args = shlex.split(expanded, comments=True)
-                for end, token in enumerate(args):
-                    if token in {"||", "&&", ";"}:
-                        args = args[:end]
-                        break
+                args = _simple_tokens(expanded)
+                if not args or args[0] not in {
+                    "update-alternatives",
+                    "/usr/bin/update-alternatives",
+                }:
+                    raise ValueError("unsupported command context")
                 install = args.index("--install")
                 if any(
                     token not in {"--quiet", "--verbose", "--force"} for token in args[1:install]

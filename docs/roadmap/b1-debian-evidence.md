@@ -8,7 +8,8 @@ rebase/deploy order is B7 #429 v3 → B5 #430 v4 → archive providers v5.
 
 [Machine-readable measurements](b1-debian-measurements.json) and the fixed
 [2,000-package selection](b1-debian-sample-selection.json) make the runs inspectable.
-The historical cold sample and current alias-aware results are separate.
+The historical cold acquisition, previous-policy local storage probe and current
+parser/provider audits are recorded separately.
 
 ## Defaults and approval boundary
 
@@ -19,7 +20,11 @@ archive imports require `--debian-full`.
 
 With `BETTERMAN_DEBIAN_FULL_PROMOTE` unset, full ingests stop at verified staging.
 Even a combined ingest/promote dispatch cannot promote that first full release.
-A separate promotion-only dispatch is required. The owner can subsequently set
+A separate promotion-only dispatch with `debian_full_promote: true` (default
+false) is required. Routine promote-only recovery skips an actual archive
+staging release unless that input or the exact promotion variable is enabled.
+The backend checks provenance and changes pointers in the same transaction;
+the workflow logs the hold and skips its prod smoke check. Other distros continue. The owner can subsequently set
 `BETTERMAN_DEBIAN_FULL_PROMOTE=1` to authorize recurring promotion. The ops tests
 pin cron/dispatch × import on/off, independent controls, promotion hold/release
 and download-only isolation. No switch was enabled during this work.
@@ -39,49 +44,43 @@ and download-only isolation. No switch was enabled during this work.
 
 ## Alternatives audit
 
-Read postinst from control.tar as text, never execute it. The parser recognizes
-literal installs/slaves, literal variables/for-lists/wrapper calls, and checked
-OpenJDK/xz helper forms. Unknown or ambiguous expressions are skipped/reported.
-A binary master without a manual slave must have a unique exact-basename manual
-in the same package. Archive-owned executable symlinks can prove a second name
-uses that same executable; binary contents are neither extracted nor executed.
-This is how clang++ and clang share their documented target.
+Registrations are read from postinst as data, never executed. Accept only simple
+command words; skip heredoc/echo/printf data and unresolved branch variables.
+Literal variables/loops/wrappers and checked OpenJDK/xz templates remain supported.
+Choose a provider before checking its manual. Rank the default-installed
+`required`/`important`/`standard` package Priority group first, then pinned popcon
+`by_inst`, then alternatives priority. Curated awk/vi/nc preferences break exact
+remaining ties only. If the winner has no attributable manual, omit the route
+and report it; do not fall back. A real archive manual always retains its route.
 
-Priorities rank before popcon, then package/path. Only awk/vi/nc keep explicit
-policy overrides. Editor and pager follow Debian priorities. A provider with no
-attributable manual is ineligible; the parser does not invent non-free GCC docs.
-The audit records GCC's undocumented cc offer as skipped while Clang's documented
-cc/c++ registrations remain eligible.
+The audit uses the fixed **2,000-package corpus plus 22 competing packages**,
+with **2,107 acquired packages including retained dependency/audit cache**.
+It includes nano, vim-common/vim-tiny/vim, joe, less, most, gcc/g++, clang,
+OpenJDK 21/25 JRE/JDK headless, gawk, mawk, original-awk, xterm, gnome-terminal,
+terminator, tnftp, ftp.app, bison, byacc and 9base. Every added archive passes the
+normal pinned Packages SHA256/size check. The complete catalog remains 17,314
+manual-owner packages; the table applies the full-Debian policy to these audited
+competitors. It is not a claim that all catalog archives were downloaded.
 
-The **21-package focused cohort plus curated/dependency archives restores
-43 names**, with 0 parse failures and 0 unresolved sources.
-The **2,000-package cohort restores 55 names** absent from its ordinary archive routes.
-The focused audit reports 6 skipped/unsupported offers; every reason is in the JSON.
-Every requested name was additionally queried through the real local public
-content action, following aliases to a real page: **19/19 passed**.
-These defaults describe the recorded cohort, not an executed full-corpus election.
+| Route | Audited default | Why |
+| --- | --- | --- |
+| `editor(1)` | `nano(1)` — nano | important, 290,480 installed; joe's priority 70 cannot override it |
+| `pager(1)` | `more(1)` — util-linux | required, 295,050 installed; wins before less/most and alternatives priority |
+| `cc(1)` | omitted — winner gcc | winning GCC provider has no manual in main; no Clang fallback |
+| `c++(1)` | omitted — winner g++ | winning G++ provider has no manual in main; no Clang fallback |
+| `java(1)` | OpenJDK 21 JRE headless | package-owned `java(1)`; 36,467 installed beats OpenJDK 25 |
+| `awk(1)` | `mawk(1)` — mawk | required, 294,539 installed; alternatives priority 5 is considered last |
+| `x-terminal-emulator(1)` | `lxterm(1)` — xterm | optional, 117,460 installed; ahead of GNOME Terminal and terminator |
+| `ftp(1)` | `FTP(1)` — ftp.app | package-owned manual retains the lowercased route; the tnftp alternative cannot displace it |
+| `yacc(1)` | `bison.yacc(1)` — bison | optional, 20,605 installed; ahead of byacc/9base |
+| `view(1)` | `vim(1)` — vim-common, via vim-tiny | important provider, 289,379 installed; alternatives priority 15 |
+| `ex(1)` | `vim(1)` — vim-common, via vim-tiny | same election as view |
 
-| Name | Registration package | Priority | Verified final manual/package |
-| --- | --- | ---: | --- |
-| `which` | debianutils | 0 | `which.debianutils(1)`, debianutils |
-| `cc` | clang | 10 | `clang-19(1)`, clang-19 |
-| `c++` | clang | 10 | `clang-19(1)`, clang-19 |
-| `view` | vim | 30 | `vim(1)`, vim-common |
-| `ex` | vim | 30 | `vim(1)`, vim-common |
-| `nawk` | gawk | 10 | `gawk(1)`, gawk |
-| `fakeroot` | fakeroot | 50 | `fakeroot-sysv(1)`, fakeroot |
-| `telnet` | inetutils-telnet | 150 | `inetutils-telnet(1)`, inetutils-telnet |
-| `traceroute` | traceroute | 100 | `traceroute.db(1)`, traceroute |
-| `java` | openjdk-21-jre-headless | 2111 | `java(1)`, openjdk-21-jre-headless |
-| `mt` | cpio | 10 | `mt-gnu(1)`, cpio |
-| `lzma` | xz-utils | 20 | `xz(1)`, xz-utils |
-| `mailx` | bsd-mailx | 50 | `bsd-mailx(1)`, bsd-mailx |
-| `pinentry` | pinentry-curses | 50 | `pinentry-curses(1)`, pinentry-curses |
-| `x-terminal-emulator` | xterm | 30 | `lxterm(1)`, xterm |
-| `ftp` | tnftp | 120 | `tnftp(1)`, tnftp |
-| `yacc` | bison | 100 | `bison.yacc(1)`, bison |
-| `editor` | nano | 40 | `nano(1)`, nano |
-| `pager` | less | 77 | `less(1)`, less |
+The ftp disposition follows the requested real-page precedence even though its
+popcon count is only 54. Its source spelling is `FTP`; URL normalization makes
+that the occupied `ftp` route. Both its real manual and tnftp's own manual remain
+stored. This consequence is explicit rather than hidden by a provider override.
+The discarded 27-package reviewer cohort was not reconstructed, per owner direction.
 
 ## Alias semantics and parser boundary
 
@@ -92,12 +91,31 @@ provider are retained separately, including case/path collisions. Explicit
 target package. The B10 switch UI remains separate.
 
 Archive includes resolve only through the indexed, verified store. Mandoc runs
-in a fresh empty temporary cwd. Remaining executable includes are rejected in
-conditional/custom-control requests and command aliases. Literal documentation
-such as `.B .so` and indented prose stays text. Optional `www.tmac`/`pic.tmac`
-requests are omitted without consulting host macro files. Sentinel regressions
-cover conditional requests, changed controls and fresh cwd. The existing mandoc
-parser/golden fixtures remain in use.
+with stdin in a fresh empty temporary cwd. This is the primary boundary against
+accidental relative host includes; it is not an OS filesystem sandbox and does
+not revoke absolute-path permissions. Source checks are defence in depth:
+reject unresolved includes, escape/control changes (`ec`, `eo`, `cc`, `c2`),
+request-position `\*` interpolation, include requests in macro bodies and
+strings defining `so`. Normal prose in macro bodies, inline comments and
+formatting-argument interpolation are preserved after auditing false positives.
+Optional `www.tmac`/`pic.tmac` requests are omitted without host lookup.
+
+The final audit checks **13,243 renderable sources owned by the original 2,000
+packages**, and **13,423 including added provider/dependency sources**. Both
+sets reject exactly **four (0.030%)**. No additional include/interpolation or
+macro-definition rejection remains after narrowing the false positives.
+
+| Rejected source | Package | Actual request |
+| --- | --- | --- |
+| `usr/share/man/man1/mjpegtools.1.gz` | mjpegtools | `.ec` |
+| `usr/share/man/man1/nomarch.1.gz` | nomarch | `.cc @` |
+| `usr/share/man/man1/sqlite3.1.gz` | sqlite3 | `.cc \|` |
+| `usr/share/man/man1/tio.1.gz` | tio | `.eo` |
+
+These are intentional failures of the explicit control/escape policy; they stay
+below the existing 2% publish gate. Sentinel regressions separately verify fresh
+empty cwd, failure to resolve a parent-relative sentinel with the filter bypassed,
+and refusal of absolute/conditional/dynamic includes before process invocation.
 
 ## Local sample and projections
 
@@ -108,17 +126,20 @@ not an unbiased statistical sample.
 
 | Metric | Current local result |
 | --- | ---: |
-| Selected packages / acquired dependencies | 2,000 / 74 |
-| Canonical pages / alternate real pages | 13,284 / 15 |
-| Redirect routes / retained alias providers | 3,377 / 3,401 |
-| Parse failures / unresolved sources / missing selected notices | 0 / 0 / 0 |
-| Parse with two workers, including dependency resolution | 77.33 s |
-| Parent / largest-child peak RSS | 207,306,752 / 144,801,792 B |
-| Parse spool | 283,758,592 B |
-| Real-page upload, with reusable blobs | 46.37 s |
-| Notice upload / local activation | 4.36 / 22.60 s |
-| Parse + publish (excludes footprint scans) | 135.93 s |
-| Published notices, including provider/dependency packages | 2,031 |
+| Fixed selected packages / previously acquired cache | 2,000 / 2,107 (includes provider audit) |
+| Canonical pages / alternate real pages | 13,281 / 14 |
+| Redirect routes / retained alias providers | 3,372 / 3,393 |
+| Intentional control-rule rejections / unresolved sources / missing selected notices | 4 / 0 / 0 |
+| Parse with two workers, including dependency resolution | 64.30 s |
+| Parent / largest-child peak RSS | 204,652,544 / 145,522,688 B |
+| Retained source files / parse spool | 51,234,139 / 283,316,224 B |
+| Restored alternative names in the fixed cohort | 50 |
+
+The fixed cohort parser accepts 13,295 real pages plus aliases. The earlier local
+publish used the previous policy and is retained separately in the measurement
+JSON: 46.37 s real-page upload with reused blobs, 4.36 s notices, 22.60 s activation,
+and 2,031 notices including providers/dependencies. Those are historical upload
+measurements, not a new upload or a claim of zero rejections under the new guard.
 
 The historical cold acquisition transferred 1,997,753,706 bytes for 2,000 selected
 plus 66 dependency packages in 249.83 s. It precedes the alias change and is used
@@ -128,29 +149,36 @@ a separate six-package browser/office/compiler stress check also resolved all
 notices. Missing/oversized text fails closed without truncation.
 
 The old **143k page** projection counted materialized aliases. Applying the
-current package ratio ×8.657 projects about **115,000 canonical pages
-and 29,235 redirect routes**, plus retained providers. This is a projection;
+current package ratio ×8.657 projects about **114,975 canonical pages
+and 29,191 redirect routes**, plus retained providers. This is a projection;
 the full corpus was not executed. Alias concentration and curated bias limit
 straight-line extrapolation.
 
-Cold download scaling suggests about 38 minutes; two-worker parsing about
-11.2 minutes. Using the slower historical cold upload rate of 161 pages/s
+Cold download scaling suggests about 38 minutes; current two-worker parsing
+about 9.3 minutes. Using the slower historical cold upload rate of 161 pages/s
 instead of warmed blob reuse gives about 12 minutes for pages. Reserve extra
 setup/index/alias/license/backfill time: an 80-minute planning estimate with 3x
 contingency is about four hours, below the existing 300-minute Linux budget and
 six-hour ceiling. Deadlines remain enforced; activation resumes independently.
 Mirror throttling and unsampled inputs can still exhaust the budget.
 
-The dataset disk allowance is about 9.5 GB: retained source/index metadata,
-roughly 2.5 GB projected spool plus journal margin, and a 2 GiB archive cache
-with bounded in-flight downloads. Publish spools are removed after success or
-failure. Historical probe spools in the local evidence directory are not a fresh
-single-run peak. A linear parent-RSS extrapolation plus child peaks and a 2x
-margin remains below 5 GB, but is not an observed full-corpus aggregate RSS trace.
+Source files project to about 444 MB; the enforced 4 GiB extracted-file ceiling
+also leaves room for corpus skew. A fresh run must allow the 2 GiB retained cache,
+up to two bounded 1 GiB in-flight archives, indexes, and roughly 2.45 GB projected
+parse spool plus journal/runner margin. These fit the 14 GB planning envelope,
+but a limit/free-space check may still stop a skewed run resumably. Publish
+spools are removed after success or failure. Historical benchmark spools remain
+in the local evidence directory and are not a fresh single-run disk peak. A
+linear parent-RSS extrapolation plus children and 2x margin remains below 5 GB;
+this is not an observed full-corpus aggregate RSS trace.
 
 ## Storage, reads and cost boundary
 
-| Attributed resource | Local sample | Projection ×8.657 |
+The previous-policy real-backend probe is retained as a planning reference:
+the current fixed cohort creates fewer page/alias/provider rows. It was not
+re-uploaded for this round. This excludes the additional audit-only competitors.
+
+| Attributed resource | Historical local sample | Projection ×8.657 |
 | --- | ---: | ---: |
 | User documents | 179,597 | 1.55 million |
 | Logical database JSON | 88,068,583 B | 0.762 GB |
@@ -187,18 +215,29 @@ A persistent lock-keyed workspace retains successful package receipts bound to
 archive digest, extractor version and files. Stale/incomplete records are removed
 from the resolver index and rebuilt from verified archives; retained files stay
 available for recovery. A failure does not discard completed packages. The
-checksum-named archive cache is bounded to 2 GiB with rehashing on every reuse.
+checksum-named archive cache is rehashed on every reuse.
+The archive cache has a 2 GiB ceiling (1–2 GiB configurable) and excludes in-use
+files during eviction. Total extracted regular files have a separate **4 GiB
+ceiling**, accounting for resumed/partial files, overwrites and concurrent
+writes before writing. Its override can only lower the limit (minimum 16 MiB).
+Disk exhaustion stops resumably. The existing free-disk check remains additional.
 Two concurrent downloads use eight exponential/jittered attempts and honor
 Retry-After/absolute job budgets. Integrity mismatches fail immediately.
 
 Same-runner restarts reuse complete extractions. New runners only restore the
-bounded verified `.deb` cache; evicted files are fetched again. The always-save
-step preserves partial successful acquisition after recoverable job failures.
+bounded verified `.deb` cache; evicted files are fetched again. Workflow keys
+are exactly `debian-debs-<pinned Release SHA256>` without run IDs or fallback
+prefixes. GitHub's immutable entry saves the first bounded subset for that
+Release/branch; later runs reuse it rather than adding another 2 GiB entry.
+A new pin creates a new key; repository-wide 10 GB LRU eviction removes older
+entries. Old run-ID keys are no longer restored and may age out or be removed
+by the owner. An always-save step can preserve partial successes when that key
+has not yet been saved; it cannot update an existing immutable entry.
 An abrupt VM loss can prevent saving; this does not claim all 18+ GB survive a
 new runner. The download-only dispatch has no production environment or secrets,
 suppresses regular ingest/promote and was not run.
 
-Validation: 487 Python tests (85.97% coverage), 195 Convex tests/typecheck,
+Validation: 508 Python tests (86% coverage), 196 Convex tests/typecheck,
 531 Next tests/lint/grammar/build, 122 fresh-fixture browser E2E tests, 112 ops
 tests, unchanged performance budgets and public-API/PR diff guards. Fixture
 coverage includes the real postinst templates, binary-link/manual attribution,

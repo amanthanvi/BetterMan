@@ -100,3 +100,29 @@ def test_extracted_receipts_and_checksum_cache_resume_and_revalidate(tmp_path, m
         file.unlink()
     acquire(tmp_path / "three")
     assert len(calls) == 2
+
+
+def test_extracted_quota_counts_resumed_files_and_parallel_writes(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    import pytest
+
+    from ingestion.debian_archives import ExtractedQuota
+
+    (tmp_path / "existing").write_bytes(b"1234")
+    quota = ExtractedQuota(tmp_path, 10)
+
+    def write(name):
+        try:
+            quota.write(tmp_path / name, io.BytesIO(b"1234"), 4)
+            return True
+        except RuntimeError:
+            return False
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        assert sorted(executor.map(write, ["one", "two"])) == [False, True]
+    assert quota.used == sum(p.stat().st_size for p in tmp_path.iterdir()) == 8
+    quota.write(tmp_path / "existing", io.BytesIO(b"1"), 1)
+    assert quota.used == 5
+    with pytest.raises(RuntimeError, match="Existing extracted"):
+        ExtractedQuota(tmp_path, 4)

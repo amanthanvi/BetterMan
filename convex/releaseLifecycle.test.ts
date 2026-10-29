@@ -166,6 +166,27 @@ describe("release sealing", () => {
     expect((await t.run((ctx) => ctx.db.get(previous.releaseId)))?.sealed).not.toBe(true);
   });
 
+  it("holds the actual full Debian staging pointer atomically while promoting healthy distros", async () => {
+    const t = convexTest(schema, modules);
+    for (const distro of ["debian", "ubuntu"] as const) {
+      const input = releaseInput(`full-${distro}`, distro);
+      const { releaseId } = await t.mutation(internal.ingest.createRelease, {
+        ...input, imageRef: distro === "debian" ? "https://snapshot.debian.org/archive/debian/20261001T000000Z" : "ubuntu:24.04",
+      });
+      await t.run(ctx => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
+      await pointRelease(t, releaseId, "staging");
+    }
+    const args = { fromStage: "staging" as const, toStage: "prod" as const, distros: ["debian" as const, "ubuntu" as const], activatedAt: "2026-10-29T00:00:00Z" };
+    expect(await t.mutation(internal.ingest.promoteActiveReleases, args)).toEqual({
+      promoted: [{ distro: "ubuntu", datasetReleaseId: "full-ubuntu" }],
+      skipped: [{ distro: "debian", datasetReleaseId: "full-debian", reason: "FULL_DEBIAN_PROMOTION_HELD" }],
+    });
+    expect(await t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod").eq("locale", "en").eq("distro", "debian")).unique())).toBeNull();
+    expect(await t.mutation(internal.ingest.promoteActiveReleases, { ...args, allowFullDebian: true })).toEqual({
+      promoted: [{ distro: "debian", datasetReleaseId: "full-debian" }, { distro: "ubuntu", datasetReleaseId: "full-ubuntu" }],
+    });
+  });
+
   it("seals and hydrates all 14 supported active pointers before reporting ready", async () => {
     vi.useFakeTimers();
     const t = convexTest(schema, modules);

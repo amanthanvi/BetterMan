@@ -217,10 +217,27 @@ combined full-ingest/promote dispatches then stop at verified staging while
 healthy curated distros keep their existing promotion behavior. Record the full
 release ID and inspect actual staging storage, reads, license coverage and cost
 before the owner authorizes a separate promotion-only dispatch (`ingest: false`,
-`promote: true`). The existing promotion-only workflow covers all seven distros;
-review every staging pointer before dispatching it. Only after this approval
+`promote: true`, **`debian_full_promote: true`**). The latter input defaults
+false. Routine promote-only recovery without that input skips an actual
+full-Debian staging pointer, logs `Skipping held full-Debian staging release`,
+and continues the other distros. The backend makes the check in the promotion
+transaction against release provenance, so a changed import switch or rerun
+cannot bypass the hold. The workflow skips the Debian prod smoke check when
+held. The promotion-only workflow covers all seven distros; review every staging
+pointer before dispatching it. Only after this approval
 should the owner set `BETTERMAN_DEBIAN_FULL_PROMOTE=1` to enable recurring full
-promotions. Setting it alone does not opt into full ingestion.
+promotions. Setting it alone does not opt into full ingestion. Non-`1` repository
+values (including explicitly empty values) emit a workflow warning and remain
+off; the warning does not echo the supplied value.
+
+The verified archive cache is capped at 2 GiB and keyed only by pinned Release
+SHA256; there is no run-ID fan-out. GitHub keeps the first immutable cache entry
+for that Release/branch and evicts older keys through its repository-wide 10 GB
+LRU quota. Later runs reuse that subset and fetch evicted/missing archives;
+they do not replace the saved entry. Retained extracted files have a separate
+4 GiB limit, including resumed/partial files and concurrent extraction. Hitting
+it stops resumably instead of consuming the runner's disk. See ingestion/README
+for lower-limit configuration and same-runner checkpoint guarantees.
 
 The `debian_download_only: true` input suppresses normal ingest/promote and runs
 an isolated, secrets-free 2,000-package acquisition benchmark. It never creates

@@ -126,6 +126,31 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual((values['ingest'],values['promote']), ('false','false'))
 
+    def test_full_debian_promotion_hold_and_explicit_recovery(self):
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for variable, manual, allowed in [('', 'false', False), ('true', 'false', False), ('1', 'false', True), ('', 'true', True)]:
+            os.environ.update(BETTERMAN_DEBIAN_FULL_PROMOTE=variable, BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT=manual)
+            def response(request, **kwargs):
+                payload = json.loads(request.data)
+                self.assertEqual(payload['allowFullDebian'], allowed)
+                body = {'promoted': [{'distro':'debian','datasetReleaseId':'full'}]} if allowed else {
+                    'promoted': [], 'skipped': [{'distro':'debian','datasetReleaseId':'full','reason':'FULL_DEBIAN_PROMOTION_HELD'}]}
+                return io.BytesIO(json.dumps(body).encode())
+            with self.post_mock(response), contextlib.redirect_stdout(io.StringIO()) as log:
+                self.assertEqual(w.promote('debian'), 0)
+            self.assertEqual(w.load('debian')['stage'], 'promoted' if allowed else 'full Debian promotion held')
+            if not allowed:
+                self.assertIn('Skipping held full-Debian', log.getvalue())
+                self.assertIn('skipped=true', Path('output').read_text())
+
+    def test_misspelled_gate_values_warn_and_stay_off(self):
+        for name in ['BETTERMAN_DEBIAN_FULL', 'BETTERMAN_DEBIAN_FULL_PROMOTE']:
+            for value in ['', 'true', '0', 'yes', ' 1', '1 ']:
+                os.environ[name] = value
+                with contextlib.redirect_stdout(io.StringIO()) as log:
+                    self.assertFalse(w.gate(name))
+                self.assertIn('::warning::' + name, log.getvalue())
+
     def test_early_middle_and_all_failures(self):
         for failed in ({'debian'}, {'fedora'}, set(w.LINUX)):
             with self.subTest(failed=failed):
@@ -376,6 +401,15 @@ function assertWorkflowWiring(workflow) {
   assert.match(download.steps.find(s => s.name === 'Acquire only; never create a Convex client').run, /--download-only$/)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_full.default, false)
   assert.equal(workflow.on.workflow_dispatch.inputs.debian_download_only.default, false)
+  assert.equal(workflow.on.workflow_dispatch.inputs.debian_full_promote.default, false)
+  const release = JSON.parse(readFileSync('ingestion/data/debian-trixie.json', 'utf8')).releaseSha256
+  for (const job of [download, ingest]) {
+    for (const cache of job.steps.filter(s => s.uses?.startsWith('actions/cache/'))) {
+      assert.equal(cache.with.key, `debian-debs-${release}`)
+      assert.equal(cache.with['restore-keys'], undefined)
+      assert.ok(!cache.with.key.includes('run_id'))
+    }
+  }
   assert.equal(ingest.strategy['fail-fast'], false)
   assert.equal(ingest.strategy['max-parallel'], 2)
   assert.deepEqual(workflow.concurrency, { group: 'update-dataset', 'cancel-in-progress': false })
@@ -392,7 +426,8 @@ function assertWorkflowWiring(workflow) {
   assert.match(step('debian_renderer').run, /--no-install-recommends mandoc/)
   assert.ok(index('dependencies') < index('debian_renderer') && index('debian_renderer') < index('staging'))
   const promotion = "${{ matrix.promote }}"
-  for (const id of ['promote', 'verify_prod']) assert.equal(step(id).if, promotion)
+  assert.equal(step('promote').if, promotion)
+  assert.equal(step('verify_prod').if, "${{ matrix.promote && steps.promote.outputs.skipped != 'true' }}")
   assert.equal(step('promote').env.BETTERMAN_INGEST_ENABLED, '${{ needs.plan.outputs.ingest }}')
   assert.equal(step('promote').env.CONVEX_URL, '${{ vars.CONVEX_URL }}')
   assert.equal(step('verify_prod').env.BETTERMAN_EXPECTED_RELEASE_IDS, '${{ steps.promote.outputs.release_ids }}')

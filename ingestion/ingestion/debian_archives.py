@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import bz2
 import gzip
+import io
 import lzma
 import posixpath
 import re
 import sqlite3
 import tarfile
+import threading
 from pathlib import Path
 
 from ingestion.debian_indexes import BINARY_PATH, MAN_PATH, Package, safe_path
@@ -17,6 +19,41 @@ from ingestion.util import sha256_hex
 
 MAX_SOURCE_BYTES = 16 * 1024 * 1024
 COPYRIGHT = re.compile(r"^usr/share/doc/[^/]+/copyright(?:\.gz)?$")
+
+
+class ExtractedQuota:
+    """One shared reservation/accounting boundary for resumed and concurrent writes."""
+
+    def __init__(self, directory: Path, limit: int = 4 * 1024**3):
+        self.limit = limit
+        self.lock = threading.Lock()
+        self.used = sum(p.stat().st_size for p in directory.glob("*") if p.is_file())
+        if self.used > limit:
+            raise RuntimeError("Existing extracted files exceed total extracted-file disk limit")
+
+    def write(self, destination: Path, source, size: int):
+        # Serialize the small retained-file writes, not downloads/tar traversal.
+        # Count existing/partial files on resume; replacements don't double count.
+        with self.lock:
+            previous = destination.stat().st_size if destination.exists() else 0
+            if self.used - previous + size > self.limit:
+                raise RuntimeError(
+                    "Total extracted-file disk limit exhausted; acquisition remains resumable"
+                )
+            try:
+                with destination.open("wb") as output:
+                    count = 0
+                    while chunk := source.read(min(256 * 1024, size - count + 1)):
+                        count += len(chunk)
+                        if count > size:
+                            raise ValueError("Extracted member exceeds declared size")
+                        output.write(chunk)
+                    if count != size:
+                        raise ValueError("Truncated extracted member")
+            finally:
+                self.used += (
+                    destination.stat().st_size - previous if destination.exists() else -previous
+                )
 
 
 class MissingSource(FileNotFoundError):
@@ -81,15 +118,17 @@ def postinst_from_archive(archive: Path) -> str:
     return ""
 
 
-def extract(archive: Path, package: Package, root: Path) -> list[tuple]:
+def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[tuple]:
     """Stream past unrelated members; write only man sources and copyrights."""
     files = root / "files"
     files.mkdir(parents=True, exist_ok=True)
+    quota = quota or ExtractedQuota(files)
     entries = []
     script = postinst_from_archive(archive)
     if script:
         destination = files / sha256_hex(f"{package.name}/@control/postinst".encode())
-        destination.write_text(script)
+        encoded = script.encode("utf-8")
+        quota.write(destination, io.BytesIO(encoded), len(encoded))
         entries.append((package.name, "@control/postinst", "control", None, str(destination)))
     with archive.open("rb") as stream, tarfile.open(fileobj=data_member(stream), mode="r|*") as tar:
         for member in tar:
@@ -138,9 +177,7 @@ def extract(archive: Path, package: Package, root: Path) -> list[tuple]:
                 if source is None:
                     raise ValueError("Missing tar member content")
                 destination = files / sha256_hex(f"{package.name}/{path}".encode())
-                with destination.open("wb") as output:
-                    while chunk := source.read(256 * 1024):
-                        output.write(chunk)
+                quota.write(destination, source, member.size)
                 entries.append((package.name, path, "file", None, str(destination)))
     return entries
 

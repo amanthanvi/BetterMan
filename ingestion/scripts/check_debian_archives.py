@@ -41,6 +41,109 @@ def audit_routes(admin):
     return report
 
 
+def audit_alternatives(workspace):
+    """No upload: extend the fixed corpus with the competing Debian providers."""
+    from ingestion.mandoc import checked_source
+
+    requested = set(
+        (
+            "nano vim-common vim-tiny vim joe less most gcc g++ clang gawk mawk original-awk "
+            "xterm gnome-terminal terminator tnftp ftp.app bison byacc 9base"
+        ).split()
+    )
+    requested.update(
+        name
+        for name in workspace.available
+        if name.startswith(("openjdk-21-", "openjdk-25-")) and "headless" in name
+    )
+    absent = sorted(requested - workspace.available.keys())
+    if absent:
+        raise RuntimeError(f"Audit provider unavailable in pinned Packages: {absent}")
+    selected = {p.name for p in workspace.packages}
+    workspace.packages += [workspace.available[n] for n in sorted(requested - selected)]
+    workspace.acquire()
+    rejected, checked = [], 0
+    original_checked = 0
+    for pkg, path, name, section, alias, raw in workspace.sources():
+        if alias:
+            continue
+        checked += 1
+        original_checked += pkg in selected
+        try:
+            checked_source(raw)
+        except RuntimeError as exc:
+            rejected.append(
+                {
+                    "package": pkg,
+                    "path": path,
+                    "name": name,
+                    "section": section,
+                    "reason": str(exc),
+                    "originalCorpus": pkg in selected,
+                }
+            )
+    names = set("editor pager cc c++ java awk x-terminal-emulator ftp yacc view ex".split())
+    defaults = []
+    for item in workspace.alternative_defaults:
+        if item["name"] in names:
+            metadata = workspace.available[item["package"]]
+            defaults.append(
+                item | {"packagePriority": metadata.priority, "installed": metadata.installed}
+            )
+    routes = {}
+    for name in sorted(names):
+        winner = workspace.route_winners.get((name, "1"))
+        if winner is None:
+            decision = next(
+                (
+                    r
+                    for r in workspace.alternatives_skipped
+                    if r.get("name") == name and "winning provider" in r["reason"]
+                ),
+                {},
+            )
+            routes[name] = {
+                "status": "omitted",
+                "reason": decision.get("reason", "no registration"),
+            }
+            if "package" in decision:
+                metadata = workspace.available[decision["package"]]
+                routes[name].update(
+                    registrationPackage=metadata.name,
+                    packagePriority=metadata.priority,
+                    installed=metadata.installed,
+                )
+        else:
+            pkg, path, alias = winner
+            owner, target, _raw = workspace.resolve(pkg, path, details=True)
+            metadata = workspace.available[pkg]
+            routes[name] = {
+                "status": "alias" if alias else "package-owned page",
+                "registrationPackage": pkg,
+                "packagePriority": metadata.priority,
+                "installed": metadata.installed,
+                "manualPackage": owner,
+                "manualPath": target,
+            }
+    return {
+        "routes": routes,
+        "scope": "fixed 2000-package corpus plus competing providers from pinned trixie/main",
+        "selectedPackages": len(workspace.packages),
+        "acquiredPackages": len(workspace.acquired),
+        "addedProviders": sorted(requested - selected),
+        "requiredProviders": sorted(requested),
+        "checkedPages": checked,
+        "originalCorpusCheckedPages": original_checked,
+        "rejectedPages": rejected,
+        "alternativeDefaults": defaults,
+        "omittedOrOccupied": [r for r in workspace.alternatives_skipped if r.get("name") in names],
+        "allAlternativeDefaults": workspace.alternative_defaults,
+        "skipped": workspace.alternatives_skipped,
+        "restoredNames": workspace.restored_names,
+        "unresolved": workspace.missing,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--workdir", type=Path, required=True)
@@ -49,11 +152,35 @@ def main():
     parser.add_argument("--download-only", action="store_true")
     parser.add_argument("--audit-active-alternatives", action="store_true")
     parser.add_argument(
+        "--audit-alternatives", action="store_true", help="No-upload provider and roff-guard audit"
+    )
+    parser.add_argument(
         "--local-upload",
         action="store_true",
         help="Upload only to this worktree's loopback deployment",
     )
     args = parser.parse_args()
+    if args.audit_alternatives:
+        if args.local_upload or args.download_only or args.audit_active_alternatives:
+            parser.error("provider audit cannot combine with other modes")
+        from ingestion.debian_pipeline import Workspace
+
+        report = audit_alternatives(Workspace(args.workdir.resolve(), limit=args.packages))
+        (args.workdir / "alternatives-guard-audit.json").write_text(
+            json.dumps(report, indent=2) + "\n"
+        )
+        print(
+            json.dumps(
+                {
+                    key: value
+                    for key, value in report.items()
+                    if key not in {"allAlternativeDefaults", "skipped", "rejectedPages"}
+                },
+                indent=2,
+            )
+        )
+        print(json.dumps({"rejectedCount": len(report["rejectedPages"])}))
+        return
     if args.audit_active_alternatives:
         import os
 
