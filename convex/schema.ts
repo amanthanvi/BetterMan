@@ -140,6 +140,8 @@ export default defineSchema({
     contentSha256: v.string(),
     optionSignatureHash: v.optional(v.string()),
     optionSignatureBytes: v.optional(v.number()),
+    optionInputBytes: v.optional(v.number()),
+    optionContentBytes: v.optional(v.number()),
     optionExtractorVersion: v.optional(v.number()),
     hasParseWarnings: v.boolean(),
     verifiedFlagUsage: v.optional(v.array(v.object({
@@ -314,6 +316,7 @@ export default defineSchema({
     lastProgressAt: v.optional(v.number()), startedAt: v.optional(v.number()),
     errorSamples: v.optional(v.array(v.object({ name: v.string(), section: v.string(), code: v.string() }))),
     jobId: v.optional(v.id("_scheduled_functions")), error: v.optional(v.string()),
+    batchPageLimit: v.optional(v.number()), isolateNext: v.optional(v.boolean()),
   }).index("by_locale", ["locale"]),
 
   derivedScanJobs: defineTable({
@@ -373,6 +376,7 @@ export default defineSchema({
     releaseId: v.id("datasetReleases"), pageId: v.id("manPages"), key: v.string(), summaryJson: v.string(),
     locale: v.optional(v.string()), distro: v.optional(distroValidator), name: v.optional(v.string()), section: v.optional(v.string()),
     sourceContentSha256: v.optional(v.string()), sourceSignatureHash: v.optional(v.string()), dependencyFingerprint: v.optional(v.string()),
+    detailBytes: v.optional(v.number()), detailChunkCount: v.optional(v.number()), cleanupPending: v.optional(v.boolean()),
   }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
     .index("by_locale_and_distro_and_name_and_section", ["locale", "distro", "name", "section"]),
 

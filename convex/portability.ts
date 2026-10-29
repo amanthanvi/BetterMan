@@ -14,7 +14,7 @@ export const getDetails = query({
     const page = await pageByNameAndSection(ctx, { releaseId: release._id, name: normalizeName(args.name), section: normalizeSection(args.section) });
     if (!page || (!release.derivedCompletedKey && !release.derivedInitialized)) return null;
     const row = await ctx.db.query("manPageDerived").withIndex("by_locale_and_distro_and_name_and_section", (q) => q.eq("locale", release.locale).eq("distro", args.distro).eq("name", page.name).eq("section", page.section)).unique();
-    if (!row || row.sourceContentSha256 !== page.contentSha256 || !page.optionSignatureHash || row.sourceSignatureHash !== page.optionSignatureHash) return null;
+    if (!row || row.cleanupPending || row.sourceContentSha256 !== page.contentSha256 || !page.optionSignatureHash || row.sourceSignatureHash !== page.optionSignatureHash) return null;
     const main = decodeSummary(row.summaryJson);
     const chunkIndex = Math.floor(offset / PORTABILITY_PAGE_SIZE);
     const chunk = await ctx.db.query("derivedPortabilityChunks").withIndex("by_derivedId_and_chunkIndex", (q) => q.eq("derivedId", row._id).eq("chunkIndex", chunkIndex)).unique();

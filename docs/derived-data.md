@@ -47,9 +47,42 @@ an incompletely known historical parse is unknown, not proof of absence.
 
 The ordinary builder consists of scheduled **mutations**, not an action/query/
 mutation chain per page. It reads signatures and page/link metadata, never whole
-stored documents. A batch handles up to 32 logical page names, bounded by 4 MB of
-signature inputs and a relationship-read ceiling. A group above the input ceiling
-is flagged instead of exceeding a transaction limit.
+stored payloads. Before loading option or detail payloads, admission resolves
+current, alias and predecessor page metadata and reserves read **and** write bytes.
+The 6 MiB admission ceiling includes measured transaction usage and conservative
+allowances for signature/cache hydration, content-row existence checks, output
+replacement and chunk ownership changes. This leaves substantial headroom below
+Convex's 16 MiB read/write limits for small metadata and relationship reads. A batch
+still handles at most 32 logical names, stopping earlier when reservations do not
+fit. Input identities are deduplicated and loaded predecessor inputs are reused.
+Historical payloads are reserved/read only when metadata permits a version-mark
+comparison: the same known extractor and changed source/package. Unknown or
+different historical extraction therefore cannot block valid current summaries.
+
+Uploads persist content-row sizes and current input-payload sizes next to signature
+lengths. Known unavailable inputs have a separate two-byte input-size hint, never
+a fake signature length that could under-reserve a later legacy cache repair.
+Missing legacy input/content size metadata is learned under a full 1 MiB document
+reservation, with progress persisted before continuing in a fresh transaction.
+Legacy content rows can contain four 256 KB fields; they are not assumed to have
+an aggregate 256 KB size. Summary rows persist
+exact detail-payload byte/count metadata, including document overhead allowance.
+Older rows without that metadata are drained in bounded steps of at most four
+1 MiB chunk documents; the parent remains hidden until replacement recreates its
+summary and details together. Admission never bulk-loads unknown old chunks merely
+to delete them. Cleanup advances without advancing the logical-page cursor until
+it is safe to process that page. A single logical page above the reservation
+ceiling fails individually, after bounded output cleanup, while later pages keep
+progressing. Rejected groups also release obsolete rows/retries for removed pages,
+aliases and distros.
+
+Resume checks the scheduled job state, including crashes that left the build phase
+unchanged. Each failed/canceled batch halves a persisted name limit down to one.
+If a one-name transaction still fails, that page is isolated on the next attempt;
+its error remains visible for targeted repair instead of blocking the locale's
+queue forever. Healthy names and later promotions continue. Native transaction
+limit regressions enforce an 8 MiB read/write ceiling across predecessor-heavy
+promotions, legacy cleanup, oversized-page isolation and repeated crash recovery.
 
 A promotion queues page and alias names from only the changed old/new releases.
 Existing scan cursors survive another distro's promotion. Logical dependency

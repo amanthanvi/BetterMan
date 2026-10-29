@@ -450,7 +450,7 @@ async function pageReadModel(
   const readable = args.stage === PUBLIC_DATASET_STAGE && (args.release.derivedCompletedKey !== undefined || args.release.derivedInitialized === true);
   const row = readable ? await ctx.db.query("manPageDerived")
     .withIndex("by_locale_and_distro_and_name_and_section", (q) => q.eq("locale", args.release.locale).eq("distro", args.page.distro).eq("name", args.page.name).eq("section", args.page.section)).unique() : null;
-  const matches = row && row.sourceContentSha256 === args.page.contentSha256 &&
+  const matches = row && !row.cleanupPending && row.sourceContentSha256 === args.page.contentSha256 &&
     args.page.optionSignatureHash && row.sourceSignatureHash === args.page.optionSignatureHash;
   const stored = matches ? decodeSummary(row.summaryJson) : null;
   const stale = row?.key !== args.release.derivedExpectedKey && args.release.derivedExpectedKey !== args.release.derivedCompletedKey;

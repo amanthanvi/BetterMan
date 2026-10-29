@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { getConvexSize, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -6,11 +6,16 @@ import { DISTROS, prefixUpperBound, PUBLIC_DATASET_STAGE, type Distro } from "./
 import { encodeSummary, encodeSummaryParts, decodeSummary, decodeOptions } from "./_derivedEncoding";
 import { buildOptionPortability, newInOptions, rankFlags, variantGroups } from "./_derivedModel";
 import { storedPayloadDigest } from "./_storedPayload";
-import { hydrateCachedSignature } from "./_derivedInputs";
+import { hydrateCachedSignature, MAX_SIGNATURE_BYTES } from "./_derivedInputs";
 
 const DERIVED_VERSION = 3;
 export const DERIVED_BATCH_PAGES = 32;
-const MAX_BATCH_INPUT_BYTES = 4_000_000;
+// Payload reservations plus measured reads/writes stay below 6 MiB, leaving
+// 10 MiB beneath Convex's 16 MiB ceiling for query/metadata overhead.
+export const MAX_BATCH_BYTES = 6 * 1024 * 1024;
+const MAX_BATCH_INPUT_BYTES = MAX_BATCH_BYTES;
+const UNKNOWN_CONTENT_BYTES = 1024 * 1024; // legacy rows can hold four inline fields
+const CHUNK_DOCUMENT_BYTES = 1024 * 1024;
 const MAX_BATCH_RELATION_READS = 6000;
 const LEASE_MS = 60 * 60 * 1000;
 export const MAX_REFERENCED_BY = 20;
@@ -104,13 +109,18 @@ export async function scheduleDerivedBuild(ctx: MutationCtx, locale: string, for
   if (changed) for (const old of previous?.pointers ?? []) {
     if (!pointers.some((p) => p.distro === old.distro)) added += await enqueueReleaseScans(ctx, locale, old.releaseId, key);
   }
+  const priorJob = previous?.jobId ? await ctx.db.system.get(previous.jobId) : null;
+  const crashed = priorJob?.state.kind === "failed" || priorJob?.state.kind === "canceled";
+  const priorLimit = previous?.batchPageLimit ?? DERIVED_BATCH_PAGES;
+  const batchPageLimit = crashed ? Math.max(1, Math.floor(priorLimit / 2)) : priorLimit;
+  const isolateNext = previous?.isolateNext || (priorJob?.state.kind === "failed" && priorLimit === 1);
   const retry = previous?.phase === "failed";
   const payload = {
     locale, key, fingerprint, revision, pointers: pointers.map(({ distro, releaseId, datasetReleaseId }) => ({ distro, releaseId, datasetReleaseId })), inputReleaseIds,
     phase: ready ? "summaries" as const : "blocked" as const, releaseIndex: 0, cursor: null,
     pendingJobs: (previous?.pendingJobs ?? 0) + added,
     retrying: !changed && !force && retry, retryCursor: !changed && !force && retry ? null : previous?.retryCursor ?? null,
-    failedPages: previous?.failedPages ?? 0,
+    failedPages: previous?.failedPages ?? 0, batchPageLimit, isolateNext,
     scanned: previous?.scanned ?? 0, recomputed: previous?.recomputed ?? 0, cacheHits: previous?.cacheHits ?? 0,
     skipped: retry ? 0 : previous?.skipped ?? 0, batches: previous?.batches ?? 0,
     lastProgressAt: previous?.lastProgressAt ?? Date.now(), startedAt: previous?.startedAt ?? Date.now(),
@@ -177,7 +187,7 @@ export const status = internalQuery({
     const job = build.jobId ? await ctx.db.system.get(build.jobId) : null;
     const crashed = job?.state.kind === "failed" || job?.state.kind === "canceled";
     return { state: crashed ? "failed" : build.phase, healthy: build.phase === "complete" && !build.failedPages && !crashed,
-      failedPages: build.failedPages ?? 0,
+      failedPages: build.failedPages ?? 0, batchPageLimit: build.batchPageLimit ?? DERIVED_BATCH_PAGES,
       key: build.key, pendingJobs: build.pendingJobs ?? 0, scanned: build.scanned ?? 0, recomputed: build.recomputed ?? 0,
       cacheHits: build.cacheHits ?? 0, skipped: build.skipped ?? 0, batches: build.batches ?? 0,
       lastProgressAt: build.lastProgressAt ?? null, error: build.error ?? (crashed ? "SCHEDULED_BATCH_FAILED" : null), errors: build.errorSamples ?? [] };
@@ -212,8 +222,10 @@ async function inputForPage(ctx: MutationCtx, page: Doc<"manPages">) {
     if (existing) await ctx.db.replace(id, missing);
     return await ctx.db.get(id);
   }
+  const contentBytes = getConvexSize(content) + 1024;
+  if (page.optionContentBytes !== contentBytes) await ctx.db.patch(page._id, { optionContentBytes: contentBytes });
   if (existing?.status === "ready" && existing.contentSha256 === page.contentSha256 && (!page.optionSignatureHash || existing.signatureHash === page.optionSignatureHash)) return existing;
-  const hydrated = await hydrateCachedSignature(ctx, page);
+  const hydrated = await hydrateCachedSignature(ctx, page, contentBytes);
   if (hydrated || existing) return hydrated ?? existing;
   const id = await ctx.db.insert("derivedPageInputs", { releaseId: page.releaseId, pageId: page._id, name: page.name, section: page.section,
     contentSha256: page.contentSha256, optionsJson: "[]", truncated: true, signatureHash: `unavailable:${page.contentSha256}`,
@@ -252,8 +264,7 @@ async function discardRow(ctx: MutationCtx, row: Doc<"manPageDerived"> | null, l
   await ctx.db.delete(row._id);
   await changePin(ctx, row.releaseId, locale, { rows: -1 });
 }
-async function saveRow(ctx: MutationCtx, page: Doc<"manPages">, key: string, fingerprint: string, signatureHash: string | undefined, summary: PageDerivedSummary) {
-  const previous = await storedRow(ctx, page.locale, page.distro, page.name, page.section);
+async function saveRow(ctx: MutationCtx, page: Doc<"manPages">, key: string, fingerprint: string, signatureHash: string | undefined, summary: PageDerivedSummary, previous: Doc<"manPageDerived"> | null) {
   let encoded: ReturnType<typeof encodeSummaryParts>;
   try { encoded = encodeSummaryParts(summary); }
   catch (error) {
@@ -263,7 +274,8 @@ async function saveRow(ctx: MutationCtx, page: Doc<"manPages">, key: string, fin
   const { summaryJson, chunks } = encoded;
   if (new TextEncoder().encode(summaryJson).length > MAX_SUMMARY_BYTES) return "DERIVED_SUMMARY_LIMIT";
   const data = { releaseId: page.releaseId, pageId: page._id, locale: page.locale, distro: page.distro, name: page.name, section: page.section,
-    sourceContentSha256: page.contentSha256, ...(signatureHash ? { sourceSignatureHash: signatureHash } : {}), dependencyFingerprint: fingerprint, key, summaryJson };
+    sourceContentSha256: page.contentSha256, ...(signatureHash ? { sourceSignatureHash: signatureHash } : {}), dependencyFingerprint: fingerprint, key, summaryJson,
+    detailBytes: chunks.reduce((sum, json) => sum + new TextEncoder().encode(json).length + 1024, 0), detailChunkCount: chunks.length };
   const id = previous?._id ?? await ctx.db.insert("manPageDerived", data);
   if (previous) {
     await deleteDetails(ctx, previous._id);
@@ -299,9 +311,129 @@ async function processName(ctx: MutationCtx, build: Doc<"derivedBuilds">, name: 
     }
     comparisons.push(comparison);
   }
-  const estimatedBytes = [...allInputs.values()].reduce((sum, page) => sum + (page.optionSignatureBytes ?? 700_000), 0);
-  return { pages, comparisons, estimatedBytes };
+  // Resolve predecessor metadata before any option payload is loaded.
+  const histories = new Map<Id<"manPages">, { oldRelease: Doc<"datasetReleases"> | null; oldPage: Doc<"manPages"> | null; compareOptions: boolean }>();
+  for (const page of pages) if (page?.name === name && page.section === section) {
+    const release = await ctx.db.get(page.releaseId);
+    const oldRelease = release?.previousProdReleaseId ? await ctx.db.get(release.previousProdReleaseId) : null;
+    const oldPage = oldRelease?.sealed && oldRelease.manifestVerified && !oldRelease.pruning
+      ? await physicalPageByName(ctx, oldRelease._id, name, section) : null;
+    // Unknown/different extraction or unchanged source cannot produce marks.
+    // Do not load (or reserve a guessed maximum for) irrelevant old payloads.
+    const compareOptions = !!oldPage && typeof page.optionExtractorVersion === "number" &&
+      page.optionExtractorVersion === oldPage.optionExtractorVersion &&
+      (oldPage.contentSha256 !== page.contentSha256 || oldPage.sourcePackageVersion !== page.sourcePackageVersion);
+    histories.set(page._id, { oldRelease, oldPage, compareOptions });
+    if (oldPage && compareOptions) allInputs.set(oldPage._id, oldPage);
+  }
+  // Older unavailable inputs have no signature length. Learn their actual
+  // stored input size under a full-document reservation, without treating the
+  // empty failure payload as the size of a future cache repair.
+  let deferred = false, metadataChanged = false;
+  for (const page of allInputs.values()) {
+    if (page.optionInputBytes === undefined && page.optionSignatureBytes === undefined) {
+      if (!await fitsBudget(ctx, CHUNK_DOCUMENT_BYTES, 64 * 1024)) { deferred = true; break; }
+      const input = await ctx.db.query("derivedPageInputs").withIndex("by_releaseId_and_pageId", (q) => q.eq("releaseId", page.releaseId).eq("pageId", page._id)).unique();
+      page.optionInputBytes = input ? new TextEncoder().encode(input.optionsJson).length : 2;
+      await ctx.db.patch(page._id, { optionInputBytes: page.optionInputBytes });
+      metadataChanged = true;
+    }
+    if (page.optionContentBytes === undefined) {
+      if (!await fitsBudget(ctx, CHUNK_DOCUMENT_BYTES, 64 * 1024)) { deferred = true; break; }
+      const content = await ctx.db.query("manPageContents").withIndex("by_pageId", (q) => q.eq("pageId", page._id)).first();
+      page.optionContentBytes = content ? getConvexSize(content) + 1024 : 0;
+      await ctx.db.patch(page._id, { optionContentBytes: page.optionContentBytes });
+      metadataChanged = true;
+    }
+  }
+  const rows = new Map<Distro, Doc<"manPageDerived">>();
+  for (const distro of DISTROS) {
+    const row = await storedRow(ctx, build.locale, distro, name, section);
+    if (row) rows.set(distro, row);
+  }
+  return { pages, comparisons, histories, rows, allInputs, deferred, metadataChanged };
 }
+
+type GroupPlan = Awaited<ReturnType<typeof processName>>;
+function signatureBytes(page: Doc<"manPages">) {
+  const bytes = page.optionInputBytes ?? page.optionSignatureBytes ?? MAX_SIGNATURE_BYTES;
+  return Number.isSafeInteger(bytes) && bytes >= 0 && bytes <= MAX_SIGNATURE_BYTES ? bytes : MAX_BATCH_BYTES + 1;
+}
+function groupBudget(plan: GroupPlan) {
+  let readBytes = 0, writeBytes = 0;
+  for (const page of plan.allInputs.values()) {
+    const size = signatureBytes(page);
+    // Existing input + up to two cache candidates + saveInput reread/return.
+    const cacheBytes = page.optionSignatureHash || page.optionExtractorVersion !== undefined
+      ? page.optionSignatureBytes ?? MAX_SIGNATURE_BYTES : 0;
+    readBytes += size + cacheBytes * 4 + (page.optionContentBytes ?? UNKNOWN_CONTENT_BYTES) + 16 * 1024;
+    writeBytes += cacheBytes * 2 + 16 * 1024; // possible cache hydration and page metadata
+  }
+  for (const page of plan.pages) if (page) {
+    // New detail JSON is smaller than twice the source signature, including
+    // the bounded 64 chunk documents and the compact main summary.
+    const size = signatureBytes(page);
+    // Every packed option occupies at least 16 bytes; do not reserve 64 chunk
+    // documents for small manuals that can only produce one.
+    const chunkCount = Math.min(64, Math.ceil(size / (16 * 128)));
+    writeBytes += size * 2 + chunkCount * 1024 + MAX_SUMMARY_BYTES;
+  }
+  for (const row of plan.rows.values()) {
+    readBytes += row.detailBytes ?? MAX_BATCH_BYTES + 1;
+    writeBytes += row.detailBytes ?? MAX_BATCH_BYTES + 1; // old deletes/ownership patches
+  }
+  return { readBytes, writeBytes };
+}
+async function fitsBudget(ctx: MutationCtx, readBytes: number, writeBytes: number) {
+  const metrics = await ctx.meta.getTransactionMetrics();
+  return metrics.bytesRead.used + readBytes <= MAX_BATCH_BYTES && metrics.bytesWritten.used + writeBytes <= MAX_BATCH_BYTES;
+}
+
+// Older rows have no size metadata. Drain a bounded number of <=1 MiB
+// documents before replacing them, instead of guessing and bulk-reading them.
+// The same path clears oversized-page output without loading its inputs.
+async function prepareDetails(ctx: MutationCtx, plan: GroupPlan, discard: boolean) {
+  let changed = false;
+  for (const [distro, row] of plan.rows) {
+    if (row.detailBytes !== undefined && row.detailChunkCount === 0) continue;
+    if (row.detailBytes !== undefined && !row.cleanupPending && !discard) continue;
+    const metrics = await ctx.meta.getTransactionMetrics();
+    const available = Math.min(MAX_BATCH_BYTES - metrics.bytesRead.used, MAX_BATCH_BYTES - metrics.bytesWritten.used) - 64 * 1024;
+    const limit = Math.min(4, Math.floor(available / CHUNK_DOCUMENT_BYTES));
+    if (limit < 1) return { ready: false, changed };
+    changed = true;
+    await ctx.db.patch(row._id, { cleanupPending: true, dependencyFingerprint: undefined });
+    const chunks = await ctx.db.query("derivedPortabilityChunks").withIndex("by_derivedId_and_chunkIndex", (q) => q.eq("derivedId", row._id)).take(limit);
+    for (const chunk of chunks) await ctx.db.delete(chunk._id);
+    if (chunks.length === limit) return { ready: false, changed };
+    // Keep the parent hidden until saveRow replaces its summary and chunks
+    // together. Another distro in this logical group may still need cleanup.
+    const ready = { ...row, detailBytes: 0, detailChunkCount: 0, cleanupPending: true, dependencyFingerprint: undefined };
+    await ctx.db.patch(row._id, { detailBytes: 0, detailChunkCount: 0, cleanupPending: true, dependencyFingerprint: undefined });
+    plan.rows.set(distro, ready);
+  }
+  return { ready: true, changed };
+}
+async function admitGroup(ctx: MutationCtx, plan: GroupPlan, processed: number, isolate: boolean) {
+  const initial = groupBudget(plan);
+  const oversized = initial.readBytes > MAX_BATCH_BYTES || initial.writeBytes > MAX_BATCH_BYTES || isolate;
+  if (processed && (oversized || !await fitsBudget(ctx, initial.readBytes, initial.writeBytes))) return { defer: true };
+  const preparation = await prepareDetails(ctx, plan, oversized);
+  if (!preparation.ready) return { defer: true };
+  const ready = groupBudget(plan);
+  if (isolate) return { defer: false, error: "DERIVED_TRANSACTION_LIMIT" };
+  if (ready.readBytes > MAX_BATCH_BYTES || ready.writeBytes > MAX_BATCH_BYTES) return { defer: false, error: "DERIVED_GROUP_INPUT_LIMIT" };
+  if (!await fitsBudget(ctx, ready.readBytes, ready.writeBytes)) {
+    if (processed || preparation.changed || plan.metadataChanged) return { defer: true };
+    // A fresh transaction still cannot fit this name. Clear obsolete output
+    // before isolating it, instead of repeating the same failing workload.
+    const cleanup = await prepareDetails(ctx, plan, true);
+    if (!cleanup.ready || cleanup.changed) return { defer: true };
+    return { defer: false, error: "DERIVED_GROUP_INPUT_LIMIT" };
+  }
+  return { defer: false };
+}
+
 async function retryPage(ctx: MutationCtx, locale: string, distro: Distro, name: string, section: string, failure?: { releaseId: Id<"datasetReleases">; error: string }) {
   const key = JSON.stringify([distro, name, section]);
   const previous = await ctx.db.query("derivedRetryPages").withIndex("by_locale_and_key", (q) => q.eq("locale", locale).eq("key", key)).unique();
@@ -312,14 +444,22 @@ async function retryPage(ctx: MutationCtx, locale: string, distro: Distro, name:
   return 0;
 }
 
-async function processGroup(ctx: MutationCtx, build: Doc<"derivedBuilds">, pages: (Doc<"manPages"> | null)[], name: string, section: string, comparisons: ComparisonPlan[], estimatedBytes: number) {
-  if (estimatedBytes > MAX_BATCH_INPUT_BYTES) {
+async function processGroup(ctx: MutationCtx, build: Doc<"derivedBuilds">, pages: (Doc<"manPages"> | null)[], name: string, section: string, plan: GroupPlan, forcedError?: string) {
+  const { comparisons } = plan;
+  const estimate = groupBudget(plan);
+  if (forcedError || estimate.readBytes > MAX_BATCH_INPUT_BYTES || estimate.writeBytes > MAX_BATCH_INPUT_BYTES) {
     let retryDelta = 0, skipped = 0;
-    for (const page of pages) if (page?.name === name && page.section === section) {
-      skipped++; retryDelta += await retryPage(ctx, build.locale, page.distro, name, section, { releaseId: page.releaseId, error: "DERIVED_GROUP_INPUT_LIMIT" });
-      await discardRow(ctx, await storedRow(ctx, build.locale, page.distro, name, section), build.locale);
+    // Admission already drained output within its own budget. Removed pages,
+    // aliases and retired distros also lose their obsolete row ownership.
+    for (const row of plan.rows.values()) await discardRow(ctx, row, build.locale);
+    for (const distro of DISTROS) {
+      const index = build.pointers.findIndex((p) => p.distro === distro);
+      const page = index < 0 ? null : pages[index];
+      if (page?.name === name && page.section === section) {
+        skipped++; retryDelta += await retryPage(ctx, build.locale, distro, name, section, { releaseId: page.releaseId, error: forcedError ?? "DERIVED_GROUP_INPUT_LIMIT" });
+      } else retryDelta += await retryPage(ctx, build.locale, distro, name, section);
     }
-    return { recomputed: 0, cacheHits: 0, skipped, reads: 0, errors: [{ name, section, code: "DERIVED_GROUP_INPUT_LIMIT" }], retryDelta };
+    return { recomputed: 0, cacheHits: 0, skipped, reads: 0, errors: [{ name, section, code: forcedError ?? "DERIVED_GROUP_INPUT_LIMIT" }], retryDelta };
   }
   const inputs = await Promise.all(pages.map((page) => page ? inputForPage(ctx, page) : null));
   const inputMemo = new Map(pages.flatMap((page, i) => page ? [[page._id, inputs[i]] as const] : []));
@@ -327,13 +467,13 @@ async function processGroup(ctx: MutationCtx, build: Doc<"derivedBuilds">, pages
   let recomputed = 0, cacheHits = 0, skipped = 0, reads = 0, retryDelta = 0;
   const errors: { name: string; section: string; code: string }[] = [];
   for (const distro of DISTROS) if (!build.pointers.some((p) => p.distro === distro)) {
-    const stale = await storedRow(ctx, build.locale, distro, name, section);
+    const stale = plan.rows.get(distro) ?? null;
     await discardRow(ctx, stale, build.locale);
     retryDelta += await retryPage(ctx, build.locale, distro, name, section);
   }
   for (const [index, pointer] of build.pointers.entries()) {
     const page = pages[index];
-    const prior = await storedRow(ctx, build.locale, pointer.distro, name, section);
+    const prior = plan.rows.get(pointer.distro) ?? null;
     if (!page || page.name !== name || page.section !== section) {
       retryDelta += await retryPage(ctx, build.locale, pointer.distro, name, section);
       await discardRow(ctx, prior, build.locale);
@@ -365,10 +505,9 @@ async function processGroup(ctx: MutationCtx, build: Doc<"derivedBuilds">, pages
       comparisonInputs[i]?.signatureHash ?? null, comparisonInputs[i]?.extractorVersion ?? null, comparisonInputs[i]?.status ?? "unavailable"]);
     const semanticName = name === "bsdtar" && section === "1" && comparison.aliases.some((a) => a.name === "tar" && a.section === "1") ? "tar" : name;
     const options = decodeOptions(input.optionsJson);
-    const release = await ctx.db.get(page.releaseId);
-    const oldRelease = release?.previousProdReleaseId ? await ctx.db.get(release.previousProdReleaseId) : null;
-    const oldPage = oldRelease && oldRelease.sealed && oldRelease.manifestVerified && !oldRelease.pruning ? await physicalPageByName(ctx, oldRelease._id, name, section) : null;
-    const oldInput = oldPage ? await inputForPage(ctx, oldPage) : null;
+    const { oldRelease, oldPage, compareOptions } = plan.histories.get(page._id)!;
+    if (oldPage && compareOptions && !inputMemo.has(oldPage._id)) inputMemo.set(oldPage._id, await inputForPage(ctx, oldPage));
+    const oldInput = oldPage && compareOptions ? inputMemo.get(oldPage._id) ?? null : null;
     const comparable = oldPage && oldInput?.status === "ready" && typeof input.extractorVersion === "number" && input.extractorVersion === oldInput.extractorVersion &&
       (oldPage.contentSha256 !== page.contentSha256 || oldPage.sourcePackageVersion !== page.sourcePackageVersion);
     // A version migration must not preserve marks computed by older inference
@@ -395,7 +534,7 @@ async function processGroup(ctx: MutationCtx, build: Doc<"derivedBuilds">, pages
       newIn, previousDatasetReleaseId: oldRelease?.datasetReleaseId ?? history?.previousDatasetReleaseId ?? null,
       mostUsed: rankFlags(options, page.verifiedFlagUsage ?? []), referencedBy: refs.data, family: family.data,
       package: page.sourcePackage ? { name: page.sourcePackage, version: page.sourcePackageVersion ?? null } : null };
-    const error = await saveRow(ctx, page, build.key, fingerprint, input.signatureHash, summary);
+    const error = await saveRow(ctx, page, build.key, fingerprint, input.signatureHash, summary, prior);
     if (error) {
       skipped++; errors.push({ name, section, code: error });
       retryDelta += await retryPage(ctx, build.locale, pointer.distro, name, section, { releaseId: page.releaseId, error });
@@ -408,12 +547,12 @@ async function processGroup(ctx: MutationCtx, build: Doc<"derivedBuilds">, pages
 }
 
 // Internal keyset cursors let byte-aware batches stop without losing the unprocessed suffix.
-async function scanPages(ctx: QueryCtx, releaseId: Id<"datasetReleases">, cursor: string | null, kind: "pages" | "aliases") {
+async function scanPages(ctx: QueryCtx, releaseId: Id<"datasetReleases">, cursor: string | null, kind: "pages" | "aliases", limit: number) {
   const table = kind === "pages" ? "manPages" : "manPageAliases";
-  if (!cursor) return ctx.db.query(table).withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId)).take(DERIVED_BATCH_PAGES + 1);
+  if (!cursor) return ctx.db.query(table).withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId)).take(limit + 1);
   const [name, section] = JSON.parse(cursor) as [string, string];
-  const tail = await ctx.db.query(table).withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).eq("name", name).gt("section", section)).take(DERIVED_BATCH_PAGES + 1);
-  if (tail.length < DERIVED_BATCH_PAGES + 1) tail.push(...await ctx.db.query(table).withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).gt("name", name)).take(DERIVED_BATCH_PAGES + 1 - tail.length));
+  const tail = await ctx.db.query(table).withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).eq("name", name).gt("section", section)).take(limit + 1);
+  if (tail.length < limit + 1) tail.push(...await ctx.db.query(table).withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", releaseId).gt("name", name)).take(limit + 1 - tail.length));
   return tail;
 }
 
@@ -437,19 +576,23 @@ export const runBatch = internalMutation({
   handler: async (ctx, args) => {
     const build = await ctx.db.query("derivedBuilds").withIndex("by_locale", (q) => q.eq("locale", args.locale)).unique();
     if (!build || build.key !== args.key || build.phase === "complete" || build.phase === "blocked") return { processed: 0, stale: true };
+    const limit = build.batchPageLimit ?? DERIVED_BATCH_PAGES;
     const job = await ctx.db.query("derivedScanJobs").withIndex("by_locale", (q) => q.eq("locale", args.locale)).first();
     if (!job) {
       if (!build.retrying) { await finishBuild(ctx, build); return { processed: 0, stale: false }; }
       const retries = build.retryCursor ? await ctx.db.query("derivedRetryPages")
-        .withIndex("by_locale_and_key", (q) => q.eq("locale", args.locale).gt("key", build.retryCursor!)).take(DERIVED_BATCH_PAGES + 1)
-        : await ctx.db.query("derivedRetryPages").withIndex("by_locale_and_key", (q) => q.eq("locale", args.locale)).take(DERIVED_BATCH_PAGES + 1);
-      let processed = 0, bytes = 0, recomputed = 0, cacheHits = 0, skipped = 0, retryDelta = 0, reads = 0;
+        .withIndex("by_locale_and_key", (q) => q.eq("locale", args.locale).gt("key", build.retryCursor!)).take(limit + 1)
+        : await ctx.db.query("derivedRetryPages").withIndex("by_locale_and_key", (q) => q.eq("locale", args.locale)).take(limit + 1);
+      let processed = 0, recomputed = 0, cacheHits = 0, skipped = 0, retryDelta = 0, reads = 0;
       const errors = [...(build.errorSamples ?? [])];
-      for (const retry of retries.slice(0, DERIVED_BATCH_PAGES)) {
+      for (const retry of retries.slice(0, limit)) {
         const group = await processName(ctx, build, retry.name, retry.section);
-        if (processed && (bytes + group.estimatedBytes > MAX_BATCH_INPUT_BYTES || reads >= MAX_BATCH_RELATION_READS)) break;
-        const result = await processGroup(ctx, build, group.pages, retry.name, retry.section, group.comparisons, group.estimatedBytes);
-        processed++; bytes += group.estimatedBytes; reads += result.reads; retryDelta += result.retryDelta;
+        if (group.deferred) break;
+        if (processed && reads >= MAX_BATCH_RELATION_READS) break;
+        const admission = await admitGroup(ctx, group, processed, build.isolateNext === true);
+        if (admission.defer) break;
+        const result = await processGroup(ctx, build, group.pages, retry.name, retry.section, group, admission.error);
+        processed++; reads += result.reads; retryDelta += result.retryDelta;
         recomputed += result.recomputed; cacheHits += result.cacheHits; skipped += result.skipped;
         for (const error of result.errors) if (errors.length < 20) errors.push(error);
       }
@@ -457,28 +600,31 @@ export const runBatch = internalMutation({
         cacheHits: (build.cacheHits ?? 0) + cacheHits, skipped: (build.skipped ?? 0) + skipped,
         failedPages: Math.max(0, (build.failedPages ?? 0) + retryDelta), batches: (build.batches ?? 0) + 1,
         errorSamples: errors, lastProgressAt: Date.now() };
-      await ctx.db.patch(build._id, changes);
+      await ctx.db.patch(build._id, { ...changes, ...(processed ? { isolateNext: false } : {}) });
       if (retries.length <= processed) { await finishBuild(ctx, { ...build, ...changes }); return { processed, stale: false }; }
-      await ctx.db.patch(build._id, { retryCursor: retries[processed - 1].key });
+      if (processed) await ctx.db.patch(build._id, { retryCursor: retries[processed - 1].key });
       const jobId = await ctx.scheduler.runAfter(0, internal.derived.runBatch, args);
       await ctx.db.patch(build._id, { jobId });
       return { processed, stale: false };
     }
     const release = await ctx.db.get(job.releaseId);
-    const pages = release && !release.pruning ? await scanPages(ctx, job.releaseId, job.cursor, job.kind) : [];
-    let processed = 0, bytes = 0, relationReads = 0, recomputed = 0, cacheHits = 0, skipped = 0, retryDelta = 0;
+    const pages = release && !release.pruning ? await scanPages(ctx, job.releaseId, job.cursor, job.kind, limit) : [];
+    let processed = 0, relationReads = 0, recomputed = 0, cacheHits = 0, skipped = 0, retryDelta = 0;
     const errorSamples = [...(build.errorSamples ?? [])];
-    for (const page of pages.slice(0, DERIVED_BATCH_PAGES)) {
+    for (const page of pages.slice(0, limit)) {
       const group = await processName(ctx, build, page.name, page.section);
-      if (processed && (bytes + group.estimatedBytes > MAX_BATCH_INPUT_BYTES || relationReads >= MAX_BATCH_RELATION_READS)) break;
-      const result = await processGroup(ctx, build, group.pages, page.name, page.section, group.comparisons, group.estimatedBytes);
-      processed++; bytes += group.estimatedBytes; relationReads += result.reads;
+      if (group.deferred) break;
+      if (processed && relationReads >= MAX_BATCH_RELATION_READS) break;
+      const admission = await admitGroup(ctx, group, processed, build.isolateNext === true);
+      if (admission.defer) break;
+      const result = await processGroup(ctx, build, group.pages, page.name, page.section, group, admission.error);
+      processed++; relationReads += result.reads;
       recomputed += result.recomputed; cacheHits += result.cacheHits; skipped += result.skipped; retryDelta += result.retryDelta;
       for (const error of result.errors) if (errorSamples.length < 20) errorSamples.push(error);
     }
     const done = pages.length <= processed;
     if (done) { await ctx.db.delete(job._id); await changePin(ctx, job.releaseId, args.locale, { pending: -1 }); }
-    else {
+    else if (processed) {
       const last = pages[processed - 1];
       await ctx.db.patch(job._id, { cursor: JSON.stringify([last.name, last.section]), scanned: job.scanned + processed });
     }
@@ -488,7 +634,7 @@ export const runBatch = internalMutation({
       // Legacy pre-pin pruning may have removed a scan source; reconstruct from current pointers.
       for (const pointer of build.pointers) queued += await enqueueReleaseScans(ctx, args.locale, pointer.releaseId, build.key);
     }
-    await ctx.db.patch(build._id, { pendingJobs: Math.max(0, (build.pendingJobs ?? 0) + queued - (done ? 1 : 0)), scanned: (build.scanned ?? 0) + processed,
+    await ctx.db.patch(build._id, { ...(processed ? { isolateNext: false } : {}), pendingJobs: Math.max(0, (build.pendingJobs ?? 0) + queued - (done ? 1 : 0)), scanned: (build.scanned ?? 0) + processed,
       recomputed: (build.recomputed ?? 0) + recomputed, cacheHits: (build.cacheHits ?? 0) + cacheHits, skipped: (build.skipped ?? 0) + skipped,
       failedPages: Math.max(0, (build.failedPages ?? 0) + retryDelta),
       batches: (build.batches ?? 0) + 1, lastProgressAt: Date.now(), errorSamples, error: skipped ? "DERIVED_PAGES_UNAVAILABLE" : build.error });
