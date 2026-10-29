@@ -38,37 +38,96 @@ it("keeps a >1 MiB manifest with 20k package entries off the release and reclaim
   expect(await t.run((ctx) => ctx.db.system.query("_storage").take(3))).toHaveLength(1);
 });
 
-it("declares 9k packages in bounded transactions, resumes replays, and refuses incomplete or changed declarations", async () => {
-  vi.useFakeTimers();
-  // Real limits, including documentsWritten and array length. This would fail
-  // the former single-transaction package declaration.
+// Exercise large declaration fanout separately from package insertion. convex-test
+// implements indexed reads by scanning/sorting in-memory rows, so uploading 9k
+// packages through per-package uniqueness checks measures quadratic mock work,
+// not Convex's indexed backend. The opt-in `pnpm ingest:scale` runs the real
+// 17,300-package upload against a local deployment.
+function packageRows(count: number, start = 0) {
+  return Array.from({ length: count }, (_, i) => ({
+    name: `pkg${String(start + i).padStart(5, "0")}`, version: "1", hasLicenseText: false,
+  }));
+}
+async function declareBatch(packages: ReturnType<typeof packageRows>) {
+  return { digest: await storedPayloadDigest(canonicalJson(packages)), count: packages.length, licenseCount: 0 };
+}
+
+it("declares 17.3k packages above array/write limits using only bounded batch metadata", async () => {
   const t = convexTest({ schema, modules, transactionLimits: { documentsWritten: 256 } });
-  const packages = Array.from({ length: 9000 }, (_, i) => ({ name: `pkg${String(i).padStart(5, "0")}`, version: "1", hasLicenseText: false }));
-  const batches = Array.from({ length: 45 }, (_, i) => packages.slice(i * 200, (i + 1) * 200));
-  const packageBatches = await Promise.all(batches.map(async (batch) => ({ digest: await storedPayloadDigest(canonicalJson(batch)), count: 200, licenseCount: 0 })));
+  const count = 17_300; // Above both 8,192 array elements and 16,000 document writes.
+  const packageBatches = await Promise.all(Array.from({ length: Math.ceil(count / 200) }, (_, i) =>
+    declareBatch(packageRows(Math.min(200, count - i * 200), i * 200))));
+  const input = { ...declaration, packageBatches };
+  const { releaseId } = await t.mutation(internal.ingest.createRelease, input);
+  expect(await t.mutation(internal.ingest.createRelease, input)).toEqual({ releaseId, existed: true });
+  const declared = await t.run((ctx) => ctx.db.query("releasePackageBatches")
+    .withIndex("by_releaseId_and_batchIndex", q => q.eq("releaseId", releaseId)).take(88));
+  expect(declared).toHaveLength(87);
+  expect(declared.reduce((sum, batch) => sum + batch.count, 0)).toBe(count);
+  expect(declared.map(batch => batch.digest)).toEqual(packageBatches.map(batch => batch.digest));
+  expect(declared.every(batch => !batch.uploaded)).toBe(true);
+  expect(await t.run((ctx) => ctx.db.query("licensePackages").take(1))).toEqual([]);
+  expect(await t.run((ctx) => ctx.db.get(releaseId))).toMatchObject({ packageBatchCount: 87, uploadedPackageBatchCount: 0 });
+});
+
+it("uploads full and partial package batches within 202 writes, resumes replays, and rejects changed/incomplete declarations", async () => {
+  vi.useFakeTimers();
+  // 401 total rows exceed the per-transaction budget, while 200 rows + the
+  // batch/release progress writes fit exactly. The last batch has one row.
+  const t = convexTest({ schema, modules, transactionLimits: { documentsWritten: 202 } });
+  const packages = packageRows(401);
+  const batches = [packages.slice(0, 200), packages.slice(200, 400), packages.slice(400)];
+  const packageBatches = await Promise.all(batches.map(declareBatch));
   const { releaseId } = await t.mutation(internal.ingest.createRelease, { ...declaration, packageBatches });
-  for (const [batchIndex, batch] of batches.entries()) {
-    expect(await t.mutation(internal.ingest.insertLicensePackages, { datasetReleaseId: "scale", batchIndex, packages: batch })).toEqual({ inserted: 200, skipped: 0 });
-    if (batchIndex === 0) {
-      expect(await t.mutation(internal.ingest.insertLicensePackages, { datasetReleaseId: "scale", batchIndex, packages: batch })).toEqual({ inserted: 0, skipped: 200 });
-      await expect(t.mutation(internal.ingest.insertLicensePackages, { datasetReleaseId: "scale", batchIndex, packages: [{ ...batch[0], version: "changed" }, ...batch.slice(1)] })).rejects.toThrow("RELEASE_MANIFEST_CONFLICT");
-      await expect(t.mutation(internal.ingest.activateRelease, { datasetReleaseId: "scale", stage: "prod", activatedAt: "now" })).rejects.toThrow("RELEASE_MANIFEST_INCOMPLETE");
-    }
+  // Supply the complete page upload first: incomplete activation below must be
+  // caused by the missing package batches, not by a missing page.
+  await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "scale", pages: [{
+    externalId: "one", name: "one", section: "1", sitemapPage: 1, title: "one", description: "one",
+    sourcePath: "one.1", sourcePackage: null, sourcePackageVersion: null, contentSha256: "one",
+    hasParseWarnings: false, doc: { blocks: [] }, synopsis: null, options: null, seeAlso: null,
+    searchText: "one", snippetText: "one", links: [],
+  }] });
+  const activate = () => t.mutation(internal.ingest.activateRelease, { datasetReleaseId: "scale", stage: "prod", activatedAt: "now" });
+  for (const batchIndex of [2, 0, 1]) { // Resume out of order, including the short final batch.
+    const batch = batches[batchIndex];
+    const upload = (packages = batch) => t.mutation(internal.ingest.insertLicensePackages, { datasetReleaseId: "scale", batchIndex, packages });
+    expect(await upload()).toEqual({ inserted: batch.length, skipped: 0 });
+    expect(await upload()).toEqual({ inserted: 0, skipped: batch.length });
+    await expect(upload([{ ...batch[0], version: "changed" }, ...batch.slice(1)])).rejects.toThrow("RELEASE_MANIFEST_CONFLICT");
+    if (batchIndex !== 1) await expect(activate()).rejects.toThrow("RELEASE_MANIFEST_INCOMPLETE");
   }
-  const page = (cursor?: string) => t.query(api.queries.listLicenses, { distro: "debian", cursor });
-  await t.run(async (ctx) => {
-    await ctx.db.insert("activeReleases", { stage: "prod", locale: "en", distro: "debian", releaseId, datasetReleaseId: "scale", activatedAt: "now" });
-  });
-  let cursor: string | null = null;
-  const names = [];
-  do {
-    const batch = await page(cursor ?? undefined);
-    names.push(...batch.packages.map((pkg) => pkg.name));
-    cursor = batch.nextCursor;
-  } while (cursor);
-  expect(names).toEqual(packages.map((pkg) => pkg.name));
-  expect((await t.run((ctx) => ctx.db.get(releaseId)))?.uploadedPackageBatchCount).toBe(45);
-}, 60_000);
+  expect(await activate()).toMatchObject({ pending: true });
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await activate()).toMatchObject({ pending: false });
+  const listed = await t.query(api.queries.listLicenses, { distro: "debian" });
+  expect(listed.packages.map(pkg => pkg.name)).toEqual(packages.map(pkg => pkg.name));
+  expect(listed.nextCursor).toBeNull();
+  expect(await t.run((ctx) => ctx.db.get(releaseId))).toMatchObject({ uploadedPackageBatchCount: 3, sealed: true });
+});
+
+it("paginates across the 5,000-package boundary without duplicates or unbounded reads", async () => {
+  const t = convexTest({ schema, modules, transactionLimits: { documentsRead: 5005, documentsWritten: 1000 } });
+  const { releaseId } = await t.mutation(internal.ingest.createRelease, { ...declaration, licensePackages: [] });
+  const packages = packageRows(5001);
+  // Query coverage uses direct, batched fixture writes instead of repeating
+  // thousands of ingestion uniqueness lookups already covered above.
+  for (let start = 0; start < packages.length; start += 1000) {
+    await t.run(async ctx => {
+      for (const pkg of packages.slice(start, start + 1000)) {
+        await ctx.db.insert("licensePackages", { releaseId, datasetReleaseId: "scale",
+          packageName: pkg.name, version: pkg.version, hasLicenseText: pkg.hasLicenseText });
+      }
+    });
+  }
+  await t.run(ctx => ctx.db.insert("activeReleases", { stage: "prod", locale: "en", distro: "debian", releaseId, datasetReleaseId: "scale", activatedAt: "now" }));
+  const first = await t.query(api.queries.listLicenses, { distro: "debian" });
+  expect(first.packages).toHaveLength(5000);
+  expect(first.nextCursor).toBe(packages[4999].name);
+  const last = await t.query(api.queries.listLicenses, { distro: "debian", cursor: first.nextCursor!, datasetReleaseId: first.datasetReleaseId });
+  expect(last.packages).toHaveLength(1);
+  expect(last.nextCursor).toBeNull();
+  expect([...first.packages, ...last.packages].map(pkg => pkg.name)).toEqual(packages.map(pkg => pkg.name));
+});
 
 it("reads a deep 20k-page section in at most seven documents", async () => {
   const t = convexTest({ schema, modules, transactionLimits: { documentsRead: 7 } });

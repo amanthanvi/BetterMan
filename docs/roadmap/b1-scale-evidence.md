@@ -9,7 +9,7 @@ and real-package throughput remain outside this evidence.
 | Blocker | PR 1 implementation and evidence |
 | --- | --- |
 | >1 MiB release manifest / large per-query reads | Stored JSON file plus `releaseManifests`; only counts, digests and lifecycle state on `datasetReleases`. Optional cursor migration detaches existing inline manifests. A >2 MiB/20k-entry unit fixture preserves provenance and reclaims duplicate replay files. |
-| 8,192-element license array / 16k transaction writes | Creation commits at most 200-package batch digests, then uploads each separately. Missing, changed, duplicate, and replayed batches are checked. A 9k-package regression enforces 256 writes/transaction; the live run uses 17,300 package declarations and notices. License listing paginates and pins one active release; Next caches bounded package pages and joins them for filtering; large provenance stays a separate JSON link. Above 5k packages the initial DOM renders 200 rows and offers more. |
+| 8,192-element license array / 16k transaction writes | Creation commits at most 200-package batch digests, then uploads each separately. Missing, changed, duplicate, and replayed batches are checked. A 17,300-package declaration checks bounded digest fanout under 256 writes; actual 200/200/1-row uploads run under a 202-write limit. The local backend experiment uploads all 17,300 package declarations and notices. License listing paginates and pins one active release; Next caches bounded package pages and joins them for filtering; large provenance stays a separate JSON link. Above 5k packages the initial DOM renders 200 rows and offers more. |
 | >100 sections | Lists all declared sections up to the existing 256-section declaration bound; 114-section regression. |
 | Deep pagination | Existing name cursors retained and tested at page 19,001 of 20k under a seven-document read limit. Legacy offset-only URLs above 5,000 redirect to the first page; forward/backward cursor traversal has no such cap. |
 | Perl names | `::` accepted by source/href filters and typo candidate recognition. Scan, link, spool-equivalence tests plus live `Foo::Bar(3)` search/lookup. A red/green browser regression caught encoded HTML params (`foo%3A%3Abar`) reaching lookups unchanged; HTML, plain-text and OG route boundaries decode exactly once. Raw/encoded URLs, name-only redirects and citation search pass. Names keep today's lowercase normalization. |
@@ -102,7 +102,7 @@ required before any spend increase.
 
 ## Regression validation
 
-The local regression suites pass `pnpm convex:test` (190), `pnpm ingest:test`
+The local regression suites pass `pnpm convex:test` (192), `pnpm ingest:test`
 (445, 86.48% coverage), `pnpm next:test` (470) and `pnpm ops:test` (112). Convex
 typecheck, ingestion/Next lint, visual grammar and the public-API guard pass. The
 platform-deadline shell step is exercised for 60-, 90- and 300-minute budgets;
@@ -124,6 +124,38 @@ page views retain home 3 calls/7 documents, man 5/28 plus one file read, search
 3/32 and section 2/37. The synthetic scale measurements above were retained from
 the original local experiment; these regressions did not repeat the 20k-page
 probe or exercise shared deployments.
+
+## CI test cost
+
+The package regressions separate three boundaries so CI measures behavior instead
+of quadratic in-memory mock work:
+
+- 17,300 declared packages (above the 8,192-element and 16,000-write boundaries)
+  are represented by 87 digest records, created and replayed under a 256-write
+  transaction limit without writing package rows.
+- Actual 200/200/1-row uploads run under a 202-write limit, covering full/partial
+  batches, out-of-order resume, replay, digest conflicts, incomplete publication
+  and successful activation once every batch is present.
+- A directly seeded 5,001-row package fixture tests both sides of the 5,000-row
+  pagination boundary under a bounded read budget. The existing 20k-page deep
+  lookup and >16k-child prune regressions remain.
+
+`convex-test` scans in-memory table rows for indexed lookups; sending all 9,000
+packages through individual uniqueness checks made the old test quadratic. The
+opt-in `pnpm ingest:scale` experiment uses the real local backend for the full
+17,300-package upload instead.
+
+A Linux arm64 container using Node 24, a two-CPU quota, affinity restricted to
+cores 0–1, and 4 GiB RAM passed all 192 tests in 22 files in **4.07 seconds**. The
+eight `ingestScale` tests took **839 ms**. The host Node 26 run with two Vitest
+workers passed in 1.80 seconds. These are local checks, not measurements of the
+GitHub x86 runner. No timeout was raised, and runner configuration remains unchanged.
+
+The backfill retry regression deliberately bypasses ingestion's duplicate-route
+guard to corrupt one canonical (release, name, section). It asserts the three
+expected scheduled failures, suppressing only those exact fixture diagnostics;
+unexpected errors remain visible. Normal ingestion rejects that duplicate in
+both page upload paths, with OCC protecting concurrent inserts.
 
 ## Scope and review limits
 
