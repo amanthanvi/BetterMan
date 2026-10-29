@@ -85,9 +85,9 @@ export function LicensesClient({ distro, data }: { distro: string; data: License
               View full package manifest (JSON)
             </a>
           ) : (
-          <pre tabIndex={0} role="group" aria-label="Package manifest" className="mt-3 overflow-x-auto pl-[1.75em] text-xs leading-relaxed text-ink-2">
-            {JSON.stringify(data.packageManifest, null, 2)}
-          </pre>
+            <pre tabIndex={0} role="group" aria-label="Package manifest" className="mt-3 overflow-x-auto pl-[1.75em] text-xs leading-relaxed text-ink-2">
+              {JSON.stringify(data.packageManifest, null, 2)}
+            </pre>
           )}
         </details>
       </header>

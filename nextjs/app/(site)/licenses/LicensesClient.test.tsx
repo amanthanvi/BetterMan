@@ -22,5 +22,6 @@ it('keeps current small-corpus listing and inline provenance', () => {
   const html = renderToStaticMarkup(<LicensesClient distro="debian" data={input} />)
   expect(html.match(/<li /g)).toHaveLength(300)
   expect(html).toContain('curated')
+  expect(html).toMatch(/<pre[^>]*tabindex="0"[^>]*role="group"[^>]*aria-label="Package manifest"/i)
   expect(html).not.toContain('Load more packages')
 })

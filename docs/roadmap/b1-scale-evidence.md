@@ -103,15 +103,15 @@ required before any spend increase.
 ## Regression validation
 
 The local regression suites pass `pnpm convex:test` (192), `pnpm ingest:test`
-(445, 86.48% coverage), `pnpm next:test` (470) and `pnpm ops:test` (112). Convex
+(445, 86.48% coverage), `pnpm next:test` (525) and `pnpm ops:test` (112). Convex
 typecheck, ingestion/Next lint, visual grammar and the public-API guard pass. The
 platform-deadline shell step is exercised for 60-, 90- and 300-minute budgets;
 client tests account for elapsed acquisition/parse/upload time. Backfill tests
 verify that healthy releases schedule while stopped releases retain their cursor
 and report immediate recovery errors.
 
-The browser baseline is 113 passing tests, using a worktree-local anonymous
-backend on 33410/33411 and a production Next server on 33412 with CI's required
+The browser baseline is 119 passing tests, using a worktree-local anonymous
+backend on 33610/33611 and a production Next server on 33612 with CI's required
 origin configuration and a fresh disposable fetch cache. Encoded and literal
 Perl text routes returned 200; share images returned PNG; deep legacy section
 links returned 308. The local backend's `_storage` metadata confirmed the
@@ -124,6 +124,23 @@ page views retain home 3 calls/7 documents, man 5/28 plus one file read, search
 3/32 and section 2/37. The synthetic scale measurements above were retained from
 the original local experiment; these regressions did not repeat the 20k-page
 probe or exercise shared deployments.
+
+## C3 design integration
+
+The branch is rebased onto `d30f0725887e5772cdbe4a191d9b5116cefbd408`
+(C3, PR #432). `DESIGN.md`, `PRODUCT.md`, shared components, global tokens/styles
+and the stricter grammar checker match main. License manifests retain the C3
+keyboard-focusable, labelled text block; large manifests use a separate link and
+package lists retain their progressive limit using the new link typography.
+The C3 and Perl-route E2E additions are both retained.
+
+The stricter `pnpm next:grammar`, Next lint, 525 Next unit tests, production build,
+192 Convex tests/typecheck, 445 ingestion tests, 112 operations tests, public-API
+guard, and unchanged performance budgets pass. Full E2E passes all 119 tests.
+The worktree's entire `nextjs/.next/cache` was cleared after `pnpm perf:check`,
+before the local production rebuild and browser suite. The isolated Convex URLs
+were 33610/33611 and Next used 33612. Backend, ingestion, workflow and maintenance
+sources retain the previously reviewed scale behavior.
 
 ## CI test cost
 
