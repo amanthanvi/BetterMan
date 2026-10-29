@@ -31,8 +31,11 @@ export const GENERATED_LIMITS = {
   taskPhraseChars: 60,
   partFlagUsageRows: 64,
   labelChars: 64,
-  // Pages per content hash that receive B7 flag usage in one pass.
+  // Pages per content hash that receive B7 flag usage.
   flagUsagePages: 64,
+  // B7 updates one propagation mutation schedules before continuing itself;
+  // Convex allows 1,000 scheduled functions per mutation.
+  flagUsageSchedules: 256,
   // B7's setVerifiedFlagUsage accepts at most this many rows.
   flagUsageRows: 256,
   // Serialized page inputs per response; later pages are deferred.

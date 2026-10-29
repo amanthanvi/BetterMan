@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { MutationCtx } from "./_generated/server";
 import {
   flagUsageFor,
   GENERATED_LIMITS,
@@ -64,37 +63,49 @@ export const upsertRecords = internalMutation({
   },
 });
 
-async function propagate(ctx: MutationCtx, contentSha256: string): Promise<number> {
-  const row = await ctx.db
-    .query("manPageGenerated")
-    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
-    .unique();
-  const usage = flagUsageFor(row);
-  const pages = await ctx.db
-    .query("manPages")
-    .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
-    .take(GENERATED_LIMITS.flagUsagePages);
-  let scheduled = 0;
-  for (const page of pages) {
-    if (sameFlagUsage(page.verifiedFlagUsage, usage)) continue;
-    const release = await ctx.db.get(page.releaseId);
-    if (!release || release.pruning) continue;
-    await ctx.scheduler.runAfter(0, internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage });
-    scheduled += 1;
-  }
-  return scheduled;
-}
-
-/** Give B7 the verified flag counts for every page with these content hashes. */
+/**
+ * Give B7 the verified flag counts for every page with these content hashes.
+ * Each run schedules at most `flagUsageSchedules` updates, well under Convex's
+ * 1,000 scheduled functions per mutation, then continues itself from the
+ * hash and page offset where it stopped.
+ */
 export const propagateFlagUsage = internalMutation({
-  args: { contentSha256s: v.array(v.string()) },
+  args: { contentSha256s: v.array(v.string()), offset: v.optional(v.number()) },
   handler: async (ctx, args) => {
     if (args.contentSha256s.length > GENERATED_LIMITS.recordsPerRequest) {
       throw new GeneratedRecordError(`at most ${GENERATED_LIMITS.recordsPerRequest} hashes per request`);
     }
+    const hashes = [...new Set(args.contentSha256s)];
+    let offset = Math.max(0, Math.floor(args.offset ?? 0));
     let scheduled = 0;
-    for (const contentSha256 of new Set(args.contentSha256s)) scheduled += await propagate(ctx, contentSha256);
-    return { scheduled };
+    for (let index = 0; index < hashes.length; index++) {
+      const contentSha256 = hashes[index];
+      const row = await ctx.db
+        .query("manPageGenerated")
+        .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
+        .unique();
+      const usage = flagUsageFor(row);
+      const pages = await ctx.db
+        .query("manPages")
+        .withIndex("by_contentSha256", (q) => q.eq("contentSha256", contentSha256))
+        .take(GENERATED_LIMITS.flagUsagePages);
+      for (let p = offset; p < pages.length; p++) {
+        if (scheduled >= GENERATED_LIMITS.flagUsageSchedules) {
+          await ctx.scheduler.runAfter(0, internal.generated.propagateFlagUsage, {
+            contentSha256s: hashes.slice(index), offset: p,
+          });
+          return { scheduled, continued: true };
+        }
+        const page = pages[p];
+        if (sameFlagUsage(page.verifiedFlagUsage, usage)) continue;
+        const release = await ctx.db.get(page.releaseId);
+        if (!release || release.pruning) continue;
+        await ctx.scheduler.runAfter(0, internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage });
+        scheduled += 1;
+      }
+      offset = 0;
+    }
+    return { scheduled, continued: false };
   },
 });
 
@@ -189,6 +200,10 @@ export const suppressParts = internalMutation({
       await ctx.db.insert("manPageGenerated", {
         contentSha256: args.contentSha256, suppressed, updatedAt: new Date().toISOString(),
       });
+    }
+    // Removed page or tldr examples no longer count toward B7's ranking.
+    if (args.parts.some((part) => part === "page" || part === "tldr")) {
+      await ctx.scheduler.runAfter(0, internal.generated.propagateFlagUsage, { contentSha256s: [args.contentSha256] });
     }
     return { suppressed };
   },

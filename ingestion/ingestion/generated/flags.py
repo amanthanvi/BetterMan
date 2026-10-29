@@ -181,12 +181,19 @@ def _command_start(
         i += 1
     if i >= len(segment):
         return None, None
+    # A placeholder stands for an argument, never for the command itself.
+    if PLACEHOLDER in texts[i]:
+        return None, "placeholder in command position"
     mentions = any(text.rsplit("/", 1)[-1] in heads for text in texts[i + 1 :])
     if texts[i] in _WRAPPERS and texts[i] not in heads:
         if texts[i] in _BARE_WRAPPERS:
             start = _matches(texts, i + 1, invocations)
             if start is not None:
                 return start, None
+        # Behind a wrapper that is not followed, any placeholder could be the
+        # command it runs (`env -- {{tar}}`, `xargs {{tar}}`).
+        if any(PLACEHOLDER in text for text in texts[i + 1 :]):
+            return None, f"placeholder in command position after {texts[i]}"
         if mentions:
             following = texts[i + 1] if i + 1 < len(texts) else ""
             return None, f"wrapped invocation: {texts[i]} {following}".rstrip()

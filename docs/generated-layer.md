@@ -118,6 +118,9 @@ command is in that table:
   `xargs`, `nice`, `timeout`, `time`, `command`, `exec`, `nohup`, ...) and
   any other segment that names the target after its first word (`find -exec
   tar`, `ssh host tar`) is rejected: the verifier cannot check that call.
+- A placeholder stands only for an argument. One in a command position (the
+  first word of a segment, or anywhere behind a wrapper that is not followed,
+  as in `env -- {{tar}}` or `xargs {{tar}}`) rejects the example.
 - A tldr placeholder must be one of two shapes. A flag list
   (`{{--flag}}`, `{{-v|--verbose}}`, `{{[-c|--create]}}`) is verified like any
   flag, and a subcommand list (`{{[a|address]}}`) shows its full word. A value
@@ -150,24 +153,26 @@ Run with `coverage` over the cached mandoc HTML from earlier parser work
 | Indexed tier (sections 1, 5, 7, 8) | 1,874 | 1,707 | 1,876 |
 | Pages with their own EXAMPLES | 639 | 533 | 1,514 |
 | Pages mapped to a tldr page | 537 | 478 | 534 |
-| ... with at least one verified example | 503 | 448 | 515 |
-| ... with every example rejected | 8 | 7 | 7 |
+| ... with at least one verified example | 502 | 447 | 514 |
+| ... with every example rejected | 9 | 8 | 8 |
 | tldr examples checked | 2,512 | 2,271 | 2,582 |
-| verified | 2,202 (87.7%) | 2,001 (88.1%) | 2,290 (88.7%) |
-| rejected | 310 | 270 | 292 |
-| Indexed pages already at three examples | 507 | 454 | 528 |
-| Indexed pages that need generated examples | 359 | 354 | 332 |
+| verified | 2,158 (85.9%) | 1,958 (86.2%) | 2,245 (86.9%) |
+| rejected | 354 | 313 | 337 |
+| Indexed pages already at three examples | 504 | 451 | 524 |
+| Indexed pages that need generated examples | 362 | 357 | 336 |
 
-Debian's 310 rejected examples, by reason (an example can have more than
+Debian's 354 rejected examples, by reason (an example can have more than
 one): 131 flags absent from that manual (apachectl `-t`/`-M`, getconf `-a`,
 find `-or`), 92 unsafe placeholders (multi-flag choices such as
 `{{[-sh|--summarize --human-readable]}}`, whole commands such as
 `{{tar -cvf archive.tar}}`, quoted strings, `$` and backslash escapes,
 interactive keys), 58 that do not run the command (less/vim/more keys, sftp
-prompt commands), 20 placeholders inside a flag (`du -{{b|k|m}}`), 10 command
-or process substitutions, and 5 wrapped or indirect invocations of the target
-(`help test`, `xargs`, `find -exec`). These are rejections by design: the
-verifier cannot prove those flags, or what the reader would run.
+prompt commands), 49 placeholders in a command position (mostly tldr's
+`{{command}} | base64` idiom, where the placeholder could name any command),
+20 placeholders inside a flag (`du -{{b|k|m}}`), 10 command or process
+substitutions, and 4 wrapped or indirect invocations of the target (`help
+test`, `xargs`, `find -exec`). These are rejections by design: the verifier
+cannot prove those flags, or what the reader would run.
 
 ## Generation
 
@@ -225,13 +230,16 @@ eight concurrent agents have already hit "Go usage limit exceeded" (#398).
 - `BETTERMAN_GEN_RUN_CAP_USD` caps one run (the workflow sets $8).
 - Every HTTP attempt, retries included, acquires from the governor (budget
   and requests per minute) and is written to the ledger.
-- Cost per attempt is Go's reported `opencode.allowance` when present, else
-  reported tokens × price. Usage counts only when `prompt_tokens` and
-  `completion_tokens` are both non-negative integers (and `total_tokens`, if
-  present, is their sum). Anything else, a failed attempt (it may still have
-  been billed) and a refused request are charged the worst case: the prompt
-  estimate plus `max_tokens` at the peak list price. A sent attempt is
-  recorded exactly once whatever happens next, so no reservation stays open.
+- Only a successful response with valid usage costs less than the worst
+  case. Usage is valid when `prompt_tokens` and `completion_tokens` are both
+  non-negative integers (and `total_tokens`, if present, is their sum); its
+  cost is tokens × price, or Go's `opencode.allowance` when that is a finite,
+  non-negative number. Everything else is charged the worst case, the prompt
+  estimate plus `max_tokens` at the peak list price: invalid usage whatever
+  the allowance says, failed attempts (they may still have been billed),
+  quota refusals and other errors. Over-counting is acceptable; under-counting
+  is not. A sent attempt is recorded exactly once whatever happens next, so no
+  reservation stays open.
 - Short waits sleep. A wait longer than `BETTERMAN_GEN_MAX_WAIT_SECONDS`
   (900) or a provider limit stops model calls, writes the ledger and lets the
   run finish its page and tldr parts. The next run loads the ledger and
@@ -331,10 +339,13 @@ Separate from the release ingest contract, behind the same ingest secret:
 
 - **B7 (#399, merged in #429):** most-used flags come from the `page` part's
   `flagUsage` (source `examples`) and the `tldr` part's (source `tldr`).
-  Generated examples never count. After an upload with either part,
-  `generated.propagateFlagUsage` finds every page with that content hash
-  (up to 64), skips releases being pruned and pages already current, and
-  schedules B7's own `derived.setVerifiedFlagUsage` for the rest. Candidates
+  Generated examples never count. After an upload with either part, and
+  after `suppressParts` removes one, `generated.propagateFlagUsage` finds
+  every page with that content hash (up to 64), skips releases being pruned
+  and pages already current, and schedules B7's own
+  `derived.setVerifiedFlagUsage` for the rest. One run schedules at most 256
+  updates, well under Convex's 1,000 per mutation, then continues itself from
+  where it stopped. Candidates
   report `flagUsageCurrent`, so a run that skips an unchanged hash still
   refreshes the pages of a new release through `/ingest/generated/flag-usage`.
 - **B5 (#397):** task phrases are in `generated.taskPhrases`.

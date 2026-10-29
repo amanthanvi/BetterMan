@@ -864,11 +864,62 @@ def test_an_exception_after_send_still_records_the_attempt():
 
 
 def test_a_usage_limit_records_the_attempt_and_releases_the_reservation():
+    from ingestion.generated.budget import token_cost
+
     gen = make_generator(FakeProvider(UsageLimitExceeded("Go usage limit exceeded")))
+    messages = [{"role": "user", "content": "test"}]
     with pytest.raises(BudgetPaused):
-        gen._request([{"role": "user", "content": "test"}])
-    assert gen.governor.checkpoint.ledger[0][1] == 0.0
+        gen._request(messages)
+    # Over-counting a refusal is acceptable; under-counting is not.
+    worst = token_cost(len("test") // 4 + 16, gen.max_output_tokens, peak=True)
+    assert gen.governor.checkpoint.ledger[0][1] == pytest.approx(worst)
     assert gen.governor._reserved == 0
+
+
+# Round-2 re-check of #434: an allowance never rescues invalid usage.
+@pytest.mark.parametrize("usage", [{}, {"prompt_tokens": "bad", "completion_tokens": 1}, None])
+@pytest.mark.parametrize("allowance", [0, False, {"usd": 0}, 0.0, "0", -1, float("nan")])
+def test_an_allowance_never_lowers_the_charge_for_invalid_usage(usage, allowance):
+    from test_generated_provider import Opener
+
+    from ingestion.generated.budget import token_cost
+
+    payload = {"choices": [{"message": {"content": "{}"}}], "opencode": {"allowance": allowance}}
+    if usage is not None:
+        payload["usage"] = usage
+    gen = governed(Opener(payload), Clock())
+    messages = [{"role": "user", "content": "probe"}]
+    gen._request(messages)
+    worst = token_cost(len("probe") // 4 + 16, gen.max_output_tokens, peak=True)
+    assert gen.governor.run_spend == pytest.approx(worst)
+
+
+@pytest.mark.parametrize(
+    ("allowance", "expected"),
+    [
+        (0.0004, 0.0004),
+        ({"usd": 0.0002}, 0.0002),
+        (False, None),
+        (float("inf"), None),
+        (float("nan"), None),
+        (-0.1, None),
+        ("0.0004", None),
+    ],
+)
+def test_a_valid_response_uses_only_a_finite_non_negative_allowance(allowance, expected):
+    from test_generated_provider import Opener
+
+    from ingestion.generated.budget import token_cost
+
+    payload = {
+        "choices": [{"message": {"content": "{}"}}],
+        "usage": {"prompt_tokens": 1000, "completion_tokens": 300},
+        "opencode": {"allowance": allowance},
+    }
+    gen = governed(Opener(payload), Clock())
+    gen._request([{"role": "user", "content": "probe"}])
+    want = expected if expected is not None else token_cost(1000, 300)
+    assert gen.governor.run_spend == pytest.approx(want)
 
 
 def test_unchanged_rows_hand_missing_flag_usage_to_b7(monkeypatch):

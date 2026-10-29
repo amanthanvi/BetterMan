@@ -6,6 +6,8 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { briefFromRecord, GENERATED_CONTRACT_VERSION, GENERATED_LIMITS, generationDoc } from "./_generatedLayer";
 import { serializeStoredPayload } from "./_storedPayload";
+import { decodeSummary } from "./_derivedEncoding";
+import { persistOptionSignature } from "./_derivedInputs";
 import type { Distro } from "./lib";
 import schema from "./schema";
 
@@ -481,11 +483,91 @@ describe("B7 flag usage", () => {
     })).json();
     expect(before.items[0].flagUsageCurrent).toBe(false);
     const response = await call(t, "/ingest/generated/flag-usage", { contentSha256s: [TAR] });
-    expect(await response.json()).toEqual({ scheduled: 1 });
+    expect(await response.json()).toEqual({ scheduled: 1, continued: false });
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     expect(await usageOf(t, "debian")).toEqual([{ flag: "-x", count: 1, source: "tldr" }]);
     // Nothing is rescheduled once the page is current.
     expect(await (await call(t, "/ingest/generated/flag-usage", { contentSha256s: [TAR] })).json())
-      .toEqual({ scheduled: 0 });
+      .toEqual({ scheduled: 0, continued: false });
+  });
+});
+
+describe("B7 propagation at scale and after suppression", () => {
+  afterEach(() => vi.useRealTimers());
+  const finish = (t: Harness) => t.finishAllScheduledFunctions(() => vi.runAllTimers(), 10_000);
+
+  it("schedules the largest supported batch within Convex's per-mutation limit", async () => {
+    vi.useFakeTimers();
+    // Round-2 re-check of #434: 25 hashes x 64 pages is 1,600 updates.
+    const t = convexTest({ schema, modules, transactionLimits: { functionsScheduled: 1000 } });
+    const hashes = Array.from({ length: GENERATED_LIMITS.recordsPerRequest }, (_, i) => i.toString(16).padStart(64, "0"));
+    await t.run(async (ctx) => {
+      const releaseId = await release(ctx, "debian", "staging");
+      for (const [h, sha] of hashes.entries()) {
+        await ctx.db.insert("manPageGenerated", {
+          contentSha256: sha, updatedAt: "now", page: { examples: [], flagUsage: [{ flag: "-c", count: 1 }] },
+        });
+        for (let i = 0; i < GENERATED_LIMITS.flagUsagePages; i++) {
+          await ctx.db.insert("manPages", {
+            releaseId, datasetReleaseId: "debian-staging", externalId: `${h}-${i}`, locale: "en", distro: "debian",
+            name: `p${h}-${i}`, section: "1", sitemapPage: 0, title: "p", description: "p", sourcePath: "p",
+            contentSha256: sha, hasParseWarnings: false,
+          });
+        }
+      }
+    });
+    const first = await t.mutation(internal.generated.propagateFlagUsage, { contentSha256s: hashes });
+    expect(first).toEqual({ scheduled: GENERATED_LIMITS.flagUsageSchedules, continued: true });
+    await finish(t);
+    const pages = await t.run((ctx) => ctx.db.query("manPages").take(2000));
+    expect(pages).toHaveLength(1600);
+    expect(pages.every((page) => page.verifiedFlagUsage?.[0]?.flag === "-c")).toBe(true);
+    // Everything is current: nothing more to schedule.
+    expect(await t.mutation(internal.generated.propagateFlagUsage, { contentSha256s: hashes }))
+      .toEqual({ scheduled: 0, continued: false });
+  });
+
+  it("recomputes B7's ranking when page and tldr sources are suppressed", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const id = await t.run(async (ctx) => {
+      const releaseId = await release(ctx, "debian", "prod");
+      await ctx.db.patch(releaseId, { manifestVerified: true });
+      const pageId = await storedPage(ctx, releaseId, "debian", "tar", TAR);
+      await persistOptionSignature(ctx, pageId, tarOptions, 1);
+      return pageId;
+    });
+    await t.mutation(internal.derived.rebuildActive, {});
+    await finish(t);
+    await t.mutation(internal.generated.upsertRecords, { records: [record()], updatedAt: "now" });
+    await finish(t);
+    const ranking = async () => {
+      const derived = await t.run((ctx) => ctx.db.query("manPageDerived")
+        .withIndex("by_locale_and_distro_and_name_and_section", (q) =>
+          q.eq("locale", "en").eq("distro", "debian").eq("name", "tar").eq("section", "1"))
+        .unique());
+      return decodeSummary(derived!.summaryJson).mostUsed.source;
+    };
+    expect((await t.run((ctx) => ctx.db.get(id)))?.verifiedFlagUsage).toHaveLength(3);
+    expect(await ranking()).toBe("verified-frequency");
+
+    await t.mutation(internal.generated.suppressParts, { contentSha256: TAR, parts: ["page", "tldr"] });
+    await finish(t);
+    expect((await t.run((ctx) => ctx.db.get(id)))?.verifiedFlagUsage).toEqual([]);
+    expect(await ranking()).toBe("manual-order");
+  });
+
+  it("drops only the suppressed source from the counts", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const id = await t.run(async (ctx) => storedPage(ctx, await release(ctx, "debian", "staging"), "debian", "tar", TAR));
+    await t.mutation(internal.generated.upsertRecords, { records: [record()], updatedAt: "now" });
+    await finish(t);
+    await t.mutation(internal.generated.suppressParts, { contentSha256: TAR, parts: ["tldr"] });
+    await finish(t);
+    expect((await t.run((ctx) => ctx.db.get(id)))?.verifiedFlagUsage).toEqual([
+      { flag: "-c", count: 1, source: "examples" },
+      { flag: "-f", count: 1, source: "examples" },
+    ]);
   });
 });

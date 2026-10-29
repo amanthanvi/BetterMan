@@ -182,8 +182,9 @@ class Generator:
         """One logical request. Every HTTP attempt, retries included, passes the
         governor (budget and requests per minute) and is charged.
 
-        An attempt without usage data is charged its worst case: the prompt
-        estimate plus max_tokens at the peak list price. Raises BudgetPaused.
+        Anything but a successful response with valid usage is charged its
+        worst case: the prompt estimate plus max_tokens at the peak list price.
+        Raises BudgetPaused.
         """
         worst = token_cost(_estimate_tokens(messages), self.max_output_tokens, peak=True)
         attempts = max(1, self.provider.config.max_attempts)
@@ -192,21 +193,23 @@ class Generator:
             self._count("requests")
             # Once sent, an attempt is recorded exactly once, in `finally`,
             # whatever happens next, so its reservation is always released.
+            # Only a successful response with valid usage may cost less than
+            # the worst case; Go's reported allowance may then replace the
+            # computed cost. Refusals, failures and bad usage pay the worst case.
             charge = worst
             completion: Completion | None = None
             delay: float | None = None
             try:
                 completion = self.provider.send(messages, max_tokens=self.max_output_tokens)
-                if completion.billed_usd is not None:
-                    charge = completion.billed_usd
-                elif completion.usage_reported:
+                if completion.usage_reported:
                     charge = self.governor.cost(
                         completion.prompt_tokens,
                         completion.completion_tokens,
                         completion.cached_tokens,
                     )
+                    if completion.billed_usd is not None:
+                        charge = completion.billed_usd
             except UsageLimitExceeded:
-                charge = 0.0
                 raise self.governor.provider_limit() from None
             except TransientProviderError as exc:
                 # A timed-out or failed attempt may still have been billed.

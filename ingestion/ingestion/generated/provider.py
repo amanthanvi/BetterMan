@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import ssl
 import uuid
@@ -106,7 +107,13 @@ def _billed(payload: Mapping[str, object]) -> float | None:
         allowance = allowance.get("allowance")
     if isinstance(allowance, Mapping):
         allowance = allowance.get("usd", allowance.get("cost"))
-    if isinstance(allowance, int | float) and allowance >= 0:
+    # A real number only: not a bool, NaN, an infinity, a string or negative.
+    if (
+        isinstance(allowance, int | float)
+        and not isinstance(allowance, bool)
+        and math.isfinite(allowance)
+        and allowance >= 0
+    ):
         return float(allowance)
     return None
 

@@ -256,3 +256,36 @@ def test_value_alternations_are_verified_like_any_value():
     page = parse_page("# tar\n- Do it:\n`tar --invented {{a|b}}`", "common/tar.md")
     result = tldr_examples(page, name="tar", table=TAR.table)
     assert result.rejected[0][1] == ("unknown flag --invented",)
+
+
+# Round-2 re-check of #434: placeholders only stand for arguments.
+@pytest.mark.parametrize(
+    "command",
+    [
+        "tar --create | env -- {{tar}} --invented",
+        "tar --create | xargs {{tar}} --invented",
+        "tar --create | {{tar}} --invented",
+        "tar --create | {{sudo}} -u root tar --invented",
+        "tar --create | sudo {{tar}} --invented",
+        "tar --create | env {{tar}} --invented",
+        "tar --create | nice -n 5 {{tar}}",
+        "{{tar}} --create",
+        "tar --create && {{command}}",
+    ],
+)
+def test_placeholders_in_command_position_are_rejected(command):
+    page = parse_page(f"# tar\n- Do it:\n`{command}`", "common/tar.md")
+    result = tldr_examples(page, name="tar", table=TAR.table)
+    assert result.examples == []
+    assert any("placeholder in command position" in p for p in result.rejected[0][1])
+
+
+def test_placeholders_as_arguments_still_work():
+    page = parse_page(
+        "# tar\n- Do it:\n`sudo tar -xf {{a.tar}} -C {{dir}} | grep {{name}}`", "common/tar.md"
+    )
+    result = tldr_examples(page, name="tar", table=TAR.table)
+    assert (
+        not result.rejected
+        and result.examples[0].command == "sudo tar -xf a.tar -C dir | grep name"
+    )
