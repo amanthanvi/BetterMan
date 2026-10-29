@@ -235,6 +235,8 @@ pnpm convex:derived-check --prod
 pnpm convex:derived-check --status-file /path/to/captured-status.json
 ```
 
+Without a local deploy key, run the `ops-status` workflow from GitHub Actions. It runs the same `--prod` check in the protected production environment and changes nothing.
+
 `derived:status` reports healthy/state, failures, pending jobs, scanned/recomputed/
 cache-hit counts, batches and last progress. The check exits nonzero for pending,
 blocked, failed or unresolved skipped data. `derivedSignatures:status` exposes the
