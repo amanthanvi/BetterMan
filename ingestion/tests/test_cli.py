@@ -303,7 +303,7 @@ def test_full_debian_uses_archive_path_before_docker(monkeypatch):
     monkeypatch.setattr(
         cli, "run_ingest_container", lambda **_: pytest.fail("must not install Debian packages")
     )
-    assert cli.main(["ingest", "--distro", "debian", "--no-activate"]) == 0
+    assert cli.main(["ingest", "--distro", "debian", "--debian-full", "--no-activate"]) == 0
     assert calls[0]["archive_mode"] is True
     assert calls[0]["activate"] is False
 
@@ -313,3 +313,10 @@ def test_debian_sample_keeps_curated_docker_path(monkeypatch):
     monkeypatch.setattr(cli, "run_ingest_container", lambda **kwargs: calls.append(kwargs) or 0)
     assert cli.main(["ingest", "--distro", "debian", "--sample"]) == 0
     assert calls == [{"sample": True, "activate": False, "distro": "debian"}]
+
+
+def test_default_debian_keeps_curated_docker_path(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli, "run_ingest_container", lambda **kw: calls.append(kw) or 0)
+    assert cli.main(["ingest", "--distro", "debian"]) == 0
+    assert calls == [{"sample": False, "activate": True, "distro": "debian"}]

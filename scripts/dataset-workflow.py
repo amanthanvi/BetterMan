@@ -55,6 +55,13 @@ def selection():
     ingest = not dispatch or os.environ["BETTERMAN_INGEST_ENABLED"] == "true"
     promote = not dispatch or os.environ["BETTERMAN_PROMOTE_ENABLED"] == "true"
     sample = dispatch and os.environ["BETTERMAN_INGEST_SAMPLE"] == "true"
+    if dispatch and os.environ.get("BETTERMAN_DEBIAN_DOWNLOAD_ONLY") == "true":
+        return {"include": []}, False, False
+    full_debian = not sample and (
+        os.environ.get("BETTERMAN_DEBIAN_FULL_INPUT") == "true" if dispatch
+        else os.environ.get("BETTERMAN_DEBIAN_FULL") == "1"
+    )
+    auto_full = os.environ.get("BETTERMAN_DEBIAN_FULL_PROMOTE") == "1"
     distros = []
     if ingest:
         for group, key in ((BSD, "BSD"), (LINUX, "LINUX")):
@@ -69,6 +76,10 @@ def selection():
         "include": [
             {
                 "distro": distro,
+                "full_debian": distro == "debian" and full_debian,
+                "promote": promote and not sample and (
+                    distro != "debian" or not full_debian or auto_full or (dispatch and not ingest)
+                ),
                 "runner": "macos-latest" if distro == "macos" and ingest else "ubuntu-latest",
                 "timeout": (60 if distro == "macos" else 90 if distro == "freebsd" else 300)
                 if ingest
@@ -163,7 +174,9 @@ def request_json(request):
 
 def promote(distro):
     record = load(distro)
-    _, ingest, enabled = selection()
+    matrix, ingest, enabled = selection()
+    selected = next((item for item in matrix["include"] if item["distro"] == distro), None)
+    enabled = enabled and selected is not None and selected["promote"]
     if not enabled:
         raise ValueError("Refusing to promote when promotion is disabled or this is a sample")
     if ingest and (record["result"] != "success" or record.get("stagingVerified") is not True):

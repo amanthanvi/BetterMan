@@ -40,6 +40,9 @@ def _build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         help="Mark the dataset release as active after ingestion",
     )
+    ingest.add_argument(
+        "--debian-full", action="store_true", help="Opt in to full Debian archive ingestion"
+    )
     ingest.add_argument("--in-container", action="store_true", help=argparse.SUPPRESS)
 
     activation = sub.add_parser(
@@ -86,7 +89,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "ingest":
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
-        if args.distro == "debian" and not args.sample and not args.in_container:
+        if (
+            args.distro == "debian"
+            and args.debian_full
+            and not args.sample
+            and not args.in_container
+        ):
             return _run_ingest(
                 sample=False,
                 activate=activate,

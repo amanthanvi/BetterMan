@@ -1,3 +1,4 @@
+import { packageName } from '@/lib/packageName'
 import {
   FastApiError,
   fetchManResolve,
@@ -40,10 +41,10 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
     name = target.name
     if (target.kind === 'page') section = target.section
   }
-  const pkg = new URL(request.url).searchParams.get('pkg')
-  const textHref = (path: string) => {
+  const pkg = packageName(new URL(request.url).searchParams.get('pkg'))
+  const textHref = (path: string, selected = pkg) => {
     const href = withDistro(path, urlDistro)
-    return pkg ? `${href}${href.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}` : href
+    return selected ? `${href}${href.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(selected)}` : href
   }
   const rawDistro = new URL(request.url).searchParams.get('distro')?.trim()
   const urlDistro = rawDistro ? normalizeDistro(rawDistro) : null
@@ -61,7 +62,7 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
       return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => textHref(`${manPath(name, option.section)}.txt`)).join('\n')}\n`, 409)
     }
     if (data.kind === 'alias' || !('data' in data)) {
-      return text('', 308, { Location: textHref(`${manPath(data.name, data.section)}.txt`) })
+      return text('', 308, { Location: textHref(`${manPath(data.name, data.section)}.txt`, 'pkg' in data ? packageName(data.pkg) : undefined) })
     }
     const canonical = `${getPublicOrigin(request)}${canonicalWithDistro(manPath(data.data.page.name, data.data.page.section), distro)}`
     return text(renderManText(data.data), 200, { Link: `<${canonical}>; rel="canonical"` })

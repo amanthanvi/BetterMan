@@ -8,11 +8,14 @@ describe('Open Graph image inputs', () => {
     expect(isValidManImageParams('[', '1')).toBe(true)
     expect(isValidManImageParams('_exit', '2')).toBe(true)
     expect(isValidManImageParams('__fpurge', '3')).toBe(true)
+    expect(isValidManImageParams('systemd-backlight@.service', '8')).toBe(true)
+    expect(isValidManImageParams('a'.repeat(200), '1')).toBe(true)
   })
 
   it('rejects malformed or oversized path parameters', () => {
     expect(isValidManImageParams('bad/name', '1')).toBe(false)
-    expect(isValidManImageParams('a'.repeat(129), '1')).toBe(false)
+    expect(isValidManImageParams('bash\n', '1')).toBe(false)
+    expect(isValidManImageParams('a'.repeat(201), '1')).toBe(false)
     expect(isValidManImageParams('bash', '../1')).toBe(false)
     expect(isValidManImageParams('bash', `1${'a'.repeat(8)}`)).toBe(false)
   })

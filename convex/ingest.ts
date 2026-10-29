@@ -95,6 +95,8 @@ const storedPageInput = v.object({
 });
 
 const aliasInput = v.object({
+  sourcePackage: v.optional(v.string()), sourcePath: v.optional(v.string()),
+  targetPackage: v.optional(v.string()), providerOnly: v.optional(v.boolean()),
   name: v.string(),
   section: v.string(),
   targetName: v.string(),
@@ -658,9 +660,27 @@ export const insertAliases = internalMutation({
 
     let inserted = 0;
     let skipped = 0;
+    let providerInserted = 0;
     for (const alias of args.aliases) {
       const name = alias.name.trim().toLowerCase();
       const section = alias.section.trim().toLowerCase();
+      if (alias.sourcePackage !== undefined) {
+        if (!release.providerCount || !alias.sourcePath || !alias.targetPackage) throw new Error("INVALID_ALIAS_PROVIDER");
+        const owner = await ctx.db.query("manPageAliasProviders").withIndex("by_releaseId_and_route_and_package_and_path", q =>
+          q.eq("releaseId", release._id).eq("name", name).eq("section", section).eq("sourcePackage", alias.sourcePackage!).eq("sourcePath", alias.sourcePath!)).unique();
+        if (owner) {
+          if (owner.targetName !== alias.targetName || owner.targetSection !== alias.targetSection || owner.targetPackage !== alias.targetPackage) throw new Error("RELEASE_MANIFEST_CONFLICT");
+        } else {
+          if (immutable) throw new Error("RELEASE_SEALED");
+        const canonicalTarget = await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", q => q.eq("releaseId", release._id).eq("name", alias.targetName).eq("section", alias.targetSection)).unique();
+        const alternateTarget = canonicalTarget?.sourcePackage === alias.targetPackage ? null : await ctx.db.query("manPageProviders")
+          .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id).eq("name", alias.targetName).eq("section", alias.targetSection).eq("sourcePackage", alias.targetPackage!)).first();
+        if (canonicalTarget?.sourcePackage !== alias.targetPackage && !alternateTarget) throw new Error("ALIAS_TARGET_NOT_FOUND");
+          await ctx.db.insert("manPageAliasProviders", { releaseId: release._id, name, section, sourcePackage: alias.sourcePackage, sourcePath: alias.sourcePath, targetName: alias.targetName, targetSection: alias.targetSection, targetPackage: alias.targetPackage });
+          providerInserted++;
+        }
+        if (alias.providerOnly) { skipped++; continue; }
+      } else if (alias.providerOnly) throw new Error("INVALID_ALIAS_PROVIDER");
       const existing = await ctx.db
         .query("manPageAliases")
         .withIndex("by_releaseId_and_name_and_section", (q) =>
@@ -680,7 +700,9 @@ export const insertAliases = internalMutation({
       if (canonical) throw new Error("DUPLICATE_MAN_PAGE_ROUTE");
       const target = await ctx.db.query("manPages")
         .withIndex("by_releaseId_and_name_and_section", (q) => q.eq("releaseId", release._id).eq("name", targetName).eq("section", targetSection)).unique();
-      if (!target) throw new Error("ALIAS_TARGET_NOT_FOUND");
+      const providerTarget = !target && alias.targetPackage ? await ctx.db.query("manPageProviders")
+        .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id).eq("name", targetName).eq("section", targetSection).eq("sourcePackage", alias.targetPackage!)).first() : null;
+      if (!target && !providerTarget) throw new Error("ALIAS_TARGET_NOT_FOUND");
       await ctx.db.insert("manPageAliases", {
         releaseId: release._id,
         datasetReleaseId: release.datasetReleaseId,
@@ -688,9 +710,11 @@ export const insertAliases = internalMutation({
         section,
         targetName,
         targetSection,
+        ...(alias.targetPackage && target?.sourcePackage !== alias.targetPackage ? { targetPackage: alias.targetPackage } : {}),
       });
       inserted += 1;
     }
+    if (providerInserted > 0) await recordProviderUploads(ctx, release, providerInserted, args.aliases[0].name);
     if (inserted > 0) await recordOtherUploads(ctx, release, "aliases", inserted);
     return { inserted, skipped };
   },

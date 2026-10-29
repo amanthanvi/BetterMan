@@ -42,6 +42,7 @@ const DEFAULT_STORAGE_STATS_LIMIT = 25;
 const MAX_STORAGE_STATS_LIMIT = 100;
 
 const storageStatsTableValidator = v.union(
+  v.literal("manPageAliasProviders"),
   v.literal("manPageProviders"),
   v.literal("releaseProviderUploadShards"),
   v.literal("activeReleases"),
@@ -80,6 +81,7 @@ const storageStatsTableValidator = v.union(
 type StorageStatsTable = TableNames;
 
 export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<keyof Doc<T>, string>> } = {
+  manPageAliasProviders: ["name", "section", "sourcePackage", "sourcePath", "targetName", "targetSection", "targetPackage"],
   manPageProviders: ["name", "section", "sourcePackage", "sourcePath", "title", "description"],
   releaseProviderUploadShards: [],
   activeReleases: ["distro", "datasetReleaseId"],
@@ -101,7 +103,7 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   manPageContentBlobs: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageContentChunks: ["chunk"],
   manPageContents: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
-  manPageAliases: ["name", "section", "targetName", "targetSection"],
+  manPageAliases: ["name", "section", "targetName", "targetSection", "targetPackage"],
   // Content-hash rows, not release-owned; parts are bounded objects.
   manPageGenerated: ["contentSha256", "updatedAt", "tldrCommit"],
   manPageLinks: ["fromExternalId", "toName", "toSection", "toTitle", "toDescription", "linkType"],
@@ -985,7 +987,7 @@ export const releaseStats = internalQuery({
 export const measureReleaseBatch = internalQuery({
   args: {
     datasetReleaseId: v.string(), cursor: v.union(v.string(), v.null()),
-    table: v.union(v.literal("manPageProviders"), v.literal("releaseProviderUploadShards"), v.literal("manPages"), v.literal("manPageSearchDocuments"), v.literal("manPageLinks"),
+    table: v.union(v.literal("datasetReleases"), v.literal("manPageAliases"), v.literal("manPageAliasProviders"), v.literal("manPageProviders"), v.literal("releaseProviderUploadShards"), v.literal("manPages"), v.literal("manPageSearchDocuments"), v.literal("manPageLinks"),
       v.literal("manPageSymbols"), v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
       v.literal("releaseSectionStats"), v.literal("releaseManifests"), v.literal("releasePackageBatches"), v.literal("releasePageUploadShards")),
   },
@@ -994,7 +996,13 @@ export const measureReleaseBatch = internalQuery({
     const release = await releaseByDatasetReleaseId(ctx, args.datasetReleaseId);
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     const id = release._id;
-    const query = args.table === "manPageProviders" ? ctx.db.query("manPageProviders").withIndex("by_releaseId_and_externalId", q => q.eq("releaseId", id))
+    if (args.table === "datasetReleases") return {
+      documents: 1, jsonBytes: new TextEncoder().encode(JSON.stringify(release)).length,
+      storageBytes: 0, isDone: true, continueCursor: "",
+    };
+    const query = args.table === "manPageAliases" ? ctx.db.query("manPageAliases").withIndex("by_releaseId_and_name_and_section", q => q.eq("releaseId", id))
+      : args.table === "manPageAliasProviders" ? ctx.db.query("manPageAliasProviders").withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", id))
+      : args.table === "manPageProviders" ? ctx.db.query("manPageProviders").withIndex("by_releaseId_and_externalId", q => q.eq("releaseId", id))
       : args.table === "releaseProviderUploadShards" ? ctx.db.query("releaseProviderUploadShards").withIndex("by_releaseId_and_bucket", q => q.eq("releaseId", id))
       : args.table === "manPages" ? ctx.db.query("manPages").withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", id))
       : args.table === "manPageSearchDocuments" ? ctx.db.query("manPageSearchDocuments").withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", id))

@@ -64,13 +64,20 @@ def ingest_debian(
         raise RuntimeError("Debian archive ingestion requires Python 3.14 and mandoc")
     client = ConvexIngestClient(convex_url, ingest_secret)
     client.require_deployed_contract()  # Before acquisition or any writes.
-    with TemporaryDirectory(prefix="betterman-debs-") as directory:
-        root = Path(directory)
-        workspace = Workspace(root)
-        workspace.acquire()
-        return publish_workspace(
-            workspace, client, activate=activate, dataset_stage=dataset_stage, git_sha=git_sha
-        )
+    import os
+
+    from ingestion.debian_indexes import PINS
+    from ingestion.util import sha256_hex
+
+    base = Path(__file__).resolve().parents[2] / ".cache" / "debian"
+    root = Path(os.environ.get("BETTERMAN_DEBIAN_WORKDIR", str(base / "workspaces")))
+    # A different lock cannot reuse extracted state, even in the same runner path.
+    root = root / sha256_hex(PINS.read_bytes())
+    workspace = Workspace(root)
+    workspace.acquire()
+    return publish_workspace(
+        workspace, client, activate=activate, dataset_stage=dataset_stage, git_sha=git_sha
+    )
 
 
 def publish_workspace(
@@ -83,15 +90,17 @@ def publish_workspace(
     sample: bool = False,
 ) -> IngestResult:
     import time
-    import uuid
 
     workspace.timings = {}
-    with _PageSpool(workspace.root / f"publish-{uuid.uuid4()}.sqlite3") as spool:
+    with (
+        TemporaryDirectory(prefix="publish-", dir=workspace.root) as temporary,
+        _PageSpool(Path(temporary) / "pages.sqlite3") as spool,
+    ):
         providers, failures = parse_workspace(workspace, spool, workers=_ingest_worker_count())
         refs = list(spool.refs())
         canonical = [ref for ref in refs if ref.page_id not in providers]
         failed = len(failures) + len(workspace.missing)
-        total = len(refs) + failed
+        total = len(refs) + len(workspace.aliases) + failed
         if not canonical or failed / total > 0.02:
             raise RuntimeError(f"Archive parse gate failed: {failed}/{total} sources")
         if not sample:
@@ -99,14 +108,19 @@ def publish_workspace(
                 distro="debian",
                 requested=FULL_PACKAGE_SET_DEBIAN,
                 pages=canonical,
-                aliases=[],
+                aliases=workspace.aliases,
                 sample=False,
             )
         release_id = _build_dataset_release_id(
             git_sha=git_sha, mandoc_version="host", distro="debian"
         )
         licenses = _LicenseSpool(spool.connection)
-        for package in workspace.packages:
+        used = {p.name for p in workspace.packages} | {
+            p.source_package for p in refs if p.source_package
+        }
+        used |= {a["sourcePackage"] for a in workspace.alias_providers}
+        published_packages = [workspace.available[name] for name in sorted(used)]
+        for package in published_packages:
             require_job_budget("copyright collection")
             licenses[package.name] = copyright_text(workspace, package.name)
         manifest = {
@@ -117,7 +131,8 @@ def publish_workspace(
             "distro": "debian",
             "pins": workspace.pins,
             "popularitySource": "popcon by_inst installed",
-            "alternatives": "curated gawk/vim-common/less/netcat-openbsd, then installed count",
+            "alternatives": "postinst priority, popcon, package/path; curated awk/vi/nc policy",
+            "alternativesSkipped": workspace.alternatives_skipped,
             "packages": [
                 {
                     "name": p.name,
@@ -125,7 +140,7 @@ def publish_workspace(
                     "sha256": p.sha256,
                     "installed": p.installed,
                 }
-                for p in workspace.packages
+                for p in published_packages
             ],
             "missingSources": workspace.missing,
             "parseFailures": failures,
@@ -151,8 +166,8 @@ def publish_workspace(
                 "ingestedAt": iso_utc_now(),
                 "packageManifest": manifest,
                 "pageCount": len(canonical),
-                "providerCount": len(providers),
-                "aliasCount": 0,
+                "providerCount": len(providers) + len(workspace.alias_providers),
+                "aliasCount": len(workspace.aliases),
                 "licenseCount": len(licenses),
                 "sectionTotals": [
                     {"section": section, "total": count}
@@ -194,6 +209,15 @@ def publish_workspace(
             workers=_upload_worker_count(),
         )
         workspace.timings["pageUploadSeconds"] = time.monotonic() - upload_started
+        for index in range(0, len(workspace.alias_providers), 100):
+            require_job_budget("alias upload")
+            client.post(
+                "/ingest/aliases",
+                {
+                    "datasetReleaseId": release_id,
+                    "aliases": workspace.alias_providers[index : index + 100],
+                },
+            )
         license_started = time.monotonic()
         pending = []
         for notice in _iter_license_items(

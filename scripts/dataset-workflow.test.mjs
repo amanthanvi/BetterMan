@@ -103,6 +103,29 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual(values['promote'], 'false')
 
+    def test_full_debian_requires_opt_in_and_separate_initial_promotion(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for enabled in [False, True]:
+                values, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                    BETTERMAN_INGEST_ENABLED='true', BETTERMAN_INGEST_SAMPLE='false',
+                    BETTERMAN_LINUX_ENABLED='true', BETTERMAN_BSD_ENABLED='false',
+                    BETTERMAN_LINUX_DISTRO='all', BETTERMAN_PROMOTE_ENABLED='true',
+                    BETTERMAN_DEBIAN_FULL='1' if enabled or event == 'workflow_dispatch' else '',
+                    BETTERMAN_DEBIAN_FULL_INPUT='true' if enabled or event == 'schedule' else 'false',
+                    BETTERMAN_DEBIAN_FULL_PROMOTE='')
+                debian = next(r for r in rows if r['distro'] == 'debian')
+                self.assertEqual(debian['full_debian'], enabled)
+                self.assertEqual(debian['promote'], not enabled)
+                self.assertTrue(next(r for r in rows if r['distro'] == 'ubuntu')['promote'])
+        _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT='schedule', BETTERMAN_DEBIAN_FULL_PROMOTE='1')
+        self.assertTrue(next(r for r in rows if r['distro'] == 'debian')['promote'])
+        _, rows = self.plan(BETTERMAN_WORKFLOW_EVENT='workflow_dispatch',
+            BETTERMAN_DEBIAN_FULL_PROMOTE='', BETTERMAN_INGEST_ENABLED='false')
+        self.assertTrue(next(r for r in rows if r['distro'] == 'debian')['promote'])
+        values, rows = self.plan(BETTERMAN_DEBIAN_DOWNLOAD_ONLY='true')
+        self.assertEqual(rows, [])
+        self.assertEqual((values['ingest'],values['promote']), ('false','false'))
+
     def test_early_middle_and_all_failures(self):
         for failed in ({'debian'}, {'fedora'}, set(w.LINUX)):
             with self.subTest(failed=failed):
@@ -345,6 +368,14 @@ test('dependency-free workflow parser preserves structure and literal shell comm
 
 function assertWorkflowWiring(workflow) {
   const { plan, ingest, summary } = workflow.jobs
+  const download = workflow.jobs.debian_download_only
+  assert.equal(download.if, "${{ github.event_name == 'workflow_dispatch' && inputs.debian_download_only }}")
+  assert.equal(download.environment, undefined)
+  assert.ok(!JSON.stringify(download).includes('secrets.'))
+  assert.ok(!JSON.stringify(download).includes('--local-upload'))
+  assert.match(download.steps.find(s => s.name === 'Acquire only; never create a Convex client').run, /--download-only$/)
+  assert.equal(workflow.on.workflow_dispatch.inputs.debian_full.default, false)
+  assert.equal(workflow.on.workflow_dispatch.inputs.debian_download_only.default, false)
   assert.equal(ingest.strategy['fail-fast'], false)
   assert.equal(ingest.strategy['max-parallel'], 2)
   assert.deepEqual(workflow.concurrency, { group: 'update-dataset', 'cancel-in-progress': false })
@@ -357,10 +388,10 @@ function assertWorkflowWiring(workflow) {
   assert.equal(step('activation_deadline').env.BETTERMAN_JOB_TIMEOUT_MINUTES, '${{ matrix.timeout }}')
   assert.match(step('activation_deadline').run, /BETTERMAN_JOB_TIMEOUT_MINUTES \* 60 - 180/)
   assert.match(step('freebsd').with.envs, /BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS/)
-  assert.equal(step('debian_renderer').if, "${{ needs.plan.outputs.ingest == 'true' && matrix.distro == 'debian' && !inputs.sample }}")
+  assert.equal(step('debian_renderer').if, "${{ needs.plan.outputs.ingest == 'true' && matrix.full_debian }}")
   assert.match(step('debian_renderer').run, /--no-install-recommends mandoc/)
   assert.ok(index('dependencies') < index('debian_renderer') && index('debian_renderer') < index('staging'))
-  const promotion = "${{ needs.plan.outputs.promote == 'true' }}"
+  const promotion = "${{ matrix.promote }}"
   for (const id of ['promote', 'verify_prod']) assert.equal(step(id).if, promotion)
   assert.equal(step('promote').env.BETTERMAN_INGEST_ENABLED, '${{ needs.plan.outputs.ingest }}')
   assert.equal(step('promote').env.CONVEX_URL, '${{ vars.CONVEX_URL }}')

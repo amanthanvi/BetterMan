@@ -181,5 +181,9 @@ def test_fixture_definitions_keep_source_leading_text(source: Path) -> None:
     raw = source.read_bytes()
     if is_so_stub(raw) is not None:
         return
+    # This source fixture has an explicit include; supply only the known local
+    # fixture bytes before calling the renderer's fail-closed include boundary.
+    if source.name == "rbash.1":
+        raw = raw.replace(b".so man1/bash.1", (source.parent / "bash.1").read_bytes())
     html = render_html(raw).html
     assert not missing_definition_leading_text(html, parse_mandoc_html(html).doc)

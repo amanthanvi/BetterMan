@@ -72,13 +72,13 @@ def test_provider_defaults_popcon_curated_names_and_case_collisions(archive_work
     sources = list(obj.sources())
     shared = [row for row in sources if row[2:4] == ("shared", "1")]
     assert [(row[0], row[4]) for row in shared] == [
-        ("provider-high", True),
+        ("provider-high", False),
         ("provider-low", False),
     ]
     assert next(row for row in sources if row[2] == "awk")[0] == "gawk"
     cases = [row for row in sources if row[2] == "foo::bar"]
     assert len(cases) == 2
-    assert [row[4] for row in cases] == [True, False]
+    assert [row[4] for row in cases] == [False, False]
     assert any(row[2] == "_exit" for row in sources)
     assert any(row[2] == "[" for row in sources)
 
@@ -89,7 +89,7 @@ def test_archive_pages_use_existing_mandoc_parser_and_stable_provider_ids(
     obj = archive_workspace
     source = next(row for row in obj.sources() if row[2] == "shared")
     row, primary = parse_archive_source((*source, "1"))
-    assert primary and row.source_package == "provider-high"
+    assert not primary and row.source_package == "provider-high"
     assert row.description == "preferred fixture"
     assert row.options and row.options[0]["flags"] == "--fixture"
     assert parse_archive_source((*source, "1"))[0].page_id == row.page_id
@@ -196,8 +196,16 @@ def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
     ]
     assert result.published
     assert release["providerCount"] >= 2
-    assert release["providerCount"] == sum(bool(p.get("providerOnly")) for p in pages)
-    assert release["pageCount"] + release["providerCount"] == len(pages)
+    alias_providers = [
+        a for path, payload in calls if path == "/ingest/aliases" for a in payload["aliases"]
+    ]
+    assert release["providerCount"] == sum(bool(p.get("providerOnly")) for p in pages) + len(
+        alias_providers
+    )
+    assert release["aliasCount"] == sum(not a["providerOnly"] for a in alias_providers)
+    assert any(a["name"] == "cross" and a["targetName"] == "target" for a in alias_providers)
+    assert not any(p["name"] == "cross" for p in pages)
+    assert release["pageCount"] + sum(bool(p.get("providerOnly")) for p in pages) == len(pages)
     assert release["licenseCount"] == 3
     assert (
         next(p for p in pages if p["name"] == "shared" and not p.get("providerOnly"))[
@@ -378,3 +386,47 @@ def test_deadline_blocks_acquisition_before_network_or_extraction(
     monkeypatch.setattr(pipeline, "ingest_activation_deadline", lambda: 1)
     with pytest.raises(RuntimeError, match="Job budget exhausted"):
         obj._acquire(package("gawk"))
+
+
+def test_cross_package_document_directory_symlink_chain(archive_workspace):
+    obj = archive_workspace
+    obj.store.db.execute(
+        "INSERT INTO entries VALUES (?,?,?,?,NULL)",
+        ("provider-low", "usr/share/doc/shared-doc", "link", "usr/share/doc/provider-low"),
+    )
+    assert "License:" in obj.resolve("provider-high", "usr/share/doc/shared-doc/copyright").decode()
+
+
+def test_binary_master_requires_a_unique_same_package_manual(archive_workspace, tmp_path):
+    obj = archive_workspace
+    script = tmp_path / "master-data"
+    script.write_text(
+        "update-alternatives --install /usr/bin/cc cc /usr/bin/shared 10\n"
+        "update-alternatives --install /usr/bin/unknown unknown /usr/bin/missing 20\n"
+    )
+    obj.store.db.execute(
+        "INSERT INTO entries VALUES (?,?,?,NULL,?)",
+        ("provider-high", "@control/master", "control", str(script)),
+    )
+    sources = list(obj.sources())
+    assert any(row[2] == "cc" and row[4] for row in sources)
+    assert not any(row[2] == "unknown" for row in sources)
+    assert any(item.get("group") == "unknown" for item in obj.alternatives_skipped)
+
+
+def test_binary_link_chain_proves_an_alternative_uses_the_same_documented_executable(
+    archive_workspace, tmp_path
+):
+    obj = archive_workspace
+    script = tmp_path / "binary-links-postinst"
+    script.write_text("update-alternatives --install /usr/bin/c++ c++ /usr/bin/compiler++ 10\n")
+    obj.store.db.executemany(
+        "INSERT INTO entries VALUES (?,?,?,?,?)",
+        [
+            ("provider-high", "@control/links", "control", None, str(script)),
+            ("provider-high", "usr/bin/compiler++", "binary-link", "usr/bin/shared", None),
+            ("provider-high", "usr/bin/shared", "binary-file", None, None),
+        ],
+    )
+    assert obj.binary_target("provider-high", "/usr/bin/compiler++") == "usr/bin/shared"
+    assert any(row[2] == "c++" and row[4] for row in obj.sources())

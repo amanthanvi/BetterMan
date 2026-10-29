@@ -6,6 +6,7 @@ import dataclasses
 import hashlib
 import json
 import logging
+import os
 import resource
 import shutil
 import sqlite3
@@ -17,8 +18,10 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
 
 from ingestion.convex_client import ingest_activation_deadline
+from ingestion.debian_alternatives import parse_alternatives
 from ingestion.debian_archives import ArchiveStore, MissingSource, extract
 from ingestion.debian_indexes import (
+    MAN_PATH,
     PINS,
     Package,
     available_packages,
@@ -28,12 +31,15 @@ from ingestion.debian_indexes import (
 )
 from ingestion.ingest_runner import (
     _NAME_RE,
+    _AliasRow,
     _bounded_futures,
     _PageSpool,
     _parse_source,
     _ParseContext,
+    _resolve_aliases,
 )
 from ingestion.man_scan import ManSource
+from ingestion.mandoc_parser import is_so_stub
 from ingestion.package_set import FULL_PACKAGE_SET_DEBIAN
 from ingestion.util import sha256_hex
 
@@ -41,8 +47,6 @@ log = logging.getLogger("betterman.ingestion")
 CURATED_ALTERNATIVES = {
     ("awk", "1"): ("gawk", "gawk", "1"),
     ("vi", "1"): ("vim-common", "vim", "1"),
-    ("editor", "1"): ("vim-common", "vim", "1"),
-    ("pager", "1"): ("less", "less", "1"),
     ("nc", "1"): ("netcat-openbsd", "nc_openbsd", "1"),
 }
 
@@ -111,13 +115,42 @@ class Workspace:
                 json.dumps({"limit": limit, "packages": [p.name for p in self.packages]})
             )
         self.available = available_packages(self.root / "indexes", popularity(self.pins))
+        # Retain the original curated pass, including runtime packages such as
+        # vim-tiny whose manual slaves live in vim-common. Their postinst data
+        # supplies alternatives; they are never installed.
+        selected_names = {p.name for p in self.packages}
+        self.curated_packages = [
+            self.available[n]
+            for n in FULL_PACKAGE_SET_DEBIAN
+            if n in self.available and n not in selected_names
+        ]
         self.store = ArchiveStore(self.root)
         self.owners = sqlite3.connect(self.root / "indexes" / "owners.sqlite3")
-        self.acquired = {row[0] for row in self.store.db.execute("SELECT name FROM packages")}
+        self.acquired = {p.name for p in self.available.values() if self.store.complete(p)}
+        # Never resolve through stale/incomplete extraction records. Keep the
+        # hashed source files for recovery, but reconstruct their index from a
+        # verified archive when that package is next needed.
+        stale = {
+            row[0] for row in self.store.db.execute("SELECT name FROM packages")
+        } - self.acquired
+        with self.store.db:
+            for name in stale:
+                self.store.db.execute("DELETE FROM entries WHERE pkg=?", (name,))
+                self.store.db.execute("DELETE FROM packages WHERE name=?", (name,))
+                self.store.db.execute("DELETE FROM receipts WHERE pkg=?", (name,))
         self.cached_packages = len(self.acquired)
         self.downloaded = 0
+        self.cache = Path(
+            os.environ.get("BETTERMAN_DEBIAN_CACHE_DIR", str(self.root.parent / "archives"))
+        ).resolve()
+        self.cache.mkdir(parents=True, exist_ok=True)
+        self.cache_limit = int(os.environ.get("BETTERMAN_DEBIAN_CACHE_MAX_BYTES", str(2 * 1024**3)))
+        if self.cache_limit < 1024**3:
+            raise ValueError("Archive cache must allow at least 1 GiB")
+
         self._disk_lock = threading.Lock()
         self._reserved = 0
+        self._inflight = set()
         self.missing: list[dict] = []
 
     def _acquire(self, package: Package):
@@ -131,21 +164,34 @@ class Workspace:
             ):
                 raise RuntimeError("Insufficient workspace disk for bounded archive extraction")
             self._reserved += package.size
-        archive = self.root / "downloads" / f"{package.name}.deb"
+            self._inflight.add(f"{package.sha256}.deb")
+        archive = self.cache / f"{package.sha256}.deb"
         try:
             size = download(
                 f"{self.pins['mirror']}/{package.filename}", archive, package.sha256, package.size
             )
+            archive.touch()
             return package, extract(archive, package, self.root), size
         finally:
-            archive.unlink(missing_ok=True)
             with self._disk_lock:
                 self._reserved -= package.size
+                self._inflight.discard(f"{package.sha256}.deb")
+                # Bounded checksum-keyed LRU. In-flight archives are excluded;
+                # complete extracted packages remain resumable in the workspace.
+                used = sum(p.stat().st_size for p in self.cache.glob("*.deb"))
+                for candidate in sorted(self.cache.glob("*.deb"), key=lambda p: p.stat().st_mtime):
+                    if used <= self.cache_limit:
+                        break
+                    if candidate.name in self._inflight:
+                        continue
+                    used -= candidate.stat().st_size
+                    candidate.unlink()
 
-    def acquire(self, packages=None, *, workers=4):
+    def acquire(self, packages=None, *, workers=2):
+        workers = min(2, max(1, workers))
         pending = [
             p
-            for p in (self.packages if packages is None else packages)
+            for p in (self.packages + self.curated_packages if packages is None else packages)
             if p.name not in self.acquired
         ]
         with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -161,10 +207,10 @@ class Workspace:
                         )
                     )
 
-    def resolve(self, package: str, path: str) -> bytes:
+    def resolve(self, package: str, path: str, **kwargs):
         for _ in range(32):
             try:
-                return self.store.resolve(package, path)
+                return self.store.resolve(package, path, **kwargs)
             except MissingSource as exc:
                 repair = SOURCE_TARGETS.get(exc.path)
                 if repair:
@@ -199,41 +245,191 @@ class Workspace:
                 )
         raise ValueError("Documentation dependency chain exceeds 32 packages")
 
-    def sources(self):
-        selected = {p.name for p in self.packages}
-        # Materialize only route references; bodies stay in files and SQLite.
-        rows = [row for row in self.store.manuals() if row[0] in selected]
-        for (name, section), (pkg, target, target_section) in CURATED_ALTERNATIVES.items():
-            candidates = [
-                row for row in rows if row[0] == pkg and row[2:] == (target, target_section)
-            ]
-            if candidates:
-                rows.append((pkg, candidates[0][1], name, section))
-
-        # Curated names win independent of future completion order. Otherwise
-        # popcon installed count, package name, and original path break ties.
-        def order(row):
-            pkg, path, name, section = row
-            preferred = CURATED_ALTERNATIVES.get((name, section), (None,))[0] == pkg
-            return (name, section, not preferred, -self.available[pkg].installed, pkg, path)
-
+    def binary_target(self, package: str, path: str):
+        # Follow archive-owned executable links as data, never run a binary.
+        # This proves clang++ and clang denote the same executable without
+        # guessing from their spelling or borrowing another program's manual.
+        path = path.lstrip("/")
         seen = set()
-        for row in sorted(set(rows), key=order):
-            pkg, path, name, section = row
+        for _ in range(64):
+            if (package, path) in seen:
+                raise ValueError("Executable link cycle")
+            seen.add((package, path))
+            row = self.store.db.execute(
+                "SELECT pkg,kind,target FROM entries WHERE pkg=? AND path=? "
+                "AND kind IN ('binary-link','binary-file')",
+                (package, path),
+            ).fetchone()
+            if row is None:
+                row = self.store.db.execute(
+                    "SELECT e.pkg,e.kind,e.target FROM entries e JOIN packages p ON p.name=e.pkg "
+                    "WHERE e.path=? AND e.kind IN ('binary-link','binary-file') "
+                    "ORDER BY p.installed DESC,e.pkg LIMIT 1",
+                    (path,),
+                ).fetchone()
+            if row is None:
+                owners = [
+                    self.available[r[0]]
+                    for r in self.owners.execute("SELECT pkg FROM owners WHERE path=?", (path,))
+                    if r[0] in self.available and r[0] not in self.acquired
+                ]
+                if not owners:
+                    raise ValueError("Executable target is unavailable")
+                self.acquire(sorted(owners, key=lambda p: (-p.installed, p.name))[:1], workers=1)
+                seen.remove((package, path))
+                continue
+            package, kind, target = row
+            if kind == "binary-file":
+                return path
+            path = target
+        raise ValueError("Executable link depth exceeds limit")
+
+    def sources(self):
+        selected = {p.name for p in self.packages} | {
+            p.name for p in getattr(self, "curated_packages", [])
+        }
+        rows = [
+            (pkg, path, name, section, None)
+            for pkg, path, name, section in self.store.manuals()
+            if pkg in selected
+        ]
+        ordinary_routes = {(row[2], row[3]) for row in rows}
+        self.alternatives_skipped = []
+        self.alternatives_audit = []
+        for pkg, file in self.store.db.execute(
+            "SELECT pkg,file FROM entries WHERE kind='control' ORDER BY pkg"
+        ).fetchall():
+            if pkg not in selected:
+                continue
+            offers, skipped = parse_alternatives(Path(file).read_text())
+            self.alternatives_skipped.extend({"package": pkg, **item} for item in skipped)
+            for offer in offers:
+                target, section = offer.target, offer.section
+                if offer.binary:
+                    executable = Path(target).name.lower()
+                    matches = [
+                        (path, sec)
+                        for owner, path, name, sec, rank in rows
+                        if owner == pkg and name == executable and rank is None
+                    ]
+                    if not matches:
+                        try:
+                            executable = Path(self.binary_target(pkg, target)).name.lower()
+                            matches = [
+                                (path, sec)
+                                for owner, path, name, sec, rank in rows
+                                if owner == pkg and name == executable and rank is None
+                            ]
+                        except ValueError:
+                            pass
+                    if len(matches) != 1:
+                        self.alternatives_skipped.append(
+                            {
+                                "package": pkg,
+                                "group": offer.group,
+                                "reason": "binary target has no unique same-package English manual",
+                                "target": target,
+                            }
+                        )
+                        continue
+                    target, section = matches[0]
+                rows.append((pkg, target, offer.name, section, offer.priority))
+        prepared = []
+        extras = set()
+        for pkg, path, name, section, priority in sorted(
+            set(rows), key=lambda row: (*row[:4], row[4] is None, row[4] or 0)
+        ):
             if not _NAME_RE.fullmatch(name):
                 self.missing.append(
                     {"package": pkg, "path": path, "error": "Unsupported route name"}
                 )
                 continue
             try:
-                raw = self.resolve(pkg, path)
+                owner, final_path, raw = self.resolve(pkg, path, details=True, follow_stubs=False)
+                resolved_identity = MAN_PATH.fullmatch(final_path)
+                alias = (
+                    priority is not None
+                    or is_so_stub(raw) is not None
+                    or (
+                        resolved_identity is not None
+                        and (resolved_identity[1].lower(), resolved_identity[2].lower())
+                        != (name, section)
+                    )
+                )
+                target = None
+                if alias:
+                    target_owner, target_path, raw = self.resolve(pkg, path, details=True)
+                    match = MAN_PATH.fullmatch(target_path)
+                    if not match:
+                        raise ValueError("Alias target has no manual identity")
+                    target = (match[1].lower(), match[2].lower(), target_owner)
+                    if target[:2] == (name, section):
+                        alias = False
+                    elif target_owner not in selected:
+                        extras.add((target_owner, target_path, *target[:2]))
+                preferred = CURATED_ALTERNATIVES.get((name, section), (None,))[0] in {pkg, owner}
+                rank = (
+                    name,
+                    section,
+                    not preferred,
+                    priority is None,
+                    -(priority or 0),
+                    -self.available[pkg].installed,
+                    pkg,
+                    path,
+                )
+                prepared.append((rank, pkg, path, name, section, alias, target))
+                if priority is not None:
+                    self.alternatives_audit.append(
+                        {
+                            "name": name,
+                            "section": section,
+                            "package": pkg,
+                            "priority": priority,
+                            "target": target,
+                            "sourcePath": path,
+                        }
+                    )
             except (ValueError, FileNotFoundError) as exc:
-                self.missing.append({"package": pkg, "path": path, "error": str(exc)})
+                item = {"package": pkg, "path": path, "error": str(exc)}
+                (self.alternatives_skipped if priority is not None else self.missing).append(item)
+        for pkg, path, name, section in extras:
+            rank = (name, section, True, True, 0, -self.available[pkg].installed, pkg, path)
+            prepared.append((rank, pkg, path, name, section, False, None))
+        self.alias_candidates = []
+        self.route_winners = {}
+        identities = set()
+        for _, pkg, path, name, section, alias, target in sorted(
+            prepared, key=lambda item: item[0]
+        ):
+            identity = (pkg, path, name, section)
+            if identity in identities:
                 continue
-            key = (name, section)
-            primary = key not in seen
-            seen.add(key)
-            yield pkg, path, name, section, primary, raw
+            identities.add(identity)
+            self.route_winners.setdefault((name, section), (pkg, path, alias))
+            if alias:
+                self.alias_candidates.append(
+                    {
+                        "name": name,
+                        "section": section,
+                        "targetName": target[0],
+                        "targetSection": target[1],
+                        "targetPackage": target[2],
+                        "sourcePackage": pkg,
+                        "sourcePath": path,
+                    }
+                )
+            # Keep only route references in memory, never all resolved bodies.
+            yield pkg, path, name, section, alias, b"" if alias else self.resolve(pkg, path)
+        self.alternative_defaults = [
+            a
+            for a in self.alternatives_audit
+            if self.route_winners.get((a["name"], a["section"]), ())[:2]
+            == (a["package"], a["sourcePath"])
+        ]
+        self.restored_names = sorted(
+            {(a["name"], a["section"]) for a in self.alternative_defaults} - ordinary_routes
+        )
 
 
 def parse_archive_source(item):
@@ -251,9 +447,11 @@ def parse_archive_source(item):
 
 def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
     def inputs():
-        for pkg, path, name, section, primary, raw in workspace.sources():
+        for pkg, path, name, section, alias, raw in workspace.sources():
             require_job_budget("parsing")
-            yield pkg, path, name, section, primary, raw, workspace.available[pkg].version
+            if alias:
+                continue
+            yield pkg, path, name, section, False, raw, workspace.available[pkg].version
 
     providers = set()
     seen_routes = set()
@@ -271,6 +469,35 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
                 seen_routes.add(key)
             except Exception as exc:  # noqa: BLE001
                 failed.append({"package": item[0], "path": item[1], "error": str(exc)})
+    refs = list(spool.refs())
+    canonical = {(p.name, p.section): p for p in refs if p.page_id not in providers}
+    by_route = {}
+    for item in workspace.alias_candidates:
+        key = (item["name"], item["section"])
+        if workspace.route_winners[key] == (item["sourcePackage"], item["sourcePath"], True):
+            by_route.setdefault(key, item)
+    aliases = _resolve_aliases(
+        aliases=[
+            _AliasRow(a["name"], a["section"], a["targetName"], a["targetSection"], a["sourcePath"])
+            for a in by_route.values()
+        ],
+        pages=refs,
+    )
+    workspace.aliases = aliases
+    # An alternatives alias owns its clean route even when an unrelated package
+    # ships a real page under that name. Keep that page as an explicit provider.
+    alias_keys = {(a.name, a.section) for a in aliases}
+    for key in alias_keys:
+        if key in canonical:
+            providers.add(canonical[key].page_id)
+    workspace.alias_providers = [
+        a
+        | {
+            "providerOnly": (a["name"], a["section"]) not in alias_keys
+            or by_route.get((a["name"], a["section"])) != a
+        }
+        for a in workspace.alias_candidates
+    ]
     return providers, failed
 
 
@@ -305,6 +532,13 @@ def benchmark(root: Path, *, limit=2000, workers=4) -> dict:
             "fullDownloadBytes": sum(p.size for p in workspace.all_manual_packages),
             "sampleArchiveBytes": workspace.downloaded,
             "parsedPages": len(spool),
+            "aliases": len(workspace.aliases),
+            "aliasProviders": len(workspace.alias_providers),
+            "alternatives": workspace.alternatives_audit,
+            "alternativeDefaults": workspace.alternative_defaults,
+            "restoredNames": workspace.restored_names,
+            "canonicalPages": len(spool) - len(providers),
+            "alternativesSkipped": workspace.alternatives_skipped,
             "alternateProviders": len(providers),
             "unresolved": len(workspace.missing),
             "parseFailures": len(failures),

@@ -2,21 +2,28 @@
 
 from __future__ import annotations
 
+import email.utils
 import gzip
 import hashlib
 import json
 import lzma
+import math
+import random
 import re
 import sqlite3
 import time
+import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from http.client import HTTPException
 from pathlib import Path, PurePosixPath
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 PINS = Path(__file__).resolve().parents[1] / "data" / "debian-trixie.json"
+BINARY_PATH = re.compile(r"^(?:(?:usr/)?s?bin/[^/]+|usr/lib/llvm-[^/]+/bin/[^/]+)$")
 MAN_PATH = re.compile(
-    r"^usr/share/man/man[1-9][a-z0-9]*/([^/]+)\.([1-9][a-z0-9]*)(?:\.(?:gz|xz|bz2|zst))?$",
+    r"^(?:usr/share/man|usr/lib/jvm/[^/]+/man)/man[1-9][a-z0-9]*/([^/]+)\.([1-9][a-z0-9]*)(?:\.(?:gz|xz|bz2|zst))?$",
     re.IGNORECASE,
 )
 
@@ -58,7 +65,7 @@ def _download_once(url: str, destination: Path, digest: str, size: int | None = 
             return 0
         destination.unlink()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_suffix(destination.suffix + ".part")
+    temporary = destination.with_name(destination.name + f".{uuid.uuid4().hex}.part")
     count = 0
     checksum = hashlib.sha256()
     try:
@@ -83,16 +90,42 @@ def _download_once(url: str, destination: Path, digest: str, size: int | None = 
 
 
 def download(url: str, destination: Path, digest: str, size: int | None = None) -> int:
-    for attempt in range(3):
+    for attempt in range(8):
         try:
             return _download_once(url, destination, digest, size)
         except HTTPError as exc:
-            if exc.code not in {429, 500, 502, 503, 504} or attempt == 2:
+            if exc.code not in {429, 500, 502, 503, 504} or attempt == 7:
                 raise
-        except (URLError, TimeoutError):
-            if attempt == 2:
+            retry_after = exc.headers.get("Retry-After", "") if exc.headers else ""
+            exc.close()
+        except (URLError, TimeoutError, ConnectionError, OSError, HTTPException):
+            if attempt == 7:
                 raise
-        time.sleep(2**attempt)
+            retry_after = ""
+        delay = min(180, 5 * 2**attempt) + random.uniform(0, 3)
+        try:
+            advertised = float(retry_after)
+        except ValueError:
+            try:
+                advertised = (
+                    email.utils.parsedate_to_datetime(retry_after) - datetime.now(UTC)
+                ).total_seconds()
+            except (ValueError, TypeError):
+                advertised = 0
+        if not math.isfinite(advertised) or advertised > 900:
+            raise RuntimeError("Retry-After exceeds the retry budget; resume acquisition later")
+        delay = max(delay, max(0, advertised))
+        # Sleep in short pieces so the absolute workflow budget stays effective.
+        from ingestion.convex_client import ingest_activation_deadline
+
+        remaining = delay
+        while remaining > 0:
+            deadline = ingest_activation_deadline()
+            chunk = min(remaining, 30)
+            if deadline is not None and time.time() + chunk >= deadline:
+                raise RuntimeError("Job deadline exhausted during Debian download backoff")
+            time.sleep(chunk)
+            remaining -= chunk
     raise RuntimeError("Download attempts exhausted")
 
 
@@ -163,6 +196,7 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
                     selected.update(owner.rsplit("/", 1)[-1] for owner in fields[1].split(","))
                 if len(fields) == 2 and (
                     MAN_PATH.fullmatch(fields[0])
+                    or BINARY_PATH.fullmatch(fields[0])
                     or (
                         fields[0].startswith("usr/share/doc/")
                         and (fields[0].endswith("/copyright") or fields[0].count("/") == 3)

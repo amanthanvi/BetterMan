@@ -30,3 +30,6 @@ venv/
 .vscode/
 .vercel
 *.tsbuildinfo
+
+# Resumable verified Debian acquisition
+.cache/debian/

@@ -11,7 +11,7 @@ import sqlite3
 import tarfile
 from pathlib import Path
 
-from ingestion.debian_indexes import MAN_PATH, Package, safe_path
+from ingestion.debian_indexes import BINARY_PATH, MAN_PATH, Package, safe_path
 from ingestion.mandoc_parser import is_so_stub
 from ingestion.util import sha256_hex
 
@@ -36,7 +36,7 @@ class MemberReader:
         return data
 
 
-def data_member(stream):
+def data_member(stream, prefix="data.tar"):
     if stream.read(8) != b"!<arch>\n":
         raise ValueError("Not a Debian ar archive")
     version = False
@@ -52,12 +52,33 @@ def data_member(stream):
             if size != 4:
                 raise ValueError("Unsupported Debian archive version")
             version = stream.read(4) == b"2.0\n"
-        elif name.startswith("data.tar"):
+        elif name.startswith(prefix):
             if not version:
                 raise ValueError("Unsupported Debian archive version")
             return MemberReader(stream, size)
         stream.seek(start + size + size % 2)
-    raise ValueError("Debian archive has no data member")
+    raise ValueError(f"Debian archive has no {prefix} member")
+
+
+def postinst_from_archive(archive: Path) -> str:
+    with archive.open("rb") as stream:
+        try:
+            member = data_member(stream, "control.tar")
+        except ValueError as exc:
+            if "has no control.tar" in str(exc):
+                return ""
+            raise
+        with tarfile.open(fileobj=member, mode="r|*") as tar:
+            for item in tar:
+                if item.name.removeprefix("./") == "postinst" and item.isfile():
+                    if item.size > MAX_SOURCE_BYTES:
+                        raise ValueError("Oversized maintainer script")
+                    return (
+                        tar.extractfile(item)
+                        .read(MAX_SOURCE_BYTES + 1)
+                        .decode("utf-8", errors="strict")
+                    )
+    return ""
 
 
 def extract(archive: Path, package: Package, root: Path) -> list[tuple]:
@@ -65,12 +86,31 @@ def extract(archive: Path, package: Package, root: Path) -> list[tuple]:
     files = root / "files"
     files.mkdir(parents=True, exist_ok=True)
     entries = []
+    script = postinst_from_archive(archive)
+    if script:
+        destination = files / sha256_hex(f"{package.name}/@control/postinst".encode())
+        destination.write_text(script)
+        entries.append((package.name, "@control/postinst", "control", None, str(destination)))
     with archive.open("rb") as stream, tarfile.open(fileobj=data_member(stream), mode="r|*") as tar:
         for member in tar:
             # Ignore arbitrary payload filenames (including valid Linux '\\'
             # names). Only documentation members can ever reach a write path.
             raw_path = member.name.removeprefix("./")
-            if not raw_path.startswith(("usr/share/man/", "usr/share/doc/")):
+            if BINARY_PATH.fullmatch(raw_path):
+                path = safe_path(raw_path)
+                if member.issym() or member.islnk():
+                    target = member.linkname
+                    if target.startswith("/"):
+                        target = target.lstrip("/")
+                    elif member.issym():
+                        target = posixpath.join(posixpath.dirname(path), target)
+                    target = safe_path(posixpath.normpath(target))
+                    if BINARY_PATH.fullmatch(target):
+                        entries.append((package.name, path, "binary-link", target, None))
+                elif member.isfile():
+                    entries.append((package.name, path, "binary-file", None, None))
+                continue
+            if not raw_path.startswith(("usr/share/man/", "usr/share/doc/", "usr/lib/jvm/")):
                 continue
             path = safe_path(member.name)
             manual = MAN_PATH.fullmatch(path)
@@ -84,7 +124,7 @@ def extract(archive: Path, package: Package, root: Path) -> list[tuple]:
                 elif member.issym():
                     target = posixpath.join(posixpath.dirname(path), target)
                 target = safe_path(posixpath.normpath(target))
-                if not target.startswith(("usr/share/man/", "usr/share/doc/")):
+                if not target.startswith(("usr/share/man/", "usr/share/doc/", "usr/lib/jvm/")):
                     # Debian docs may link examples to /etc or alternatives.
                     # Keep no filesystem link and never read outside the store.
                     if manual or notice:
@@ -138,6 +178,7 @@ class ArchiveStore:
             CREATE TABLE IF NOT EXISTS entries
                 (pkg TEXT, path TEXT, kind TEXT, target TEXT, file TEXT,
                 PRIMARY KEY(pkg,path));
+            CREATE TABLE IF NOT EXISTS receipts(pkg TEXT PRIMARY KEY,digest TEXT,version INTEGER);
             CREATE INDEX IF NOT EXISTS entries_path ON entries(path);
         """)
 
@@ -146,9 +187,24 @@ class ArchiveStore:
             self.db.execute(
                 "INSERT OR REPLACE INTO packages VALUES (?,?)", (package.name, package.installed)
             )
+            self.db.execute("DELETE FROM entries WHERE pkg=?", (package.name,))
             self.db.executemany("INSERT OR REPLACE INTO entries VALUES (?,?,?,?,?)", entries)
+            self.db.execute(
+                "INSERT OR REPLACE INTO receipts VALUES (?,?,?)", (package.name, package.sha256, 3)
+            )
 
-    def resolve(self, package: str, path: str, seen=None):
+    def complete(self, package: Package):
+        receipt = self.db.execute(
+            "SELECT digest,version FROM receipts WHERE pkg=?", (package.name,)
+        ).fetchone()
+        return receipt == (package.sha256, 3) and all(
+            Path(row[0]).is_file()
+            for row in self.db.execute(
+                "SELECT file FROM entries WHERE pkg=? AND file IS NOT NULL", (package.name,)
+            )
+        )
+
+    def resolve(self, package: str, path: str, seen=None, *, details=False, follow_stubs=True):
         """Resolve same-package first, then popcon-ranked cross-package links/stubs."""
         seen = set() if seen is None else seen
         key = (package, path)
@@ -180,34 +236,48 @@ class ArchiveStore:
             # Copyright directories themselves may be links (e.g. foo-doc -> foo).
             parent, name = posixpath.split(path)
             link = self.db.execute(
-                "SELECT target FROM entries WHERE pkg=? AND path=? AND kind='link'",
+                "SELECT pkg,target FROM entries WHERE pkg=? AND path=? AND kind='link'",
                 (package, parent),
             ).fetchone()
+            if link is None:
+                link = self.db.execute(
+                    "SELECT e.pkg,e.target FROM entries e JOIN packages p ON p.name=e.pkg "
+                    "WHERE e.path=? AND e.kind='link' ORDER BY p.installed DESC,e.pkg LIMIT 1",
+                    (parent,),
+                ).fetchone()
             if link:
-                return self.resolve(package, posixpath.join(link[0], name), seen)
+                return self.resolve(
+                    link[0],
+                    posixpath.join(link[1], name),
+                    seen,
+                    details=details,
+                    follow_stubs=follow_stubs,
+                )
             raise MissingSource(package, path)
         owner, kind, target, file = entry
         if kind == "blocked":
             raise ValueError("Documentation link leaves archive documentation roots")
         if kind == "link":
-            return self.resolve(owner, target, seen)
+            return self.resolve(owner, target, seen, details=details, follow_stubs=follow_stubs)
         data = source_bytes(Path(file))
         stub = is_so_stub(data)
 
-        def include(target):
+        def include(target, with_details=False):
             if target.startswith("/"):
                 resolved = target.lstrip("/")
             elif target.startswith("man"):
-                resolved = "usr/share/man/" + target
+                resolved = re.split(r"/man[1-9][^/]*/", path)[0] + "/" + target
             else:
                 resolved = posixpath.join(posixpath.dirname(path), target)
             resolved = safe_path(posixpath.normpath(resolved))
-            if not resolved.startswith("usr/share/man/"):
+            if not MAN_PATH.fullmatch(resolved):
                 raise ValueError("Roff include escapes manual root")
-            return self.resolve(owner, resolved, set(seen))
+            return self.resolve(owner, resolved, set(seen), details=with_details)
 
         if stub:
-            return include(stub)
+            if not follow_stubs:
+                return (owner, path, data) if details else data
+            return include(stub, details)
         # Never let mandoc open host files for non-stub .so requests either.
         lines = data.splitlines(keepends=True)
         expanded_size = len(data)
@@ -224,7 +294,7 @@ class ArchiveStore:
         if sum(map(len, lines)) > MAX_SOURCE_BYTES:
             raise ValueError("Expanded roff source exceeds limit")
         data = b"".join(lines)
-        return data
+        return (owner, path, data) if details else data
 
     def manuals(self):
         for pkg, path in self.db.execute("SELECT pkg,path FROM entries ORDER BY pkg,path"):

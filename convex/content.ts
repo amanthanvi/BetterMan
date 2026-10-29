@@ -502,7 +502,7 @@ export const getManByNameReadModel = internalQuery({
 async function aliasTarget(
   ctx: QueryCtx,
   args: { releaseId: Id<"datasetReleases">; name: string; section: string },
-): Promise<{ name: string; section: string } | null> {
+): Promise<{ name: string; section: string; pkg?: string } | null> {
   const alias = await ctx.db
     .query("manPageAliases")
     .withIndex("by_releaseId_and_name_and_section", (q) =>
@@ -510,7 +510,7 @@ async function aliasTarget(
     )
     .unique();
   if (!alias) return null;
-  return { name: alias.targetName, section: alias.targetSection };
+  return { name: alias.targetName, section: alias.targetSection, ...(alias.targetPackage ? { pkg: alias.targetPackage } : {}) };
 }
 
 export const getManByNameAndSectionReadModel = internalQuery({
@@ -534,7 +534,11 @@ export const getManByNameAndSectionReadModel = internalQuery({
       const provider = await ctx.db.query("manPageProviders")
         .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id)
           .eq("name", name).eq("section", section).eq("sourcePackage", args.pkg!)).first();
-      if (!provider) return null;
+      if (!provider) {
+        const alias = await ctx.db.query("manPageAliasProviders")
+          .withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", release._id).eq("name", name).eq("section", section).eq("sourcePackage", args.pkg!)).first();
+        return alias ? { kind: "alias" as const, name: alias.targetName, section: alias.targetSection, pkg: alias.targetPackage } : null;
+      }
       const blob = await ctx.db.get(provider.blobId);
       if (!blob) return null;
       return { kind: "page" as const, data: { release, page: provider, variants: [],
@@ -602,7 +606,7 @@ export const getManByNameAndSection = action({
     });
     if (!result) return null;
     if (result.kind === "alias") {
-      return { kind: "alias" as const, name: result.name, section: result.section };
+      return { kind: "alias" as const, name: result.name, section: result.section, ...(result.pkg ? { pkg: result.pkg } : {}) };
     }
 
     const content = await resolveContent(ctx, result.data.content);

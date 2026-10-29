@@ -9,7 +9,7 @@ on:
         required: false
         default: true
       linux:
-        description: Run Linux container ingests (debian/ubuntu/fedora/arch/alpine)
+        description: Run Linux distro ingests (full Debian requires its separate opt-in)
         type: boolean
         required: false
         default: true
@@ -48,6 +48,16 @@ on:
         type: boolean
         required: false
         default: false
+      debian_full:
+        description: Explicitly authorize full Debian archive ingestion (shared execution and spend)
+        type: boolean
+        required: false
+        default: false
+      debian_download_only:
+        description: Download-only Debian benchmark; no Convex, upload, activation or promotion
+        type: boolean
+        required: false
+        default: false
       promote:
         description: Promote active staging releases to prod
         type: boolean
@@ -68,6 +78,10 @@ permissions:
 # workflow_dispatch choices above aligned with its LINUX and BSD lists.
 
 env:
+  BETTERMAN_DEBIAN_FULL: ${{ vars.BETTERMAN_DEBIAN_FULL }}
+  BETTERMAN_DEBIAN_FULL_INPUT: ${{ inputs.debian_full && 'true' || 'false' }}
+  BETTERMAN_DEBIAN_FULL_PROMOTE: ${{ vars.BETTERMAN_DEBIAN_FULL_PROMOTE }}
+  BETTERMAN_DEBIAN_DOWNLOAD_ONLY: ${{ inputs.debian_download_only && 'true' || 'false' }}
   BETTERMAN_WORKFLOW_EVENT: ${{ github.event_name }}
   BETTERMAN_INGEST_ENABLED: ${{ inputs.ingest && 'true' || 'false' }}
   BETTERMAN_PROMOTE_ENABLED: ${{ inputs.promote && 'true' || 'false' }}
@@ -78,9 +92,46 @@ env:
   BETTERMAN_BSD_DISTRO: ${{ inputs.bsd_distro || 'all' }}
 
 jobs:
+  debian_download_only:
+    name: Debian download-only benchmark (no uploads)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.debian_download_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: Reserve time to save verified downloads and report
+        run: echo "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS=$(( $(date +%s) + 297 * 60 ))" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: 3.14
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: false
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/betterman-debian/archives/*.deb
+          key: debian-debs-${{ hashFiles('ingestion/data/debian-trixie.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: debian-debs-${{ hashFiles('ingestion/data/debian-trixie.json') }}-
+      - name: Acquire only; never create a Convex client
+        env:
+          BETTERMAN_DEBIAN_CACHE_DIR: ${{ runner.temp }}/betterman-debian/archives
+        run: uv run --directory ingestion python -m scripts.check_debian_archives --workdir "${RUNNER_TEMP}/betterman-debian/workspace" --packages 2000 --download-only
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ always() }}
+        with:
+          path: ${{ runner.temp }}/betterman-debian/archives/*.deb
+          key: debian-debs-${{ hashFiles('ingestion/data/debian-trixie.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: debian-download-only-report
+          path: ${{ runner.temp }}/betterman-debian/workspace/download-only.json
+          retention-days: 14
+
   preflight:
     name: Validate ingestion configuration
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.ingest || inputs.promote }}
+    if: ${{ !inputs.debian_download_only && (github.event_name != 'workflow_dispatch' || inputs.ingest || inputs.promote) }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 1
@@ -149,18 +200,18 @@ jobs:
           python-version: 3.14
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        if: ${{ needs.plan.outputs.promote == 'true' }}
+        if: ${{ matrix.promote }}
         with:
           version: 10.34.4
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
-        if: ${{ needs.plan.outputs.promote == 'true' }}
+        if: ${{ matrix.promote }}
         with:
           node-version: 26
           cache: pnpm
       # Preserve the promotion job's no-lifecycle-scripts install policy.
       - name: Install verification dependencies
         id: verification_dependencies
-        if: ${{ needs.plan.outputs.promote == 'true' }}
+        if: ${{ matrix.promote }}
         run: python3 scripts/dataset-workflow.py run "${DISTRO}" verification-setup pnpm install --frozen-lockfile --ignore-scripts
         env:
           DISTRO: ${{ matrix.distro }}
@@ -177,9 +228,16 @@ jobs:
         env:
           DISTRO: ${{ matrix.distro }}
 
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ matrix.full_debian }}
+        with:
+          path: ${{ runner.temp }}/betterman-debian/archives/*.deb
+          key: debian-debs-${{ hashFiles('ingestion/data/debian-trixie.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: debian-debs-${{ hashFiles('ingestion/data/debian-trixie.json') }}-
+
       - name: Install Debian archive renderer
         id: debian_renderer
-        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro == 'debian' && !inputs.sample }}
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_debian }}
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
 
       - name: Ingest to Convex staging
@@ -192,12 +250,18 @@ jobs:
           BETTERMAN_DATASET_STAGE: staging
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
+          BETTERMAN_DEBIAN_FULL_SELECTED: ${{ matrix.full_debian }}
+          BETTERMAN_DEBIAN_WORKDIR: ${{ runner.temp }}/betterman-debian/workspace
+          BETTERMAN_DEBIAN_CACHE_DIR: ${{ runner.temp }}/betterman-debian/archives
         shell: bash
         run: |
           set -euo pipefail
           ingest_args=(--activate)
           if [[ "${BETTERMAN_INGEST_SAMPLE}" == "true" ]]; then
             ingest_args=(--sample --no-activate)
+          fi
+          if [[ "${BETTERMAN_DEBIAN_FULL_SELECTED}" == "true" ]]; then
+            ingest_args+=(--debian-full)
           fi
           python3 scripts/dataset-workflow.py run "${DISTRO}" ingest \
             uv run --directory ingestion python -m ingestion.cli ingest --distro "${DISTRO}" "${ingest_args[@]}"
@@ -250,7 +314,7 @@ jobs:
 
       - name: Promote this distro's verified staging release
         id: promote
-        if: ${{ needs.plan.outputs.promote == 'true' }}
+        if: ${{ matrix.promote }}
         env:
           DISTRO: ${{ matrix.distro }}
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
@@ -261,7 +325,7 @@ jobs:
 
       - name: Verify promoted production release
         id: verify_prod
-        if: ${{ needs.plan.outputs.promote == 'true' }}
+        if: ${{ matrix.promote }}
         env:
           DISTRO: ${{ matrix.distro }}
           CONVEX_URL: ${{ vars.CONVEX_URL }}
@@ -272,6 +336,12 @@ jobs:
           set -euo pipefail
           test -n "${BETTERMAN_EXPECTED_RELEASE_IDS}"
           python3 scripts/dataset-workflow.py run "${DISTRO}" prod-verified pnpm convex:prod-check
+
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ always() && matrix.full_debian }}
+        with:
+          path: ${{ runner.temp }}/betterman-debian/archives/*.deb
+          key: debian-debs-${{ hashFiles('ingestion/data/debian-trixie.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Record distro result
         if: ${{ always() }}

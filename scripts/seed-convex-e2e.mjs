@@ -279,9 +279,9 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     ingestedAt: now,
     packageManifest: { packages: [] },
     pageCount: pages.length,
-    providerCount: 1,
+    providerCount: 2,
     packageBatches: [],
-    aliasCount: 1,
+    aliasCount: 2,
     licenseCount: 0,
     sectionTotals,
     licensePackages: [],
@@ -296,7 +296,10 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
   // `.so` stub: /man/gunzip/1 redirects to gzip(1).
   await post('/ingest/aliases', {
     datasetReleaseId,
-    aliases: [{ name: 'gunzip', section: '1', targetName: 'gzip', targetSection: '1' }],
+    aliases: [
+      { name: 'gunzip', section: '1', targetName: 'gzip', targetSection: '1' },
+      { name: 'foo::stub', section: '3pm', targetName: 'foo::bar', targetSection: '3pm', sourcePackage: 'stub-perl', sourcePath: 'man3/stub.3pm', targetPackage: 'alternate-perl', providerOnly: false },
+    ],
   })
   const deadline = Date.now() + 300_000
   while (true) {

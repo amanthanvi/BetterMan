@@ -289,6 +289,11 @@ export default defineSchema({
     .index('by_releaseId_and_section_and_termNorm', ['releaseId', 'section', 'termNorm']),
 
   // `.so` include stubs: /man/<name>/<section> redirects to the target page.
+  manPageAliasProviders: defineTable({
+    releaseId: v.id("datasetReleases"), name: v.string(), section: v.string(),
+    sourcePackage: v.string(), sourcePath: v.string(), targetName: v.string(), targetSection: v.string(), targetPackage: v.string(),
+  }).index("by_releaseId_and_route_and_package_and_path", ["releaseId", "name", "section", "sourcePackage", "sourcePath"]),
+
   manPageAliases: defineTable({
     releaseId: v.id("datasetReleases"),
     datasetReleaseId: v.string(),
@@ -296,6 +301,7 @@ export default defineSchema({
     section: v.string(),
     targetName: v.string(),
     targetSection: v.string(),
+    targetPackage: v.optional(v.string()),
   })
     .index("by_releaseId_and_name_and_section", ["releaseId", "name", "section"])
     .index("by_releaseId_and_name", ["releaseId", "name"])

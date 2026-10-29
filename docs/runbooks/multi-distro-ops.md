@@ -205,19 +205,34 @@ the recovery URL. The `(site)/loading.tsx` boundary can already have streamed
 HTTP 200; in that case Next emits its client/meta redirect. Before streaming,
 Next returns HTTP 307. This recovery is not a permanent canonical redirect.
 
-## Debian archive imports
+## Debian archive imports: explicit approval switches
 
-The full Debian leg now runs native Python/mandoc against the checksum-pinned
-trixie main snapshot in `ingestion/data/debian-trixie.json`; it extracts `.deb`
-manuals and copyrights without installing their packages. Debian samples and
-other distro paths keep the curated runners. See the [archive operator notes](../../ingestion/README.md#full-debian-from-archives).
-The matrix's existing 300-minute Linux deadline still applies (below the six-hour
-runner cap), including setup/acquisition/parsing/uploads. Activation uses only
-the remaining platform budget, capped at 45 minutes, and is resumable afterward.
+Default Debian jobs use the curated container path. Full imports require either
+cron repository variable `BETTERMAN_DEBIAN_FULL=1`, or manual input
+`debian_full: true` (default false). The dispatch input, not the repository import
+variable, controls manual jobs. The CLI likewise requires `--debian-full`.
 
-Merge/deploy ordering is B7 #429 v3, B5 #430 v4, then archive providers v5. Preserve
-the combined contract and payload fields when rebasing; do not deploy during an
-update-docs run. A local sample and projection do not authorize the full shared
-run or a spend increase. Obtain owner sign-off for the projected storage/cost,
-then follow the normal create → verify → seal → activate staging → promote prod
-and rollback/prune procedure. No full shared import was performed for the sample.
+Leave `BETTERMAN_DEBIAN_FULL_PROMOTE` unset for the first full release. Cron and
+combined full-ingest/promote dispatches then stop at verified staging while
+healthy curated distros keep their existing promotion behavior. Record the full
+release ID and inspect actual staging storage, reads, license coverage and cost
+before the owner authorizes a separate promotion-only dispatch (`ingest: false`,
+`promote: true`). The existing promotion-only workflow covers all seven distros;
+review every staging pointer before dispatching it. Only after this approval
+should the owner set `BETTERMAN_DEBIAN_FULL_PROMOTE=1` to enable recurring full
+promotions. Setting it alone does not opt into full ingestion.
+
+The `debian_download_only: true` input suppresses normal ingest/promote and runs
+an isolated, secrets-free 2,000-package acquisition benchmark. It never creates
+a Convex client. Executing it is a shared runner measurement and requires owner
+authorization; this implementation did not run it. A bounded checksum-verified
+archive cache is saved even after recoverable acquisition failures. See the
+[checkpoint limits](../../ingestion/README.md#acquisition-checkpoints-and-runner-measurements):
+new VMs only reuse retained cached archives, not an entire extracted full corpus.
+
+The existing 300-minute Linux job deadline includes setup/download/parse/upload.
+Activation uses only the remaining budget, capped at 45 minutes, and can resume
+without another import. Never deploy Convex during a dataset run. Merge B7 v3,
+then B5 v4, then rebase/deploy archive providers v5 with the combined contract,
+symbols, derived state, lease fence and all child tables. No switch, billing
+setting or shared dataset was changed for the local evidence.

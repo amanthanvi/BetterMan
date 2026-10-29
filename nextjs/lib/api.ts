@@ -1,3 +1,4 @@
+import { packageName } from './packageName'
 import { api } from '../../convex/_generated/api'
 import { unstable_cache } from 'next/cache'
 import type { FunctionReturnType } from 'convex/server'
@@ -353,7 +354,7 @@ export async function listSection(opts: {
   return result
 }
 
-export type ManAlias = { kind: 'alias'; name: string; section: string }
+export type ManAlias = { kind: 'alias'; name: string; section: string; pkg?: string }
 
 export type ManByNameResult =
   | { kind: 'page'; data: ManPageResponse }
@@ -410,7 +411,7 @@ export async function fetchManByNameAndSectionOrAlias(opts: {
   pkg?: string
 }): Promise<ManByNameAndSectionResult> {
   const result = (await mapConvexError(() =>
-    cachedManByNameAndSection(opts.distro, opts.name, opts.section, opts.pkg ?? null),
+    cachedManByNameAndSection(opts.distro, opts.name, opts.section, packageName(opts.pkg) ?? null),
   )) as ConvexManByNameAndSectionResult
   if (!result) throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
   return result
@@ -443,7 +444,7 @@ export async function fetchManMetaByNameAndSection(opts: {
   section: string
   pkg?: string
 }): Promise<ManPageMetaResponse> {
-  if (opts.pkg) {
+  if (packageName(opts.pkg)) {
     const provider = await fetchManByNameAndSectionOrAlias(opts)
     if (provider.kind !== 'page') throw apiError(404, 'PAGE_NOT_FOUND', 'Page not found')
     return { page: provider.data.page }

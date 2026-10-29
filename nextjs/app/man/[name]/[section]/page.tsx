@@ -1,3 +1,4 @@
+import { packageName } from '@/lib/packageName'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound, permanentRedirect, redirect } from 'next/navigation'
@@ -28,7 +29,7 @@ export async function generateMetadata({
   const section = decodeManParam(rawSection)
   const sp = await searchParams
   const requestedDistro = await resolveRequestDistro(sp)
-  const pkg = getFirst(sp.pkg)
+  const pkg = packageName(getFirst(sp.pkg))
   const located = pkg ? await locateManPage(name, section, requestedDistro, pkg) : await locateManPage(name, section, requestedDistro)
   if (!located) return MISSING_MAN_METADATA
   const { distro, data } = located
@@ -72,13 +73,14 @@ export default async function ManByNameAndSectionPage({
   const section = decodeManParam(rawSection)
   const sp = await searchParams
   const requestedDistro = await resolveRequestDistro(sp)
-  const pkg = getFirst(sp.pkg)
+  const pkg = packageName(getFirst(sp.pkg))
   const located = pkg ? await locateManPage(name, section, requestedDistro, pkg) : await locateManPage(name, section, requestedDistro)
   if (!located) notFound()
   const { distro, data } = located
   if (data.kind === 'alias') {
     const urlDistro = explicitDistro(sp)
-    const target = withDistro(`/man/${encodeURIComponent(data.name)}/${encodeURIComponent(data.section)}`, urlDistro)
+    let target = withDistro(`/man/${encodeURIComponent(data.name)}/${encodeURIComponent(data.section)}`, urlDistro)
+    if (packageName(data.pkg)) target += `${target.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(data.pkg!)}`
     // Browsers cache a 308, so only an explicit `?distro=` gets one; a bare URL
     // resolved the alias on the stored default, which can change.
     if (urlDistro) permanentRedirect(target)
@@ -104,7 +106,7 @@ export default async function ManByNameAndSectionPage({
   return (
     <>
       <JsonLdHead id={`bm-jsonld:${data.page.id}`} nonce={nonce} jsonLd={jsonLd} />
-      {await ManPageBody({ distro, name: name.toLowerCase(), section, ...(getFirst(sp.pkg) ? { pkg: getFirst(sp.pkg) } : {}) }, origin)}
+      {await ManPageBody({ distro, name: name.toLowerCase(), section, ...(packageName(getFirst(sp.pkg)) ? { pkg: packageName(getFirst(sp.pkg)) } : {}) }, origin)}
     </>
   )
 }

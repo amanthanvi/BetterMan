@@ -114,11 +114,14 @@ def synthetic_page(i: int, count: int, salt: str = "") -> _PageRow:
 
 
 def footprint(admin: LocalAdmin, release_id: str) -> dict:
-    totals = {"documents": 1, "jsonBytes": 0, "storageBytes": 0}
+    totals = {"documents": 0, "jsonBytes": 0, "storageBytes": 0}
     tables = {}
     for table in [
+        "datasetReleases",
+        "manPageAliases",
         "manPages",
         "manPageProviders",
+        "manPageAliasProviders",
         "releaseProviderUploadShards",
         "manPageSearchDocuments",
         "manPageLinks",
