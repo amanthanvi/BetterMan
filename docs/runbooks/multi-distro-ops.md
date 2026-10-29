@@ -212,23 +212,28 @@ cron repository variable `BETTERMAN_DEBIAN_FULL=1`, or manual input
 `debian_full: true` (default false). The dispatch input, not the repository import
 variable, controls manual jobs. The CLI likewise requires `--debian-full`.
 
-Leave `BETTERMAN_DEBIAN_FULL_PROMOTE` unset for the first full release. Cron and
-combined full-ingest/promote dispatches then stop at verified staging while
-healthy curated distros keep their existing promotion behavior. Record the full
+Leave `BETTERMAN_DEBIAN_FULL_PROMOTE` unset and `debian_full_promote` false for
+the first full release. Cron and combined full-ingest/promote dispatches then
+stop at verified staging while healthy curated distros keep their existing promotion behavior. Record the full
 release ID and inspect actual staging storage, reads, license coverage and cost
 before the owner authorizes a separate promotion-only dispatch (`ingest: false`,
 `promote: true`, **`debian_full_promote: true`**). The latter input defaults
 false. Routine promote-only recovery without that input skips an actual
 full-Debian staging pointer, logs `Skipping held full-Debian staging release`,
-and continues the other distros. The backend makes the check in the promotion
-transaction against release provenance, so a changed import switch or rerun
-cannot bypass the hold. The workflow skips the Debian prod smoke check when
-held. The promotion-only workflow covers all seven distros; review every staging
+and continues the other distros. An explicit manual `debian_full_promote: true`
+also authorizes promotion in a combined ingest+promote dispatch; cron ignores
+dispatch inputs and uses only the repository variable. The backend checks
+persisted `acquisition: "deb-extraction"` identity from the creation manifest
+in every prod-pointer transaction, independently of the mirror URL. HTTP/CLI
+activation cannot authorize full-Debian prod activation; use the gated promote
+workflow. `--debian-full` with `BETTERMAN_DATASET_STAGE=prod` fails before work.
+A changed import switch, mirror or rerun cannot bypass the hold. The workflow
+skips the Debian prod smoke check when held. The promotion-only workflow covers all seven distros; review every staging
 pointer before dispatching it. Only after this approval
 should the owner set `BETTERMAN_DEBIAN_FULL_PROMOTE=1` to enable recurring full
-promotions. Setting it alone does not opt into full ingestion. Non-`1` repository
-values (including explicitly empty values) emit a workflow warning and remain
-off; the warning does not echo the supplied value.
+promotions. Setting it alone does not opt into full ingestion. Non-empty
+repository values other than exactly `1` emit a workflow warning and remain off. Empty
+values are treated as unset without warning; warnings never echo supplied values.
 
 The verified archive cache is capped at 2 GiB and keyed only by pinned Release
 SHA256; there is no run-ID fan-out. GitHub keeps the first immutable cache entry

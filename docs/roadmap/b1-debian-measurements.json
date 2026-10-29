@@ -7438,12 +7438,25 @@
     },
     "storageProjectionScope": "Historical sample storage predates merged derived/symbol data; not a measured combined v5 storage projection. No shared capacity/spend authorization.",
     "checks": {
-      "ingestion": 819,
-      "coveragePercent": 89.33,
-      "convex": 3226,
+      "ingestion": 842,
+      "coveragePercent": 89.36,
+      "convex": 3232,
       "next": 570,
       "e2e": 134,
       "ops": 119
+    },
+    "reviewCorrections": {
+      "baseHead": "76ca64db642fe7d1360db1cf5517ab8ecba60c6d",
+      "acquisition": "deb-extraction",
+      "prodPointerPaths": [
+        "ingest.activateRelease",
+        "ingest.promoteActiveReleases"
+      ],
+      "httpActivationCanAuthorize": false,
+      "realLocalHoldSmoke": "Changed-mirror release returns 409 FULL_DEBIAN_PROMOTION_HELD, including attempted HTTP override.",
+      "aliasEnrichment": "Canonical-only explain/search metadata is omitted when targetPackage selects another provider.",
+      "unmodeledFunctionAssignments": "Unresolved; literal wrappers retain explicit call modeling.",
+      "sharedRuns": false
     }
   }
 }

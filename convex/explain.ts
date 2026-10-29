@@ -71,7 +71,9 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
     // A single alias hop, within the same release, never a chain or a corpus scan.
     const aliases = await read(`alias:${name}`, 3, () => ctx.db.query('manPageAliases').withIndex('by_releaseId_and_name', q => q.eq('releaseId', release._id).eq('name', name)).take(3));
     const alias = aliases?.find(a => commandSection(a.section));
-    return alias ? await read(`target:${alias.targetName}:${alias.targetSection}`, 1, () => ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', release._id).eq('name', alias.targetName).eq('section', alias.targetSection)).first()) : null;
+    const target = alias ? await read(`target:${alias.targetName}:${alias.targetSection}`, 1, () => ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', release._id).eq('name', alias.targetName).eq('section', alias.targetSection)).first()) : null;
+    // Canonical option/symbol rows cannot describe a different provider.
+    return target && (!alias?.targetPackage || alias.targetPackage === target.sourcePackage) ? target : null;
   }
   async function option(page: Doc<'manPages'>, flag: string) {
     return await read(`flag:${page._id}:${flag}`, 1, () => ctx.db.query('manPageOptionFlags').withIndex('by_pageId_and_flag', q => q.eq('pageId', page._id).eq('flag', flag)).first());

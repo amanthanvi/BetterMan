@@ -85,7 +85,7 @@ export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<key
   manPageProviders: ["name", "section", "sourcePackage", "sourcePath", "title", "description"],
   releaseProviderUploadShards: [],
   activeReleases: ["distro", "datasetReleaseId"],
-  datasetReleases: ["datasetReleaseId", "packageManifestJson"],
+  datasetReleases: ["datasetReleaseId", "packageManifestJson", "acquisition"],
   derivedBuilds: ["locale", "key", "fingerprint"],
   derivedScanJobs: ["locale", "cursor", "createdForKey"],
   derivedSignatureBackfills: ["locale", "cursor", "error"],

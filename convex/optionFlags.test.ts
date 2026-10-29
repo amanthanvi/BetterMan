@@ -468,6 +468,22 @@ describe("search correctness", () => {
     expect((await search(t, "man(7)")).results[0]).toMatchObject({ name: "man", section: "7", title: "man(7)" });
   });
 
+  it.each(["canonical", "alternate"])("does not borrow another provider's citation metadata (target package %s)", async (targetPackage) => {
+    const t = await seeded([page("groff_man", null, { section: "7", description: "Canonical package description" })], 66);
+    await t.run(async ctx => {
+      const release = await ctx.db.query("datasetReleases").first();
+      const target = await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", q => q.eq("releaseId", release!._id).eq("name", "groff_man").eq("section", "7")).unique();
+      await ctx.db.patch(target!._id, { sourcePackage: "canonical" });
+      await ctx.db.insert("manPageAliases", {
+        releaseId: release!._id, datasetReleaseId: "options", name: "man", section: "7",
+        targetName: "groff_man", targetSection: "7", targetPackage,
+      });
+    });
+    const hits = (await search(t, "man(7)")).results.filter(hit => hit.name === "man");
+    if (targetPackage === "canonical") expect(hits).toMatchObject([{ description: "Canonical package description" }]);
+    else expect(hits).toEqual([]);
+  });
+
   it("treats citations as a name and section, ahead of other prefix matches", async () => {
     const t = await seeded([
       page("open", null, { section: "1" }), page("open", null, { section: "2" }),

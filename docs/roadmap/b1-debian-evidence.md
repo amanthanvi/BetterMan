@@ -23,13 +23,18 @@ Cron requires repository variable `BETTERMAN_DEBIAN_FULL=1`; dispatch requires
 `debian_full: true`, default false, independently of the cron variable. CLI
 archive imports require `--debian-full`.
 
-With `BETTERMAN_DEBIAN_FULL_PROMOTE` unset, full ingests stop at verified staging.
-Even a combined ingest/promote dispatch cannot promote that first full release.
-A separate promotion-only dispatch with `debian_full_promote: true` (default
-false) is required. Routine promote-only recovery skips an actual archive
-staging release unless that input or the exact promotion variable is enabled.
-The backend checks provenance and changes pointers in the same transaction;
-the workflow logs the hold and skips its prod smoke check. Other distros continue. The owner can subsequently set
+With `BETTERMAN_DEBIAN_FULL_PROMOTE` unset and manual `debian_full_promote` false,
+full ingests stop at verified staging. The first full release should be inspected
+before a separate promotion-only dispatch with explicit `debian_full_promote: true`.
+That input also authorizes a combined manual ingest/promote dispatch; cron
+ignores it and requires the exact promotion variable. Routine promote-only
+recovery skips an actual archive staging release unless explicitly authorized.
+Both prod-pointer writers check persisted manifest-derived
+`acquisition: "deb-extraction"` in the transaction, independent of mirror URLs.
+HTTP activation never sends this authorization, and the CLI refuses full imports
+targeting prod before work. The workflow logs the hold and skips its prod smoke
+check; other distros continue. Empty switches are silently off; non-empty values
+other than exactly `1` warn. The owner can subsequently set
 `BETTERMAN_DEBIAN_FULL_PROMOTE=1` to authorize recurring promotion. The ops tests
 pin cron/dispatch × import on/off, independent controls, promotion hold/release
 and download-only isolation. No switch was enabled during this work.
@@ -51,6 +56,8 @@ and download-only isolation. No switch was enabled during this work.
 
 Registrations are read from postinst as data, never executed. Accept only simple
 command words; skip heredoc/echo/printf data and unresolved branch variables.
+Assignments in unmodeled shell functions cannot establish registration values;
+only the explicitly modeled literal wrappers are expanded at proven calls.
 Literal variables/loops/wrappers and checked OpenJDK/xz templates remain supported.
 Choose a provider before checking its manual. Treat Debian
 `required`/`important`/`standard` as one installed-by-default group and elect its
@@ -280,8 +287,8 @@ The only new indexes are on these new tables:
 | `releaseProviderUploadShards` | `by_releaseId_and_bucket` |
 | `manPageAliasProviders` | `by_releaseId_and_route_and_package_and_path` |
 
-Existing-table changes are only optional `datasetReleases.providerCount` and
-`manPageAliases.targetPackage`. Registry enumeration, storage-field enumeration,
+Existing-table changes are only optional `datasetReleases.providerCount`,
+`datasetReleases.acquisition` and `manPageAliases.targetPackage`. Registry enumeration, storage-field enumeration,
 provider-aware orphan sweep and derived pin protections are covered locally.
 All main CHANGELOG entries were preserved during the rebase.
 
@@ -313,11 +320,18 @@ An abrupt VM loss can prevent saving; this does not claim all 18+ GB survive a
 new runner. The download-only dispatch has no production environment or secrets,
 suppresses regular ingest/promote and was not run.
 
-Validation: 819 ingestion tests (89.33% coverage), 3,226 Convex tests/typecheck,
+Validation: 842 ingestion tests (89.36% coverage), 3,232 Convex tests/typecheck,
 570 Next tests/lint/grammar/build, 134 fresh-fixture local E2E tests and 119 ops
 tests passed, along with current main performance budgets and public-API/PR
 guards. Fixture coverage includes the real postinst templates, binary-link/manual
-attribution,
-cache corruption/version/file replay, Retry-After, include isolation, aliases,
+attribution, cache corruption/version/file replay, Retry-After, include isolation, aliases,
 provider completeness/seals/prune and all response formats. No runner config or
 budget rules changed.
+
+The final promotion-hold regression also ran against the real loopback backend:
+an archive release created from the pinned manifest with a different mirror
+returned `409 FULL_DEBIAN_PROMOTION_HELD` on prod activation, including an
+attempted HTTP authorization override. No prod pointer was moved. Regression
+tests cover insert/replacement activation, staging, explicit internal approval,
+mixed-distro promotion, empty/misspelled gates, combined manual authorization,
+uncalled function assignments and package-qualified alias enrichment.

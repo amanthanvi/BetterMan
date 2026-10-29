@@ -124,7 +124,7 @@ def publish_workspace(
             require_job_budget("copyright collection")
             licenses[package.name] = copyright_text(workspace, package.name)
         manifest = {
-            "acquisition": "deb-extraction",
+            "acquisition": workspace.pins["acquisition"],
             "imageRef": workspace.pins["mirror"],
             "imageDigest": workspace.pins["releaseSha256"],
             "arch": "amd64",

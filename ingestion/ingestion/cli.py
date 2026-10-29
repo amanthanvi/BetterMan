@@ -88,6 +88,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "ingest":
+        if args.debian_full and os.environ.get("BETTERMAN_DATASET_STAGE", "staging") == "prod":
+            _log(
+                "ingest_error",
+                error="--debian-full cannot use stage prod; ingest to staging "
+                "and use the gated promotion workflow",
+            )
+            return 2
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
         if (
             args.distro == "debian"

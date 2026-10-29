@@ -69,6 +69,37 @@ def test_case_branch_assignment_is_unresolved_after_join():
     assert not offers and any("unresolved variable p" in row["reason"] for row in skipped)
 
 
+@pytest.mark.parametrize(
+    "body",
+    [
+        "unused() {\np=999\n}",
+        "unused(){p=999;}",
+        "function unused {\np=999\n}",
+        "unused()\n{\np=999\n}",
+        "unused() {\nif true; then\np=999\nfi\n}",
+        "unused() (\np=999\n)",
+        "unused-helper() {\np=999\n}",
+        "unused() {\necho '}'\np=999\n}",
+        "unused() # a helper\n{\np=999\n}",
+    ],
+)
+@pytest.mark.parametrize("initial", ["", "p=50\n"])
+def test_unmodeled_function_assignments_cannot_resolve_registrations(body, initial):
+    offers, skipped = parse_alternatives(
+        initial + body + "\nupdate-alternatives --install /bin/ls ls /bin/evil $p"
+    )
+    assert not offers
+    assert any("unresolved variable p" in row["reason"] for row in skipped)
+
+
+def test_uncalled_inline_function_does_not_register_alternatives():
+    offers, _ = parse_alternatives(
+        "unused() { update-alternatives --install /bin/ls ls /bin/evil 999; }\n"
+        "update-alternatives --install /bin/safe safe /bin/target 1"
+    )
+    assert [o.name for o in offers] == ["safe"]
+
+
 def test_tabs_heredoc_ends_before_following_real_registration():
     offers, _ = parse_alternatives(
         "cat <<-EOF\n\tupdate-alternatives --install /bin/ls ls /bin/evil 999\n\tEOF\n"

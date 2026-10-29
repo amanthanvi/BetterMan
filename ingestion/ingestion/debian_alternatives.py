@@ -149,6 +149,49 @@ def _without_heredocs(script):
     return "\n".join(lines)
 
 
+def _without_functions(script):
+    """Discard unmodeled functions and poison variables they might assign.
+
+    Literal registration wrappers were expanded before this pass. For every
+    other function we cannot prove whether/when it runs, so none of its writes
+    can establish a value used by registrations outside the function.
+    """
+    header = re.compile(
+        r"^\s*(?:[A-Za-z_][\w-]*\s*\(\s*\)|function\s+[A-Za-z_][\w-]*(?:\s*\(\s*\))?)\s*(?=[{(#]|$)"
+    )
+    output, assigned = [], set()
+    in_function = False
+    depth = 0
+    opened = False
+    for line in script.splitlines():
+        if not in_function:
+            match = header.match(line)
+            if not match:
+                output.append(line)
+                continue
+            line = line[match.end() :]
+        in_function = True
+        assigned.update(re.findall(r"(?:^|[;{\s])([A-Za-z_]\w*)=", line))
+        try:
+            # Non-posix tokens retain quotes: a quoted '}' is not a body end.
+            lexer = shlex.shlex(line, posix=False, punctuation_chars="{}();")
+            lexer.whitespace_split = True
+            for token in lexer:
+                if token and all(c in "{}();" for c in token):
+                    depth += (
+                        token.count("{") + token.count("(") - token.count("}") - token.count(")")
+                    )
+                    opened |= "{" in token or "(" in token
+        except ValueError:
+            # Unknown syntax cannot establish a safe end; discard the tail.
+            depth = max(depth, 1)
+        output.append("")
+        if opened and depth <= 0:
+            in_function = False
+            opened = False
+    return "\n".join(output), assigned
+
+
 def _simple_tokens(command):
     lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|<>()")
     lexer.whitespace_split = True
@@ -172,6 +215,7 @@ def parse_alternatives(
     script = _without_heredocs(script)
     script = _xz_helper(script)
     script = _literal_functions(script)
+    script, function_assignments = _without_functions(script)
     # Native (not cross-architecture) installation: this exact OpenJDK branch
     # cannot run for the pinned amd64 package on the amd64 ingestion target.
     if architecture == "amd64":
@@ -194,7 +238,7 @@ def parse_alternatives(
     )
     values = {}
     branches = []
-    ambiguous = set()
+    ambiguous = function_assignments
     lists = {}
     loop_stack = []
     offers, skipped = [], []

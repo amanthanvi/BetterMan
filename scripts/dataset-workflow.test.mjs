@@ -145,11 +145,38 @@ class WorkflowTest(unittest.TestCase):
 
     def test_misspelled_gate_values_warn_and_stay_off(self):
         for name in ['BETTERMAN_DEBIAN_FULL', 'BETTERMAN_DEBIAN_FULL_PROMOTE']:
-            for value in ['', 'true', '0', 'yes', ' 1', '1 ']:
+            for value in ['true', '0', 'yes', ' 1', '1 ']:
                 os.environ[name] = value
                 with contextlib.redirect_stdout(io.StringIO()) as log:
                     self.assertFalse(w.gate(name))
                 self.assertIn('::warning::' + name, log.getvalue())
+
+    def test_empty_and_unset_gates_are_silent(self):
+        for name in ['BETTERMAN_DEBIAN_FULL', 'BETTERMAN_DEBIAN_FULL_PROMOTE']:
+            for value in [None, '']:
+                os.environ.pop(name, None)
+                if value is not None:
+                    os.environ[name] = value
+                with contextlib.redirect_stdout(io.StringIO()) as log:
+                    self.assertFalse(w.gate(name))
+                self.assertEqual(log.getvalue(), '')
+
+    def test_combined_dispatch_honors_explicit_promotion_but_cron_ignores_input(self):
+        for event in ['schedule', 'workflow_dispatch']:
+            for variable in ['', '1']:
+                for manual in ['false', 'true']:
+                    values, rows = self.plan(BETTERMAN_WORKFLOW_EVENT=event,
+                        BETTERMAN_INGEST_ENABLED='true', BETTERMAN_INGEST_SAMPLE='false',
+                        BETTERMAN_LINUX_ENABLED='true', BETTERMAN_BSD_ENABLED='false',
+                        BETTERMAN_LINUX_DISTRO='debian', BETTERMAN_PROMOTE_ENABLED='true',
+                        BETTERMAN_DEBIAN_FULL='1', BETTERMAN_DEBIAN_FULL_INPUT='true',
+                        BETTERMAN_DEBIAN_FULL_PROMOTE=variable,
+                        BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT=manual)
+                    debian = next(r for r in rows if r['distro'] == 'debian')
+                    allowed = variable == '1' or (event == 'workflow_dispatch' and manual == 'true')
+                    self.assertTrue(debian['full_debian'])
+                    self.assertEqual(debian['promote'], allowed)
+                    self.assertEqual(w.full_promotion_enabled(), allowed)
 
     def test_early_middle_and_all_failures(self):
         for failed in ({'debian'}, {'fedora'}, set(w.LINUX)):

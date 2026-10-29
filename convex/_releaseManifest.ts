@@ -3,6 +3,18 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 export const MAX_MANIFEST_SECTIONS = 256;
 
+// Persist acquisition identity independently of the mirror and large manifest.
+export function releaseAcquisition(manifest: unknown): "deb-extraction" | undefined {
+  const acquisition = manifest && typeof manifest === "object" && "acquisition" in manifest
+    ? manifest.acquisition : undefined;
+  if (acquisition !== undefined && acquisition !== "deb-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
+  return acquisition;
+}
+
+export function fullDebianPromotionHeld(release: Doc<"datasetReleases">, stage: "prod" | "staging", allowFullDebian?: boolean): boolean {
+  return stage === "prod" && release.distro === "debian" && release.acquisition === "deb-extraction" && allowFullDebian !== true;
+}
+
 export function validManifestCount(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }

@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { DATASET_STAGES, DISTROS, type DatasetStage, type Distro } from "./lib";
 import schema from "./schema";
+import debianManifest from "../ingestion/data/debian-trixie.json";
 
 const modules = import.meta.glob("./**/*.ts");
 type Harness = TestConvex<typeof schema>;
@@ -171,7 +172,7 @@ describe("release sealing", () => {
     for (const distro of ["debian", "ubuntu"] as const) {
       const input = releaseInput(`full-${distro}`, distro);
       const { releaseId } = await t.mutation(internal.ingest.createRelease, {
-        ...input, imageRef: distro === "debian" ? "https://snapshot.debian.org/archive/debian/20261001T000000Z" : "ubuntu:24.04",
+        ...input, imageRef: "https://another-mirror.example/debian", packageManifest: distro === "debian" ? debianManifest : null,
       });
       await t.run(ctx => ctx.db.patch(releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
       await pointRelease(t, releaseId, "staging");
@@ -185,6 +186,34 @@ describe("release sealing", () => {
     expect(await t.mutation(internal.ingest.promoteActiveReleases, { ...args, allowFullDebian: true })).toEqual({
       promoted: [{ distro: "debian", datasetReleaseId: "full-debian" }, { distro: "ubuntu", datasetReleaseId: "full-ubuntu" }],
     });
+  });
+
+  it.each([false, true])("holds direct prod activation before mutation (existing pointer: %s), but allows staging and explicit authorization", async (existing) => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    if (existing) {
+      const old = await t.mutation(internal.ingest.createRelease, releaseInput("old"));
+      await pointRelease(t, old.releaseId, "prod");
+    }
+    const input = { ...releaseInput("archive", "debian", 1), packageManifest: debianManifest, imageRef: "https://changed-mirror.example/archive" };
+    const { releaseId } = await t.mutation(internal.ingest.createRelease, input);
+    expect(await t.run(ctx => ctx.db.get(releaseId))).toMatchObject({ acquisition: debianManifest.acquisition });
+    await write(t, "inline", "archive", "archive-page");
+    const before = await t.run(ctx => ctx.db.query("activeReleases").take(10));
+    for (const allowFullDebian of [undefined, false]) {
+      await expect(t.mutation(internal.ingest.activateRelease, { ...activation("archive"), ...(allowFullDebian === undefined ? {} : { allowFullDebian }) }))
+        .rejects.toThrow("FULL_DEBIAN_PROMOTION_HELD");
+    }
+    expect(await t.run(ctx => ctx.db.query("activeReleases").take(10))).toEqual(before);
+    expect((await t.run(ctx => ctx.db.get(releaseId)))?.sealed).not.toBe(true);
+    expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").take(10))).toEqual([]);
+    await t.mutation(internal.ingest.activateRelease, { ...activation("archive"), stage: "staging" });
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    expect(await t.mutation(internal.ingest.activateRelease, { ...activation("archive"), stage: "staging" })).toMatchObject({ pending: false });
+    await expect(t.mutation(internal.ingest.activateRelease, activation("archive"))).rejects.toThrow("FULL_DEBIAN_PROMOTION_HELD");
+    expect(await t.mutation(internal.ingest.activateRelease, { ...activation("archive"), allowFullDebian: true })).toMatchObject({ pending: false });
+    expect(await t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod").eq("locale", "en").eq("distro", "debian")).unique())).toMatchObject({ releaseId });
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   });
 
   it("seals and hydrates all 14 supported active pointers before reporting ready", async () => {

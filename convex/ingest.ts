@@ -6,7 +6,7 @@ import { contentChunks, splitContentFields, type ContentField, type ContentJsonK
 import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { scheduleDerivedBuild } from "./derived";
-import { recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
+import { fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { insertProvider, recordProviderUploads } from "./_providers";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
@@ -295,6 +295,7 @@ export const createRelease = internalMutation({
     packageManifest: v.optional(v.any()),
     packageManifestStorageId: v.optional(v.id("_storage")),
     packageManifestDigest: v.optional(v.string()),
+    acquisition: v.optional(v.literal("deb-extraction")),
     packageBatches: v.optional(v.array(v.object({ digest: v.string(), count: v.number(), licenseCount: v.number() }))),
     providerCount: v.optional(v.number()),
     pageCount: v.number(),
@@ -304,6 +305,8 @@ export const createRelease = internalMutation({
     licensePackages: v.optional(v.array(licensePackageInput)),
   },
   handler: async (ctx, args) => {
+    const acquisition = args.packageManifest !== undefined ? releaseAcquisition(args.packageManifest) : args.acquisition;
+    if (args.acquisition !== undefined && acquisition !== args.acquisition) throw new Error("INVALID_RELEASE_MANIFEST");
     const packages = args.licensePackages ?? [];
     if (args.providerCount !== undefined && (!validManifestCount(args.providerCount) || args.packageBatches === undefined)) throw new Error("INVALID_RELEASE_MANIFEST");
     if (args.packageBatches !== undefined) {
@@ -326,6 +329,7 @@ export const createRelease = internalMutation({
     const { packageManifestStorageId, ...declaration } = args;
     const manifestDeclarationDigest = await storedPayloadDigest(canonicalJson({
       ...declaration,
+      acquisition,
       sectionTotals: [...args.sectionTotals].sort((a, b) => a.section.localeCompare(b.section)),
       licensePackages: packages.map((pkg) => ({ ...pkg, name: pkg.name.trim().toLowerCase() }))
         .sort((a, b) => a.name.localeCompare(b.name)),
@@ -346,6 +350,7 @@ export const createRelease = internalMutation({
       distro: args.distro,
       imageRef: args.imageRef,
       imageDigest: args.imageDigest,
+      acquisition,
       ingestedAt: args.ingestedAt,
       ...(args.packageBatches !== undefined ? { shardedPageUploads: true, relatedMetadataVersion: 1 } : {}),
       packageBatchCount: args.packageBatches?.length ?? 0,
@@ -791,6 +796,7 @@ export const activateRelease = internalMutation({
     stage: datasetStageValidator,
     datasetReleaseId: v.string(),
     activatedAt: v.string(),
+    allowFullDebian: v.optional(v.boolean()),
   },
   returns: v.object({
     stage: datasetStageValidator,
@@ -805,6 +811,8 @@ export const activateRelease = internalMutation({
       .unique();
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (release.pruning) throw new Error("RELEASE_PRUNING");
+
+    if (fullDebianPromotionHeld(release, args.stage, args.allowFullDebian)) throw new Error("FULL_DEBIAN_PROMOTION_HELD");
 
     await verifyDeclaredManifest(ctx, release);
     if (!release.sealed) await ctx.db.patch(release._id, { sealed: true });
@@ -879,11 +887,9 @@ export const promoteActiveReleases = internalMutation({
       if (!source) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
       const release = await ctx.db.get(source.releaseId);
       if (!release) throw new Error("RELEASE_NOT_FOUND");
-      // Archive ingestion records its pinned mirror, unlike curated Docker images.
-      // Check this in the pointer transaction: a preflight read could race activation.
-      if (distro === "debian" && args.toStage === "prod"
-        && release.imageRef.startsWith("https://snapshot.debian.org/archive/debian/")
-        && !args.allowFullDebian) {
+      // Check persisted acquisition identity in the pointer transaction; a
+      // preflight read or mirror URL would not enforce the release's hold.
+      if (fullDebianPromotionHeld(release, args.toStage, args.allowFullDebian)) {
         skipped.push({ distro, datasetReleaseId: source.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
         continue;
       }

@@ -52,7 +52,7 @@ def load(distro):
 
 def gate(name):
     value = os.environ.get(name, "")
-    if name in os.environ and value != "1":
+    if value and value != "1":
         print(f"::warning::{name} is not exactly 1; treating it as off", flush=True)
     return value == "1"
 
@@ -70,7 +70,7 @@ def selection():
     promote = not dispatch or os.environ["BETTERMAN_PROMOTE_ENABLED"] == "true"
     sample = dispatch and os.environ["BETTERMAN_INGEST_SAMPLE"] == "true"
     cron_full = gate("BETTERMAN_DEBIAN_FULL")
-    auto_full = gate("BETTERMAN_DEBIAN_FULL_PROMOTE")
+    auto_full = full_promotion_enabled()
     if dispatch and os.environ.get("BETTERMAN_DEBIAN_DOWNLOAD_ONLY") == "true":
         return {"include": []}, False, False
     full_debian = not sample and (

@@ -1,4 +1,5 @@
 {
+  "acquisition": "deb-extraction",
   "mirror": "https://snapshot.debian.org/archive/debian/20261001T000000Z",
   "suite": "trixie",
   "component": "main",

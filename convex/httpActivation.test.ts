@@ -3,9 +3,33 @@ import { convexTest } from "convex-test";
 import { afterEach, expect, it, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import debianManifest from "../ingestion/data/debian-trixie.json";
 
 const modules = import.meta.glob("./**/*.ts");
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
+
+it("derives the persistent full-Debian hold from the manifest and refuses HTTP prod activation", async () => {
+  vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
+  const t = convexTest(schema, modules);
+  const headers = { authorization: "Bearer test-secret", "content-type": "application/json" };
+  const response = await t.fetch("/ingest/release", { method: "POST", headers, body: JSON.stringify({
+    datasetReleaseId: "archive", locale: "en", distro: "debian", imageRef: "https://changed-mirror.example",
+    imageDigest: "test", ingestedAt: "now", packageManifest: debianManifest,
+    pageCount: 1, aliasCount: 0, licenseCount: 0, sectionTotals: [{ section: "1", total: 1 }], licensePackages: [],
+  }) });
+  expect(response.status).toBe(200);
+  const release = await t.run(ctx => ctx.db.query("datasetReleases").withIndex("by_datasetReleaseId", q => q.eq("datasetReleaseId", "archive")).unique());
+  expect(release).toMatchObject({ acquisition: "deb-extraction" });
+  for (const override of [{}, { allowFullDebian: true }]) {
+    const held = await t.fetch("/ingest/activate", { method: "POST", headers, body: JSON.stringify({
+      datasetReleaseId: "archive", stage: "prod", activatedAt: "now", ...override,
+    }) });
+    expect(held.status).toBe(409);
+    expect(await held.json()).toMatchObject({ error: { code: "FULL_DEBIAN_PROMOTION_HELD" } });
+  }
+  expect(await t.run(ctx => ctx.db.query("activeReleases").take(1))).toEqual([]);
+  expect((await t.run(ctx => ctx.db.get(release!._id)))?.sealed).not.toBe(true);
+});
 
 it("returns pending until hydration completes, then publishes through the authenticated HTTP route", async () => {
   vi.useFakeTimers();

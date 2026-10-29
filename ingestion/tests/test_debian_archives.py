@@ -169,7 +169,15 @@ def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
     from ingestion.debian_publish import publish_workspace
 
     obj = archive_workspace
-    obj.pins = {"mirror": "https://example.test/snapshot", "releaseSha256": "a" * 64}
+    import json
+
+    from ingestion.debian_indexes import PINS
+
+    obj.pins = {
+        **json.loads(PINS.read_text()),
+        "mirror": "https://example.test/snapshot",
+        "releaseSha256": "a" * 64,
+    }
     monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
     monkeypatch.setenv("BETTERMAN_INGEST_UPLOAD_WORKERS", "2")
     calls = []
@@ -188,6 +196,7 @@ def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
         obj, Client(), activate=True, dataset_stage="prod", git_sha="fixture", sample=True
     )
     release = next(payload for path, payload in calls if path == "/ingest/release")
+    assert release["packageManifest"]["acquisition"] == obj.pins["acquisition"] == "deb-extraction"
     pages = [
         page
         for path, payload in calls

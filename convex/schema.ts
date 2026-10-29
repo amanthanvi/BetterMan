@@ -42,6 +42,7 @@ export default defineSchema({
     distro: distroValidator,
     imageRef: v.string(),
     imageDigest: v.string(),
+    acquisition: v.optional(v.literal("deb-extraction")),
     ingestedAt: v.string(),
     packageManifestJson: v.optional(v.string()),
     shardedPageUploads: v.optional(v.boolean()),

@@ -759,7 +759,7 @@ export const search = query({
           const target = await pageByNameAndSection(ctx, {
             releaseId: release._id, name: alias.targetName, section: alias.targetSection,
           });
-          if (target) ordered.unshift({
+          if (target && (!alias.targetPackage || alias.targetPackage === target.sourcePackage)) ordered.unshift({
             name: alias.name, section: alias.section, title: `${alias.name}(${alias.section})`,
             description: target.description, highlights: [], rank: 20_000,
           });
