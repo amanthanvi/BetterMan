@@ -231,11 +231,13 @@ cannot prove those flags, or what the reader would run.
 
 ### What gets generated, and when
 
-The indexed tier comes first: sections 1, 8, 5 and 7. A priority file can put
-popular pages or packages ahead (`tar`, `tar(1)`, `pkg:coreutils`, one per
-line); B4's popularity priors can feed it once they exist. Without one, pages
-with an options table come first, sections 1 and 8 before 5 and 7. Pages
-without options get a summary and task phrases but no examples.
+[B4](roadmap/b4-index-by-demand.md) owns the indexed tier: sections 1, 5, 7
+and 8, popular packages and routes promoted by aggregate traffic. Generated
+contract v3 returns the persisted tier and score. The default scan covers every
+section; the selector admits only that tier, ordered by descending demand score,
+then option-table presence and section order. A `--priority` file (`tar`,
+`tar(1)`, `pkg:coreutils`) can reorder tier members but cannot promote a page.
+Pages without options get a summary and task phrases but no examples.
 
 Each row is keyed by the page's raw-source content hash. A run skips a page
 whose hash already has generated text, so text is regenerated only when the

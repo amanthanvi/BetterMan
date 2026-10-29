@@ -79,8 +79,9 @@ when enabling analytics; this change does not alter account configuration.
 
 ## Build/ops page-count export for B4
 
-Run `pnpm analytics:counts` from the repo worktree. It is not part of builds,
-runtime requests or CI, and does not read or write Convex. Without a nonblank
+Run `pnpm analytics:counts` from the repo worktree. It is not part of application
+builds or runtime requests and does not read or write Convex. The monthly dataset
+workflow runs it before ingestion. Without a nonblank
 `PLAUSIBLE_API_KEY`, it succeeds without network or filesystem changes, preserving
 any previous snapshot. Supply that private Stats API key only in an authorized
 operator environment; never prefix it with `NEXT_PUBLIC_` or commit it.
@@ -97,9 +98,11 @@ complete UTC days and atomically replaces the snapshot only after all pages
 validate. Failures leave the old snapshot intact and exit nonzero without
 printing credentials or provider bodies. The JSON has `schemaVersion: 1`,
 `siteId`, `generatedAt`, `dateRange` (two ISO instants), and a `pageviews` mapping
-from path to aggregate integer count. Wiring this manual command into the monthly
-pipeline belongs to [#396 (B4)](https://github.com/amanthanvi/BetterMan/issues/396),
-alongside ranking and promotion decisions; this change does not implement them.
+from path to aggregate integer count. The monthly dataset workflow consumes this
+file through
+`BETTERMAN_PLAUSIBLE_COUNTS` when the production environment secret
+`PLAUSIBLE_API_KEY` exists. [B4](roadmap/b4-index-by-demand.md) documents
+scoring, the traffic threshold, deployment order and owner configuration.
 
 Offset pagination is not a transaction over historical analytics. Duplicate
 paths fail safely; an operator can rerun if historical counts changed mid-export.

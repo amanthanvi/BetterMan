@@ -190,7 +190,7 @@ def test_selector_orders_priority_then_commands_with_options():
     ]
     priority = Priority.parse(["# popular", "pkg:coreutils", "tar(1)"])
     names = [c.name for c in select(candidates, priority=priority)]
-    assert names == ["true", "tar", "bash", "zip", "ip", "passwd"]
+    assert names == ["true", "tar", "bash", "ip", "zip", "passwd"]
     assert [c.name for c in select(candidates, limit=2)] == ["bash", "tar"]
 
 
@@ -199,7 +199,7 @@ class FakeClient:
         self.posts = []
 
     def _get_json(self, path):
-        return {"schemaVersion": 2}
+        return {"schemaVersion": 3}
 
     def post(self, path, payload):
         self.posts.append((path, payload))

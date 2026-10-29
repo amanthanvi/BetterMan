@@ -79,6 +79,7 @@ from ingestion.man_scan import ManSource, scan_man_sources
 from ingestion.mandoc import read_roff, render_html
 from ingestion.mandoc_parser import is_so_stub, parse_mandoc_html, so_target_name_section
 from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
+from ingestion.popularity import PopularityPolicy, default_policy
 from ingestion.symbols import MAX_SYMBOLS, symbol_rows
 from ingestion.util import normalize_ws, sha256_hex
 
@@ -264,7 +265,9 @@ def ingest(
             success_rate = (handled / total) if total else 0.0
             publish_allowed = success_rate >= 0.80 and hard_fail_rate <= 0.02
 
-            sitemap_pages = _build_sitemap_page_map(pages=page_refs)
+            policy = PopularityPolicy.load()
+            package_manifest["indexPolicy"] = policy.provenance()
+            sitemap_pages = _build_sitemap_page_map(pages=page_refs, policy=policy)
             licenses = _collect_licenses(
                 pages=page_refs, distro=distro, sink=_LicenseSpool(spool.connection)
             )
@@ -292,6 +295,7 @@ def ingest(
                     "ingestedAt": datetime.now(tz=UTC).isoformat(),
                     "packageManifest": package_manifest,
                     "pageCount": succeeded,
+                    "indexablePageCount": sum(value > 0 for value in sitemap_pages.values()),
                     "aliasCount": len(aliases),
                     "licenseCount": len(licenses),
                     "sectionTotals": [
@@ -323,7 +327,9 @@ def ingest(
                 client,
                 dataset_release_id=dataset_release_id,
                 limits=batch_limits,
-                pages=_resolved_page_payloads(parsed_pages, page_refs, sitemap_pages),
+                pages=_resolved_page_payloads(
+                    parsed_pages, page_refs, sitemap_pages, policy=policy
+                ),
                 total=succeeded,
                 workers=upload_workers,
             )
@@ -506,8 +512,13 @@ def _package_batch_digest(packages: list[dict]) -> str:
 
 
 def _resolved_page_payloads(
-    pages: Iterable[_PageRow], refs: list[_PageRef], sitemap_pages: dict[str, int]
+    pages: Iterable[_PageRow],
+    refs: list[_PageRef],
+    sitemap_pages: dict[str, int],
+    *,
+    policy: PopularityPolicy | None = None,
 ) -> Iterator[dict[str, object]]:
+    policy = policy or default_policy()
     index = {(p.name, p.section): p for p in refs}
     by_id = {p.page_id: p for p in refs}
     by_name: dict[str, list[str]] = {}
@@ -517,7 +528,10 @@ def _resolved_page_payloads(
         _resolve_doc_links_and_see_also(pages=[page], route_index=index, names=by_name)
         links = _build_page_links(pages=[page], route_index=index, ids=by_id, names=by_name)
         yield _page_payload(
-            page, sitemap_page=sitemap_pages[page.page_id], links=links.get(page.page_id, [])
+            page,
+            sitemap_page=sitemap_pages[page.page_id],
+            links=links.get(page.page_id, []),
+            policy=policy,
         )
 
 
@@ -1354,10 +1368,18 @@ def _build_license_packages(
     return out
 
 
-def _build_sitemap_page_map(*, pages: Sequence[_PageRow | _PageRef]) -> dict[str, int]:
+def _build_sitemap_page_map(
+    *, pages: Sequence[_PageRow | _PageRef], policy: PopularityPolicy | None = None
+) -> dict[str, int]:
+    policy = policy or default_policy()
     out: dict[str, int] = {}
-    for index, page in enumerate(sorted(pages, key=lambda p: (p.name, p.section)), start=1):
-        out[page.page_id] = ((index - 1) // 10_000) + 1
+    indexed = 0
+    for page in sorted(pages, key=lambda p: (p.name, p.section)):
+        if policy.evaluate(page.name, page.section, page.source_package).indexable:
+            out[page.page_id] = indexed // 10_000 + 1
+            indexed += 1
+        else:
+            out[page.page_id] = 0
     return out
 
 
@@ -1495,15 +1517,19 @@ def _page_payload(
     *,
     sitemap_page: int,
     links: list[dict[str, str | None]],
+    policy: PopularityPolicy | None = None,
 ) -> dict[str, object]:
     # The server ignores searchText and keeps 240 characters of snippetText
     # (MAX_SNIPPET_TEXT_CHARS in convex/lib.ts); send only what it stores.
+    demand = (policy or default_policy()).evaluate(row.name, row.section, row.source_package)
     snippet_text = normalize_ws(f"{row.description} {row.plain_text}")[:240]
     return {
         "externalId": row.page_id,
         "name": row.name,
         "section": row.section,
         "sitemapPage": sitemap_page,
+        "indexable": demand.indexable,
+        "popularityScore": demand.score,
         "title": row.title,
         "description": row.description,
         "sourcePath": row.source_path,

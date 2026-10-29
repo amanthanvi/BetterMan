@@ -268,3 +268,10 @@ older or newer protocol versions before any writes. Hourly jobs bootstrap
 existing stored data and resume failures; fresh
 upstream coverage still arrives with ingestion. Use the read-only status check
 to distinguish healthy completion from partial unavailable pages.
+
+## Index-by-demand (B4)
+
+[The B4 policy and runbook](roadmap/b4-index-by-demand.md) define the shared
+ingest-time score, indexable tier, monthly refresh, optional Plausible input,
+legacy rollout and full-Debian projection. These scalars live on existing page
+metadata; page reads do not query analytics or a separate derived table.

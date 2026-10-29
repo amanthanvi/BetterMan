@@ -211,14 +211,27 @@ jobs:
           python-version: 3.14
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        if: ${{ matrix.promote }}
         with:
           version: 10.34.4
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
-        if: ${{ matrix.promote }}
         with:
           node-version: 26
           cache: pnpm
+      # Aggregate counts are optional. No token enters Docker, Convex or Next.
+      - name: Snapshot page demand for this monthly release
+        if: ${{ needs.plan.outputs.ingest == 'true' }}
+        env:
+          PLAUSIBLE_API_KEY: ${{ secrets.PLAUSIBLE_API_KEY }}
+          PLAUSIBLE_SITE_ID: betterman.sh
+          PLAUSIBLE_COUNTS_OUTPUT: ${{ github.workspace }}/.plausible-counts.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm analytics:counts
+          if [[ -f "$PLAUSIBLE_COUNTS_OUTPUT" ]]; then
+            echo "BETTERMAN_PLAUSIBLE_COUNTS=$PLAUSIBLE_COUNTS_OUTPUT" >> "$GITHUB_ENV"
+          fi
+
       # Preserve the promotion job's no-lifecycle-scripts install policy.
       - name: Install verification dependencies
         id: verification_dependencies
@@ -309,6 +322,11 @@ jobs:
             if [ "${BETTERMAN_INGEST_SAMPLE}" = "true" ]; then
               set -- --sample --no-activate
             fi
+            if [ -f "$GITHUB_WORKSPACE/.plausible-counts.json" ]; then
+              export BETTERMAN_PLAUSIBLE_COUNTS="$GITHUB_WORKSPACE/.plausible-counts.json"
+            fi
+            # Run checkout sources so B4's checksum-pinned data accompanies the module.
+            export PYTHONPATH="$GITHUB_WORKSPACE/ingestion${PYTHONPATH:+:$PYTHONPATH}"
             $py scripts/dataset-workflow.py run freebsd ingest $py -m ingestion.cli ingest --distro freebsd "$@"
         env:
           CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}

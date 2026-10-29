@@ -67,7 +67,7 @@ it("accepts the deployed promotion contract while keeping CAS optional for manua
   expect(await response.json()).toEqual({ promoted: [] });
 });
 
-it("combines package batches, symbols, signatures, optional arguments and providers in one v5 sealed release", async () => {
+it("combines package batches, symbols, signatures, optional arguments and providers and demand policy in one v7 sealed release", async () => {
   vi.useFakeTimers();
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   try {
@@ -75,7 +75,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
     const packages = [{ name: "tar", version: "1", hasLicenseText: false }];
     const { releaseId } = await t.mutation(internal.ingest.createRelease, {
       datasetReleaseId: "combined-contract", locale: "en", distro: "debian", imageRef: "test", imageDigest: "test",
-      ingestedAt: "2026-10-28T00:00:00Z", packageManifest: null, pageCount: 1, providerCount: 2, aliasCount: 1, licenseCount: 0,
+      ingestedAt: "2026-10-28T00:00:00Z", packageManifest: null, pageCount: 1, indexablePageCount: 1, providerCount: 2, aliasCount: 1, licenseCount: 0,
       sectionTotals: [{ section: "1", total: 1 }],
       packageBatches: [{ digest: await storedPayloadDigest(canonicalJson(packages)), count: 1, licenseCount: 0 }],
     });
@@ -85,7 +85,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
     const response = await t.fetch("/ingest/pages/storage", {
       method: "POST", headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
       body: JSON.stringify({ datasetReleaseId: "combined-contract", pages: [{
-        externalId: "tar", name: "tar", section: "1", sitemapPage: 0, title: "tar", description: "archive",
+        externalId: "tar", name: "tar", section: "1", sitemapPage: 1, indexable: true, popularityScore: 5000, title: "tar", description: "archive",
         sourcePath: "tar.1", sourcePackage: "tar", sourcePackageVersion: "1", contentSha256: "tar-source",
         hasParseWarnings: false, extractorVersion: 123456, doc: { toc: [], blocks: [] }, synopsis: null,
         options: [{ flags: "-c, --create", anchorId: "create" }, { flags: "--color", argument: "[WHEN]", anchorId: "color" }], seeAlso: null,
@@ -125,7 +125,7 @@ it("combines package batches, symbols, signatures, optional arguments and provid
       aliasProviders: await ctx.db.query("manPageAliasProviders").withIndex("by_releaseId_and_route_and_package_and_path", q => q.eq("releaseId", releaseId)).take(2),
       packages: await ctx.db.query("licensePackages").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", releaseId)).take(2),
     }));
-    expect(state.release).toMatchObject({ sealed: true, uploadedPackageBatchCount: 1 });
+    expect(state.release).toMatchObject({ sealed: true, indexablePageCount: 1, uploadedPackageBatchCount: 1 });
     expect(state.input).toMatchObject({ status: "ready", extractorVersion: 123456 });
     expect(state.symbols).toMatchObject([{term: "TAR_OPTIONS", anchorId: "environment"}]);
     expect(state.flags.find(flag => flag.flag === "--color")).toMatchObject({argumentOptional: true});
@@ -137,4 +137,25 @@ it("combines package batches, symbols, signatures, optional arguments and provid
   } finally {
     vi.useRealTimers();
   }
+});
+
+it("rejects missing/contradictory demand fields and refuses to seal a wrong tier count", async () => {
+  const t = convexTest(schema, modules);
+  const { releaseId } = await t.mutation(internal.ingest.createRelease, {
+    datasetReleaseId: "demand", locale: "en", distro: "debian", imageRef: "fixture", imageDigest: "fixture",
+    ingestedAt: "now", pageCount: 2, indexablePageCount: 1, aliasCount: 0, licenseCount: 0,
+    sectionTotals: [{ section: "3", total: 2 }], licensePackages: [],
+  });
+  const page = {
+    externalId: "one", name: "one", section: "3", sitemapPage: 0, title: "one", description: "one",
+    sourcePath: "one", sourcePackage: null, sourcePackageVersion: null, contentSha256: "one",
+    hasParseWarnings: false, doc: { toc: [], blocks: [] }, synopsis: null, options: null, seeAlso: null,
+    searchText: "", snippetText: "", links: [],
+  };
+  await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "demand", pages: [page] })).rejects.toThrow("INVALID_INDEX_POLICY");
+  await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "demand", pages: [{ ...page, indexable: true, popularityScore: 100 }] })).rejects.toThrow("INVALID_INDEX_POLICY");
+  const rows = [page, { ...page, externalId: "two", name: "two" }].map(p => ({ ...p, indexable: false, popularityScore: 0 }));
+  await t.mutation(internal.ingest.insertPages, { datasetReleaseId: "demand", pages: rows });
+  await expect(t.mutation(internal.ingest.activateRelease, { datasetReleaseId: "demand", stage: "staging", activatedAt: "now" })).rejects.toThrow("RELEASE_MANIFEST_INCOMPLETE");
+  expect((await t.run(ctx => ctx.db.get(releaseId)))?.sealed).not.toBe(true);
 });

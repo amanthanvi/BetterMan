@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const releases = await fetchSeoReleases()
 
   const etag = weakEtag([
-    'sitemap-index',
+    'sitemap-index-b4-v1',
     ...releases.items.flatMap((r: (typeof releases.items)[number]) => [
       r.distro,
       r.datasetReleaseId,
@@ -41,6 +41,7 @@ export async function GET(request: Request) {
   }
 
   const rows = releases.items
+    .filter((r: (typeof releases.items)[number]) => r.pageCount > 0)
     .slice()
     .sort((a: (typeof releases.items)[number], b: (typeof releases.items)[number]) => a.distro.localeCompare(b.distro))
     .map((r: (typeof releases.items)[number]) => {

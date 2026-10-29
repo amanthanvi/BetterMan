@@ -192,6 +192,7 @@ describe("generated layer ingest routes", () => {
     })).json();
     expect(first.items).toEqual([{
       name: "cpio", section: "1", contentSha256: BSDTAR, sourcePackage: "tar",
+      indexable: false, popularityScore: 0,
       hasRecord: false, promptVersion: null, tldrCommit: null, suppressed: [], flagUsageCurrent: true,
     }]);
     expect(first.isDone).toBe(false);

@@ -195,3 +195,13 @@ it('keeps alternate canonical and robots headers on a release-mismatched private
   expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
   expect(res.headers.get('x-robots-tag')).toBe('noindex')
 })
+
+it.each([true, false, undefined])('carries tier robots on text GET and HEAD: %s', async indexable => {
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, indexable } } })
+  for (const method of [GET, HEAD]) {
+    const res = await method(req(), ctx())
+    expect(res.status).toBe(200)
+    expect(res.headers.get('x-robots-tag')).toBe(indexable === true ? 'index, follow' : 'noindex, follow')
+    expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1>; rel="canonical"')
+  }
+})

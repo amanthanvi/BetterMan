@@ -27,10 +27,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
   if (!release) return new Response(null, { status: 404 })
 
   const urlsPerFile = releases.urlsPerFile || 10000
-  const pageCount = Math.max(1, Math.ceil(release.pageCount / urlsPerFile))
+  const pageCount = Math.ceil(release.pageCount / urlsPerFile)
   if (page > pageCount) return new Response(null, { status: 404 })
 
-  const etag = weakEtag(['sitemap-page', distro, release.datasetReleaseId, String(page)])
+  const etag = weakEtag(['sitemap-page-b4-v1', distro, release.datasetReleaseId, String(page)])
   const ifNoneMatch = request.headers.get('if-none-match')
   if (ifNoneMatch && ifNoneMatch === etag) {
     return new Response(null, {
@@ -61,7 +61,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ distro?: st
       headers: {
         'Content-Type': 'application/xml; charset=utf-8',
         'Cache-Control': 'public, max-age=3600',
-        ETag: weakEtag(['sitemap-page', distro, data.datasetReleaseId, String(page)]),
+        ETag: weakEtag(['sitemap-page-b4-v1', distro, data.datasetReleaseId, String(page)]),
       },
     })
   } catch (err) {

@@ -42,7 +42,7 @@ A `.so` include stub is recorded as an alias rather than a page; its URL permane
 
 A release is one distro at one point in time. Before uploading, ingestion declares its page count, per-section totals, alias count, and license count with the package identities that require license text. Activation verifies these declarations against completed uploads before sealing, hydrating related metadata, and atomically changing the `staging` pointer. Promotion copies only manifest-verified, sealed, complete release pointers to `prod`. New rows cannot be appended after sealing, and pruning marks a release ineligible for activation before deleting any children. Superseded releases are removed by the manual `prune-releases` workflow, which keeps the newest verified inactive release per distro as a rollback target, never deletes active or recently created declared releases, and leaves unsealed drafts alone unless an operator opts in.
 
-Ingest contract v6 retains the v2 storage/batch protocol and v3/v4 extractor,
+Ingest contract v7 retains the v2 storage/batch protocol and v3/v4 extractor,
 signature, symbol and optional-argument fields, adding real and alias package
 providers from v5, adding an authenticated fixed-staging promotion-source read
 and per-distro `expectedDatasetReleaseId` compare-and-swap. A mismatch aborts
@@ -53,7 +53,12 @@ release IDs through concurrency-queue waits with `expected_release_ids`; a
 job-time source mismatch fails before promotion. Both paths retain the persisted
 full-Debian acquisition hold. Promotion requests carry the exact contract
 version header so old in-flight workflows fail before moving prod. The
-generated layer advertises its own independent v2 contract.
+generated layer advertises its own independent v3 contract.
+
+B4 adds per-page demand scores and indexable membership, plus a declared tier
+count verified through existing upload shards. Scored releases filter their
+sitemaps and serve the long tail with noindex. Unscored releases keep main's
+all-page indexing and sitemaps. See the [B4 policy and rollout](roadmap/b4-index-by-demand.md).
 Large package provenance is stored in Convex file storage via a
 `releaseManifests` row. The release document contains counts, digests and lifecycle
 state. Digest-bound package batches populate `licensePackages` in transactions of

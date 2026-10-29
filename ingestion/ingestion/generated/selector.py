@@ -1,9 +1,4 @@
-"""Choose which pages get generated text first.
-
-The indexed tier is sections 1, 5, 7 and 8 plus popular packages. Popularity
-priors (B4) do not exist yet, so a priority list can be passed in; without
-one, section 1 and 8 commands come first, then file formats and overviews.
-"""
+"""Choose B4 indexable pages, ordered by their ingest-time demand score."""
 
 from __future__ import annotations
 
@@ -11,7 +6,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-INDEXED_SECTIONS = ("1", "8", "5", "7")
+from ingestion.popularity import INDEXED_SECTIONS, PopularityPolicy
 
 
 @dataclass(frozen=True)
@@ -21,6 +16,8 @@ class Candidate:
     content_sha256: str
     source_package: str | None = None
     has_options: bool | None = None
+    indexable: bool | None = None
+    popularity_score: int | None = None
 
 
 @dataclass(frozen=True)
@@ -72,15 +69,23 @@ def select(
 ) -> list[Candidate]:
     """Indexed-tier pages in generation order, one per content hash."""
     priority = priority or Priority({}, {})
+    policy = PopularityPolicy.load()
     order = {section: index for index, section in enumerate(sections)}
     chosen: dict[str, tuple[tuple, Candidate]] = {}
     for candidate in candidates:
-        section_rank = order.get(candidate.section)
+        section_rank = order.get(candidate.section[:1])
         prio = priority.rank(candidate)
-        if section_rank is None and prio is None:
+        demand = policy.evaluate(candidate.name, candidate.section, candidate.source_package)
+        indexed = candidate.indexable if candidate.indexable is not None else demand.indexable
+        if not indexed:
             continue
         key = (
             prio if prio is not None else float("inf"),
+            -(
+                candidate.popularity_score
+                if candidate.popularity_score is not None
+                else demand.score
+            ),
             0 if candidate.has_options is not False else 1,
             section_rank if section_rank is not None else len(order),
             candidate.name,
