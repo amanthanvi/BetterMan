@@ -79,6 +79,7 @@ it.each(WRAPPER_FORMS)('applies nested env boundaries and delimiter ranges under
     expect(result.stages.some(s=>s.tokens.some(t=>t.kind==='command' && t.value==='rm'))).toBe(false);
   }
   for(const delimiter of ['\\400','\\777','\\x100','\\q']) expect(parseShell(`${wrapper} xargs -d '${delimiter}' rm x`).diagnostics.length).toBeGreaterThan(0);
+  for(const delimiter of ['\\377','\\xFF','\\n',',']) expect(parseShell(`${wrapper} xargs -d '${delimiter}' rm x`).diagnostics).toEqual([]);
 });
 it.each(['timeout 1','nice','nohup','command','exec','doas','/usr/bin/time','xargs'])('does not skip assignment-shaped executables after %s',wrapper=>{
  const result=parseShell(`${wrapper} VAR=value rm x`);

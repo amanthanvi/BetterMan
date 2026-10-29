@@ -246,3 +246,10 @@ worktree's Next server and clean the generated `nextjs/.next` directory before
 rebuilding. Next's persistent data/route cache can otherwise retain the perf
 fixture's section listing across builds even after the backend URL changes.
 The perf report remains in `.perf-results/measurements.json`.
+
+Round 6 adds three direct-query admission cases: a wrapper child whose
+executable is assignment-shaped (3 documents), env's option-like executable
+after assignments (4), and an out-of-range xargs delimiter (5). Each uses one
+call and zero storage reads. Assertions pin the diagnostics, unknown executable
+markers where applicable, and absence of facts/hints. Existing metric
+descriptors, tolerances and measured read counts remain unchanged.

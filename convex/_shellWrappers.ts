@@ -23,8 +23,8 @@ const SIGNALS=new Set('HUP INT QUIT ILL TRAP ABRT IOT BUS FPE KILL USR1 SEGV USR
 export function validXargsDelimiter(value:string):boolean {
   if(value.length===1 && value.charCodeAt(0)>0 && value.charCodeAt(0)<=127) return true;
   if(/^\\[abfnrtv\\]$/.test(value)) return true;
-  if(/^\\x[0-9a-fA-F]{1,2}$/.test(value)) return true;
-  return /^\\[0-7]{1,3}$/.test(value) && Number.parseInt(value.slice(1),8)<=255;
+  if(/^\\x[0-9a-fA-F]+$/.test(value)) return Number.parseInt(value.slice(2),16)<=255;
+  return /^\\[0-7]+$/.test(value) && Number.parseInt(value.slice(1),8)<=255;
 }
 function validValue(name:string,flag:string,value:string):boolean {
   if(name==='timeout') return ['-s','--signal'].includes(flag) ? integer(value,0,64) || SIGNALS.has(value.replace(/^SIG/,'')) : duration(value);

@@ -98,5 +98,73 @@
   {
     "value": "\u00e9",
     "accepted": false
+  },
+  {
+    "value": "\\0377",
+    "accepted": true
+  },
+  {
+    "value": "\\0000",
+    "accepted": true
+  },
+  {
+    "value": "\\000377",
+    "accepted": true
+  },
+  {
+    "value": "\\01",
+    "accepted": true
+  },
+  {
+    "value": "\\1",
+    "accepted": true
+  },
+  {
+    "value": "\\x000",
+    "accepted": true
+  },
+  {
+    "value": "\\x000FF",
+    "accepted": true
+  },
+  {
+    "value": "\\x0FF",
+    "accepted": true
+  },
+  {
+    "value": "\\00x",
+    "accepted": false
+  },
+  {
+    "value": "\\0a",
+    "accepted": false
+  },
+  {
+    "value": "\\x1",
+    "accepted": true
+  },
+  {
+    "value": "\\x01",
+    "accepted": true
+  },
+  {
+    "value": "\\+1",
+    "accepted": false
+  },
+  {
+    "value": "\\8",
+    "accepted": false
+  },
+  {
+    "value": "\\9",
+    "accepted": false
+  },
+  {
+    "value": "\\08",
+    "accepted": false
+  },
+  {
+    "value": "\\0000000000000000000000000000000000000000000000000000000377",
+    "accepted": true
   }
 ]

@@ -102,7 +102,8 @@ is unknown and diagnosed. env and sudo consume their own documented assignment
 prefixes; after env's first assignment, options are finished and the next word
 is its executable (including an option-like word, which remains unknown).
 Xargs delimiters accept one literal byte or a complete GNU C escape: octal
-values must be at most 377, hex has one or two digits, and only the documented
+values must be at most 377, hexadecimal values at most ff (leading zeros are
+accepted in both), and only the documented
 C escapes are admitted. Other wrapper strings are not escape-decoded.
 
 Wrapper resolution first lifts shell redirect pairs out of argv while retaining

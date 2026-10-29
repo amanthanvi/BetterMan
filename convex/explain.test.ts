@@ -461,6 +461,11 @@ describe('round 5: grammar and wrapper admission',()=>{
 
 
 describe('round 6 wrapper argv admission',()=>{
+ it.each(['\\377','\\xFF','\\n',','])('retains known GNU delimiter %s',async delimiter=>{
+  const result=await explain(await reviewed(),`xargs -d '${delimiter}' rm x`);
+  expect(result.diagnostics).toEqual([]);
+  expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).map((n:{description:string})=>n.description)).toContain('rm deletes files.');
+ });
  it.each(reviewR6)('fresh review $group: $cmd',async({cmd,errorCode})=>{
   if(errorCode) {await expect(explain(await reviewed(),cmd)).rejects.toThrow(errorCode);return;}
   const result=await explain(await reviewed(),cmd);
