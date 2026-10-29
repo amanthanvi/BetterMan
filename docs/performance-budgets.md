@@ -226,3 +226,23 @@ invalid form. Every prior metric descriptor and document count is unchanged.
 The earlier unquoted attached-brace replacement case retains safe token
 resolution at five reads but now diagnoses unsupported brace syntax; it cannot
 authorize facts or hints.
+
+## Combined B5 and derived-data integration
+
+The fixture retains the production-built ready derived snapshot and the compact
+man response assertions from #429 alongside every B5 search/explain case.
+Re-recording on main f17816b with both features keeps browser document reads
+(home/man/search/section) at 7/28/32/37, with calls 3/5/3/2 and storage reads
+0/1/0/0. The man response is 35,123 bytes including 846 derived bytes; the
+nonempty tar response is 168,478 / 3,879 derived bytes, and the pathological
+large response is 318,303 / 6,216 derived bytes. These match the derived-data
+baselines. B5 query counts remain symbol 10, kit archive/pipeline 8/12, and
+whole-request ceilings 64 (saturated multi-row) / 66 (overflow). Every prior
+metric descriptor/tolerance is retained after recording; measured browser byte
+variation stays within the existing 2% limits, without raising baselines.
+
+For a subsequent local E2E run against a real local Convex seed, stop this
+worktree's Next server and clean the generated `nextjs/.next` directory before
+rebuilding. Next's persistent data/route cache can otherwise retain the perf
+fixture's section listing across builds even after the backend URL changes.
+The perf report remains in `.perf-results/measurements.json`.

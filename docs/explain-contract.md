@@ -193,8 +193,11 @@ separate subcommand page. errno and environ special-page layouts are covered
 by selected, hashed real-corpus fixtures. Invalid/oversized terms or anchors are omitted, never truncated
 into a bogus anchor. Excerpts are clipped at 160 UTF-16 units without splitting
 surrogate pairs; Python and Convex use the same unit. Terms/anchors over their limits are skipped.
-Contract schema version 2 prevents new ingestion from writing to an older
-deployment. Default page batches are derived from a 7,000-derived-write budget divided
+Contract schema version 4 prevents new ingestion from writing to an older
+deployment. Version 4 also retains license-package uploads, extractorVersion
+and packed signatures from v3; clients reject both older and newer contracts.
+Symbols are registered release children for bounded pruning; the orphan sweep
+checks their release and page ownership before deletion. Default page batches are derived from a 7,000-derived-write budget divided
 by 400 option rows plus the symbol cap per page (currently ten items). The
 existing item-count setting can lower this bound but cannot bypass it.
 See [the cached-corpus audit](symbol-index-audit.md) for coverage and quality

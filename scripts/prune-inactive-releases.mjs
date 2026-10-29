@@ -284,7 +284,7 @@ export async function cleanupOrphanManifestFiles(run, { dryRun, log = console.lo
 
 export async function cleanupOrphanDerivedCaches(run, { dryRun, log = console.log, retry = {} } = {}) {
   const totals = { scanned: 0, orphans: 0, deleted: 0, unknownSkipped: 0, pages: 0 }
-  for (const table of ['derivedSignatureCache', 'derivedLegacySignatures']) {
+  for (const table of ['derivedSignatureCache', 'derivedLegacySignatures', 'manPageSymbols']) {
     let cursor = null
     const limit = adaptiveLimit({ start: 5, min: 1 })
     for (let page = 0; page < 1_000_000; page += 1) {

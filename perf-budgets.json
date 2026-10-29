@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v3: 7 distros x32 browser pages with a production-built ready derived snapshot; extended direct-search fixture",
+  "fixture": "scripts/perf-fixture.ts v9: ready derived snapshots, bounded symbol/explain queries and wrapper admission",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -558,7 +558,7 @@
       "absolute": 0
     }
   },
-  "sourceHead": "90f087485dfa33bbcd4cf3ab729143ffc7d871fc",
+  "sourceHead": "27f30934be2eaf3dd0e2aeb4df081a90b10cbb1e",
   "toolchain": {
     "next": "16.4.2",
     "playwright": "1.64.1",

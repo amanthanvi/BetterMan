@@ -632,12 +632,13 @@ def test_ingest_fails_before_writing_when_convex_contract_is_missing(monkeypatch
     assert calls == []
 
 
-def test_ingest_rejects_the_license_batch_v2_contract_before_any_write(monkeypatch):
+@pytest.mark.parametrize("version", [2, 3, REQUIRED_SCHEMA_VERSION + 1])
+def test_ingest_rejects_incompatible_contract_before_any_write(monkeypatch, version):
     monkeypatch.setattr(
         ingest_runner.ConvexIngestClient,
         "_get_json",
         lambda _self, _path: {
-            "schemaVersion": 2,
+            "schemaVersion": version,
             "functions": list(REQUIRED_FUNCTIONS),
             "declarationCounts": list(REQUIRED_DECLARATION_COUNTS),
             "activatePending": True,
@@ -650,7 +651,7 @@ def test_ingest_rejects_the_license_batch_v2_contract_before_any_write(monkeypat
         lambda *_args, **_kwargs: calls.append("post"),
     )
     monkeypatch.setattr(ingest_runner, "apt_install", lambda _packages: calls.append("apt"))
-    with pytest.raises(ConvexContractError, match="schemaVersion 2"):
+    with pytest.raises(ConvexContractError, match=f"schemaVersion {version}"):
         ingest_runner.ingest(
             sample=True,
             activate=True,

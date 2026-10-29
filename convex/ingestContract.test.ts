@@ -42,7 +42,7 @@ it("does not advertise the ingest contract when the secret is unset", async () =
   expect(response.status).toBe(503);
 });
 
-it("combines license-package batches and versioned stored-page signatures in one sealed release", async () => {
+it("combines license-package batches, symbols and versioned stored-page signatures in one sealed release", async () => {
   vi.useFakeTimers();
   vi.stubEnv("CONVEX_INGEST_SECRET", "test-secret");
   try {
@@ -63,7 +63,8 @@ it("combines license-package batches and versioned stored-page signatures in one
         externalId: "tar", name: "tar", section: "1", sitemapPage: 0, title: "tar", description: "archive",
         sourcePath: "tar.1", sourcePackage: "tar", sourcePackageVersion: "1", contentSha256: "tar-source",
         hasParseWarnings: false, extractorVersion: 123456, doc: { toc: [], blocks: [] }, synopsis: null,
-        options: [{ flags: "-c, --create", anchorId: "create" }], seeAlso: null,
+        options: [{ flags: "-c, --create", anchorId: "create" }, { flags: "--color", argument: "[WHEN]", anchorId: "color" }], seeAlso: null,
+        symbols: [{ term: "TAR_OPTIONS", anchorId: "environment", excerpt: "Default options", kind: "environment" }],
         searchText: "", snippetText: "archive", links: [],
       }] }),
     });
@@ -77,10 +78,14 @@ it("combines license-package batches and versioned stored-page signatures in one
     const state = await t.run(async (ctx) => ({
       release: await ctx.db.get(releaseId),
       input: await ctx.db.query("derivedPageInputs").withIndex("by_releaseId_and_pageId", (q) => q.eq("releaseId", releaseId)).unique(),
+      symbols: await ctx.db.query("manPageSymbols").withIndex("by_releaseId_and_termNorm", q => q.eq("releaseId", releaseId)).take(2),
+      flags: await ctx.db.query("manPageOptionFlags").withIndex("by_releaseId_and_flag_and_nameNorm", q => q.eq("releaseId", releaseId)).take(4),
       packages: await ctx.db.query("licensePackages").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", releaseId)).take(2),
     }));
     expect(state.release).toMatchObject({ sealed: true, uploadedPackageBatchCount: 1 });
     expect(state.input).toMatchObject({ status: "ready", extractorVersion: 123456 });
+    expect(state.symbols).toMatchObject([{term: "TAR_OPTIONS", anchorId: "environment"}]);
+    expect(state.flags.find(flag => flag.flag === "--color")).toMatchObject({argumentOptional: true});
     expect(state.packages.map((pkg) => pkg.packageName)).toEqual(["tar"]);
   } finally {
     vi.useRealTimers();

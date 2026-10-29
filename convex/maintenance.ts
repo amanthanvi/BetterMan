@@ -824,12 +824,12 @@ export const cleanupOrphanContentBlobsBatch = internalMutation({
 });
 
 
-// These are optional caches, not release children. Delete a cache only after
+// Signature caches are optional; symbols are release/page-owned. Delete only after
 // proving that no live page/input or exact legacy content identity references
 // it in the same transaction. Small pages bound the worst-case signature bytes.
 export const cleanupOrphanDerivedCachesBatch = internalMutation({
   args: {
-    table: v.union(v.literal("derivedSignatureCache"), v.literal("derivedLegacySignatures")),
+    table: v.union(v.literal("derivedSignatureCache"), v.literal("derivedLegacySignatures"), v.literal("manPageSymbols")),
     cursor: v.union(v.string(), v.null()),
     limit: v.optional(v.number()),
     dryRun: v.optional(v.boolean()),
@@ -840,6 +840,17 @@ export const cleanupOrphanDerivedCachesBatch = internalMutation({
     let orphans = 0;
     let deleted = 0;
     let unknownSkipped = 0;
+    if (args.table === "manPageSymbols") {
+      const page = await ctx.db.query("manPageSymbols").paginate({cursor: args.cursor, numItems: limit});
+      for (const row of page.page) {
+        const [release, owner] = await Promise.all([ctx.db.get(row.releaseId), ctx.db.get(row.pageId)]);
+        if (release && owner?.releaseId === row.releaseId) continue;
+        orphans++;
+        if (!dryRun) {await ctx.db.delete(row._id); deleted++;}
+      }
+      return {table: args.table, dryRun, limit, scanned: page.page.length, orphans, deleted, unknownSkipped,
+        isDone: page.isDone, continueCursor: page.continueCursor};
+    }
     if (args.table === "derivedSignatureCache") {
       const page = await ctx.db.query("derivedSignatureCache").paginate({ cursor: args.cursor, numItems: limit });
       for (const row of page.page) {
