@@ -7,6 +7,16 @@ import { test } from 'node:test'
 
 const workflow = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8')
 
+test('Convex deploy precedes Vercel and promotion fences mismatched workflow contracts', () => {
+  assert.ok(workflow.indexOf('- name: Deploy current Convex functions') < workflow.indexOf('- name: Verify production Convex contract'))
+  const verify = workflow.indexOf('- name: Verify production Convex contract')
+  const build = workflow.indexOf('- name: Deploy and verify production')
+  assert.ok(verify > 0 && build > verify, 'production Convex must be verified before Vercel build')
+  const helper = readFileSync(new URL('./dataset-workflow.py', import.meta.url), 'utf8')
+  assert.ok(helper.indexOf(').require_deployed_contract()') < helper.indexOf('result = request_json(request)'))
+  assert.match(helper, /request\.add_header\("X-BetterMan-Ingest-Contract", str\(contract\["schemaVersion"\]\)\)/)
+})
+
 function convexDeployScript() {
   const step = workflow.split('      - name: Deploy current Convex functions\n')[1]?.split('\n      - name: ')[0]
   assert.ok(step, 'Convex deploy step must exist')

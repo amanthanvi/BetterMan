@@ -862,6 +862,31 @@ export const activateRelease = internalMutation({
   },
 });
 
+function requirePromotableRelease(release: Doc<"datasetReleases">) {
+  if (release.pruning) throw new Error("RELEASE_PRUNING");
+  if (!release.sealed) throw new Error("RELEASE_NOT_SEALED");
+  if (!release.manifestVerified) throw new Error("RELEASE_MANIFEST_UNVERIFIED");
+  if (release.relatedMetadataCompletedVersion !== (release.relatedMetadataVersion ?? 0)) {
+    throw new Error("RELATED_METADATA_INCOMPLETE");
+  }
+}
+
+// Authenticated workflow preflight only. Staging never enters the public API.
+export const getPromotionSource = internalQuery({
+  args: { distro: distroValidator },
+  returns: v.object({ distro: distroValidator, datasetReleaseId: v.string() }),
+  handler: async (ctx, { distro }) => {
+    const source = await ctx.db.query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "staging").eq("locale", "en").eq("distro", distro))
+      .unique();
+    if (!source) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    const release = await ctx.db.get(source.releaseId);
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+    requirePromotableRelease(release);
+    return { distro, datasetReleaseId: source.datasetReleaseId };
+  },
+});
+
 export const promoteActiveReleases = internalMutation({
   args: {
     fromStage: datasetStageValidator,
@@ -869,6 +894,11 @@ export const promoteActiveReleases = internalMutation({
     distros: v.array(distroValidator),
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
+    expectedDatasetReleaseId: v.optional(v.object({
+      debian: v.optional(v.string()), ubuntu: v.optional(v.string()),
+      fedora: v.optional(v.string()), arch: v.optional(v.string()),
+      alpine: v.optional(v.string()), freebsd: v.optional(v.string()), macos: v.optional(v.string()),
+    })),
   },
   returns: v.object({
     promoted: v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string() })),
@@ -877,42 +907,53 @@ export const promoteActiveReleases = internalMutation({
   handler: async (ctx, args) => {
     const promoted = [];
     const skipped = [];
+    let changed = false;
     for (const distro of new Set(args.distros)) {
+      const expected = args.expectedDatasetReleaseId?.[distro];
+      if (expected !== undefined && !expected.trim()) throw new Error("INVALID_RELEASE_MANIFEST");
+      const target = await ctx.db
+        .query("activeReleases")
+        .withIndex("by_stage_and_locale_and_distro", (q) =>
+          q.eq("stage", args.toStage).eq("locale", "en").eq("distro", distro),
+        )
+        .unique();
+      // A lost response can be retried after staging advances. Acknowledge the
+      // already committed target without writing pointers/history or scheduling
+      // derived work, but still enforce the persisted full-Debian hold below.
+      const alreadyPromoted = expected !== undefined && target?.datasetReleaseId === expected;
       const source = await ctx.db
         .query("activeReleases")
         .withIndex("by_stage_and_locale_and_distro", (q) =>
           q.eq("stage", args.fromStage).eq("locale", "en").eq("distro", distro),
         )
         .unique();
-      if (!source) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
-      const release = await ctx.db.get(source.releaseId);
+      if (!alreadyPromoted && expected !== undefined && source?.datasetReleaseId !== expected) {
+        // Throwing rolls back every distro in this mutation, including earlier
+        // pointer, predecessor and scheduler writes. Never return partial CAS.
+        throw new Error(`STAGING_RELEASE_CONFLICT: ${distro} expected ${expected}, found ${source?.datasetReleaseId ?? "missing"}`);
+      }
+      const candidate = alreadyPromoted ? target : source;
+      if (!candidate) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+      const release = await ctx.db.get(candidate.releaseId);
       if (!release) throw new Error("RELEASE_NOT_FOUND");
       // Check persisted acquisition identity in the pointer transaction; a
       // preflight read or mirror URL would not enforce the release's hold.
       if (fullDebianPromotionHeld(release, args.toStage, args.allowFullDebian)) {
-        skipped.push({ distro, datasetReleaseId: source.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
+        skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
         continue;
       }
-      if (release.pruning) throw new Error("RELEASE_PRUNING");
-      if (!release.sealed) throw new Error("RELEASE_NOT_SEALED");
-      if (!release.manifestVerified) throw new Error("RELEASE_MANIFEST_UNVERIFIED");
-      if (release.relatedMetadataCompletedVersion !== (release.relatedMetadataVersion ?? 0)) {
-        throw new Error("RELATED_METADATA_INCOMPLETE");
+      requirePromotableRelease(release);
+      if (alreadyPromoted) {
+        promoted.push({ distro, datasetReleaseId: candidate.datasetReleaseId });
+        continue;
       }
-
-      const target = await ctx.db
-        .query("activeReleases")
-        .withIndex("by_stage_and_locale_and_distro", (q) =>
-          q.eq("stage", args.toStage).eq("locale", source.locale).eq("distro", distro),
-        )
-        .unique();
 
       const payload = {
         stage: args.toStage,
-        locale: source.locale,
-        distro: source.distro,
-        releaseId: source.releaseId,
-        datasetReleaseId: source.datasetReleaseId,
+        locale: candidate.locale,
+        distro: candidate.distro,
+        releaseId: candidate.releaseId,
+        datasetReleaseId: candidate.datasetReleaseId,
         activatedAt: args.activatedAt,
       };
 
@@ -930,10 +971,11 @@ export const promoteActiveReleases = internalMutation({
         await ctx.db.insert("activeReleases", payload);
       }
 
-      promoted.push({ distro, datasetReleaseId: source.datasetReleaseId });
+      changed = true;
+      promoted.push({ distro, datasetReleaseId: candidate.datasetReleaseId });
     }
 
-    if (args.toStage === "prod" && promoted.length) await scheduleDerivedBuild(ctx, "en");
+    if (args.toStage === "prod" && changed) await scheduleDerivedBuild(ctx, "en");
 
 
     return skipped.length ? { promoted, skipped } : { promoted };

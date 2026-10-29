@@ -188,6 +188,11 @@ def request_json(request):
 
 
 def promote(distro):
+    # The promotion-only runner has Python but no installed ingestion package.
+    # This client uses only the standard library; share its exact-version gate.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ingestion"))
+    from ingestion.convex_client import ConvexIngestClient
+
     record = load(distro)
     matrix, ingest, enabled = selection()
     selected = next((item for item in matrix["include"] if item["distro"] == distro), None)
@@ -196,7 +201,7 @@ def promote(distro):
         raise ValueError("Refusing to promote when promotion is disabled or this is a sample")
     if ingest and (record["result"] != "success" or record.get("stagingVerified") is not True):
         raise ValueError("Refusing to promote without this run's completed staging activation")
-    record.update(stage="read previous prod", result="pending", error="")
+    record.update(stage="promotion contract", result="pending", error="")
     save(distro, record)
     payload = {
         "fromStage": "staging",
@@ -205,16 +210,39 @@ def promote(distro):
         "activatedAt": datetime.datetime.now(datetime.UTC).isoformat(),
         "allowFullDebian": full_promotion_enabled(),
     }
-    request = urllib.request.Request(
-        f"{os.environ['CONVEX_HTTP_URL'].rstrip('/')}/ingest/promote",
-        data=json.dumps(payload).encode(),
-        headers={
-            "Authorization": f"Bearer {os.environ['CONVEX_INGEST_SECRET']}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
+
+    def ingest_request(path, body):
+        return urllib.request.Request(
+            f"{os.environ['CONVEX_HTTP_URL'].rstrip('/')}/ingest/{path}",
+            data=json.dumps(body).encode(),
+            headers={
+                "Authorization": f"Bearer {os.environ['CONVEX_INGEST_SECRET']}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
     try:
+        contract = ConvexIngestClient(
+            http_url=os.environ["CONVEX_HTTP_URL"],
+            ingest_secret=os.environ["CONVEX_INGEST_SECRET"],
+        ).require_deployed_contract()
+        record["stage"] = "verify staging source"
+        save(distro, record)
+        if not ingest:
+            source = request_json(ingest_request("promotion-source", {"distro": distro}))
+            if source["distro"] != distro:
+                raise ValueError("Unexpected staging source distro")
+            record["releaseId"] = source["datasetReleaseId"]
+            record["stagingVerified"] = True
+        expected = record.get("releaseId")
+        if not isinstance(expected, str) or not expected.strip():
+            raise ValueError("Missing verified staging release ID; refusing unconditional promotion")
+        payload["expectedDatasetReleaseId"] = {distro: expected}
+        request = ingest_request("promote", payload)
+        request.add_header("X-BetterMan-Ingest-Contract", str(contract["schemaVersion"]))
+        record["stage"] = "read previous prod"
+        save(distro, record)
         info = request_json(
             urllib.request.Request(
                 f"{os.environ['CONVEX_URL'].rstrip('/')}/api/query",
@@ -239,7 +267,7 @@ def promote(distro):
         skipped = result.get("skipped", [])
         if (not promoted and distro == "debian" and len(skipped) == 1
             and skipped[0].get("distro") == "debian"
-            and skipped[0].get("datasetReleaseId")
+            and skipped[0].get("datasetReleaseId") == expected
             and skipped[0].get("reason") == "FULL_DEBIAN_PROMOTION_HELD"):
             print("[dataset] Skipping held full-Debian staging release: authorize debian_full_promote or BETTERMAN_DEBIAN_FULL_PROMOTE=1", flush=True)
             record.update(stage="full Debian promotion held", result="success")
@@ -261,7 +289,7 @@ def promote(distro):
         record.update(stage="promoted", result="success", releaseId=release_id)
         with open(os.environ["GITHUB_OUTPUT"], "a") as output:
             output.write(f"release_ids={json.dumps({distro: release_id})}\n")
-    except (OSError, http.client.HTTPException, ValueError, KeyError, TypeError) as error:
+    except (OSError, http.client.HTTPException, RuntimeError, ValueError, KeyError, TypeError) as error:
         detail = str(error)
         if isinstance(error, urllib.error.HTTPError):
             try:

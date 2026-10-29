@@ -48,11 +48,12 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 - Release creation declares page count, section totals, alias count (including zero), and license count. License declarations identify packages whose text must be uploaded; packages without available license text do not create a text requirement. Activation verifies the declarations before sealing and waits for related-metadata hydration before changing its staging pointer. HTTP 409 with `pending: true` is not publication; the client polls until `pending: false`, with a 45-minute default/maximum further capped by the matrix job’s remaining budget. Resume the same release with `pnpm ingest:activate --release-id <id> --stage staging`; this does not re-parse or upload. Failed or canceled hydration jobs resume their persisted cursor. Sealed releases cannot accept new rows: use a new release ID for further data. Promotion rejects missing, unverified, unsealed, incomplete, or pruning source releases atomically.
 - Ingest+promote dispatches and scheduled runs promote each successful distro independently. Eligibility requires exit zero and the CLI completion record with `published: true` and a release ID: activation has finished manifest verification, sealing and metadata hydration. A distro whose ingest fails is never replaced by its old staging pointer in the candidate set; its prod pointer keeps the last good release (or stays uninitialized). The server still atomically rejects unsafe source pointers for each promotion. A later production smoke-check failure is reported after promotion and does not automatically roll back a sealed, verified release.
 - Sample dispatches use `--sample --no-activate` and cannot promote. They validate the real acquisition/parser/upload path without moving staging or production active pointers.
-- Explicit promote-only dispatches intentionally ignore distro selectors and independently attempt all active staging pointers without ingestion; the same server seal/manifest/metadata checks apply to each. Inspect all staging pointers before dispatching. An invalid distro pointer fails that job while other valid pointers can promote. Samples never promote, including when `ingest=false` is also selected.
+- Explicit promote-only dispatches intentionally ignore distro selectors and independently attempt all active staging pointers without ingestion. Each job reads `/ingest/promotion-source` with the ingest secret to verify sealing, manifest and metadata completion and capture its staging ID, then passes that ID as its CAS expectation. Inspect all staging pointers before dispatching. An invalid distro pointer fails that job while other valid pointers can promote. Samples never promote, including when `ingest=false` is also selected.
 - The final **Dataset summary** job always runs after selected distro jobs, writes a table of distro, stage reached, result, and sanitized error excerpt, and fails if any job failed. Missing or damaged results (setup failure, timeout, cancellation or artifact loss) fail closed without hiding sibling rows. Selection runs independently of configuration preflight, so a preflight failure produces blocked rows for all requested distros; failed selection can be reconstructed from dispatch inputs for reporting. Per-distro result artifacts are retained for 14 days; full package/build logs stay in the corresponding job. A whole-run cancellation can prevent artifact upload or summary execution; the cancelled run is never a successful refresh.
 - Recover an ingest-stage failure by fixing the failed distro and dispatching only it (for example `-f linux_distro=debian -f bsd=false -f promote=true`). Successful siblings need no rollback or re-ingestion.
 - Recover a promote-stage failure after successful staging activation with a new promote-only dispatch: `gh workflow run update-dataset -f ingest=false -f promote=true`. Do not re-run the failed matrix leg: it re-ingests for 20–50 minutes and creates another release that may displace the previous month's rollback candidate when pruning with `keep_per_distro=1`. A failed promotion may already have changed prod if its response was lost; check public `getInfo` before retrying. Rollback remains manual via the [rollback runbook](bad-ingestion-release.md), including after a failed production smoke check.
-- Do not manually activate staging during a refresh: manual HTTP operations do not participate in the workflow concurrency group, and the existing promotion endpoint copies the current verified staging pointer. The workflow compares its returned ID with the completed ingest ID and fails on a mismatch, but that post-check cannot undo a concurrent manual pointer change.
+- Manual HTTP operations do not participate in the workflow concurrency group. Every workflow promotion sends `expectedDatasetReleaseId: {"<distro>": "<verified-release-id>"}`: cron and combined dispatches use the completed ingest ID; promotion-only jobs use their authenticated verified staging read. If staging changes before the transaction commits, HTTP `409 STAGING_RELEASE_CONFLICT` aborts the entire request, including earlier distro writes. The workflow does not retry conflicts or substitute the new staging ID. Investigate the competing activation, verify the intended release, then start a new promotion-only run. Multi-distro manual requests are atomic on conflict; separate matrix jobs still succeed or fail independently.
+- Transient retries retain exactly the same expected ID. If prod already points to that ID, the transaction acknowledges success without rewriting pointers, predecessor history, or derived jobs, even if staging has advanced. It still checks the expected release's persisted full-Debian identity and readiness. A returned ID mismatch remains a failure as a defense against unexpected servers.
 - Local no-write coverage is part of `pnpm ops:test`: the dataset workflow harness stubs acquisition/activation output and HTTP promotion. It does not load secrets, run Docker/VM ingestion, or call Convex.
 
 ## Prune superseded releases (GitHub Actions)
@@ -154,9 +155,21 @@ In BetterMan, the Arch ingest path handles this automatically (see `ingestion/in
 ## Deploy and activation recovery
 
 Do not deploy Convex during an `update-docs` / `update-dataset` run. Wait for all
-isolated distro matrix legs to finish before deploying. The ingest contract is
-checked before writes: a client that straddles an incompatible deploy fails
-safely rather than mixing contract versions. Once the workflow and deployment
+isolated distro matrix legs to finish before deploying. Contract **v6** retains
+v5 uploads and adds verified-source reads and CAS promotion. Both ingestion and
+every promotion path call `require_deployed_contract()` and reject either an
+older or newer version before writes. Promotion additionally requires
+`X-BetterMan-Ingest-Contract: 6`: new Convex rejects old in-flight workflow calls
+without the header as `409 INGEST_CONTRACT_MISMATCH`, before moving pointers.
+New workflow code against v5 fails its preflight; if Convex rolls back between
+preflight and POST, v5's validator rejects the unknown CAS field as an invalid
+payload before any mutation writes. There is no unconditional fallback.
+Vercel can lag the Convex deploy because this exchange goes directly to Convex.
+An old ingest already past its preflight may finish compatible uploads or
+staging activation, but cannot promote through the v6 HTTP fence. Do not deploy
+during the live full-Debian run (including run `40957721036`); let it finish,
+deploy Convex v6, then use a fresh matching promotion-only dispatch if needed.
+Once the workflow and deployment
 have settled, use the matching client. If upload was incomplete, re-ingest under
 a new release ID; if upload and sealing completed, resume activation of that ID
 with `pnpm ingest:activate --release-id <id> --stage staging`.
@@ -255,6 +268,6 @@ new VMs only reuse retained cached archives, not an entire extracted full corpus
 The existing 300-minute Linux job deadline includes setup/download/parse/upload.
 Activation uses only the remaining budget, capped at 45 minutes, and can resume
 without another import. Never deploy Convex during a dataset run. Merge B7 v3,
-then B5 v4, then rebase/deploy archive providers v5 with the combined contract,
-symbols, derived state, lease fence and all child tables. No switch, billing
+then B5 v4, then archive providers v5, then promotion CAS v6 with the combined
+contract, symbols, derived state, lease fence and all child tables. No switch, billing
 setting or shared dataset was changed for the local evidence.

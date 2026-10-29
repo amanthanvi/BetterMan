@@ -42,10 +42,15 @@ async function requireIngestSecret(req: Request): Promise<Response | null> {
   return null;
 }
 
-function ingestAction(handler: (ctx: ActionCtx, body: unknown) => Promise<Response>) {
+function ingestAction(handler: (ctx: ActionCtx, body: unknown) => Promise<Response>, requireContract = false) {
   return httpAction(async (ctx, req) => {
     const auth = await requireIngestSecret(req);
     if (auth) return auth;
+    // Fence old in-flight workflows as well as new callers' preflight reads.
+    // The CAS field remains optional for manual operators using this contract.
+    if (requireContract && req.headers.get("x-betterman-ingest-contract") !== String(INGEST_CONTRACT.schemaVersion)) {
+      return jsonResponse({ error: { code: "INGEST_CONTRACT_MISMATCH", message: `Promotion requires ingest contract v${INGEST_CONTRACT.schemaVersion}; use the matching workflow/client and deploy Convex first.` } }, 409);
+    }
     let body: unknown;
     try {
       body = await req.json();
@@ -226,12 +231,20 @@ http.route({
 });
 
 http.route({
+  path: "/ingest/promotion-source",
+  method: "POST",
+  handler: ingestAction(async (ctx, body) => jsonResponse(
+    await ctx.runQuery(internal.ingest.getPromotionSource, body as never),
+  )),
+});
+
+http.route({
   path: "/ingest/promote",
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.promoteActiveReleases, body as never);
     return jsonResponse(result);
-  }),
+  }, true),
 });
 
 // Generated layer (B6). Separate from the release contract above: records are
