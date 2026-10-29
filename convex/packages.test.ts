@@ -43,6 +43,7 @@ describe("package pagination", () => {
     const first = await read(t, null, " libX11 ", 500);
     expect(first).toMatchObject({ name: "libX11", version: "1.8", cursorReset: null, hasMore: true });
     expect(first.pages).toHaveLength(100);
+    expect(first.pages[0]).toMatchObject({ section: "3", description: "X API" });
     expect(first.nextCursor).toMatch(/^p1\.[A-Za-z0-9_-]+$/);
     const second = await read(t, first.nextCursor);
     const third = await read(t, second.nextCursor);

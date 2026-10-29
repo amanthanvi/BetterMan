@@ -551,7 +551,7 @@ export async function fetchSeoSitemapPage(opts: { distro: string; page: number }
 const cachedPackage = unstable_cache(
   async (distro: Distro, name: string, cursor: string | null) =>
     await convex().query(api.packages.getPackage, { distro, name, paginationOpts: { numItems: 100, cursor } }),
-  ['betterman', 'convex', 'package', 'v2'],
+  ['betterman', 'convex', 'package', 'v3'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
 
