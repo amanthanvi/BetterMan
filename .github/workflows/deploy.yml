@@ -46,6 +46,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           MANUAL_SHA: ${{ inputs.sha }}
+          CONFIRM_LARGE_INDEXES: ${{ inputs.confirm_large_indexes }}
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
@@ -69,6 +70,14 @@ jobs:
             fi
             if ! git merge-base --is-ancestor "$sha" origin/main; then
               echo "Commit ${sha} is not reachable from protected main." >&2
+              exit 1
+            fi
+            # Redeploying the current main head is not a rollback, so it ships that
+            # revision's Convex functions too. Older revisions keep production's.
+            if [[ "$sha" == "$(git rev-parse origin/main)" ]]; then
+              require_current_main="true"
+            elif [[ "$CONFIRM_LARGE_INDEXES" == "true" ]]; then
+              echo "confirm_large_indexes applies only to the current main head, the one revision whose Convex functions a manual run deploys." >&2
               exit 1
             fi
           fi
