@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { MAX_MANIFEST_SECTIONS } from "./_releaseManifest";
 import { resolveRelatedItems } from "./_relatedLinks";
 import { flagTakesArgument, parseOptionQuery } from "./_optionFlags";
 import { nameEditDistance } from "./_searchTypos";
@@ -30,7 +31,7 @@ const SITEMAP_URLS_PER_FILE = 10_000;
 const MAX_SEARCH_LIMIT = 50;
 const MAX_SEARCH_OFFSET = 200;
 const MAX_SECTION_LIMIT = 500;
-const MAX_SECTION_OFFSET = 5_000;
+const MAX_LEGACY_SECTION_SCAN = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
 const MAX_RELATED = 50;
 const MAX_DESCRIPTION_HITS = 24;
@@ -112,8 +113,9 @@ export const listSections = query({
     const stats = await ctx.db
       .query("releaseSectionStats")
       .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", release._id))
-      .take(100);
+      .take(MAX_MANIFEST_SECTIONS + 1);
 
+    if (stats.length > MAX_MANIFEST_SECTIONS) throw new Error("INVALID_RELEASE_MANIFEST");
     return stats
       .map((stat) => ({
         section: stat.section,
@@ -241,7 +243,10 @@ export const listSection = query({
       throw new Error("Use either cursor or before, not both");
     }
     const hasCursor = args.cursor !== undefined || args.before !== undefined;
-    const offset = boundedInt(args.offset ?? 0, 0, hasCursor ? Number.MAX_SAFE_INTEGER : MAX_SECTION_OFFSET);
+    const offset = boundedInt(args.offset ?? 0, 0, Number.MAX_SAFE_INTEGER);
+    if (!hasCursor && offset > MAX_LEGACY_SECTION_SCAN) {
+      throw new Error("Deep section pagination requires cursor or before");
+    }
     const release = await requireActiveRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
@@ -610,7 +615,7 @@ async function typoHits(
   args: { releaseId: Id<"datasetReleases">; section: string | null; queryText: string },
 ): Promise<RankedHit[]> {
   const textNorm = args.queryText.toLowerCase();
-  if (!/^[a-z0-9_.+-]{3,64}$/.test(textNorm)) return [];
+  if (!/^[a-z0-9_.+:-]{3,64}$/.test(textNorm)) return [];
   const prefixes = [...new Set([
     textNorm.slice(0, Math.max(2, textNorm.length - 4)), textNorm.slice(0, 2),
     textNorm[1] + textNorm[0], textNorm[0] + textNorm[2], textNorm[0],
@@ -818,24 +823,37 @@ export const listLicenses = query({
   args: {
     stage: publicStageCompatibilityValidator,
     distro: distroValidator,
+    cursor: v.optional(v.string()),
+    datasetReleaseId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const release = await requireActiveRelease(ctx, {
       stage: PUBLIC_DATASET_STAGE,
       distro: args.distro,
     });
+    if (args.datasetReleaseId && args.datasetReleaseId !== release.datasetReleaseId) throw new Error("RELEASE_CHANGED");
+    const manifest = await ctx.db.query("releaseManifests")
+      .withIndex("by_releaseId", (q) => q.eq("releaseId", release._id)).unique();
+    const manifestMetadata = manifest?.storageId ? await ctx.db.system.get(manifest.storageId) : null;
     const packages = await ctx.db
       .query("licensePackages")
-      .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", release._id))
-      .take(5000);
+      .withIndex("by_releaseId_and_packageName", (q) => {
+        const range = q.eq("releaseId", release._id);
+        return args.cursor === undefined ? range : range.gt("packageName", args.cursor);
+      })
+      .take(5001);
+    const visible = packages.slice(0, 5000);
 
     return {
       datasetReleaseId: release.datasetReleaseId,
       ingestedAt: release.ingestedAt,
       imageRef: release.imageRef,
       imageDigest: release.imageDigest,
-      packageManifest: releasePackageManifest(release),
-      packages: packages.map((pkg) => ({
+      packageManifest: manifest?.json ? JSON.parse(manifest.json) : releasePackageManifest(release),
+      packageManifestUrl: manifest?.storageId ? await ctx.storage.getUrl(manifest.storageId) : null,
+      packageManifestBytes: manifestMetadata?.size ?? null,
+      nextCursor: packages.length > 5000 ? visible[visible.length - 1].packageName : null,
+      packages: visible.map((pkg) => ({
         name: pkg.packageName,
         version: pkg.version,
         hasLicenseText: pkg.hasLicenseText,

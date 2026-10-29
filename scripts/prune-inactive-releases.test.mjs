@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import {
-  adaptiveLimit, cleanupOrphanBlobs, describeError, limitForAttempt, listInactiveReleases, mapWithConcurrency, parseOptions, prune,
+  adaptiveLimit, cleanupOrphanBlobs, cleanupOrphanManifestFiles, describeError, limitForAttempt, listInactiveReleases, mapWithConcurrency, parseOptions, prune,
   pruneRelease, selectPrunable, withRetry,
 } from './prune-inactive-releases.mjs'
 
@@ -144,7 +144,7 @@ test('deletes one release in bounded confirmed batches until the release row is 
   const run = async (name, args) => { calls.push([name, args]); return responses.shift() }
   const result = await pruneRelease(run, 'r', { ...quiet, retry: noPause })
   assert.deepEqual(result, { datasetReleaseId: 'r', batches: 2, deleted: 103, storageDeletes: 41, deletedByTable: { manPages: 62, manPageLinks: 40, datasetReleases: 1 } })
-  assert.deepEqual(calls[0], ['maintenance:deleteInactiveReleaseBatch', { datasetReleaseId: 'r', confirmDatasetReleaseId: 'r', maxDocs: 100 }])
+  assert.deepEqual(calls[0], ['maintenance:deleteInactiveReleaseBatch', { datasetReleaseId: 'r', confirmDatasetReleaseId: 'r', maxDocs: 1000 }])
 })
 
 test('shrinks the deletion batch after a failed attempt and keeps the smaller size', async () => {
@@ -157,8 +157,8 @@ test('shrinks the deletion batch after a failed attempt and keeps the smaller si
     return { datasetReleaseId: 'r', deleted: 25, deletedByTable: { manPages: 25 }, deletedRelease: batches === 3, hasMore: batches !== 3 }
   }
   await pruneRelease(run, 'r', { ...quiet, retry: noPause })
-  // First batch degrades 100 -> 50 -> 25; later batches start at 25 directly.
-  assert.deepEqual(sizes, [100, 50, 25, 25, 25])
+  // Large batches shrink to a safe size, which later batches retain.
+  assert.deepEqual(sizes, [1000, 500, 250, 125, 62, 31, 15, 15, 15])
 
   const limit = adaptiveLimit({ start: 100, min: 5 })
   assert.equal(limit.forAttempt(1), 100)
@@ -235,6 +235,7 @@ test('dry run never deletes or sweeps, apply deletes only the selected releases 
   const dryResult = await prune(dry.run, { ...parseOptions({}, now), concurrency: 2 }, { ...quiet, retry: noPause })
   assert.equal(dryResult.selection.prune.length, 1)
   assert.equal(dryResult.orphans, null)
+  assert.equal(dryResult.manifestFiles, null)
   assert.deepEqual([...new Set(dry.calls.map(([name]) => name))], ['maintenance:previewInactiveReleases'])
 
   const preview = runner()
@@ -249,6 +250,7 @@ test('dry run never deletes or sweeps, apply deletes only the selected releases 
   assert.deepEqual(deletions.map(([, args]) => args.datasetReleaseId), ['legacy'])
   assert.equal(wetResult.pruned.length, 1)
   assert.ok(wet.calls.some(([name, args]) => name === 'maintenance:cleanupOrphanContentBlobsBatch' && args.dryRun === false), 'apply with the workflow default sweeps')
+  assert.ok(wet.calls.some(([name, args]) => name === 'maintenance:cleanupOrphanManifestFilesBatch' && args.dryRun === false))
   const plan = logged.find((entry) => entry.event === 'prune_plan')
   assert.ok(plan.prune.every((entry) => typeof entry.createdAt === 'string' && !('ingestedAt' in entry)))
   assert.equal(logged.filter((entry) => entry.event === 'prune_release').length, 1)
@@ -287,4 +289,35 @@ test('pruning is wired as a manual, dry-run-default workflow that cannot overlap
   const provenance = steps.findIndex((step) => step.includes('deps:provenance'))
   const secret = steps.findIndex((step) => step.includes('CONVEX_DEPLOY_KEY'))
   assert.ok(provenance >= 0 && secret > provenance, 'provenance gate must precede deploy-key exposure')
+})
+
+
+test('manifest orphan sweep traverses pages and fails on stalled cursors', async () => {
+  const calls = []
+  const pages = [
+    { scanned: 100, orphans: 2, storageDeletes: 0, isDone: false, continueCursor: 'next' },
+    { scanned: 2, orphans: 1, storageDeletes: 0, isDone: true, continueCursor: '' },
+  ]
+  const result = await cleanupOrphanManifestFiles(async (name, args) => { calls.push([name, args]); return pages.shift() }, { dryRun: true, ...quiet, retry: noPause })
+  assert.deepEqual(result, { scanned: 102, orphans: 3, storageDeletes: 0 })
+  assert.ok(calls.every(([name, args]) => name === 'maintenance:cleanupOrphanManifestFilesBatch' && args.dryRun && args.limit === 100))
+  assert.equal(calls[1][1].cursor, 'next')
+  await assert.rejects(cleanupOrphanManifestFiles(async () => ({ scanned: 1, isDone: false, continueCursor: null }), { ...quiet, retry: noPause }), /did not advance/)
+})
+
+
+test('dry-run manifest file diagnostics include id, age and size, capped across pages', async () => {
+  const logs = []
+  let page = 0
+  const run = async () => {
+    page++
+    return { scanned: 70, orphans: 70, storageDeletes: 0, isDone: page === 2, continueCursor: 'next',
+      files: Array.from({ length: 70 }, (_, i) => ({ storageId: `file-${page}-${i}`, ageMs: 86400001, size: 42 })) }
+  }
+  assert.deepEqual(await cleanupOrphanManifestFiles(run, { dryRun: true, retry: noPause, log: line => logs.push(JSON.parse(line)) }),
+    { scanned: 140, orphans: 140, storageDeletes: 0 })
+  const files = logs.filter(row => row.event === 'manifest_orphan_preview')
+  assert.equal(files.length, 100)
+  assert.deepEqual(files[0], { event: 'manifest_orphan_preview', storageId: 'file-1-0', ageMs: 86400001, size: 42 })
+  assert.deepEqual(logs.at(-1), { event: 'manifest_orphan_preview_truncated', omitted: 40, maxFiles: 100 })
 })

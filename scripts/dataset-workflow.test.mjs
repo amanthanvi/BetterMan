@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { spawnSync, execFileSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -353,6 +353,10 @@ function assertWorkflowWiring(workflow) {
   const steps = ingest.steps
   const step = id => steps.find(value => value.id === id)
   const index = id => steps.findIndex(value => value.id === id)
+  assert.equal(index('activation_deadline'), 0, 'budget starts before checkout/setup')
+  assert.equal(step('activation_deadline').env.BETTERMAN_JOB_TIMEOUT_MINUTES, '${{ matrix.timeout }}')
+  assert.match(step('activation_deadline').run, /BETTERMAN_JOB_TIMEOUT_MINUTES \* 60 - 180/)
+  assert.match(step('freebsd').with.envs, /BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS/)
   const promotion = "${{ needs.plan.outputs.promote == 'true' }}"
   for (const id of ['promote', 'verify_prod']) assert.equal(step(id).if, promotion)
   assert.equal(step('promote').env.BETTERMAN_INGEST_ENABLED, '${{ needs.plan.outputs.ingest }}')
@@ -430,5 +434,21 @@ esac
     }
   } finally {
     rmSync(root, { recursive: true, force: true })
+  }
+})
+
+
+test('each platform deadline reserves reporting time before setup begins', async () => {
+  const deadline = readWorkflow().jobs.ingest.steps.find(step => step.id === 'activation_deadline')
+  for (const minutes of [60, 90, 300]) {
+    const dir = mkdtempSync(join(tmpdir(), 'betterman-deadline-'))
+    try {
+      const out = join(dir, 'env')
+      const before = Math.floor(Date.now() / 1000)
+      execFileSync('bash', ['-c', deadline.run], { env: { ...process.env, GITHUB_ENV: out, BETTERMAN_JOB_TIMEOUT_MINUTES: String(minutes) } })
+      const value = Number(readFileSync(out, 'utf8').trim().split('=')[1])
+      assert.ok(value >= before + minutes * 60 - 180)
+      assert.ok(value <= Math.floor(Date.now() / 1000) + minutes * 60 - 180)
+    } finally { rmSync(dir, { recursive: true, force: true }) }
   }
 })

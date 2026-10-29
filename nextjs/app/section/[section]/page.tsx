@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 
 import { RunningHead } from '../../../components/man/RunningHead'
 import { LinkPendingHint } from '../../../components/ui/LinkPendingHint'
@@ -99,6 +99,11 @@ export default async function SectionPage({
   const safeOffset = Number.isFinite(offset) && offset >= 0 ? offset : 0
   const cursor = getFirst(sp.cursor)
   const before = cursor === undefined ? getFirst(sp.before) : undefined
+  // Old offset-only bookmarks cannot seek cheaply. Restart their browse at a
+  // canonical first page instead of surfacing the backend cursor-required error.
+  if (safeOffset > 5000 && cursor === undefined && before === undefined) {
+    permanentRedirect(buildSectionHref({ section, urlDistro: explicitDistro(sp), offset: 0 }))
+  }
 
   const { distro, data } = await withDistroFallback(requestedDistro, (activeDistro) =>
     listSection({ distro: activeDistro, section, limit: 200, offset: safeOffset, cursor, before }),

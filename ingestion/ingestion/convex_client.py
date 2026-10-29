@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
+import math
+import os
 import ssl
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -15,7 +17,13 @@ logger = logging.getLogger("betterman.ingestion")
 # the existing release for an identical manifest and skips rows it already
 # stored, so a 5xx, 429, or transport failure is retried a bounded number of
 # times. Activation posts once; its caller owns the pending-hydration loop.
-_RETRIED_PATHS = ("/ingest/release", "/ingest/pages", "/ingest/aliases", "/ingest/licenses")
+_RETRIED_PATHS = (
+    "/ingest/release",
+    "/ingest/pages",
+    "/ingest/aliases",
+    "/ingest/licenses",
+    "/ingest/license-packages",
+)
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = 1.0
 
@@ -30,11 +38,14 @@ class ConvexContractError(RuntimeError):
 
 # Keep these aligned with convex/ingestContract.ts. Ingestion refuses to write
 # until GET /ingest/contract advertises the same schema version, functions,
-# declaration counts, and activate-pending flag.
-REQUIRED_SCHEMA_VERSION = 1
+# declaration counts, and activate-pending flag. Alignment test:
+# tests/test_ingest_contract.py. MERGE #430/#431: the second to land rebases and
+# bumps both constants to v3, retaining package batches AND stored-page symbols.
+REQUIRED_SCHEMA_VERSION = 2
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",
     "ingest.insertStoredPages",
+    "ingest.insertLicensePackages",
     "ingest.insertAliases",
     "ingest.insertLicenses",
     "ingest.activateRelease",
@@ -140,12 +151,48 @@ def convex_http_url(raw: str) -> str:
     return value
 
 
+DEFAULT_ACTIVATION_TIMEOUT_SECONDS = 45 * 60
+MAX_ACTIVATION_TIMEOUT_SECONDS = 45 * 60
+
+
+def activation_timeout_seconds() -> float:
+    raw = os.environ.get(
+        "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", str(DEFAULT_ACTIVATION_TIMEOUT_SECONDS)
+    )
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS must be a number") from None
+    if not 0 < value <= MAX_ACTIVATION_TIMEOUT_SECONDS:
+        raise ValueError("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS must be >0 and <=2700")
+    return value
+
+
+def ingest_activation_deadline() -> float | None:
+    raw = os.environ.get("BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS")
+    if raw is None:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError(
+            "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS must be a Unix timestamp"
+        ) from None
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError("BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS must be finite and positive")
+    return value
+
+
 @dataclass(frozen=True)
 class ConvexIngestClient:
     http_url: str
     ingest_secret: str
+    activation_timeout: float = field(default_factory=activation_timeout_seconds)
+    activation_deadline: float | None = field(default_factory=ingest_activation_deadline)
 
     def __post_init__(self) -> None:
+        if not 0 < self.activation_timeout <= MAX_ACTIVATION_TIMEOUT_SECONDS:
+            raise ValueError("Activation timeout must be >0 and <=2700 seconds")
         if not self.ingest_secret.strip():
             raise ValueError("CONVEX_INGEST_SECRET is required")
 
@@ -224,7 +271,21 @@ class ConvexIngestClient:
                 "Deploy Convex before ingestion writes."
             ) from exc
 
-    def activate_release(self, payload: dict, *, timeout_seconds: float = 300) -> dict:
+    def activate_release(self, payload: dict, *, timeout_seconds: float | None = None) -> dict:
+        if timeout_seconds is None:
+            timeout_seconds = self.activation_timeout
+        if not 0 < timeout_seconds <= MAX_ACTIVATION_TIMEOUT_SECONDS:
+            raise ValueError("Activation timeout must be >0 and <=2700 seconds")
+        # The matrix records this absolute deadline before checkout/setup,
+        # including Docker/VM acquisition and parse/upload in the job budget.
+        if self.activation_deadline is not None:
+            timeout_seconds = min(timeout_seconds, self.activation_deadline - time.time())
+            if timeout_seconds <= 0:
+                raise RuntimeError(
+                    "Ingestion job budget exhausted before activation; "
+                    f"release {payload.get('datasetReleaseId')} remains resumable. "
+                    "Use the activate command with the same release ID and stage."
+                )
         deadline = time.monotonic() + timeout_seconds
         while (remaining := deadline - time.monotonic()) > 0:
             try:
@@ -238,7 +299,11 @@ class ConvexIngestClient:
             if result.get("pending") is not True:
                 raise RuntimeError("Activation response is missing readiness status")
             time.sleep(min(2, max(0, deadline - time.monotonic())))
-        raise RuntimeError("Release activation did not finish within the hydration deadline")
+        raise RuntimeError(
+            "Release activation did not finish within the hydration deadline; "
+            f"release {payload.get('datasetReleaseId')} remains sealed and resumable. "
+            "Use the activate command with the same release ID and stage; do not re-ingest."
+        )
 
     def post(self, path: str, payload: object, *, timeout_seconds: float = 120) -> dict:
         url = f"{convex_http_url(self.http_url)}/{path.lstrip('/')}"

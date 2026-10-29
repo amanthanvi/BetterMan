@@ -45,7 +45,7 @@ Workflow: `.github/workflows/update-docs.yml` (`update-dataset`)
 - Before promotion, the workflow records each affected distro's current prod `datasetReleaseId` through public `getInfo` in its result artifact and summary as the rollback target. For manual promotion, save the same ID yourself (exposed at `/api/v1/info?distro=…`). See [Bad ingestion release published](bad-ingestion-release.md) for manual rollback. An `uninitialized` pointer has no previous release to restore.
 - Verification dependencies install before ingestion, and the longer BSD legs are scheduled first. Promotion and the public prod-ID read retry network errors and HTTP 5xx up to three times, with 60-second request timeouts and two- then four-second backoff. Client rejections (including unsealed/unverified releases) do not retry.
 - Each selected distro runs in its own matrix job (`fail-fast: false`, at most two concurrent jobs). Linux still uses Docker, FreeBSD its VM, and macOS its host runner. The workflow-level `update-dataset` concurrency group continues to serialize refreshes and pruning. A failed, timed-out, or cancelled distro does not block healthy siblings from building, uploading, activating to staging, or promoting. The run still fails overall.
-- Release creation declares page count, section totals, alias count (including zero), and license count. License declarations identify packages whose text must be uploaded; packages without available license text do not create a text requirement. Activation verifies the declarations before sealing and waits for related-metadata hydration before changing its staging pointer. HTTP 409 with `pending: true` is not publication; the client polls until `pending: false`, with a five-minute deadline. Retry activation to resume a failed or canceled hydration job. Sealed releases cannot accept new rows: use a new release ID for further data. Promotion rejects missing, unverified, unsealed, incomplete, or pruning source releases atomically.
+- Release creation declares page count, section totals, alias count (including zero), and license count. License declarations identify packages whose text must be uploaded; packages without available license text do not create a text requirement. Activation verifies the declarations before sealing and waits for related-metadata hydration before changing its staging pointer. HTTP 409 with `pending: true` is not publication; the client polls until `pending: false`, with a 45-minute default/maximum further capped by the matrix job’s remaining budget. Resume the same release with `pnpm ingest:activate --release-id <id> --stage staging`; this does not re-parse or upload. Failed or canceled hydration jobs resume their persisted cursor. Sealed releases cannot accept new rows: use a new release ID for further data. Promotion rejects missing, unverified, unsealed, incomplete, or pruning source releases atomically.
 - Ingest+promote dispatches and scheduled runs promote each successful distro independently. Eligibility requires exit zero and the CLI completion record with `published: true` and a release ID: activation has finished manifest verification, sealing and metadata hydration. A distro whose ingest fails is never replaced by its old staging pointer in the candidate set; its prod pointer keeps the last good release (or stays uninitialized). The server still atomically rejects unsafe source pointers for each promotion. A later production smoke-check failure is reported after promotion and does not automatically roll back a sealed, verified release.
 - Sample dispatches use `--sample --no-activate` and cannot promote. They validate the real acquisition/parser/upload path without moving staging or production active pointers.
 - Explicit promote-only dispatches intentionally ignore distro selectors and independently attempt all active staging pointers without ingestion; the same server seal/manifest/metadata checks apply to each. Inspect all staging pointers before dispatching. An invalid distro pointer fails that job while other valid pointers can promote. Samples never promote, including when `ingest=false` is also selected.
@@ -75,7 +75,7 @@ Selection rules, applied on top of `maintenance:deleteInactiveReleaseBatch` (whi
 - Sealed legacy releases without an alias declaration, and sealed releases whose manifest verification failed, cannot be activated again and are pruned regardless of age.
 - Sealed declared releases created less than `min_age_hours` ago (default 24, minimum 1) are skipped in case activation is still hydrating. Beyond that floor, the newest `keep_per_distro` (default 1, minimum 1) verified releases per distro are retained as rollback targets and the rest are pruned.
 
-Deletion runs in bounded batches per release with retries; batch sizes halve after a failed attempt and stay at the size that succeeded, so an oversized transaction shrinks instead of stalling. A failure stops new work and fails the run; re-running resumes because marked releases are always finished first. When applying, the run then sweeps `manPageContentBlobs` that no page references, deleting their chunks and stored files. Blobs still shared with an active release are never orphans and are left in place. The sweep walks the whole blob table, so previews skip it unless `sweep_orphans=true`; its count on a preview is pre-existing orphans, not what pruning would produce.
+Deletion starts at 1,000 documents per transaction (server maximum 2,000), including manifest rows and stored provenance. Up to ten attempts let large batches shrink to the five-document minimum. Deletion runs in bounded batches per release with retries; batch sizes halve after a failed attempt and stay at the size that succeeded, so an oversized transaction shrinks instead of stalling. A failure stops new work and fails the run; re-running resumes because marked releases are always finished first. When applying, the run then sweeps `manPageContentBlobs` that no page references, deleting their chunks and stored files. Blobs still shared with an active release are never orphans and are left in place. The sweep walks the whole blob table, so previews skip it unless `sweep_orphans=true`; its count on a preview is pre-existing orphans, not what pruning would produce.
 
 Run the preview again after applying; it should list only the retained rollback candidates and any unsealed drafts.
 
@@ -149,3 +149,58 @@ Arch base images can exclude man pages via `pacman` config (`NoExtract` patterns
   - Remove/adjust any `NoExtract` patterns that match `usr/share/man/*`, then reinstall the packages you care about so their man pages are extracted.
 
 In BetterMan, the Arch ingest path handles this automatically (see `ingestion/ingestion/arch.py`).
+
+
+## Deploy and activation recovery
+
+Do not deploy Convex during an `update-docs` / `update-dataset` run. Wait for all
+isolated distro matrix legs to finish before deploying. The ingest contract is
+checked before writes: a client that straddles an incompatible deploy fails
+safely rather than mixing contract versions. Once the workflow and deployment
+have settled, use the matching client. If upload was incomplete, re-ingest under
+a new release ID; if upload and sealing completed, resume activation of that ID
+with `pnpm ingest:activate --release-id <id> --stage staging`.
+
+The standalone activation wait defaults to and is capped at 2700 seconds (45
+minutes). CI also records `BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS` before checkout
+and setup, based on the platform's total job budget: Linux 300 minutes, FreeBSD
+90 minutes, macOS 60 minutes. It reserves three minutes for promotion checks,
+result recording and artifact upload. Docker and the FreeBSD VM receive the same
+deadline; activation uses the smaller of the configured wait and the time left
+after acquisition, parsing and upload. An exhausted budget makes no activation
+request and reports the uploaded release as resumable. The 45-minute cap alone
+does not bound total ingestion runtime. A timeout leaves the server-owned cursor
+resumable; inspect the active ID before retrying after a lost response.
+Three consecutive failed
+hydration attempts at the same cursor stop with
+`RELATED_METADATA_BACKFILL_FAILED` rather than polling until the job is killed.
+Inspect the failed scheduled mutation, repair its cause, then explicitly re-arm:
+
+```bash
+pnpm exec convex run related:retryFailedBackfill '{"datasetReleaseId":"<release-id>"}'
+pnpm ingest:activate --release-id <release-id> --stage staging
+```
+
+Use the operator's securely selected deployment for both commands. The internal
+repair mutation requires a sealed, manifest-verified, nonpruning release and
+rejects a live job. Successful batches reset the failure budget; ordinary polls
+cannot reset it.
+
+The orphan sweep also scans manifest files tagged
+`application/vnd.betterman.release-manifest+json`. It preserves files younger
+than 24 hours and checks indexed manifest references before deleting older
+unlinked files. This includes an HTTP action dying between file storage and
+release creation. Unrelated JSON content is excluded. Preview via the existing
+prune command with `BETTERMAN_PRUNE_SWEEP_ORPHANS=true`; apply remains separately
+gated. Dry-run batches return at most 100 file IDs with age in milliseconds and
+size in bytes. The driver logs at most 100 candidates across the entire sweep,
+then reports the omitted count; counters still cover every scanned batch.
+The legacy manifest migration is documented in [RELEASING](../RELEASING.md).
+
+
+License pagination restarts when a promotion changes its release. If repeated
+promotions exhaust the in-request restarts, `/licenses` redirects to a fresh
+request, carrying only an explicit URL `?distro=`. A cookie/default never enters
+the recovery URL. The `(site)/loading.tsx` boundary can already have streamed
+HTTP 200; in that case Next emits its client/meta redirect. Before streaming,
+Next returns HTTP 307. This recovery is not a permanent canonical redirect.

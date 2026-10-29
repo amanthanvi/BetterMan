@@ -1,5 +1,5 @@
 import type { Doc } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 export const MAX_MANIFEST_SECTIONS = 256;
 
@@ -44,8 +44,47 @@ export function validateReleaseDeclaration(args: {
   if (licenses !== args.licenseCount) throw new Error("INVALID_RELEASE_MANIFEST");
 }
 
-export async function recordPageUploads(ctx: MutationCtx, release: Doc<"datasetReleases">, bySection: Map<string, number>): Promise<void> {
+export const PAGE_UPLOAD_SHARDS = 16;
+
+export async function pageUploadProgress(ctx: QueryCtx | MutationCtx, release: Doc<"datasetReleases">) {
+  const sections = new Map<string, number>();
+  if (!release.shardedPageUploads) return { pageCount: release.uploadedPageCount, sections };
+  const shards = await ctx.db.query("releasePageUploadShards")
+    .withIndex("by_releaseId_and_bucket", (q) => q.eq("releaseId", release._id)).take(PAGE_UPLOAD_SHARDS + 1);
+  if (shards.length > PAGE_UPLOAD_SHARDS) throw new Error("INVALID_RELEASE_MANIFEST");
+  let pageCount = 0;
+  for (const shard of shards) {
+    pageCount += shard.pageCount;
+    for (const stat of shard.sections) sections.set(stat.section, (sections.get(stat.section) ?? 0) + stat.uploaded);
+  }
+  return { pageCount, sections };
+}
+
+export async function recordPageUploads(ctx: MutationCtx, release: Doc<"datasetReleases">, bySection: Map<string, number>, batchKey: string): Promise<void> {
   if (release.manifestBasis !== "declared" || release.uploadedPageCount === undefined) throw new Error("RELEASE_MANIFEST_UNDECLARED");
+  if (release.shardedPageUploads) {
+    let hash = 0;
+    for (const char of batchKey) hash = (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0;
+    const bucket = hash % PAGE_UPLOAD_SHARDS;
+    const shard = await ctx.db.query("releasePageUploadShards")
+      .withIndex("by_releaseId_and_bucket", (q) => q.eq("releaseId", release._id).eq("bucket", bucket)).unique();
+    const sections = new Map((shard?.sections ?? []).map((stat) => [stat.section, stat.uploaded]));
+    let added = 0;
+    for (const [section, count] of bySection) {
+      const stat = await ctx.db.query("releaseSectionStats")
+        .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", release._id).eq("section", section)).unique();
+      if (!stat) throw new Error("UNDECLARED_MAN_PAGE_SECTION");
+      const uploaded = (sections.get(section) ?? 0) + count;
+      if (!validManifestCount(uploaded) || uploaded > stat.total) throw new Error("RELEASE_MANIFEST_EXCEEDED");
+      sections.set(section, uploaded);
+      added += count;
+    }
+    const payload = { releaseId: release._id, bucket, pageCount: (shard?.pageCount ?? 0) + added,
+      sections: [...sections].map(([section, uploaded]) => ({ section, uploaded })) };
+    if (shard) await ctx.db.replace(shard._id, payload);
+    else await ctx.db.insert("releasePageUploadShards", payload);
+    return;
+  }
   let added = 0;
   for (const [section, count] of bySection) {
     const stat = await ctx.db.query("releaseSectionStats")
@@ -77,10 +116,19 @@ export async function verifyDeclaredManifest(ctx: MutationCtx, release: Doc<"dat
   const stats = await ctx.db.query("releaseSectionStats")
     .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", release._id)).take(MAX_MANIFEST_SECTIONS + 1);
   validateManifestSections(release.pageCount, stats);
-  if (release.uploadedPageCount !== release.pageCount || release.aliasCount === undefined || release.licenseCount === undefined ||
+  const progress = await pageUploadProgress(ctx, release);
+  if ((progress.pageCount !== undefined && progress.pageCount > release.pageCount) ||
+      stats.some((stat) => (progress.sections.get(stat.section) ?? 0) > stat.total)) {
+    throw new Error("RELEASE_MANIFEST_EXCEEDED");
+  }
+  if ((release.packageBatchCount ?? 0) !== (release.uploadedPackageBatchCount ?? 0) ||
+      progress.pageCount !== release.pageCount || release.aliasCount === undefined || release.licenseCount === undefined ||
       release.uploadedAliasCount !== release.aliasCount || release.uploadedLicenseCount !== release.licenseCount ||
-      stats.some((stat) => stat.uploaded !== stat.total)) {
+      stats.some((stat) => (release.shardedPageUploads ? progress.sections.get(stat.section) ?? 0 : stat.uploaded) !== stat.total)) {
     throw new Error("RELEASE_MANIFEST_INCOMPLETE");
   }
-  await ctx.db.patch(release._id, { manifestVerified: true });
+  if (release.shardedPageUploads) {
+    for (const stat of stats) await ctx.db.patch(stat._id, { uploaded: stat.total });
+  }
+  await ctx.db.patch(release._id, { manifestVerified: true, uploadedPageCount: progress.pageCount });
 }

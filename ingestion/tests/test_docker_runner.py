@@ -98,6 +98,8 @@ def test_run_ingest_container_forwards_page_batch_limits_by_name(monkeypatch) ->
     monkeypatch.setenv("BETTERMAN_DEBIAN_IMAGE_REF", "debian:custom")
     monkeypatch.setenv("CONVEX_HTTP_URL", "https://example.convex.site")
     monkeypatch.setenv("CONVEX_INGEST_SECRET", "secret")
+    monkeypatch.setenv("BETTERMAN_INGEST_UPLOAD_WORKERS", "3")
+    monkeypatch.setenv("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", "900")
     monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", "7")
     monkeypatch.setenv("BETTERMAN_INGEST_PAGE_BATCH_BYTES", "1024")
     monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
@@ -314,7 +316,29 @@ def test_run_ingest_container_builds_alpine_command(monkeypatch) -> None:
         ("alpine", "alpine:3.24"),
     ],
 )
-def test_run_ingest_container_defaults_to_supported_image(monkeypatch, distro, image) -> None:
+@pytest.mark.parametrize("optional_set", [False, True])
+def test_run_ingest_container_defaults_to_supported_image(
+    monkeypatch, distro, image, optional_set
+) -> None:
+    optional = (
+        "BETTERMAN_INGEST_UPLOAD_WORKERS",
+        "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS",
+        "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS",
+    )
+    for name in optional:
+        if optional_set:
+            monkeypatch.setenv(
+                name,
+                "1800000000"
+                if name.endswith("UNIX_SECONDS")
+                else "3"
+                if name.endswith("WORKERS")
+                else "900",
+            )
+        else:
+            monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("BETTERMAN_DOCKER_PLATFORM", "linux/amd64")
+    monkeypatch.setenv("INGEST_DOCKER_NETWORK", "test-network")
     monkeypatch.delenv(f"BETTERMAN_{distro.upper()}_IMAGE_REF", raising=False)
     monkeypatch.setattr(docker_runner, "_docker_network_exists", lambda _name: False)
 
@@ -336,7 +360,29 @@ def test_run_ingest_container_defaults_to_supported_image(monkeypatch, distro, i
 
     assert docker_runner.run_ingest_container(sample=True, activate=False, distro=distro) == 0
 
-    assert calls[0] == ["docker", "pull", image]
+    assert calls[0] == ["docker", "pull", "--platform", "linux/amd64", image]
     docker_run = [cmd for cmd in calls if cmd[:2] == ["docker", "run"]][0]
     assert docker_run[-4] == image
     assert f"BETTERMAN_IMAGE_REF={image}" in docker_run
+
+    # Parse the complete Docker grammar, rather than checking isolated tokens.
+    # A bare env name would otherwise become the image, breaking every distro.
+    index = 2
+    env_names = []
+    while index < len(docker_run):
+        flag = docker_run[index]
+        if flag == "--rm":
+            index += 1
+        elif flag in {"-e", "-v", "-w", "--platform", "--network"}:
+            value = docker_run[index + 1]
+            assert value and not value.startswith("-")
+            if flag == "-e":
+                env_names.append(value.split("=", 1)[0])
+            index += 2
+        else:
+            break
+    assert docker_run[index] == image
+    assert docker_run[index + 1 : index + 3] == ["sh", "-lc"]
+    assert len(docker_run) == index + 4
+    for name in optional:
+        assert (name in env_names) is optional_set

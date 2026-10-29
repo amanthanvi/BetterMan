@@ -103,7 +103,7 @@ describe("related metadata backfill", () => {
     }
     expect((await t.query(api.queries.getRelated, { distro: "debian", name: "source", section: "1" }))?.items.map((item) => item.name)).toEqual(["target"]);
     expect(await t.run((ctx) => ctx.db.get(releaseId))).toEqual(completed);
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1, stopped: [] });
   });
 
   it("bounds batches and schedules the remainder", async () => {
@@ -114,7 +114,7 @@ describe("related metadata backfill", () => {
       await ctx.db.patch(releaseId, { sealed: true });
       const sourceId = await seedPage(ctx, releaseId, "source");
       await seedPage(ctx, releaseId, "target");
-      for (let index = 0; index < 205; index += 1) {
+      for (let index = 0; index < 1005; index += 1) {
         await ctx.db.insert("manPageLinks", {
           releaseId, fromPageId: sourceId, fromExternalId: "source",
           toName: "target", toSection: "1", linkType: "xref",
@@ -123,12 +123,12 @@ describe("related metadata backfill", () => {
     });
     expect(await t.mutation(internal.related.backfillRelease, {
       datasetReleaseId: "large", cursor: "forged", version: Number.MAX_SAFE_INTEGER,
-    })).toMatchObject({ processed: 100, updated: 100, isDone: false });
+    })).toMatchObject({ processed: 500, updated: 500, isDone: false });
     expect((await t.run((ctx) => ctx.db.get(releaseId)))?.relatedMetadataBackfillCursor).toEqual(expect.any(String));
     expect((await t.run((ctx) => ctx.db.get(releaseId)))?.relatedMetadataCompletedVersion).toBeUndefined();
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
-    const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(300));
-    expect(links).toHaveLength(205);
+    const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(1100));
+    expect(links).toHaveLength(1005);
     expect(links.every((link) => link.toTitle === "target(1)" && link.toDescription === "target description")).toBe(true);
   });
 
@@ -208,9 +208,9 @@ describe("related metadata backfill", () => {
         });
       }
     });
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 1, skipped: 0 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 1, skipped: 0, stopped: [] });
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 1, stopped: [] });
     const before = await t.run((ctx) => ctx.db.system.query("_scheduled_functions").take(100));
     await t.mutation(internal.ingest.activateRelease, {
       stage: "prod", datasetReleaseId: "active", activatedAt: "2026-09-07T01:00:00Z",
@@ -229,18 +229,18 @@ describe("related metadata backfill", () => {
     await t.run(async (ctx) => {
       await ctx.db.patch(releaseId, { sealed: true });
       const sourceId = await seedPage(ctx, releaseId, "source");
-      for (let index = 0; index < 105; index += 1) {
+      for (let index = 0; index < 505; index += 1) {
         await ctx.db.insert("manPageLinks", {
           releaseId, fromPageId: sourceId, fromExternalId: "source",
           toName: "later", toSection: "1", linkType: "xref",
         });
       }
     });
-    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "resumed" })).toMatchObject({ processed: 100, updated: 100, isDone: false });
+    expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "resumed" })).toMatchObject({ processed: 500, updated: 500, isDone: false });
     await expect(t.mutation(internal.ingest.insertPages, { datasetReleaseId: "resumed", pages: [pageInput("later")] })).rejects.toThrow("RELEASE_SEALED");
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
-    const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(200));
-    expect(links).toHaveLength(105);
+    const links = await t.run((ctx) => ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId)).take(600));
+    expect(links).toHaveLength(505);
     expect(links.every((link) => link.toMissing === true && link.toTitle === undefined)).toBe(true);
     const release = await t.run((ctx) => ctx.db.get(releaseId));
     expect(release?.relatedMetadataCompletedVersion).toBe(release?.relatedMetadataVersion ?? 0);
@@ -268,7 +268,7 @@ describe("active metadata readiness", () => {
       complete: false,
       releases: ["staging", "prod"].map((stage) => ({
         datasetReleaseId: "readiness", stage, distro: "debian",
-        currentVersion: 1, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null,
+        currentVersion: 1, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null, backfillStopped: false,
       })),
     };
     expect(await t.query(internal.related.activeMetadataStatus, {})).toEqual(pending);
@@ -303,7 +303,7 @@ describe("active metadata readiness", () => {
       complete: false,
       releases: [{
         datasetReleaseId: "missing", stage: "prod", distro: "debian",
-        currentVersion: null, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null,
+        currentVersion: null, completedVersion: null, sealed: false, complete: false, manifestVerified: false, manifestError: null, backfillStopped: false,
       }],
     });
   });
@@ -339,4 +339,29 @@ it("skips links cached as missing without looking up their target", async () => 
     { name: "target", section: "1", title: "target(1)", description: "target description" },
   ]);
   expect(lookup).not.toHaveBeenCalled();
+});
+
+it("resumes a canceled backfill from its durable cursor", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  const { releaseId } = await t.mutation(internal.ingest.createRelease, releaseInput("canceled"));
+  await t.run(async (ctx) => {
+    await ctx.db.patch(releaseId, { sealed: true });
+    const sourceId = await seedPage(ctx, releaseId, "source");
+    for (let i = 0; i < 510; i++) await ctx.db.insert("manPageLinks", {
+      releaseId, fromPageId: sourceId, fromExternalId: "source", toName: "absent", toSection: "1", linkType: "xref",
+    });
+  });
+  expect(await t.mutation(internal.related.backfillRelease, { datasetReleaseId: "canceled" }))
+    .toMatchObject({ processed: 500, isDone: false });
+  const before = await t.run((ctx) => ctx.db.get(releaseId));
+  await t.run(async (ctx) => {
+    await ctx.scheduler.cancel(before!.relatedMetadataBackfillJobId!);
+    const { scheduleRelatedMetadataBackfill } = await import("./related");
+    expect(await scheduleRelatedMetadataBackfill(ctx, (await ctx.db.get(releaseId))!)).toBe(true);
+    expect((await ctx.db.get(releaseId))?.relatedMetadataBackfillCursor).toBe(before!.relatedMetadataBackfillCursor);
+  });
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  const after = await t.run((ctx) => ctx.db.get(releaseId));
+  expect(after?.relatedMetadataCompletedVersion).toBe(after?.relatedMetadataVersion ?? 0);
 });

@@ -12,13 +12,14 @@ const mocks = vi.hoisted(() => {
   return {
     FastApiError,
     listSection: vi.fn(),
+    permanentRedirect: vi.fn(() => { throw new Error('NEXT_REDIRECT;308') }),
     notFound: vi.fn(() => {
       throw new Error('NEXT_HTTP_ERROR_FALLBACK;404')
     }),
   }
 })
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
-vi.mock('next/navigation', () => ({ notFound: mocks.notFound }))
+vi.mock('next/navigation', () => ({ notFound: mocks.notFound, permanentRedirect: mocks.permanentRedirect }))
 vi.mock('../../../lib/api', () => ({
   FastApiError: mocks.FastApiError,
   listSection: mocks.listSection,
@@ -117,4 +118,14 @@ describe('section browse pagination', () => {
     }))
     expect(html).not.toContain('First page')
   })
+})
+
+
+it('redirects bookmarked legacy offsets above 5000 to the first page before querying', async () => {
+  await expect(SectionPage({
+    params: Promise.resolve({ section: '1' }),
+    searchParams: Promise.resolve({ offset: '5200', distro: 'ubuntu' }),
+  })).rejects.toThrow('NEXT_REDIRECT;308')
+  expect(mocks.permanentRedirect).toHaveBeenCalledWith('/section/1?distro=ubuntu')
+  expect(mocks.listSection).not.toHaveBeenCalled()
 })

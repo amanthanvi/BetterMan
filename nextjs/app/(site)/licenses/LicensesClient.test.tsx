@@ -1,0 +1,27 @@
+import { renderToStaticMarkup } from 'react-dom/server'
+import { expect, it } from 'vitest'
+import type { LicensesResponse } from '../../../lib/api'
+import { LicensesClient } from './LicensesClient'
+
+function data(count: number): LicensesResponse {
+  return { datasetReleaseId: 'local', ingestedAt: 'now', imageRef: 'test', imageDigest: 'test',
+    packageManifest: null, packageManifestUrl: 'https://files.example/manifest.json',
+    packages: Array.from({ length: count }, (_, i) => ({ name: `pkg${i}`, version: '1', hasLicenseText: true })) }
+}
+
+it('bounds initial large-corpus markup and exposes the full manifest separately', () => {
+  const html = renderToStaticMarkup(<LicensesClient distro="debian" data={data(17_300)} />)
+  expect(html.match(/<li /g)).toHaveLength(200)
+  expect(html).toContain('Load more packages (200 of 17300)')
+  expect(html).toContain('View full package manifest (JSON)')
+  expect(html).toContain('https://files.example/manifest.json')
+})
+
+it('keeps current small-corpus listing and inline provenance', () => {
+  const input = { ...data(300), packageManifest: { source: 'curated' } }
+  const html = renderToStaticMarkup(<LicensesClient distro="debian" data={input} />)
+  expect(html.match(/<li /g)).toHaveLength(300)
+  expect(html).toContain('curated')
+  expect(html).toMatch(/<pre[^>]*tabindex="0"[^>]*role="group"[^>]*aria-label="Package manifest"/i)
+  expect(html).not.toContain('Load more packages')
+})

@@ -77,9 +77,12 @@ def run_ingest_container(*, sample: bool, activate: bool, distro: str) -> int:
         "-w",
         "/work",
     ]
-    # Pass by name (`-e NAME`) only when the host set the variable. Docker
-    # copies the value from this process, and an unset name would arrive empty.
+    # Pass by name (`-e NAME`) only for nonempty host values. Docker
+    # omits unset names itself; this guard also omits explicitly empty strings.
     for name in (
+        "BETTERMAN_INGEST_UPLOAD_WORKERS",
+        "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS",
+        "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS",
         "BETTERMAN_INGEST_PAGE_BATCH_ITEMS",
         "BETTERMAN_INGEST_PAGE_BATCH_BYTES",
         "BETTERMAN_ALLOW_MISSING_COMMAND_PAGES",

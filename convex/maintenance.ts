@@ -1,5 +1,8 @@
 import { v } from "convex/values";
+import { MANIFEST_CONTENT_TYPE, MANIFEST_ORPHAN_MIN_AGE_MS } from "./_manifestStorage";
+import { RELEASE_CHILD_TABLES, releaseChildRows, type ReleaseChildTable } from "./_releaseChildren";
 import { distroValidator } from "./schema";
+import { pageUploadProgress } from "./_releaseManifest";
 import { requireMutableRelease } from "./_releaseIntegrity";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
@@ -26,8 +29,8 @@ const DEFAULT_RELEASE_LIMIT = 5;
 const MAX_RELEASE_LIMIT = 10;
 const DEFAULT_CHILD_SAMPLE_LIMIT = 5;
 const MAX_CHILD_SAMPLE_LIMIT = 10;
-const DEFAULT_DELETE_LIMIT = 50;
-const MAX_DELETE_LIMIT = 200;
+const DEFAULT_DELETE_LIMIT = 1000;
+const MAX_DELETE_LIMIT = 2000;
 const DEFAULT_COMPACT_LIMIT = 10;
 const MAX_COMPACT_LIMIT = 25;
 const DEFAULT_CONTENT_DEDUPE_LIMIT = 5;
@@ -38,27 +41,6 @@ const MAX_ORPHAN_BLOB_LIMIT = 100;
 const DEFAULT_STORAGE_STATS_LIMIT = 25;
 const MAX_STORAGE_STATS_LIMIT = 100;
 
-type ReleaseChildTable =
-  | "releaseSectionStats"
-  | "manPages"
-  | "manPageSearchDocuments"
-  | "manPageOptionFlags"
-  | "manPageLinks"
-  | "manPageAliases"
-  | "licensePackages"
-  | "licenses";
-
-const RELEASE_CHILD_TABLES: ReleaseChildTable[] = [
-  "releaseSectionStats",
-  "manPageSearchDocuments",
-  "manPageOptionFlags",
-  "manPageLinks",
-  "manPageAliases",
-  "licensePackages",
-  "licenses",
-  "manPages",
-];
-
 const storageStatsTableValidator = v.union(
   v.literal("activeReleases"),
   v.literal("datasetReleases"),
@@ -68,40 +50,31 @@ const storageStatsTableValidator = v.union(
   v.literal("manPageContentBlobs"),
   v.literal("manPageContentChunks"),
   v.literal("manPageContents"),
+  v.literal("manPageAliases"),
   v.literal("manPageLinks"),
   v.literal("manPageOptionFlags"),
   v.literal("manPageSearchDocuments"),
   v.literal("manPages"),
   v.literal("rateLimitBuckets"),
   v.literal("releaseSectionStats"),
+  v.literal("releaseManifests"),
+  v.literal("releasePackageBatches"),
+  v.literal("releasePageUploadShards"),
 );
 
-type StorageStatsTable =
-  | "activeReleases"
-  | "datasetReleases"
-  | "licensePackages"
-  | "licenses"
-  | "manPageContentBlobChunks"
-  | "manPageContentBlobs"
-  | "manPageContentChunks"
-  | "manPageContents"
-  | "manPageLinks"
-  | "manPageOptionFlags"
-  | "manPageSearchDocuments"
-  | "manPages"
-  | "rateLimitBuckets"
-  | "releaseSectionStats";
+type StorageStatsTable = TableNames;
 
-const STORAGE_STATS_FIELDS: Record<StorageStatsTable, string[]> = {
+export const STORAGE_STATS_FIELDS: { [T in StorageStatsTable]: Array<Extract<keyof Doc<T>, string>> } = {
   activeReleases: ["distro", "datasetReleaseId"],
   datasetReleases: ["datasetReleaseId", "packageManifestJson"],
-  licensePackages: ["packageName", "licenseId", "packageManifestJson"],
-  licenses: ["licenseId", "name", "text"],
+  licensePackages: ["packageName", "version"],
+  licenses: ["licenseId", "licenseName", "licenseText"],
   manPageContentBlobChunks: ["chunk"],
   manPageContentBlobs: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
   manPageContentChunks: ["chunk"],
   manPageContents: ["docJson", "synopsisJson", "optionsJson", "seeAlsoJson"],
-  manPageLinks: ["fromName", "fromSection", "toName", "toSection", "linkType"],
+  manPageAliases: ["name", "section", "targetName", "targetSection"],
+  manPageLinks: ["fromExternalId", "toName", "toSection", "toTitle", "toDescription", "linkType"],
   manPageOptionFlags: ["nameNorm", "section", "flag", "anchorId", "flags"],
   manPageSearchDocuments: ["searchText", "snippetText", "description", "title", "name"],
   manPages: [
@@ -116,8 +89,11 @@ const STORAGE_STATS_FIELDS: Record<StorageStatsTable, string[]> = {
     "datasetReleaseId",
     "contentSha256",
   ],
-  rateLimitBuckets: ["bucketKey"],
+  rateLimitBuckets: ["key"],
   releaseSectionStats: ["section"],
+  releaseManifests: ["json"],
+  releasePackageBatches: ["digest"],
+  releasePageUploadShards: [],
 };
 
 function bounded(value: number | undefined, fallback: number, max: number): number {
@@ -275,47 +251,7 @@ async function sampleReleaseChildren(
   releaseId: Id<"datasetReleases">,
   limit: number,
 ): Promise<{ count: number; hasMore: boolean }> {
-  const takeLimit = limit + 1;
-  const rows =
-    table === "releaseSectionStats"
-      ? await ctx.db
-          .query("releaseSectionStats")
-          .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", releaseId))
-          .take(takeLimit)
-      : table === "manPages"
-        ? await ctx.db
-            .query("manPages")
-            .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", releaseId))
-            .take(takeLimit)
-        : table === "manPageSearchDocuments"
-          ? await ctx.db
-              .query("manPageSearchDocuments")
-              .withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", releaseId))
-              .take(takeLimit)
-          : table === "manPageOptionFlags"
-            ? await ctx.db
-                .query("manPageOptionFlags")
-                .withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", releaseId))
-                .take(takeLimit)
-          : table === "manPageLinks"
-            ? await ctx.db
-                .query("manPageLinks")
-                .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId))
-                .take(takeLimit)
-            : table === "manPageAliases"
-              ? await ctx.db
-                  .query("manPageAliases")
-                  .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", releaseId))
-                  .take(takeLimit)
-            : table === "licensePackages"
-              ? await ctx.db
-                  .query("licensePackages")
-                  .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", releaseId))
-                  .take(takeLimit)
-              : await ctx.db
-                  .query("licenses")
-                  .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", releaseId))
-                  .take(takeLimit);
+  const rows = await releaseChildRows(ctx, table, releaseId, limit + 1);
   return { count: Math.min(rows.length, limit), hasMore: rows.length > limit };
 }
 
@@ -336,68 +272,11 @@ async function deleteReleaseChildrenByTable(
   releaseId: Id<"datasetReleases">,
   limit: number,
 ): Promise<number> {
-  if (table === "releaseSectionStats") {
-    const rows = await ctx.db
-      .query("releaseSectionStats")
-      .withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", releaseId))
-      .take(limit);
-    for (const row of rows) await ctx.db.delete(row._id);
-    return rows.length;
+  const rows = await releaseChildRows(ctx, table, releaseId, limit);
+  for (const row of rows) {
+    if (table === "releaseManifests" && "storageId" in row && row.storageId) await ctx.storage.delete(row.storageId);
+    await ctx.db.delete(row._id);
   }
-  if (table === "manPageSearchDocuments") {
-    const rows = await ctx.db
-      .query("manPageSearchDocuments")
-      .withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", releaseId))
-      .take(limit);
-    for (const row of rows) await ctx.db.delete(row._id);
-    return rows.length;
-  }
-  if (table === "manPageOptionFlags") {
-    const rows = await ctx.db
-      .query("manPageOptionFlags")
-      .withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", releaseId))
-      .take(limit);
-    for (const row of rows) await ctx.db.delete(row._id);
-    return rows.length;
-  }
-  if (table === "manPageLinks") {
-    const rows = await ctx.db
-      .query("manPageLinks")
-      .withIndex("by_releaseId", (q) => q.eq("releaseId", releaseId))
-      .take(limit);
-    for (const row of rows) await ctx.db.delete(row._id);
-    return rows.length;
-  }
-  if (table === "manPageAliases") {
-    const rows = await ctx.db
-      .query("manPageAliases")
-      .withIndex("by_releaseId_and_name", (q) => q.eq("releaseId", releaseId))
-      .take(limit);
-    for (const row of rows) await ctx.db.delete(row._id);
-    return rows.length;
-  }
-  if (table === "licensePackages") {
-    const rows = await ctx.db
-      .query("licensePackages")
-      .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", releaseId))
-      .take(limit);
-    for (const row of rows) await ctx.db.delete(row._id);
-    return rows.length;
-  }
-  if (table === "licenses") {
-    const rows = await ctx.db
-      .query("licenses")
-      .withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", releaseId))
-      .take(limit);
-    for (const row of rows) await ctx.db.delete(row._id);
-    return rows.length;
-  }
-
-  const rows = await ctx.db
-    .query("manPages")
-    .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", releaseId))
-    .take(limit);
-  for (const row of rows) await ctx.db.delete(row._id);
   return rows.length;
 }
 
@@ -444,6 +323,28 @@ async function deletePagePayload(
   return { deleted, storageDeletes, deletedByTable };
 }
 
+// Optional admin migration after deployment; ordinary reads of new releases
+// never include provenance. Cursor and batch size keep legacy migration bounded.
+export const detachLegacyManifests = internalMutation({
+  args: { cursor: v.union(v.string(), v.null()), dryRun: v.optional(v.boolean()) },
+  returns: v.object({ moved: v.number(), isDone: v.boolean(), continueCursor: v.string() }),
+  handler: async (ctx, args) => {
+    const batch = await ctx.db.query("datasetReleases").paginate({ cursor: args.cursor, numItems: 5 });
+    let moved = 0;
+    for (const release of batch.page) {
+      if (!release.packageManifestJson || release.pruning) continue;
+      const existing = await ctx.db.query("releaseManifests")
+        .withIndex("by_releaseId", (q) => q.eq("releaseId", release._id)).unique();
+      if (existing && existing.json !== release.packageManifestJson) throw new Error("RELEASE_MANIFEST_CONFLICT");
+      if (args.dryRun) { moved += 1; continue; }
+      if (!existing) await ctx.db.insert("releaseManifests", { releaseId: release._id, json: release.packageManifestJson });
+      await ctx.db.patch(release._id, { packageManifestJson: undefined });
+      moved += 1;
+    }
+    return { moved, isDone: batch.isDone, continueCursor: batch.continueCursor };
+  },
+});
+
 export const previewInactiveReleases = internalQuery({
   args: {
     cursor: v.optional(v.union(v.string(), v.null())),
@@ -473,6 +374,7 @@ export const previewInactiveReleases = internalQuery({
         children[table] = await sampleReleaseChildren(ctx, table, release._id, childSampleLimit);
       }
 
+      const progress = await pageUploadProgress(ctx, release);
       inactive.push({
         datasetReleaseId: release.datasetReleaseId,
         releaseId: release._id,
@@ -482,6 +384,9 @@ export const previewInactiveReleases = internalQuery({
         // Server-assigned creation time; ingestedAt is client-supplied.
         createdAt: new Date(release._creationTime).toISOString(),
         pageCount: release.pageCount,
+        uploadedPageCount: progress.pageCount ?? null,
+        uploadedLicenseCount: release.uploadedLicenseCount ?? null,
+        uploadedPackageBatchCount: release.uploadedPackageBatchCount ?? null,
         // Rollback eligibility: only sealed, verified, declared releases can be
         // activated again. Legacy or failed manifests never can.
         sealed: release.sealed === true,
@@ -491,8 +396,9 @@ export const previewInactiveReleases = internalQuery({
         manifestError: release.manifestError ?? null,
         // Declared uploads are complete when every counter matches its
         // declaration; such a release is still activatable even if unsealed.
-        uploadComplete: release.manifestBasis === "declared"
-          && release.uploadedPageCount === release.pageCount
+        uploadComplete: (release.packageBatchCount ?? 0) === (release.uploadedPackageBatchCount ?? 0)
+          && release.manifestBasis === "declared"
+          && progress.pageCount === release.pageCount
           && release.aliasCount !== undefined && release.uploadedAliasCount === release.aliasCount
           && release.licenseCount !== undefined && release.uploadedLicenseCount === release.licenseCount,
         children,
@@ -541,7 +447,7 @@ export const deleteInactiveReleaseBatch = internalMutation({
         const pages = await ctx.db
           .query("manPages")
           .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", release._id))
-          .take(Math.min(maxDocs - deleted, 50));
+          .take(Math.min(Math.ceil((maxDocs - deleted) / 2), 500));
         for (const page of pages) {
           if (deleted >= maxDocs) break;
           const result = await deletePagePayload(ctx, page, maxDocs - deleted);
@@ -655,34 +561,7 @@ export const estimateStorageStatsBatch = internalQuery({
   handler: async (ctx, args) => {
     const limit = bounded(args.limit, DEFAULT_STORAGE_STATS_LIMIT, MAX_STORAGE_STATS_LIMIT);
     const paginationOpts = { cursor: args.cursor, numItems: limit };
-    const result =
-      args.table === "activeReleases"
-        ? await ctx.db.query("activeReleases").paginate(paginationOpts)
-        : args.table === "datasetReleases"
-          ? await ctx.db.query("datasetReleases").paginate(paginationOpts)
-          : args.table === "licensePackages"
-            ? await ctx.db.query("licensePackages").paginate(paginationOpts)
-            : args.table === "licenses"
-              ? await ctx.db.query("licenses").paginate(paginationOpts)
-              : args.table === "manPageContentBlobChunks"
-                ? await ctx.db.query("manPageContentBlobChunks").paginate(paginationOpts)
-                : args.table === "manPageContentBlobs"
-                  ? await ctx.db.query("manPageContentBlobs").paginate(paginationOpts)
-                  : args.table === "manPageContentChunks"
-                    ? await ctx.db.query("manPageContentChunks").paginate(paginationOpts)
-                    : args.table === "manPageContents"
-                      ? await ctx.db.query("manPageContents").paginate(paginationOpts)
-                      : args.table === "manPageLinks"
-                        ? await ctx.db.query("manPageLinks").paginate(paginationOpts)
-                        : args.table === "manPageOptionFlags"
-                          ? await ctx.db.query("manPageOptionFlags").paginate(paginationOpts)
-                        : args.table === "manPageSearchDocuments"
-                          ? await ctx.db.query("manPageSearchDocuments").paginate(paginationOpts)
-                          : args.table === "manPages"
-                            ? await ctx.db.query("manPages").paginate(paginationOpts)
-                            : args.table === "rateLimitBuckets"
-                              ? await ctx.db.query("rateLimitBuckets").paginate(paginationOpts)
-                              : await ctx.db.query("releaseSectionStats").paginate(paginationOpts);
+    const result = await ctx.db.query(args.table).paginate(paginationOpts);
 
     const fields = STORAGE_STATS_FIELDS[args.table];
     const charsByField: Record<string, number> = {};
@@ -981,5 +860,97 @@ export const releaseStats = internalQuery({
       });
     }
     return { stage: args.stage, releases };
+  },
+});
+
+// Admin-only measurement for the local scale probe. JSON bytes describe stored
+// values, excluding index/internal encoding overhead; storage bytes use actual
+// file metadata. No stage pointer or release data is changed by these queries.
+export const measureReleaseBatch = internalQuery({
+  args: {
+    datasetReleaseId: v.string(), cursor: v.union(v.string(), v.null()),
+    table: v.union(v.literal("manPages"), v.literal("manPageSearchDocuments"), v.literal("manPageLinks"),
+      v.literal("manPageOptionFlags"), v.literal("licensePackages"), v.literal("licenses"),
+      v.literal("releaseSectionStats"), v.literal("releaseManifests"), v.literal("releasePackageBatches"), v.literal("releasePageUploadShards")),
+  },
+  returns: v.object({ documents: v.number(), jsonBytes: v.number(), storageBytes: v.number(), isDone: v.boolean(), continueCursor: v.string() }),
+  handler: async (ctx, args) => {
+    const release = await releaseByDatasetReleaseId(ctx, args.datasetReleaseId);
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const id = release._id;
+    const query = args.table === "manPages" ? ctx.db.query("manPages").withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", id))
+      : args.table === "manPageSearchDocuments" ? ctx.db.query("manPageSearchDocuments").withIndex("by_releaseId_and_nameNorm", (q) => q.eq("releaseId", id))
+      : args.table === "manPageLinks" ? ctx.db.query("manPageLinks").withIndex("by_releaseId", (q) => q.eq("releaseId", id))
+      : args.table === "manPageOptionFlags" ? ctx.db.query("manPageOptionFlags").withIndex("by_releaseId_and_flag_and_nameNorm", (q) => q.eq("releaseId", id))
+      : args.table === "licensePackages" ? ctx.db.query("licensePackages").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", id))
+      : args.table === "licenses" ? ctx.db.query("licenses").withIndex("by_releaseId_and_packageName", (q) => q.eq("releaseId", id))
+      : args.table === "releaseSectionStats" ? ctx.db.query("releaseSectionStats").withIndex("by_releaseId_and_section", (q) => q.eq("releaseId", id))
+      : args.table === "releaseManifests" ? ctx.db.query("releaseManifests").withIndex("by_releaseId", (q) => q.eq("releaseId", id))
+      : args.table === "releasePageUploadShards" ? ctx.db.query("releasePageUploadShards").withIndex("by_releaseId_and_bucket", (q) => q.eq("releaseId", id))
+      : ctx.db.query("releasePackageBatches").withIndex("by_releaseId_and_batchIndex", (q) => q.eq("releaseId", id));
+    const batch = await query.paginate({ cursor: args.cursor, numItems: 500, maximumBytesRead: 4 * 1024 * 1024 });
+    const encoder = new TextEncoder();
+    const bytes = (value: unknown) => encoder.encode(JSON.stringify(value)).length;
+    let documents = batch.page.length;
+    let jsonBytes = batch.page.reduce((sum, row) => sum + bytes(row), 0);
+    let storageBytes = 0;
+    for (const row of batch.page) {
+      if (args.table === "manPages") {
+        const content = await ctx.db.query("manPageContents")
+          .withIndex("by_pageId", (q) => q.eq("pageId", row._id as Id<"manPages">)).unique();
+        if (content) { documents++; jsonBytes += bytes(content); }
+        const blob = content?.blobId ? await ctx.db.get(content.blobId) : null;
+        if (blob) { documents++; jsonBytes += bytes(blob); }
+        if (blob?.storageId) storageBytes += (await ctx.db.system.get(blob.storageId))?.size ?? 0;
+      } else if (args.table === "releaseManifests" && "storageId" in row && row.storageId) {
+        storageBytes += (await ctx.db.system.get(row.storageId))?.size ?? 0;
+      }
+    }
+    return { documents, jsonBytes, storageBytes, isDone: batch.isDone, continueCursor: batch.continueCursor };
+  },
+});
+
+export const measurePageLookup = internalQuery({
+  args: { distro: distroValidator, name: v.string(), section: v.string() },
+  returns: v.object({ documents: v.number(), jsonBytes: v.number(), releaseJsonBytes: v.number() }),
+  handler: async (ctx, args) => {
+    const pointer = await ctx.db.query("activeReleases")
+      .withIndex("by_stage_and_locale_and_distro", (q) => q.eq("stage", "prod").eq("locale", "en").eq("distro", args.distro)).unique();
+    if (!pointer) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    const release = await ctx.db.get(pointer.releaseId);
+    if (!release) throw new Error("RELEASE_NOT_FOUND");
+    const page = await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", (q) =>
+      q.eq("releaseId", release._id).eq("name", args.name).eq("section", args.section)).unique();
+    if (!page) throw new Error("PAGE_NOT_FOUND");
+    const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
+    return { documents: 3, jsonBytes: [pointer, release, page].reduce((sum, row) => sum + bytes(row), 0), releaseJsonBytes: bytes(release) };
+  },
+});
+
+
+// Also reclaim manifests whose HTTP action died after store() and before the
+// release mutation. The distinct MIME type and 24h grace exclude unrelated files
+// and every live upload action; indexed reference checks serialize with linking.
+export const cleanupOrphanManifestFilesBatch = internalMutation({
+  args: { cursor: v.union(v.string(), v.null()), limit: v.optional(v.number()), dryRun: v.optional(v.boolean()) },
+  returns: v.object({ scanned: v.number(), orphans: v.number(), storageDeletes: v.number(), isDone: v.boolean(), continueCursor: v.string(),
+    files: v.array(v.object({ storageId: v.id("_storage"), ageMs: v.number(), size: v.number() })),
+  }),
+  handler: async (ctx, args) => {
+    const batch = await ctx.db.system.query("_storage").paginate({ cursor: args.cursor,
+      numItems: bounded(args.limit, 50, 100) });
+    let orphans = 0;
+    let storageDeletes = 0;
+    const files = [];
+    for (const file of batch.page) {
+      if (file.contentType !== MANIFEST_CONTENT_TYPE || file._creationTime > Date.now() - MANIFEST_ORPHAN_MIN_AGE_MS) continue;
+      const ref = await ctx.db.query("releaseManifests")
+        .withIndex("by_storageId", (q) => q.eq("storageId", file._id)).first();
+      if (ref) continue;
+      orphans++;
+      if (args.dryRun) files.push({ storageId: file._id, ageMs: Date.now() - file._creationTime, size: file.size });
+      if (!args.dryRun) { await ctx.storage.delete(file._id); storageDeletes++; }
+    }
+    return { scanned: batch.page.length, orphans, storageDeletes, files, isDone: batch.isDone, continueCursor: batch.continueCursor };
   },
 });

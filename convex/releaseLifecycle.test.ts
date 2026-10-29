@@ -177,14 +177,14 @@ describe("release sealing", () => {
       }
     }
     expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(false);
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 14, skipped: 0 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 14, skipped: 0, stopped: [] });
     const pending = await t.query(internal.related.activeMetadataStatus, {});
     expect(pending.complete).toBe(false);
     expect(pending.releases).toHaveLength(14);
     expect(pending.releases.every((release) => release.sealed)).toBe(true);
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(true);
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 14 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 0, skipped: 14, stopped: [] });
   });
 
   it("does not declare a completed but unsealed legacy release ready", async () => {
@@ -195,7 +195,7 @@ describe("release sealing", () => {
     await t.run((ctx) => ctx.db.patch(releaseId, { relatedMetadataCompletedVersion: 1, manifestBasis: undefined, aliasCount: undefined }));
     await pointRelease(t, releaseId, "prod");
     expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(false);
-    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 1, skipped: 0 });
+    expect(await t.mutation(internal.related.backfillActiveReleases, {})).toEqual({ scheduled: 1, skipped: 0, stopped: [] });
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     expect((await t.query(internal.related.activeMetadataStatus, {})).complete).toBe(false);
   });

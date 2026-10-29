@@ -14,6 +14,56 @@ The ingest command parses man pages locally/in-container, creates a Convex relea
 
 Optional: `BETTERMAN_INGEST_WORKERS` sets the number of parse processes, clamped to 1–8 and defaulting to the CPU count up to 8. `1` parses sequentially. Output order and page ids do not depend on it.
 
+## Large releases and recovery
+
+Ingest contract **2** must be deployed before this client writes. Release
+provenance is a JSON file in Convex storage, referenced from `releaseManifests`;
+page views read only the small release row. Page-upload counters use 16 shards;
+sealing folds their per-section counts in one bounded verification transaction,
+avoiding a write to the same release/stat row from every upload worker. Package declarations use digest-bound
+batches of 200 (`/ingest/license-packages`). Creation commits the batch digests,
+counts and license requirements. Missing batches block activation; replaying an
+identical batch is a no-op and changing its payload fails. The small legacy
+internal mutation path remains available for existing fixtures.
+
+Parsing writes document bodies to a temporary SQLite spool with an 8 MiB cache.
+Only source/route/package references remain in memory. A second pass resolves
+links and streams page batches. Parse futures are bounded to twice the process
+count; upload futures are bounded to the upload worker count. License text is
+also spooled and validated in a first pass before any release upload. Temporary
+files are removed on success or failure; allow disk space for the parsed bodies
+in addition to source archives.
+
+`BETTERMAN_INGEST_UPLOAD_WORKERS` defaults to **4**, capped at **8**; `1` keeps
+serial uploads. The existing page-count and exact-byte limits still apply per
+request. These variables are forwarded through the curated Docker path.
+
+Activation polls for up to 45 minutes, configurable with
+`BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS` (positive, at most 2700; validated before any work). Each
+request is short; the server persists and schedules batches of 500 link rows.
+A failed/canceled job resumes its cursor for the same metadata version. Until
+all work completes, the previous pointer stays active. A timeout or disconnect
+does not require another parse/upload. With the same local/deployment environment
+already configured, resume the **same release and intended stage**:
+
+```bash
+pnpm ingest:activate --release-id '<uploaded-release-id>' --stage staging
+```
+
+The contract check runs before this command writes. It reports success only for
+`pending: false` and the requested release ID. For a rollback use the explicitly
+authorized `prod` stage and saved rollback ID as described in the runbook.
+
+`pnpm ingest:scale` is an opt-in synthetic benchmark. It requires this worktree's
+`.convex/local/default/config.json`, matching loopback URLs in `.env.local`, and
+the local ingest secret `bm2-scale-local`; it accepts no deployment URL. Start
+`pnpm convex:dev` and set that secret on the verified local deployment first.
+It uploads 20,000 pages and declares/uploads notices for 17,300 packages, then
+activates only its local fixture. It refuses to replace an unrelated local
+Debian pointer. The report is `.perf-results/ingest-scale.json`; `--output` can
+select another path. Measurements are synthetic, not a Debian throughput or
+billing guarantee. See [PR 1 evidence](../docs/roadmap/b1-scale-evidence.md).
+
 ## Parser fixtures
 
 `tests/fixtures/roff/` holds roff sources captured from Debian trixie plus one mdoc page from macOS. `tests/test_golden.py` renders each with the host `mandoc` and compares the parsed result to `tests/fixtures/golden/`. After a deliberate parser change:
@@ -126,3 +176,14 @@ Bare tokens nested inside option definitions or their indented argument lists ar
 values, not options. A mixed field-range or compatibility-entry list cannot
 establish CLI context solely through one flag-shaped peer; extraction keeps the
 original body terms and anchors intact.
+
+
+The activation timeout is validated at CLI startup and client construction.
+CI records `BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS` before setup from the platform
+job limit (Linux 300 minutes, FreeBSD 90, macOS 60), reserving three minutes for
+reporting/promotion. Activation caps the configured wait by the actual time
+remaining after parse/upload. The deadline is forwarded unchanged into Docker
+and the FreeBSD VM. Standalone CLI runs without that variable retain the
+45-minute cap; set it to an absolute Unix timestamp when supplying a job budget. Resume a timed-out release with `pnpm ingest:activate`; three failed attempts
+at one hydration cursor require operator repair and explicit re-arming as
+described in [the operations runbook](../docs/runbooks/multi-distro-ops.md#deploy-and-activation-recovery).

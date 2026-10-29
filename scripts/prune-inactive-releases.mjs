@@ -9,15 +9,15 @@ import { promisify } from 'node:util'
 const exec = promisify(execFile)
 
 // Convex bounds: previewInactiveReleases pages at most 10 releases,
-// deleteInactiveReleaseBatch removes at most 200 documents per transaction,
+// deleteInactiveReleaseBatch removes at most 2,000 documents per transaction,
 // and cleanupOrphanContentBlobsBatch scans at most 100 blobs. Batches start
 // below the maximum and halve on failure so a heavy page (large inline
 // payloads, many chunks) degrades instead of stalling the run.
 const PREVIEW_LIMIT = 10
-const DELETE_LIMIT = { start: 100, min: 5 }
+const DELETE_LIMIT = { start: 1000, min: 5 }
 const ORPHAN_LIMIT = { start: 50, min: 5 }
 const MAX_BATCHES_PER_RELEASE = 100_000
-const MAX_ATTEMPTS = 4
+const MAX_ATTEMPTS = 10
 
 export function parseOptions(env = process.env, now = Date.now()) {
   const apply = env.BETTERMAN_PRUNE_APPLY === 'true'
@@ -247,6 +247,32 @@ export async function cleanupOrphanBlobs(run, { dryRun, log = console.log, retry
   throw new Error('Orphan blob cleanup did not terminate')
 }
 
+export async function cleanupOrphanManifestFiles(run, { dryRun, log = console.log, retry = {} } = {}) {
+  let cursor = null
+  const totals = { scanned: 0, orphans: 0, storageDeletes: 0 }
+  let previewed = 0
+  for (let page = 0; page < 1_000_000; page++) {
+    const result = await withRetry(() => run('maintenance:cleanupOrphanManifestFilesBatch', {
+      cursor, limit: 100, dryRun,
+    }), { ...retry, log, label: 'manifest orphan sweep' })
+    if (typeof result?.isDone !== 'boolean' || !Number.isSafeInteger(result.scanned)) throw new Error('Invalid manifest orphan response')
+    for (const key of Object.keys(totals)) totals[key] += result[key] ?? 0
+    if (dryRun) {
+      for (const file of (result.files ?? []).slice(0, 100 - previewed)) {
+        log(JSON.stringify({ event: 'manifest_orphan_preview', storageId: file.storageId, ageMs: file.ageMs, size: file.size }))
+        previewed++
+      }
+    }
+    if (result.isDone) {
+      if (dryRun && totals.orphans > previewed) log(JSON.stringify({ event: 'manifest_orphan_preview_truncated', omitted: totals.orphans - previewed, maxFiles: 100 }))
+      return totals
+    }
+    if (!result.continueCursor || result.continueCursor === cursor) throw new Error('Manifest orphan sweep did not advance')
+    cursor = result.continueCursor
+  }
+  throw new Error('Manifest orphan sweep did not terminate')
+}
+
 // Bounded concurrency that stops handing out new work after the first failure.
 // In-flight workers finish their current item, then the first error is thrown.
 export async function mapWithConcurrency(items, concurrency, worker) {
@@ -289,7 +315,8 @@ export async function prune(run, options, { log = console.log, retry = {} } = {}
   }
   // The sweep walks the whole blob table, so it is opt-in for previews.
   const orphans = options.sweepOrphans ? await cleanupOrphanBlobs(run, { dryRun: !options.apply, log, retry }) : null
-  return { inactive: inactive.length, selection, pruned, orphans }
+  const manifestFiles = options.sweepOrphans ? await cleanupOrphanManifestFiles(run, { dryRun: !options.apply, log, retry }) : null
+  return { inactive: inactive.length, selection, pruned, orphans, manifestFiles }
 }
 
 // Surface the provider's error text without echoing credentials. Deploy keys
@@ -324,6 +351,7 @@ async function main() {
     ? `Pruned ${result.pruned.length} inactive release(s) (${deleted} documents, ${files} stored files), retained ${result.selection.retained.length}, skipped ${result.selection.skipped.length}; ${orphanNote}.`
     : `Dry run: ${result.selection.prune.length} inactive release(s) would be pruned, ${result.selection.retained.length} retained, ${result.selection.skipped.length} skipped; ${orphanNote}.`
   console.log(message)
+  if (result.manifestFiles) console.log(JSON.stringify({ event: 'manifest_orphans', ...result.manifestFiles }))
   if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}\n`)
 }
 

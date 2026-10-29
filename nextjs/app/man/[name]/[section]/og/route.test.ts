@@ -122,3 +122,16 @@ describe('man page share image route', () => {
     expect(apiMocks.withDistroFallback).toHaveBeenLastCalledWith('debian', expect.any(Function))
   })
 })
+
+
+it('decodes encoded Perl names exactly once before OG lookup and rendering', async () => {
+  apiMocks.fetchManMetaByNameAndSection.mockResolvedValue({ page: { ...page().page, name: 'foo::bar', section: '3pm' } })
+  expect((await get('foo%3A%3Abar', '3pm')).status).toBe(200)
+  expect(apiMocks.fetchManMetaByNameAndSection).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm' })
+  expect(ogCard).toHaveBeenCalledWith(expect.objectContaining({ head: 'FOO::BAR(3PM)', name: 'foo::bar(3pm)' }))
+})
+
+it.each(['foo%253A%253Abar', 'foo%ZZ'])('rejects malformed or doubly encoded OG names %s', async name => {
+  await expect(get(name, '3pm')).rejects.toThrow('NEXT_NOT_FOUND')
+  expect(apiMocks.fetchManMetaByNameAndSection).not.toHaveBeenCalled()
+})

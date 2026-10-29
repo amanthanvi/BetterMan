@@ -5,7 +5,9 @@ import type { Id } from "./_generated/dataModel";
 import { ingestClientError } from "./_ingestErrors";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { optionFlagRows } from "./_optionFlags";
+import { MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
 import { INGEST_CONTRACT } from "./ingestContract";
+import { canonicalJson } from "./ingest";
 import { secretsMatch } from "./lib";
 
 const http = httpRouter();
@@ -78,9 +80,30 @@ http.route({
   path: "/ingest/release",
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
-    const result = await ctx.runMutation(internal.ingest.createRelease, body as never);
-    return jsonResponse(result);
+    const { packageManifest, ...metadata } = body as Record<string, unknown>;
+    // JSON is a storage blob, so a 17k-package manifest never crosses the
+    // document or Convex array-value limits or burdens a page-view read.
+    const text = canonicalJson(packageManifest ?? null);
+    const storageId = await ctx.storage.store(new Blob([text], { type: MANIFEST_CONTENT_TYPE }));
+    try {
+      const result = await ctx.runMutation(internal.ingest.createRelease, {
+        ...metadata, packageManifestStorageId: storageId, packageManifestDigest: await storedPayloadDigest(text),
+      } as never);
+      if (result.existed) await ctx.storage.delete(storageId);
+      return jsonResponse(result);
+    } catch (error) {
+      await ctx.storage.delete(storageId);
+      throw error;
+    }
   }),
+});
+
+http.route({
+  path: "/ingest/license-packages",
+  method: "POST",
+  handler: ingestAction(async (ctx, body) => jsonResponse(
+    await ctx.runMutation(internal.ingest.insertLicensePackages, body as never),
+  )),
 });
 
 http.route({

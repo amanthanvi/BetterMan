@@ -78,9 +78,15 @@ def test_broken_parse_pool_names_the_first_source_without_a_result(monkeypatch) 
         def __exit__(self, *_exc) -> None:
             return None
 
-        def map(self, _fn, _sources):
-            yield ingest_runner._ParseResult(error="first")
-            raise BrokenProcessPool("terminated abruptly")
+        def submit(self, _fn, source):
+            from concurrent.futures import Future
+
+            future = Future()
+            if source.name == "p0":
+                future.set_result(ingest_runner._ParseResult(error="first"))
+            else:
+                future.set_exception(BrokenProcessPool("terminated abruptly"))
+            return future
 
     monkeypatch.setattr(ingest_runner, "ProcessPoolExecutor", DyingPool)
     sources = [ManSource(path=Path(f"/man/p{i}.1"), name=f"p{i}", section="1") for i in range(3)]
@@ -460,9 +466,22 @@ def test_ingest_declares_uploaded_aliases_and_licenses(
     assert declaration["sectionTotals"] == [{"section": "1", "total": 1}]
     assert declaration["aliasCount"] == int(with_alias_and_license)
     assert declaration["licenseCount"] == int(with_alias_and_license)
-    assert declaration["licensePackages"] == [
-        {"name": "example", "version": "1.0", "hasLicenseText": with_alias_and_license}
+    packages = [{"name": "example", "version": "1.0", "hasLicenseText": with_alias_and_license}]
+    assert declaration["packageBatches"] == [
+        {
+            "digest": ingest_runner._package_batch_digest(packages),
+            "count": 1,
+            "licenseCount": int(with_alias_and_license),
+        }
     ]
+    assert (
+        "/ingest/license-packages",
+        {
+            "datasetReleaseId": result.dataset_release_id,
+            "batchIndex": 0,
+            "packages": packages,
+        },
+    ) in calls
     for path, key in [("/ingest/aliases", "aliases"), ("/ingest/licenses", "licenses")]:
         assert sum(len(payload[key]) for route, payload in calls if route == path) == int(
             with_alias_and_license
@@ -830,3 +849,110 @@ def test_license_items_measure_utf8_and_never_truncate():
         ingest_runner._license_items(
             licenses={"example": "é" * 600_000}, distro="fedora", dataset_release_id="r"
         )
+
+
+def test_perl_names_scan_resolve_and_build_links(tmp_path):
+    module = tmp_path / "Foo::Bar.3perl"
+    module.write_text(".TH Foo::Bar 3perl\n.SH NAME\nFoo::Bar \\- example module\n")
+    source = _filter_sources([ManSource(path=module, name="Foo::Bar", section="3perl")])
+    assert source[0].name == "foo::bar"
+    target = _page("foo::bar", "3perl")
+    source_page = replace(
+        _page("caller", "1"),
+        doc={
+            "blocks": [
+                {
+                    "type": "link",
+                    "linkType": "internal",
+                    "href": "/man/foo::bar/3perl",
+                }
+            ]
+        },
+    )
+    assert ingest_runner._parse_man_href("/man/foo::bar/3perl") == ("foo::bar", "3perl")
+    links = ingest_runner._build_page_links(pages=[source_page, target])
+    assert links[source_page.page_id][0]["toExternalId"] == target.page_id
+    assert links[source_page.page_id][0]["toName"] == "foo::bar"
+
+
+def test_disk_spool_and_parallel_upload_keep_large_bodies_bounded(tmp_path):
+    import tracemalloc
+    from threading import Lock
+
+    # 2k x 64KiB bodies exceed 128MiB; the allocator peak must stay below
+    # 12MiB. A retained list or an unbounded executor queue fails this test.
+    count = 2000
+    tracemalloc.start()
+    try:
+        with ingest_runner._PageSpool(tmp_path / "pages.sqlite3") as spool:
+            for i in range(count):
+                spool.append(replace(_page(f"p{i}", "1"), doc={"text": "x" * 65536}))
+            refs = list(spool.refs())
+            produced = 0
+            uploaded = 0
+            max_ahead = 0
+            lock = Lock()
+
+            def pages():
+                nonlocal produced, max_ahead
+                for payload in ingest_runner._resolved_page_payloads(
+                    spool, refs, ingest_runner._build_sitemap_page_map(pages=refs)
+                ):
+                    with lock:
+                        produced += 1
+                        max_ahead = max(max_ahead, produced - uploaded)
+                    yield payload
+
+            class Client:
+                def post(self, _path, payload):
+                    nonlocal uploaded
+                    with lock:
+                        uploaded += len(payload["pages"])
+
+            _upload_pages(
+                Client(),
+                dataset_release_id="r",
+                limits=(3, 1024 * 1024),
+                pages=pages(),
+                total=count,
+                workers=4,
+            )
+            assert produced == uploaded == count
+            assert max_ahead <= 4 * 3 + 1
+            assert tracemalloc.get_traced_memory()[1] < 12 * 1024 * 1024
+    finally:
+        tracemalloc.stop()
+
+
+def test_spooled_link_resolution_matches_the_in_memory_path(tmp_path):
+    import copy
+    from dataclasses import asdict
+
+    pages = [
+        replace(
+            _page("source", "1"),
+            doc={
+                "inlines": [
+                    {"type": "link", "href": "/man/foo::bar/3perl", "linkType": "internal"},
+                    {"type": "link", "href": "/man/missing/1", "linkType": "internal"},
+                ]
+            },
+            see_also=[{"name": "foo::bar", "section": None}],
+        ),
+        _page("foo::bar", "3perl"),
+    ]
+    expected_pages = copy.deepcopy(pages)
+    ingest_runner._resolve_doc_links_and_see_also(pages=expected_pages)
+    links = ingest_runner._build_page_links(pages=expected_pages)
+    sitemap = ingest_runner._build_sitemap_page_map(pages=pages)
+    expected = [
+        _page_payload(p, sitemap_page=sitemap[p.page_id], links=links.get(p.page_id, []))
+        for p in expected_pages
+    ]
+    with ingest_runner._PageSpool(tmp_path / "pages.sqlite3") as spool:
+        for page in pages:
+            spool.append(page)
+        refs = list(spool.refs())
+        assert list(ingest_runner._resolved_page_payloads(spool, refs, sitemap)) == expected
+        # Reading/resolving a replay does not mutate the stored original bodies.
+        assert asdict(next(iter(spool))) == {**asdict(pages[0]), "see_also_refs": []}

@@ -19,6 +19,16 @@ const NOT_A_PAGE = new Set([
   'zip', 'gz', 'tgz', 'rar', 'sql', 'bak', 'env',
 ])
 
+/** Next route params can preserve percent escapes; decode once at the route boundary. */
+export function decodeManParam(segment: string): string {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    // A malformed escape cannot match an ingested name; retain it for the 404.
+    return segment
+  }
+}
+
 /** True when `value` can be a man page name, so a lookup for it is worth a query. */
 export function isManName(value: string): boolean {
   return NAME.test(value)

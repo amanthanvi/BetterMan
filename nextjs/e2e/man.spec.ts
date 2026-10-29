@@ -545,3 +545,38 @@ test('man: phones under 400px drop the running head; wider screens keep it', asy
   await page.setViewportSize({ width: 768, height: 900 })
   await expect(head).toBeVisible()
 })
+
+test('Perl module URLs render encoded names, name-only redirects, and search citations', async ({ page, request }) => {
+  for (const path of ['/man/foo%3A%3Abar/3pm', '/man/foo::bar/3pm', '/man/foo%3A%3Abar']) {
+    const response = await page.goto(path)
+    expect(response?.status(), path).toBe(200)
+    await expect(page.getByRole('heading', { name: 'foo::bar(3pm)', exact: true })).toBeVisible()
+    await expect(page.getByText('Perl module documentation.', { exact: true })).toBeVisible()
+  }
+  const api = await request.get('/api/v1/man/foo%3A%3Abar/3pm')
+  expect(api.status()).toBe(200)
+  const search = await request.get('/api/v1/search?q=Foo%3A%3ABar(3pm)')
+  expect(search.status()).toBe(200)
+  expect((await search.json()).results).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'foo::bar', section: '3pm' })]))
+})
+
+test('Perl text exports and share images accept encoded and literal module names', async ({ request }) => {
+  for (const name of ['foo%3A%3Abar', 'foo::bar']) {
+    for (const path of [`/man/${name}/3pm.txt`, `/${name}.txt`, `/${name}.3pm.txt`]) {
+      const text = await request.get(path)
+      expect(text.status(), path).toBe(200)
+      expect(text.headers()['content-type']).toContain('text/plain')
+      expect(await text.text()).toContain('FOO::BAR(3pm)')
+    }
+    const image = await request.get(`/man/${name}/3pm/og`)
+    expect(image.status()).toBe(200)
+    expect(image.headers()['content-type']).toContain('image/png')
+    expect((await image.body()).subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
+  }
+})
+
+test('legacy deep section bookmarks redirect to the first page', async ({ request }) => {
+  const response = await request.get('/section/1?offset=5200&distro=ubuntu', { maxRedirects: 0 })
+  expect(response.status()).toBe(308)
+  expect(response.headers().location).toBe('/section/1?distro=ubuntu')
+})

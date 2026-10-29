@@ -9,6 +9,7 @@ import { canonicalWithDistro, withDistro } from '../../../lib/distro'
 import { MISSING_MAN_METADATA, resolveManName } from '../../../lib/manLookup'
 import { getPublicOrigin } from '../../../lib/public-origin'
 import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+import { decodeManParam } from '../../../lib/shortUrl'
 
 export async function generateMetadata({
   params,
@@ -17,7 +18,8 @@ export async function generateMetadata({
   params: Promise<{ name: string }>
   searchParams: Promise<SearchParams>
 }): Promise<Metadata> {
-  const { name } = await params
+  const { name: rawName } = await params
+  const name = decodeManParam(rawName)
   const sp = await searchParams
   const resolved = await resolveManName(name, await resolveRequestDistro(sp))
   if (!resolved) return MISSING_MAN_METADATA
@@ -44,7 +46,8 @@ export default async function ManByNamePage({
   params: Promise<{ name: string }>
   searchParams: Promise<SearchParams>
 }) {
-  const { name } = await params
+  const { name: rawName } = await params
+  const name = decodeManParam(rawName)
   const sp = await searchParams
   const resolved = await resolveManName(name, await resolveRequestDistro(sp))
   if (!resolved) notFound()

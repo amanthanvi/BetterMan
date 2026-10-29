@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 import ingestion.cli as cli
 
 
@@ -215,3 +217,76 @@ def test_run_ingest_on_host_defaults_image_fields(monkeypatch) -> None:
     assert called["image_ref"] == "host:macos"
     assert called["image_digest"] == "unknown"
     assert called["git_sha"] == "abc123"
+
+
+def test_activation_resume_does_not_reingest(monkeypatch):
+    from ingestion import cli
+
+    calls = []
+    monkeypatch.setenv("CONVEX_HTTP_URL", "http://127.0.0.1:33311")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "local")
+    monkeypatch.setattr(cli.ConvexIngestClient, "require_deployed_contract", lambda _self: {})
+
+    def activate(_self, payload):
+        calls.append(payload)
+        return {"pending": False, "datasetReleaseId": payload["datasetReleaseId"]}
+
+    monkeypatch.setattr(cli.ConvexIngestClient, "activate_release", activate)
+
+    def no_ingest(**_kwargs):
+        raise AssertionError("must not re-ingest")
+
+    monkeypatch.setattr(cli, "ingest_dataset", no_ingest)
+    assert cli.main(["activate", "--release-id", "large", "--stage", "staging"]) == 0
+    assert calls[0]["datasetReleaseId"] == "large"
+    assert calls[0]["stage"] == "staging"
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["ingest"],
+        ["ingest", "--distro", "macos"],
+        ["ingest", "--in-container"],
+        ["activate", "--release-id", "large"],
+    ],
+)
+def test_invalid_timeout_stops_at_startup_without_any_work(monkeypatch, caplog, args):
+    monkeypatch.setenv("BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS", "invalid")
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("startup validation must precede Docker, parsing and network writes")
+
+    monkeypatch.setattr(cli, "run_ingest_container", forbidden)
+    monkeypatch.setattr(cli, "ingest_dataset", forbidden)
+    monkeypatch.setattr(cli, "ConvexIngestClient", forbidden)
+    with caplog.at_level("INFO"):
+        assert cli.main(args) == 2
+    assert "ingest_error" in caplog.text
+    assert "BETTERMAN_INGEST_ACTIVATION_TIMEOUT_SECONDS must be a number" in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+def test_activate_client_value_error_is_clean(monkeypatch, caplog):
+    monkeypatch.setenv("CONVEX_HTTP_URL", "http://127.0.0.1:33411")
+    monkeypatch.setenv("CONVEX_INGEST_SECRET", "local")
+
+    def invalid(*_args):
+        raise ValueError("invalid client settings")
+
+    monkeypatch.setattr(cli, "ConvexIngestClient", invalid)
+    with caplog.at_level("INFO"):
+        assert cli.main(["activate", "--release-id", "large"]) == 2
+    assert "invalid client settings" in caplog.text
+
+
+def test_invalid_job_deadline_exits_before_ingestion(monkeypatch, caplog):
+    monkeypatch.setenv("BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS", "not-a-timestamp")
+
+    def forbidden(**_kwargs):
+        raise AssertionError("must validate before Docker or writes")
+
+    monkeypatch.setattr(cli, "run_ingest_container", forbidden)
+    with caplog.at_level("INFO"):
+        assert cli.main(["ingest"]) == 2
+    assert "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS must be a Unix timestamp" in caplog.text

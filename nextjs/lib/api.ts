@@ -68,6 +68,7 @@ export type LicensesResponse = {
   imageDigest: string
   ingestedAt: string
   packageManifest: Record<string, unknown> | null
+  packageManifestUrl?: string | null
   packages: LicensePackage[]
 }
 
@@ -234,11 +235,51 @@ const cachedSuggest = unstable_cache(
   { revalidate: SEARCH_REVALIDATE_SECONDS },
 )
 
-const cachedLicenses = unstable_cache(
-  async (distro: Distro) => await convex().query(api.queries.listLicenses, { distro }),
-  ['betterman', 'convex', 'licenses'],
+const cachedLicensePage = unstable_cache(
+  async (distro: Distro, cursor: string | null, datasetReleaseId: string | null) =>
+    await convex().query(api.queries.listLicenses, {
+      distro, ...(cursor === null ? {} : { cursor }),
+      ...(datasetReleaseId === null ? {} : { datasetReleaseId }),
+    }),
+  ['betterman', 'convex', 'license-packages', 'v2'],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 )
+
+// Cache bounded pages, not a joined 17k-package response (>Next's 2 MiB entry
+// limit). The license surface can join them without repeating backend reads.
+async function cachedLicenses(distro: Distro) {
+  // A promotion between package pages invalidates the pinned generation. Read
+  // page one uncached on retry rather than joining stale cached generations.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await licensesForRelease(distro, attempt > 0)
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('RELEASE_CHANGED')) throw error
+    }
+  }
+  throw new FastApiError(503, 'RELEASE_CHANGED', 'Dataset changed during pagination; retry shortly')
+}
+
+async function licensesForRelease(distro: Distro, fresh: boolean) {
+  const first = fresh
+    ? await convex().query(api.queries.listLicenses, { distro })
+    : await cachedLicensePage(distro, null, null)
+  const packages = [...first.packages]
+  let cursor = first.nextCursor
+  while (cursor) {
+    const page = await cachedLicensePage(distro, cursor, first.datasetReleaseId)
+    packages.push(...page.packages)
+    if (page.nextCursor === cursor) throw new Error('License pagination did not advance')
+    cursor = page.nextCursor
+  }
+  let packageManifest = first.packageManifest
+  if (first.packageManifestUrl && (first.packageManifestBytes ?? 0) <= 64 * 1024) {
+    const response = await fetch(first.packageManifestUrl)
+    if (!response.ok) throw new Error('Failed to load package manifest')
+    packageManifest = await response.json()
+  }
+  return { ...first, packageManifest, packages }
+}
 
 const cachedLicenseText = unstable_cache(
   async (distro: Distro, packageName: string) =>

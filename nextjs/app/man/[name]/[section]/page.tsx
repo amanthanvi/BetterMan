@@ -11,6 +11,7 @@ import { OG_SIZE } from '../../../../lib/og/card'
 import { getPublicOrigin } from '../../../../lib/public-origin'
 import { reportProblemHref } from '../../../../lib/reportProblem'
 import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../../../lib/requestContext'
+import { decodeManParam } from '../../../../lib/shortUrl'
 import { safeJsonLdStringify } from '../../../../lib/seo'
 
 type Lookup = { distro: Distro; name: string; section: string }
@@ -22,7 +23,9 @@ export async function generateMetadata({
   params: Promise<{ name: string; section: string }>
   searchParams: Promise<SearchParams>
 }): Promise<Metadata> {
-  const { name, section } = await params
+  const { name: rawName, section: rawSection } = await params
+  const name = decodeManParam(rawName)
+  const section = decodeManParam(rawSection)
   const sp = await searchParams
   const located = await locateManPage(name, section, await resolveRequestDistro(sp))
   if (!located) return MISSING_MAN_METADATA
@@ -62,7 +65,9 @@ export default async function ManByNameAndSectionPage({
   params: Promise<{ name: string; section: string }>
   searchParams: Promise<SearchParams>
 }) {
-  const { name, section } = await params
+  const { name: rawName, section: rawSection } = await params
+  const name = decodeManParam(rawName)
+  const section = decodeManParam(rawSection)
   const sp = await searchParams
   const located = await locateManPage(name, section, await resolveRequestDistro(sp))
   if (!located) notFound()

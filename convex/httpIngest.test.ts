@@ -90,6 +90,8 @@ it("classifies the messages the Convex runtime hands to an action", () => {
   // validation fails before the handler runs and arrives bare.
   expect(ingestClientError(new Error("Uncaught Error: RELEASE_SEALED\n    at handler (../convex/ingest.ts:376:11)\n")))
     .toEqual({ status: 409, code: "RELEASE_SEALED", message: "RELEASE_SEALED" });
+  expect(ingestClientError(new Error("Uncaught Error: RELATED_METADATA_BACKFILL_FAILED\n    at handler")))
+    .toMatchObject({ status: 409, code: "RELATED_METADATA_BACKFILL_FAILED", message: expect.stringContaining("re-arm") });
   expect(ingestClientError(new Error("RELEASE_NOT_FOUND"))).toMatchObject({ status: 404 });
   const validation = `ArgumentValidationError: Value does not match validator.\nPath: .pages[0].doc\nValue: ${"x".repeat(5000)}`;
   const classified = ingestClientError(new Error(validation));

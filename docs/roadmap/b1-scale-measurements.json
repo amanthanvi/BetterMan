@@ -1,0 +1,189 @@
+{
+  "date": "2026-10-28",
+  "environment": {
+    "platform": "macOS arm64",
+    "node": "26.5.0",
+    "pnpm": "10.34.4",
+    "python": "3.14.9",
+    "convexClient": "1.48.0",
+    "convexBackend": "precompiled-2026-10-22-1447815",
+    "deployment": "worktree local loopback only"
+  },
+  "newContentFiles": {
+    "releaseId": "local-scale-98f54d15-19e8-43b1-a6fe-00e45849bc7d",
+    "pages": 20000,
+    "packages": 17300,
+    "workers": 4,
+    "timings": {
+      "spoolSeconds": 4.249881957890466,
+      "declarationSeconds": 4.419663458014838,
+      "uploadSeconds": 136.901177083957,
+      "licenseSeconds": 14.720319999963976,
+      "activationSeconds": 37.36434500000905
+    },
+    "totalSeconds": 234.6167734999908,
+    "pagesPerSecond": 146.09078187643817,
+    "pythonPeakAllocatedBytes": 22359986,
+    "pythonMaxRssPlatformUnits": 105955328,
+    "spoolBytes": 191225856,
+    "manifestBytes": 1954914,
+    "footprint": {
+      "documents": 214702.0,
+      "jsonBytes": 86513130.0,
+      "storageBytes": 98814921.0,
+      "tables": {
+        "manPages": {
+          "documents": 60000.0,
+          "jsonBytes": 23072391.0,
+          "storageBytes": 96860007.0
+        },
+        "manPageSearchDocuments": {
+          "documents": 20000.0,
+          "jsonBytes": 17514623.0,
+          "storageBytes": 0.0
+        },
+        "manPageLinks": {
+          "documents": 79996.0,
+          "jsonBytes": 28047964.0,
+          "storageBytes": 0.0
+        },
+        "manPageOptionFlags": {
+          "documents": 20000.0,
+          "jsonBytes": 4974748.0,
+          "storageBytes": 0.0
+        },
+        "licensePackages": {
+          "documents": 17300.0,
+          "jsonBytes": 5773484.0,
+          "storageBytes": 0.0
+        },
+        "licenses": {
+          "documents": 17300.0,
+          "jsonBytes": 7104553.0,
+          "storageBytes": 0.0
+        },
+        "releaseSectionStats": {
+          "documents": 1.0,
+          "jsonBytes": 267.0,
+          "storageBytes": 0.0
+        },
+        "releaseManifests": {
+          "documents": 1.0,
+          "jsonBytes": 171.0,
+          "storageBytes": 1954914.0
+        },
+        "releasePackageBatches": {
+          "documents": 87.0,
+          "jsonBytes": 21108.0,
+          "storageBytes": 0.0
+        },
+        "releasePageUploadShards": {
+          "documents": 16.0,
+          "jsonBytes": 3142.0,
+          "storageBytes": 0.0
+        }
+      }
+    },
+    "metadataLookup": {
+      "documents": 3.0,
+      "jsonBytes": 1575.0,
+      "releaseJsonBytes": 679.0
+    },
+    "limits": "Synthetic English pages; JSON bytes exclude index overhead. RSS units: bytes on macOS, KiB on Linux. No cloud spend measured."
+  },
+  "reusedContentFiles": {
+    "releaseId": "local-scale-11221f00-42fb-45a7-a831-4226222f224c",
+    "pages": 20000,
+    "packages": 17300,
+    "workers": 4,
+    "timings": {
+      "spoolSeconds": 3.5210907500004396,
+      "declarationSeconds": 3.268587209051475,
+      "uploadSeconds": 38.02591816696804,
+      "licenseSeconds": 14.809794542030431,
+      "activationSeconds": 39.25385970890056
+    },
+    "totalSeconds": 137.9539388329722,
+    "pagesPerSecond": 525.9570567680175,
+    "pythonPeakAllocatedBytes": 22352087,
+    "pythonMaxRssPlatformUnits": 105709568,
+    "spoolBytes": 191225856,
+    "manifestBytes": 1954914,
+    "footprint": {
+      "documents": 214702.0,
+      "jsonBytes": 86532827.0,
+      "storageBytes": 97834921.0,
+      "tables": {
+        "manPages": {
+          "documents": 60000.0,
+          "jsonBytes": 23072871.0,
+          "storageBytes": 95880007.0
+        },
+        "manPageSearchDocuments": {
+          "documents": 20000.0,
+          "jsonBytes": 17534187.0,
+          "storageBytes": 0.0
+        },
+        "manPageLinks": {
+          "documents": 79996.0,
+          "jsonBytes": 28048019.0,
+          "storageBytes": 0.0
+        },
+        "manPageOptionFlags": {
+          "documents": 20000.0,
+          "jsonBytes": 4974351.0,
+          "storageBytes": 0.0
+        },
+        "licensePackages": {
+          "documents": 17300.0,
+          "jsonBytes": 5773492.0,
+          "storageBytes": 0.0
+        },
+        "licenses": {
+          "documents": 17300.0,
+          "jsonBytes": 7104536.0,
+          "storageBytes": 0.0
+        },
+        "releaseSectionStats": {
+          "documents": 1.0,
+          "jsonBytes": 267.0,
+          "storageBytes": 0.0
+        },
+        "releaseManifests": {
+          "documents": 1.0,
+          "jsonBytes": 171.0,
+          "storageBytes": 1954914.0
+        },
+        "releasePackageBatches": {
+          "documents": 87.0,
+          "jsonBytes": 21107.0,
+          "storageBytes": 0.0
+        },
+        "releasePageUploadShards": {
+          "documents": 16.0,
+          "jsonBytes": 3146.0,
+          "storageBytes": 0.0
+        }
+      }
+    },
+    "metadataLookup": {
+      "documents": 3.0,
+      "jsonBytes": 1576.0,
+      "releaseJsonBytes": 680.0
+    },
+    "limits": "Synthetic English pages; JSON bytes exclude index overhead. RSS units: bytes on macOS, KiB on Linux. No cloud spend measured."
+  },
+  "prune": {
+    "releaseId": "local-scale-11221f00-42fb-45a7-a831-4226222f224c",
+    "batches": 117,
+    "deleted": 194702.0,
+    "seconds": 200.79409391700756,
+    "note": "Release-owned rows only; shared content blobs remain for the separately gated orphan sweep."
+  },
+  "projection141000Pages": {
+    "documents": 1303677.7999999998,
+    "jsonBytes": 531851972.29999995,
+    "storageBytes": 684817963.35
+  },
+  "projectionBasis": "Scale page/content/search/link/option rows by 141000/20000; keep 17300 package/license declarations and manifest/shard overhead fixed. JSON bytes exclude database index/internal encoding overhead. No shared deployment or billed usage was inspected."
+}
