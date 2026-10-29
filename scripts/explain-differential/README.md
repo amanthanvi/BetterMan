@@ -30,3 +30,9 @@ of every shell, distro, runtime path, user policy or possible command line.
 Interactive xargs, nested xargs input dependencies and doas after environment
 clearing are conservatively diagnostic. Production explain never runs a shell,
 Docker, a subprocess, or user input.
+
+Recorded replay on the round-7 implementation: 50,014 marker executions,
+45,358 target facts, **zero false positives**, and 4,656 false negatives out of
+125,002 generated lines. These are admission omissions, not claims that the
+omitted commands are safe. The test prints current counts and optionally writes
+its complete counts/failure report to `BM_DIFFERENTIAL_REPORT`.

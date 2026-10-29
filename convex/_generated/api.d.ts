@@ -8,13 +8,13 @@
  * @module
  */
 
+import type * as _commandConventions from "../_commandConventions.js";
 import type * as _derivedEncoding from "../_derivedEncoding.js";
 import type * as _derivedInputs from "../_derivedInputs.js";
 import type * as _derivedModel from "../_derivedModel.js";
-import type * as _generatedLayer from "../_generatedLayer.js";
-import type * as _commandConventions from "../_commandConventions.js";
 import type * as _destructive from "../_destructive.js";
 import type * as _explainBounds from "../_explainBounds.js";
+import type * as _generatedLayer from "../_generatedLayer.js";
 import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
 import type * as _manifestStorage from "../_manifestStorage.js";
@@ -34,16 +34,16 @@ import type * as content from "../content.js";
 import type * as crons from "../crons.js";
 import type * as derived from "../derived.js";
 import type * as derivedSignatures from "../derivedSignatures.js";
-import type * as generated from "../generated.js";
-import type * as portability from "../portability.js";
-import type * as packages from "../packages.js";
 import type * as explain from "../explain.js";
+import type * as generated from "../generated.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as ingestContract from "../ingestContract.js";
 import type * as lib from "../lib.js";
 import type * as maintenance from "../maintenance.js";
 import type * as manifest from "../manifest.js";
+import type * as packages from "../packages.js";
+import type * as portability from "../portability.js";
 import type * as queries from "../queries.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as related from "../related.js";
@@ -55,13 +55,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  _commandConventions: typeof _commandConventions;
   _derivedEncoding: typeof _derivedEncoding;
   _derivedInputs: typeof _derivedInputs;
   _derivedModel: typeof _derivedModel;
-  _generatedLayer: typeof _generatedLayer;
-  _commandConventions: typeof _commandConventions;
   _destructive: typeof _destructive;
   _explainBounds: typeof _explainBounds;
+  _generatedLayer: typeof _generatedLayer;
   _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
   _manifestStorage: typeof _manifestStorage;
@@ -81,16 +81,16 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   derived: typeof derived;
   derivedSignatures: typeof derivedSignatures;
-  generated: typeof generated;
-  portability: typeof portability;
-  packages: typeof packages;
   explain: typeof explain;
+  generated: typeof generated;
   http: typeof http;
   ingest: typeof ingest;
   ingestContract: typeof ingestContract;
   lib: typeof lib;
   maintenance: typeof maintenance;
   manifest: typeof manifest;
+  packages: typeof packages;
+  portability: typeof portability;
   queries: typeof queries;
   rateLimit: typeof rateLimit;
   related: typeof related;

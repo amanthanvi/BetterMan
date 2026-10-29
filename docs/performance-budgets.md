@@ -253,3 +253,17 @@ after assignments (4), and an out-of-range xargs delimiter (5). Each uses one
 call and zero storage reads. Assertions pin the diagnostics, unknown executable
 markers where applicable, and absence of facts/hints. Existing metric
 descriptors, tolerances and measured read counts remain unchanged.
+
+Round 7 adds isolated direct-query cases for sudo's assignment boundary after
+`--` and shell-builtin names below an external wrapper. Both must return a
+diagnostic, an unknown executable and no facts or hints. Each reads three documents in one call with no blob reads. Their counts are
+recorded alongside the earlier admission cases; the original browser fixture
+and all existing metric policies remain intact. Main's generated brief and
+its `{ derived, brief }` page response are retained during the rebase.
+
+The integrated man page measures five calls, 29 documents and one blob read:
+main's generated-brief lookup adds one document to the earlier derived-only
+28-document case. Symbol search remains ten documents and the explanation
+ceiling remains 66. All pre-existing metric descriptors and tolerances are
+preserved from the rebased main/branch baselines; measured bytes stay within
+them without raising a threshold.
