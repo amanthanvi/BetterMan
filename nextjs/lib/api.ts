@@ -26,6 +26,7 @@ export type SearchResult = {
   description: string
   highlights: string[]
   /** Set when the page's OPTIONS defined the queried flag; anchorId is the option row. */
+  symbolKind?: 'environment' | 'files' | 'errors' | 'config' | 'subcommand' | 'shell'
   match?: 'option'
   anchorId?: string
 }

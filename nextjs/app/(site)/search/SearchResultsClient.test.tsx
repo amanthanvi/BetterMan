@@ -22,9 +22,15 @@ function render(q: string, overrides: Partial<SearchResponse> = {}) {
 
 describe('search result copy', () => {
   it('deep-links symbol definitions without labelling them command-line options', () => {
-    const html = render('ForwardAgent', { results: [{ name: 'ssh_config', section: '5', title: 'ssh_config(5)', description: 'Client configuration', highlights: ['ForwardAgent'], anchorId: 'ForwardAgent' }] })
+    const html = render('ForwardAgent', { results: [{ name: 'ssh_config', section: '5', title: 'ssh_config(5)', description: 'Client configuration', symbolKind: 'config', highlights: ['ForwardAgent'], anchorId: 'ForwardAgent' }] })
     expect(html).toContain('/man/ssh_config/5#ForwardAgent')
-    expect(html).not.toContain('Command-line options')
+    expect(html).toContain('>directive</span>')
+    expect(html).not.toContain('>options</span>')
+  })
+  it.each([['environment','environment'],['files','file'],['errors','errno'],['subcommand','subcommand']] as const)('renders the real %s symbol badge', (symbolKind,label) => {
+    const html = render('term', {results:[{name:'example',section:'5',title:'example(5)',description:'Definition',symbolKind,highlights:['term'],anchorId:'term'}]})
+    expect(html).toContain(`>${label}</span>`)
+    expect(html).not.toContain('>options</span>')
   })
   it('gives honest guidance for unsupported multi-word queries', () => {
     const html = render('how do I extract a tarball')

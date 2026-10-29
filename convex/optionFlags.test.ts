@@ -286,6 +286,14 @@ describe("option search", () => {
     expect(symbols[0]).toMatchObject({ term: 'LD_PRELOAD', termNorm: 'ld_preload', anchorId: 'environment' });
   });
 
+  it('stores a Unicode-heavy page batch without rejecting or splitting excerpts', async () => {
+    const pages = Array.from({length: 10}, (_, i) => ({...page(`unicode${i}`, null), symbols: [{term:'UNICODE', anchorId:'env', excerpt:'a'.repeat(159)+'😀', kind:'environment' as const}]}));
+    const t = await seeded(pages);
+    const rows = await t.run(ctx => ctx.db.query('manPageSymbols').take(20));
+    expect(rows).toHaveLength(10);
+    expect(rows.every(row => row.excerpt === 'a'.repeat(159))).toBe(true);
+  });
+
   it("derives the same rows through the legacy inline page mutation", async () => {
     const t = convexTest(schema, modules);
     await t.mutation(internal.ingest.createRelease, {

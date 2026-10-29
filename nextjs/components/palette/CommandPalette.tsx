@@ -39,6 +39,7 @@ type PaletteItem =
       highlights?: string[]
       distro?: Distro
       anchorId?: string
+      symbolKind?: SearchResult['symbolKind']
       match?: 'option'
       run: () => void
     }
@@ -134,6 +135,7 @@ function resultToItem(result: SearchResult, ctx: { query: string; distro: Distro
     distro: ctx.distro,
     anchorId,
     match: result.match,
+    symbolKind: result.symbolKind,
     run: () => {
       recordRecentSearch(ctx.query)
       ctx.runMan(result.name, result.section, undefined, anchorId)
@@ -524,7 +526,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                       )}
                     </div>
                     {item.kind === 'page' && item.anchorId ? (
-                      <span className="shrink-0 small-caps text-sm text-ink-3">{item.match === 'option' ? 'flag' : 'definition'}</span>
+                      <span className="shrink-0 small-caps text-sm text-ink-3">{item.match === 'option' ? 'flag' : item.symbolKind ? ({config:'directive',environment:'environment',files:'file',errors:'errno',subcommand:'subcommand',shell:'shell'} as const)[item.symbolKind] : 'definition'}</span>
                     ) : null}
                     {item.kind === 'page' ? (
                       <div className="min-w-0 flex-1 truncate text-sm text-ink-2">{item.description}</div>

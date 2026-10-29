@@ -178,15 +178,19 @@ zero blob reads each) record saturated `ForwardAgent` symbol search at 10
 documents, `tar -xzvf backup.tar.gz -C /srv/www` at 8, the find/xargs kit
 pipeline at 12, and `git commit -m "message"` at 7. A 100-option overflow
 workload resolves 63 flag rows then stops at the shared 64-lookup ceiling,
-using 66 documents including release/page selection. The symbol fixture has
+using 66 documents including release/page selection. A separate saturated
+24-stage `git a|…|git x` corpus uses multiple page/symbol rows per lookup:
+it resolves 11 subcommands at 64 document reads, then honestly marks further
+tokens unknown. Four page variants and five symbol rows per term exceed the
+three/four-row ranges. Exact read/coverage assertions catch widening them. The symbol fixture has
 12 matching pages, exceeding the eight-row read bound; option, command and
 subcommand identities and ordered anchors are asserted. These counts include
 release resolution and repeated reads, with zero growth tolerance. Existing
 43-document single-flag and 66-document typo cases remain enforced.
 
-The explain resolver additionally caps 64 indexed lookups (at most four rows
-each) and 4,096 characters / 128 lexical tokens / 24 stages / eight nested
-levels. Its conservative whole-query ceiling is 258 document reads including
+The explain resolver additionally caps 64 indexed lookups and shares one
+64-document allowance across all stages (each query reserves its maximum) and 4,096 characters / 128 lexical tokens / 24 stages / eight nested
+levels. Its conservative whole-query ceiling is 66 document reads including
 release selection. These direct-query budgets exclude HTTP rate limiting,
 SSR/hydration and destination rendering; no explain UI is shipped in B5. The
 [JSON contract](explain-contract.md) documents unresolved and unsupported

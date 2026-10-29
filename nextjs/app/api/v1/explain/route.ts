@@ -1,4 +1,5 @@
 import { type NextRequest } from 'next/server'
+import { ConvexError } from 'convex/values'
 import { api } from '../../../../../convex/_generated/api'
 import { EXPLAIN_LIMITS } from '../../../../../convex/_shellParser'
 import { getConvexClient } from '@/lib/convexClient'
@@ -16,7 +17,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   try {
     return Response.json(await getConvexClient().query(api.explain.explain, { distro, cmd }), { headers })
   } catch (error) {
-    if (error instanceof Error && /EXPLAIN_(?:INPUT_TOO_LONG|TOO_MANY_TOKENS|TOO_MANY_STAGES|TOO_DEEP)/.test(error.message)) return Response.json({ error: 'Command exceeds explanation limits' }, { status: 400, headers })
+    const code = error instanceof ConvexError && error.data && typeof error.data === 'object' && 'code' in error.data ? error.data.code : null
+    if (typeof code === 'string' && ['EXPLAIN_INPUT_TOO_LONG', 'EXPLAIN_TOO_MANY_TOKENS', 'EXPLAIN_TOO_MANY_STAGES', 'EXPLAIN_TOO_DEEP'].includes(code)) return Response.json({ error: 'Command exceeds explanation limits', code }, { status: 400, headers })
     return Response.json({ error: 'Explanation unavailable' }, { status: 503, headers })
   }
 }

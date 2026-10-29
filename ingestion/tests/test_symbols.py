@@ -33,7 +33,7 @@ def test_definition_sections_and_config():
             {"term": term, "anchorId": "term", "excerpt": "Definition excerpt", "kind": kind}
         ]
     assert (
-        symbol_rows("ssh_config", "5", {"blocks": [definitions("ForwardAgent yes")]})[0]["term"]
+        symbol_rows("ssh_config", "5", {"blocks": [definitions("ForwardAgent")]})[0]["term"]
         == "ForwardAgent"
     )
     assert (
@@ -74,7 +74,7 @@ def test_bounds_and_deduplication():
     doc = {
         "blocks": [
             heading("ERRORS", "errors"),
-            *[definitions(f"E{i}", f"e{i}", "x" * 1000) for i in range(100)],
+            *[definitions(f"E{i}", f"e{i}", "x" * 1000) for i in range(300)],
         ]
     }
     rows = symbol_rows("example", "3", doc)
@@ -96,3 +96,59 @@ def test_golden_ssh_config_and_nested_sections():
     doc = {"blocks": [heading("ENVIRONMENT", "environment"), subheading, definitions("LD_PRELOAD")]}
     assert symbol_rows("ld.so", "8", doc)[0]["kind"] == "environment"
     assert symbol_rows("example", "5", {"blocks": [definitions("Foo", "x" * 161)]}) == []
+
+
+def test_directive_coverage_and_exact_categories():
+    names = [f"Directive{i}" for i in range(129)] + [
+        "ProxyJump",
+        "Port",
+        "User",
+        "StrictHostKeyChecking",
+        "LocalForward",
+        "ServerAliveInterval",
+        "UserKnownHostsFile",
+    ]
+    nested = definitions("ChannelTimeout")
+    nested["items"][0]["definitionBlocks"].append(definitions("agent"))
+    doc = {
+        "blocks": [
+            heading("DESCRIPTION", "description"),
+            *[definitions(name, name) for name in names],
+            nested,
+            definitions("The following options"),
+            definitions("-f"),
+            definitions("pre commit"),
+            heading("TOKENS", "tokens"),
+            definitions("%C"),
+            heading("FILES", "files"),
+            definitions("$HOME/.ssh/config", "file"),
+        ]
+    }
+    rows = symbol_rows("ssh_config", "5", doc)
+    terms = {row["term"] for row in rows}
+    assert set(names) <= terms
+    assert "$HOME/.ssh/config" in terms
+    assert not {"agent", "session", "tun", "x11", "C", "The", "f", "pre", "commit"} & terms
+    for title in ("PROFILES", "SOME ENVIRONMENT NOTES", "ERRORS AND DIAGNOSTICS"):
+        assert (
+            symbol_rows(
+                "example",
+                "1",
+                {"blocks": [heading(title, "section"), definitions("HOME /etc/config ENOSPC")]},
+            )
+            == []
+        )
+
+
+def test_suffixed_subcommands_and_utf16_limits():
+    from ingestion.symbols import utf16_length
+
+    assert symbol_rows("openssl-x509", "1ossl", {"blocks": []})[0]["term"] == "openssl x509"
+    assert symbol_rows("ip-address", "8foo", {"blocks": []})[0]["term"] == "ip address"
+    rows = symbol_rows(
+        "example",
+        "1",
+        {"blocks": [heading("ENVIRONMENT", "env"), definitions("HOME", text="a" * 159 + "😀")]},
+    )
+    assert rows[0]["excerpt"] == "a" * 159
+    assert utf16_length(rows[0]["excerpt"]) <= 160

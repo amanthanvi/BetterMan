@@ -1363,12 +1363,12 @@ def _upload_worker_count() -> int:
 def _page_batch_limits() -> tuple[int, int]:
     """Pages and exact request bytes per batch, each overridable by environment.
 
-    Twenty pages keep each mutation small; eight MiB keeps a batch of large
+    Ten pages keep each mutation small; eight MiB keeps a batch of large
     pages well under Convex's 16 MiB function-argument limit. Read before the
     release is created so a bad value cannot strand a half-uploaded release.
     """
     return (
-        _positive_int_env("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", 20),
+        _positive_int_env("BETTERMAN_INGEST_PAGE_BATCH_ITEMS", 10),
         _positive_int_env("BETTERMAN_INGEST_PAGE_BATCH_BYTES", 8 * 1024 * 1024),
     )
 

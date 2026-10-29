@@ -29,13 +29,24 @@ export async function explainFixture(documentsRead = 258) {
           { flags: '-print0', anchorId: 'print0' }, { flags: '-delete', anchorId: 'delete' }, { flags: '-exec', anchorId: 'exec', argument: 'COMMAND' },
         ] },
         { name: 'xargs', section: '1', options: [{ flags: '-0', anchorId: 'null' }] },
-        { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' }, { flags: '-r', anchorId: 'recursive' }] },
+        { name: 'rm', section: '1', options: [{ flags: '-f, --force', anchorId: 'force' }, { flags: '-r', anchorId: 'recursive' }, {flags:'-i',anchorId:'interactive'}, {flags:'-I',anchorId:'interactive-once'}, {flags:'--interactive[=WHEN]',anchorId:'interactive-long'}] },
         { name: 'git', section: '1', options: [{ flags: '-C', anchorId: 'chdir', argument: 'DIR' }] },
+        { name: 'git-rebase', section: '1', options: [] },
         { name: 'git-commit', section: '1', options: [{ flags: '-m, --message', anchorId: 'message', argument: 'MESSAGE' }] },
-        { name: 'ip', section: '8', options: [] }, { name: 'ip-address', section: '8', options: [] },
+        { name: 'ip', section: '8', options: [] }, { name: 'ip-address', section: '8', options: [] }, {name:'ip-addrlabel', section:'8',options:[]},
+        {name:'ssh', section:'1',options:[]}, {name:'ssh-add',section:'1',options:[]},
+        {name:'openssl',section:'1ssl',options:[]}, {name:'openssl-x509',section:'1ossl',options:[]},
+        {name:'cp',section:'1',options:[{flags:'-v',anchorId:'verbose'}]}, {name:'ls',section:'1',options:[{flags:'-n',anchorId:'numeric'}]},
+        ...['timeout','nice','nohup','time','command','exec','doas','echo'].map(name=>({name,section:'1',options:[]})),
+        {name:'dd',section:'1',options:[]},
+        {name:'truncate',section:'1',options:[{flags:'-s, --size',argument:'SIZE',anchorId:'size'}]},
+        {name:'mkfs.ext4',section:'8',options:[{flags:'-n',anchorId:'dry-run'}, {flags:'-L',anchorId:'label',argument:'LABEL'}]},
+        {name:'shred',section:'1',options:[]},
+        {name:'rsync',section:'1',options:[{flags:'--delete',anchorId:'delete'}, {flags:'-n, --dry-run',anchorId:'dry-run'}]},
+        {name:'git-clean',section:'1',options:[...['f','n','d','i'].map(f=>({flags:`-${f}`,anchorId:f})),{flags:'--dry-run',anchorId:'dry'}]},
         { name: 'mysql', section: '1', options: [{ flags: '-u, --user', anchorId: 'user', argument: 'USER' }] },
         { name: 'bash', section: '1', options: [] },
-        { name: 'sudo', section: '1', options: [{ flags: '-u', anchorId: 'user', argument: 'USER' }] },
+        { name: 'sudo', section: '1', options: [{ flags: '-u', anchorId: 'user', argument: 'USER' },{flags:'-i',anchorId:'login'}] },
         { name: 'env', section: '1', options: [] },
         { name: 'ssh_config', section: '5', options: [] }, { name: 'systemd.service', section: '5', options: [] },
         { name: 'errno', section: '3', options: [] },
@@ -47,11 +58,11 @@ export async function explainFixture(documentsRead = 258) {
         await ctx.db.insert('manPageSearchDocuments', { pageId, releaseId, datasetReleaseId: distro, name: spec.name, nameNorm: spec.name, section: spec.section, title: `${spec.name}(${spec.section})`, description: `Manual for ${spec.name}`, descNorm: '', searchText: '', snippetText: '' });
         for (const row of optionFlagRows(spec.options)) await ctx.db.insert('manPageOptionFlags', { ...row, releaseId, pageId, nameNorm: spec.name, section: spec.section, anchorId: `${distro}-${row.anchorId}` });
         const symbols: SymbolInput[] = [];
-        if (spec.name.includes('-')) symbols.push({ term: spec.name.replace('-', ' '), anchorId: '', excerpt: `Subcommand ${spec.name}`, kind: 'subcommand' });
+        if (/^(git|ip|openssl)-/.test(spec.name)) symbols.push({ term: spec.name.replace('-', ' '), anchorId: '', excerpt: `Subcommand ${spec.name}`, kind: 'subcommand' });
         if (spec.name === 'ssh_config') symbols.push({ term: 'ForwardAgent', anchorId: 'ForwardAgent', excerpt: 'Forward authentication agent connections.', kind: 'config' });
         if (spec.name === 'systemd.service') symbols.push({ term: 'ExecStart=', anchorId: 'ExecStart', excerpt: 'Commands executed when this service starts.', kind: 'config' });
         if (spec.name === 'errno') symbols.push({ term: 'ENOSPC', anchorId: 'enospc', excerpt: 'No space left on device.', kind: 'errors' });
-        if (spec.name === 'bash') for (const kind of ['pipeline', 'redirect', 'quoting', 'glob', 'substitution', 'subshell', 'list', 'assignment', 'expansion']) symbols.push({ term: `shell:${kind}`, anchorId: `real-${kind}`, excerpt: `Shell ${kind}`, kind: 'shell' });
+        if (spec.name === 'bash') for (const kind of ['pipeline', 'redirect', 'quoting', 'glob', 'substitution', 'subshell', 'list', 'assignment', 'expansion', 'processSubstitution']) symbols.push({ term: `shell:${kind}`, anchorId: `real-${kind}`, excerpt: `Shell ${kind}`, kind: 'shell' });
         await insertSymbols(ctx, release, pageId, { ...spec, title: `${spec.name}(${spec.section})`, description: `Manual for ${spec.name}` }, symbols);
       }
     }
@@ -69,13 +80,13 @@ describe('bounded explain resolution', () => {
     const pipeline = await explain(t, "find . -name '*.log' -mtime +7 -print0 | xargs -0 rm -f");
     expect(pipeline.stages.map((s: {tokens: {kind: string;value: string}[]}) => s.tokens.find(t => t.kind === 'command')?.value)).toEqual(['find', 'xargs', 'rm']);
     expect(pipeline.stages[0].tokens.find((t: {value: string}) => t.value === '|').shell.anchor).toBe('real-pipeline');
-    expect(pipeline.stages[2].destructive[0].description).toContain('rm requests file removal');
+    expect(pipeline.stages[2].destructive[0].description).toContain('removes the paths supplied by xargs without prompting');
     expect(pipeline.shareUrl).toBe(`/explain?cmd=${encodeURIComponent(pipeline.input)}`);
     expect(pipeline.diagnostics).toEqual([]);
   });
   it('resolves subcommands, distro variants, attached values and real find flags', async () => {
     const t = await explainFixture(30);
-    for (const [cmd, name] of [['git commit -m "message"', 'git-commit'], ['ip addr', 'ip-address']]) {
+    for (const [cmd, name] of [['git commit -m "message"', 'git-commit'], ['ip addr', 'ip-address'], ['openssl x509', 'openssl-x509']]) {
       const result = await explain(t, cmd);
       expect(result.stages[0].tokens.find((t: {kind: string}) => t.kind === 'subcommand').page.name).toBe(name);
     }
@@ -106,7 +117,7 @@ describe('bounded explain resolution', () => {
     const result = await explain(t, 'missing -f | tar -- -x');
     expect(result.stages[0].tokens[0]).toMatchObject({ kind: 'unknown', page: null });
     expect(result.stages[1].tokens.at(-1)).toMatchObject({ kind: 'argument', value: '-x', anchor: null });
-    for (const cmd of ['rm -f=invalid', 'rm -- -f', 'find . -name -delete', 'tar -f --remove-files', 'rm -f --help']) {
+    for (const cmd of ['rm -f=invalid', 'find . -name -delete', 'tar -f --remove-files', 'rm -f --help']) {
       expect((await explain(t, cmd)).stages.flatMap((s: {destructive: unknown[]}) => s.destructive), cmd).toEqual([]);
     }
     const unknown = await explain(t, 'tar -Qxf');
@@ -169,4 +180,104 @@ describe('symbol search and ranking', () => {
     expect(result.results.slice(0,3).map(t => t.section)).toEqual(['1', '8', '3']);
     expect(result.results.slice(0,3).every(t => t.name === 'lookup')).toBe(true);
   });
+});
+
+describe('stable prefix pagination', () => {
+  it('returns every page once, matching a full sort for mixed sections, lengths and descriptions', async () => {
+    const t = await explainFixture();
+    await t.run(async ctx => {
+      const original = await ctx.db.query('manPageSearchDocuments').first();
+      const {_id, _creationTime, ...row} = original!; void _id; void _creationTime;
+      const page = await ctx.db.get(row.pageId);
+      const {_id: id, _creationTime: created, ...fields} = page!; void id; void created;
+      for (let i = 0; i < 40; i++) {
+        const name = `lx${String(i).padStart(2,'0')}${i % 3 ? '_long_tail' : ''}`, section = ['3','8','1'][i % 3];
+        const pageId = await ctx.db.insert('manPages', {...fields, name, section, externalId: name});
+        await ctx.db.insert('manPageSearchDocuments', {...row, pageId, name, nameNorm: name, section, descNorm: i % 2 ? 'lx' : ''});
+      }
+    });
+    const query = (limit: number, offset: number) => t.query(api.queries.search, {distro:'debian',q:'lx',section:null,limit,offset});
+    const full = (await query(50,0)).results.map(r => `${r.name}(${r.section})`);
+    expect(full).toHaveLength(40);
+    for (const size of [10,7,13]) {
+      const pages: string[] = [];
+      for (let offset=0; offset<40; offset+=size) pages.push(...(await query(size,offset)).results.map(r => `${r.name}(${r.section})`));
+      expect(pages).toEqual(full);
+      expect(new Set(pages).size).toBe(40);
+    }
+  });
+});
+
+describe('review regressions: explanation semantics', () => {
+  it.each([
+    ['timeout 5 cp -v a b','cp','-v'],['nice ls -n dir','ls','-n'],['nohup cp -v a b','cp','-v'],
+    ['time -f format cp -v a b','cp','-v'], ['timeout -s TERM -k 1 5 cp -v a b','cp','-v'], ['nice -n 5 cp -v a b','cp','-v'], ['exec -a name cp -v a b','cp','-v'], ['doas -u root cp -v a b','cp','-v'],['command cp -v a b','cp','-v'],['exec cp -v a b','cp','-v'],['doas cp -v a b','cp','-v'],
+  ])('unwraps %s with wrapper-specific operands', async (cmd, name, flag) => {
+    const result=await explain(await explainFixture(),cmd);
+    const token=result.stages.flatMap((s: {tokens: {value:string;page:{name:string}}[]})=>s.tokens).find((t:{value:string})=>t.value===flag);
+    expect(token.page.name).toBe(name);
+  });
+  it('guards combined sudo shell flags, rejects git abbreviations and unrelated hyphen pages', async()=>{
+    const t=await explainFixture();
+    const process = await explain(t,'echo <(ls)');
+    expect(process.stages[0].tokens.find((token:{value:string})=>token.value==='<(ls)').shell.anchor).toBe('real-processSubstitution');
+    const sudo=await explain(t,'sudo -iu root rm -rf /');
+    expect(sudo.diagnostics.join(' ')).toContain('Cannot statically unwrap sudo');
+    expect(sudo.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+    expect(sudo.stages[0].tokens.find((x:{value:string})=>x.value==='root').kind).toBe('optionArgument');
+    expect((await explain(t,'git rebas')).stages[0].tokens.at(-1).kind).toBe('unknown');
+    expect((await explain(t,'ssh add')).stages[0].tokens.at(-1)).toMatchObject({kind:'argument',page:null});
+  });
+  it.each([
+    ['rm -rf build/','removes build/ and everything under it without prompting','ls -d'],
+    ['rm -i -f x','removes x without prompting','ls -d'], ['rm f','removes f.','ls -d'], ['find . | xargs rm','paths supplied by xargs','ls -d'],
+    ['find . -exec rm {} +','each path substituted for {}','ls -d'],
+    ['find . -delete','deletes matching files','-print'],
+    ['dd if=input of=output','writes input data to output',null],
+    ['truncate -s 0 f','zero bytes',null],['shred f','overwrites the contents of f',null],
+    ['mkfs.ext4 /dev/sdb1','creates a filesystem on /dev/sdb1','add `-n`'],
+    ['rsync --delete source/ dest/','deletes destination entries','--dry-run'],
+    ['git clean -fd','untracked files and directories','-n'],
+    ['echo text &> f','opens f for output with truncation',null],
+    ['echo text >| f','opens f for output with truncation',null],
+    ['echo text >& f','opens f for output with truncation',null],
+  ])('describes literal operation %s accurately',async(cmd,wording,dryRun)=>{
+    const result=await explain(await explainFixture(),cmd);
+    const notes=result.stages.flatMap((s:{destructive:{description:string;dryRun:string|null}[]})=>s.destructive);
+    expect(notes.some((n:{description:string})=>n.description.includes(wording))).toBe(true);
+    expect(notes.every((n:{description:string})=>!(/\bmay\b|\bcan\b/.test(n.description)))).toBe(true);
+    if(dryRun) expect(notes.some((n:{dryRun:string|null})=>n.dryRun?.includes(dryRun))).toBe(true);
+  });
+  it.each([
+    'dd if=/dev/zero of=/dev/null','dd if=input of=/dev/stdout','dd if=input of=/dev/fd/2',
+    'rm -rfi x','rm -f -i x','rm -f -I x','rm -f --interactive=always x',
+    'truncate -s 0 -s +1G f','truncate -s +1G f',"truncate -s '>1G' f",'mkfs.ext4 -n /dev/sdb1','mkfs.ext4 -L label',
+    'rsync --delete --dry-run source/ dest/','git clean -fn',
+    'echo x &> /dev/null','echo x >| /dev/tty','echo x >& 2',
+    'echo \\$(rm -rf /)','"FOO=bar" rm -rf /',
+  ])('makes no destructive assertion for %s',async cmd=>{
+    const result=await explain(await explainFixture(),cmd);
+    expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+  });
+});
+
+it('clips astral symbol excerpts in UTF-16 without failing an ingest batch', async () => {
+  const t = await explainFixture();
+  await t.run(async ctx => {
+    const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q => q.eq('stage','prod').eq('locale','en').eq('distro','debian')).unique();
+    const release = (await ctx.db.get(active!.releaseId))!;
+    const page = (await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId',release._id).eq('name','ssh_config')).first())!;
+    await insertSymbols(ctx,release,page._id,page,[{term:'Unicode',anchorId:'unicode',excerpt:'a'.repeat(159)+'😀',kind:'config'}]);
+    const row = await ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q=>q.eq('releaseId',release._id).eq('termNorm','unicode')).first();
+    expect(row!.excerpt).toBe('a'.repeat(159));
+  });
+});
+
+it.each([
+  ['x'.repeat(4097),'EXPLAIN_INPUT_TOO_LONG'],
+  ['echo '+'a '.repeat(129),'EXPLAIN_TOO_MANY_TOKENS'],
+  [Array(26).fill('echo').join(';'),'EXPLAIN_TOO_MANY_STAGES'],
+  ['('.repeat(10)+'echo'+')'.repeat(10),'EXPLAIN_TOO_DEEP'],
+])('returns structured Convex limit codes: %s', async (cmd,code) => {
+  await expect(explain(await explainFixture(),cmd)).rejects.toMatchObject({data:{code}});
 });

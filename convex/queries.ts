@@ -3,6 +3,7 @@ import { paginationOptsValidator } from "convex/server";
 import { MAX_MANIFEST_SECTIONS } from "./_releaseManifest";
 import { resolveRelatedItems } from "./_relatedLinks";
 import { flagTakesArgument, parseOptionQuery } from "./_optionFlags";
+import { symbolInput } from './_symbols';
 import { nameEditDistance } from "./_searchTypos";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -423,6 +424,7 @@ type SearchHit = {
   highlights: string[];
   match?: "option";
   anchorId?: string;
+  symbolKind?: 'environment' | 'files' | 'errors' | 'config' | 'subcommand' | 'shell';
 };
 
 type RankedHit = SearchHit & { rank: number };
@@ -533,12 +535,15 @@ async function clusterHits(ctx: QueryCtx, releaseId: Id<"datasetReleases">, name
 function rankSearchDocument(
   doc: Pick<Doc<"manPageSearchDocuments">, "nameNorm" | "descNorm">,
   queryNorm: string,
+  index: number,
 ): number {
-  let rank = 1000;
-  if (doc.nameNorm === queryNorm) rank += 10_000;
-  if (doc.nameNorm.startsWith(queryNorm)) rank += 2_000;
-  if (doc.nameNorm !== queryNorm && /^[_-]/.test(doc.nameNorm.slice(queryNorm.length))) rank -= 100;
-  if (doc.descNorm.includes(queryNorm)) rank += 500;
+  // Fixed five-row windows preserve the scan's total order across offset sizes.
+  // Prefixes always precede the fixed description/symbol set; only a complete
+  // window is reordered for relevance and section ties.
+  let rank = 10_000 - Math.floor(index / 5) * 100;
+  if (doc.nameNorm === queryNorm) rank += 40;
+  if (doc.nameNorm !== queryNorm && /^[_-]/.test(doc.nameNorm.slice(queryNorm.length))) rank -= 20;
+  if (doc.descNorm.includes(queryNorm)) rank += 10;
   return rank;
 }
 
@@ -584,7 +589,7 @@ async function textHits(
   const queryNorm = queryText.toLowerCase();
   // Name prefix first, then the description search index (one line per page).
   const prefixDocs = await searchDocsByNamePrefix(ctx, {
-    releaseId, section, prefix: queryNorm, takeCount: args.takeCount,
+    releaseId, section, prefix: queryNorm, takeCount: Math.ceil(args.takeCount / 5) * 5,
   });
 
   // Always merge the same description candidates so every offset slices one
@@ -597,9 +602,9 @@ async function textHits(
   const contentWords = queryNorm.split(/[^a-z0-9_]+/).filter((word) => word && !SEARCH_STOP_WORDS.has(word));
 
   const ranked = new Map<Id<"manPages">, RankedHit>();
-  prefixDocs.forEach((doc) => {
+  prefixDocs.forEach((doc, index) => {
     const current = ranked.get(doc.pageId);
-    const rank = rankSearchDocument(doc, queryNorm);
+    const rank = rankSearchDocument(doc, queryNorm, index);
     if (!current || rank > current.rank) ranked.set(doc.pageId, searchDocumentHit(doc, queryText, rank));
   });
   descriptionDocs.forEach((doc, index) => {
@@ -615,7 +620,7 @@ async function textHits(
     const existing = ranked.get(symbol.pageId);
     if (existing?.name.toLowerCase() === queryNorm) continue;
     ranked.set(symbol.pageId, { name: symbol.name, section: symbol.section, title: symbol.title, description: symbol.description,
-      highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, rank: Math.max(existing?.rank ?? 0, 2_500) });
+      symbolKind: symbol.kind, highlights: [symbol.term, symbol.excerpt].filter(Boolean), anchorId: symbol.anchorId || undefined, rank: Math.max(existing?.rank ?? 0, 2_500) });
   }
   return [...ranked.values()].sort(compareHits);
 }
@@ -669,7 +674,7 @@ export const search = query({
     results: v.array(v.object({
       name: v.string(), section: v.string(), title: v.string(), description: v.string(),
       highlights: v.array(v.string()),
-      match: v.optional(v.literal("option")), anchorId: v.optional(v.string()),
+      match: v.optional(v.literal("option")), anchorId: v.optional(v.string()), symbolKind: v.optional(symbolInput.fields.kind),
     })),
     suggestions: v.array(v.string()),
     correctedQuery: v.optional(v.string()),
@@ -790,6 +795,7 @@ export const search = query({
         title: hit.title,
         description: hit.description,
         highlights: hit.highlights,
+        ...(hit.symbolKind ? {symbolKind: hit.symbolKind} : {}),
         ...(hit.anchorId ? { anchorId: hit.anchorId, ...(hit.match === 'option' ? { match: 'option' as const } : {}) } : {}),
       })),
       suggestions,

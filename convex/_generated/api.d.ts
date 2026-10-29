@@ -12,6 +12,8 @@ import type * as _derivedEncoding from "../_derivedEncoding.js";
 import type * as _derivedInputs from "../_derivedInputs.js";
 import type * as _derivedModel from "../_derivedModel.js";
 import type * as _generatedLayer from "../_generatedLayer.js";
+import type * as _commandConventions from "../_commandConventions.js";
+import type * as _destructive from "../_destructive.js";
 import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
 import type * as _manifestStorage from "../_manifestStorage.js";
@@ -54,6 +56,8 @@ declare const fullApi: ApiFromModules<{
   _derivedInputs: typeof _derivedInputs;
   _derivedModel: typeof _derivedModel;
   _generatedLayer: typeof _generatedLayer;
+  _commandConventions: typeof _commandConventions;
+  _destructive: typeof _destructive;
   _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
   _manifestStorage: typeof _manifestStorage;

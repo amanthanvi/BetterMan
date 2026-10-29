@@ -163,14 +163,14 @@ test('command palette: a symbol result keeps its definition anchor', async ({ br
   const page = await context.newPage()
   try {
     await page.route(/\/api\/v1\/search\?/, route => route.fulfill({
-      json: { query: 'LD_PRELOAD', results: [{ name: 'bash', section: '1', title: 'bash(1)', description: 'Shell environment', highlights: ['LD_PRELOAD'], anchorId: 'description' }], suggestions: [], hasMore: false },
+      json: { query: 'LD_PRELOAD', results: [{ name: 'bash', section: '1', title: 'bash(1)', description: 'Shell environment', symbolKind: 'environment', highlights: ['LD_PRELOAD'], anchorId: 'description' }], suggestions: [], hasMore: false },
     }))
     await page.goto('/')
     await waitForInteractiveShell(page)
     await page.getByRole('button', { name: 'Search' }).click()
     await page.getByRole('combobox', { name: 'Command palette input' }).fill('LD_PRELOAD')
     const result = page.getByRole('option', { name: /bash\(1\)/i })
-    await expect(result.getByText('definition', { exact: true })).toBeVisible()
+    await expect(result.getByText('environment', { exact: true })).toBeVisible()
     await result.click()
     await expect(page).toHaveURL(/\/man\/bash\/1#description$/)
   } finally {

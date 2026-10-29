@@ -1,10 +1,12 @@
-import { v, type Infer } from 'convex/values';
+import { ConvexError, v, type Infer } from 'convex/values';
 import { query, type QueryCtx } from './_generated/server';
 import { distroValidator } from './schema';
 import { requireActiveRelease } from './_releaseLookups';
-import { PUBLIC_DATASET_STAGE, prefixUpperBound } from './lib';
+import { PUBLIC_DATASET_STAGE } from './lib';
 import { flagTakesArgument } from './_optionFlags';
-import { parseShell, destructiveSignals, type ShellToken } from './_shellParser';
+import { parseShell, ShellParseError, type ShellToken } from './_shellParser';
+import { destructiveSignals } from './_destructive';
+import { COMMAND_FAMILIES, IP_OBJECTS, commandSection } from './_commandConventions';
 import type { Doc } from './_generated/dataModel';
 
 const pageObject = v.object({ name: v.string(), section: v.string(), distro: distroValidator });
@@ -34,38 +36,50 @@ export const explain = query({
 });
 
 export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'datasetReleases'>['distro']; cmd: string }) {
-  const parsed = parseShell(args.cmd);
+  let parsed: ReturnType<typeof parseShell>;
+  try { parsed = parseShell(args.cmd); } catch (error) {
+    if (error instanceof ShellParseError) throw new ConvexError({code: error.code});
+    throw error;
+  }
   const release = await requireActiveRelease(ctx, { stage: PUBLIC_DATASET_STAGE, distro: args.distro });
-  // At most 64 indexed lookups, each at most four documents, plus two release reads.
-  let lookups = 0;
+  // Both probes and returned documents are bounded; reserve each query's maximum
+  // before issuing it so even multi-row lookups cannot exceed 66 total reads.
+  let lookups = 0, remaining = 64, limited = false;
   const cache = new Map<string, unknown>();
-  async function read<T>(key: string, fn: () => Promise<T>): Promise<T | null> {
+  async function read<T>(key: string, maximum: number, fn: () => Promise<T>): Promise<T | null> {
+    if (limited) return null;
     if (cache.has(key)) return cache.get(key) as T;
-    if (lookups++ >= 64) { if (!parsed.diagnostics.includes('Resolution lookup limit reached')) parsed.diagnostics.push('Resolution lookup limit reached'); return null; }
-    const value = await fn(); cache.set(key, value); return value;
+    if (lookups++ >= 64 || remaining < maximum) {
+      limited = true;
+      if (!parsed.diagnostics.includes('Resolution lookup limit reached')) parsed.diagnostics.push('Resolution lookup limit reached');
+      return null;
+    }
+    const value = await fn();
+    remaining -= Array.isArray(value) ? value.length : value === null ? 0 : 1;
+    cache.set(key, value); return value;
   }
   const pageRef = (page: { name: string; section: string }) => ({ name: page.name, section: page.section, distro: args.distro });
   async function pageFor(name: string): Promise<Doc<'manPages'> | null> {
     if (!/^[A-Za-z0-9_.+-]+$/.test(name)) return null;
-    const pages = await read(`page:${name}`, () => ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', release._id).eq('name', name)).take(3));
-    const page = pages?.find(p => p.section === '1' || p.section === '8');
+    const pages = await read(`page:${name}`, 3, () => ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', release._id).eq('name', name)).take(3));
+    const page = pages?.find(p => commandSection(p.section));
     if (page) return page;
     // A single alias hop, within the same release, never a chain or a corpus scan.
-    const aliases = await read(`alias:${name}`, () => ctx.db.query('manPageAliases').withIndex('by_releaseId_and_name', q => q.eq('releaseId', release._id).eq('name', name)).take(3));
-    const alias = aliases?.find(a => a.section === '1' || a.section === '8');
-    return alias ? await read(`target:${alias.targetName}:${alias.targetSection}`, () => ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', release._id).eq('name', alias.targetName).eq('section', alias.targetSection)).unique()) : null;
+    const aliases = await read(`alias:${name}`, 3, () => ctx.db.query('manPageAliases').withIndex('by_releaseId_and_name', q => q.eq('releaseId', release._id).eq('name', name)).take(3));
+    const alias = aliases?.find(a => commandSection(a.section));
+    return alias ? await read(`target:${alias.targetName}:${alias.targetSection}`, 1, () => ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', release._id).eq('name', alias.targetName).eq('section', alias.targetSection)).first()) : null;
   }
   async function option(page: Doc<'manPages'>, flag: string) {
-    return await read(`flag:${page._id}:${flag}`, () => ctx.db.query('manPageOptionFlags').withIndex('by_pageId_and_flag', q => q.eq('pageId', page._id).eq('flag', flag)).unique());
+    return await read(`flag:${page._id}:${flag}`, 1, () => ctx.db.query('manPageOptionFlags').withIndex('by_pageId_and_flag', q => q.eq('pageId', page._id).eq('flag', flag)).first());
   }
   async function shellReference(token: ShellToken, relation: string) {
     const syntax = token.kind === 'redirect' || token.kind === 'redirectTarget' ? 'redirect'
       : token.kind === 'operator' ? (/[<>]/.test(token.value) ? 'redirect' : token.value.includes('|') && !token.value.includes('||') ? 'pipeline' : /[()]/.test(token.value) ? 'subshell' : 'list')
       : token.kind === 'assignment' ? 'assignment' : token.kind === 'glob' ? 'glob'
-      : token.dynamic ? (token.text.includes('$(') || token.text.includes('`') ? 'substitution' : 'expansion')
+      : token.dynamic ? (/^[<>]\(/.test(token.text) ? 'processSubstitution' : token.text.includes('$(') || token.text.includes('`') ? 'substitution' : 'expansion')
       : /['"\\]/.test(token.text) ? 'quoting' : relation === 'substitution' && token.kind === 'command' ? 'substitution' : null;
     if (!syntax) return null;
-    const rows = await read(`shell:${syntax}`, () => ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', release._id).eq('termNorm', `shell:${syntax}`)).take(4));
+    const rows = await read(`shell:${syntax}`, 4, () => ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', release._id).eq('termNorm', `shell:${syntax}`.toLowerCase())).take(4));
     const row = rows?.find(row => row.kind === 'shell' && row.name === 'bash' && row.section === '1');
     if (row) return { page: pageRef(row), anchor: row.anchorId || null, excerpt: row.excerpt };
     const bash = await pageFor('bash');
@@ -81,7 +95,7 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
     const commandPage = page;
     let subcommandIndex = -1;
     let candidateIndex = commandIndex + 1;
-    while (page && candidateIndex < stage.tokens.length) {
+    while (page && COMMAND_FAMILIES.has(page.name) && candidateIndex < stage.tokens.length) {
       const token = stage.tokens[candidateIndex];
       if (token.kind !== 'word' || !token.value.startsWith('-')) break;
       const row = await option(page, token.value.split('=', 1)[0]);
@@ -89,22 +103,28 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
       candidateIndex += (row.takesArgument ?? flagTakesArgument(row.flags)) && !token.value.includes('=') ? 2 : 1;
     }
     const next = stage.tokens[candidateIndex];
-    if (page && next?.kind === 'word' && /^[a-z][a-z0-9-]*$/.test(next.value)) {
-      const prefix = `${page.name} ${next.value}`;
-      const rows = await read(`sub:${prefix}`, () => ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', release._id).gte('termNorm', prefix).lt('termNorm', prefixUpperBound(prefix))).take(4));
-      const candidates = rows?.filter(row => row.kind === 'subcommand');
-      const row = candidates?.find(row => row.termNorm === prefix) ?? (rows && rows.length < 4 && candidates?.length === 1 ? candidates[0] : null);
-      if (row) {
-        const subpage = await read(`id:${row.pageId}`, () => ctx.db.get(row.pageId));
-        if (subpage && subpage.releaseId === release._id) { page = subpage; subcommandIndex = candidateIndex; }
-      } else {
-        // Existing releases can resolve hyphenated manuals before symbol ingestion.
-        const name = `${page.name}-${next.value}`;
-        const pages = await read(`subpage:${name}`, () => ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', release._id).gte('name', name).lt('name', prefixUpperBound(name))).take(4));
-        const commands = pages?.filter(p => p.section === '1' || p.section === '8');
-        const match = commands?.find(p => p.name === name) ?? (pages && pages.length < 4 && commands?.length === 1 ? commands[0] : null);
-        if (match) { page = match; subcommandIndex = candidateIndex; }
+    const family = page && COMMAND_FAMILIES.has(page.name) ? page.name : null;
+    let unknownSubcommand = -1;
+    if (page && family && next?.kind === 'word' && /^[a-z][a-z0-9-]*$/.test(next.value)) {
+      const literal = `${family} ${next.value}`;
+      const lookupSymbol = (term: string) => read(`sub:${term}`, 4, () => ctx.db.query('manPageSymbols').withIndex('by_releaseId_and_termNorm', q => q.eq('releaseId', release._id).eq('termNorm', term)).take(4));
+      let rows = await lookupSymbol(literal);
+      const verb = family === 'ip' ? IP_OBJECTS[next.value] ?? next.value : next.value;
+      if (!rows?.length && verb !== next.value) rows = await lookupSymbol(`${family} ${verb}`);
+      const row = rows?.find(row => row.kind === 'subcommand' && commandSection(row.section));
+      let subpage: Doc<'manPages'> | null = null;
+      if (row) subpage = await read(`id:${row.pageId}`, 1, () => ctx.db.get(row.pageId));
+      // Exact names only, only for known families, and only without symbol rows.
+      else if (rows && !rows.length) {
+        const names = [...new Set([next.value, verb])];
+        for (const name of names) {
+          const pages = await read(`subpage:${family}-${name}`, 3, () => ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q => q.eq('releaseId', release._id).eq('name', `${family}-${name}`)).take(3));
+          subpage = pages?.find(p => commandSection(p.section)) ?? null;
+          if (subpage) break;
+        }
       }
+      if (subpage && subpage.releaseId === release._id) { page = subpage; subcommandIndex = candidateIndex; }
+      else unknownSubcommand = candidateIndex;
     }
     const tokens: Infer<typeof tokenValidator>[] = [];
     let pending: Doc<'manPageOptionFlags'> | null = null, ended = false;
@@ -112,6 +132,7 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
       const token = stage.tokens[i], shell = await shellReference(token, stage.relation);
       const currentPage = subcommandIndex >= 0 && i < subcommandIndex ? commandPage : page;
       const base = { text: token.text, value: token.value, start: token.start, end: token.end, page: null as ReturnType<typeof pageRef> | null, anchor: null as string | null, excerpt: '', takesArgument: null as boolean | null, portability: null, shell };
+      if (limited || i === unknownSubcommand) { tokens.push({...base, kind: 'unknown'}); continue; }
       if (token.kind === 'command' || i === subcommandIndex) {
         const target = i === subcommandIndex ? page : commandPage;
         tokens.push({ ...base, kind: target ? (i === subcommandIndex ? 'subcommand' : 'command') : 'unknown', page: target ? pageRef(target) : null, excerpt: target?.description ?? '' });
@@ -148,10 +169,9 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
       } else tokens.push({ ...base, kind: token.dynamic ? 'expansion' : token.kind === 'glob' ? 'glob' : 'argument' });
     }
     if (pending) parsed.diagnostics.push(`Missing argument for ${pending.flag}`);
-    const flags = tokens.filter(token => token.kind === 'option').map(token => token.value);
     const uncertain = parsed.diagnostics.length > 0 || tokens.some(token => token.kind === 'unknown') || (stage.parent !== null && uncertainStages.has(stage.parent));
     if (uncertain) uncertainStages.add(stage.id);
-    stages.push({ id: stage.id, parent: stage.parent, relation: stage.relation, tokens, destructive: uncertain ? [] : destructiveSignals(stage, flags) });
+    stages.push({ id: stage.id, parent: stage.parent, relation: stage.relation, tokens, destructive: uncertain ? [] : destructiveSignals(stage, tokens, page?.name ?? '', parsed.stages.find(parent => parent.id === stage.parent)?.tokens.find(token => token.kind === 'command')?.value) });
   }
   return { version: 1 as const, input: args.cmd, shareUrl: `/explain?cmd=${encodeURIComponent(args.cmd)}${args.distro === 'debian' ? '' : `&distro=${args.distro}`}`, diagnostics: parsed.diagnostics, stages };
 }

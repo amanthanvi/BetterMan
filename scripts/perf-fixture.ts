@@ -225,3 +225,26 @@ export async function createExplainFixture(onCall: () => void) {
   })
   return t
 }
+
+// Independent saturated corpus: widening page/symbol ranges changes the resolved
+// stage count even if the request-wide allowance stops the next lookup earlier.
+export async function createExplainMultiFixture(onCall: () => void) {
+  const t = await createExplainFixture(onCall)
+  await t.run(async ctx => {
+    const active = await ctx.db.query('activeReleases').withIndex('by_stage_and_locale_and_distro', q=>q.eq('stage','prod').eq('locale','en').eq('distro','debian')).unique()
+    const git = (await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section', q=>q.eq('releaseId',active!.releaseId).eq('name','git')).first())!
+    const {_id,_creationTime,...fields} = git
+    void _id; void _creationTime
+    for (const section of ['1ssl','3','8']) await ctx.db.insert('manPages',{...fields,section,externalId:`git-${section}`})
+    for (const verb of 'abcdefghijklmnopqrstuvwx') {
+      for (let i=0;i<5;i++) {
+        const name=`git-${verb}${i || ''}`
+        const pageId=await ctx.db.insert('manPages',{...fields,name,externalId:name})
+        await ctx.db.insert('manPageSymbols',{releaseId:git.releaseId,pageId,name,section:'1',title:`${name}(1)`,description:'Saturated subcommand',term:`git ${verb}`,termNorm:`git ${verb}`,anchorId:'',excerpt:'Subcommand',kind:'subcommand'})
+      }
+    }
+    const bash=(await ctx.db.query('manPages').withIndex('by_releaseId_and_name_and_section',q=>q.eq('releaseId',git.releaseId).eq('name','bash')).first())!
+    for(let i=0;i<4;i++) await ctx.db.insert('manPageSymbols',{releaseId:git.releaseId,pageId:bash._id,name:'bash',section:'1',title:'bash(1)',description:'Syntax',term:'shell:pipeline',termNorm:'shell:pipeline',anchorId:`pipeline${i}`,excerpt:'Pipeline',kind:'shell'})
+  })
+  return t
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseShell, destructiveSignals, EXPLAIN_LIMITS } from './_shellParser';
+import { parseShell, EXPLAIN_LIMITS } from './_shellParser';
 
 const commands = (input: string) => parseShell(input).stages.flatMap(s => s.tokens.filter(t => t.kind === 'command').map(t => t.value));
 const words = (input: string) => parseShell(input).stages.flatMap(s => s.tokens.filter(t => !['operator', 'redirect'].includes(t.kind)).map(t => [t.kind, t.value]));
@@ -64,10 +64,12 @@ describe('static shell parser', () => {
       }
     }
   });
-  it.each(['rm -rf /tmp/example', 'find . -delete', 'xargs -0 rm -f', 'dd if=input of=output', 'mkfs.ext4 /dev/example', 'truncate -s 0 file', 'shred file', 'tar --remove-files -cf out in', 'echo hi > file'])('signals requested destructive operations: %s', input => {
-    expect(parseShell(input).stages.flatMap(stage => destructiveSignals(stage)).length).toBeGreaterThan(0);
-  });
-  it.each(['echo "rm -rf /"', 'echo hi >> file', 'echo hi > /dev/null', 'rm --help', 'find . -print', 'dd if=input', '$COMMAND -rf file', 'rm -rf "$TARGET"'])('makes no destructive claim: %s', input => {
-    expect(parseShell(input).stages.flatMap(stage => destructiveSignals(stage))).toEqual([]);
-  });
+});
+
+it('distinguishes quoted assignment words, ANSI-C quotes and process substitutions',()=>{
+  expect(commands('"FOO=bar" rm -rf /')).toEqual(['FOO=bar']);
+  expect(words("echo $'a\\'b'").map(t=>t[1])).toEqual(['echo',"a'b"]);
+  expect(commands('cat <(printf hi)')).toEqual(['cat','printf']);
+  expect(parseShell('cat <(printf hi)').diagnostics).toEqual([]);
+  expect(commands('echo \\$(rm -rf /)')).not.toContain('rm');
 });

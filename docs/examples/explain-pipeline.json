@@ -200,8 +200,8 @@
     {
       "destructive": [
         {
-          "description": "rm requests file removal with force, suppressing prompts and ignoring nonexistent operands.",
-          "dryRun": null
+          "description": "rm -f removes the paths supplied by xargs without prompting.",
+          "dryRun": "run the line with `ls -d` in place of `rm` first"
         }
       ],
       "id": 2,

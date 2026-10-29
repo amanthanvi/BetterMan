@@ -1,8 +1,8 @@
 // Option flags are indexed one row per (page, flag) in manPageOptionFlags so a
 // query such as `--create`, `tar -c`, or `-C` is one exact index lookup.
 
-// Ingestion uploads 20 pages per mutation: 400 flags + 64 symbols per page
-// leaves 6,720 of the 16,000 writes for existing page/content/link metadata.
+// Ingestion uploads ten pages per mutation: 400 flags + 256 symbols per page
+// leaves 9,440 of the 16,000 writes for existing page/content/link metadata.
 export const MAX_OPTION_FLAG_ROWS_PER_PAGE = 400;
 const MAX_FLAG_CHARS = 80;
 

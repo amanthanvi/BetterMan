@@ -175,7 +175,7 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
 try {
   process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
-  const { createFixture, createSearchFixture, createExplainFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
+  const { createFixture, createSearchFixture, createExplainFixture, createExplainMultiFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
   let fixture = await createFixture(() => metrics.calls++)
   metrics = { calls: 0, documents: 0, storageReads: 0 }
   const runtime = globalThis.Convex
@@ -359,8 +359,11 @@ try {
     ['explainArchive', 'explain:explain', { distro: 'debian', cmd: 'tar -xzvf backup.tar.gz -C /srv/www' }],
     ['explainPipeline', 'explain:explain', { distro: 'debian', cmd: "find . -name '*.log' -mtime +7 -print0 | xargs -0 rm -f" }],
     ['explainSubcommand', 'explain:explain', { distro: 'debian', cmd: 'git commit -m "message"' }],
+    ['explainMulti', 'explain:explain', { distro: 'debian', cmd: [...'abcdefghijklmnopqrstuvwx'].map(verb=>`git ${verb}`).join('|') }],
     ['explainBounded', 'explain:explain', { distro: 'debian', cmd: 'bounded ' + Array.from({ length: 100 }, (_, i) => `--limit${i}`).join(' ') }],
   ]) {
+    if (name === 'explainMulti') fixture = await createExplainMultiFixture(() => metrics.calls++)
+    if (name === 'explainBounded') fixture = await createExplainFixture(() => metrics.calls++)
     metrics = { calls: 0, documents: 0, storageReads: 0 }
     const result = await fixture.query(makeFunctionReference(path), args)
     if (name === 'searchSymbol') {
@@ -368,11 +371,16 @@ try {
       assert.equal(result.results[0].anchorId, 'ForwardAgent')
       assert.equal(result.results[0].name, 'ssh_config')
     } else {
-      assert.deepEqual(result.diagnostics, name === 'explainBounded' ? ['Resolution lookup limit reached'] : [])
+      assert.deepEqual(result.diagnostics, ['explainBounded','explainMulti'].includes(name) ? ['Resolution lookup limit reached'] : [])
       const tokens = result.stages.flatMap(stage => stage.tokens)
       if (name === 'explainBounded') {
         assert.equal(tokens.filter(token => token.kind === 'option').length, 63)
         assert.ok(metrics.documents <= 66, 'Explanation lookup ceiling exceeded')
+      } else if(name === 'explainMulti') {
+        assert.ok(metrics.documents <= 66, 'Multi-document explanation ceiling exceeded')
+        assert.ok(tokens.some(token=>token.kind==='unknown'))
+        assert.equal(metrics.documents, 64, 'Saturated multi-row fixture changed its read accounting')
+        assert.equal(tokens.filter(token=>token.kind==='subcommand').length, 11, 'Widened lookup ranges changed resolution coverage')
       } else assert.ok(tokens.every(token => token.kind !== 'unknown'))
       if (name === 'explainArchive') assert.deepEqual(tokens.filter(token => token.kind === 'option').map(token => token.anchor), ['extract', 'gzip', 'verbose', 'file', 'directory'])
       if (name === 'explainPipeline') {

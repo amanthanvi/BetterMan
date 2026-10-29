@@ -54,28 +54,41 @@ at an argument-taking flag or the first unknown flag; it never labels the
 remainder of an unknown option as known switches. A following word belongs
 to an argument-taking flag, including words beginning with `-`. `--` ends
 option interpretation. Subcommands use ingest-derived exact names, or an
-unambiguous bounded prefix (`ip addr` → ip-address(8)). Global flags before a
-subcommand retain their base-command page. Wrapper command arguments are
-separate child stages, including `find -exec` / `-execdir` / `-ok` / `-okdir`.
+exact manual-name fallback for an explicit command-family table. Git verbs
+are exact; iproute2 object aliases map `ip addr` to ip-address(8), regardless
+of ip-addrlabel(8). Command sections include suffixes such as 1ssl/1ossl.
+Global flags before a subcommand retain their base-command page. Wrapper
+command arguments (`sudo`, `env`, `xargs`, `timeout`, `nice`, `nohup`, `time`,
+`command`, `exec`, `doas`) are separate child stages, including `find -exec` /
+`-execdir` / `-ok` / `-okdir`.
 
 Destructive entries have `{description, dryRun}`. They describe standard
 command operations requested by literal input, not completed execution or
 certain data loss. Dynamic input, malformed syntax, unresolved options,
 resolution exhaustion and uncertain wrapper parents suppress claims. Signals
-cover indexed rm recursive/force flags, find -delete, xargs rm, dd of=,
-mkfs variants, truncate, shred, tar --remove-files and `>` overwrite-capable
-redirection. A redirection explicitly says file existence and noclobber state
-are unknown; append and file-descriptor duplication do not imply truncation.
-`dryRun` is currently null: no generic safe rewrite can be promised without
-inspecting all side effects and the execution environment. Absence of a signal
-**does not establish that a command is safe**. Names may be shadowed by shell
+name literal operations and operands, including plain/recursive rm, find
+-delete and -exec rm, xargs rm, dd output, mkfs with a device, reducing
+truncate sizes, shred, tar --remove-files, rsync --delete, git clean, and
+truncating redirections (`>`, `>|`, `&>`, filename `>&`). Interactive/dry-run
+modes and uncertain or unresolved options suppress claims. Ordered rm
+force/interactive switches honor the last applicable switch. Special device
+sinks (/dev/null, standard streams, tty and fd paths) are excluded.
+`dryRun` offers only an operation-specific inspection hint: replace rm with
+`ls -d`, find -delete with -print, add rsync --dry-run, replace git clean -f
+with -n, or add mkfs.ext4 -n. These are inspection suggestions, not a promise
+that the entire original line is safe: other stages still have side effects.
+Absence of a signal **does not establish that a command is safe**. Names may be shadowed by shell
 functions/aliases or executables; their runtime identities are not inspected.
 
 Limits are 4,096 characters, 128 lexical tokens, 24 stages and nesting depth 8.
-The resolver performs at most 64 indexed lookups, each reading at most four
-rows, plus two release reads: a conservative ceiling of 258 documents. It
+The resolver performs at most 64 indexed lookups and shares a 64-document
+allowance across them, plus two release reads: a whole-request ceiling of 66
+documents. Each query reserves its maximum (one, three, or four rows) before
+starting; empty/cache lookups cannot bypass the independent probe cap. It
 caches repeated lookups. Once exhausted, remaining tokens stay unresolved and
-the response includes a diagnostic. The pure parser has no data dependency.
+the response includes a diagnostic. The pure parser has no data dependency. Limit failures use structured
+`ConvexError.data.code` values mapped to HTTP 400, including after production
+error redaction.
 Here-documents, braced parameter expansion, arithmetic expansion, shell control
 structures, and wrappers
 that interpret shell strings (such as `env -S`) are diagnosed as uninterpreted;
@@ -92,12 +105,16 @@ anchors take effect after the next ingest. Old releases remain readable and
 return explicit unknowns or missing excerpts where metadata is absent.
 
 The symbol index is separate from the unchanged document model. Python derives
-up to 64 unique terms per page from definition IDs under ENVIRONMENT, FILES,
+up to 256 unique terms per page from definition IDs under ENVIRONMENT, FILES,
 ERRORS and section-5 directives, plus known hyphenated command families.
 Subsections retain their enclosing category; missing item IDs use the actual
 section ID. Invalid/oversized terms or anchors are omitted, never truncated
-into a bogus anchor. Excerpts are capped at 160 characters. Bash syntax
-headings are reserved first. Search reads at most eight exact matching rows,
+into a bogus anchor. Excerpts are clipped at 160 UTF-16 units without splitting
+surrogate pairs; Python and Convex use the same unit. Terms/anchors over their limits are skipped.
+Contract schema version 2 prevents new ingestion from writing to an older
+deployment. Default page batches are ten items to retain mutation write headroom.
+See [the cached-corpus audit](symbol-index-audit.md) for coverage and quality
+evidence. Bash syntax headings are reserved first. Search reads at most eight exact matching rows,
 denormalized with page metadata, with optional section/distro scoping. No
 runtime document-body or corpus scan is needed. Broader family graphs and
 portability data belong to #399; task phrases (#398) and popularity (#396)
