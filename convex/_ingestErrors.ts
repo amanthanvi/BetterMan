@@ -33,6 +33,8 @@ const DOMAIN_ERROR_STATUS: Record<string, number> = {
   RELEASE_MANIFEST_INCOMPLETE: 409,
   RELATED_METADATA_INCOMPLETE: 409,
   RELATED_METADATA_BACKFILL_FAILED: 409,
+  // Generated-layer records carry a detail after the code: "CODE: detail".
+  INVALID_GENERATED_RECORD: 400,
 };
 
 // The validation message repeats the rejected value, which may be a whole page.
@@ -46,8 +48,10 @@ export function ingestClientError(error: unknown): IngestClientError | null {
   if (ARGUMENT_VALIDATION_PREFIXES.some((prefix) => firstLine.startsWith(prefix))) {
     return { status: 400, code: "INVALID_INGEST_PAYLOAD", message: error.message.slice(0, MAX_ERROR_MESSAGE_CHARS) };
   }
-  const code = firstLine.startsWith(UNCAUGHT_PREFIX) ? firstLine.slice(UNCAUGHT_PREFIX.length) : firstLine;
+  const message = firstLine.startsWith(UNCAUGHT_PREFIX) ? firstLine.slice(UNCAUGHT_PREFIX.length) : firstLine;
+  const [code] = message.split(": ", 1);
   if (!Object.hasOwn(DOMAIN_ERROR_STATUS, code)) return null;
   return { status: DOMAIN_ERROR_STATUS[code], code, message: code === "RELATED_METADATA_BACKFILL_FAILED"
-    ? "Related metadata batch failed three attempts without progress; repair the cause and re-arm the backfill before resuming activation." : code };
+    ? "Related metadata batch failed three attempts without progress; repair the cause and re-arm the backfill before resuming activation."
+    : message.slice(0, MAX_ERROR_MESSAGE_CHARS) };
 }

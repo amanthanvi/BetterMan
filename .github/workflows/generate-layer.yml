@@ -1,0 +1,145 @@
+name: generated-layer
+
+# Builds the generated layer (B6) for the indexed tier: page EXAMPLES,
+# tldr-pages examples and model text, keyed by page content hash. Model calls
+# need the OPENCODE_GO_API_KEY secret; without it the run is a dry run.
+# Owner setup and recovery: docs/runbooks/generated-layer.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      distro:
+        description: Distro whose active release supplies the pages
+        type: choice
+        default: debian
+        options:
+          - debian
+          - ubuntu
+          - fedora
+          - arch
+          - alpine
+          - freebsd
+          - macos
+      stage:
+        description: Dataset stage to read pages from
+        type: choice
+        default: staging
+        options:
+          - staging
+          - prod
+      limit:
+        description: Maximum pages this run (empty for the whole indexed tier)
+        type: string
+        required: false
+        default: ""
+      dry_run:
+        description: Estimate only; no model calls and no writes
+        type: boolean
+        default: true
+      llm:
+        description: Generate model text (off writes page and tldr examples only)
+        type: boolean
+        default: true
+  schedule:
+    # 12:00 UTC on the 2nd and 9th, after the monthly ingest on the 1st and
+    # outside Go's weekday peak hours. The second run resumes a paused pass.
+    - cron: "0 12 2,9 * *"
+
+concurrency:
+  group: generated-layer
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  generate:
+    name: Generated layer (${{ inputs.distro || 'debian' }})
+    runs-on: ubuntu-latest
+    environment: production
+    # Under GitHub's 6 h job limit; the budget governor pauses long before.
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: 3.14
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+
+      - run: cd ingestion && uv sync --frozen
+
+      # Only the spend ledger is carried between runs, from default-branch
+      # runs of this repository, schema-checked and clamped on load. Generated
+      # text is never restored from an artifact. When a trusted ledger from the
+      # last 30 days exists but cannot be recovered, this step fails and
+      # nothing is generated; see docs/runbooks/generated-layer.md.
+      - name: Restore the budget ledger from earlier runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/state"
+          cd ingestion
+          uv run python -m ingestion.generated.cli restore-ledger \
+            --repo "$REPO" --branch "$DEFAULT_BRANCH" \
+            --dest "$RUNNER_TEMP/state/checkpoint.json"
+
+      - name: Build generated layer
+        env:
+          OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+          BETTERMAN_GEN_BUDGET_FRACTION: ${{ vars.BETTERMAN_GEN_BUDGET_FRACTION || '0.5' }}
+          BETTERMAN_GEN_RUN_CAP_USD: ${{ vars.BETTERMAN_GEN_RUN_CAP_USD || '8' }}
+          BETTERMAN_GEN_RPM: ${{ vars.BETTERMAN_GEN_RPM || '20' }}
+          DISTRO: ${{ inputs.distro || 'debian' }}
+          STAGE: ${{ inputs.stage || 'staging' }}
+          LIMIT: ${{ inputs.limit }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          # Scheduled runs write when the key exists; manual runs default to dry.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+          LLM: ${{ github.event_name != 'workflow_dispatch' || inputs.llm }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CONVEX_HTTP_URL:-}" || -z "${CONVEX_INGEST_SECRET:-}" ]]; then
+            echo "Missing BETTERMAN_CONVEX_HTTP_URL / BETTERMAN_CONVEX_INGEST_SECRET." >&2
+            exit 1
+          fi
+          set -- run --source convex --distro "$DISTRO" --stage "$STAGE" \
+            --checkpoint "$RUNNER_TEMP/state/checkpoint.json" \
+            --cache-dir "$RUNNER_TEMP/work/parts" \
+            --work "$RUNNER_TEMP/work"
+          if [ -n "$LIMIT" ]; then set -- "$@" --limit "$LIMIT"; fi
+          if [ "$LLM" != "true" ]; then set -- "$@" --no-llm; fi
+          if [ -z "${OPENCODE_GO_API_KEY:-}" ]; then
+            echo "::notice::OPENCODE_GO_API_KEY is not set; running as a dry run."
+            set -- "$@" --dry-run
+          elif [ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]; then
+            # Only default-branch runs keep the ledger, so only they may spend.
+            echo "::notice::Not on $DEFAULT_BRANCH; running as a dry run."
+            set -- "$@" --dry-run
+          elif [ "$DRY_RUN" = "true" ]; then
+            set -- "$@" --dry-run
+          fi
+          cd ingestion
+          uv run python -m ingestion.generated.cli "$@"
+
+      - name: Keep the budget ledger for the next run
+        if: ${{ always() && github.ref_name == github.event.repository.default_branch }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: generated-layer-state
+          path: ${{ runner.temp }}/state/checkpoint.json
+          retention-days: 90
+          if-no-files-found: ignore

@@ -58,7 +58,7 @@
       "absolute": 0
     },
     "man.documents": {
-      "baseline": 28,
+      "baseline": 29,
       "relative": 0,
       "absolute": 0
     },
@@ -269,7 +269,7 @@
       "absolute": 0
     },
     "man.dataBytes": {
-      "baseline": 35123,
+      "baseline": 36842,
       "relative": 0.02,
       "absolute": 0,
       "cap": 128000
@@ -281,12 +281,12 @@
       "cap": 32000
     },
     "man.tarDataBytes": {
-      "baseline": 168478,
+      "baseline": 168491,
       "relative": 0.02,
       "absolute": 0
     },
     "man.largeDataBytes": {
-      "baseline": 318303,
+      "baseline": 318316,
       "relative": 0.02,
       "absolute": 0
     },
@@ -310,7 +310,7 @@
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "30898df56d8f2645c167648c890782374ab9fc9df207478b5476e8ece8d0687c",
+  "fixtureSha256": "1e39625cfc97a54341364ca78df84923f4a130784f3ea1166899d6c39af68125",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

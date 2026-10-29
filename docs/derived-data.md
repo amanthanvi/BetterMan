@@ -210,6 +210,8 @@ date. First-prod predecessor identity is immutable across rollback.
 Variant groups use exact raw-source hashes. Verified example/tldr occurrence counts
 aggregate by option anchor. Without matching evidence, ranking explicitly reports
 `manual-order` with zero measured count. Frequency updates affect only that page.
+The generated layer (B6) supplies the counts from verified page EXAMPLES and
+tldr-pages through `setVerifiedFlagUsage`; see `docs/generated-layer.md`.
 
 ## Backlinks, families and packages
 

@@ -16,13 +16,15 @@ logger = logging.getLogger("betterman.ingestion")
 # Release, page, alias, and license posts are idempotent: the server returns
 # the existing release for an identical manifest and skips rows it already
 # stored, so a 5xx, 429, or transport failure is retried a bounded number of
-# times. Activation posts once; its caller owns the pending-hydration loop.
+# times. Generated-layer reads and content-hash upserts are idempotent too.
+# Activation posts once; its caller owns the pending-hydration loop.
 _RETRIED_PATHS = (
     "/ingest/release",
     "/ingest/pages",
     "/ingest/aliases",
     "/ingest/licenses",
     "/ingest/license-packages",
+    "/ingest/generated",
 )
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = 1.0

@@ -12,6 +12,7 @@ import {
 import { internal } from "./_generated/api";
 import { requireMutableBlob, requireMutablePage } from "./_releaseIntegrity";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
+import { briefFromRecord } from "./_generatedLayer";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   datasetStageValidator,
@@ -182,7 +183,7 @@ async function deleteContentChunks(ctx: MutationCtx, contentId: Id<"manPageConte
   return deleted;
 }
 
-async function contentPointer(ctx: QueryCtx, pageId: Id<"manPages">) {
+export async function contentPointer(ctx: QueryCtx, pageId: Id<"manPages">) {
   const content = await ctx.db
     .query("manPageContents")
     .withIndex("by_pageId", (q) => q.eq("pageId", pageId))
@@ -464,15 +465,20 @@ async function pageReadModel(
       derived.family = null;
     }
   }
-  const [content, variants] = await Promise.all([
+  const [content, variants, generated] = await Promise.all([
     contentPointer(ctx, args.page._id),
     variantsForPage(ctx, {
       stage: args.stage, locale: args.release.locale, name: args.page.name, section: args.page.section, knownPage: args.page,
     }),
+    // One indexed read; pages without generated data cost no document.
+    ctx.db
+      .query("manPageGenerated")
+      .withIndex("by_contentSha256", (q) => q.eq("contentSha256", args.page.contentSha256))
+      .unique(),
   ]);
   if (derived) derived.variantGroups = variantGroups(variants);
   if (!content) return null;
-  return { release: args.release, page: args.page, content, variants, derived };
+  return { release: args.release, page: args.page, content, variants, derived, brief: briefFromRecord(generated) };
 }
 
 export const getManByNameReadModel = internalQuery({
@@ -562,7 +568,9 @@ export const getManByName = action({
 
     return {
       kind: "page" as const,
-      data: pageResponse(result.data.release, result.data.page, content, result.data.variants, result.data.derived),
+      data: pageResponse(result.data.release, result.data.page, content, result.data.variants, {
+        derived: result.data.derived, brief: result.data.brief,
+      }),
     };
   },
 });
@@ -589,7 +597,9 @@ export const getManByNameAndSection = action({
 
     return {
       kind: "page" as const,
-      data: pageResponse(result.data.release, result.data.page, content, result.data.variants, result.data.derived),
+      data: pageResponse(result.data.release, result.data.page, content, result.data.variants, {
+        derived: result.data.derived, brief: result.data.brief,
+      }),
     };
   },
 });

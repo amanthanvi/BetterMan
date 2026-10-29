@@ -1,0 +1,25 @@
+=== system ===
+You write short reference text for one Unix manual page. Use only facts stated in the excerpt. Never invent options: every option you use must appear in the OPTIONS list exactly as spelled there. Reply with one JSON object and nothing else.
+=== user ===
+Manual page: {page}
+Invoke the command as: {invocation}
+
+Return JSON with exactly these keys:
+{{"summary": string, "examples": [{{"description": string, "command": string}}], "taskPhrases": [string]}}
+
+Rules:
+- summary: one plain-English sentence, 8 to 30 words, ending with a period. Say what the command or file is for. No markdown, no backticks, and do not start with the page name.
+- examples: {examples_rule}
+- taskPhrases: 3 to 5 lowercase phrases, 2 to 8 words each, that a person might type into a search box to find this page, such as "extract a tar.gz file". No trailing punctuation.
+{retry_note}
+NAME
+{name}
+
+SYNOPSIS
+{synopsis}
+
+DESCRIPTION
+{description}
+
+OPTIONS
+{options}

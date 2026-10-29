@@ -187,3 +187,22 @@ and the FreeBSD VM. Standalone CLI runs without that variable retain the
 45-minute cap; set it to an absolute Unix timestamp when supplying a job budget. Resume a timed-out release with `pnpm ingest:activate`; three failed attempts
 at one hydration cursor require operator repair and explicit re-arming as
 described in [the operations runbook](../docs/runbooks/multi-distro-ops.md#deploy-and-activation-recovery).
+
+## Generated layer
+
+`ingestion/generated/` builds the man page brief: the page's own EXAMPLES,
+verified tldr-pages examples and model text, keyed by content hash and written
+through `/ingest/generated`. It runs after a release exists, from the
+`generated-layer` workflow or by hand:
+
+```bash
+uv run python -m ingestion.generated.cli fetch-tldr --dest /tmp/tldr
+uv run python -m ingestion.generated.cli coverage --cache /path/to/cache --tldr /tmp/tldr --distro debian
+uv run python -m ingestion.generated.cli run --source cache --cache /path/to/cache --tldr /tmp/tldr --dry-run --out records.jsonl
+```
+
+`coverage` and `--source cache` read `<cache>/<distro>/html/*.html.gz` and need
+no Convex deployment. `--source convex` reads the active release through the
+ingest secret. Model calls need `OPENCODE_GO_API_KEY`; without it, model text is
+only estimated. Design, verifier rules and cost model: `docs/generated-layer.md`.
+Operations: `docs/runbooks/generated-layer.md`.

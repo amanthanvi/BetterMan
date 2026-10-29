@@ -9,6 +9,8 @@ import { optionFlagRows } from "./_optionFlags";
 import { MANIFEST_CONTENT_TYPE } from "./_manifestStorage";
 import { INGEST_CONTRACT } from "./ingestContract";
 import { canonicalJson } from "./ingest";
+import { GENERATED_CONTRACT, GENERATED_LIMITS, generationDoc } from "./_generatedLayer";
+import { resolveContent } from "./content";
 import { secretsMatch } from "./lib";
 
 const http = httpRouter();
@@ -225,6 +227,104 @@ http.route({
   method: "POST",
   handler: ingestAction(async (ctx, body) => {
     const result = await ctx.runMutation(internal.ingest.promoteActiveReleases, body as never);
+    return jsonResponse(result);
+  }),
+});
+
+// Generated layer (B6). Separate from the release contract above: records are
+// keyed by content hash and written after a release exists.
+http.route({
+  path: "/ingest/generated/contract",
+  method: "GET",
+  handler: httpAction(async (_ctx, req) => {
+    const auth = await requireIngestSecret(req);
+    if (auth) return auth;
+    return jsonResponse(GENERATED_CONTRACT);
+  }),
+});
+
+http.route({
+  path: "/ingest/generated/candidates",
+  method: "POST",
+  handler: ingestAction(async (ctx, body) => {
+    const result = await ctx.runQuery(internal.generated.listCandidates, body as never);
+    return jsonResponse(result);
+  }),
+});
+
+function parsedField(value: string | undefined): unknown {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+http.route({
+  path: "/ingest/generated/inputs",
+  method: "POST",
+  handler: ingestAction(async (ctx, body) => {
+    const pointers = await ctx.runQuery(internal.generated.inputPointers, body as never);
+    const encoder = new TextEncoder();
+    const utf8 = (value: unknown) => encoder.encode(JSON.stringify(value)).length;
+    const pages: unknown[] = [];
+    const deferred: Array<{ name: string; section: string }> = [];
+    const skipped: Array<{ name: string; section: string; reason: string; bytes: number }> = [];
+    // The envelope with every page deferred or skipped, so the final response
+    // stays within the limit whatever happens to the rest.
+    const envelope = utf8({
+      pages: [],
+      deferred: pointers.map(({ name, section }) => ({ name, section })),
+      skipped: pointers.map(({ name, section }) => ({ name, section, reason: "input too large", bytes: Number.MAX_SAFE_INTEGER })),
+    });
+    let bytes = envelope;
+    for (const { pointer, ...page } of pointers) {
+      if (pages.length && bytes >= GENERATED_LIMITS.inputResponseBytes) {
+        deferred.push({ name: page.name, section: page.section });
+        continue;
+      }
+      const content = await resolveContent(ctx, pointer);
+      if (!content) continue;
+      const input = {
+        ...page,
+        doc: generationDoc(parsedField(content.docJson)),
+        synopsis: parsedField(content.synopsisJson),
+        options: parsedField(content.optionsJson),
+      };
+      // Measure the UTF-8 bytes this page adds, comma included, before adding it.
+      const size = utf8(input) + 1;
+      if (envelope + size > GENERATED_LIMITS.inputResponseBytes) {
+        skipped.push({ name: page.name, section: page.section, reason: "input too large", bytes: size });
+      } else if (bytes + size > GENERATED_LIMITS.inputResponseBytes) {
+        deferred.push({ name: page.name, section: page.section });
+      } else {
+        bytes += size;
+        pages.push(input);
+      }
+    }
+    return jsonResponse({ pages, deferred, skipped });
+  }),
+});
+
+http.route({
+  path: "/ingest/generated/flag-usage",
+  method: "POST",
+  handler: ingestAction(async (ctx, body) => {
+    const result = await ctx.runMutation(internal.generated.propagateFlagUsage, body as never);
+    return jsonResponse(result);
+  }),
+});
+
+http.route({
+  path: "/ingest/generated",
+  method: "POST",
+  handler: ingestAction(async (ctx, body) => {
+    const { records } = body as { records?: unknown };
+    const result = await ctx.runMutation(internal.generated.upsertRecords, {
+      records,
+      updatedAt: new Date().toISOString(),
+    } as never);
     return jsonResponse(result);
   }),
 });
