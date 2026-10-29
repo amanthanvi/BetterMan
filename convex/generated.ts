@@ -1,4 +1,3 @@
-import { pageIsIndexable } from "./_indexPolicy";
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -137,7 +136,7 @@ export const listCandidates = internalQuery({
   returns: v.object({
     items: v.array(v.object({
       name: v.string(), section: v.string(), contentSha256: v.string(),
-      sourcePackage: v.union(v.string(), v.null()), indexable: v.boolean(), popularityScore: v.number(),
+      sourcePackage: v.union(v.string(), v.null()), indexable: v.union(v.boolean(), v.null()), popularityScore: v.number(),
       hasRecord: v.boolean(), promptVersion: v.union(v.string(), v.null()),
       tldrCommit: v.union(v.string(), v.null()), suppressed: v.array(generatedPartNameValidator),
       flagUsageCurrent: v.boolean(),
@@ -163,7 +162,7 @@ export const listCandidates = internalQuery({
         section: page.section,
         contentSha256: page.contentSha256,
         sourcePackage: page.sourcePackage ?? null,
-        indexable: pageIsIndexable(release, page),
+        indexable: release.indexablePageCount === undefined ? null : page.indexable === true,
         popularityScore: page.popularityScore ?? 0,
         hasRecord: row !== null,
         promptVersion: row?.generated?.promptVersion ?? null,

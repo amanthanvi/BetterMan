@@ -160,6 +160,25 @@ class WorkflowTest(unittest.TestCase):
                 self.assertIn('Skipping held full-Debian', log.getvalue())
                 self.assertIn('skipped=true', Path('output').read_text())
 
+    def test_unscored_full_debian_is_skipped_without_dirtying_sibling_results(self):
+        self.plan()
+        self.ingest('ubuntu')
+        sibling = w.load('ubuntu')
+        os.environ['BETTERMAN_INGEST_ENABLED'] = 'false'
+        for allowed in ['false', 'true']:
+            os.environ['BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT'] = allowed
+            Path('output').write_text('')
+            def response(request, **kwargs):
+                raise w.urllib.error.HTTPError(request.full_url, 409, 'Conflict', {},
+                    io.BytesIO(json.dumps({'error': {'code': 'FULL_DEBIAN_TIER_REQUIRED'}}).encode()))
+            with self.post_mock(response), contextlib.redirect_stdout(io.StringIO()) as log:
+                self.assertEqual(w.promote('debian'), 0)
+            self.assertIn('scored full-Debian replacement required', log.getvalue())
+            self.assertEqual(w.load('debian')['result'], 'success')
+            self.assertEqual(w.load('debian')['error'], '')
+            self.assertEqual(Path('output').read_text(), 'skipped=true\n')
+            self.assertEqual(w.load('ubuntu'), sibling)
+
     def test_misspelled_gate_values_warn_and_stay_off(self):
         for name in ['BETTERMAN_DEBIAN_FULL', 'BETTERMAN_DEBIAN_FULL_PROMOTE']:
             for value in ['true', '0', 'yes', ' 1', '1 ']:
@@ -605,7 +624,7 @@ function assertWorkflowWiring(workflow) {
   assert.equal(ingest.strategy['max-parallel'], 2)
   assert.deepEqual(workflow.concurrency, { group: 'update-dataset', 'cancel-in-progress': false })
   assert.equal(plan.needs, undefined)
-  assert.deepEqual(ingest.needs, ['preflight', 'plan'])
+  assert.deepEqual(ingest.needs, ['preflight', 'plan', 'demand'])
   const steps = ingest.steps
   const step = id => steps.find(value => value.id === id)
   const index = id => steps.findIndex(value => value.id === id)
@@ -711,4 +730,52 @@ test('each platform deadline reserves reporting time before setup begins', async
       assert.ok(value <= Math.floor(Date.now() / 1000) + minutes * 60 - 180)
     } finally { rmSync(dir, { recursive: true, force: true }) }
   }
+})
+
+
+test('monthly ingestion shares one bounded-retry demand artifact across the matrix', () => {
+  const workflow = readWorkflow()
+  const demand = workflow.jobs.demand
+  assert.deepEqual(workflow.jobs.ingest.needs, ['preflight', 'plan', 'demand'])
+  assert.equal(demand.if, "${{ needs.plan.outputs.enabled == 'true' }}")
+  const snapshot = demand.steps.find(s => s.id === 'snapshot')
+  assert.equal(snapshot.if, "${{ needs.plan.outputs.ingest == 'true' }}")
+  assert.match(snapshot.run, /for attempt in 1 2 3/)
+  assert.match(snapshot.run, /if.*attempt.*3.*exit 1/)
+  const upload = demand.steps.find(s => s.name === 'Share aggregate snapshot')
+  assert.equal(upload.with.name, 'page-demand')
+  assert.equal(upload.with['include-hidden-files'], true)
+  assert.equal(upload.with['if-no-files-found'], 'error')
+  const download = workflow.jobs.ingest.steps.find(s => s.name === 'Download shared page-demand snapshot')
+  assert.equal(download.with.name, upload.with.name)
+  assert.match(download.if, /needs.demand.outputs.available == 'true'/)
+  assert.ok(!workflow.jobs.ingest.steps.some(s => s.run?.includes('pnpm analytics:counts')))
+  assert.ok(!workflow.jobs.ingest.steps.some(s => s.env?.PLAUSIBLE_API_KEY))
+  assert.equal(workflow.jobs.ingest.steps.find(s => s.uses?.startsWith('actions/setup-node@')).if, '${{ matrix.promote }}')
+})
+
+test('shared demand export retries transient failures and stops after three attempts', () => {
+  const script = readWorkflow().jobs.demand.steps.find(s => s.id === 'snapshot').run
+  const root = mkdtempSync(join(tmpdir(), 'b4-demand-'))
+  try {
+    for (const failures of [2, 3]) {
+      const snapshot = join(root, `counts-${failures}.json`)
+      const output = join(root, `output-${failures}`)
+      const attempts = join(root, `attempts-${failures}`)
+      const result = spawnSync('bash', ['-c', `
+        task_attempts=0
+        pnpm() {
+          task_attempts=$((task_attempts + 1))
+          echo "$task_attempts" > "$ATTEMPTS_FILE"
+          if ((task_attempts <= FAILURES)); then return 1; fi
+          echo '{}' > "$PLAUSIBLE_COUNTS_OUTPUT"
+        }
+        sleep() { :; }
+        ${script}
+      `], { env: { ...process.env, FAILURES: String(failures), ATTEMPTS_FILE: attempts, PLAUSIBLE_COUNTS_OUTPUT: snapshot, GITHUB_OUTPUT: output } })
+      assert.equal(readFileSync(attempts, 'utf8').trim(), '3')
+      assert.equal(result.status, failures === 2 ? 0 : 1)
+      if (failures === 2) assert.equal(readFileSync(output, 'utf8'), 'available=true\n')
+    }
+  } finally { rmSync(root, { recursive: true, force: true }) }
 })

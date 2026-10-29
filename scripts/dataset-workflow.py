@@ -344,7 +344,19 @@ def promote(distro):
         detail = str(error)
         if isinstance(error, urllib.error.HTTPError):
             try:
-                detail += ": " + error.read(4096).decode("utf-8", errors="replace")
+                body = error.read(4096).decode("utf-8", errors="replace")
+                try:
+                    code = json.loads(body).get("error", {}).get("code")
+                except (ValueError, AttributeError, TypeError):
+                    code = None
+                if error.code == 409 and distro == "debian" and code == "FULL_DEBIAN_TIER_REQUIRED":
+                    print("[dataset] Skipping promotion: scored full-Debian replacement required", flush=True)
+                    record.update(stage="scored full-Debian replacement required", result="success", error="")
+                    save(distro, record)
+                    with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                        output.write("skipped=true\n")
+                    return 0
+                detail += ": " + body
             except (OSError, http.client.HTTPException):
                 pass  # Preserve the HTTP status when its error body is unreadable.
         record.update(result="failure", error=clean(detail)[:1200])

@@ -76,7 +76,11 @@ def select(
         section_rank = order.get(candidate.section[:1])
         prio = priority.rank(candidate)
         demand = policy.evaluate(candidate.name, candidate.section, candidate.source_package)
-        indexed = candidate.indexable if candidate.indexable is not None else demand.indexable
+        indexed = (
+            candidate.indexable
+            if candidate.indexable is not None
+            else candidate.section in sections
+        )
         if not indexed:
             continue
         key = (

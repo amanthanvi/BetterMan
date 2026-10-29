@@ -185,6 +185,7 @@ describe("generated layer ingest routes", () => {
       await storedPage(ctx, releaseId, "debian", "tar", TAR);
       await storedPage(ctx, releaseId, "debian", "cpio", BSDTAR);
       await storedPage(ctx, releaseId, "debian", "tar.conf", "c".repeat(64), "5");
+      await storedPage(ctx, releaseId, "debian", "library", "d".repeat(64), "3");
     });
     await call(t, "/ingest/generated", { records: [record()] });
     const first = await (await call(t, "/ingest/generated/candidates", {
@@ -192,7 +193,7 @@ describe("generated layer ingest routes", () => {
     })).json();
     expect(first.items).toEqual([{
       name: "cpio", section: "1", contentSha256: BSDTAR, sourcePackage: "tar",
-      indexable: true, popularityScore: 0,
+      indexable: null, popularityScore: 0,
       hasRecord: false, promptVersion: null, tldrCommit: null, suppressed: [], flagUsageCurrent: true,
     }]);
     expect(first.isDone).toBe(false);
@@ -201,8 +202,12 @@ describe("generated layer ingest routes", () => {
     })).json();
     expect(second.items[0]).toMatchObject({ name: "tar", hasRecord: true, promptVersion: "b6-v1", tldrCommit: COMMIT });
 
-    // Legacy refresh_page remains usable; once scored, every section obeys
-    // the stored tier rather than a fresh section/package guess.
+    const legacy = await (await call(t, "/ingest/generated/candidates", {
+      stage: "staging", distro: "debian", section: null, cursor: null, limit: 10,
+    })).json();
+    expect(legacy.items.find((item: { section: string }) => item.section === "3")).toMatchObject({ name: "library", indexable: null });
+
+    // Null delegates legacy admission to the selector's exact-section rule.
     await t.run(async ctx => {
       const release = (await ctx.db.query("datasetReleases").take(1))[0];
       await ctx.db.patch(release._id, { indexablePageCount: 0 });
@@ -210,7 +215,7 @@ describe("generated layer ingest routes", () => {
     const scored = await (await call(t, "/ingest/generated/candidates", {
       stage: "staging", distro: "debian", section: null, cursor: null, limit: 10,
     })).json();
-    expect(scored.items).toHaveLength(3);
+    expect(scored.items).toHaveLength(4);
     expect(scored.items.every((item: { indexable: boolean }) => item.indexable === false)).toBe(true);
 
     const missing = await call(t, "/ingest/generated/candidates", {
