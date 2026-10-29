@@ -73,6 +73,39 @@ def _config_terms(inlines: list, *, multiword: bool = False) -> list[str]:
     return []
 
 
+PLATFORM_LABELS = {"MS", "DOS", "OS", "MSDOS", "UNIX", "WINDOWS", "LINUX", "BSD"}
+
+
+def _environment_terms(inlines: list) -> list[str]:
+    term = "".join(_text(inline) for inline in inlines).strip()
+    if len(term) > 1 and term[0] == term[-1] and term[0] in ("'", '"'):
+        term = term[1:-1]
+    key = term.split("=", 1)[0] if "=" in term else term
+    key = re.sub(r" \([^()]*\)$", "", key)
+    parts = re.split(r"\s*(?:,|/|\bor\b|\band\b)\s*", key)
+
+    def valid(value: str) -> bool:
+        return (
+            bool(re.fullmatch(r"\$?[A-Z_][A-Z0-9_]+", value))
+            and value.lstrip("$") not in PLATFORM_LABELS
+        )
+
+    if parts and all(valid(part) for part in parts):
+        return [part.lstrip("$") for part in parts]
+    # curl documents variables followed by angle-bracket value placeholders.
+    # Match the entire initial identifier, never words inside the placeholder.
+    placeholder = re.fullmatch(r"(\$?[A-Z_][A-Z0-9_]+) (?:\[[^\]]+\])?<[^>]+>(?:\[[^\]]+\])?", term)
+    if placeholder and valid(placeholder[1]):
+        return [placeholder[1].lstrip("$")]
+    macro = re.fullmatch(r"\.Ev ([A-Z_][A-Z0-9_]+)(?: [.), ]+)?", term)
+    if macro and valid(macro[1]):
+        return [macro[1]]
+    lead = _formatted_lead(inlines)
+    if valid(lead) and term.startswith(lead + " "):
+        return [lead.lstrip("$")]
+    return []
+
+
 def utf16_length(text: str) -> int:
     return len(text.encode("utf-16-le")) // 2
 
@@ -172,7 +205,7 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
                         elif kind == "errors":
                             terms = re.findall(r"\bE[A-Z0-9_]+\b", term)
                         elif kind == "environment":
-                            terms = re.findall(r"\b[A-Z_][A-Z0-9_]+\b", term)
+                            terms = _environment_terms(item.get("termInlines", []))
                         else:
                             terms = re.findall(
                                 r"(?:\$(?:[A-Z_][A-Z0-9_]*|\{[^}]+\})|~)?/[^\s,;]+", term
@@ -196,6 +229,15 @@ def symbol_rows(name: str, section: str, doc: dict, description: str = "") -> li
                 ):
                     for directive in term.split(", "):
                         add(directive, anchor, _text(following.get("items", [])), "config")
+                elif (
+                    name == "login.defs" and section.startswith("5") and heading in CONFIG_HEADINGS
+                ):
+                    directive = re.fullmatch(
+                        r"([A-Z][A-Z0-9_]*) \((?:number|string|boolean|long number|octal number)\)",
+                        term,
+                    )
+                    if directive:
+                        add(directive[1], anchor, _text(following.get("items", [])), "config")
                 elif HEADING_KINDS.get(heading) == "subcommand" and name in COMMAND_FAMILIES:
                     lead = _formatted_lead(inlines)
                     if re.fullmatch(r"[a-z][a-z0-9-]*", lead):

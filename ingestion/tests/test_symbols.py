@@ -254,3 +254,53 @@ def test_excludes_kernel_fields_and_unapproved_multiword_prose():
         ]["term"]
         == "motd file"
     )
+
+
+def test_environment_terms_are_definitions_not_platform_mentions():
+    for term in (
+        "Windows and MS-DOS",
+        "OS/2",
+        "MS",
+        "DOS",
+        "OS",
+        "Unix and OS/2",
+        "^U (Unix and OS/2) or ESC (MS-DOS and Windows)",
+    ):
+        assert (
+            symbol_rows(
+                "less",
+                "1",
+                {"blocks": [heading("ENVIRONMENT VARIABLES", "env"), definitions(term)]},
+            )
+            == []
+        )
+    for term, expected in [
+        ("HOME", ["HOME"]),
+        ('"LC_ALL"', ["LC_ALL"]),
+        ("LC_ALL, LANG", ["LC_ALL", "LANG"]),
+        ("PAGER or EDITOR", ["PAGER", "EDITOR"]),
+        ("HTTPS_PROXY [protocol://]<host>[:port]", ["HTTPS_PROXY"]),
+        ("CURL_SSL_BACKEND <TLS backend>", ["CURL_SSL_BACKEND"]),
+        (".Ev PATH .", ["PATH"]),
+        ("[url-protocol]_PROXY [protocol://]<host>[:port]", []),
+        (".Li M1 M2 M3 ;", []),
+    ]:
+        rows = symbol_rows(
+            "example", "1", {"blocks": [heading("ENVIRONMENT", "env"), definitions(term)]}
+        )
+        assert [row["term"] for row in rows] == expected
+
+
+def test_real_login_defs_typed_directives_and_less_platform_labels():
+    import json
+    from pathlib import Path
+
+    fixtures = json.loads((Path(__file__).parent / "fixtures/symbol-layouts-r4.json").read_text())
+    login = next(case for case in fixtures if case["name"] == "login.defs")
+    rows = symbol_rows(login["name"], login["section"], login["doc"])
+    assert {"PASS_MAX_DAYS", "PASS_MIN_DAYS", "PASS_WARN_AGE"} <= {row["term"] for row in rows}
+    assert all(row["anchorId"] == "description" for row in rows)
+    less = next(case for case in fixtures if case["name"] == "less")
+    terms = {row["term"] for row in symbol_rows("less", "1", less["doc"])}
+    assert not {"MS", "DOS", "OS"} & terms
+    assert "LESS" in terms

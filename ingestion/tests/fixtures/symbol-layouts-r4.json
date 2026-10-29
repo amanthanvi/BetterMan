@@ -1,0 +1,302 @@
+[
+  {
+    "name": "less",
+    "section": "1",
+    "sourceHtmlSha256": "4f8046672d05529dbf6bd285896ebf2cfe669258a4277a42cd149c401ef24936",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "environment-variables",
+          "text": "ENVIRONMENT VARIABLES",
+          "level": 2
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "LESS",
+              "termInlines": [
+                {
+                  "type": "text",
+                  "text": "LESS"
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "Options which are passed to "
+                    },
+                    {
+                      "type": "strong",
+                      "inlines": [
+                        {
+                          "type": "text",
+                          "text": "less"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": " automatically."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "Windows",
+              "termInlines": [
+                {
+                  "type": "text",
+                  "text": "Windows and MS-DOS"
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "\"$HOME/_lesshst\"."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "definition_list",
+          "items": [
+            {
+              "id": "OS/2",
+              "termInlines": [
+                {
+                  "type": "text",
+                  "text": "OS/2"
+                }
+              ],
+              "definitionBlocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    {
+                      "type": "text",
+                      "text": "\"$HOME/lesshst.ini\" or \"$INIT/lesshst.ini\"."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "login.defs",
+    "section": "5",
+    "sourceHtmlSha256": "658225013e8f984a6a977a2f84162bd4b5f78d0640a93c0c0c6cecb4468cb5e4",
+    "doc": {
+      "toc": [],
+      "blocks": [
+        {
+          "type": "heading",
+          "id": "description",
+          "level": 2,
+          "text": "DESCRIPTION"
+        },
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "PASS_MAX_DAYS"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " (number)"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            [
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "The maximum number of days a password may be used. If the password is older than this, a password change will be forced. If not specified, -1 will be assumed (which disables the restriction)."
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "PASS_MIN_DAYS"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " (number)"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            [
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "The minimum number of days allowed between password changes. Any password changes attempted sooner than this will be rejected. If not specified, 0 will be assumed (which disables the restriction)."
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "PASS_WARN_AGE"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " (number)"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            [
+              {
+                "type": "paragraph",
+                "inlines": [
+                  {
+                    "type": "text",
+                    "text": "The number of days warning given before a password expires. A zero means warning is given only upon the day of expiration, a value of -1 means no warning is given. If not specified, no warning will be provided."
+                  }
+                ]
+              }
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "PASS_MAX_DAYS"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": ", "
+            },
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "PASS_MIN_DAYS"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " and "
+            },
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "PASS_WARN_AGE"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " are only used at the time of account creation. Any changes to these settings won't affect existing accounts."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "SHA_CRYPT_MIN_ROUNDS"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " (number), "
+            },
+            {
+              "type": "strong",
+              "inlines": [
+                {
+                  "type": "text",
+                  "text": "SHA_CRYPT_MAX_ROUNDS"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " (number)"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

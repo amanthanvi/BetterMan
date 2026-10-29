@@ -3,6 +3,9 @@ import { convexTest } from 'convex-test';
 import { describe, it, expect } from 'vitest';
 import { makeFunctionReference } from 'convex/server';
 import schema from './schema';
+import reviewR4 from './fixtures/explain-review-r4.json';
+import UNSUPPORTED_FORMS from './fixtures/unsupported-shell.json';
+import {explanationBytes,EXPLAIN_OUTPUT_LIMITS} from './_explainBounds';
 import reviewFixture from './fixtures/explain-review.json';
 import symbolLayouts from '../ingestion/tests/fixtures/symbol-layouts.json';
 import { optionFlagRows } from './_optionFlags';
@@ -332,7 +335,7 @@ describe('round-3 real-metadata review corpus',()=>{
  });
  it('deduplicates command facts and suppresses hints on unknown lines',async()=>{
   const result=await explain(await reviewed(),'rm a; rm b; missing');
-  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([{description:'rm deletes files.',dryRun:null}]);
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
  });
  it.each(['truncate -s=0 f','git -C=foo clean -f','find . -exec rm -f x +','find . -exec rm {} {} +','find . -exec rm {} ;'])('marks invalid or unsupported syntax: %s',async cmd=>{
   const result=await explain(await reviewed(),cmd);
@@ -380,4 +383,49 @@ it('accepts short equals only when documented and preserves legacy optional meta
 it.each(['find . -mtime 7d -delete','find . -type q -delete','xargs -n nonsense rm file','xargs -I "" rm file','rm $UNKNOWN'])('does not offer a preview for an unmodeled or runtime form: %s',async cmd=>{
  const result=await explain(await reviewed(),cmd);
  expect(result.stages.flatMap((s:{destructive:{dryRun:string|null}[]})=>s.destructive).every((n:{dryRun:string|null})=>n.dryRun===null)).toBe(true);
+});
+
+describe('round 4: whole-line admission and response bounds',()=>{
+ it.each(UNSUPPORTED_FORMS)('emits neither facts nor hints for unsupported %s',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(result.diagnostics.length).toBeGreaterThan(0);
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+ });
+ it.each(reviewR4.cases)('review replay $group: $cmd',async({cmd})=>{
+  const result=await explain(await reviewed(),cmd);
+  const notes=result.stages.flatMap((s:{destructive:{description:string;dryRun:string|null}[]})=>s.destructive);
+  expect(notes.every((n:{description:string;dryRun:string|null})=>factDescriptions.has(n.description) && (n.dryRun===null || hints.has(n.dryRun)))).toBe(true);
+  if(result.diagnostics.length || result.stages.some((s:{tokens:{kind:string}[]})=>s.tokens.some(t=>t.kind==='unknown'))) expect(notes).toEqual([]);
+  expect(explanationBytes(result)).toBeLessThanOrEqual(EXPLAIN_OUTPUT_LIMITS.bytes);
+  expect(result.stages.reduce((n:number,s:{tokens:unknown[]})=>n+s.tokens.length,0)).toBeLessThanOrEqual(EXPLAIN_OUTPUT_LIMITS.decodedTokens);
+ });
+ it.each(['rm -'+'r'.repeat(4090)+' x',"rm '"+'\u0001'.repeat(4090)+"'"])('bounds pathological decoded output',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(explanationBytes(result)).toBeLessThanOrEqual(65536);
+  expect(result.diagnostics.join(' ').toLowerCase()).toContain('truncated');
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+  for(const stage of result.stages) for(const token of stage.tokens) if(token.kind==='option' && token.value==='-r') expect(token.text.length).toBeLessThanOrEqual(2);
+ });
+ it('drops an invocation that fails find validation even after an earlier valid command',async()=>{
+  const result=await explain(await reviewed(),'rm a; find . -delete extra');
+  expect(result.diagnostics.join(' ')).toContain('paths must precede expression');
+  expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+ });
+ it.each(['xargs -I m rm m','xargs --max-lines rm item'])('keeps the actual rm executable for %s',async cmd=>{
+  const result=await explain(await reviewed(),cmd);
+  expect(result.diagnostics).toEqual([]);
+  expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).some((n:{description:string})=>n.description==='rm deletes files.')).toBe(true);
+ });
+ it('keeps shell redirects on the wrapper invocation',async()=>{
+  const result=await explain(await reviewed(),'env echo text > out');
+  expect(result.diagnostics).toEqual([]);
+  expect(result.stages[0].tokens.some((t:{kind:string})=>t.kind==='redirect')).toBe(true);
+  expect(result.stages[1].tokens.some((t:{kind:string})=>t.kind==='redirect')).toBe(false);
+  expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive)).toEqual([{description:'> replaces the contents of the file it writes to.',dryRun:null}]);
+ });
+ it('does not reinterpret an unquoted CR command as rm',async()=>{
+  const result=await explain(await reviewed(),'rm\r item');
+  expect(result.diagnostics.join(' ')).toContain('control character');
+  expect(result.stages[0].tokens[0].kind).toBe('unknown');
+ });
 });

@@ -1,3 +1,4 @@
+import { SUPPORTED_SHELL_GRAMMAR, shellGrammarDiagnostics, isUnsupportedShellKeyword } from './_shellGrammar';
 import { manualCommandName } from './_commandConventions';
 export class ShellParseError extends Error {
   constructor(readonly code: string) { super(code); }
@@ -9,15 +10,7 @@ export type ShellToken = { kind: ShellKind; text: string; value: string; start: 
 export type ShellStage = { id: number; parent: number | null; relation: 'list' | 'subshell' | 'substitution' | 'wrapper' | 'exec'; tokens: ShellToken[] };
 export type ShellParse = { stages: ShellStage[]; diagnostics: string[] };
 const OPERATORS = ['&&', '||', '|&', '>>', '<<-', '<<<', '<<', '<>', '>&', '<&', '>|', '&>', '&>>', '|', ';', '&', '(', ')', '>', '<', '\n'];
-const WRAPPER_ARGUMENTS: Record<string, Set<string>> = {
-  sudo: new Set(['-u', '--user', '-g', '--group', '-h', '--host', '-p', '--prompt', '-C', '-T', '-R', '-D', '-r', '--role', '-t', '--type']),
-  env: new Set(['-u', '--unset', '-C', '--chdir', '-a', '--argv0']),
-  timeout: new Set(['-s','--signal','-k','--kill-after']),
-  nice: new Set(['-n','--adjustment']), nohup: new Set(),
-  time: new Set(['-f','--format','-o','--output']),
-  command: new Set(), exec: new Set(['-a']), doas: new Set(['-u','-C']),
-  xargs: new Set(['-I', '-n', '--max-args', '-P', '--max-procs', '-d', '--delimiter', '-s', '--max-chars', '-E', '-L', '--max-lines', '-a', '--arg-file']),
-};
+const WRAPPER_ARGUMENTS = Object.fromEntries(Object.entries(SUPPORTED_SHELL_GRAMMAR.wrappers).map(([name,args])=>[name,new Set(args)]));
 
 export function parseShell(input: string): ShellParse {
   if (input.length > EXPLAIN_LIMITS.characters) throw new ShellParseError('EXPLAIN_INPUT_TOO_LONG');
@@ -38,7 +31,7 @@ export function parseShell(input: string): ShellParse {
     };
     while (i < input.length) {
       if (stop && input.startsWith(stop, i)) return i;
-      if (/[\t \r]/.test(input[i])) { i++; continue; }
+      if (/[ ]/.test(input[i])) { i++; continue; }
       const a = i;
       if (input[i] === '#') {
         while (i < input.length && input[i] !== '\n') i++;
@@ -150,11 +143,15 @@ export function parseShell(input: string): ShellParse {
       if (token.kind === 'redirect' && !['redirectTarget','glob'].includes(stage.tokens[index + 1]?.kind)) result.diagnostics.push(`Missing redirection target for ${token.text}`);
     });
   }
+  result.diagnostics.push(...shellGrammarDiagnostics(input,result.stages));
+  if(result.diagnostics.some(message=>message.includes('control character'))) {
+    for(const stage of result.stages) for(const token of stage.tokens) if(!['operator','redirect','redirectTarget','comment'].includes(token.kind)) token.kind='unknown';
+  }
   for (let index = 0; index < result.stages.length; index++) {
     const stage = result.stages[index];
     // Remove lexer-created empty list stages while keeping stable IDs/parent references.
     let command = stage.tokens.findIndex((token,i) => !['operator', 'redirect', 'redirectTarget', 'comment'].includes(token.kind) && stage.tokens[i-1]?.kind !== 'redirect');
-    while (command >= 0 && stage.tokens[command].kind !== 'unknown' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(stage.tokens[command].text)) {
+    while (command >= 0 && stage.relation!=='exec' && !(stage.relation==='wrapper' && result.stages.find(parent=>parent.id===stage.parent)?.tokens.some(t=>t.kind==='command' && manualCommandName(t.value)==='xargs')) && stage.tokens[command].kind !== 'unknown' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(stage.tokens[command].text)) {
       stage.tokens[command].kind = 'assignment'; command++;
       while (command < stage.tokens.length && (['redirect', 'redirectTarget'].includes(stage.tokens[command].kind) || stage.tokens[command-1]?.kind === 'redirect')) command++;
       if (command >= stage.tokens.length) { command = -1; break; }
@@ -166,7 +163,7 @@ export function parseShell(input: string): ShellParse {
     token.kind = 'command';
     const name = manualCommandName(token.value);
     if (!name) {token.kind = 'unknown'; continue;}
-    if (['if', 'then', 'else', 'elif', 'fi', 'for', 'while', 'until', 'do', 'done', 'case', 'esac', 'function', '{', '}'].includes(name)) {
+    if (isUnsupportedShellKeyword(name)) {
       token.kind = 'unknown'; result.diagnostics.push('Shell control structures are not interpreted'); continue;
     }
     if (WRAPPER_ARGUMENTS[name]) {
@@ -189,7 +186,7 @@ export function parseShell(input: string): ShellParse {
         let consumes = false, opaque = false;
         for (const [n, part] of parts.entries()) {
           if ((name === 'env' && ['-S','--split-string'].includes(part)) || (name === 'sudo' && ['-s','-i','--shell','--login','-l','--list','-v','--validate','-k','--reset-timestamp','-K','--remove-timestamp','-e','--edit'].includes(part)) || (name === 'doas' && ['-s','-C'].includes(part)) || (name === 'command' && ['-v','-V'].includes(part)) || ['--help','--version'].includes(part)) opaque = true;
-          if (WRAPPER_ARGUMENTS[name].has(part)) {
+          if (!(SUPPORTED_SHELL_GRAMMAR.optionalWrapperArguments[name] ?? []).includes(part) && WRAPPER_ARGUMENTS[name].has(part)) {
             consumes = t.value.startsWith('--') ? !t.value.includes('=') : n === parts.length - 1;
             break;
           }
@@ -200,11 +197,11 @@ export function parseShell(input: string): ShellParse {
       }
       if (name === 'timeout' && end < stage.tokens.length) end++;
       if (end < stage.tokens.length && !['operator', 'redirect', 'comment'].includes(stage.tokens[end].kind)) {
-        const boundary = stage.tokens.findIndex((token, i) => i >= end && token.kind === 'operator');
+        const boundary = stage.tokens.findIndex((token, i) => i >= end && ['operator','redirect'].includes(token.kind));
         const child = create(stage.id, 'wrapper'); child.tokens = stage.tokens.splice(end, (boundary < 0 ? stage.tokens.length : boundary) - end);
         if(replacement==='') {result.diagnostics.push('Unsupported empty xargs replacement string');child.tokens.forEach(token=>{token.kind='unknown';});}
-        if (replacement) for(const token of child.tokens) {
-          if(token.kind!=='unknown' && token.value.includes(replacement)) {token.replacement={marker:replacement,source:'xargs'};token.dynamic=true;token.kind='expansion';}
+        if (replacement) for(const [position,token] of child.tokens.entries()) {
+          if(position>0 && token.kind!=='unknown' && token.value.includes(replacement)) {token.replacement={marker:replacement,source:'xargs'};token.dynamic=true;token.kind='expansion';}
         }
       }
     } else if (name === 'find') {

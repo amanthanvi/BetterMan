@@ -1,3 +1,5 @@
+import { EXPLAIN_OUTPUT_LIMITS, TRUNCATED_DIAGNOSTIC, explanationBytes } from './_explainBounds';
+import { findExpressionDiagnostic } from './_shellGrammar';
 import { ConvexError, v, type Infer } from 'convex/values';
 import { query, type QueryCtx } from './_generated/server';
 import { distroValidator } from './schema';
@@ -48,12 +50,14 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
   const cache = new Map<string, unknown>();
   async function read<T>(key: string, maximum: number, fn: () => Promise<T>): Promise<T | null> {
     if (limited) return null;
-    if (cache.has(key)) return cache.get(key) as T;
-    if (lookups++ >= 64 || remaining < maximum) {
+    if (lookups++ >= 64) {
       limited = true;
       if (!parsed.diagnostics.includes('Resolution lookup limit reached')) parsed.diagnostics.push('Resolution lookup limit reached');
+      parsed.diagnostics.push('Explanation truncated: lookup limit reached');
       return null;
     }
+    if (cache.has(key)) return cache.get(key) as T;
+    if(remaining < maximum) {limited=true;parsed.diagnostics.push('Resolution lookup limit reached','Explanation truncated: lookup limit reached');return null;}
     const value = await fn();
     remaining -= Array.isArray(value) ? value.length : value === null ? 0 : 1;
     cache.set(key, value); return value;
@@ -87,9 +91,13 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
     return bash ? { page: pageRef(bash), anchor: null, excerpt: `Shell ${syntax}; section anchor unavailable in this release.` } : null;
   }
   const stages: Explanation['stages'] = [];
+  const output: Explanation = {version:1,input:args.cmd,shareUrl:`/explain?cmd=${encodeURIComponent(args.cmd)}${args.distro==='debian' ? '' : `&distro=${args.distro}`}`,diagnostics:parsed.diagnostics,stages};
+  let decoded=0, truncated=false;
+  const truncate=()=>{truncated=true;if(!parsed.diagnostics.includes(TRUNCATED_DIAGNOSTIC)) parsed.diagnostics.push(TRUNCATED_DIAGNOSTIC);};
   const uncertainStages = new Set<number>();
   const safetyContexts = new Map<number, {stage: typeof parsed.stages[number]; tokens: Explanation['stages'][number]['tokens']; command: string}>();
   for (const stage of parsed.stages) {
+    if(truncated) break;
     if (!stage.tokens.length) continue;
     let page: Doc<'manPages'> | null = null;
     const commandIndex = stage.tokens.findIndex(t => t.kind === 'command');
@@ -99,6 +107,7 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
       let i=0; while(['-H','-L','-P'].includes(argv[i]?.value)) i++;
       if(!argv[i] || argv[i].value.startsWith('-')) parsed.diagnostics.push('find requires an explicit root on this distro');
     }
+    if(page?.name==='find') {const invalid=findExpressionDiagnostic(stage.tokens);if(invalid) parsed.diagnostics.push(invalid);}
     const commandPage = page;
     let subcommandIndex = -1;
     let subcommandRow: Doc<'manPageSymbols'> | null = null;
@@ -144,8 +153,19 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
       else unknownSubcommand = candidateIndex;
     }
     const tokens: Infer<typeof tokenValidator>[] = [];
+    const rendered: Explanation['stages'][number] = {id:stage.id,parent:stage.parent,relation:stage.relation,tokens,destructive:[]};
+    stages.push(rendered);
+    const addTokens = (...items: Explanation['stages'][number]['tokens']) => {
+      for(const item of items) {
+        if(truncated) return;
+        if(decoded>=EXPLAIN_OUTPUT_LIMITS.decodedTokens) {truncate();return;}
+        tokens.push(item);
+        if(explanationBytes(output)>EXPLAIN_OUTPUT_LIMITS.bytes-256) {tokens.pop();truncate();return;}
+        decoded++;
+      }
+    };
     let pending: Doc<'manPageOptionFlags'> | null = null, ended = false;
-    for (let i = 0; i < stage.tokens.length; i++) {
+    for (let i = 0; i < stage.tokens.length && !truncated; i++) {
       const token = stage.tokens[i], shell = await shellReference(token, stage.relation);
       const currentPage = subcommandIndex >= 0 && i < subcommandIndex ? commandPage : page;
       let replacementSource: Explanation['stages'][number]['tokens'][number] | undefined;
@@ -161,22 +181,22 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
         }
       }
       const base = { text: token.text, value: token.value, start: token.start, end: token.end, page: (replacementSource?.page ?? null) as ReturnType<typeof pageRef> | null, anchor: (replacementSource?.anchor ?? null) as string | null, excerpt: token.replacement ? `${token.replacement.source === 'find' ? 'find supplies matched paths' : 'xargs supplies input'} in place of ${token.replacement.marker} within this word at runtime.` : '', takesArgument: null as boolean | null, portability: null, shell };
-      if (limited || i === unknownSubcommand || token.kind === 'unknown') { tokens.push({...base, kind: 'unknown'}); continue; }
+      if (limited || i === unknownSubcommand || token.kind === 'unknown') { addTokens({...base, kind: 'unknown'}); continue; }
       if (token.kind === 'command' || i === subcommandIndex) {
         const target = i === subcommandIndex ? page : commandPage;
-        tokens.push({ ...base, kind: target ? (i === subcommandIndex ? 'subcommand' : 'command') : 'unknown', page: target ? pageRef(target) : null, excerpt: i === subcommandIndex ? subcommandRow?.excerpt ?? target?.description ?? '' : target?.description ?? '', anchor: i === subcommandIndex ? subcommandRow?.anchorId || null : null });
+        addTokens({ ...base, kind: target ? (i === subcommandIndex ? 'subcommand' : 'command') : 'unknown', page: target ? pageRef(target) : null, excerpt: i === subcommandIndex ? subcommandRow?.excerpt ?? target?.description ?? '' : target?.description ?? '', anchor: i === subcommandIndex ? subcommandRow?.anchorId || null : null });
         continue;
       }
-      if (token.kind === 'operator' || token.kind === 'redirect' || token.kind === 'redirectTarget' || token.kind === 'assignment' || token.kind === 'comment') { tokens.push({ ...base, kind: token.kind }); continue; }
+      if (token.kind === 'operator' || token.kind === 'redirect' || token.kind === 'redirectTarget' || token.kind === 'assignment' || token.kind === 'comment') { addTokens({ ...base, kind: token.kind }); continue; }
       if (pending) {
-        tokens.push({ ...base, kind: token.replacement ? 'expansion' : 'optionArgument', page: currentPage ? pageRef(currentPage) : null, anchor: pending.anchorId, excerpt: token.replacement ? `${pending.excerpt ?? pending.flags} ${base.excerpt}` : pending.excerpt ?? pending.flags }); pending = null; continue;
+        addTokens({ ...base, kind: token.replacement ? 'expansion' : 'optionArgument', page: currentPage ? pageRef(currentPage) : null, anchor: pending.anchorId, excerpt: token.replacement ? `${pending.excerpt ?? pending.flags} ${base.excerpt}` : pending.excerpt ?? pending.flags }); pending = null; continue;
       }
-      if (token.value === '--' && !ended) { ended = true; tokens.push({ ...base, kind: 'endOfOptions' }); continue; }
-      if(token.dynamic && !token.replacement && token.value.startsWith('-') && !ended) {tokens.push({...base,kind:'unknown'});parsed.diagnostics.push('Runtime replacement in an option cannot be resolved');continue;}
+      if (token.value === '--' && !ended) { ended = true; addTokens({ ...base, kind: 'endOfOptions' }); continue; }
+      if(token.dynamic && !token.replacement && token.value.startsWith('-') && !ended) {addTokens({...base,kind:'unknown'});parsed.diagnostics.push('Runtime replacement in an option cannot be resolved');continue;}
       if (currentPage && !ended && (!token.dynamic || token.replacement) && token.value.startsWith('-') && token.value !== '-') {
         const whole = token.value.split('=', 1)[0];
         const exact = await option(currentPage, whole);
-        const entries: Array<{ row: Doc<'manPageOptionFlags'> | null; flag: string; argument: string | null }> = [];
+        const entries: Array<{ row: Doc<'manPageOptionFlags'> | null; flag: string; argument: string | null; start?:number; end?:number; argumentStart?:number }> = [];
         if (exact) {
           const takes = exact.takesArgument ?? flagTakesArgument(exact.flags);
           const equals = token.value.includes('=');
@@ -187,23 +207,26 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
           entries.push({row:supported ? exact : null,flag:supported ? whole : token.value,argument:equals && supported ? token.value.slice(whole.length + (replacementArgument ? 0 : 1)) : null});
         }
         else if (/^-[A-Za-z0-9]/.test(token.value) && !token.value.startsWith('--')) {
+          const quoted = token.text.length===token.value.length+2 && ['\"',"'"].includes(token.text[0]) && token.text.at(-1)===token.text[0] && token.text.slice(1,-1)===token.value;
+          if(token.text!==token.value && !quoted) {parsed.diagnostics.push('Unsupported escaped flag cluster');addTokens({...base,kind:'unknown'});continue;}
+          const offset=quoted ? 1 : 0;
           for (let n = 1; n < token.value.length; n++) {
             const flag = `-${token.value[n]}`;
             const changingFlag = token.replacement && token.value.indexOf(token.replacement.marker) <= n;
             const row = changingFlag ? null : await option(currentPage, flag);
             const takes = row && (row.takesArgument ?? flagTakesArgument(row.flags));
-            entries.push({ row, flag, argument: takes && n + 1 < token.value.length ? token.value.slice(n + 1) : null });
-            if (!row) { if (n + 1 < token.value.length) entries.push({ row: null, flag: token.value.slice(n + 1), argument: null }); break; }
+            entries.push({ row, flag, argument: takes && n + 1 < token.value.length ? token.value.slice(n + 1) : null, start:token.start+(n===1 ? 0 : offset+n),end:token.start+offset+n+1+(quoted && n===token.value.length-1 ? 1 : 0),argumentStart:token.start+offset+n+1 });
+            if (!row) { if (n + 1 < token.value.length) entries.push({ row: null, flag: token.value.slice(n + 1), argument: null,start:token.start+offset+n+1,end:token.end }); break; }
             if (takes) break;
           }
         } else entries.push({ row: null, flag: whole, argument: null });
-        for (const { row, flag, argument } of entries) {
+        for (const { row, flag, argument, start, end, argumentStart } of entries) {
           const takes = row ? row.takesArgument ?? flagTakesArgument(row.flags) : null;
-          tokens.push({ ...base, kind: row ? 'option' : 'unknown', value: flag, page: row ? pageRef(currentPage) : null, anchor: row?.anchorId ?? null, excerpt: row?.excerpt ?? row?.flags ?? '', takesArgument: takes });
-          if (argument !== null) tokens.push({ ...base, kind: token.replacement && argument.includes(token.replacement.marker) ? 'expansion' : 'optionArgument', value: argument, page: pageRef(currentPage), anchor: row?.anchorId ?? null, excerpt: token.replacement ? `${row?.excerpt ?? row?.flags ?? ''} ${base.excerpt}` : row?.excerpt ?? row?.flags ?? '' });
+          addTokens({ ...base, ...(start===undefined ? {} : {start,end:end!,text:args.cmd.slice(start,end)}), kind: row ? 'option' : 'unknown', value: flag, page: row ? pageRef(currentPage) : null, anchor: row?.anchorId ?? null, excerpt: row?.excerpt ?? row?.flags ?? '', takesArgument: takes });
+          if (argument !== null) addTokens({ ...base, ...(argumentStart===undefined ? {} : {start:argumentStart,end:token.end,text:args.cmd.slice(argumentStart,token.end)}), kind: token.replacement && argument.includes(token.replacement.marker) ? 'expansion' : 'optionArgument', value: argument, page: pageRef(currentPage), anchor: row?.anchorId ?? null, excerpt: token.replacement ? `${row?.excerpt ?? row?.flags ?? ''} ${base.excerpt}` : row?.excerpt ?? row?.flags ?? '' });
           else if (row && takes && !optionArgumentOptional(row,currentPage.name)) pending = row;
         }
-      } else tokens.push({ ...base, kind: token.dynamic ? 'expansion' : token.kind === 'glob' ? 'glob' : 'argument' });
+      } else addTokens({ ...base, kind: token.dynamic ? 'expansion' : token.kind === 'glob' ? 'glob' : 'argument' });
     }
     if (pending) parsed.diagnostics.push(`Missing argument for ${pending.flag}`);
     const uncertain = parsed.diagnostics.length > 0 || tokens.some(token => token.kind === 'unknown') || (stage.parent !== null && uncertainStages.has(stage.parent));
@@ -218,13 +241,24 @@ export async function resolveExplanation(ctx: QueryCtx, args: { distro: Doc<'dat
     }
     const appendedFind = page?.name==='find' && ancestors.some(context=>context.command==='xargs' && !context.tokens.some(token=>token.kind==='option' && ['-I','-i','--replace'].includes(token.value)));
     if(appendedFind) parsed.diagnostics.push('Unsupported find expression with runtime arguments appended by xargs');
-    stages.push({ id: stage.id, parent: stage.parent, relation: stage.relation, tokens, destructive: uncertain || appendedFind ? [] : destructiveSignals(stage, tokens, page?.name ?? '', ancestors) });
+    rendered.destructive = uncertain || appendedFind ? [] : destructiveSignals(stage,tokens,page?.name ?? '',ancestors);
+    if(explanationBytes(output)>EXPLAIN_OUTPUT_LIMITS.bytes-256) {rendered.destructive=[];truncate();}
   }
   const facts = new Set<string>();
   const unknown = parsed.diagnostics.length > 0 || stages.some(stage=>stage.tokens.some(token=>token.kind==='unknown'));
   for(const stage of stages) {
     stage.destructive = stage.destructive.filter(note=>{if(facts.has(note.description)) return false;facts.add(note.description);return true;});
-    if(unknown) stage.destructive.forEach(note=>{note.dryRun=null;});
+    if(unknown || truncated) stage.destructive=[];
   }
-  return { version: 1 as const, input: args.cmd, shareUrl: `/explain?cmd=${encodeURIComponent(args.cmd)}${args.distro === 'debian' ? '' : `&distro=${args.distro}`}`, diagnostics: parsed.diagnostics, stages };
+  while(explanationBytes(output)>EXPLAIN_OUTPUT_LIMITS.bytes) {
+    truncate();stages.forEach(stage=>{stage.destructive=[];});
+    const last=stages.at(-1);
+    if(!last) {
+      const diagnostic=parsed.diagnostics.findIndex(message=>message!==TRUNCATED_DIAGNOSTIC);
+      if(diagnostic<0) break;
+      parsed.diagnostics.splice(diagnostic,1);continue;
+    }
+    if(last.tokens.length) last.tokens.pop();else stages.pop();
+  }
+  return output;
 }

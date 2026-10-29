@@ -365,6 +365,9 @@ try {
     ['explainOptional','explain:explain',{distro:'debian',cmd:'rm --interactive never -f file'}],
     ['explainReplace','explain:explain',{distro:'debian',cmd:'xargs -I={} rm ={}'}],
     ['explainRedirectGlob','explain:explain',{distro:'debian',cmd:'echo > *.txt'}],
+    ['explainClusterBounded','explain:explain',{distro:'debian',cmd:'rm -'+'r'.repeat(4090)+' x'}],
+    ['explainByteBounded','explain:explain',{distro:'debian',cmd:"rm '"+'\u0001'.repeat(4090)+"'"}],
+    ['explainOptionalWrapper','explain:explain',{distro:'debian',cmd:'xargs --max-lines rm item'}],
     ['explainMulti', 'explain:explain', { distro: 'debian', cmd: [...'abcdefghijklmnopqrstuvwx'].map(verb=>`git ${verb}`).join('|') }],
     ['explainBounded', 'explain:explain', { distro: 'debian', cmd: 'bounded ' + Array.from({ length: 100 }, (_, i) => `--limit${i}`).join(' ') }],
   ]) {
@@ -377,7 +380,7 @@ try {
       assert.equal(result.results[0].anchorId, 'ForwardAgent')
       assert.equal(result.results[0].name, 'ssh_config')
     } else {
-      assert.deepEqual(result.diagnostics, ['explainBounded','explainMulti'].includes(name) ? ['Resolution lookup limit reached'] : [])
+      assert.deepEqual(result.diagnostics, ['explainBounded','explainMulti','explainClusterBounded'].includes(name) ? ['Resolution lookup limit reached','Explanation truncated: lookup limit reached'] : name==='explainByteBounded' ? ['Explanation truncated: output limit reached'] : [])
       const tokens = result.stages.flatMap(stage => stage.tokens)
       if (name === 'explainBounded') {
         assert.equal(tokens.filter(token => token.kind === 'option').length, 63)
@@ -387,6 +390,11 @@ try {
         assert.ok(tokens.some(token=>token.kind==='unknown'))
         assert.equal(metrics.documents, 64, 'Saturated multi-row fixture changed its read accounting')
         assert.equal(tokens.filter(token=>token.kind==='subcommand').length, 11, 'Widened lookup ranges changed resolution coverage')
+      } else if(['explainClusterBounded','explainByteBounded'].includes(name)) {
+        assert.ok(Buffer.byteLength(JSON.stringify(result),'utf8')<=65536,'Serialized response exceeded 64 KiB')
+        assert.ok(tokens.length<=256,'Decoded output exceeded 256 tokens')
+        assert.ok(result.stages.every(stage=>stage.destructive.length===0))
+        if(name==='explainClusterBounded') assert.ok(tokens.filter(token=>token.kind==='option').every(token=>token.text.length<=2))
       } else assert.ok(tokens.every(token => token.kind !== 'unknown'))
       if (name === 'explainArchive') assert.deepEqual(tokens.filter(token => token.kind === 'option').map(token => token.anchor), ['extract', 'gzip', 'verbose', 'file', 'directory'])
       if (name === 'explainPipeline') {
@@ -403,6 +411,7 @@ try {
         assert.equal(expansion.page.name,name === 'explainExecTemplate' ? 'find' : 'xargs')
         assert.equal(expansion.shell,null)
       }
+      if(name === 'explainOptionalWrapper') assert.ok(result.stages.some(stage=>stage.destructive.some(note=>note.description==='rm deletes files.')))
       if(name === 'explainOptional') assert.equal(tokens.find(token=>token.value==='never').kind,'argument')
       if(name === 'explainRedirectGlob') {assert.equal(tokens.at(-1).kind,'glob');assert.deepEqual(result.stages[0].destructive,[])}
       if (name === 'explainSubcommand') assert.equal(tokens.find(token => token.kind === 'subcommand').page.name, 'git-commit')

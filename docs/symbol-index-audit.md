@@ -70,3 +70,52 @@ This deliberately trades unsupported multi-word recall for precision. Existing
 real fixtures still retain rsyncd.conf's `motd file`, resolv.conf's nameserver/
 search, tmpfs size, systemd directives and parent-page commands. Debian
 environment recall remains 747. Total symbols: **19,944 → 18,481**.
+
+## Round 4: variable definitions and typed login.defs directives
+
+Compared `07b64cd` with the revised extractor on the identical 18,529 cached
+HTML pages; zero parse failures and the same manifest hash above. No network
+fetch, ingestion upload or production data change was performed.
+
+| Distro | Category | Before | After |
+| --- | --- | ---: | ---: |
+| debian | environment | 747 | 729 |
+| debian | config | 1,061 | 1,095 |
+| debian | files | 896 | 896 |
+| debian | errors | 4,011 | 4,011 |
+| debian | subcommand | 308 | 308 |
+| debian | shell | 10 | 10 |
+| ubuntu | environment | 698 | 671 |
+| ubuntu | config | 1,145 | 1,145 |
+| ubuntu | files | 830 | 830 |
+| ubuntu | errors | 3,744 | 3,744 |
+| ubuntu | subcommand | 304 | 304 |
+| ubuntu | shell | 10 | 10 |
+| fedora | environment | 632 | 621 |
+| fedora | config | 859 | 859 |
+| fedora | files | 691 | 691 |
+| fedora | errors | 2,213 | 2,213 |
+| fedora | subcommand | 312 | 312 |
+| fedora | shell | 10 | 10 |
+
+Totals: Debian **7,033 → 7,049**, Ubuntu **6,731 → 6,704**, Fedora
+**4,717 → 4,706**; overall **18,481 → 18,459**. Debian environment symbols
+are **729**, above the original 714 reference. This is a retained-corpus
+coverage count, not a manually labeled recall percentage.
+
+Environment terms must be complete variable definitions, lists of variables,
+styled definition leads, documented value placeholders or explicit `.Ev`
+macro examples. Platform labels `MS`, `DOS`, `OS`, `MSDOS`, `UNIX`, `WINDOWS`,
+`LINUX`, `BSD` are excluded. Removed examples include less/pager's MS/DOS/OS,
+getopt's prose placeholder PID, curl's incomplete _PROXY/TLS fragments, and
+groff's `.Li M1 M2 M3` literal example. Curl's HTTPS_PROXY, CURL_SSL_BACKEND
+and the other full variable names, plus groff's `.Ev PATH`, remain indexed.
+The removed-term pass over all three corpora also found GCC encoding labels
+JIS/SJIS/EUCJP and Perl VMS/SYS/LOGIN prose fragments; these are excluded,
+while complete quoted locale-variable definitions in perllocale remain.
+
+Debian login.defs(5) recovers **0 → 34** directives, including PASS_MAX_DAYS,
+PASS_MIN_DAYS and PASS_WARN_AGE, from real `NAME (type)` paragraph/list pairs.
+These retain the real `description` enclosing anchor. Selected real blocks
+and source hashes are retained in `symbol-layouts-r4.json`; no synthetic
+definition-list replacement is used for that production layout.

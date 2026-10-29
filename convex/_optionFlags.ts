@@ -29,7 +29,7 @@ export function flagArgumentOptional(flags: string): boolean {
 // Legacy index rows lack the argument-column metadata. These exact GNU forms
 // are optional independently of how the old ingest rendered their flag text.
 export function optionArgumentOptional(row: {flag:string; flags:string; argumentOptional?:boolean}, command: string): boolean {
-  return row.argumentOptional ?? (flagArgumentOptional(row.flags) || (command==='rm' && row.flag==='--interactive') || (command==='xargs' && ['-i','--replace'].includes(row.flag)));
+  return row.argumentOptional ?? (flagArgumentOptional(row.flags) || (command==='rm' && row.flag==='--interactive') || (command==='xargs' && ['-i','--replace','-l','--max-lines','-e','--eof'].includes(row.flag)));
 }
 export function flagAllowsShortEquals(flags: string, flag: string): boolean {
   return flags.split(/[\s,|]+/).some(form => form.startsWith(`${flag}=`) || form.startsWith(`${flag}[=`));

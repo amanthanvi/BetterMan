@@ -53,3 +53,25 @@ test('explain: facts are target-free, deduplicated and omit redirect globs', asy
   const local=await request.get('/api/v1/explain',{params:{cmd:'./sudo rm -rf /'}})
   expect((await local.json()).stages[0].tokens[0].kind).toBe('unknown')
 })
+
+test('explain: unsupported grammar suppresses facts for the whole line over HTTP', async ({ request }) => {
+  for (const cmd of ['((rm))', '; > out', '> out ;; echo ok', '> out |', 'echo $((1+2)); > out', 'echo\r text > out']) {
+    const response = await request.get('/api/v1/explain', {params:{cmd}})
+    expect(response.status()).toBe(200)
+    const result=await response.json()
+    expect(result.diagnostics.length,cmd).toBeGreaterThan(0)
+    expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive),cmd).toEqual([])
+  }
+})
+
+test('explain: decoded cluster and serialized byte limits survive HTTP transport', async ({ request }) => {
+  for(const cmd of ['tar -'+'c'.repeat(4089)+' x', "tar '"+'\u0001'.repeat(4090)+"'"]) {
+    const response=await request.get('/api/v1/explain',{params:{cmd}})
+    expect(response.status()).toBe(200)
+    const result=await response.json()
+    expect(Buffer.byteLength(JSON.stringify(result),'utf8')).toBeLessThanOrEqual(65536)
+    expect(result.diagnostics.join(' ').toLowerCase()).toContain('truncated')
+    expect(result.stages.reduce((n:number,s:{tokens:unknown[]})=>n+s.tokens.length,0)).toBeLessThanOrEqual(256)
+    expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([])
+  }
+})

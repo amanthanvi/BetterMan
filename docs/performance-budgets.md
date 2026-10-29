@@ -210,3 +210,10 @@ operand and glob kinds rather than accepting an unrelated lookup. Existing
 metric descriptors, tolerances and read counts remain unchanged. The stored
 option index carries optional-argument metadata; legacy inline flag syntax
 and exact known optional forms remain supported without additional reads.
+
+Round 4 adds long repeated-flag decoding and serialized-output amplification
+cases (4 documents each) and xargs' optional `--max-lines` argument (5). Each
+uses one call and zero storage reads. Assertions enforce 256 decoded tokens,
+65,536 UTF-8 JSON bytes, a truncated diagnostic and no facts on truncated
+responses; individual cluster flags cannot copy the full cluster source text.
+All previous budget descriptors, tolerances and read counts are preserved.

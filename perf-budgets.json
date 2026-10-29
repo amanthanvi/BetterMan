@@ -481,6 +481,51 @@
       "baseline": 0,
       "relative": 0,
       "absolute": 0
+    },
+    "explainClusterBounded.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainClusterBounded.documents": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainClusterBounded.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainByteBounded.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainByteBounded.documents": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainByteBounded.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptionalWrapper.calls": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptionalWrapper.documents": {
+      "baseline": 5,
+      "relative": 0,
+      "absolute": 0
+    },
+    "explainOptionalWrapper.storageReads": {
+      "baseline": 0,
+      "relative": 0,
+      "absolute": 0
     }
   },
   "sourceHead": "90f087485dfa33bbcd4cf3ab729143ffc7d871fc",

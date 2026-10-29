@@ -36,14 +36,31 @@ Every token has:
 | `portability` | null, reserved for B7 data; no portability claim yet |
 | `shell` | Additional `{page, anchor, excerpt}` reference for shell syntax, otherwise null |
 
-A cluster emits one token per flag, followed by any attached argument. These
-tokens deliberately share their original source span and `text`; the decoded
-`value` identifies each part. Nested substitutions also retain the containing
-word's raw text and expose the inner commands as child stages. Literal quoted
-wildcards stay arguments; unquoted wildcards are globs. No glob, environment
-variable, substitution, shell alias, function, command path or filesystem result
+A cluster emits one token per flag, followed by any attached argument. Each
+flag retains only its own source span/text, never a copy of the entire cluster.
+Literal quoted wildcards stay arguments; unquoted wildcards are globs. No glob,
+environment variable, substitution, shell alias, function or filesystem result
 is evaluated. Manual-page aliases use at most one indexed hop within the same
 release.
+
+The admitted grammar is defined once in `convex/_shellGrammar.ts`:
+
+- Literal simple commands, literal environment assignments, quoted/escaped words,
+  argument globs and comments; single, double and ANSI-C quotes.
+- Pipelines and `&&`, `||`, `;` lists with nonempty, well-formed boundaries.
+  A final semicolon is allowed; trailing pipelines/conditionals are unsupported.
+- `>`, `>|`, `>>`, `&>`, `<` and numeric descriptor duplication such as `2>&1`.
+- The explicitly modeled executing wrapper forms listed below, including find's
+  validated conjunction-only expression and exec argument boundaries.
+
+Everything else is unsupported: arithmetic, runtime expansions/substitutions,
+process substitution, subshells/groups, conditionals/loops/case/functions,
+heredocs/here-strings, background jobs, brace expansion, unsupported redirects,
+and raw C0/DEL control characters outside quotes (including tab/newline/CR).
+Unclosed quoting and malformed list boundaries also diagnose the whole line.
+Safe token explanations remain available, but **any diagnostic or unknown token
+anywhere clears every fact and hint for the entire line**. This deliberately
+prefers missing a fact to partially modeling a shell form.
 
 `shell` references come from bash(1)'s actual ingest-indexed heading IDs for
 pipelines, lists, quoting, redirections, expansions and subshells. A release
@@ -78,7 +95,9 @@ that the submitted line successfully performs the operation.
 | truncate with a size option | truncate changes file sizes; a size of 0 empties a file. | none |
 | literal file output using >, >| or &> | > replaces the contents of the file it writes to. | none |
 
-Hints are deliberately narrower than facts. Unknown/invalid lines never receive
+Hints are deliberately narrower than facts. They require zero diagnostics and
+unknown tokens across the line. find must have a valid modeled expression with
+no stray path operands after its first predicate. Unknown/invalid lines never receive
 a hint. rm previews require ls-compatible switches and a replacement marker
 that cannot alter the inserted command; find previews use a known simple
 expression; git previews exclude existing dry-run, global options, wrappers
@@ -114,11 +133,15 @@ that expand as globs remain glob tokens; append redirects and explicit special
 device-directory spellings do not produce the file-overwrite fact.
 
 Limits are 4,096 characters, 128 lexical tokens, 24 stages and nesting depth 8.
+Decoded output is capped at 256 tokens and 65,536 serialized UTF-8 JSON bytes.
+The resolver measures each prospective token against the whole response, including
+input/share URL, and emits a truncated diagnostic before exceeding either cap.
+A final size check also accounts for facts/diagnostics; truncation suppresses facts.
 The resolver performs at most 64 indexed lookups and shares a 64-document
 allowance across them, plus two release reads: a whole-request ceiling of 66
 documents. Each query reserves its maximum (one, three, or four rows) before
-starting; empty/cache lookups cannot bypass the independent probe cap. It
-caches repeated lookups. Once exhausted, remaining tokens stay unresolved and
+starting; every lookup, including cache hits, consumes the independent probe cap. It
+caches repeated database results. Once exhausted, remaining tokens stay unresolved and
 the response includes a diagnostic. The pure parser has no data dependency. Limit failures use structured
 `ConvexError.data.code` values mapped to HTTP 400, including after production
 error redaction.

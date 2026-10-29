@@ -28,7 +28,7 @@
         },
         {
           "anchor": "extract",
-          "end": 9,
+          "end": 6,
           "excerpt": "-x, --extract",
           "kind": "option",
           "page": {
@@ -40,12 +40,12 @@
           "shell": null,
           "start": 4,
           "takesArgument": false,
-          "text": "-xzvf",
+          "text": "-x",
           "value": "-x"
         },
         {
           "anchor": "gzip",
-          "end": 9,
+          "end": 7,
           "excerpt": "-z, --gzip",
           "kind": "option",
           "page": {
@@ -55,14 +55,14 @@
           },
           "portability": null,
           "shell": null,
-          "start": 4,
+          "start": 6,
           "takesArgument": false,
-          "text": "-xzvf",
+          "text": "z",
           "value": "-z"
         },
         {
           "anchor": "verbose",
-          "end": 9,
+          "end": 8,
           "excerpt": "-v, --verbose",
           "kind": "option",
           "page": {
@@ -72,9 +72,9 @@
           },
           "portability": null,
           "shell": null,
-          "start": 4,
+          "start": 7,
           "takesArgument": false,
-          "text": "-xzvf",
+          "text": "v",
           "value": "-v"
         },
         {
@@ -89,9 +89,9 @@
           },
           "portability": null,
           "shell": null,
-          "start": 4,
+          "start": 8,
           "takesArgument": true,
-          "text": "-xzvf",
+          "text": "f",
           "value": "-f"
         },
         {
