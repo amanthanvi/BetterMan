@@ -1,13 +1,44 @@
 import hashlib
 import io
 import sqlite3
+import threading
 from pathlib import Path
 from urllib.error import HTTPError
+
+import pytest
 
 from ingestion import convex_client
 from ingestion import debian_indexes as indexes
 from ingestion import debian_pipeline as pipeline
 from ingestion.debian_indexes import Package
+
+
+@pytest.mark.parametrize("failure", ["download", "extract"])
+def test_acquisition_cleanup_preserves_original_errors(tmp_path, monkeypatch, failure):
+    obj = object.__new__(pipeline.Workspace)
+    obj.root = tmp_path
+    obj.cache = tmp_path / "cache"
+    obj.cache.mkdir()
+    obj.pins = {"mirror": "https://never-contact.invalid"}
+    obj.cache_limit = 1
+    obj._disk_lock = threading.Lock()
+    obj._reserved = 0
+    obj._inflight = set()
+    obj.extracted_quota = None
+    (obj.cache / "old.deb").write_bytes(b"old")
+    package = Package("fixture", "1", "pool/main/fixture.deb", "a" * 64, 1)
+    error = RuntimeError(f"original {failure} error")
+
+    def fail(*_args, **_kwargs):
+        raise error
+
+    monkeypatch.setattr(pipeline, "download", fail if failure == "download" else lambda *_: 0)
+    monkeypatch.setattr(pipeline, "extract", fail)
+    with pytest.raises(RuntimeError) as caught:
+        obj._acquire(package)
+    assert caught.value is error
+    assert obj._reserved == 0 and not obj._inflight
+    assert sum(p.stat().st_size for p in obj.cache.glob("*.deb")) <= obj.cache_limit
 
 
 def test_retry_after_and_minutes_of_jittered_backoff_are_bounded(tmp_path, monkeypatch):
@@ -104,8 +135,6 @@ def test_extracted_receipts_and_checksum_cache_resume_and_revalidate(tmp_path, m
 
 def test_extracted_quota_counts_resumed_files_and_parallel_writes(tmp_path):
     from concurrent.futures import ThreadPoolExecutor
-
-    import pytest
 
     from ingestion.debian_archives import ExtractedQuota
 

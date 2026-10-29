@@ -8,8 +8,9 @@ import ingestion.cli as cli
 
 
 @pytest.mark.parametrize("extra", [[], ["--sample"], ["--no-activate"], ["--in-container"]])
-def test_full_debian_cannot_target_prod_before_any_work(monkeypatch, extra):
-    monkeypatch.setenv("BETTERMAN_DATASET_STAGE", "prod")
+@pytest.mark.parametrize("stage", ["prod", " PROD ", "Prod", "\tprod\n"])
+def test_full_debian_cannot_target_prod_before_any_work(monkeypatch, extra, stage):
+    monkeypatch.setenv("BETTERMAN_DATASET_STAGE", stage)
 
     def forbidden(**_kwargs):
         pytest.fail("full prod ingest must fail before acquisition or writes")

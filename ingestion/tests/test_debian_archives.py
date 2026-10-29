@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 from ingestion import debian_indexes as indexes
+from ingestion import debian_pipeline as pipeline
 from ingestion.debian_archives import ArchiveStore, MissingSource, extract
 from ingestion.debian_indexes import Package, release_checksums, safe_path
-from ingestion.debian_pipeline import Workspace, parse_archive_source, sample_packages
-from ingestion.debian_publish import copyright_text
+from ingestion.debian_licenses import copyright_text
 
 FIXTURES = Path(__file__).parent / "fixtures" / "debs"
 
@@ -23,7 +23,7 @@ def package(name, installed=1):
 
 
 def workspace(tmp_path):
-    obj = object.__new__(Workspace)
+    obj = object.__new__(pipeline.Workspace)
     obj.root = tmp_path
     obj.store = ArchiveStore(tmp_path)
     obj.packages = [package("provider-low", 10), package("provider-high", 100), package("gawk", 1)]
@@ -88,11 +88,13 @@ def test_archive_pages_use_existing_mandoc_parser_and_stable_provider_ids(
 ):
     obj = archive_workspace
     source = next(row for row in obj.sources() if row[2] == "shared")
-    row, primary = parse_archive_source((*source, "1"))
-    assert not primary and row.source_package == "provider-high"
+    pkg, path, name, section, _alias, raw = source
+    job = pipeline.ArchiveParseInput(pkg, path, name, section, raw, "1")
+    row = pipeline.parse_archive_source(job)
+    assert row.source_package == "provider-high"
     assert row.description == "preferred fixture"
     assert row.options and row.options[0]["flags"] == "--fixture"
-    assert parse_archive_source((*source, "1"))[0].page_id == row.page_id
+    assert pipeline.parse_archive_source(job).page_id == row.page_id
 
 
 def test_cycles_and_host_file_includes_fail_closed(archive_workspace, tmp_path):
@@ -159,8 +161,10 @@ def test_release_uses_sha256_not_md5_and_sampling_is_stable():
         f"MD5Sum:\n {'b' * 32} 10 ignored\nSHA256:\n {digest} 10 main/Contents-all.gz\n"
     ) == {"main/Contents-all.gz": (digest, 10)}
     packages = [package("gawk"), package("provider-low"), package("provider-high")]
-    assert sample_packages(packages, 2) == sample_packages(list(reversed(packages)), 2)
-    assert sample_packages(packages, 2)[0].name == "gawk"
+    assert pipeline.sample_packages(packages, 2) == pipeline.sample_packages(
+        list(reversed(packages)), 2
+    )
+    assert pipeline.sample_packages(packages, 2)[0].name == "gawk"
 
 
 def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
@@ -389,8 +393,6 @@ def test_missing_cross_package_targets_acquire_only_the_indexed_owner(
 def test_deadline_blocks_acquisition_before_network_or_extraction(
     archive_workspace, tmp_path, monkeypatch
 ):
-    import ingestion.debian_pipeline as pipeline
-
     obj = archive_workspace
     monkeypatch.setattr(pipeline, "ingest_activation_deadline", lambda: 1)
     with pytest.raises(RuntimeError, match="Job budget exhausted"):

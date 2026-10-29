@@ -7438,8 +7438,8 @@
     },
     "storageProjectionScope": "Historical sample storage predates merged derived/symbol data; not a measured combined v5 storage projection. No shared capacity/spend authorization.",
     "checks": {
-      "ingestion": 842,
-      "coveragePercent": 89.36,
+      "ingestion": 856,
+      "coveragePercent": 89.45,
       "convex": 3232,
       "next": 570,
       "e2e": 134,

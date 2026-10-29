@@ -29,10 +29,12 @@ from ingestion.debian_indexes import (
     download,
     popularity,
 )
+from ingestion.debian_licenses import copyright_text
 from ingestion.ingest_runner import (
     _NAME_RE,
     _AliasRow,
     _bounded_futures,
+    _PageRow,
     _PageSpool,
     _parse_source,
     _ParseContext,
@@ -179,21 +181,25 @@ class Workspace:
                 f"{self.pins['mirror']}/{package.filename}", archive, package.sha256, package.size
             )
             archive.touch()
-            return package, extract(archive, package, self.root, quota=self.extracted_quota), size
+            entries = extract(archive, package, self.root, quota=self.extracted_quota)
         finally:
             with self._disk_lock:
                 self._reserved -= package.size
                 self._inflight.discard(f"{package.sha256}.deb")
-                # Bounded checksum-keyed LRU. In-flight archives are excluded;
-                # complete extracted packages remain resumable in the workspace.
-                used = sum(p.stat().st_size for p in self.cache.glob("*.deb"))
-                for candidate in sorted(self.cache.glob("*.deb"), key=lambda p: p.stat().st_mtime):
-                    if used <= self.cache_limit:
-                        break
-                    if candidate.name in self._inflight:
-                        continue
-                    used -= candidate.stat().st_size
-                    candidate.unlink()
+                self._evict_archives()
+        return package, entries, size
+
+    def _evict_archives(self):
+        # Called under the disk lock. In-flight archives are excluded; complete
+        # extracted packages remain resumable independently of archive eviction.
+        used = sum(p.stat().st_size for p in self.cache.glob("*.deb"))
+        for candidate in sorted(self.cache.glob("*.deb"), key=lambda p: p.stat().st_mtime):
+            if used <= self.cache_limit:
+                break
+            if candidate.name in self._inflight:
+                continue
+            used -= candidate.stat().st_size
+            candidate.unlink()
 
     def acquire(self, packages=None, *, workers=2):
         workers = min(2, max(1, workers))
@@ -348,6 +354,7 @@ class Workspace:
                                 if owner == pkg and name == executable and rank is None
                             ]
                         except ValueError:
+                            # No resolvable binary link: report the missing manual below.
                             pass
                     if len(matches) != 1:
                         self.alternatives_skipped.append(
@@ -514,17 +521,30 @@ class Workspace:
         )
 
 
-def parse_archive_source(item):
-    pkg, path, name, section, primary, raw, version = item
+@dataclasses.dataclass(frozen=True)
+class ArchiveParseInput:
+    package: str
+    path: str
+    name: str
+    section: str
+    raw: bytes
+    version: str
+
+
+def parse_archive_source(item: ArchiveParseInput) -> _PageRow:
     page = _parse_source(
-        ManSource(Path(path), name, section), raw, _ParseContext("debian", "amd64", {}, {})
+        ManSource(Path(item.path), item.name, item.section),
+        item.raw,
+        _ParseContext("debian", "amd64", {}, {}),
     )
     return dataclasses.replace(
         page,
-        page_id=sha256_hex(f"debian/{pkg}/{path}/{name}/{section}".encode())[:32],
-        source_package=pkg,
-        source_package_version=version,
-    ), primary
+        page_id=sha256_hex(
+            f"debian/{item.package}/{item.path}/{item.name}/{item.section}".encode()
+        )[:32],
+        source_package=item.package,
+        source_package_version=item.version,
+    )
 
 
 def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
@@ -533,7 +553,7 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
             require_job_budget("parsing")
             if alias:
                 continue
-            yield pkg, path, name, section, False, raw, workspace.available[pkg].version
+            yield ArchiveParseInput(pkg, path, name, section, raw, workspace.available[pkg].version)
 
     providers = set()
     seen_routes = set()
@@ -543,14 +563,14 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
             executor, parse_archive_source, iter(inputs()), workers * 2
         ):
             try:
-                page, primary = future.result()
+                page = future.result()
                 spool.append(page)
                 key = (page.name, page.section)
                 if key in seen_routes:
                     providers.add(page.page_id)
                 seen_routes.add(key)
             except Exception as exc:  # noqa: BLE001
-                failed.append({"package": item[0], "path": item[1], "error": str(exc)})
+                failed.append({"package": item.package, "path": item.path, "error": str(exc)})
     refs = list(spool.refs())
     canonical = {(p.name, p.section): p for p in refs if p.page_id not in providers}
     by_route = {}
@@ -593,7 +613,6 @@ def benchmark(root: Path, *, limit=2000, workers=4) -> dict:
     with _PageSpool(spool_path) as spool:
         providers, failures = parse_workspace(workspace, spool, workers=workers)
         parsed = time.monotonic()
-        from ingestion.debian_publish import copyright_text
         from ingestion.ingest_runner import _LicenseSpool
 
         notices = _LicenseSpool(spool.connection)

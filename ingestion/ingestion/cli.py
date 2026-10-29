@@ -88,7 +88,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "ingest":
-        if args.debian_full and os.environ.get("BETTERMAN_DATASET_STAGE", "staging") == "prod":
+        if (
+            args.debian_full
+            and os.environ.get("BETTERMAN_DATASET_STAGE", "staging").strip().lower() == "prod"
+        ):
             _log(
                 "ingest_error",
                 error="--debian-full cannot use stage prod; ingest to staging "

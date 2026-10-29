@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 
 from ingestion.convex_client import ConvexIngestClient, encode_json
 from ingestion.db import iso_utc_now
+from ingestion.debian_licenses import copyright_text
 from ingestion.debian_pipeline import Workspace, parse_workspace, require_job_budget
 from ingestion.ingest_runner import (
     IngestResult,
@@ -24,28 +25,6 @@ from ingestion.ingest_runner import (
     _upload_worker_count,
 )
 from ingestion.package_set import FULL_PACKAGE_SET_DEBIAN
-
-
-def copyright_text(workspace: Workspace, package: str) -> str:
-    paths = [
-        row[0]
-        for row in workspace.store.db.execute(
-            "SELECT path FROM entries WHERE pkg=? "
-            "AND (path LIKE 'usr/share/doc/%/copyright' "
-            "OR path LIKE 'usr/share/doc/%/copyright.gz') ORDER BY path",
-            (package,),
-        )
-    ]
-    if not paths:
-        paths = [f"usr/share/doc/{package}/copyright"]
-    texts = []
-    for path in paths:
-        text = workspace.resolve(package, path).decode("utf-8", errors="replace")
-        if text.strip() and text not in texts:
-            texts.append(text)
-    if not texts:
-        raise RuntimeError(f"Missing nonblank archive copyright: {package}")
-    return "\n\n".join(texts)
 
 
 def ingest_debian(

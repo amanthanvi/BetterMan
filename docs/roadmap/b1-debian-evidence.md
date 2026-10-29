@@ -320,7 +320,7 @@ An abrupt VM loss can prevent saving; this does not claim all 18+ GB survive a
 new runner. The download-only dispatch has no production environment or secrets,
 suppresses regular ingest/promote and was not run.
 
-Validation: 842 ingestion tests (89.36% coverage), 3,232 Convex tests/typecheck,
+Validation: 856 ingestion tests (89.45% coverage), 3,232 Convex tests/typecheck,
 570 Next tests/lint/grammar/build, 134 fresh-fixture local E2E tests and 119 ops
 tests passed, along with current main performance budgets and public-API/PR
 guards. Fixture coverage includes the real postinst templates, binary-link/manual
@@ -335,3 +335,11 @@ attempted HTTP authorization override. No prod pointer was moved. Regression
 tests cover insert/replacement activation, staging, explicit internal approval,
 mixed-distro promotion, empty/misspelled gates, combined manual authorization,
 uncalled function assignments and package-qualified alias enrichment.
+
+Archive parser jobs use a frozen `ArchiveParseInput` and return a typed page
+record, eliminating positional input/result ambiguity across process workers.
+Acquisition releases reservations in `finally` and delegates eviction to a
+separate method; download/extraction exception identity is tested. Shared
+copyright loading lives in `debian_licenses`, so benchmark and publication
+imports are acyclic. List test inputs use explicit concatenation, and failed
+binary resolution is intentionally reported by the manual-attribution check.

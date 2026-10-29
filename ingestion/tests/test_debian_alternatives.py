@@ -19,9 +19,9 @@ def test_real_static_templates_are_read_without_executing(file, name, priority):
 def test_unknown_dynamic_and_ambiguous_registrations_fail_closed():
     for script in [
         "update-alternatives --install /bin/foo foo $(evil) 5 "
-        "--slave /usr/share/man/man1/foo.1 foo.1 /usr/share/man/man1/bar.1",
+        + "--slave /usr/share/man/man1/foo.1 foo.1 /usr/share/man/man1/bar.1",
         "p=10\np=50\nupdate-alternatives --install /bin/foo foo /bin/bar $p "
-        "--slave /usr/share/man/man1/foo.1 foo.1 /usr/share/man/man1/bar.1",
+        + "--slave /usr/share/man/man1/foo.1 foo.1 /usr/share/man/man1/bar.1",
         'echo "update-alternatives --install /bin/foo foo /bin/bar 5"',
     ]:
         offers, skipped = parse_alternatives(script)
