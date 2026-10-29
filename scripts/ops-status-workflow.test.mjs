@@ -14,6 +14,10 @@ test('ops-status stays a manual, read-only production check', () => {
   assert.equal(withSecret.length, 1)
   assert.match(withSecret[0], /^name: Derived data status\n[\s\S]*secrets\.CONVEX_DEPLOY_KEY[\s\S]*run: pnpm convex:derived-check --prod\n?$/)
   assert.ok(steps.indexOf(withSecret[0]) === steps.length - 1, 'the secret step runs last')
+  // Same gate as prune-releases.yml: verify installed tooling before the key is exposed.
+  const provenance = steps.findIndex((step) => step.startsWith('name: Verify trusted tooling provenance\n        run: pnpm deps:provenance\n'))
+  assert.ok(provenance > 0 && provenance < steps.indexOf(withSecret[0]), 'provenance is verified before the secret step')
+  assert.ok(steps.findIndex((step) => step.includes('pnpm install --frozen-lockfile')) < provenance)
   for (const forbidden of ['convex deploy', 'convex import', 'convex run', 'ingest:', 'uv run', 'vercel ']) {
     assert.ok(!workflow.includes(forbidden), `ops-status must not run ${forbidden}`)
   }

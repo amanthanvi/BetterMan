@@ -37,6 +37,9 @@ jobs:
       - name: Install application dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify trusted tooling provenance
+        run: pnpm deps:provenance
+
       # Exits nonzero while a build is pending or unhealthy; the printed status
       # is the answer either way.
       - name: Derived data status
