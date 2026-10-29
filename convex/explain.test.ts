@@ -225,7 +225,7 @@ describe('stable prefix pagination', () => {
 describe('review regressions: explanation semantics', () => {
   it.each([
     ['timeout 5 cp -v a b','cp','-v'],['nice ls -n dir','ls','-n'],['nohup cp -v a b','cp','-v'],
-    ['time -f format cp -v a b','cp','-v'], ['timeout -s TERM -k 1 5 cp -v a b','cp','-v'], ['nice -n 5 cp -v a b','cp','-v'], ['exec -a name cp -v a b','cp','-v'], ['doas -u root cp -v a b','cp','-v'],['command cp -v a b','cp','-v'],['exec cp -v a b','cp','-v'],['doas cp -v a b','cp','-v'],
+    ['/usr/bin/time -f format cp -v a b','cp','-v'], ['timeout -s TERM -k 1 5 cp -v a b','cp','-v'], ['nice -n 5 cp -v a b','cp','-v'], ['exec -a name cp -v a b','cp','-v'], ['doas -u root cp -v a b','cp','-v'],['command cp -v a b','cp','-v'],['exec cp -v a b','cp','-v'],['doas cp -v a b','cp','-v'],
   ])('unwraps %s with wrapper-specific operands', async (cmd, name, flag) => {
     const result=await explain(await explainFixture(),cmd);
     const token=result.stages.flatMap((s: {tokens: {value:string;page:{name:string}}[]})=>s.tokens).find((t:{value:string})=>t.value===flag);
@@ -485,4 +485,16 @@ describe('round 6 wrapper argv admission',()=>{
   expect(result.diagnostics).toEqual([]);
   expect(result.stages.flatMap((s:{destructive:{description:string}[]})=>s.destructive).map((n:{description:string})=>n.description)).toContain('rm deletes files.');
  });
+});
+
+it.each(['sudo -- VAR=1 rm x','sudo -u root -- VAR=1 rm x','env command rm x','env exec rm x','sudo nice command rm x','command env exec rm x'])('round 7: rejects false shell dispatch for %s',async cmd=>{
+ const result=await explain(await reviewed(),cmd);
+ expect(result.diagnostics.length).toBeGreaterThan(0);
+ expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
+});
+
+it.each(['xargs -p rm x','xargs --interactive rm x','xargs xargs -r rm x','env -i doas -n rm x','exec -c doas -n rm x','>out time command rm x','time >out time exec rm x'])('differential admission regressions: %s',async cmd=>{
+ const result=await explain(await explainFixture(),cmd);
+ expect(result.diagnostics.length).toBeGreaterThan(0);
+ expect(result.stages.flatMap((s:{destructive:unknown[]})=>s.destructive)).toEqual([]);
 });

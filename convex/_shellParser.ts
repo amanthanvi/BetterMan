@@ -1,6 +1,6 @@
 import { SUPPORTED_SHELL_GRAMMAR, shellGrammarDiagnostics, isUnsupportedShellKeyword, hasUnquotedBrace, hasUnquotedTilde } from './_shellGrammar';
 import {wrapperBoundary} from './_shellWrappers';
-import { manualCommandName } from './_commandConventions';
+import { manualCommandName, SHELL_BUILTINS, MODELED_EXTERNAL_SHELL_NAMES } from './_commandConventions';
 export class ShellParseError extends Error {
   constructor(readonly code: string) { super(code); }
 }
@@ -8,7 +8,7 @@ export class ShellParseError extends Error {
 export const EXPLAIN_LIMITS = { characters: 4096, tokens: 128, stages: 24, depth: 8 } as const;
 export type ShellKind = 'command' | 'word' | 'assignment' | 'operator' | 'redirect' | 'redirectTarget' | 'glob' | 'expansion' | 'comment' | 'unknown';
 export type ShellToken = { kind: ShellKind; text: string; value: string; start: number; end: number; dynamic: boolean; replacement?: {marker: string; source: 'find' | 'xargs'} };
-export type ShellStage = { id: number; parent: number | null; relation: 'list' | 'subshell' | 'substitution' | 'wrapper' | 'exec'; tokens: ShellToken[] };
+export type ShellStage = { id: number; parent: number | null; relation: 'list' | 'subshell' | 'substitution' | 'wrapper' | 'exec'; executionContext: 'shell' | 'command' | 'external'; environmentCleared: boolean; tokens: ShellToken[] };
 export type ShellParse = { stages: ShellStage[]; diagnostics: string[] };
 const OPERATORS = ['&&', '||', '|&', '>>', '<<-', '<<<', '<<', '<>', '>&', '<&', '>|', '&>', '&>>', '|', ';', '&', '(', ')', '>', '<', '\n'];
 const WRAPPER_ARGUMENTS = Object.fromEntries(Object.entries(SUPPORTED_SHELL_GRAMMAR.wrappers).map(([name,args])=>[name,new Set(args)]));
@@ -19,7 +19,7 @@ export function parseShell(input: string): ShellParse {
   let count = 0;
   const create = (parent: number | null, relation: ShellStage['relation']) => {
     if (result.stages.length >= EXPLAIN_LIMITS.stages) throw new ShellParseError('EXPLAIN_TOO_MANY_STAGES');
-    const stage: ShellStage = { id: result.stages.length, parent, relation, tokens: [] };
+    const stage: ShellStage = { id: result.stages.length, parent, relation, executionContext: parent===null ? 'shell' : 'external', environmentCleared: false, tokens: [] };
     result.stages.push(stage);
     return stage;
   };
@@ -180,16 +180,33 @@ export function parseShell(input: string): ShellParse {
     token.kind = 'command';
     const name = manualCommandName(token.value);
     if (!name) {token.kind = 'unknown'; continue;}
+    if(SHELL_BUILTINS.has(name) && (stage.executionContext==='external' || token.value.includes('/')) && !MODELED_EXTERNAL_SHELL_NAMES.has(name)) {
+      token.kind='unknown';result.diagnostics.push('Unsupported external executable: shell builtin name');continue;
+    }
     if (isUnsupportedShellKeyword(name)) {
       token.kind = 'unknown'; result.diagnostics.push('Shell control structures are not interpreted'); continue;
     }
+    const ancestors:ShellStage[]=[];
+    for(let parent=stage.parent;parent!==null;) {const ancestor=result.stages[parent];ancestors.push(ancestor);parent=ancestor.parent;}
+    if(name==='xargs' && ancestors.some(ancestor=>ancestor.tokens.some(t=>t.kind==='command' && manualCommandName(t.value)==='xargs'))) {result.diagnostics.push('Unsupported nested xargs input dependency');continue;}
+    if(name==='doas' && stage.environmentCleared) {result.diagnostics.push('Unsupported doas lookup with a cleared environment');continue;}
     if (WRAPPER_ARGUMENTS[name]) {
+      const keywordTime=name==='time' && token.text==='time' && stage.executionContext==='shell' && command===0 && ![stage,...ancestors].some(context=>context.tokens.some(other=>other.start<token.start && (other.kind==='redirect' || context===stage)));
+      if(keywordTime && stage.tokens[command+1]?.value.startsWith('-') && stage.tokens.some(other=>other.kind==='redirect' && other.start<stage.tokens[command+1].start)) {
+        result.diagnostics.push('Unsupported redirected time keyword option');continue;
+      }
+      if(keywordTime && stage.tokens[command+1]?.value.startsWith('-') && stage.tokens[command+1].value!=='-p') {
+        result.diagnostics.push('Unsupported shell time keyword option');continue;
+      }
       const boundaryResult=wrapperBoundary(stage.tokens,command,name);
       const {end,replacement,diagnostic}=boundaryResult;
       if(diagnostic) {result.diagnostics.push(diagnostic);continue;}
       if (end < stage.tokens.length && !['operator', 'redirect', 'comment'].includes(stage.tokens[end].kind)) {
         const boundary = stage.tokens.findIndex((token, i) => i >= end && ['operator','redirect'].includes(token.kind));
-        const child = create(stage.id, 'wrapper'); child.tokens = stage.tokens.splice(end, (boundary < 0 ? stage.tokens.length : boundary) - end);
+        const child = create(stage.id, 'wrapper');
+        child.environmentCleared=stage.environmentCleared || boundaryResult.clearsEnvironment;
+        child.executionContext=keywordTime ? 'shell' : name==='command' && stage.executionContext!=='external' && !token.value.includes('/') ? 'command' : 'external';
+        child.tokens = stage.tokens.splice(end, (boundary < 0 ? stage.tokens.length : boundary) - end);
         if(replacement==='') {result.diagnostics.push('Unsupported empty xargs replacement string');child.tokens.forEach(token=>{token.kind='unknown';});}
         if (replacement) for(const [position,token] of child.tokens.entries()) {
           if(position>0 && token.kind!=='unknown' && token.value.includes(replacement)) {token.replacement={marker:replacement,source:'xargs'};token.dynamic=true;token.kind='expansion';}

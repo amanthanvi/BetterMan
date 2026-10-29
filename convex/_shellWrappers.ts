@@ -12,7 +12,7 @@ export const EXECUTING_WRAPPER_SWITCHES: Record<string, readonly string[]> = {
 };
 const OPAQUE: Record<string, readonly string[]> = {
   sudo:['-s','-i','--shell','--login','-l','--list','-v','--validate','-k','--reset-timestamp','-K','--remove-timestamp','-e','--edit'],
-  doas:['-s','-C'], env:['-S','--split-string'], command:['-v','-V'],
+  doas:['-s','-C'], xargs:['-p','--interactive'], env:['-S','--split-string'], command:['-v','-V'],
 };
 const duration=(v:string)=>/^(?:\d+(?:\.\d*)?|\.\d+)[smhd]?$/.test(v) && Number.isFinite(Number(v.replace(/[smhd]$/,'')));
 const integer=(v:string,min:number,max=2147483647)=>/^[+-]?\d+$/.test(v) && Number.isSafeInteger(Number(v)) && Number(v)>=min && Number(v)<=max;
@@ -50,14 +50,14 @@ function validValue(name:string,flag:string,value:string):boolean {
 export function executingWrapperOptions(name:string):readonly string[] {
   return [...(SUPPORTED_SHELL_GRAMMAR.wrappers[name]??[]),...(SUPPORTED_SHELL_GRAMMAR.optionalWrapperArguments[name]??[]),...(EXECUTING_WRAPPER_SWITCHES[name]??[])].filter(flag=>!(OPAQUE[name]??[]).includes(flag));
 }
-export function wrapperBoundary(tokens:ShellToken[],command:number,name:string):{end:number;replacement:string|null;diagnostic:string|null} {
-  let end=command+1,replacement:string|null=null;
-  const fail=(reason:string)=>({end:tokens.length,replacement,diagnostic:`Cannot statically unwrap ${name}: ${reason}`});
+export function wrapperBoundary(tokens:ShellToken[],command:number,name:string):{end:number;replacement:string|null;diagnostic:string|null;clearsEnvironment:boolean} {
+  let end=command+1,replacement:string|null=null, optionsEnded=false,clearsEnvironment=false;
+  const fail=(reason:string)=>({end:tokens.length,replacement,clearsEnvironment,diagnostic:`Cannot statically unwrap ${name}: ${reason}`});
   const required=SUPPORTED_SHELL_GRAMMAR.wrappers[name]??[],optional=SUPPORTED_SHELL_GRAMMAR.optionalWrapperArguments[name]??[];
   while(end<tokens.length && !['operator','redirect','comment'].includes(tokens[end].kind)) {
     const token=tokens[end],word=token.value;
     if(token.dynamic || token.kind==='glob') return fail('runtime option or argument');
-    if(word==='--') {end++;break;}
+    if(word==='--') {optionsEnded=true;end++;break;}
     if(['env','sudo'].includes(name) && /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) break;
     if(!word.startsWith('-') || word==='-') break;
     let consumed=false;
@@ -65,6 +65,7 @@ export function wrapperBoundary(tokens:ShellToken[],command:number,name:string):
     for(let n=0;n<parts.length;n++) {
       const flag=parts[n];
       if((OPAQUE[name]??[]).includes(flag) || ['--help','--version'].includes(flag)) return fail(`non-executing or opaque mode ${flag}`);
+      if((name==='env' && ['-i','--ignore-environment'].includes(flag)) || (name==='exec' && flag==='-c')) clearsEnvironment=true;
       const takes=required.includes(flag),maybe=optional.includes(flag);
       if(!takes && !maybe && !(EXECUTING_WRAPPER_SWITCHES[name]??[]).includes(flag)) return fail(`unrecognized option ${flag}`);
       if(!takes && !maybe) {
@@ -84,7 +85,7 @@ export function wrapperBoundary(tokens:ShellToken[],command:number,name:string):
   }
   // env/sudo assignments belong to these wrappers, never to child shell syntax.
   // Once assignments begin, the next non-assignment word is the executable.
-  if(name==='env' || name==='sudo') {
+  if(name==='env' || (name==='sudo' && !optionsEnded)) {
     while(end<tokens.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[end].value)) {
       if(tokens[end].dynamic || tokens[end].kind==='glob') return fail('runtime assignment');
       tokens[end].kind='assignment';end++;
@@ -97,5 +98,5 @@ export function wrapperBoundary(tokens:ShellToken[],command:number,name:string):
   if(!tokens[end] || ['operator','redirect','comment'].includes(tokens[end].kind)) {
     if(['sudo','doas','timeout','nohup','time'].includes(name)) return fail('missing command');
   }
-  return {end,replacement,diagnostic:null};
+  return {end,replacement,diagnostic:null,clearsEnvironment};
 }

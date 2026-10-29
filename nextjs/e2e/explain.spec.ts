@@ -100,7 +100,7 @@ test('explain: interleaved wrapper redirects preserve the child option anchor', 
 test('explain: wrapper assignment and delimiter admission survives HTTP',async({request})=>{
  // Keep this API matrix in its own real rate-limit bucket, as plain-text E2E does.
  const headers={'x-vercel-forwarded-for':`2001:db8::${crypto.randomUUID().replaceAll('-','').slice(0,4)}:${crypto.randomUUID().replaceAll('-','').slice(0,4)}`};
- for(const cmd of ['timeout 1 VAR=value rm x','nice VAR=value rm x','nohup VAR=value rm x','command VAR=value rm x','exec VAR=value rm x','doas VAR=value rm x','/usr/bin/time VAR=value rm x','xargs VAR=value rm x','env VAR=value -- rm x','env VAR=value -u VAR rm x',"xargs -d '\\400' rm x","xargs --delimiter='\\777' rm x"]) {
+ for(const cmd of ['timeout 1 VAR=value rm x','nice VAR=value rm x','nohup VAR=value rm x','command VAR=value rm x','exec VAR=value rm x','doas VAR=value rm x','/usr/bin/time VAR=value rm x','xargs VAR=value rm x','sudo -- VAR=1 rm x','sudo -u root -- VAR=1 rm x','env command rm x','env exec rm x','sudo nice command rm x','command env exec rm x','xargs -p rm x','xargs xargs -r rm x','env -i doas -n rm x','>out time command rm x','time >out -p rm x','env VAR=value -- rm x','env VAR=value -u VAR rm x',"xargs -d '\\400' rm x","xargs --delimiter='\\777' rm x"]) {
   const response=await request.get('/api/v1/explain',{params:{cmd},headers});
   expect(response.status()).toBe(200);
   const result=await response.json();

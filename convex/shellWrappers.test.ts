@@ -4,7 +4,7 @@ import delimiters from './fixtures/xargs-delimiters.json';
 import {parseShell} from './_shellParser';
 import {SUPPORTED_SHELL_GRAMMAR} from './_shellGrammar';
 
-export const WRAPPER_FORMS=['sudo -u root','doas -u root','env -u HOME','timeout -k 1s -s TERM 5m','nice -n -5','nohup','time -f %E','command -p','exec -a name','xargs -0'];
+export const WRAPPER_FORMS=['sudo -u root','doas -u root','env -u HOME','timeout -k 1s -s TERM 5m','nice -n -5','nohup','/usr/bin/time -f %E','command -p','exec -a name','xargs -0'];
 export const INVALID_WRAPPERS=[
  'timeout invalid rm x','timeout -k invalid 5 rm x','timeout -s INVALID 5 rm x','timeout -s 999 5 rm x','timeout -k=1 5 rm x','timeout 5',
  'nice -n invalid rm x','nice -n 99999999999999999 rm x','nice -n=5 rm x',
@@ -53,8 +53,9 @@ it('validates every required wrapper option, including missing values',()=>{
    : wrapper==='xargs' && ['-n','--max-args','-P','--max-procs','-s','--max-chars','-L'].includes(flag) ? '1' : 'VALUE';
   const validValue=wrapper==='xargs' && ['-d','--delimiter'].includes(flag) ? ':' : value;
   const tail=wrapper==='timeout' ? '5 rm x' : 'rm x';
-  expect(parseShell(`${wrapper} ${flag} ${validValue} ${tail}`).diagnostics,`${wrapper} ${flag}`).toEqual([]);
-  expect(parseShell(`${wrapper} ${flag}`).diagnostics.length,`${wrapper} ${flag} missing`).toBeGreaterThan(0);
+  const program=wrapper==='time'?'/usr/bin/time':wrapper;
+  expect(parseShell(`${program} ${flag} ${validValue} ${tail}`).diagnostics,`${wrapper} ${flag}`).toEqual([]);
+  expect(parseShell(`${program} ${flag}`).diagnostics.length,`${wrapper} ${flag} missing`).toBeGreaterThan(0);
  }
 });
 
@@ -79,7 +80,7 @@ it.each(WRAPPER_FORMS)('applies nested env boundaries and delimiter ranges under
     expect(result.stages.some(s=>s.tokens.some(t=>t.kind==='command' && t.value==='rm'))).toBe(false);
   }
   for(const delimiter of ['\\400','\\777','\\x100','\\q']) expect(parseShell(`${wrapper} xargs -d '${delimiter}' rm x`).diagnostics.length).toBeGreaterThan(0);
-  for(const delimiter of ['\\377','\\xFF','\\n',',']) expect(parseShell(`${wrapper} xargs -d '${delimiter}' rm x`).diagnostics).toEqual([]);
+  for(const delimiter of ['\\377','\\xFF','\\n',',']) expect(parseShell(`${wrapper} xargs -d '${delimiter}' rm x`).diagnostics).toEqual(wrapper.startsWith('xargs') ? ['Unsupported nested xargs input dependency'] : []);
 });
 it.each(['timeout 1','nice','nohup','command','exec','doas','/usr/bin/time','xargs'])('does not skip assignment-shaped executables after %s',wrapper=>{
  const result=parseShell(`${wrapper} VAR=value rm x`);
@@ -91,4 +92,31 @@ it('retains top-level and documented wrapper assignments',()=>{
   const result=parseShell(cmd);expect(result.diagnostics).toEqual([]);
   expect(result.stages.some(s=>s.tokens.some(t=>t.kind==='command' && t.value==='rm'))).toBe(true);
  }
+});
+
+it.each(['sudo -- VAR=1 rm x','sudo -u root -- VAR=1 rm x'])('ends sudo assignments at --: %s',cmd=>{
+ const result=parseShell(cmd);
+ expect(result.diagnostics.length).toBeGreaterThan(0);
+ expect(result.stages.at(-1)?.tokens[0]).toMatchObject({kind:'unknown',value:'VAR=1'});
+});
+it.each(WRAPPER_FORMS.filter(w=>!w.startsWith('command') && !w.startsWith('exec') && !w.startsWith('time')).concat('/usr/bin/time'))('never restores builtin dispatch below external %s',wrapper=>{
+ for(const builtin of ['command','exec','builtin','type','eval','source','export']) {
+  const result=parseShell(`${wrapper} ${builtin} rm x`);
+  expect(result.diagnostics.length,`${wrapper} ${builtin}`).toBeGreaterThan(0);
+  expect(result.stages.some(s=>s.tokens.some(t=>t.kind==='command' && t.value==='rm'))).toBe(false);
+ }
+});
+it.each(['command exec rm x','time command rm x','sudo env VAR=1 nice rm x','env /usr/bin/time rm x'])('keeps supported shell/external contexts for %s',cmd=>expect(parseShell(cmd).diagnostics).toEqual([]));
+it.each(['env command rm x','env exec rm x','exec command rm x','command env command rm x','time -f %E rm x'])('diagnoses external/keyword dispatch rather than guessing a shell: %s',cmd=>expect(parseShell(cmd).diagnostics.length).toBeGreaterThan(0));
+
+it.each(['>out','2>&1','<input'])('redirect provenance blocks time keyword dispatch: %s',redirect=>{
+ for(const prefix of ['', 'time ']) for(const builtin of ['command','exec']) expect(parseShell(`${prefix}${redirect} time ${builtin} rm x`).diagnostics.length).toBeGreaterThan(0);
+});
+it.each(['xargs -p','xargs --interactive','xargs xargs -r','xargs env xargs -I z','env -i doas -n','exec -c doas -n'])('fails closed on interactive/input/lookup dependencies: %s',prefix=>{
+ for(const target of ['rm x','truncate -s 0 f']) expect(parseShell(`${prefix} ${target}`).diagnostics.length).toBeGreaterThan(0);
+});
+
+it.each(['>out','2>&1','<input'])('does not lift a redirect across time keyword options: %s',redirect=>{
+ for(const target of ['rm x','truncate -s 0 f']) expect(parseShell(`time ${redirect} -p ${target}`).diagnostics.length).toBeGreaterThan(0);
+ expect(parseShell(`time -p ${redirect} rm x`).diagnostics).toEqual([]);
 });

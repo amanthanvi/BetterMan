@@ -216,3 +216,16 @@ denormalized with page metadata, with optional section/distro scoping. No
 runtime document-body or corpus scan is needed. Broader family graphs and
 portability data belong to #399; task phrases (#398) and popularity (#396)
 remain separate work.
+
+
+Wrapper dispatch retains its execution context: shell assignments are prefixes
+only at the start of a top-level simple command. Env and sudo consume their own
+documented assignments, but sudo's `--` ends both options and assignments.
+An external wrapper's child is argv, not another shell; builtin names such as
+`command` and `exec` are unknown executables there. Shell `command` preserves
+builtin dispatch, `exec` switches to external argv, and only lexical keyword
+`time` (without an earlier redirect/assignment) preserves shell parsing.
+Interactive xargs, nested xargs input dependencies, and doas after environment
+clearing receive diagnostics and no facts/hints. Token explanations remain.
+See the [recorded GNU admission oracle](../scripts/explain-differential/README.md)
+for generation, coverage and its deliberately bounded evidentiary scope.
