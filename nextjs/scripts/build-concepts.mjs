@@ -16,8 +16,8 @@ const SCALARS = ['slug', 'title', 'term', 'summary', 'status', 'generated-by', '
 const LISTS = ['related', 'aliases', 'references', 'headings', 'pages']
 const SOURCE_KEYS = ['page', 'package', 'distros', 'sections']
 const DISTROS = ['debian', 'ubuntu', 'fedora', 'arch', 'alpine', 'freebsd', 'macos']
-export const MIN_WORDS = 100
-export const MAX_WORDS = 260
+export const MIN_WORDS = 120
+export const MAX_WORDS = 250
 
 const REF_RE = /^([A-Za-z0-9_.:+-]+)\(([1-9][a-z0-9]*)\)$/
 const INLINE_REF_RE = /(?<![\w.:+-])([a-z][a-z0-9_.+-]*[a-z0-9])\(([1-9][a-z0-9]*)\)/g

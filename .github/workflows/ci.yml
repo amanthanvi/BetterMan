@@ -285,7 +285,8 @@ jobs:
           export CONVEX_INGEST_SECRET="e2e-secret"
           export RATE_LIMIT_TAG_KEY="e2e-rate-limit-key"
           export PUBLIC_BASE_URL="http://127.0.0.1:3000"
-          # Concept explainers ship unapproved; e2e renders the drafts (production ignores this flag).
+          # Concept explainers ship unapproved; e2e renders the drafts. The flag needs CI=true (set by
+          # GitHub Actions) or a Vercel preview; production and the Docker image ignore it.
           export BETTERMAN_CONCEPT_DRAFTS=1
 
           pnpm -C nextjs build

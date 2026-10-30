@@ -53,6 +53,11 @@ export function isManHtmlPath(pathname: string): boolean {
   return /^\/man\/[^/]+(?:\/[^/]+)?$/.test(pathname) && !/^\/man\/[^/]+\/[^/]+\.txt$/.test(pathname)
 }
 
+/** `/concept/<slug>`, the explainers the Pages Router renders as plain HTML (pages/concept). */
+export function isConceptHtmlPath(pathname: string): boolean {
+  return /^\/concept\/[^/]+$/.test(pathname)
+}
+
 /**
  * Next normalises a loopback host in middleware URLs to `localhost`, so behind
  * `next start -H 127.0.0.1` (the budget harness) a rewrite no longer matches the
@@ -161,6 +166,10 @@ export async function proxy(request: NextRequest) {
   if (redirect) return setSecurityHeaders(redirect, null)
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
   if (isManHtmlPath(request.nextUrl.pathname)) return await manProxy(request, cspEnabled)
+  // Explainers depend only on the URL and the deployment: the man pages' hash-only CSP, no nonce, no cookie.
+  if (isConceptHtmlPath(request.nextUrl.pathname)) {
+    return setSecurityHeaders(NextResponse.next(), cspEnabled ? buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null)
+  }
   const path = request.nextUrl.pathname
   // Keep root concrete .txt routes in sync with the afterFiles rewrites in next.config.ts.
   if (/^\/man\/[^/]+\/[^/]+\.txt$/.test(path) || (/^\/[^/]+\.txt$/.test(path) && path !== '/robots.txt')) {

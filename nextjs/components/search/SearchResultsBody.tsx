@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Fragment, type ReactNode } from 'react'
 
 import type { SearchResult, TopHit } from '../../lib/api'
-import type { ConceptLink } from '../../lib/concepts'
+import type { ConceptLink, ConceptMatch } from '../../lib/concepts'
 import { withDistro, type Distro } from '../../lib/distro'
 import { looksLikeCommandLine } from '../../lib/explain'
 import { ConceptRow } from './ConceptRow'
@@ -60,11 +60,18 @@ export function SearchResultsBody({
   top?: TopHit | null
   urlDistro: Distro | null
   /** BetterMan explainers the query names (lib/concepts.ts matchConcepts). */
-  concepts?: ConceptLink[]
+  concepts?: (ConceptLink & Partial<Pick<ConceptMatch, 'via'>>)[]
   footer?: ReactNode
 }) {
   // Explainers explain the manual's section 7 pages, so another section filter leaves them out.
-  const conceptRows = section && !section.startsWith('7') ? [] : concepts
+  // An alias-only match yields when the first hit is a command of exactly that name that
+  // the explainer is not about: `nice` finds nice(1), not the scheduling explainer.
+  const first = results[0]
+  const asked = q.trim().toLowerCase()
+  const conceptRows = section && !section.startsWith('7')
+    ? []
+    : concepts.filter((concept) =>
+      concept.via !== 'alias' || !first || first.name.toLowerCase() !== asked || concept.sources.some((s) => s.name === first.name))
   if (!results.length && conceptRows.length) {
     return (
       <div className="mt-10">
@@ -101,7 +108,6 @@ export function SearchResultsBody({
     )
   }
 
-  const first = results[0]
   const leads = top && top.name === first.name && top.section === first.section ? top : null
   return (
     <div className="mt-10">

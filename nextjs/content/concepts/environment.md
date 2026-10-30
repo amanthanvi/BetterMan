@@ -6,6 +6,7 @@ summary: The name=value strings every process inherits, such as PATH, HOME and L
 status: pending-owner
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
+panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
 sources:
   - page: environ(7)
     package: manpages 6.9.1-1
@@ -14,12 +15,12 @@ sources:
 related: env(1), printenv(1), sh(1), bash(1), getenv(3), setenv(3), execve(2)
 aliases: environment, environment variable, env var, env vars, environ, path variable
 references: environ(7)
-headings: ENVIRONMENT
 ---
 Every process carries an *environment*: a list of strings of the form
-`name=value`. A new process gets a copy of its parent's environment, so
-variables set in your shell reach the programs you start from it. Names are
-case-sensitive and cannot contain `=`.
+`name=value`. A child process inherits a copy of its parent's environment. A
+shell variable reaches the programs you start only once it is exported, or
+when it is assigned in front of the command. Names are case-sensitive and
+cannot contain `=`.
 
 In a Bourne-style shell, `export NAME=value` puts a variable into the
 environment of every command run afterwards, while `NAME=value command` sets it
@@ -29,7 +30,8 @@ Variables you will meet everywhere:
 
 - `PATH`, the colon-separated list of directories searched, in order, for a
   command given without a slash.
-- `HOME`, `USER`, `LOGNAME` and `SHELL`, set at login from the user database.
+- `HOME`, `USER`, `LOGNAME` and `SHELL`, set at login from the user database;
+  su(1) may keep `LOGNAME` and `USER` from the old user.
 - `LANG` and the `LC_*` variables, which choose the [[locale]].
 - `TERM`, the terminal type output is prepared for.
 - `PAGER`, `EDITOR` and `VISUAL`, the programs other tools launch for you.

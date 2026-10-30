@@ -6,6 +6,7 @@ summary: How cmd1 | cmd2 connects one command's output to the next one's input, 
 status: pending-owner
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
+panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
 sources:
   - page: bash(1)
     package: bash 5.2.37-2+b10
@@ -14,7 +15,7 @@ sources:
   - page: pipe(7)
     package: manpages 6.9.1-1
     distros: debian, ubuntu, fedora, arch, alpine
-    sections: DESCRIPTION; I/O on pipes and FIFOs; Pipe capacity
+    sections: DESCRIPTION; I/O on pipes and FIFOs; Pipe capacity; PIPE_BUF
   - page: fifo(7)
     package: manpages 6.9.1-1
     distros: debian, ubuntu, fedora, arch, alpine
@@ -24,27 +25,26 @@ aliases: pipe, pipes, pipeline, pipelines, piping, named pipe, named pipes, fifo
 references: pipe(7), fifo(7)
 pages: bash(1), sh(1), dash(1)
 ---
-A pipeline is a sequence of commands joined by `|`. In `ps ax | grep ssh`, the
-standard output of ps(1) is connected through a pipe to the standard input of
-grep(1). Each command of the pipeline runs in its own process, and the shell
-waits for all of them to finish.
-
-A few details from bash(1):
+A pipeline is a sequence of commands joined by `|`: in `ps ax | grep ssh`, the
+standard output of ps(1) becomes the standard input of grep(1). Each command runs in its own subshell process, except that with the
+`lastpipe` option and job control off, bash may run the last one itself. The
+shell waits for all of them to finish.
 
 - `|&` sends standard error through the pipe too; it is short for `2>&1 |`.
-- The pipeline's [[exit-status|exit status]] is that of the *last* command,
-  so an earlier failure goes unnoticed. With `set -o pipefail` it is the status
-  of the last command that failed, or zero if all succeeded.
+- The pipeline's [[exit-status|exit status]] is that of the *last* command.
+  With `set -o pipefail` it is that of
+  the rightmost command that failed, or zero if all succeeded.
 - `!` before a pipeline inverts its exit status.
 
-Underneath, a pipe is a one-way channel inside the kernel: bytes written to
-one end are read from the other, as a plain byte stream with no message
-boundaries. A pipe holds a limited amount of data (on Linux, 16 pages by
-default: 65,536 bytes with 4 KiB pages); a writer that fills it waits until the reader catches up, and a
-reader of an empty pipe waits for data. When every writer has closed its end,
-the reader sees end-of-file. When every reader has gone, a writer receives the
-`SIGPIPE` [[signals|signal]], which by default ends it; this is how
-`yes | head -1` stops.
+Underneath, a pipe is a one-way kernel channel carrying a plain byte stream.
+It holds a limited amount: 16 pages by default on current Linux, adjustable
+with fcntl(2); programs should not rely on any size. A writer
+that fills it waits for the reader, or fails if nonblocking; a reader of an
+empty pipe waits for data. When every writer has closed its end, the reader
+sees end-of-file. When every reader has gone, a writer receives the `SIGPIPE`
+[[signals|signal]], which by default ends it, or its write fails with `EPIPE`
+if it ignores the signal. This is how `yes | head -1` stops.
 
 A FIFO, or *named pipe*, works the same way but has a name in the file system,
-so unrelated processes can use it. mkfifo(1) creates one.
+so unrelated processes can use it; opening one normally blocks until the other
+end is opened. See mkfifo(1).

@@ -2,14 +2,16 @@ import { expect, test } from '@playwright/test'
 
 import { expectNoCriticalOrSeriousViolations } from './a11y'
 
-// Every explainer ships unapproved, so these run against a build that opts in to
-// drafts (BETTERMAN_CONCEPT_DRAFTS=1, set by CI's e2e job). Production ignores the flag.
+// Every explainer ships unapproved, so these run against a server that opts in to
+// drafts: BETTERMAN_CONCEPT_DRAFTS=1 with CI=true, as CI's e2e job runs it. Production ignores the flag.
 
 test.describe('concept explainers (#400)', () => {
   test('a man page names the concepts it references in a quiet footer line', async ({ page }) => {
     await page.goto('/man/bash/1')
     const line = page.getByRole('navigation', { name: 'Concepts' })
-    await expect(line).toContainText('Concepts: exit status · pipes · quoting · redirection')
+    // At most three, strongest first; bash(1) is named by four, so the fourth waits.
+    await expect(line).toContainText('Concepts: exit status · pipes · quoting')
+    await expect(line.getByRole('link')).toHaveCount(3)
     await expect(page.locator('.bm-manual [data-bm-concepts], article .bm-added [data-bm-concepts]')).toHaveCount(0)
 
     await line.getByRole('link', { name: 'pipes' }).click()
@@ -38,6 +40,10 @@ test.describe('concept explainers (#400)', () => {
     test('the explainer page is complete, labelled as BetterMan’s text, and links its manual page', async ({ page }) => {
       const response = await page.goto('/concept/signals')
       expect(response?.status()).toBe(200)
+      // Plain HTML like the man pages: hash-only CSP, no Next runtime, and a draft is never cached.
+      expect(response?.headers()['content-security-policy']).not.toContain('nonce')
+      expect(response?.headers()['cache-control']).toBe('private, no-store')
+      await expect(page.locator('script[src^="/_next/"]')).toHaveCount(0)
       await expect(page.getByRole('heading', { level: 1, name: 'Signals' })).toBeVisible()
       await expect(page.locator('[data-bm-concept-draft]')).toContainText('not published')
       await expect(page.locator('[data-bm-concept-provenance]')).toContainText('BetterMan’s own explainer, not text from the manual')
@@ -70,6 +76,7 @@ test.describe('concept explainers (#400)', () => {
     expect((await request.get('/sitemap-concepts.xml')).status()).toBe(404)
     const response = await page.goto('/concept/no-such-concept')
     expect(response?.status()).toBe(404)
+    expect(response?.headers()['cache-control']).toBe('public, max-age=0, must-revalidate')
     await expect(page.getByRole('heading', { level: 1, name: 'No such file or directory' })).toBeVisible()
   })
 })

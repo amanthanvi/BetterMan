@@ -6,11 +6,16 @@ summary: How the kernel or another program tells a process to stop, pause, conti
 status: pending-owner
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
+panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
 sources:
   - page: signal(7)
     package: manpages 6.9.1-1
     distros: debian, ubuntu, fedora, arch, alpine
     sections: Signal dispositions; Sending a signal; Signal mask and pending signals; Standard signals; Queueing and delivery semantics for standard signals
+  - page: pid_namespaces(7)
+    package: manpages 6.9.1-1
+    distros: debian, ubuntu, fedora, arch, alpine
+    sections: The namespace init process
   - page: bash(1)
     package: bash 5.2.37-2+b10
     distros: debian
@@ -35,7 +40,8 @@ Signals you meet most often:
 - `SIGINT`, interrupt from the keyboard (usually Ctrl-C), and `SIGTERM`, a
   termination request.
   Both terminate by default, but a program may catch them and clean up first.
-- `SIGKILL` always ends the process.
+- `SIGKILL` always ends the process, though the init process (PID 1) of a
+  PID namespace has special delivery rules.
 - `SIGHUP`, a hangup on the controlling terminal or the death of the
   controlling process.
 - `SIGTSTP`, stop typed at the terminal (usually Ctrl-Z), and `SIGSTOP` pause

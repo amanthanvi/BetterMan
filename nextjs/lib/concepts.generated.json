@@ -4,11 +4,11 @@
    "slug": "boot",
    "title": "The boot process",
    "term": "boot process",
-   "summary": "What happens between power-on and a login prompt, from firmware and boot loader to the kernel, the initramfs and the first process.",
+   "summary": "What happens between power-on and a login prompt, from firmware and boot loader to the kernel, the initramfs and the system manager.",
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -35,7 +35,7 @@
       "arch",
       "alpine"
      ],
-     "sections": "Hardware; OS loader; Kernel; Root user-space process; Boot scripts"
+     "sections": "Hardware; OS loader; Kernel; Root user-space process; Boot scripts; Sequencing directories"
     }
    ],
    "related": [
@@ -72,9 +72,7 @@
     "boot",
     "booting",
     "bootup",
-    "startup",
     "boot sequence",
-    "init",
     "initramfs",
     "initrd",
     "boot loader",
@@ -102,7 +100,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 254,
+   "words": 241,
    "body": [
     {
      "type": "p",
@@ -135,13 +133,13 @@
        },
        {
         "t": "text",
-        "v": ", such as GRUB or systemd-boot, on a storage device or the network. On EFI systems the firmware can also load the kernel directly."
+        "v": ", such as GRUB or systemd-boot. On EFI and some other firmware, the firmware can load the kernel directly instead."
        }
       ],
       [
        {
         "t": "text",
-        "v": "The boot loader loads the "
+        "v": "The boot loader or the firmware loads the "
        },
        {
         "t": "em",
@@ -149,7 +147,7 @@
        },
        {
         "t": "text",
-        "v": ", and usually an "
+        "v": " into memory and, optionally, an "
        },
        {
         "t": "em",
@@ -157,7 +155,7 @@
        },
        {
         "t": "text",
-        "v": ", into memory. It can pass the kernel parameters, such as which file system is the root; "
+        "v": ". Kernel parameters, such as which file system is the root, are listed in "
        },
        {
         "t": "man",
@@ -175,13 +173,13 @@
        },
        {
         "t": "text",
-        "v": " list them."
+        "v": "."
        }
       ],
       [
        {
         "t": "text",
-        "v": "The kernel initializes the hardware drivers and unpacks the initramfs, a compressed archive that serves as a temporary root file system. Its job is to find and mount the real root file system. The older name "
+        "v": "The kernel unpacks the initramfs, a compressed archive used as a temporary root file system, and starts its first user-space program as PID 1. That early user space finds and mounts the real root file system. The older name "
        },
        {
         "t": "em",
@@ -189,13 +187,7 @@
        },
        {
         "t": "text",
-        "v": " is still used for it."
-       }
-      ],
-      [
-       {
-        "t": "text",
-        "v": "The kernel then starts the first user-space process, which has PID 1. Traditionally this runs "
+        "v": " is still used for it. Without one, the kernel mounts the root itself and starts the init program there, traditionally "
        },
        {
         "t": "code",
@@ -203,7 +195,13 @@
        },
        {
         "t": "text",
-        "v": "; on many current distributions it is "
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "Control passes to the host's system manager, often "
        },
        {
         "t": "man",
@@ -212,13 +210,7 @@
        },
        {
         "t": "text",
-        "v": ", the system manager."
-       }
-      ],
-      [
-       {
-        "t": "text",
-        "v": "The system manager mounts the remaining file systems and starts the configured services."
+        "v": ", which mounts the remaining file systems and starts the configured services."
        }
       ]
      ]
@@ -228,27 +220,11 @@
      "inlines": [
       {
        "t": "text",
-       "v": "On systemd systems the last step is organized into "
+       "v": "Under systemd this last step is organized into "
       },
       {
        "t": "em",
        "v": "targets"
-      },
-      {
-       "t": "text",
-       "v": ": named stages such as "
-      },
-      {
-       "t": "code",
-       "v": "basic.target"
-      },
-      {
-       "t": "text",
-       "v": " and "
-      },
-      {
-       "t": "code",
-       "v": "multi-user.target"
       },
       {
        "t": "text",
@@ -260,7 +236,7 @@
       },
       {
        "t": "text",
-       "v": " depends on, which is usually an alias for "
+       "v": " depends on, usually an alias for "
       },
       {
        "t": "code",
@@ -276,7 +252,7 @@
       },
       {
        "t": "text",
-       "v": ". The work runs in parallel, so the order is not fixed beyond the dependencies."
+       "v": ", largely in parallel."
       }
      ]
     },
@@ -293,7 +269,7 @@
       },
       {
        "t": "text",
-       "v": " instead. init reads "
+       "v": ": init reads "
       },
       {
        "t": "code",
@@ -301,7 +277,7 @@
       },
       {
        "t": "text",
-       "v": " and runs start and stop scripts from "
+       "v": ", and scripts in "
       },
       {
        "t": "code",
@@ -309,15 +285,64 @@
       },
       {
        "t": "text",
-       "v": " in the order set by links in "
+       "v": " run through links in "
       },
       {
        "t": "code",
-       "v": "/etc/rc?.d"
+       "v": "/etc/rc[0-6S].d"
       },
       {
        "t": "text",
-       "v": ". Shutdown runs the chain in reverse: services stop, file systems are unmounted, and the machine powers off."
+       "v": ", "
+      },
+      {
+       "t": "code",
+       "v": "S"
+      },
+      {
+       "t": "text",
+       "v": " links with "
+      },
+      {
+       "t": "code",
+       "v": "start"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "K"
+      },
+      {
+       "t": "text",
+       "v": " links with "
+      },
+      {
+       "t": "code",
+       "v": "stop"
+      },
+      {
+       "t": "text",
+       "v": ", in link-name order."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "At shutdown, systemd stops the services, unmounts the file systems it can, optionally hands over to an "
+      },
+      {
+       "t": "em",
+       "v": "exitrd"
+      },
+      {
+       "t": "text",
+       "v": " to detach the rest, and powers off."
       }
      ]
     }
@@ -331,7 +356,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -346,7 +371,22 @@
       "arch",
       "alpine"
      ],
-     "sections": "DESCRIPTION; Capabilities list; Thread capability sets; File capabilities; Capabilities and execution of programs by root; NOTES"
+     "sections": "DESCRIPTION; Capabilities list; Thread capability sets; File capabilities; Capabilities and execution of programs by root; Set-user-ID-root programs that have file capabilities; The securebits flags: establishing a capabilities-only environment; NOTES"
+    },
+    {
+     "page": {
+      "name": "path_resolution",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "Bypassing permission checks: superuser and capabilities"
     }
    ],
    "related": [
@@ -381,7 +421,6 @@
     "cap_net_bind_service",
     "cap_sys_admin",
     "cap_net_raw",
-    "setcap",
     "file capabilities"
    ],
    "references": [
@@ -392,7 +431,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 225,
+   "words": 247,
    "body": [
     {
      "type": "p",
@@ -408,7 +447,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "A few examples from the list in "
+       "v": "Some examples from "
       },
       {
        "t": "man",
@@ -451,7 +490,7 @@
        },
        {
         "t": "text",
-        "v": " bypasses file read, write and execute permission checks."
+        "v": " bypasses file read, write and execute permission checks, but grants execute only if at least one of the file's execute bits is set."
        }
       ],
       [
@@ -506,7 +545,7 @@
       },
       {
        "t": "text",
-       "v": " set limits what may become effective; a capability dropped from the permitted set cannot be taken back without running a privileged program. Other sets decide what survives running a new program."
+       "v": " set limits what may become effective. A capability dropped from the permitted set returns only by running a set-user-ID-root program, or one whose file capabilities grant it."
       }
      ]
     },
@@ -524,7 +563,7 @@
       },
       {
        "t": "text",
-       "v": ". That lets a program do one privileged thing, such as listen on port 80, without running as root; "
+       "v": "; "
       },
       {
        "t": "man",
@@ -533,7 +572,7 @@
       },
       {
        "t": "text",
-       "v": " shows a file's capabilities. By default the kernel still treats root specially: a process running as root that starts a program gets every capability not removed from its "
+       "v": " shows them. By default the kernel still treats root specially: a process whose real and effective user IDs are 0 gets, when it runs a program, every capability not removed from its "
       },
       {
        "t": "em",
@@ -541,7 +580,15 @@
       },
       {
        "t": "text",
-       "v": " set."
+       "v": " set. The "
+      },
+      {
+       "t": "em",
+       "v": "securebits"
+      },
+      {
+       "t": "text",
+       "v": " flags can turn that off. A set-user-ID-root program that has file capabilities, run by a user whose real ID is not 0, gets only the file's capabilities."
       }
      ]
     },
@@ -564,7 +611,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -579,7 +626,7 @@
       "arch",
       "alpine"
      ],
-     "sections": "DESCRIPTION; Terminology; Cgroups version 1 and version 2; Creating cgroups and moving processes; CGROUPS VERSION 2; Cgroups v2 controllers; Cgroups v2 subtree control; FILES"
+     "sections": "DESCRIPTION; Terminology; Cgroups version 1 and version 2; Creating cgroups and moving processes; CGROUPS VERSION 2; Cgroups v2 unified hierarchy; Cgroups v2 controllers; Cgroups v2 subtree control; Cgroups v2 \"no internal processes\" rule; NOTES; FILES"
     }
    ],
    "related": [
@@ -626,14 +673,14 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 251,
+   "words": 249,
    "body": [
     {
      "type": "p",
      "inlines": [
       {
        "t": "text",
-       "v": "Control groups, usually called cgroups, let the kernel organize processes into a tree of groups and then limit and measure the resources each group uses: CPU time, memory, I/O, the number of processes, and more."
+       "v": "Control groups, usually called cgroups, let the kernel organize processes into a tree of groups and then limit and measure the resources each group uses."
       }
      ]
     },
@@ -682,7 +729,7 @@
       },
       {
        "t": "text",
-       "v": ". A limit set on a group applies to everything beneath it in the tree, and a child group cannot exceed its parent's limit."
+       "v": ". Limits generally apply to the whole subtree beneath a group, and a descendant cannot exceed a limit set higher up."
       }
      ]
     },
@@ -691,7 +738,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "There are two versions. Version 1 let each controller have its own separate hierarchy. Version 2, official since Linux 4.5, puts every controller in one unified hierarchy, and is meant to replace version 1, which remains for compatibility."
+       "v": "Version 1 gave each controller its own hierarchy. Version 2, official since Linux 4.5, uses one unified hierarchy and implements a subset of the version 1 controllers. Both can be mounted at once, but not one controller in both."
       }
      ]
     },
@@ -700,15 +747,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "Cgroups are managed through a file system, normally mounted under "
-      },
-      {
-       "t": "code",
-       "v": "/sys/fs/cgroup"
-      },
-      {
-       "t": "text",
-       "v": ":"
+       "v": "Cgroups are managed through a file system:"
       }
      ]
     },
@@ -718,7 +757,7 @@
       [
        {
         "t": "text",
-        "v": "Each group is a directory, and making a subdirectory creates a child group."
+        "v": "Each group is a directory; a subdirectory is a child group."
        }
       ],
       [
@@ -732,7 +771,24 @@
        },
        {
         "t": "text",
-        "v": " file moves that process, with all its threads, into the group. A process is in exactly one group of a hierarchy at a time, and a child starts in its parent's group."
+        "v": " file moves that process into the group. In version 1, and in version 2 thread mode, the threads of one process can sit in different groups. A child starts in its parent's groups, unless created with "
+       },
+       {
+        "t": "man",
+        "name": "clone3",
+        "section": "2"
+       },
+       {
+        "t": "text",
+        "v": " "
+       },
+       {
+        "t": "code",
+        "v": "CLONE_INTO_CGROUP"
+       },
+       {
+        "t": "text",
+        "v": "."
        }
       ],
       [
@@ -746,7 +802,7 @@
        },
        {
         "t": "text",
-        "v": " chooses which controllers are active for a group's children."
+        "v": " chooses which controllers are active for a group's children. A group other than the root cannot both contain processes and enable controllers for its children."
        }
       ],
       [
@@ -756,7 +812,7 @@
        },
        {
         "t": "text",
-        "v": " shows which group a process is in."
+        "v": " shows which groups a process is in."
        }
       ]
      ]
@@ -765,8 +821,21 @@
      "type": "p",
      "inlines": [
       {
+       "t": "man",
+       "name": "cgroups",
+       "section": "7"
+      },
+      {
        "t": "text",
-       "v": "On many systems, "
+       "v": " says the usual place for version 1 mounts is under "
+      },
+      {
+       "t": "code",
+       "v": "/sys/fs/cgroup"
+      },
+      {
+       "t": "text",
+       "v": ", and that \"on many modern systems, "
       },
       {
        "t": "man",
@@ -775,16 +844,7 @@
       },
       {
        "t": "text",
-       "v": " mounts this file system at boot and uses cgroups to track services and user sessions, so its resource settings are often where you set limits. Cgroups decide how much of a resource a group may use; "
-      },
-      {
-       "t": "concept",
-       "slug": "namespaces",
-       "v": "namespaces"
-      },
-      {
-       "t": "text",
-       "v": ", their usual partner in containers, decide what it can see."
+       "v": " automatically mounts the cgroup2 filesystem at /sys/fs/cgroup/unified during the boot process.\" Layouts vary between systems."
       }
      ]
     },
@@ -792,8 +852,13 @@
      "type": "p",
      "inlines": [
       {
+       "t": "concept",
+       "slug": "namespaces",
+       "v": "Namespaces"
+      },
+      {
        "t": "text",
-       "v": "Cgroups are specific to Linux."
+       "v": ", their partner in containers, decide what a group can see. Cgroups are specific to Linux."
       }
      ]
     }
@@ -807,7 +872,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -880,7 +945,6 @@
     "utf-8",
     "unicode",
     "ascii",
-    "encoding",
     "character encoding",
     "charset",
     "charsets",
@@ -920,7 +984,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 253,
+   "words": 245,
    "body": [
     {
      "type": "p",
@@ -953,7 +1017,7 @@
       },
       {
        "t": "text",
-       "v": " has the full table in octal, decimal and hexadecimal. The ISO/IEC 8859 family, such as Latin-1, kept ASCII as the lower half and used the upper half for the letters of one group of languages at a time."
+       "v": " has the full table. The ISO/IEC 8859 family, such as Latin-1, kept ASCII as the lower half; positions 128 to 159 are control characters, and 160 to 255 hold 96 characters for one group of languages at a time."
       }
      ]
     },
@@ -978,7 +1042,7 @@
       [
        {
         "t": "text",
-        "v": "Every other character takes two to four bytes, all of them 0x80 or above, so no byte inside a multibyte character can be mistaken for "
+        "v": "Every other character takes two to four bytes, each in the range 0x80 to 0xfd, so no byte inside a multibyte character can be mistaken for "
        },
        {
         "t": "code",
@@ -986,15 +1050,7 @@
        },
        {
         "t": "text",
-        "v": " or the null byte. The copyright sign © is stored as "
-       },
-       {
-        "t": "code",
-        "v": "0xc2 0xa9"
-       },
-       {
-        "t": "text",
-        "v": "."
+        "v": " or the null byte. The bytes 0xfe and 0xff never occur."
        }
       ],
       [
@@ -1019,7 +1075,7 @@
       },
       {
        "t": "text",
-       "v": "; a UTF-8 locale is selected with a setting such as "
+       "v": ", set for example with "
       },
       {
        "t": "code",
@@ -1027,7 +1083,7 @@
       },
       {
        "t": "text",
-       "v": ". In a UTF-8 locale a single byte is not necessarily a single character, and one character does not always take one column on screen: wide East Asian characters take two, and combining marks take none."
+       "v": ". In a UTF-8 locale one byte is not necessarily one character, and one character does not always take one column on screen: wide East Asian characters take two, and combining marks take none."
       }
      ]
     },
@@ -1058,7 +1114,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -1074,6 +1130,21 @@
       "alpine"
      ],
      "sections": "Process ID (PID); Parent process ID (PPID); Process group ID and session ID; User and group identifiers"
+    },
+    {
+     "page": {
+      "name": "pid_namespaces",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "The namespace init process"
     }
    ],
    "related": [
@@ -1111,17 +1182,12 @@
     }
    ],
    "aliases": [
-    "pid",
     "ppid",
-    "uid",
-    "gid",
     "euid",
     "user id",
     "group id",
     "process id",
     "process group",
-    "session",
-    "setuid",
     "set-user-id",
     "real user id",
     "effective user id"
@@ -1134,7 +1200,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 239,
+   "words": 246,
    "body": [
     {
      "type": "p",
@@ -1166,16 +1232,7 @@
       },
       {
        "t": "text",
-       "v": " (PPID) names the process that created it. Commands such as "
-      },
-      {
-       "t": "man",
-       "name": "kill",
-       "section": "1"
-      },
-      {
-       "t": "text",
-       "v": " use PIDs to name their targets."
+       "v": " (PPID) names its current parent: initially the process that created it, but an orphaned process gets a new parent."
       }
      ]
     },
@@ -1208,7 +1265,7 @@
       },
       {
        "t": "text",
-       "v": ", which shares one controlling terminal. Only the foreground job may read from the terminal; a background job that tries is sent the "
+       "v": ", which shares one controlling terminal. Only the foreground job may read from the terminal; when a background process tries, its process group is sent the "
       },
       {
        "t": "code",
@@ -1225,7 +1282,7 @@
       },
       {
        "t": "text",
-       "v": " and stops."
+       "v": ", which suspends the job."
       }
      ]
     },
@@ -1323,7 +1380,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -1387,11 +1444,9 @@
      "section": "7"
     }
    ],
-   "headings": [
-    "ENVIRONMENT"
-   ],
+   "headings": [],
    "pages": [],
-   "words": 217,
+   "words": 237,
    "body": [
     {
      "type": "p",
@@ -1414,7 +1469,7 @@
       },
       {
        "t": "text",
-       "v": ". A new process gets a copy of its parent's environment, so variables set in your shell reach the programs you start from it. Names are case-sensitive and cannot contain "
+       "v": ". A child process inherits a copy of its parent's environment. A shell variable reaches the programs you start only once it is exported, or when it is assigned in front of the command. Names are case-sensitive and cannot contain "
       },
       {
        "t": "code",
@@ -1522,7 +1577,32 @@
        },
        {
         "t": "text",
-        "v": ", set at login from the user database."
+        "v": ", set at login from the user database; "
+       },
+       {
+        "t": "man",
+        "name": "su",
+        "section": "1"
+       },
+       {
+        "t": "text",
+        "v": " may keep "
+       },
+       {
+        "t": "code",
+        "v": "LOGNAME"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "USER"
+       },
+       {
+        "t": "text",
+        "v": " from the old user."
        }
       ],
       [
@@ -1661,7 +1741,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -1672,7 +1752,7 @@
      "distros": [
       "debian"
      ],
-     "sections": "EXIT STATUS; SHELL GRAMMAR (Pipelines; Lists)"
+     "sections": "EXIT STATUS; SHELL GRAMMAR (Pipelines; Lists); COMMAND EXECUTION"
     },
     {
      "page": {
@@ -1746,7 +1826,7 @@
      "section": "1"
     }
    ],
-   "words": 217,
+   "words": 245,
    "body": [
     {
      "type": "p",
@@ -1770,7 +1850,15 @@
       },
       {
        "t": "text",
-       "v": ", for example, uses 1 for \"no lines selected\" and 2 for an error."
+       "v": ", for example, uses 1 for \"no lines selected\" and 2 for an error, though with "
+      },
+      {
+       "t": "code",
+       "v": "-q"
+      },
+      {
+       "t": "text",
+       "v": " a selected line gives 0 even after an error."
       }
      ]
     },
@@ -1898,7 +1986,15 @@
       [
        {
         "t": "text",
-        "v": "127: the command was not found."
+        "v": "127: the command was not found, unless a "
+       },
+       {
+        "t": "code",
+        "v": "command_not_found_handle"
+       },
+       {
+        "t": "text",
+        "v": " function supplies another status."
        }
       ],
       [
@@ -1977,7 +2073,7 @@
       },
       {
        "t": "text",
-       "v": " returns the status of its last command, unless the "
+       "v": " returns the status of its last command; with "
       },
       {
        "t": "code",
@@ -1985,7 +2081,7 @@
       },
       {
        "t": "text",
-       "v": " option is set; "
+       "v": " set, it returns that of the rightmost command that failed. "
       },
       {
        "t": "code",
@@ -1993,7 +2089,7 @@
       },
       {
        "t": "text",
-       "v": " in front of a command inverts its status. A script ends with the status of the last command it ran, or with the value given to "
+       "v": " in front inverts the status. A script ends with the status of the last command it ran, or the value given to "
       },
       {
        "t": "code",
@@ -2001,7 +2097,7 @@
       },
       {
        "t": "text",
-       "v": "."
+       "v": "; a syntax error makes it exit nonzero."
       }
      ]
     }
@@ -2015,7 +2111,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -2068,12 +2164,7 @@
     "filesystem hierarchy",
     "file hierarchy",
     "directory layout",
-    "directory structure",
-    "/etc",
-    "/usr",
-    "/var",
-    "/usr/local",
-    "/tmp"
+    "directory structure"
    ],
    "references": [
     {
@@ -2087,7 +2178,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 226,
+   "words": 234,
    "body": [
     {
      "type": "p",
@@ -2303,7 +2394,15 @@
        },
        {
         "t": "text",
-        "v": " may be deleted without notice, for example at boot."
+        "v": " may be deleted without notice, for example at boot, while "
+       },
+       {
+        "t": "code",
+        "v": "/var/tmp"
+       },
+       {
+        "t": "text",
+        "v": " keeps files for an unspecified duration."
        }
       ],
       [
@@ -2440,7 +2539,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -2753,7 +2852,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -2806,14 +2905,9 @@
     "inode number",
     "file mode",
     "file modes",
-    "permissions",
     "file permissions",
     "permission bits",
-    "setgid",
-    "sticky bit",
-    "mtime",
-    "ctime",
-    "atime"
+    "sticky bit"
    ],
    "references": [
     {
@@ -2823,7 +2917,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 256,
+   "words": 244,
    "body": [
     {
      "type": "p",
@@ -2838,7 +2932,7 @@
       },
       {
        "t": "text",
-       "v": ", a record of everything about it except its name. Directory entries map names to inode numbers, and a file can have several names ("
+       "v": ", a record of its metadata: type, owner, permissions, size and timestamps. The name lives in a directory entry that points to the inode number, and a file can have several names ("
       },
       {
        "t": "concept",
@@ -2847,7 +2941,7 @@
       },
       {
        "t": "text",
-       "v": ") that all lead to one inode. Inode numbers are unique only within one file system, which is why hard links cannot cross file systems. "
+       "v": ") that lead to one inode. Inode numbers are unique only within one file system, which is why hard links cannot cross file systems; "
       },
       {
        "t": "man",
@@ -2856,16 +2950,7 @@
       },
       {
        "t": "text",
-       "v": " shows what a file's inode holds."
-      }
-     ]
-    },
-    {
-     "type": "p",
-     "inlines": [
-      {
-       "t": "text",
-       "v": "An inode records:"
+       "v": " shows an inode. Besides the link count, it keeps three timestamps:"
       }
      ]
     },
@@ -2874,58 +2959,51 @@
      "items": [
       [
        {
-        "t": "text",
-        "v": "the file type and mode;"
-       }
-      ],
-      [
-       {
-        "t": "text",
-        "v": "the link count, the number of hard links;"
-       }
-      ],
-      [
-       {
-        "t": "text",
-        "v": "the owning user and group;"
-       }
-      ],
-      [
-       {
-        "t": "text",
-        "v": "the size in bytes and the blocks allocated;"
-       }
-      ],
-      [
-       {
-        "t": "text",
-        "v": "timestamps: last access ("
-       },
-       {
         "t": "em",
         "v": "atime"
        },
        {
         "t": "text",
-        "v": "), last modification of the contents ("
+        "v": ", last access, which mount options or "
        },
+       {
+        "t": "code",
+        "v": "O_NOATIME"
+       },
+       {
+        "t": "text",
+        "v": " can stop updating;"
+       }
+      ],
+      [
        {
         "t": "em",
         "v": "mtime"
        },
        {
         "t": "text",
-        "v": "), and last status change ("
-       },
+        "v": ", last modification of the contents;"
+       }
+      ],
+      [
        {
         "t": "em",
         "v": "ctime"
        },
        {
         "t": "text",
-        "v": "), which changes whenever the inode itself changes, such as a new owner or mode. Some systems also keep a creation time."
+        "v": ", last status change, set by writes and by changes to the inode itself, such as owner, link count or mode."
        }
       ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Most Linux file systems do not support a creation time."
+      }
      ]
     },
     {
@@ -2942,7 +3020,7 @@
       },
       {
        "t": "text",
-       "v": ", written in octal. Read is 4, write 2 and execute 1, and there is one digit each for the owner, the group and everyone else, so "
+       "v": ", in octal: read 4, write 2, execute 1, one digit each for owner, group and others. "
       },
       {
        "t": "code",
@@ -2975,7 +3053,7 @@
       },
       {
        "t": "text",
-       "v": " (2000) on a program make it run with the file's user or group ID. Set-group-ID on a directory makes new files there take the directory's group. The "
+       "v": " (2000) on a program change the effective user or group ID of whoever runs it to the file's. Set-group-ID on a directory makes new files there take its group. The "
       },
       {
        "t": "em",
@@ -2997,7 +3075,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -3067,7 +3145,6 @@
    ],
    "aliases": [
     "locales",
-    "lang",
     "lc_all",
     "lc_ctype",
     "lc_collate",
@@ -3085,7 +3162,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 200,
+   "words": 206,
    "body": [
     {
      "type": "p",
@@ -3208,7 +3285,7 @@
       },
       {
        "t": "text",
-       "v": " in this order: "
+       "v": ", taking the first of these that is set and not empty: "
       },
       {
        "t": "code",
@@ -3216,7 +3293,7 @@
       },
       {
        "t": "text",
-       "v": " if it is set, then the variable named after the category (for example "
+       "v": ", then the variable named after the category (for example "
       },
       {
        "t": "code",
@@ -3273,7 +3350,7 @@
       },
       {
        "t": "text",
-       "v": ", and compiled locale data usually lives in "
+       "v": "; on glibc systems, compiled locale data usually lives in "
       },
       {
        "t": "code",
@@ -3337,7 +3414,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -3367,7 +3444,7 @@
       "arch",
       "alpine"
      ],
-     "sections": "DESCRIPTION; The namespace init process"
+     "sections": "DESCRIPTION; The namespace init process; Nesting PID namespaces"
     },
     {
      "page": {
@@ -3382,7 +3459,7 @@
       "arch",
       "alpine"
      ],
-     "sections": "DESCRIPTION; Nested namespaces, namespace membership"
+     "sections": "DESCRIPTION; Nested namespaces, namespace membership; Interaction of user namespaces and other types of namespaces; NOTES"
     }
    ],
    "related": [
@@ -3434,8 +3511,6 @@
    "aliases": [
     "namespace",
     "linux namespaces",
-    "container",
-    "containers",
     "pid namespace",
     "network namespace",
     "mount namespace",
@@ -3481,14 +3556,14 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 239,
+   "words": 248,
    "body": [
     {
      "type": "p",
      "inlines": [
       {
        "t": "text",
-       "v": "A namespace wraps a global system resource so that the processes inside it appear to have their own private copy. Changes made inside are visible to the other members of the namespace and invisible to everyone else. Combining several namespaces is how containers are built."
+       "v": "A namespace wraps a global system resource so that the processes inside it appear to have their own private copy. Changes made inside are visible to the other members and hidden from everyone else, though how far depends on the type: a parent PID namespace, for one, still sees its children's processes. Combining several namespaces is how containers are built."
       }
      ]
     },
@@ -3521,7 +3596,7 @@
        },
        {
         "t": "text",
-        "v": ": process IDs; numbering starts again at 1 inside, and the first process becomes that namespace's init."
+        "v": ": process IDs; numbering starts again at 1 inside, and the first process is that namespace's init. If it exits, the kernel kills the rest."
        }
       ],
       [
@@ -3600,7 +3675,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "Every process belongs to one namespace of each type, and a child starts in its parent's. "
+       "v": "A child starts in its parent's namespaces. "
       },
       {
        "t": "man",
@@ -3627,7 +3702,7 @@
       },
       {
        "t": "text",
-       "v": " lists them. Each process's namespaces appear as links under "
+       "v": " lists them. A process's namespaces appear as links under "
       },
       {
        "t": "code",
@@ -3635,7 +3710,7 @@
       },
       {
        "t": "text",
-       "v": ", and two processes share a namespace when those links point to the same object."
+       "v": "."
       }
      ]
     },
@@ -3661,7 +3736,7 @@
       },
       {
        "t": "text",
-       "v": ", since the creator can then change resources other processes will see. User namespaces are the exception: since Linux 3.8, any user may create one."
+       "v": " in the caller's user namespace. Since Linux 3.8 an unprivileged process can create a user namespace, kernel support permitting, and other types in the same call, because the user namespace is created first."
       }
      ]
     },
@@ -3684,7 +3759,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -3737,10 +3812,9 @@
     }
    ],
    "aliases": [
-    "path",
-    "paths",
     "pathname",
     "pathnames",
+    "path resolution",
     "absolute path",
     "relative path",
     "permission denied",
@@ -3757,14 +3831,14 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 253,
+   "words": 245,
    "body": [
     {
      "type": "p",
      "inlines": [
       {
        "t": "text",
-       "v": "Whenever a program names a file, the kernel resolves the path one component at a time."
+       "v": "The kernel resolves a path one component at a time."
       }
      ]
     },
@@ -3789,7 +3863,7 @@
       },
       {
        "t": "text",
-       "v": " and starts at the process's root directory, usually the root of the file system. Any other path is "
+       "v": " and starts at the process's root directory. Any other path is "
       },
       {
        "t": "em",
@@ -3797,7 +3871,16 @@
       },
       {
        "t": "text",
-       "v": " and starts at the current working directory. Both are inherited from the parent process."
+       "v": " and starts at the current working directory, or for "
+      },
+      {
+       "t": "man",
+       "name": "openat",
+       "section": "2"
+      },
+      {
+       "t": "text",
+       "v": "-style calls at the directory given by a file descriptor. Both are inherited from the parent process."
       }
      ]
     },
@@ -3815,7 +3898,7 @@
       },
       {
        "t": "text",
-       "v": " to one. A symbolic link is resolved on the way, up to 40 of them per path on Linux. The familiar errors come from this walk:"
+       "v": " to one; Linux follows at most 40 links per path. The familiar errors come from this walk:"
       }
      ]
     },
@@ -3858,24 +3941,12 @@
      "type": "p",
      "inlines": [
       {
-       "t": "text",
-       "v": "Every directory has "
-      },
-      {
-       "t": "code",
-       "v": "."
-      },
-      {
-       "t": "text",
-       "v": ", itself, and "
-      },
-      {
        "t": "code",
        "v": ".."
       },
       {
        "t": "text",
-       "v": ", its parent; "
+       "v": " is the parent directory ("
       },
       {
        "t": "code",
@@ -3891,7 +3962,7 @@
       },
       {
        "t": "text",
-       "v": ". A trailing slash insists that the last component is a directory."
+       "v": "), and a trailing slash insists that the last component is a directory."
       }
      ]
     },
@@ -3900,7 +3971,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "Permission bits come in three groups of three: read, write and execute. The kernel uses the owner's group if the process's effective user ID owns the file, the group's if the file's group is one of the process's groups, and otherwise the last. For a directory, "
+       "v": "Permission bits come in three groups of three: read, write and execute. Linux checks them against the process's filesystem user and group IDs, which normally equal the effective IDs, and its supplementary groups. It uses the owner's group if the process owns the file, the group's if it is in the file's group, and otherwise the last. On a directory, "
       },
       {
        "t": "em",
@@ -3908,7 +3979,7 @@
       },
       {
        "t": "text",
-       "v": " means permission to search it, which is why a directory you cannot search blocks every path through it."
+       "v": " means permission to search it."
       }
      ]
     },
@@ -3917,7 +3988,23 @@
      "inlines": [
       {
        "t": "text",
-       "v": "Root traditionally bypasses these checks. On Linux that power comes from the "
+       "v": "Root traditionally bypasses these checks. On Linux, "
+      },
+      {
+       "t": "code",
+       "v": "CAP_DAC_OVERRIDE"
+      },
+      {
+       "t": "text",
+       "v": " overrides them, but grants execute only if at least one execute bit is set; "
+      },
+      {
+       "t": "code",
+       "v": "CAP_DAC_READ_SEARCH"
+      },
+      {
+       "t": "text",
+       "v": " grants only read and search on directories and read on ordinary files. See "
       },
       {
        "t": "concept",
@@ -3926,23 +4013,7 @@
       },
       {
        "t": "text",
-       "v": " "
-      },
-      {
-       "t": "code",
-       "v": "CAP_DAC_OVERRIDE"
-      },
-      {
-       "t": "text",
-       "v": " and "
-      },
-      {
-       "t": "code",
-       "v": "CAP_DAC_READ_SEARCH"
-      },
-      {
-       "t": "text",
-       "v": "; even so, a file is executable only if at least one of its execute bits is set."
+       "v": "."
       }
      ]
     }
@@ -3956,7 +4027,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -3982,7 +4053,7 @@
       "arch",
       "alpine"
      ],
-     "sections": "DESCRIPTION; I/O on pipes and FIFOs; Pipe capacity"
+     "sections": "DESCRIPTION; I/O on pipes and FIFOs; Pipe capacity; PIPE_BUF"
     },
     {
      "page": {
@@ -4064,7 +4135,7 @@
      "section": "1"
     }
    ],
-   "words": 245,
+   "words": 249,
    "body": [
     {
      "type": "p",
@@ -4079,7 +4150,7 @@
       },
       {
        "t": "text",
-       "v": ". In "
+       "v": ": in "
       },
       {
        "t": "code",
@@ -4096,7 +4167,7 @@
       },
       {
        "t": "text",
-       "v": " is connected through a pipe to the standard input of "
+       "v": " becomes the standard input of "
       },
       {
        "t": "man",
@@ -4105,25 +4176,15 @@
       },
       {
        "t": "text",
-       "v": ". Each command of the pipeline runs in its own process, and the shell waits for all of them to finish."
-      }
-     ]
-    },
-    {
-     "type": "p",
-     "inlines": [
-      {
-       "t": "text",
-       "v": "A few details from "
+       "v": ". Each command runs in its own subshell process, except that with the "
       },
       {
-       "t": "man",
-       "name": "bash",
-       "section": "1"
+       "t": "code",
+       "v": "lastpipe"
       },
       {
        "t": "text",
-       "v": ":"
+       "v": " option and job control off, bash may run the last one itself. The shell waits for all of them to finish."
       }
      ]
     },
@@ -4168,7 +4229,7 @@
        },
        {
         "t": "text",
-        "v": " command, so an earlier failure goes unnoticed. With "
+        "v": " command. With "
        },
        {
         "t": "code",
@@ -4176,7 +4237,7 @@
        },
        {
         "t": "text",
-        "v": " it is the status of the last command that failed, or zero if all succeeded."
+        "v": " it is that of the rightmost command that failed, or zero if all succeeded."
        }
       ],
       [
@@ -4196,7 +4257,16 @@
      "inlines": [
       {
        "t": "text",
-       "v": "Underneath, a pipe is a one-way channel inside the kernel: bytes written to one end are read from the other, as a plain byte stream with no message boundaries. A pipe holds a limited amount of data (on Linux, 16 pages by default: 65,536 bytes with 4 KiB pages); a writer that fills it waits until the reader catches up, and a reader of an empty pipe waits for data. When every writer has closed its end, the reader sees end-of-file. When every reader has gone, a writer receives the "
+       "v": "Underneath, a pipe is a one-way kernel channel carrying a plain byte stream. It holds a limited amount: 16 pages by default on current Linux, adjustable with "
+      },
+      {
+       "t": "man",
+       "name": "fcntl",
+       "section": "2"
+      },
+      {
+       "t": "text",
+       "v": "; programs should not rely on any size. A writer that fills it waits for the reader, or fails if nonblocking; a reader of an empty pipe waits for data. When every writer has closed its end, the reader sees end-of-file. When every reader has gone, a writer receives the "
       },
       {
        "t": "code",
@@ -4213,7 +4283,15 @@
       },
       {
        "t": "text",
-       "v": ", which by default ends it; this is how "
+       "v": ", which by default ends it, or its write fails with "
+      },
+      {
+       "t": "code",
+       "v": "EPIPE"
+      },
+      {
+       "t": "text",
+       "v": " if it ignores the signal. This is how "
       },
       {
        "t": "code",
@@ -4238,7 +4316,7 @@
       },
       {
        "t": "text",
-       "v": ", works the same way but has a name in the file system, so unrelated processes can use it. "
+       "v": ", works the same way but has a name in the file system, so unrelated processes can use it; opening one normally blocks until the other end is opened. See "
       },
       {
        "t": "man",
@@ -4247,7 +4325,7 @@
       },
       {
        "t": "text",
-       "v": " creates one."
+       "v": "."
       }
      ]
     }
@@ -4261,7 +4339,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -4272,7 +4350,7 @@
      "distros": [
       "debian"
      ],
-     "sections": "DEFINITIONS; QUOTING; EXPANSION (Word Splitting; Pathname Expansion; Quote Removal)"
+     "sections": "DEFINITIONS; QUOTING; EXPANSION (Word Splitting; Pathname Expansion; Quote Removal); HISTORY EXPANSION"
     }
    ],
    "related": [
@@ -4299,10 +4377,8 @@
     "single quotes",
     "double quotes",
     "escaping",
-    "escape",
     "backslash",
-    "word splitting",
-    "ifs"
+    "word splitting"
    ],
    "references": [],
    "headings": [],
@@ -4320,7 +4396,7 @@
      "section": "1"
     }
    ],
-   "words": 241,
+   "words": 248,
    "body": [
     {
      "type": "p",
@@ -4456,7 +4532,15 @@
        },
        {
         "t": "text",
-        "v": ", so variables and command substitutions still expand: "
+        "v": " (and "
+       },
+       {
+        "t": "code",
+        "v": "!"
+       },
+       {
+        "t": "text",
+        "v": " while interactive history expansion is on, outside POSIX mode), so variables and command substitutions still expand: "
        },
        {
         "t": "code",
@@ -4498,7 +4582,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "Quoting matters most around expansions. After the shell expands an unquoted "
+       "v": "After the shell expands an unquoted "
       },
       {
        "t": "code",
@@ -4514,7 +4598,7 @@
       },
       {
        "t": "text",
-       "v": ", it splits the result into separate words at spaces, tabs and newlines (the characters in "
+       "v": ", it splits the result into words at the characters in "
       },
       {
        "t": "code",
@@ -4522,7 +4606,15 @@
       },
       {
        "t": "text",
-       "v": ") and then expands any wildcards in them. Double quotes prevent both, so "
+       "v": " (space, tab and newline by default; an empty "
+      },
+      {
+       "t": "code",
+       "v": "IFS"
+      },
+      {
+       "t": "text",
+       "v": " means no splitting), then expands any wildcards in them. Double quotes prevent both, so "
       },
       {
        "t": "code",
@@ -4563,7 +4655,7 @@
       },
       {
        "t": "text",
-       "v": ", passes an empty argument. Once expansion is done, the shell removes the quote characters themselves; the command never sees them. In bash, "
+       "v": ", passes an empty argument. Once expansion is done, the shell removes the quote characters themselves. In bash, "
       },
       {
        "t": "code",
@@ -4601,7 +4693,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -4676,14 +4768,14 @@
      "section": "1"
     }
    ],
-   "words": 244,
+   "words": 246,
    "body": [
     {
      "type": "p",
      "inlines": [
       {
        "t": "text",
-       "v": "Every command starts with three open file descriptors: 0, "
+       "v": "A command inherits its open file descriptors from the shell. By convention, 0 is "
       },
       {
        "t": "em",
@@ -4691,7 +4783,7 @@
       },
       {
        "t": "text",
-       "v": "; 1, "
+       "v": ", 1 "
       },
       {
        "t": "em",
@@ -4699,7 +4791,7 @@
       },
       {
        "t": "text",
-       "v": "; and 2, "
+       "v": " and 2 "
       },
       {
        "t": "em",
@@ -4707,7 +4799,7 @@
       },
       {
        "t": "text",
-       "v": ". Normally all three are your terminal. Redirection, written on the command line and carried out by the shell before the command runs, points them somewhere else."
+       "v": "; often all three are your terminal. Redirection, written on the command line and carried out by the shell before the command runs, points them somewhere else."
       }
      ]
     },
@@ -4763,7 +4855,15 @@
        },
        {
         "t": "text",
-        "v": " refuses to overwrite an existing file."
+        "v": " refuses to overwrite an existing regular file; "
+       },
+       {
+        "t": "code",
+        "v": ">|"
+       },
+       {
+        "t": "text",
+        "v": " overrides that."
        }
       ],
       [
@@ -4819,15 +4919,7 @@
        },
        {
         "t": "text",
-        "v": ", in bash, sends both output and error to "
-       },
-       {
-        "t": "code",
-        "v": "file"
-       },
-       {
-        "t": "text",
-        "v": "; it means the same as "
+        "v": ", in bash, means the same as "
        },
        {
         "t": "code",
@@ -4877,7 +4969,7 @@
       },
       {
        "t": "text",
-       "v": " it was redirected, usually the terminal."
+       "v": " it was redirected."
       }
      ]
     },
@@ -4907,7 +4999,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "The lines up to the delimiter become standard input. Variables in them are expanded unless the delimiter word is quoted, as in "
+       "v": "The lines up to the delimiter become standard input. If any part of the delimiter word is quoted, as in "
       },
       {
        "t": "code",
@@ -4915,7 +5007,7 @@
       },
       {
        "t": "text",
-       "v": ". In bash, "
+       "v": ", they are used as written; otherwise parameter expansion, command substitution and arithmetic expansion apply. In bash, "
       },
       {
        "t": "code",
@@ -4923,7 +5015,7 @@
       },
       {
        "t": "text",
-       "v": " passes a single string instead."
+       "v": " passes a single string, with a newline appended."
       }
      ]
     },
@@ -4941,7 +5033,7 @@
       },
       {
        "t": "text",
-       "v": " is the other way to connect commands: it joins one command's output to the next one's input directly."
+       "v": " is the other way to connect commands."
       }
      ]
     }
@@ -4955,7 +5047,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -5012,8 +5104,6 @@
     "regexp",
     "regexps",
     "regular expression",
-    "ere",
-    "bre",
     "extended regular expressions",
     "basic regular expressions"
    ],
@@ -5352,7 +5442,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -5367,7 +5457,7 @@
       "arch",
       "alpine"
      ],
-     "sections": "Scheduling policies; SCHED_FIFO; SCHED_RR; SCHED_OTHER; The nice value; SCHED_BATCH; SCHED_IDLE; The autogroup feature; The nice value and group scheduling"
+     "sections": "Scheduling policies; SCHED_FIFO; SCHED_RR; SCHED_DEADLINE; SCHED_OTHER; The nice value; SCHED_BATCH; SCHED_IDLE; The autogroup feature; The nice value and group scheduling"
     }
    ],
    "related": [
@@ -5403,18 +5493,15 @@
    "aliases": [
     "sched",
     "scheduler",
-    "nice",
+    "cpu scheduling",
     "nice value",
     "niceness",
-    "renice",
-    "priority",
     "process priority",
     "cpu priority",
-    "real-time",
-    "realtime",
+    "real-time scheduling",
     "sched_fifo",
     "sched_rr",
-    "chrt"
+    "sched_deadline"
    ],
    "references": [
     {
@@ -5424,7 +5511,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 249,
+   "words": 247,
    "body": [
     {
      "type": "p",
@@ -5464,7 +5551,7 @@
       },
       {
        "t": "text",
-       "v": " sets the share of CPU time: it runs from -20, the highest priority, to +19, the lowest, and 0 is the default. On current Linux each step of difference makes the scheduler favour the higher-priority process by a factor of 1.25. "
+       "v": " sets the share of CPU time: it runs from -20, the highest priority, to +19, the lowest, and 0 is the default. On Linux it belongs to each thread, and each step of difference makes the scheduler favour the higher-priority one by a factor of 1.25. "
       },
       {
        "t": "man",
@@ -5482,7 +5569,7 @@
       },
       {
        "t": "text",
-       "v": " changes a running one. An unprivileged process can make itself nicer, but how far it may raise its priority is limited by "
+       "v": " changes a running one. How far an unprivileged process may raise its priority is limited by "
       },
       {
        "t": "code",
@@ -5499,7 +5586,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "Two related policies sit beside it. "
+       "v": "Beside it, "
       },
       {
        "t": "code",
@@ -5515,7 +5602,7 @@
       },
       {
        "t": "text",
-       "v": " is for jobs that should run only when nothing else wants the CPU, lower even than nice +19."
+       "v": " runs jobs at extremely low priority, below even nice +19."
       }
      ]
     },
@@ -5556,7 +5643,7 @@
       },
       {
        "t": "text",
-       "v": " thread keeps the CPU until it blocks, yields, or is preempted by a higher priority; "
+       "v": " thread runs until it blocks on I/O, yields, or is preempted by a higher priority; "
       },
       {
        "t": "code",
@@ -5564,7 +5651,15 @@
       },
       {
        "t": "text",
-       "v": " adds a time slice. A runaway real-time thread can starve the whole system, so their use is limited by privileges and resource limits. "
+       "v": " adds a time slice. "
+      },
+      {
+       "t": "code",
+       "v": "SCHED_DEADLINE"
+      },
+      {
+       "t": "text",
+       "v": ", since Linux 3.14, preempts all of them. A runaway thread under these policies can starve the system, so their use is limited by privileges and resource limits. "
       },
       {
        "t": "man",
@@ -5573,7 +5668,7 @@
       },
       {
        "t": "text",
-       "v": " sets these policies."
+       "v": " sets them."
       }
      ]
     },
@@ -5582,7 +5677,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "One surprise: many distributions enable "
+       "v": "A nice value only competes within the thread's task group. Threads in one CPU cgroup form a group, and many distributions enable "
       },
       {
        "t": "em",
@@ -5590,7 +5685,7 @@
       },
       {
        "t": "text",
-       "v": ", which groups the processes of a session, typically one terminal window. A nice value then only competes with processes in the same group."
+       "v": ", which groups a session's processes, typically one terminal window."
       }
      ]
     }
@@ -5604,7 +5699,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -5620,6 +5715,21 @@
       "alpine"
      ],
      "sections": "Signal dispositions; Sending a signal; Signal mask and pending signals; Standard signals; Queueing and delivery semantics for standard signals"
+    },
+    {
+     "page": {
+      "name": "pid_namespaces",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "The namespace init process"
     },
     {
      "page": {
@@ -5677,7 +5787,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 236,
+   "words": 250,
    "body": [
     {
      "type": "p",
@@ -5793,7 +5903,7 @@
        },
        {
         "t": "text",
-        "v": " always ends the process."
+        "v": " always ends the process, though the init process (PID 1) of a PID namespace has special delivery rules."
        }
       ],
       [
@@ -5871,7 +5981,7 @@
    "status": "pending-owner",
    "generatedBy": "claude-opus-5-5",
    "generatedOn": "2026-10-30",
-   "panelReview": null,
+   "panelReview": "GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied",
    "sources": [
     {
      "page": {
@@ -5888,7 +5998,7 @@
       "freebsd",
       "macos"
      ],
-     "sections": "DESCRIPTION; Symbolic link ownership, permissions, and timestamps; Commands not traversing a file tree; Commands traversing a file tree"
+     "sections": "DESCRIPTION; Symbolic link ownership, permissions, and timestamps; Treatment of symbolic links in system calls; Commands not traversing a file tree; Commands traversing a file tree"
     }
    ],
    "related": [
@@ -5937,8 +6047,7 @@
     "soft links",
     "hard link",
     "hard links",
-    "dangling link",
-    "ln -s"
+    "dangling link"
    ],
    "references": [
     {
@@ -5948,7 +6057,7 @@
    ],
    "headings": [],
    "pages": [],
-   "words": 251,
+   "words": 248,
    "body": [
     {
      "type": "p",
@@ -5972,7 +6081,7 @@
       },
       {
        "t": "text",
-       "v": ", so all of them are equally the file: there is no original and copy, and a change made through one name shows through all of them. Hard links cannot refer to directories."
+       "v": ", so all of them are equally the file, with no original and copy. Hard links cannot refer to directories."
       }
      ]
     },
@@ -5989,7 +6098,7 @@
       },
       {
        "t": "text",
-       "v": " is a small file whose contents are a path name. It points to a name, not to the file underneath, so it can refer to a directory or to another file system. The target need not exist; a link to a missing path is called "
+       "v": " is a small file whose contents are a path name. It points to a name, not to the file underneath, so it can refer to a directory or to another file system. The target need not exist; a link to a missing path is "
       },
       {
        "t": "em",
@@ -6006,7 +6115,7 @@
       },
       {
        "t": "text",
-       "v": " makes a hard link, and "
+       "v": " makes hard links, and "
       },
       {
        "t": "code",
@@ -6014,7 +6123,7 @@
       },
       {
        "t": "text",
-       "v": " a symbolic one."
+       "v": " symbolic ones."
       }
      ]
     },
@@ -6023,7 +6132,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "When a command meets a symbolic link it either "
+       "v": "A command meeting a symbolic link either "
       },
       {
        "t": "em",
@@ -6031,7 +6140,7 @@
       },
       {
        "t": "text",
-       "v": " it and acts on the target, or acts on the link itself:"
+       "v": " it to the target or acts on the link itself:"
       }
      ]
     },
@@ -6057,7 +6166,16 @@
        },
        {
         "t": "text",
-        "v": ", are always followed."
+        "v": ", are followed by nearly every system call and command; "
+       },
+       {
+        "t": "man",
+        "name": "openat2",
+        "section": "2"
+       },
+       {
+        "t": "text",
+        "v": " can refuse them."
        }
       ],
       [
@@ -6089,7 +6207,7 @@
        },
        {
         "t": "text",
-        "v": " are exceptions; they rename or delete the link itself, and nothing else."
+        "v": " instead rename or delete the link itself."
        }
       ],
       [
@@ -6130,7 +6248,7 @@
        },
        {
         "t": "text",
-        "v": " follows those named on the command line and "
+        "v": " follows links named on the command line, and "
        },
        {
         "t": "code",
@@ -6138,7 +6256,7 @@
        },
        {
         "t": "text",
-        "v": " follows every one; "
+        "v": " also those met in the walk; "
        },
        {
         "t": "code",
@@ -6146,7 +6264,25 @@
        },
        {
         "t": "text",
-        "v": " restores the default."
+        "v": " restores the default, and the last of the three wins. "
+       },
+       {
+        "t": "man",
+        "name": "rm",
+        "section": "1"
+       },
+       {
+        "t": "text",
+        "v": " takes none of them, and "
+       },
+       {
+        "t": "man",
+        "name": "ls",
+        "section": "1"
+       },
+       {
+        "t": "text",
+        "v": " differs."
        }
       ]
      ]
@@ -6156,7 +6292,7 @@
      "inlines": [
       {
        "t": "text",
-       "v": "A link that names its target by a relative path is resolved from the link's own directory, so moving it can break it."
+       "v": "A relative target is resolved from the link's own directory, so moving the link can break it."
       }
      ]
     }

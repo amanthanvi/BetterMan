@@ -1,38 +1,17 @@
-import type { Metadata } from 'next'
-import { headers } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { ManSectionLabel, RunningHead } from '../man/RunningHead'
+import type { Concept, ConceptSource } from '../../lib/concepts'
+import { DISTRO_LABEL, withDistro, type Distro } from '../../lib/distro'
+import { Kbd } from '../ui/Kbd'
+import { Citation, ConceptText } from './ConceptText'
 
-import { Citation, ConceptText } from '../../../components/concept/ConceptText'
-import { ManSectionLabel, RunningHead } from '../../../components/man/RunningHead'
-import { conceptHref, conceptReportHref, getConcept, publishedConcepts, type ConceptSource } from '../../../lib/concepts'
-import { DISTRO_LABEL, type Distro } from '../../../lib/distro'
-import { getPublicOrigin } from '../../../lib/public-origin'
-import { explicitDistro, type SearchParams } from '../../../lib/requestContext'
-
-type ConceptPageProps = {
-  params: Promise<{ slug: string }>
-  searchParams: Promise<SearchParams>
-}
-
-export async function generateMetadata({ params }: ConceptPageProps): Promise<Metadata> {
-  const { slug } = await params
-  const concept = getConcept(slug)
-  if (!concept) return { title: 'No such file or directory — BetterMan', robots: { index: false, follow: false } }
-  const origin = getPublicOrigin({ headers: await headers() })
-  const title = `${concept.title} — BetterMan`
-  return {
-    title,
-    description: concept.summary,
-    alternates: { canonical: `${origin}${conceptHref(concept.slug)}` },
-    openGraph: { title, description: concept.summary, type: 'article' },
-    // A draft shows only on a build that opted in; it is never indexed.
-    ...(concept.status === 'approved' ? {} : { robots: { index: false, follow: false } }),
-  }
-}
-
-/** A source names the distros it was read from; link one that has it when Debian does not. */
-function sourceDistro(source: ConceptSource, urlDistro: Distro | null): Distro | null {
-  if (urlDistro || source.distros.includes('debian')) return urlDistro
+/**
+ * The distro a source link opens: the reader's `?distro=` when the source was read
+ * there, else Debian when it was, else the first distro that has it. A reader on
+ * FreeBSD is never sent to a page FreeBSD does not ship.
+ */
+export function sourceDistro(source: Pick<ConceptSource, 'distros'>, urlDistro: Distro | null): Distro | null {
+  if (urlDistro && source.distros.includes(urlDistro)) return urlDistro
+  if (source.distros.includes('debian')) return null
   return (source.distros[0] as Distro | undefined) ?? null
 }
 
@@ -42,16 +21,20 @@ function formatDate(iso: string): string {
 
 /**
  * A concept explainer (B8, #400): BetterMan's own plain-English text over the manual's
- * section 7 pages. Server-rendered and complete without JavaScript; it reads no data
- * beyond the explainers bundled at build time.
+ * section 7 pages, rendered by pages/concept/[slug].tsx as plain HTML.
  */
-export default async function ConceptPage({ params, searchParams }: ConceptPageProps) {
-  const { slug } = await params
-  const concept = getConcept(slug)
-  if (!concept) notFound()
-  const urlDistro = explicitDistro(await searchParams)
-  const origin = getPublicOrigin({ headers: await headers() })
-  const published = new Set(publishedConcepts().map((c) => c.slug))
+export function ConceptArticle({
+  concept,
+  urlDistro,
+  published,
+  reportHref,
+}: {
+  concept: Concept
+  urlDistro: Distro | null
+  /** Slugs that render, so links to other explainers only appear once those are published. */
+  published: string[]
+  reportHref: string
+}) {
   const primary = concept.sources.filter((s) => s.page.section.startsWith('7'))
   const lead = primary.length ? primary : concept.sources.slice(0, 1)
 
@@ -85,9 +68,13 @@ export default async function ConceptPage({ params, searchParams }: ConceptPageP
       <article aria-label="Explainer" className="mt-8 border-t border-rule pt-6">
         <p className="mb-5 text-sm text-ink-3" data-bm-concept-provenance>
           BetterMan’s own explainer, not text from the manual. Generated · {concept.generatedBy}, {formatDate(concept.generatedOn)};{' '}
-          {concept.status === 'approved' ? 'checked against the pages it cites by a model panel and read by the maintainer.' : 'not yet reviewed.'}
+          {concept.status === 'approved'
+            ? 'checked against the pages it cites by a model panel and read by the maintainer.'
+            : concept.panelReview
+              ? 'checked against the pages it cites by a model panel; not yet read by the maintainer.'
+              : 'not yet reviewed.'}
         </p>
-        <ConceptText blocks={concept.body} urlDistro={urlDistro} published={published} />
+        <ConceptText blocks={concept.body} urlDistro={urlDistro} published={new Set(published)} />
       </article>
 
       <section aria-labelledby="concept-sources" className="mt-12">
@@ -124,11 +111,34 @@ export default async function ConceptPage({ params, searchParams }: ConceptPageP
       ) : null}
 
       <p className="mt-12 text-xs text-ink-3">
-        <a href={conceptReportHref(concept, origin)} target="_blank" rel="noopener noreferrer" className="underline">
+        <a href={reportHref} target="_blank" rel="noopener noreferrer" className="underline">
           Report a problem
         </a>{' '}
         with this explainer on GitHub.
       </p>
+    </div>
+  )
+}
+
+/** An explainer that does not exist, or is not published: man's ENOENT, as on every other 404. */
+export function ConceptNotFound({ urlDistro }: { urlDistro: Distro | null }) {
+  return (
+    <div className="mx-auto max-w-[46rem]">
+      <RunningHead title="ERRNO(3)" label="404 Not Found" end="ENOENT" />
+      <div className="pt-[12vh]">
+        <h1 className="break-words font-mono text-[1.625rem] leading-snug">No such file or directory</h1>
+        <p className="mt-4 font-serif text-lg text-ink-2">
+          Nothing lives at this address. <span className="bm-js">Press <Kbd>⌘K</Kbd> to search the manual.</span>
+        </p>
+        <p className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <a href={withDistro('/', urlDistro)} className="underline">
+            Go home
+          </a>
+          <a href={withDistro('/search', urlDistro)} className="underline">
+            Search
+          </a>
+        </p>
+      </div>
     </div>
   )
 }

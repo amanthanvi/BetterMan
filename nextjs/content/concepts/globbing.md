@@ -6,6 +6,7 @@ summary: How wildcard patterns such as *.txt expand into the list of matching fi
 status: pending-owner
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
+panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
 sources:
   - page: glob(7)
     package: manpages 6.9.1-1

@@ -6,6 +6,7 @@ summary: What the standard top-level directories such as /etc, /usr, /var and /t
 status: pending-owner
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
+panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
 sources:
   - page: hier(7)
     package: manpages 6.9.1-1
@@ -16,7 +17,7 @@ sources:
     distros: debian, ubuntu, fedora
     sections: DESCRIPTION
 related: systemd-path(1), mount(8), proc(5)
-aliases: hier, fhs, filesystem hierarchy, file hierarchy, directory layout, directory structure, /etc, /usr, /var, /usr/local, /tmp
+aliases: hier, fhs, filesystem hierarchy, file hierarchy, directory layout, directory structure
 references: hier(7), file-hierarchy(7)
 ---
 Unix-like systems arrange their files in one tree that starts at `/`, and most
@@ -34,7 +35,8 @@ it for Linux:
 - `/var`, files that change in size: logs in `/var/log`, program state in
   `/var/lib`, caches in `/var/cache`, queues in `/var/spool`.
 - `/tmp` and `/var/tmp`, temporary files; anything in `/tmp` may be deleted
-  without notice, for example at boot.
+  without notice, for example at boot, while `/var/tmp` keeps files for an
+  unspecified duration.
 - `/home`, users' home directories, and `/root`, the root user's.
 - `/dev`, device files; `/proc` and `/sys`, file systems through which the
   kernel reports on processes and itself.

@@ -6,42 +6,43 @@ summary: How Linux organizes processes into a hierarchy of groups whose CPU, mem
 status: pending-owner
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
+panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
 sources:
   - page: cgroups(7)
     package: manpages 6.9.1-1
     distros: debian, ubuntu, fedora, arch, alpine
-    sections: DESCRIPTION; Terminology; Cgroups version 1 and version 2; Creating cgroups and moving processes; CGROUPS VERSION 2; Cgroups v2 controllers; Cgroups v2 subtree control; FILES
+    sections: DESCRIPTION; Terminology; Cgroups version 1 and version 2; Creating cgroups and moving processes; CGROUPS VERSION 2; Cgroups v2 unified hierarchy; Cgroups v2 controllers; Cgroups v2 subtree control; Cgroups v2 "no internal processes" rule; NOTES; FILES
 related: systemd-cgls(1), systemd-run(1), systemd.resource-control(5), cgroup_namespaces(7), namespaces(7)
 aliases: cgroup, cgroups, control group, control groups, cgroup v2, cgroups v2, resource limits, cgroupfs
 references: cgroups(7), cgroup_namespaces(7)
 ---
 Control groups, usually called cgroups, let the kernel organize processes into
-a tree of groups and then limit and measure the resources each group uses:
-CPU time, memory, I/O, the number of processes, and more.
+a tree of groups and then limit and measure the resources each group uses.
 
 The parts that do the limiting are *controllers*, such as `cpu`, `memory`,
-`io` and `pids`. A limit set on a group applies to everything beneath it in
-the tree, and a child group cannot exceed its parent's limit.
+`io` and `pids`. Limits generally apply to the whole subtree beneath a group,
+and a descendant cannot exceed a limit set higher up.
 
-There are two versions. Version 1 let each controller have its own separate
-hierarchy. Version 2, official since Linux 4.5, puts every controller in one
-unified hierarchy, and is meant to replace version 1, which remains for
-compatibility.
+Version 1 gave each controller its own hierarchy. Version 2, official since
+Linux 4.5, uses one unified hierarchy and implements a subset of the version 1
+controllers. Both can be mounted at once, but not one controller in both.
 
-Cgroups are managed through a file system, normally mounted under
-`/sys/fs/cgroup`:
+Cgroups are managed through a file system:
 
-- Each group is a directory, and making a subdirectory creates a child group.
-- Writing a PID into a group's `cgroup.procs` file moves that process, with
-  all its threads, into the group. A process is in exactly one group of a
-  hierarchy at a time, and a child starts in its parent's group.
+- Each group is a directory; a subdirectory is a child group.
+- Writing a PID into a group's `cgroup.procs` file moves that process into the
+  group. In version 1, and in version 2 thread mode, the threads of one process
+  can sit in different groups. A child starts in its parent's groups, unless created with clone3(2)
+  `CLONE_INTO_CGROUP`.
 - In version 2, `cgroup.subtree_control` chooses which controllers are active
-  for a group's children.
-- `/proc/<pid>/cgroup` shows which group a process is in.
+  for a group's children. A group other than the root cannot both contain
+  processes and enable controllers for its children.
+- `/proc/<pid>/cgroup` shows which groups a process is in.
 
-On many systems, systemd(1) mounts this file system at boot and uses cgroups to
-track services and user sessions, so its resource settings are often where you
-set limits. Cgroups decide how much of a resource a group may use;
-[[namespaces]], their usual partner in containers, decide what it can see.
+cgroups(7) says the usual place for version 1 mounts is under `/sys/fs/cgroup`,
+and that "on many modern systems, systemd(1) automatically mounts the cgroup2
+filesystem at /sys/fs/cgroup/unified during the boot process." Layouts vary
+between systems.
 
-Cgroups are specific to Linux.
+[[namespaces|Namespaces]], their partner in containers, decide what a group
+can see. Cgroups are specific to Linux.

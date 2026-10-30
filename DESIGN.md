@@ -332,21 +332,24 @@ the numbered definitions and the safety note.
 
 ## Concept explainers
 
-`/concept/<slug>` (`app/concept/[slug]/page.tsx`, B8 #400) is BetterMan's own
-plain-English text over a section 7 page, server-rendered and complete without
-JavaScript. A running head (Concept · title · BetterMan), the title in the
+`/concept/<slug>` (`pages/concept/[slug].tsx`, B8 #400) is BetterMan's own
+plain-English text over a section 7 page, plain server HTML in the man page
+shell (`ManShell`, the boot script, the man page script), complete without
+JavaScript and cacheable at the edge. A running head (Concept · title · BetterMan), the title in the
 serif, the summary as a sans lede, then "The manual's page": the section 7
-citations in large serif, first, because the manual is the authority. The
+citations in large serif, first, because the manual is the authority. A source
+link keeps the reader's `?distro=` only where the source was read. The
 explainer itself (article "Explainer") is sans on paper with a provenance line
 ("BetterMan's own explainer, not text from the manual. Generated · model,
 date"), mono for anything typed; citations in it link to the manual. Sources
 list each cited page with its package, distros and the sections read; Related
 pages follow. Only approved explainers render (`nextjs/content/concepts/README.md`);
-a build with `BETTERMAN_CONCEPT_DRAFTS=1` shows drafts with a red "not
-published" note and `noindex`.
+an opted-in local, CI or preview server (`BETTERMAN_CONCEPT_DRAFTS=1`) shows
+drafts with a red "not published" note and `noindex`.
 
 On a man page that references a concept, one quiet line closes the footer, nav
-"Concepts" (`[data-bm-concepts]`): "Concepts: signals · globbing". It sits
+"Concepts" (`[data-bm-concepts]`): "Concepts: signals · globbing", at most three,
+strongest reference first. It sits
 beside "Report a problem", never in the manual text and never as a card. In
 search, an explainer is a row with the kind `concept`, evidence "BetterMan
 explainer · on signal(7)", after the first result.

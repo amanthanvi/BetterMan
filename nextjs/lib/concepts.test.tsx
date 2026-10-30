@@ -17,12 +17,13 @@ import {
   matchConcepts,
   publishedConcepts,
   type Concept,
+  type ConceptMatch,
 } from './concepts'
 import data from './concepts.generated.json'
 import type { BlockNode } from './docModel'
 
 const ALL = (data as unknown as { concepts: Concept[] }).concepts
-const DRAFTS = { BETTERMAN_CONCEPT_DRAFTS: '1' }
+const DRAFTS = { BETTERMAN_CONCEPT_DRAFTS: '1', CI: 'true' }
 const bySlug = (slug: string) => ALL.find((c) => c.slug === slug)!
 const approve = (concept: Concept): Concept => ({ ...concept, status: 'approved' })
 
@@ -34,10 +35,14 @@ describe('publishing gate', () => {
     expect(getConcept('signals', {})).toBeNull()
   })
 
-  it('shows drafts only when a non-production build opts in', () => {
+  it('shows drafts only when the flag is set on a server that is positively not production', () => {
     expect(conceptDraftsEnabled(DRAFTS)).toBe(true)
+    expect(conceptDraftsEnabled({ BETTERMAN_CONCEPT_DRAFTS: '1', NODE_ENV: 'development' })).toBe(true)
+    expect(conceptDraftsEnabled({ BETTERMAN_CONCEPT_DRAFTS: '1', VERCEL_ENV: 'preview' })).toBe(true)
     expect(conceptDraftsEnabled({ ...DRAFTS, VERCEL_ENV: 'production' })).toBe(false)
-    expect(conceptDraftsEnabled({ BETTERMAN_CONCEPT_DRAFTS: 'true' })).toBe(false)
+    // The Docker image sets neither VERCEL_ENV nor CI: a stray flag there shows nothing.
+    expect(conceptDraftsEnabled({ BETTERMAN_CONCEPT_DRAFTS: '1', NODE_ENV: 'production' })).toBe(false)
+    expect(conceptDraftsEnabled({ BETTERMAN_CONCEPT_DRAFTS: 'true', CI: 'true' })).toBe(false)
     expect(getConcept('signals', DRAFTS)?.title).toBe('Signals')
     expect(publishedConcepts({ ...DRAFTS, VERCEL_ENV: 'production' }).map((c) => c.status)).not.toContain('pending-owner')
   })
@@ -79,7 +84,26 @@ describe('conceptsForPage', () => {
   it('finds a concept from a section heading, the page itself, or a page the concept names', () => {
     expect(slugs({ name: 'grep', section: '1' }, { blocks: [], toc: [{ id: 'exit', level: 2, title: 'Exit status:' }] })).toEqual(['exit-status'])
     expect(slugs({ name: 'signal', section: '7' }, { blocks: [], toc: [] })).toEqual(['signals'])
-    expect(slugs({ name: 'bash', section: '1' }, { blocks: [], toc: [] })).toEqual(['exit-status', 'pipelines', 'quoting', 'redirection'])
+    expect(slugs({ name: 'bash', section: '1' }, { blocks: [], toc: [] })).toEqual(['exit-status', 'pipelines', 'quoting'])
+  })
+
+  it('names at most three, strongest first: own source, named page, SEE ALSO, text link, heading last', () => {
+    const exitHeading = { id: 'exit', level: 2, title: 'EXIT STATUS' }
+    // An open(2)-like page: a heading, a text link and four SEE ALSO citations.
+    const busy = {
+      blocks: [link('/man/path_resolution/7')],
+      toc: [exitHeading],
+      seeAlso: ['symlink', 'inode', 'capabilities', 'environ'].map((name) => ({ name, section: '7' })),
+    }
+    expect(slugs({ name: 'open', section: '2' }, busy)).toEqual(['capabilities', 'environment', 'inodes'])
+    // The heading-only match comes last, after a text link.
+    expect(slugs({ name: 'cp', section: '1' }, { blocks: [link('/man/symlink/7')], toc: [exitHeading] })).toEqual(['symbolic-links', 'exit-status'])
+    // A section 7 source outranks everything else on the page.
+    expect(slugs({ name: 'pipe', section: '7' }, { blocks: [], toc: [exitHeading], seeAlso: ['signal', 'environ', 'glob'].map((name) => ({ name, section: '7' })) })[0]).toBe('pipelines')
+  })
+
+  it('no longer reads an ENVIRONMENT heading as a reference', () => {
+    expect(slugs({ name: 'tar', section: '1' }, { blocks: [], toc: [{ id: 'env', level: 2, title: 'ENVIRONMENT' }] })).toEqual([])
   })
 
   it('ignores text that only mentions a concept, and other sections of the same name', () => {
@@ -110,6 +134,14 @@ describe('matchConcepts', () => {
     expect(match('kill -9')).toEqual([])
     expect(match('tar')).toEqual([])
     expect(match('s')).toEqual([])
+    for (const command of ['init', 'nice', 'renice', 'chrt', 'setcap', 'path', 'ln -s', '/tmp', 'ifs', 'pid', 'session', 'permissions']) {
+      expect(match(command), command).toEqual([])
+    }
+  })
+
+  it('says whether a match came from the name or only from an alias', () => {
+    expect(matchConcepts('signals', concepts).map((c) => c.via)).toEqual(['name'])
+    expect(matchConcepts('sigterm', concepts).map((c) => c.via)).toEqual(['alias'])
   })
 
   it('matches nothing while no explainer is published', () => {
@@ -127,6 +159,7 @@ describe('rendering', () => {
     expect(html).toContain('aria-label="Concepts"')
     expect(html).toContain('href="/concept/signals?distro=arch"')
     expect(html).toMatch(/Concepts: <a[^>]*>signals<\/a><span aria-hidden="true"> · <\/span><a[^>]*>globbing<\/a>/)
+    expect(html).not.toContain('title=')
     expect(html).not.toContain('bm-added">Concepts')
   })
 
@@ -137,6 +170,20 @@ describe('rendering', () => {
     expect(renderToStaticMarkup(<ConceptRow concept={signals} urlDistro={null} />)).toMatch(/small-caps[^>]*>concept<\/span>[\s\S]*BetterMan explainer[\s\S]*signal\(7\)/)
     expect(renderToStaticMarkup(<SearchResultsBody q="signals" section="1" results={[]} suggestions={[]} urlDistro={null} concepts={[signals]} />)).not.toContain('/concept/')
     expect(renderToStaticMarkup(<SearchResultsBody q="signals" section="" results={[]} suggestions={[]} urlDistro={null} concepts={[signals]} />)).toContain('/concept/signals')
+  })
+
+  it('lets an alias-only match yield to a command of exactly that name', () => {
+    const hit = (name: string, section: string) => [{ name, section, title: `${name}(${section})`, description: 'x' } as SearchResult]
+    const body = (q: string, results: SearchResult[], concept: ConceptMatch) =>
+      renderToStaticMarkup(<SearchResultsBody q={q} section="" results={results} suggestions={[]} urlDistro={null} concepts={[concept]} />)
+    const viaAlias = (slug: string) => ({ ...conceptLink(approve(bySlug(slug))), via: 'alias' as const })
+    // stdin(3) is a function, not what the redirection explainer is about.
+    expect(body('stdin', hit('stdin', '3'), viaAlias('redirection'))).not.toContain('/concept/redirection')
+    // glob(3) shares its name with the explainer's source glob(7), so the explainer stays.
+    expect(body('glob', hit('glob', '3'), viaAlias('globbing'))).toContain('/concept/globbing')
+    // A different first hit, or a match on the concept's own name, keeps it too.
+    expect(body('stdin', hit('cat', '1'), viaAlias('redirection'))).toContain('/concept/redirection')
+    expect(body('locale', hit('locale', '1'), { ...conceptLink(approve(bySlug('locale'))), via: 'name' })).toContain('/concept/locale')
   })
 
   it('renders explainer text as text, linking citations and only published concepts', () => {

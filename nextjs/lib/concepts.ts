@@ -5,8 +5,8 @@ import { ISSUES_NEW_URL } from './reportProblem'
 /**
  * Concept explainers (B8, #400): BetterMan's own short text over the manual's
  * section 7 pages, compiled from content/concepts/*.md by scripts/build-concepts.mjs.
- * Everything here is static data bundled at build time, so surfacing a concept
- * on a man page or in search reads nothing from Convex.
+ * Everything here is static data bundled at build time: surfacing a concept on
+ * a man page or in search adds no Convex read to that page's own reads.
  */
 
 export type ConceptRef = { name: string; section: string }
@@ -45,16 +45,21 @@ export type Concept = {
 
 /** What a page that names a concept needs to link to it. */
 export type ConceptLink = Pick<Concept, 'slug' | 'term' | 'title' | 'summary'> & { sources: ConceptRef[] }
+/** A search match, and whether it came from the concept's own name or only from an alias. */
+export type ConceptMatch = ConceptLink & { via: 'name' | 'alias' }
 
 const ALL = (data as unknown as { concepts: Concept[] }).concepts
 
 /**
- * Drafts render only when a local or CI build opts in with BETTERMAN_CONCEPT_DRAFTS=1,
- * so the owner can read them in place. A production deployment ignores the flag:
- * there, only `approved` explainers exist.
+ * Drafts render only when BETTERMAN_CONCEPT_DRAFTS=1 and the server is positively
+ * a place drafts may show: a Vercel development or preview deployment, or, off
+ * Vercel, `next dev` or a CI run (`CI=true`). Production, and any server that
+ * cannot say what it is (the Docker image), shows only `approved` explainers.
  */
 export function conceptDraftsEnabled(env: Record<string, string | undefined> = process.env): boolean {
-  return env.BETTERMAN_CONCEPT_DRAFTS === '1' && env.VERCEL_ENV !== 'production'
+  if (env.BETTERMAN_CONCEPT_DRAFTS !== '1') return false
+  if (env.VERCEL_ENV) return env.VERCEL_ENV === 'development' || env.VERCEL_ENV === 'preview'
+  return env.CI === 'true' || env.NODE_ENV === 'development'
 }
 
 export function publishedConcepts(env?: Record<string, string | undefined>, all: Concept[] = ALL): Concept[] {
@@ -104,7 +109,7 @@ function collectInlineRefs(inlines: InlineNode[], out: Set<string>) {
   }
 }
 
-function collectBlockRefs(blocks: BlockNode[], refs: Set<string>, headings: Set<string>) {
+function collectBlockRefs(blocks: BlockNode[], refs: Set<string>, headings: Set<string>): void {
   for (const block of blocks) {
     switch (block.type) {
       case 'heading':
@@ -126,12 +131,16 @@ function collectBlockRefs(blocks: BlockNode[], refs: Set<string>, headings: Set<
   }
 }
 
+/** The footer names at most this many explainers, the strongest references first. */
+export const MAX_PAGE_CONCEPTS = 3
+
 /**
- * The concepts a man page references, in the deterministic order of the concept list.
- * A page references a concept when it is one of the concept's section 7 sources, when it cites
- * one of the concept's section 7 pages (SEE ALSO or a cross-reference link in the
- * text), when it has one of the concept's section headings, or when the concept
- * names the page outright. Reads only the content already loaded for the page.
+ * The concepts a man page references, strongest first and at most three. In rank
+ * order, a page references a concept when it is one of the concept's section 7
+ * sources, when the concept names the page outright, when its SEE ALSO cites one of
+ * the concept's pages, when a cross-reference link in its text does, or, weakest,
+ * when it has one of the concept's section headings (EXIT STATUS). Ties keep the
+ * concept list's order. Reads only the content already loaded for the page.
  */
 export function conceptsForPage(
   page: { name: string; section: string },
@@ -140,19 +149,27 @@ export function conceptsForPage(
 ): ConceptLink[] {
   if (!concepts.length) return []
   const self = key(page.name, page.section)
-  const refs = new Set<string>()
+  const seeAlso = new Set<string>()
+  const links = new Set<string>()
   const headings = new Set<string>()
-  for (const ref of content.seeAlso ?? []) if (ref.section) refs.add(key(ref.name, ref.section))
+  for (const ref of content.seeAlso ?? []) if (ref.section) seeAlso.add(key(ref.name, ref.section))
   for (const item of content.toc ?? []) headings.add(item.title.trim().replace(/:$/, '').toUpperCase())
-  collectBlockRefs(content.blocks, refs, headings)
+  collectBlockRefs(content.blocks, links, headings)
+  const cites = (refs: Set<string>, concept: Concept) => concept.references.some((r) => refs.has(key(r.name, r.section)))
+  const rank = (concept: Concept): number => {
+    if (concept.sources.some((s) => s.page.section.startsWith('7') && key(s.page.name, s.page.section) === self)) return 0
+    if (concept.pages.some((p) => key(p.name, p.section) === self)) return 1
+    if (cites(seeAlso, concept)) return 2
+    if (cites(links, concept)) return 3
+    if (concept.headings.some((heading) => headings.has(heading))) return 4
+    return -1
+  }
   return concepts
-    .filter((concept) =>
-      concept.sources.some((s) => s.page.section.startsWith('7') && key(s.page.name, s.page.section) === self) ||
-      concept.pages.some((p) => key(p.name, p.section) === self) ||
-      concept.references.some((r) => refs.has(key(r.name, r.section))) ||
-      concept.headings.some((heading) => headings.has(heading)),
-    )
-    .map(conceptLink)
+    .map((concept, index) => ({ concept, index, rank: rank(concept) }))
+    .filter((entry) => entry.rank >= 0)
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .slice(0, MAX_PAGE_CONCEPTS)
+    .map((entry) => conceptLink(entry.concept))
 }
 
 function normalize(text: string): string {
@@ -165,19 +182,30 @@ function variants(text: string): string[] {
   return t.endsWith('s') && t.length > 3 ? [t, t.slice(0, -1)] : [t, `${t}s`]
 }
 
+/** A query as matching compares it: lower case, without "what is" and a final question mark. */
+export function normalizeConceptQuery(query: string): string {
+  return normalize(query).replace(/^(?:what (?:is|are)|explain) (?:an? |the )?/, '').replace(/(?<=\w)\?$/, '').trim()
+}
+
 /**
  * Concepts a search names: the query is the concept's slug, title, term or one of
  * its aliases, optionally after "what is" / "what are". Exact phrases only, so a
- * command search such as `kill -9` is never answered with an explainer.
+ * command search such as `kill -9` is never answered with an explainer. Aliases
+ * are conceptual phrases, never a command's name; see SearchResultsBody for how an
+ * alias-only match yields to a command of that name.
  */
-export function matchConcepts(query: string, concepts: Concept[] = publishedConcepts()): ConceptLink[] {
-  const q = normalize(query).replace(/^(?:what (?:is|are)|explain) (?:an? |the )?/, '').replace(/(?<=\w)\?$/, '').trim()
+export function matchConcepts(query: string, concepts: Concept[] = publishedConcepts()): ConceptMatch[] {
+  const q = normalizeConceptQuery(query)
   if (q.length < 2) return []
   const wanted = new Set(variants(q))
+  const hit = (names: string[]) => names.some((name) => wanted.has(normalize(name)))
   return concepts
-    .filter((concept) => [concept.slug.replace(/-/g, ' '), concept.title, concept.term, ...concept.aliases].some((name) => wanted.has(normalize(name))))
+    .flatMap((concept): ConceptMatch[] => {
+      if (hit([concept.slug.replace(/-/g, ' '), concept.title, concept.term])) return [{ ...conceptLink(concept), via: 'name' }]
+      if (hit(concept.aliases)) return [{ ...conceptLink(concept), via: 'alias' }]
+      return []
+    })
     .slice(0, 3)
-    .map(conceptLink)
 }
 
 /** A new issue about one explainer, using the repository's bug form. */

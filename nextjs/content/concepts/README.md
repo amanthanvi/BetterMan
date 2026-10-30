@@ -17,14 +17,19 @@ One file per concept. `pnpm concepts:build` compiles them into
    itself in `generated-by` and `generated-on`. Status `pending-owner`.
 2. **Model panel.** An independent panel checks every claim against the cited
    sections. Fixes land in the file; `panel-review` records the panel and date.
+   The first round (GPT-6.1 Sol and Grok 4.7, 2026-10-30) checked all twenty;
+   its corrections are applied, and none was rejected or merged.
 3. **Owner skim.** The owner reads it and flips `status` to `approved`.
 
 Only `approved` explainers exist on the site: the concept page, the man page
 footer line, the search row and `/sitemap-concepts.xml`. Anything else returns
-404 and is never listed. To read drafts in place, run a local build with
-`BETTERMAN_CONCEPT_DRAFTS=1`; drafts then render with a "not published" note
-and `noindex`. A deployment with `VERCEL_ENV=production` ignores the flag.
-CI's e2e job sets it to test the surfaces.
+404 and is never listed. To read drafts in place, set
+`BETTERMAN_CONCEPT_DRAFTS=1` on `pnpm next:dev`, or on a build started with
+`CI=true`; drafts then render with a "not published" note, `noindex` and
+`private, no-store`. The flag is a positive opt-in: it also works on a Vercel
+development or preview deployment, and is ignored everywhere else, including
+`VERCEL_ENV=production` and the Docker image. CI's e2e job sets it to test the
+surfaces.
 
 ## File format
 
@@ -57,20 +62,24 @@ kill(1), which link automatically, and [[slug]] or [[slug|text]] for another
 explainer, which links only once that one is published.
 ```
 
-The body must be 100 to 260 words. The text is data: it renders as React text
+Aliases are conceptual phrases (`sigterm`, `exit codes`), never a command's
+name such as `nice` or `init`. The body must be 120 to 250 words. The text is data: it renders as React text
 nodes, so no HTML in a file can reach the page.
 
 ## Where the footer line shows
 
 `conceptsForPage` in `nextjs/lib/concepts.ts` decides from the page data the
-man page has already read; it adds no Convex call. A man page shows a concept
-when any of these hold:
+man page has already read; it adds no Convex call. A man page shows at most
+three concepts, strongest first; ties keep the list's alphabetical order. From
+strongest to weakest:
 
-- the page is one of the concept's section 7 sources (signal(7) shows signals);
-- its SEE ALSO, or a cross-reference link in its text, cites one of the
-  concept's `references` (kill(1) cites signal(7));
-- it has a section heading listed in `headings` (an EXIT STATUS section);
-- it is listed in `pages` (bash(1) for quoting and redirection).
+1. the page is one of the concept's section 7 sources (signal(7) shows signals);
+2. it is listed in the concept's `pages` (bash(1) for quoting and redirection);
+3. its SEE ALSO cites one of the concept's `references` (kill(1) cites
+   signal(7));
+4. a cross-reference link in its text does;
+5. it has a section heading listed in `headings`. Only exit-status uses this,
+   for EXIT STATUS, so that heading alone never crowds out a real citation.
 
 A word in the prose alone never counts. The line is BetterMan's text, at the
 end of the page beside "Report a problem", never inside the manual.
@@ -82,7 +91,21 @@ matches when it is a concept's slug, title, term or alias, singular or plural,
 optionally after "what is" or "what are". Command searches such as `kill -9`
 never match. A matched explainer appears as a `concept` row after the first
 result, so the top hit still leads; a section filter other than 7 hides it.
+A match on an alias alone yields when the first result is a page of exactly
+that name that is not one of the concept's sources: `stdin` finds stdin(3)
+without the redirection explainer, while `glob` keeps globbing beside glob(3).
 Only the matched rows reach the browser.
+
+## The page
+
+`/concept/<slug>` is rendered by the Pages Router (`nextjs/pages/concept/`) as
+plain HTML, like the man pages: no Next runtime, the hashed boot script for
+theme and preferences, the man page script for the palette and keys, and the
+same hash-only CSP from `proxy.ts`. It never reads a cookie, so an approved
+explainer is sent with `CDN-Cache-Control: public, s-maxage=3600,
+stale-while-revalidate=86400` and a 404 with `s-maxage=600`. A deployment
+replaces the CDN cache, so a newly approved or edited explainer appears with
+the deployment that carries it.
 
 ## The initial list and how it was chosen
 

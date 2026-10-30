@@ -8,7 +8,7 @@ import { shareFlag, withShareFlag } from '../../lib/manShare'
 import { manPath, parseShortUrl, type ShortUrl } from '../../lib/shortUrl'
 
 function reservedSegments(): Set<string> {
-  // Inlined at build time by next.config.ts from the app and public directories.
+  // Inlined at build time by next.config.ts from the app, pages and public directories.
   const raw = process.env.BM_RESERVED_PATH_SEGMENTS
   if (!raw) throw new Error('BM_RESERVED_PATH_SEGMENTS is not set')
   return new Set(raw.split('/'))

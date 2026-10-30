@@ -6,6 +6,7 @@ summary: The pattern language grep, sed and many other tools use to match text, 
 status: pending-owner
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
+panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
 sources:
   - page: regex(7)
     package: manpages 6.9.1-1
@@ -15,7 +16,7 @@ sources:
     distros: freebsd, macos
     sections: DESCRIPTION
 related: grep(1), sed(1), awk(1), regex(3), glob(7)
-aliases: regex, regexp, regexps, regular expression, ere, bre, extended regular expressions, basic regular expressions
+aliases: regex, regexp, regexps, regular expression, extended regular expressions, basic regular expressions
 references: regex(7), re_format(7)
 ---
 A regular expression (RE) is a pattern that describes text. grep(1) prints the

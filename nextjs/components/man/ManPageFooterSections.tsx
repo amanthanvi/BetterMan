@@ -21,7 +21,7 @@ export function ManPageFooterSections({
   relatedItems: SectionPage[]
   derived?: Pick<PageDerivedResponse, 'referencedBy' | 'family' | 'package'>
   /** Published concept explainers this page references (lib/concepts.ts). */
-  concepts?: Pick<ConceptLink, 'slug' | 'term' | 'summary'>[]
+  concepts?: Pick<ConceptLink, 'slug' | 'term'>[]
   hasParseWarnings?: boolean
 }) {
   const seeAlsoItems = (seeAlso ?? []).slice(0, 24)
@@ -128,7 +128,7 @@ export function ManPageFooterSections({
             {concepts.map((concept, index) => (
               <Fragment key={concept.slug}>
                 {index ? <span aria-hidden="true"> · </span> : null}
-                <a href={withDistro(`/concept/${encodeURIComponent(concept.slug)}`, urlDistro)} title={concept.summary} className="underline">
+                <a href={withDistro(`/concept/${encodeURIComponent(concept.slug)}`, urlDistro)} className="underline">
                   {concept.term}
                 </a>
               </Fragment>

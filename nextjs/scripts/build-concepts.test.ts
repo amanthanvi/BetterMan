@@ -11,7 +11,7 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
 })
 
-const WORDS = Array.from({ length: 110 }, (_, i) => `word${i}`).join(' ')
+const WORDS = Array.from({ length: 130 }, (_, i) => `word${i}`).join(' ')
 
 function concept(slug: string, { front = '', body = WORDS }: { front?: string; body?: string } = {}) {
   return [

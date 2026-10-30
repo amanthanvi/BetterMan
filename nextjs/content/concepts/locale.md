@@ -6,6 +6,7 @@ summary: The language and cultural settings, chosen by LANG and the LC_* variabl
 status: pending-owner
 generated-by: claude-opus-5-5
 generated-on: 2026-10-30
+panel-review: GPT-6.1 Sol and Grok 4.7, 2026-10-30, corrections applied
 sources:
   - page: locale(7)
     package: manpages 6.9.1-1
@@ -20,7 +21,7 @@ sources:
     distros: debian
     sections: Pattern Matching
 related: locale(1), localedef(1), setlocale(3), locale(5), environ(7)
-aliases: locales, lang, lc_all, lc_ctype, lc_collate, lc_messages, lc_time, lc_numeric, localization, internationalization
+aliases: locales, lc_all, lc_ctype, lc_collate, lc_messages, lc_time, lc_numeric, localization, internationalization
 references: locale(7)
 ---
 A locale is a set of language and cultural rules: the language of messages,
@@ -39,12 +40,13 @@ The rules come in categories, each of which can be set on its own:
 - `LC_TIME`, how dates and times are formatted.
 
 A program that asks for the default locale picks each category from the
-[[environment]] in this order: `LC_ALL` if it is set, then the variable named
-after the category (for example `LC_TIME`), then `LANG`. So `LANG` sets a
+[[environment]], taking the first of these that is set and not empty: `LC_ALL`,
+then the variable named after the category (for example `LC_TIME`), then
+`LANG`. So `LANG` sets a
 default, a single `LC_*` variable overrides one category, and `LC_ALL`
 overrides everything.
 
-Locale names look like `en_GB.UTF-8`, and compiled locale data usually lives
-in `/usr/lib/locale`. locale(1) shows the current settings. Setting
+Locale names look like `en_GB.UTF-8`; on glibc systems, compiled locale data
+usually lives in `/usr/lib/locale`. locale(1) shows the current settings. Setting
 `LC_ALL=C` asks for the traditional behaviour; bash(1), for example, suggests
 it to make `[a-d]` mean exactly `[abcd]`.
