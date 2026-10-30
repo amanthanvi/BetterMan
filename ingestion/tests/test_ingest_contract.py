@@ -1,9 +1,9 @@
 """Single cross-language ingest contract merge/alignment check.
 
 Resolve protocol changes in convex/ingestContract.ts and convex_client.py together.
-Contract v7 retains verified promotion-source reads, compare-and-swap, package
+Contract v8 retains verified promotion-source reads, compare-and-swap, package
 batches, extractor provenance, signatures, symbols and providers, adding demand
-scores and indexable counts.
+scores and indexable counts, adding B2 acquisition identities and stored notices.
 Never resolve overlap by taking one branch's functions or payload fields.
 """
 

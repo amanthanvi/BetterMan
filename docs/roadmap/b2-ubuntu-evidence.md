@@ -2,9 +2,10 @@
 
 Implements the Ubuntu family of #394. This PR is based on **#445**, pending
 contract **v7**, and must merge/deploy after that PR's November 1 rollout window.
-It extends that pending contract with Ubuntu's acquisition identity and independent
-promotion authorization, without a v8 fork. The advertised acquisition list lets
-the full importer reject a pre-B2 v7 deployment before acquisition or writes.
+B2 uses **v8**, shared by all four distro PRs, with exact-version preflight checks.
+Both a v7 server and a future v9 server are rejected even when they advertise all
+required fields. Promotion headers are fenced to v8 too. Translations follow as
+v9; acquisition capabilities remain an additional preflight requirement.
 
 ## Inputs and safety
 
@@ -106,9 +107,9 @@ The more conservative 266-minute/under-10-GB runner plan above is retained.
 Both artifacts record the exact pin-file digest used; the Release and package
 hashes are unchanged by the final Kerberos repair.
 
-Validation: `pnpm ingest:lint`; `pnpm ingest:test` (954 passed); `pnpm ops:test`
+Validation: `pnpm ingest:lint`; `pnpm ingest:test` (956 passed); `pnpm ops:test`
 (126 passed, including dataset/deploy workflow tests); explicit dataset/deploy
-workflow tests (12 passed); `pnpm convex:typecheck`; `pnpm convex:test` (3,279
+workflow tests (12 passed); `pnpm convex:typecheck`; `pnpm convex:test` (3,280
 passed), plus contract/hold tests after the capability advertisement. Local
 `pnpm convex:check --local-cloud-port 3432 --local-site-port 3433` regenerated
 code; `convex/_generated` has no drift. `uv run --directory ingestion --with pip

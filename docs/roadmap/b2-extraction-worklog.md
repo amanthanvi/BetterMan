@@ -15,3 +15,14 @@ a Kerberos include; exact repair passed a cached replay with 5,312 pages and
 6,709 aliases, zero unresolved. PR guards and Ubuntu PR next. No shared writes/dispatches.
 
 Remaining: open Ubuntu, then implement/check/open Fedora, Arch and Alpine.
+
+Review follow-up: lead requires Arch CDN/archive fallback, malformed APK cache/
+mirror recovery, optional reviewed whole-APK SHA256 pins enforced when present,
+and exact B2 v8 (B4 v7, translations v9). Implement in family branches, restack,
+rerun each family checks, push and refresh each Proof. No dispatch or merge.
+
+Ubuntu review fixes verified: exact v8, explicit v7/v9 preflight and promotion
+rejection; 956 ingestion / 3,280 Convex / 126 ops / 12 workflow tests pass.
+Lint, typecheck, public API, pip dry-run and isolated codegen/no-drift pass.
+Remaining: restack Fedora, fix/remeasure Arch, fix/harden Alpine; rerun checks
+and push each branch with refreshed Proof.

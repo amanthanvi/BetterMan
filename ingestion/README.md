@@ -442,10 +442,11 @@ It is prepared for an owner-authorized runner measurement and **was not run**:
 runner measurements count as shared execution. The [evidence document](../docs/roadmap/b1-debian-evidence.md)
 contains local results, audit dispositions and projections.
 
-Contract **v7** retains the merged v4 license batches, extractor provenance,
+Contract **v8** retains the merged v4 license batches, extractor provenance,
 packed signatures, symbols and optional-argument metadata with real/alias
 provider declarations from v5, verified staging-source reads and CAS promotion
-from v6, adding B4 demand fields. Promotion requires the matching v7 header; optional dispatch
+from v6, adding B4 demand fields and B2 acquisition identities, promotion holds and stored
+notices. Promotion requires the matching v8 header; optional dispatch
 `expected_release_ids` pins inspected releases through queue waits. The generated
 layer keeps its separate **v3** contract.
 The single TS/Python alignment test and bidirectional mismatch tests guard deploy
@@ -486,8 +487,10 @@ Cron opt-in: `BETTERMAN_UBUNTU_FULL=1`. Dispatch opt-in: `ubuntu_full: true`.
 Both default off. Promotion independently requires `ubuntu_full_promote: true`
 or `BETTERMAN_UBUNTU_FULL_PROMOTE=1`, plus `promote: true`; persisted
 `ubuntu-deb-extraction` is held server-side otherwise. HTTP activation cannot
-bypass it, and unscored full releases cannot promote. This family extends #445's
-pending v7 and must land after that deployment. No shared workflow is dispatched
+bypass it, and unscored full releases cannot promote. B2 uses v8 after #445's
+pending v7 deployment; all four B2 families share that one bump. Clients reject
+both v7 and v9 servers before writes, and promotion requires the exact v8 header.
+The translations stack follows as v9. No shared workflow is dispatched
 by implementation work.
 
 No-upload rehearsal, with a fresh explicit workdir (relative to ingestion/):

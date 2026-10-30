@@ -41,9 +41,9 @@ class ConvexContractError(RuntimeError):
 # Keep these aligned with convex/ingestContract.ts. Ingestion refuses to write
 # until GET /ingest/contract advertises the same schema version, functions,
 # declaration counts, and activate-pending flag. Alignment test:
-# tests/test_ingest_contract.py. v7 retains v6 promotion-source reads and CAS,
-# adding demand scores and tier counts to the complete v5 upload payload.
-REQUIRED_SCHEMA_VERSION = 7
+# tests/test_ingest_contract.py. B2 v8 retains v7 demand scores and tier counts,
+# adding full-distro acquisition identities, promotion holds and stored notices.
+REQUIRED_SCHEMA_VERSION = 8
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",
     "ingest.insertStoredPages",
