@@ -624,7 +624,7 @@ describe('task-phrase rows (C5)', () => {
       expect(rows).toHaveLength(2);
       expect(rows.every(row => row.popularityScore === 6123)).toBe(true);
       const releases = await t.run(ctx => ctx.db.query('datasetReleases').take(4));
-      expect(releases.every(release => release.flagSearchReady)).toBe(true);
+      expect(releases.every(release => release.flagSearchReady && release.flagSearchGeneration !== undefined)).toBe(true);
       const flags = await t.run(ctx => ctx.db.query('flagSearchCandidates').take(20));
       expect(flags.some(row => row.flag === '--extract' && row.candidates.some(c => c.name === 'tar'))).toBe(true);
       expect((await t.mutation(internal.taskPhrases.backfillActiveReleases, {})).scheduled).toBe(0);

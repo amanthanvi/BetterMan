@@ -1,11 +1,12 @@
 /// <reference types="vite/client" />
-// Scratch re-review tests for #465 (not committed).
+// Golden search and refresh regressions, including independent review counterexamples.
 import { convexTest } from "convex-test";
 import { describe, expect, it, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { syncFlagCandidates } from "./_flagSearch";
 import { readFileSync } from "node:fs";
+import { withDocumentBudget } from "../scripts/perf-metrics.mjs";
 import { optionKeys } from "./_optionFlags";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -13,9 +14,9 @@ const modules = import.meta.glob("./**/*.ts");
 // flags: [option text, takesArgument?]; one manPageOptionFlags row per spelling (as optionFlagRows does).
 type P = { name: string; score?: number; options?: Array<[string, boolean?]>; task?: string; usage?: Record<string, number> };
 
-async function world(pages: P[], opts: { scoredRelease?: boolean; ready?: boolean; sync?: boolean; documentsRead?: number } = {}) {
+async function world(pages: P[], opts: { scoredRelease?: boolean; ready?: boolean; sync?: boolean } = {}) {
   const { scoredRelease = true, ready = true, sync = true } = opts;
-  const t = convexTest({ schema, modules, transactionLimits: { documentsRead: opts.documentsRead ?? 4096 } });
+  const t = convexTest({ schema, modules, transactionLimits: true });
   const releaseId = await t.run(async ctx => {
     const releaseId = await ctx.db.insert("datasetReleases", {
       datasetReleaseId: "r", locale: "en", distro: "debian", imageRef: "test", imageDigest: "test",
@@ -44,7 +45,7 @@ async function world(pages: P[], opts: { scoredRelease?: boolean; ready?: boolea
   return { t, releaseId };
 }
 const q = (t: ReturnType<typeof convexTest>, query: string, brief = false) =>
-  t.query(api.queries.search, { distro: "debian", q: query, section: null, limit: 5, offset: 0, brief });
+  withDocumentBudget(() => t.query(api.queries.search, { distro: "debian", q: query, section: null, limit: 5, offset: 0, brief }), query.startsWith("-") ? 40 : 30);
 
 const S = 5470;
 // Real Debian tar(1) alias strings (ingestion/tests/fixtures/golden/tar.1.json).
@@ -87,21 +88,24 @@ describe("re-review #465: realistic recall", () => {
         await t.mutation(internal.derived.setVerifiedFlagUsage, { pageId: page._id, usage: [] });
       }
       // Source writes commit without touching hot candidate rows.
-      const before = await t.run(ctx => ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_flag", q => q.eq("releaseId", releaseId).eq("flag", "--extract")).unique());
+      const before = await t.run(ctx => ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", releaseId).eq("generation", undefined).eq("flag", "--extract")).unique());
       expect(before?.candidates.some(c => c.name === "tar")).toBe(false);
       await t.finishAllScheduledFunctions(vi.runAllTimers);
-      const row = await t.run(ctx => ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_flag", q => q.eq("releaseId", releaseId).eq("flag", "--extract")).unique());
+      const row = await t.run(async ctx => {
+        const release = (await ctx.db.get(releaseId))!;
+        return ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", releaseId).eq("generation", release.flagSearchGeneration).eq("flag", "--extract")).unique();
+      });
       expect(row?.candidates.map(c => c.name)).toEqual(["tar"]);
       expect((await q(t, "--extract")).results[0].name).toBe("tar");
       const status = await t.run(ctx => ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", q => q.eq("releaseId", releaseId)).unique());
       expect(status?.generation).toBe(1);
-      expect(status?.completedVersion).toBe(4);
+      expect(status?.completedVersion).toBe(5);
       // A failed/interrupted scan must retain requests received before it stopped.
-      await t.run(ctx => ctx.db.patch(status!._id, { completedVersion: undefined, jobId: undefined, rescanFlags: true }));
+      await t.run(ctx => ctx.db.patch(status!._id, { completedVersion: undefined, jobId: undefined, rescanFlags: true, candidateGeneration: (status!.candidateGeneration ?? 0) + 1 }));
       await t.mutation(internal.taskPhrases.backfillActiveReleases, {});
       expect(await t.run(async ctx => (await ctx.db.get(status!._id))?.rescanFlags)).toBe(true);
       await t.finishAllScheduledFunctions(vi.runAllTimers);
-      expect(await t.run(async ctx => (await ctx.db.get(status!._id))?.completedVersion)).toBe(4);
+      expect(await t.run(async ctx => (await ctx.db.get(status!._id))?.completedVersion)).toBe(5);
     } finally { vi.useRealTimers(); }
   });
 
@@ -124,7 +128,7 @@ it("a refresh after completion starts a new generation even before the old job e
     const { t, releaseId } = await world([realTar]);
     const oldJob = await t.run(async ctx => {
       const jobId = await ctx.scheduler.runAfter(0, internal.taskPhrases.backfillRelease, { releaseId, generation: 1 });
-      await ctx.db.insert("taskPhraseBackfills", { releaseId, version: 4, completedVersion: 4, generation: 1,
+      await ctx.db.insert("taskPhraseBackfills", { releaseId, version: 5, completedVersion: 5, generation: 1,
         jobId, cursor: null, scanned: 1, written: 0, attempts: 0, updatedAt: 0 });
       return jobId;
     });
@@ -132,7 +136,76 @@ it("a refresh after completion starts a new generation even before the old job e
     expect(await t.run(async ctx => (await ctx.db.system.get(oldJob))?.state.kind)).toBe("canceled");
     await t.finishAllScheduledFunctions(vi.runAllTimers);
     const status = await t.run(ctx => ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", q => q.eq("releaseId", releaseId)).unique());
-    expect(status).toMatchObject({ generation: 2, completedVersion: 4 });
+    expect(status).toMatchObject({ generation: 2, completedVersion: 5 });
     expect((await q(t, "-xzf")).results[0].name).toBe("tar");
   } finally { vi.useRealTimers(); }
+});
+
+
+describe("completed candidate generations", () => {
+  const earlier: P[] = ["a2ps", "ar", "bash", "bsdtar", "cpio", "dpkg-deb", "lz4", "pax"].map(name => ({
+    name, score: S, options: [["-x, --extract"], ["-z, --gzip"], ["-f FILE", true]],
+  }));
+
+  it("keeps tar ranked throughout debouncing, mid-pass updates, publication and cleanup", async () => {
+    vi.useFakeTimers();
+    try {
+      const { t, releaseId } = await world([realTar, ...earlier, { name: "zzz", options: [["-q"]], usage: { "-q": 1 } }]);
+      const page = await t.run(ctx => ctx.db.query("manPages").withIndex("by_releaseId_and_externalId", q => q.eq("releaseId", releaseId).eq("externalId", "zzz")).unique());
+      await t.mutation(internal.derived.setVerifiedFlagUsage, { pageId: page!._id, usage: [{ flag: "-q", count: 2, source: "tldr" }] });
+      await t.mutation(internal.taskPhrases.requestFlagRefresh, { releaseId });
+      const initial = await t.run(ctx => ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", q => q.eq("releaseId", releaseId)).unique());
+      for (let i = 0; i < 8; i++) await t.mutation(internal.taskPhrases.requestFlagRefresh, { releaseId });
+      expect(await t.run(async ctx => (await ctx.db.get(initial!._id))?.jobId)).toBe(initial!.jobId);
+      expect(initial?.scanned).toBe(0);
+      for (let step = 0; step < 14; step++) {
+        expect((await t.run(ctx => ctx.db.get(releaseId)))?.flagSearchReady).toBe(true);
+        expect((await q(t, "-xzf", true)).results[0].name).toBe("tar");
+        expect((await q(t, "--extract")).results[0].name).toBe("tar");
+        vi.runOnlyPendingTimers();
+        await t.finishInProgressScheduledFunctions();
+        if (step === 1) await t.mutation(internal.derived.setVerifiedFlagUsage, { pageId: page!._id, usage: [{ flag: "-q", count: 3, source: "tldr" }] });
+      }
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      const release = (await t.run(ctx => ctx.db.get(releaseId)))!;
+      expect(release.flagSearchGeneration).toBeGreaterThan(1);
+      const rows = await t.run(ctx => ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_flag", q => q.eq("releaseId", releaseId)).take(256));
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every(row => row.generation === release.flagSearchGeneration)).toBe(true);
+      const current = await t.run(ctx => ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", q => q.eq("releaseId", releaseId)).unique());
+      expect(await t.mutation(internal.taskPhrases.backfillRelease, { releaseId, generation: current!.generation! - 1 })).toEqual({ done: false });
+      expect((await q(t, "-xzf")).results[0].name).toBe("tar");
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("merges every letter's candidates when tar is evicted from the first-letter ranges", async () => {
+    const crowded: P[] = ["c", "x"].flatMap(letter => Array.from({ length: 16 }, (_, i) => ({
+      name: `${letter}${i}`, options: [[`-${letter}`]] as Array<[string]>, usage: { [`-${letter}`]: 100 },
+    })));
+    const { t } = await world([realTar, ...earlier, ...crowded]);
+    for (const query of ["-czf", "-xzf", "-cf", "-xf"]) expect((await q(t, query, true)).results[0].name).toBe("tar");
+  });
+
+  it("rejects short prefixes and ranks exact words above final-word prefixes", async () => {
+    const { t } = await world([{ name: "aim", score: 9000, task: "find a target" }, { name: "exact", score: 1, task: "find targ" }, { ...realTar, task: "extract files from an archive" }]);
+    expect((await q(t, "how to ta")).results).toEqual([]);
+    expect((await q(t, "how to tar")).results.some(hit => hit.name === "aim")).toBe(false);
+    expect((await q(t, "extract a ta")).results.some(hit => hit.name === "aim")).toBe(false);
+    expect((await q(t, "find a targ")).results[0].name).toBe("exact");
+    expect((await q(t, "extract a tarb")).results[0].name).toBe("tar");
+  });
+
+  it("keeps every cluster length including two-letter clusters within 40 reads with the full brief", async () => {
+    const flags = [..."xzabcdvf"].map(letter => `-${letter}`);
+    const extras = Array.from({ length: 4 }, (_, i) => `--extra${i}`);
+    const pages: P[] = Array.from({ length: 16 }, (_, i) => ({ name: `cover${i}`, score: S,
+      options: [...flags.map(flag => [flag, flag === "-f"] as [string, boolean]), ...extras.map(flag => [flag] as [string])],
+      usage: Object.fromEntries([...flags, ...extras].map(flag => [flag, flag.length === 2 ? 5 : 1])),
+    }));
+    const { t } = await world(pages);
+    for (let length = 2; length <= 8; length++) {
+      const query = "-" + "xzabcdv".slice(0, length - 1) + "f";
+      expect((await q(t, query, true)).results.length).toBeGreaterThan(0);
+    }
+  });
 });

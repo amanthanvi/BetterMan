@@ -21,8 +21,9 @@ import { datasetStageValidator, distroValidator } from "./schema";
  * Before a release's backfill completes, worded queries match only the pages
  * whose rows exist; other search results are unaffected.
  */
-export const TASK_PHRASE_VERSION = 4;
+export const TASK_PHRASE_VERSION = 5;
 const BACKFILL_PAGES = 4;
+const FLAG_REFRESH_DELAY_MS = 30_000;
 const SYNC_PAGES = 256;
 const MAX_BACKFILL_ATTEMPTS = 3;
 
@@ -111,7 +112,7 @@ export async function scheduleTaskPhraseBackfill(ctx: MutationCtx, release: Doc<
   if (status?.jobId) {
     const job = await ctx.db.system.get(status.jobId);
     if (status.version === TASK_PHRASE_VERSION && status.completedVersion !== TASK_PHRASE_VERSION && job && (job.state.kind === "pending" || job.state.kind === "inProgress")) {
-      if (refreshFlags && !status.rescanFlags) await ctx.db.patch(status._id, { rescanFlags: true });
+      if (refreshFlags && (job.state.kind === "inProgress" || status.scanned > 0) && !status.rescanFlags) await ctx.db.patch(status._id, { rescanFlags: true });
       return true;
     }
     if (job?.state.kind === "pending") await ctx.scheduler.cancel(status.jobId);
@@ -121,14 +122,17 @@ export async function scheduleTaskPhraseBackfill(ctx: MutationCtx, release: Doc<
   const attempts = sameVersion ? (status?.attempts ?? 0) : 0;
   if (failed && sameVersion && attempts >= MAX_BACKFILL_ATTEMPTS) throw new Error("TASK_PHRASE_BACKFILL_FAILED");
   const generation = (status?.generation ?? 0) + 1;
-  const resume = sameVersion && !refreshFlags;
-  const jobId = await ctx.scheduler.runAfter(0, internal.taskPhrases.backfillRelease, { releaseId: release._id, generation });
+  const resume = sameVersion && !refreshFlags && status?.candidateGeneration !== release.flagSearchGeneration;
+  const candidateGeneration = resume ? status?.candidateGeneration ?? generation : generation;
+  if (!resume && status?.candidateGeneration !== undefined && status.candidateGeneration !== release.flagSearchGeneration) {
+    await ctx.scheduler.runAfter(0, internal.taskPhrases.cleanupFlagGeneration, { releaseId: release._id, generation: status.candidateGeneration });
+  }
+  const jobId = await ctx.scheduler.runAfter(refreshFlags ? FLAG_REFRESH_DELAY_MS : 0, internal.taskPhrases.backfillRelease, { releaseId: release._id, generation });
   const progress = {
-    version: TASK_PHRASE_VERSION, generation, jobId, clearingFlags: resume ? status?.clearingFlags ?? false : true, rescanFlags: resume ? status?.rescanFlags ?? false : false, attempts: attempts + 1, updatedAt: Date.now(),
+    version: TASK_PHRASE_VERSION, generation, candidateGeneration, jobId, clearingFlags: false, rescanFlags: resume ? status?.rescanFlags ?? false : false, attempts: attempts + 1, updatedAt: Date.now(),
     cursor: resume ? status?.cursor ?? null : null,
     scanned: resume ? status?.scanned ?? 0 : 0, written: resume ? status?.written ?? 0 : 0,
   };
-  await ctx.db.patch(release._id, { flagSearchReady: false });
   if (status) await ctx.db.patch(status._id, { ...progress, completedVersion: undefined });
   else await ctx.db.insert("taskPhraseBackfills", { releaseId: release._id, ...progress });
   return true;
@@ -142,35 +146,43 @@ export const backfillRelease = internalMutation({
     const status = await ctx.db.query("taskPhraseBackfills").withIndex("by_releaseId", (q) => q.eq("releaseId", args.releaseId)).unique();
     if (!release || release.pruning || !status || status.version !== TASK_PHRASE_VERSION || args.generation !== status.generation || args.generation === undefined) return { done: false };
     if (status.completedVersion === TASK_PHRASE_VERSION) return { done: true };
-    if (status.clearingFlags) {
-      const rows = await ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_flag", q => q.eq("releaseId", release._id)).take(16);
-      for (const row of rows) await ctx.db.delete(row._id);
-      const jobId = await ctx.scheduler.runAfter(0, internal.taskPhrases.backfillRelease, { releaseId: release._id, generation: args.generation });
-      await ctx.db.patch(status._id, { jobId, clearingFlags: rows.length === 16 });
-      return { done: false };
-    }
     const batch = await ctx.db.query("manPages")
       .withIndex("by_releaseId_and_externalId", (q) => q.eq("releaseId", args.releaseId))
       .paginate({ cursor: status.cursor, numItems: BACKFILL_PAGES });
     let written = 0;
     for (const page of batch.page) {
-      await syncFlagCandidates(ctx, page);
+      await syncFlagCandidates(ctx, page, page, status.candidateGeneration);
       if (await syncTaskRow(ctx, page, await generatedFor(ctx, page.contentSha256))) written += 1;
     }
     const progress = { scanned: status.scanned + batch.page.length, written: status.written + written, updatedAt: Date.now() };
-    if (batch.isDone && status.rescanFlags) {
-      const jobId = await ctx.scheduler.runAfter(0, internal.taskPhrases.backfillRelease, { releaseId: release._id, generation: args.generation });
-      await ctx.db.patch(status._id, { jobId, cursor: null, scanned: 0, written: 0, clearingFlags: true, rescanFlags: false });
-      return { done: false };
-    }
     if (batch.isDone) {
-      await ctx.db.patch(release._id, { flagSearchReady: true });
-      await ctx.db.patch(status._id, { ...progress, cursor: null, completedVersion: TASK_PHRASE_VERSION, attempts: 0 });
+      // Publish before queuing another pass: reads retain a completed snapshot throughout updates.
+      await ctx.db.patch(release._id, { flagSearchReady: true, flagSearchGeneration: status.candidateGeneration });
+      await ctx.db.patch(status._id, { ...progress, cursor: null, completedVersion: TASK_PHRASE_VERSION, attempts: 0, rescanFlags: false });
+      if (release.flagSearchGeneration !== status.candidateGeneration) await ctx.scheduler.runAfter(0, internal.taskPhrases.cleanupFlagGeneration, {
+        releaseId: release._id, generation: release.flagSearchGeneration,
+      });
+      if (status.rescanFlags) await scheduleTaskPhraseBackfill(ctx, { ...release, flagSearchReady: true, flagSearchGeneration: status.candidateGeneration }, true);
       return { done: true };
     }
     const jobId = await ctx.scheduler.runAfter(0, internal.taskPhrases.backfillRelease, { releaseId: args.releaseId, generation: args.generation });
     await ctx.db.patch(status._id, { ...progress, cursor: batch.continueCursor, jobId });
     return { done: false };
+  },
+});
+
+/** Old snapshots are removed in bounded batches after the reader pointer switches. */
+export const cleanupFlagGeneration = internalMutation({
+  args: { releaseId: v.id("datasetReleases"), generation: v.optional(v.number()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const release = await ctx.db.get(args.releaseId);
+    if (!release || release.flagSearchGeneration === args.generation) return null;
+    const rows = await ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_generation_and_flag", q =>
+      q.eq("releaseId", release._id).eq("generation", args.generation)).take(16);
+    for (const row of rows) await ctx.db.delete(row._id);
+    if (rows.length === 16) await ctx.scheduler.runAfter(0, internal.taskPhrases.cleanupFlagGeneration, args);
+    return null;
   },
 });
 

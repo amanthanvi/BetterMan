@@ -190,15 +190,20 @@ that explicit mode requires tar first for all five cases and fails on query erro
 Use `BETTERMAN_E2E_UNSCORED=1` with the seed script to verify the default production
 mode against a legacy release shape without popularity or verified flag usage.
 
-This revision removes #465's proposed indexes on `manPageOptionFlags`. Its sole
-new index is on a new, empty `flagSearchCandidates` table, so this rollout needs
-no `confirm_large_indexes` dispatch. Normal deployment schedules task-backfill
-version 4 through the existing entrypoint. That scan populates verified flag
-candidates and marks each release `flagSearchReady` only on completion; until then
-search uses deterministic fallback. B7 page writes schedule coalesced requests to
-the same serialized release writer afterward. Each refresh rebuilds from source
-so withdrawals restore evicted candidates; search uses fallback while rebuilding.
-Pending old-version jobs are canceled and generation tokens supersede stale chains.
-`pnpm convex:task-check` reports completion/failures through the existing durable
+This revision removes #465's proposed indexes on `manPageOptionFlags`. Candidate
+indexes belong to the new, empty `flagSearchCandidates` table, so this rollout
+needs no `confirm_large_indexes` dispatch. Normal deployment schedules version 5
+through the existing task-backfill entrypoint. The first source scan marks a
+release ready and publishes its candidate generation. Legacy completed rows stay
+readable during migration; subsequent B7 updates never unset readiness.
+
+B7 page writes request a coalesced refresh with a thirty-second delayed start.
+The serialized writer builds a separate generation, publishes it atomically,
+and cleans old generations in bounded batches. Mid-pass writes request another
+pass without delaying publication of the one finishing. Readers keep the last
+completed ranking throughout. Source scans restore evicted candidates; canceled
+old jobs and generation tokens prevent stale chains from writing. An interrupted
+build resumes its staging generation and retains queued rescan requests.
+`pnpm convex:task-check` reports progress and failures through the existing
 per-release status. No production workflow or migration was executed by the
 implementation agent.

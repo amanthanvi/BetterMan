@@ -418,8 +418,9 @@ Separate from the release ingest contract, behind the same ingest secret:
 
 Task search adds `tar archive` alongside the original `tarball`/`tarballs` query
 word. This curated list applies only to task retrieval and evidence scoring.
-Phrase overlap uses complete tokens except for the final type-ahead word,
-including the task's command name as implicit
+Phrase overlap uses exact tokens except for a final type-ahead word of at least
+four characters, which scores half an exact match. It includes
+the task's command name as implicit
 context: tar's "extract files from an archive" therefore shares `extract`, `tar`
 and `archive` with "extract a tar archive". Lexical overlap comes first,
 `popularityScore` breaks ties, then command name and section. A popular dd cannot
@@ -438,28 +439,37 @@ all aliases of each selected option. Real tar's `--gzip`, `--gunzip`, `--ungzip`
 and `-z` therefore stay together. The top-hit brief keeps its separate twelve
 spelling lookup budget.
 
-B7 commits page usage first and schedules a refresh request. Requests coalesce
-into one serialized per-release backfill chain, rather than rewriting shared
-candidate rows in parallel with up to 256 page updates. Task-backfill version 4
-clears candidate rows and rebuilds from source in batches of four pages; a
-request arriving mid-scan requests one additional pass. This also restores
-previously evicted candidates when higher-ranked pages withdraw usage. It sets
-`datasetReleases.flagSearchReady` only when the full release scan completes.
-The existing deploy/activation entrypoints schedule this migration. Pending older
-jobs are canceled, and generation tokens make already-running or stale chains
-no-ops. Until it
-completes, scored and unscored releases both retain deterministic name-ordered
-option lookup. No option-row score backfill or new index on the large option
-table is needed; the only new index belongs to the initially empty sidecar table.
+B7 commits page usage first and schedules a refresh request. Requests share a
+30-second delayed start per release; requests arriving after scanning starts ask
+for one later pass. Task-backfill version 5 builds a new candidate generation in
+four-page batches while readers retain the last completed generation, including
+legacy rows that have no generation key. A completed pass atomically switches
+`flagSearchGeneration` and marks the first generation ready. Later refreshes never
+clear readiness or mutate the reader's completed snapshot. A pass is published
+even when more updates are queued, so ongoing generation runs cannot postpone
+publication indefinitely.
 
-Bare clusters filter the precomputed candidates for verified coverage of every
-cluster flag before applying the read cap, then check each real option on the
-same page. An argument-taking flag cannot consume later letters. Verified usage
-counts rank candidates, followed by popularity and deterministic name/section.
-Without complete verified coverage, a bounded name-ordered first-flag range is
-used. Direct attribution is bounded to 30 document reads before the optional
-brief; the saturated perf fixture measures that brief too. Recall remains bounded
-by the sidecar's 16 candidates and 12 complete options; broader coverage would need
-precomputed cluster keys. Existing named-cluster and ordinary search workloads
-retain their previous budgets. The bare-cluster perf scenario now exercises six
-covering candidates and a full brief at 40 document reads.
+The source scan restores evicted candidates. Old snapshots and superseded partial
+builds are cleaned in bounded batches of sixteen rows, guarded against deleting
+the active generation. Pending older jobs are canceled and generation tokens make
+stale chains no-ops. Retries preserve both the partially built generation and any
+queued rescan. Existing deploy/activation entrypoints start the migration; no new
+index on the large option table is needed. Candidate indexes belong to the new,
+initially empty sidecar table.
+
+Bare clusters merge the candidate row for every unique letter (at most eight)
+before filtering for complete verified coverage. This preserves recall when a
+page is missing from the first letter's sixteen candidates. Real option rows are
+still verified on the same page; an argument-taking flag cannot consume later
+letters. Verified usage counts rank candidates, followed by popularity and
+name/section. Without complete coverage, bounded name-ordered fallback remains.
+
+Every cluster length reserves two release reads, all letter rows, and fourteen
+reads for the optional full brief. Each verified candidate costs one option row
+per letter plus one page, so the candidate ceiling is
+`floor((40 - 2 - clusterLength - 14) / (clusterLength + 1))`. Two-letter clusters
+can inspect seven pages and three-letter clusters five. Both saturated perf
+scenarios include the full brief and must stay within forty reads. Ordinary
+search and named-cluster workloads retain their prior budgets. Recall remains
+bounded by sixteen candidates per flag and twelve complete options per page;
+broader coverage would need precomputed cluster keys.

@@ -675,7 +675,7 @@ describe("popularity ranking (#464)", () => {
       });
     });
     const result = await t.query(api.queries.search, { distro: "debian", q: "-xzf", section: null, limit: 20, offset: 0, brief: true });
-    expect(result.results).toHaveLength(6);
+    expect(result.results).toHaveLength(5);
     expect(result.results[0].name).toBe("tool0");
   });
 

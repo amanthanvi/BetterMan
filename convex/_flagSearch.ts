@@ -4,6 +4,7 @@ import { optionKeys } from "./_optionFlags";
 
 // Retain complete options: aliases never compete with other options for the cap.
 const MAX_OPTIONS = 12;
+// shortcut: sixteen candidates per flag bound recall; precompute cluster keys if broader coverage is needed.
 const MAX_CANDIDATES = 16;
 type Candidate = Doc<"flagSearchCandidates">["candidates"][number];
 
@@ -30,12 +31,12 @@ async function verifiedOptions(ctx: MutationCtx, page: Doc<"manPages">) {
 }
 
 /** Refresh one page's bounded verified-example candidates, including removed usage. */
-export async function syncFlagCandidates(ctx: MutationCtx, page: Doc<"manPages">, previous = page) {
+export async function syncFlagCandidates(ctx: MutationCtx, page: Doc<"manPages">, previous = page, generation?: number) {
   const options = await verifiedOptions(ctx, page);
   const old = previous === page ? options : await verifiedOptions(ctx, previous);
   const usage = [...options].map(([flag, value]) => ({ flag, count: value.count }));
   for (const flag of new Set([...old.keys(), ...options.keys()])) {
-    const existing = await ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_flag", q => q.eq("releaseId", page.releaseId).eq("flag", flag)).unique();
+    const existing = await ctx.db.query("flagSearchCandidates").withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", page.releaseId).eq("generation", generation).eq("flag", flag)).unique();
     const candidates = (existing?.candidates ?? []).filter(c => c.pageId !== page._id);
     const option = options.get(flag);
     if (option && page.name.length <= 128 && page.section.length <= 16 && option.row.anchorId.length <= 256) candidates.push({
@@ -43,7 +44,7 @@ export async function syncFlagCandidates(ctx: MutationCtx, page: Doc<"manPages">
       popularityScore: page.popularityScore ?? 0, usage, flags: option.row.flags, anchorId: option.row.anchorId,
     });
     candidates.sort((a, b) => compareFlagCandidates(a, b, [flag]));
-    const row = { releaseId: page.releaseId, flag, candidates: candidates.slice(0, MAX_CANDIDATES) };
+    const row = { releaseId: page.releaseId, generation, flag, candidates: candidates.slice(0, MAX_CANDIDATES) };
     if (!candidates.length) { if (existing) await ctx.db.delete(existing._id); }
     else if (existing) await ctx.db.patch(existing._id, row);
     else await ctx.db.insert("flagSearchCandidates", row);

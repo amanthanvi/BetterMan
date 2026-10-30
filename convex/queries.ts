@@ -49,7 +49,8 @@ function taskExpansion(word: string, prefixWord?: string): string | undefined {
 }
 
 function wordOverlap(words: string[], queryWords: string[], prefixWord?: string): number {
-  return queryWords.filter(word => words.some(candidate => candidate === word || word === prefixWord && candidate.startsWith(word))).length;
+  return queryWords.reduce((score, word) => score + (words.includes(word) ? 1 :
+    word === prefixWord && word.length >= 4 && words.some(candidate => candidate.startsWith(word)) ? 0.5 : 0), 0);
 }
 
 function boundedInt(value: number, min: number, max: number): number {
@@ -583,12 +584,13 @@ async function clusterHits(ctx: QueryCtx, releaseId: Id<"datasetReleases">, name
 /** Verified-example coverage is checked before the candidate cap, not after it. */
 async function bareClusterHits(ctx: QueryCtx, release: Doc<"datasetReleases">, flag: string, section: string | null): Promise<RankedHit[]> {
   const letters = [...flag.slice(1)].map(letter => `-${letter}`);
-  const hints = release.flagSearchReady ? await ctx.db.query("flagSearchCandidates")
-    .withIndex("by_releaseId_and_flag", q => q.eq("releaseId", release._id).eq("flag", letters[0])).unique() : null;
-  const preferred = (hints?.candidates ?? []).filter(c => (section === null || c.section === section) && letters.every(f => c.usage.some(u => u.flag === f)))
+  const hints = release.flagSearchReady ? await Promise.all([...new Set(letters)].map(part => ctx.db.query("flagSearchCandidates")
+    .withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", release._id).eq("generation", release.flagSearchGeneration).eq("flag", part)).unique())) : [];
+  const merged = new Map(hints.flatMap(row => row?.candidates ?? []).map(candidate => [candidate.pageId, candidate]));
+  const preferred = [...merged.values()].filter(c => (section === null || c.section === section) && letters.every(f => c.usage.some(u => u.flag === f)))
     .sort((a, b) => compareFlagCandidates(a, b, letters));
-  // shortcut: 16 precomputed verified candidates and bounded lexical fallback, precompute full cluster keys if broader recall is needed.
-  const take = Math.floor((hints ? 27 : 24) / (letters.length + 1));
+  // Reserve release reads, every letter's candidate row, and the full 12-lookup brief.
+  const take = Math.floor((40 - 2 - letters.length - (MAX_TOP_FLAG_LOOKUPS + 2)) / (letters.length + 1));
   const candidates = preferred.length ? preferred.slice(0, take) : await optionFlagRowsFor(ctx, {
     releaseId: release._id, section, flag: letters[0], namePrefix: null, take,
   });
@@ -913,7 +915,7 @@ export const search = query({
         }
       }
       const hints = visible === null && name === null && release.flagSearchReady ? await ctx.db.query("flagSearchCandidates")
-        .withIndex("by_releaseId_and_flag", q => q.eq("releaseId", release._id).eq("flag", flag.startsWith("--") ? flag.toLowerCase() : flag)).unique() : null;
+        .withIndex("by_releaseId_and_generation_and_flag", q => q.eq("releaseId", release._id).eq("generation", release.flagSearchGeneration).eq("flag", flag.startsWith("--") ? flag.toLowerCase() : flag)).unique() : null;
       const preferred = (hints?.candidates ?? []).filter(c => section === null || c.section === section);
       if (rows.length || preferred.length) {
         const candidates: Array<RankedHit | Doc<"manPageOptionFlags">> = [
