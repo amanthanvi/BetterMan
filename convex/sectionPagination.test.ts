@@ -89,7 +89,8 @@ describe("section name cursors", () => {
     const exact = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2 });
     expect(exact).toMatchObject({ hasMore: false, nextCursor: null, prevCursor: null });
     const empty = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, cursor: "z" });
-    expect(empty).toMatchObject({ results: [], hasMore: false, nextCursor: null, prevCursor: null });
+    // No next page; Previous offers the last one (names up to and including "z").
+    expect(empty).toMatchObject({ results: [], hasMore: false, nextCursor: null, prevCursor: "z\u0000" });
   });
 
   it("returns an empty section and missing sections without invented cursors", async () => {
@@ -104,5 +105,43 @@ describe("section name cursors", () => {
     await expect(t.query(api.queries.listSection, {
       distro: "debian", section: "1", limit: 2, cursor: "awk", before: "echo",
     })).rejects.toThrow("Use either cursor or before, not both");
+  });
+});
+
+describe("section letter jumps", () => {
+  it("starts at the first name at or after a letter, with both neighbours reachable", async () => {
+    const t = await seededSection();
+    const atC = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, from: "c" });
+    expect(atC?.results.map((page) => page.name)).toEqual(["cat", "diff"]);
+    expect(atC?.prevCursor).toBe("cat");
+    expect(atC?.nextCursor).toBe("diff");
+    const back = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, before: atC!.prevCursor! });
+    expect(back?.results.map((page) => page.name)).toEqual(["awk", "bash"]);
+    // A letter with no names lands on the next one; past the end there is nothing.
+    expect((await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, from: "b" }))?.results[0].name).toBe("bash");
+    const end = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, from: "z" });
+    expect(end?.results).toEqual([]);
+    // Past the last name, Previous opens the last page rather than nothing.
+    expect(end?.prevCursor).toBe("z");
+    const last = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, before: end!.prevCursor! });
+    expect(last?.results.map((page) => page.name)).toEqual(["diff", "echo"]);
+    expect(last?.nextCursor).toBeNull();
+    // A stale forward cursor past the end does the same, keeping its own name.
+    const stale = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, cursor: "echo" });
+    expect(stale?.results).toEqual([]);
+    const lastAgain = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, before: stale!.prevCursor! });
+    expect(lastAgain?.results.map((page) => page.name)).toEqual(["diff", "echo"]);
+    await expect(t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, from: "c", cursor: "a" })).rejects.toThrow("Use one of cursor, before or from");
+  });
+});
+
+describe("an empty section", () => {
+  it("has no page to offer in either direction", async () => {
+    const t = await seededSection([]);
+    for (const args of [{}, { from: "m" }, { cursor: "m" }]) {
+      const result = await t.query(api.queries.listSection, { distro: "debian", section: "1", limit: 2, ...args });
+      expect(result?.results).toEqual([]);
+      expect([result?.prevCursor, result?.nextCursor]).toEqual([null, null]);
+    }
   });
 });

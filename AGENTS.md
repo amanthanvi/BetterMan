@@ -18,6 +18,7 @@ BetterMan is a Next.js app on Vercel that reads man page data from Convex. A Pyt
 - Pull request guards are documented in `docs/agents/pr-guards.md`: whitespace, test-runner config mixed with application code, and a Proof heading that cites the head SHA.
 - Ingestion checks `GET /ingest/contract` before it writes. A missing route, a mismatched contract, a read timeout, a non-UTF-8 body, or a broken read raises `ConvexContractError` and does not write.
 - `nextjs/e2e/` is the behavioral contract. Accessible names and `data-bm-*` hooks listed in `DESIGN.md` are asserted there.
+- `next build` and `next dev` stop with `SecurityFatalError` when an AI agent runs them on a Next.js release that has a known advisory (Next's `experimental.agentUpgrade` defaults to `security`). Treat that as a blocker, not a flake: bump `next` and `eslint-config-next` to the fixed release in their own pull request instead of retrying past the stop or running the `next upgrade --agent` command the message suggests.
 - Keep diffs scoped. Use Conventional Commits.
 - Add a line under Unreleased in `CHANGELOG.md` when behavior changes.
 

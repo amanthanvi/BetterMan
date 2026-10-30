@@ -9,6 +9,11 @@ dependencies = [
   "pydantic>=2.13.4",
 ]
 
+# Containers and the FreeBSD runner `pip install` this directory. Name the
+# package, so data/ (pins read from the checkout) is not taken for a second one.
+[tool.setuptools.packages.find]
+include = ["ingestion", "ingestion.*"]
+
 [dependency-groups]
 dev = [
   "pytest>=9.1.1",
