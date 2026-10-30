@@ -1,0 +1,1243 @@
+{
+  "scope": "complete pinned Contents/Packages competitor discovery, including renamed executable families and virtual providers; candidate archive parse; no upload",
+  "releaseSha256": "ed56aac47e7911e65ee63aae8d67e29f20e023f840e49f8ed037043a33de138a",
+  "fullManualPackages": 17323,
+  "acquiredPackages": 153,
+  "auditedPackages": [
+    "9base",
+    "apache2",
+    "apache2-bin",
+    "bash",
+    "caddy",
+    "cct",
+    "chr",
+    "chr-tiny",
+    "clang-17",
+    "clang-18",
+    "clang-19",
+    "clang-22",
+    "coreutils",
+    "curl",
+    "default-mysql-client",
+    "edbrowse",
+    "emacs-gtk",
+    "emacs-lucid",
+    "emacs-nox",
+    "emacs-pgtk",
+    "findutils",
+    "firebird-dev",
+    "firebird3.0-utils",
+    "firebird4.0-utils",
+    "fte-console",
+    "fte-terminal",
+    "fte-xwindow",
+    "gawk",
+    "gcc",
+    "gcc-12",
+    "gcc-13",
+    "gcc-14",
+    "gdb",
+    "git",
+    "git-man",
+    "grep",
+    "groff",
+    "groff-base",
+    "groovy",
+    "hdf4-tools",
+    "hx",
+    "icedtea-netx",
+    "iproute2",
+    "jed",
+    "jove",
+    "jupp",
+    "le",
+    "less",
+    "levee",
+    "libncarg-bin",
+    "libncrystal-bin",
+    "libncurses-dev",
+    "libnetcdf-c++4-dev",
+    "libnetcdf-dev",
+    "librarian-puppet",
+    "libssl-dev",
+    "libtest-simple-perl",
+    "lighttpd",
+    "lpe",
+    "make",
+    "make-guile",
+    "manpages",
+    "manpages-dev",
+    "mariadb-client-core",
+    "mawk",
+    "mdm",
+    "merecat",
+    "mg",
+    "micro-httpd",
+    "mini-httpd",
+    "mount",
+    "ncal",
+    "ncaptool",
+    "ncat",
+    "ncbi-acc-download",
+    "ncbi-seg",
+    "ncdc",
+    "ncdt",
+    "ncdu",
+    "ncftp",
+    "ncl-ncarg",
+    "ncl-tools",
+    "ncmpc",
+    "ncmpcpp",
+    "nco",
+    "ncoils",
+    "ncrack",
+    "ncview",
+    "ne",
+    "neovim",
+    "netcat-openbsd",
+    "netcat-traditional",
+    "netcdf-bin",
+    "nginx",
+    "openssh-client",
+    "openssl",
+    "opensysusers",
+    "original-awk",
+    "pcc",
+    "perl",
+    "perl-base",
+    "plptools",
+    "pnetcdf-bin",
+    "postgresql-17",
+    "postgresql-client",
+    "postgresql-client-17",
+    "postgresql-doc-17",
+    "procps",
+    "python3",
+    "python3-minimal",
+    "python3-netcdf4",
+    "rsync",
+    "scala",
+    "scite",
+    "sed",
+    "systemd",
+    "systemd-standalone-sysusers",
+    "systemd-standalone-tmpfiles",
+    "tar",
+    "tcc",
+    "tntnet",
+    "util-linux",
+    "vile",
+    "vim",
+    "vim-common",
+    "vim-gtk3",
+    "vim-motif",
+    "vim-nox",
+    "vim-tiny",
+    "vis",
+    "webfs",
+    "wget",
+    "xjed",
+    "xvile",
+    "yaws"
+  ],
+  "controlCompetitors": [
+    "apache2",
+    "caddy",
+    "cct",
+    "chr",
+    "chr-tiny",
+    "clang-17",
+    "clang-18",
+    "clang-19",
+    "clang-22",
+    "edbrowse",
+    "emacs-gtk",
+    "emacs-lucid",
+    "emacs-nox",
+    "emacs-pgtk",
+    "fte-console",
+    "fte-terminal",
+    "fte-xwindow",
+    "gawk",
+    "gcc",
+    "gcc-12",
+    "gcc-13",
+    "gcc-14",
+    "gdb",
+    "git",
+    "grep",
+    "groff",
+    "hdf4-tools",
+    "hx",
+    "iproute2",
+    "jed",
+    "jove",
+    "jupp",
+    "le",
+    "levee",
+    "libncarg-bin",
+    "libncrystal-bin",
+    "libncurses-dev",
+    "libnetcdf-c++4-dev",
+    "libnetcdf-dev",
+    "libtest-simple-perl",
+    "lighttpd",
+    "lpe",
+    "mawk",
+    "mdm",
+    "merecat",
+    "mg",
+    "micro-httpd",
+    "mini-httpd",
+    "ncal",
+    "ncaptool",
+    "ncat",
+    "ncbi-acc-download",
+    "ncbi-seg",
+    "ncdc",
+    "ncdt",
+    "ncdu",
+    "ncftp",
+    "ncl-ncarg",
+    "ncl-tools",
+    "ncmpc",
+    "ncmpcpp",
+    "nco",
+    "ncoils",
+    "ncrack",
+    "ncview",
+    "ne",
+    "neovim",
+    "netcat-openbsd",
+    "netcat-traditional",
+    "netcdf-bin",
+    "nginx",
+    "openssh-client",
+    "opensysusers",
+    "original-awk",
+    "pcc",
+    "perl",
+    "plptools",
+    "pnetcdf-bin",
+    "procps",
+    "python3",
+    "python3-netcdf4",
+    "scite",
+    "systemd",
+    "systemd-standalone-sysusers",
+    "systemd-standalone-tmpfiles",
+    "tcc",
+    "tntnet",
+    "util-linux",
+    "vile",
+    "vim",
+    "vim-gtk3",
+    "vim-motif",
+    "vim-nox",
+    "vim-tiny",
+    "vis",
+    "webfs",
+    "xjed",
+    "xvile",
+    "yaws"
+  ],
+  "curatedAlternativeRoutes": [
+    {
+      "name": "awk",
+      "section": "1",
+      "tiePreference": "gawk",
+      "publishedOwner": "mawk",
+      "registrationPackage": "mawk",
+      "candidates": [
+        {
+          "name": "awk",
+          "section": "1",
+          "package": "gawk",
+          "priority": 10,
+          "spelling": "awk",
+          "target": [
+            "gawk",
+            "1",
+            "gawk"
+          ],
+          "sourcePath": "usr/share/man/man1/gawk.1.gz"
+        },
+        {
+          "name": "awk",
+          "section": "1",
+          "package": "mawk",
+          "priority": 5,
+          "spelling": "awk",
+          "target": [
+            "mawk",
+            "1",
+            "mawk"
+          ],
+          "sourcePath": "usr/share/man/man1/mawk.1.gz"
+        },
+        {
+          "name": "awk",
+          "section": "1",
+          "package": "original-awk",
+          "priority": 0,
+          "spelling": "awk",
+          "target": [
+            "original-awk",
+            "1",
+            "original-awk"
+          ],
+          "sourcePath": "usr/share/man/man1/original-awk.1.gz"
+        }
+      ]
+    },
+    {
+      "name": "nc",
+      "section": "1",
+      "tiePreference": "netcat-openbsd",
+      "publishedOwner": "netcat-traditional",
+      "registrationPackage": "netcat-traditional",
+      "candidates": [
+        {
+          "name": "nc",
+          "section": "1",
+          "package": "ncat",
+          "priority": 40,
+          "spelling": "nc",
+          "target": [
+            "ncat",
+            "1",
+            "ncat"
+          ],
+          "sourcePath": "usr/share/man/man1/ncat.1.gz"
+        },
+        {
+          "name": "nc",
+          "section": "1",
+          "package": "netcat-openbsd",
+          "priority": 50,
+          "spelling": "nc",
+          "target": [
+            "nc_openbsd",
+            "1",
+            "netcat-openbsd"
+          ],
+          "sourcePath": "usr/share/man/man1/nc_openbsd.1.gz"
+        },
+        {
+          "name": "nc",
+          "section": "1",
+          "package": "netcat-traditional",
+          "priority": 10,
+          "spelling": "nc",
+          "target": [
+            "nc.traditional",
+            "1",
+            "netcat-traditional"
+          ],
+          "sourcePath": "usr/share/man/man1/nc.traditional.1.gz"
+        }
+      ]
+    },
+    {
+      "name": "vi",
+      "section": "1",
+      "tiePreference": "vim-common",
+      "publishedOwner": "vim-common",
+      "registrationPackage": "vim-tiny",
+      "candidates": [
+        {
+          "name": "vi",
+          "section": "1",
+          "package": "levee",
+          "priority": 10,
+          "spelling": "vi",
+          "target": [
+            "levee",
+            "1",
+            "levee"
+          ],
+          "sourcePath": "usr/share/man/man1/levee.1.gz"
+        },
+        {
+          "name": "vi",
+          "section": "1",
+          "package": "vile",
+          "priority": 20,
+          "spelling": "vi",
+          "target": [
+            "vile",
+            "1",
+            "vile-common"
+          ],
+          "sourcePath": "usr/share/man/man1/vile.1.gz"
+        },
+        {
+          "name": "vi",
+          "section": "1",
+          "package": "vim",
+          "priority": 30,
+          "spelling": "vi",
+          "target": [
+            "vim",
+            "1",
+            "vim-common"
+          ],
+          "sourcePath": "usr/share/man/man1/vim.1.gz"
+        },
+        {
+          "name": "vi",
+          "section": "1",
+          "package": "vim-gtk3",
+          "priority": 50,
+          "spelling": "vi",
+          "target": [
+            "vim",
+            "1",
+            "vim-common"
+          ],
+          "sourcePath": "usr/share/man/man1/vim.1.gz"
+        },
+        {
+          "name": "vi",
+          "section": "1",
+          "package": "vim-motif",
+          "priority": 50,
+          "spelling": "vi",
+          "target": [
+            "vim",
+            "1",
+            "vim-common"
+          ],
+          "sourcePath": "usr/share/man/man1/vim.1.gz"
+        },
+        {
+          "name": "vi",
+          "section": "1",
+          "package": "vim-nox",
+          "priority": 40,
+          "spelling": "vi",
+          "target": [
+            "vim",
+            "1",
+            "vim-common"
+          ],
+          "sourcePath": "usr/share/man/man1/vim.1.gz"
+        },
+        {
+          "name": "vi",
+          "section": "1",
+          "package": "vim-tiny",
+          "priority": 15,
+          "spelling": "vi",
+          "target": [
+            "vim",
+            "1",
+            "vim-common"
+          ],
+          "sourcePath": "usr/share/man/man1/vim.1.gz"
+        },
+        {
+          "name": "vi",
+          "section": "1",
+          "package": "vis",
+          "priority": 35,
+          "spelling": "vi",
+          "target": [
+            "vis",
+            "1",
+            "vis"
+          ],
+          "sourcePath": "usr/share/man/man1/vis.1.gz"
+        }
+      ]
+    }
+  ],
+  "privateManualPackages": [
+    "firebird3.0-utils",
+    "firebird4.0-utils",
+    "groovy",
+    "icedtea-netx",
+    "librarian-puppet",
+    "postgresql-17",
+    "postgresql-client-17",
+    "postgresql-doc-17",
+    "scala"
+  ],
+  "verifiedLicenses": 138,
+  "verifiedCommandOwners": {
+    "groff": "groff-base",
+    "bash": "bash",
+    "coreutils": "coreutils",
+    "util-linux": "mount",
+    "findutils": "findutils",
+    "grep": "grep",
+    "sed": "sed",
+    "gawk": "gawk",
+    "curl": "curl",
+    "wget": "wget",
+    "openssh-client": "openssh-client",
+    "rsync": "rsync",
+    "netcat-openbsd": "netcat-traditional",
+    "tar": "tar",
+    "systemd": "systemd",
+    "vim": "vim-common",
+    "less": "less",
+    "git": "git-man",
+    "make": "make",
+    "nginx": "nginx",
+    "apache2": "apache2-bin",
+    "openssl": "openssl",
+    "python3": "python3.13-minimal",
+    "perl": "perl-base",
+    "iproute2": "iproute2",
+    "procps": "procps",
+    "postgresql-client": "postgresql-client-17",
+    "default-mysql-client": "mariadb-client-core"
+  },
+  "commands": [
+    {
+      "package": "manpages",
+      "status": "non-command"
+    },
+    {
+      "package": "manpages-dev",
+      "status": "non-command"
+    },
+    {
+      "package": "groff",
+      "name": "groff",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "groff-base",
+          "path": "usr/share/man/man1/groff.1.gz"
+        }
+      ],
+      "expectedPackage": "groff",
+      "resolvedOwner": "groff-base",
+      "registrationPackage": "groff-base",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/groff.1.gz"
+    },
+    {
+      "package": "bash",
+      "name": "bash",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "bash",
+          "path": "usr/share/man/man1/bash.1.gz"
+        }
+      ],
+      "expectedPackage": "bash",
+      "resolvedOwner": "bash",
+      "registrationPackage": "bash",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/bash.1.gz"
+    },
+    {
+      "package": "coreutils",
+      "name": "ls",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "coreutils",
+          "path": "usr/share/man/man1/ls.1.gz"
+        },
+        {
+          "package": "9base",
+          "path": "usr/share/man/man1/ls.1plan9.gz"
+        }
+      ],
+      "expectedPackage": "coreutils",
+      "resolvedOwner": "coreutils",
+      "registrationPackage": "coreutils",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/ls.1.gz"
+    },
+    {
+      "package": "util-linux",
+      "name": "mount",
+      "section": "8",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "mount",
+          "path": "usr/share/man/man8/mount.8.gz"
+        }
+      ],
+      "expectedPackage": "util-linux",
+      "resolvedOwner": "mount",
+      "registrationPackage": "mount",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man8/mount.8.gz"
+    },
+    {
+      "package": "findutils",
+      "name": "find",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "findutils",
+          "path": "usr/share/man/man1/find.1.gz"
+        }
+      ],
+      "expectedPackage": "findutils",
+      "resolvedOwner": "findutils",
+      "registrationPackage": "findutils",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/find.1.gz"
+    },
+    {
+      "package": "grep",
+      "name": "grep",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "grep",
+          "path": "usr/share/man/man1/grep.1.gz"
+        },
+        {
+          "package": "9base",
+          "path": "usr/share/man/man1/grep.1plan9.gz"
+        }
+      ],
+      "expectedPackage": "grep",
+      "resolvedOwner": "grep",
+      "registrationPackage": "grep",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/grep.1.gz"
+    },
+    {
+      "package": "sed",
+      "name": "sed",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "sed",
+          "path": "usr/share/man/man1/sed.1.gz"
+        },
+        {
+          "package": "9base",
+          "path": "usr/share/man/man1/sed.1plan9.gz"
+        }
+      ],
+      "expectedPackage": "sed",
+      "resolvedOwner": "sed",
+      "registrationPackage": "sed",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/sed.1.gz"
+    },
+    {
+      "package": "gawk",
+      "name": "gawk",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "gawk",
+          "path": "usr/share/man/man1/gawk.1.gz"
+        }
+      ],
+      "expectedPackage": "gawk",
+      "resolvedOwner": "gawk",
+      "registrationPackage": "gawk",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/gawk.1.gz"
+    },
+    {
+      "package": "curl",
+      "name": "curl",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "curl",
+          "path": "usr/share/man/man1/curl.1.gz"
+        }
+      ],
+      "expectedPackage": "curl",
+      "resolvedOwner": "curl",
+      "registrationPackage": "curl",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/curl.1.gz"
+    },
+    {
+      "package": "wget",
+      "name": "wget",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "wget",
+          "path": "usr/share/man/man1/wget.1.gz"
+        }
+      ],
+      "expectedPackage": "wget",
+      "resolvedOwner": "wget",
+      "registrationPackage": "wget",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/wget.1.gz"
+    },
+    {
+      "package": "openssh-client",
+      "name": "ssh_config",
+      "section": "5",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "openssh-client",
+          "path": "usr/share/man/man5/ssh_config.5.gz"
+        }
+      ],
+      "expectedPackage": "openssh-client",
+      "resolvedOwner": "openssh-client",
+      "registrationPackage": "openssh-client",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man5/ssh_config.5.gz"
+    },
+    {
+      "package": "rsync",
+      "name": "rsync",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "rsync",
+          "path": "usr/share/man/man1/rsync.1.gz"
+        }
+      ],
+      "expectedPackage": "rsync",
+      "resolvedOwner": "rsync",
+      "registrationPackage": "rsync",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/rsync.1.gz"
+    },
+    {
+      "package": "netcat-openbsd",
+      "name": "nc",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [],
+      "expectedPackage": "netcat-traditional",
+      "resolvedOwner": "netcat-traditional",
+      "registrationPackage": "netcat-traditional",
+      "alternativeCandidates": [
+        {
+          "name": "nc",
+          "section": "1",
+          "package": "ncat",
+          "priority": 40,
+          "spelling": "nc",
+          "target": [
+            "ncat",
+            "1",
+            "ncat"
+          ],
+          "sourcePath": "usr/share/man/man1/ncat.1.gz"
+        },
+        {
+          "name": "nc",
+          "section": "1",
+          "package": "netcat-openbsd",
+          "priority": 50,
+          "spelling": "nc",
+          "target": [
+            "nc_openbsd",
+            "1",
+            "netcat-openbsd"
+          ],
+          "sourcePath": "usr/share/man/man1/nc_openbsd.1.gz"
+        },
+        {
+          "name": "nc",
+          "section": "1",
+          "package": "netcat-traditional",
+          "priority": 10,
+          "spelling": "nc",
+          "target": [
+            "nc.traditional",
+            "1",
+            "netcat-traditional"
+          ],
+          "sourcePath": "usr/share/man/man1/nc.traditional.1.gz"
+        }
+      ],
+      "resolvedPath": "usr/share/man/man1/nc.traditional.1.gz"
+    },
+    {
+      "package": "tar",
+      "name": "tar",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "tar",
+          "path": "usr/share/man/man1/tar.1.gz"
+        }
+      ],
+      "expectedPackage": "tar",
+      "resolvedOwner": "tar",
+      "registrationPackage": "tar",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/tar.1.gz"
+    },
+    {
+      "package": "systemd",
+      "name": "systemd",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "systemd",
+          "path": "usr/share/man/man1/systemd.1.gz"
+        }
+      ],
+      "expectedPackage": "systemd",
+      "resolvedOwner": "systemd",
+      "registrationPackage": "systemd",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/systemd.1.gz"
+    },
+    {
+      "package": "vim",
+      "name": "vim",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "vim-common",
+          "path": "usr/share/man/man1/vim.1.gz"
+        }
+      ],
+      "expectedPackage": "vim",
+      "resolvedOwner": "vim-common",
+      "registrationPackage": "vim-common",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/vim.1.gz"
+    },
+    {
+      "package": "less",
+      "name": "less",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "less",
+          "path": "usr/share/man/man1/less.1.gz"
+        }
+      ],
+      "expectedPackage": "less",
+      "resolvedOwner": "less",
+      "registrationPackage": "less",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/less.1.gz"
+    },
+    {
+      "package": "git",
+      "name": "git",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "git-man",
+          "path": "usr/share/man/man1/git.1.gz"
+        }
+      ],
+      "expectedPackage": "git",
+      "resolvedOwner": "git-man",
+      "registrationPackage": "git-man",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/git.1.gz"
+    },
+    {
+      "package": "make",
+      "name": "make",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "make",
+          "path": "usr/share/man/man1/make.1.gz"
+        },
+        {
+          "package": "make-guile",
+          "path": "usr/share/man/man1/make.1.gz"
+        }
+      ],
+      "expectedPackage": "make",
+      "resolvedOwner": "make",
+      "registrationPackage": "make",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/make.1.gz"
+    },
+    {
+      "package": "gcc",
+      "name": "gcc",
+      "section": "1",
+      "status": "excluded",
+      "reason": "gcc(1) is in gcc-14-doc in non-free, outside the selected main packages",
+      "catalogSources": [],
+      "expectedPackage": "gcc",
+      "resolvedOwner": null,
+      "registrationPackage": null,
+      "alternativeCandidates": [],
+      "resolvedPath": null
+    },
+    {
+      "package": "gdb",
+      "name": "gdb",
+      "section": "1",
+      "status": "excluded",
+      "reason": "gdb(1) is in gdb-doc in non-free, outside the selected main packages",
+      "catalogSources": [],
+      "expectedPackage": "gdb",
+      "resolvedOwner": null,
+      "registrationPackage": null,
+      "alternativeCandidates": [],
+      "resolvedPath": null
+    },
+    {
+      "package": "nginx",
+      "name": "nginx",
+      "section": "8",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "nginx",
+          "path": "usr/share/man/man8/nginx.8.gz"
+        }
+      ],
+      "expectedPackage": "nginx",
+      "resolvedOwner": "nginx",
+      "registrationPackage": "nginx",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man8/nginx.8.gz"
+    },
+    {
+      "package": "apache2",
+      "name": "apache2",
+      "section": "8",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "apache2-bin",
+          "path": "usr/share/man/man8/apache2.8.gz"
+        }
+      ],
+      "expectedPackage": "apache2",
+      "resolvedOwner": "apache2-bin",
+      "registrationPackage": "apache2-bin",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man8/apache2.8.gz"
+    },
+    {
+      "package": "openssl",
+      "name": "openssl",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "openssl",
+          "path": "usr/share/man/man1/openssl.1ssl.gz"
+        }
+      ],
+      "expectedPackage": "openssl",
+      "resolvedOwner": "openssl",
+      "registrationPackage": "openssl",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/openssl.1ssl.gz"
+    },
+    {
+      "package": "libssl-dev",
+      "status": "non-command"
+    },
+    {
+      "package": "python3",
+      "name": "python3",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "python3-minimal",
+          "path": "usr/share/man/man1/python3.1.gz"
+        }
+      ],
+      "expectedPackage": "python3",
+      "resolvedOwner": "python3.13-minimal",
+      "registrationPackage": "python3-minimal",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/python3.13.1.gz"
+    },
+    {
+      "package": "perl",
+      "name": "perl",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "perl-base",
+          "path": "usr/share/man/man1/perl.1.gz"
+        }
+      ],
+      "expectedPackage": "perl",
+      "resolvedOwner": "perl-base",
+      "registrationPackage": "perl-base",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/perl.1.gz"
+    },
+    {
+      "package": "iproute2",
+      "name": "ip",
+      "section": "8",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "iproute2",
+          "path": "usr/share/man/man8/ip.8.gz"
+        }
+      ],
+      "expectedPackage": "iproute2",
+      "resolvedOwner": "iproute2",
+      "registrationPackage": "iproute2",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man8/ip.8.gz"
+    },
+    {
+      "package": "procps",
+      "name": "ps",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "procps",
+          "path": "usr/share/man/man1/ps.1.gz"
+        }
+      ],
+      "expectedPackage": "procps",
+      "resolvedOwner": "procps",
+      "registrationPackage": "procps",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/ps.1.gz"
+    },
+    {
+      "package": "postgresql-client",
+      "name": "psql",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "postgresql-client-17",
+          "path": "usr/share/postgresql/17/man/man1/psql.1.gz"
+        }
+      ],
+      "expectedPackage": "postgresql-client",
+      "resolvedOwner": "postgresql-client-17",
+      "registrationPackage": "postgresql-client-17",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/postgresql/17/man/man1/psql.1.gz"
+    },
+    {
+      "package": "default-mysql-client",
+      "name": "mysql",
+      "section": "1",
+      "status": "present",
+      "reason": null,
+      "catalogSources": [
+        {
+          "package": "mariadb-client-core",
+          "path": "usr/share/man/man1/mysql.1.gz"
+        }
+      ],
+      "expectedPackage": "default-mysql-client",
+      "resolvedOwner": "mariadb-client-core",
+      "registrationPackage": "mariadb-client-core",
+      "alternativeCandidates": [],
+      "resolvedPath": "usr/share/man/man1/mariadb.1.gz"
+    }
+  ],
+  "parseFailures": [],
+  "unresolvedSources": [
+    {
+      "package": "emacs-gtk",
+      "path": "usr/share/man/man1/emacs-gtk.1.gz",
+      "error": "emacs-gtk:usr/share/man/man1/emacs.1.gz"
+    },
+    {
+      "package": "emacs-lucid",
+      "path": "usr/share/man/man1/emacs-lucid.1.gz",
+      "error": "emacs-lucid:usr/share/man/man1/emacs.1.gz"
+    },
+    {
+      "package": "emacs-nox",
+      "path": "usr/share/man/man1/emacs-nox.1.gz",
+      "error": "emacs-nox:usr/share/man/man1/emacs.1.gz"
+    },
+    {
+      "package": "emacs-pgtk",
+      "path": "usr/share/man/man1/emacs-pgtk.1.gz",
+      "error": "emacs-pgtk:usr/share/man/man1/emacs.1.gz"
+    },
+    {
+      "package": "lighttpd",
+      "path": "usr/share/man/man8/lighttpd-disable-mod.8.gz",
+      "error": "lighttpd:usr/share/man/man8/lighty-enable-mod.8.gz"
+    },
+    {
+      "package": "lighttpd",
+      "path": "usr/share/man/man8/lighttpd-enable-mod.8.gz",
+      "error": "lighttpd:usr/share/man/man8/lighty-enable-mod.8.gz"
+    },
+    {
+      "package": "lighttpd",
+      "path": "usr/share/man/man8/lighty-disable-mod.8.gz",
+      "error": "lighttpd:usr/share/man/man8/lighty-enable-mod.8.gz"
+    }
+  ],
+  "registeredPrivateManualPathCount": 329,
+  "registrationPathsFile": "ingestion/data/debian-private-manuals.json",
+  "ncPackageEvidence": [
+    {
+      "name": "netcat-traditional",
+      "version": "1.10-50",
+      "priority": "standard",
+      "installed": 267400,
+      "provides": [
+        "netcat"
+      ],
+      "archiveSha256": "e60c7a7bd106491d8092a8e038a8ee69a9fad83f23f78c091236cb62f6659b3a",
+      "postinstSha256": "bb6009d2281f140b61b9e4ffabce98619b8fcee1fe9981b9543aa5826b9a451c"
+    },
+    {
+      "name": "netcat-openbsd",
+      "version": "1.229-1",
+      "priority": "optional",
+      "installed": 35052,
+      "provides": [
+        "netcat"
+      ],
+      "archiveSha256": "d24b18012d4567e9b8fce551293a2373c2bfea5373d012d7f7e81bf5bf17b13e",
+      "postinstSha256": "81abc862db99e322e5d6cda436769bc21b9394ce287ea35d057761b6313cb6ef"
+    },
+    {
+      "name": "ncat",
+      "version": "7.95+dfsg-3",
+      "priority": "optional",
+      "installed": 2517,
+      "provides": [],
+      "archiveSha256": "b019984b5dac06f856e16981178c776a9e2df72839d40a693db2980cac4069f6",
+      "postinstSha256": "bb5370fdc6c94d3bb3556ce0adbdb00c58f4d98df2c3aaa781729a68ad274dd2"
+    }
+  ],
+  "netcatOpenbsdProviders": [],
+  "ownerDifferences": [
+    {
+      "request": "groff",
+      "route": "groff(1)",
+      "publishedOwner": "groff-base",
+      "classification": "valid dependency/alias target; no election change"
+    },
+    {
+      "request": "util-linux",
+      "route": "mount(8)",
+      "publishedOwner": "mount",
+      "classification": "existing explicit companion request"
+    },
+    {
+      "request": "netcat-openbsd",
+      "route": "nc(1)",
+      "publishedOwner": "netcat-traditional",
+      "classification": "full-archive expectation corrected"
+    },
+    {
+      "request": "vim",
+      "route": "vim(1)",
+      "publishedOwner": "vim-common",
+      "classification": "valid dependency/alias target; no election change"
+    },
+    {
+      "request": "git",
+      "route": "git(1)",
+      "publishedOwner": "git-man",
+      "classification": "valid dependency/alias target; no election change"
+    },
+    {
+      "request": "apache2",
+      "route": "apache2(8)",
+      "publishedOwner": "apache2-bin",
+      "classification": "valid dependency/alias target; no election change"
+    },
+    {
+      "request": "python3",
+      "route": "python3(1)",
+      "publishedOwner": "python3.13-minimal",
+      "classification": "valid dependency/alias target; no election change"
+    },
+    {
+      "request": "perl",
+      "route": "perl(1)",
+      "publishedOwner": "perl-base",
+      "classification": "valid dependency/alias target; no election change"
+    },
+    {
+      "request": "postgresql-client",
+      "route": "psql(1)",
+      "publishedOwner": "postgresql-client-17",
+      "classification": "valid dependency/alias target; no election change"
+    },
+    {
+      "request": "default-mysql-client",
+      "route": "mysql(1)",
+      "publishedOwner": "mariadb-client-core",
+      "classification": "valid dependency/alias target; no election change"
+    }
+  ],
+  "rehearsal": {
+    "runId": 40992908901,
+    "head": "2f302341",
+    "acquiredPackages": 17330,
+    "acquireSeconds": 1266.128,
+    "downloadWorkerSeconds": 829.371,
+    "extractWorkerSeconds": 714.516,
+    "archiveCacheHits": 605,
+    "archiveFallbacks": 1,
+    "parsedPages": 110082,
+    "parseSeconds": 1039.327040299,
+    "blockedAt": "2026-10-30T03:18:25Z",
+    "uploaded": false,
+    "error": "wrong nc owner: netcat-traditional versus the curated netcat-openbsd expectation"
+  }
+}

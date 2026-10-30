@@ -327,12 +327,25 @@ Copyright files are resolved from the selected archives and every published
 provider's package, including linked doc directories. Missing/blank or oversized
 notices block publishing and are never truncated. Required curated command pages
 and the two-percent parse/unresolved-source gate still apply. Archive publishing
-also requires each actual canonical/alias owner to be the requested package, a
-transitive Depends/Pre-Depends dependency, or a provider. The existing explicit
+also requires each actual canonical/alias owner to be the full-archive expected
+package, a transitive Depends/Pre-Depends dependency, or a virtual-name provider. The existing explicit
 `util-linux` → `mount` companion request from `apt_install` remains accepted;
-other diagnostic owner hints grant no authority. Exact sections take precedence
-over suffixes such as `ls(1plan9)`. Wrong ownership blocks before any upload and
-is not covered by the missing-page escape hatch.
+other diagnostic owner hints grant no authority. Ownership checks consume the
+finalized canonical/alias-target publication map, so candidate input order and
+alias registration-package identity cannot change the checked owner. Providers
+satisfy only virtual names absent from the real Packages catalog; make-guile's
+`Provides: make` never satisfies the real make package. Exact sections take
+precedence over suffixes such as `ls(1plan9)`. Wrong ownership blocks before any
+upload and is not covered by the missing-page escape hatch.
+
+The curated apt package pass requests netcat-openbsd, but the full archive corpus
+contains netcat-traditional too. Its `standard` Priority wins the default-installed
+group under the existing election policy; the OpenBSD preference breaks only
+remaining ties. Full imports therefore require netcat-traditional for canonical
+`nc(1)`, while retaining netcat-openbsd and ncat as explicit alternate providers.
+This is a full-archive expectation, not permission for any package that Provides
+netcat. The [full-competitor audit](../docs/roadmap/b1-debian-nc-owner.md) records
+all curated owner differences and the second staging rehearsal.
 
 ### Acquisition checkpoints and runner measurements
 
@@ -401,8 +414,10 @@ cannot be combined with upload and never creates a Convex client.
 listed in the evidence, elects routes, and audits renderable sources against the
 roff checks. It also performs no Convex writes and records every rejection.
 
-`--audit-command-pages` scans the complete verified Contents catalog, acquires
-all curated command owners plus supported private-root packages, replays
+`--audit-command-pages` scans complete verified Contents and Packages metadata,
+acquiring all exact command/manual competitors, virtual co-providers, executable
+families for commands without a literal manual basename (including all nc
+variants), and supported private-root packages. It replays
 parsing and the exact publish command gate, verifies provider copyrights, and
 writes `command-pages-audit.json`. It creates no Convex client. Every curated
 package is reported as present, excluded with its reason, or non-command.
