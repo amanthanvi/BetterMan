@@ -20,7 +20,7 @@ import { datasetStageValidator, distroValidator } from "./schema";
  * Before a release's backfill completes, worded queries match only the pages
  * whose rows exist; other search results are unaffected.
  */
-export const TASK_PHRASE_VERSION = 1;
+export const TASK_PHRASE_VERSION = 2;
 const BACKFILL_PAGES = 100;
 const SYNC_PAGES = 256;
 const MAX_BACKFILL_ATTEMPTS = 3;
@@ -45,13 +45,13 @@ export async function syncTaskRow(ctx: MutationCtx, page: Doc<"manPages">, gener
   }
   const row = {
     releaseId: page.releaseId, pageId: page._id, contentSha256: page.contentSha256,
-    name: page.name, section: page.section, title: page.title, description: page.description, taskText,
+    name: page.name, section: page.section, title: page.title, description: page.description, taskText, popularityScore: page.popularityScore,
   };
   if (!existing) {
     await ctx.db.insert("manPageTaskPhrases", row);
     return true;
   }
-  if (existing.taskText === taskText && existing.contentSha256 === page.contentSha256) return false;
+  if (existing.taskText === taskText && existing.contentSha256 === page.contentSha256 && existing.popularityScore === page.popularityScore) return false;
   await ctx.db.patch(existing._id, row);
   return true;
 }

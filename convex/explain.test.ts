@@ -598,6 +598,27 @@ describe('task-phrase rows (C5)', () => {
     vi.useRealTimers();
   });
 
+  it('refreshes version-1 task rows with the page popularity on the next deploy', async () => {
+    vi.useFakeTimers();
+    try {
+      const t = await withTarLayer();
+      await t.run(async ctx => {
+        const pages = await ctx.db.query('manPages').withIndex('by_contentSha256', q => q.eq('contentSha256', 'tar')).take(4);
+        for (const page of pages) {
+          await ctx.db.patch(page._id, { popularityScore: 6123 });
+          await ctx.db.insert('taskPhraseBackfills', { releaseId: page.releaseId, version: 1, cursor: null,
+            scanned: 1, written: 1, completedVersion: 1, attempts: 0, updatedAt: 0 });
+        }
+      });
+      expect((await t.mutation(internal.taskPhrases.backfillActiveReleases, {})).scheduled).toBe(2);
+      await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+      const rows = await t.run(ctx => ctx.db.query('manPageTaskPhrases').take(4));
+      expect(rows).toHaveLength(2);
+      expect(rows.every(row => row.popularityScore === 6123)).toBe(true);
+      expect((await t.mutation(internal.taskPhrases.backfillActiveReleases, {})).scheduled).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
   it('backfill every active release once, report durable per-release status, and are idempotent', async () => {
     vi.useFakeTimers();
     const t = await explainFixture();

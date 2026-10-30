@@ -44,7 +44,7 @@ function stableSha(value) {
 
 function page({
   name, section, title, description, toc, blocks, synopsis = null, options = null, seeAlso = null,
-  sourcePackage = null, sourcePackageVersion = null,
+  sourcePackage = null, sourcePackageVersion = null, popularityScore = 0,
 }) {
   const doc = { toc, blocks }
   const plainText = [name, description, JSON.stringify(doc)].join(' ')
@@ -54,7 +54,7 @@ function page({
     section,
     sitemapPage: section === '3pm' ? 0 : 1,
     indexable: section !== '3pm',
-    popularityScore: 0,
+    popularityScore,
     title,
     description,
     sourcePath: `/e2e/${name}.${section}`,
@@ -126,6 +126,14 @@ function makePages(distro) {
           termInlines: [{ type: 'code', text: '-c, --create' }],
           definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Create a new archive.' }] }],
         },
+        ...[
+          ['-x, --extract', 'opt-extract', 'Extract files from an archive.'],
+          ['-z, --gzip', 'opt-gzip', 'Filter through gzip.'],
+          ['-f, --file ARCHIVE', 'opt-file', 'Use archive file.'],
+        ].map(([flags, id, description]) => ({
+          id, termInlines: [{ type: 'code', text: flags }],
+          definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: description }] }],
+        })),
       ],
     },
     { type: 'heading', id: 'examples', level: 2, text: 'EXAMPLES' },
@@ -154,8 +162,14 @@ function makePages(distro) {
     ],
     blocks: tarBlocks,
     synopsis: ['tar [OPTION]... [FILE]...'],
-    options: [{ flags: '-c, --create', argument: null, description: 'Create a new archive.', anchorId: tarOptAnchor }],
+    options: [
+      { flags: '-c, --create', argument: null, description: 'Create a new archive.', anchorId: tarOptAnchor },
+      { flags: '-x, --extract', anchorId: 'opt-extract', description: 'Extract files from an archive.' },
+      { flags: '-z, --gzip', anchorId: 'opt-gzip', description: 'Filter through gzip.' },
+      { flags: '-f, --file', argument: 'ARCHIVE', anchorId: 'opt-file', description: 'Use archive file.' },
+    ],
     seeAlso: [{ name: 'gzip', section: '1', resolvedPageId: gzip.externalId }, { name: 'cpio', section: '1', resolvedPageId: null }],
+    popularityScore: 6000,
     sourcePackage: 'tar',
     sourcePackageVersion: '1.35+dfsg-3',
   })
@@ -240,7 +254,11 @@ function makePages(distro) {
     name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)', description: 'Perl module route fixture', sourcePackage: 'perl',
     toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Perl module documentation.' }] }],
   })
-  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl]
+  const competitors = [['instmodsh', 5800], ['ptar', 5900], ['dpkg', 5950]].map(([name, popularityScore]) => page({
+    name, popularityScore, section: '1', title: `${name}(1)`, description: `${name} utility`,
+    toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: `${name} utility` }] }], options: [{ flags: '-x, --extract', anchorId: 'extract', description: 'Extract files.' }],
+  }))
+  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl, ...competitors]
   // Linux only, so FreeBSD and macOS have a page another distro carries.
   if (distro !== 'freebsd' && distro !== 'macos') {
     pages.push(
@@ -357,10 +375,17 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
         provider: 'opencode-go', model: 'deepseek-v4.1-flash', promptVersion: 'b6-v1', generatedAt: '2026-10-28',
         summary: 'Creates and extracts archive files <b>such as</b> tarballs.',
         examples: [{ description: 'Create an archive of the current folder', command: 'tar -c .' }],
-        taskPhrases: ['create a tar archive', 'bundle a folder'],
+        taskPhrases: ['create a tar archive', 'bundle a folder', 'extract files from an archive'],
         rejected: 0,
       },
     }] })
+    for (const [name, phrase] of [['instmodsh', 'create tarball from installed module'], ['ptar', 'extract a tar archive'], ['dpkg', 'extract package files']]) {
+      const competitor = pages.find(p => p.name === name)
+      await post('/ingest/generated', { records: [{ contentSha256: competitor.contentSha256, generated: {
+        provider: 'fixture', model: 'fixture', promptVersion: 'b6-v1', generatedAt: '2026-10-30',
+        summary: `${name} utility`, examples: [], rejected: 0, taskPhrases: [phrase],
+      } }] })
+    }
   }
   await post('/ingest/pages/storage', { datasetReleaseId, pages: [{
     ...pages.find((p) => p.name === 'foo::bar'), externalId: crypto.randomUUID(), sourcePackage: 'same-perl', providerOnly: true,

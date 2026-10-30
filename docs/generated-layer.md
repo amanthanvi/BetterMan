@@ -413,3 +413,32 @@ Separate from the release ingest contract, behind the same ingest secret:
 - The long tail (other sections, non-English) waits for promotion by demand.
 - The deterministic parts could be built during ingestion, where the parsed
   pages are already in memory, instead of read back from Convex.
+
+## Task search ranking
+
+Task rows copy the page's B4 `popularityScore` at ingest/backfill, with missing
+scores treated as zero. Task backfill version 2 refreshes existing rows through
+the existing deploy entrypoint. Search still reads at most eight task rows, ranks
+all of them before keeping three. Among task matches with content-word evidence,
+popularity precedes lexical overlap; equal or missing scores retain the existing
+relevance order. Exact command-name ranking stays above task matches. This lets
+common commands beat niche commands whose generated phrasing shares another word,
+even when their log-scaled popularity scores differ only slightly.
+
+The curated query-only synonym list in `convex/queries.ts` maps `tarball` and
+`tarballs` to `tar archive`. These describe the same archive format; broader
+synonyms need a demonstrated query and a regression case. Expansion applies only
+to task retrieval and overlap, preserving the original query, command names,
+option spellings, stored phrase evidence and explain detection.
+
+Option rows copy the same score on both upload paths. Bare flag lookups in scored
+releases use a descending popularity index before pagination; unscored releases
+keep their name-ordered lookup. New releases populate these fields automatically;
+no mutable backfill of sealed option rows is required. Bare short clusters use
+their first flag's ordered range, then verify the remaining flags on each same
+page. An argument-taking flag cannot consume later cluster letters. The candidate
+cap is `floor(24 / (clusterLength + 1))`, bounding option and page reads plus the
+two release reads to 26 documents (before the existing optional top-hit brief).
+This deliberately bounded attribution may miss a matching command outside the
+candidate range; a precomputed cluster index is the upgrade if real queries need
+more recall. Existing named-cluster behavior and budgets are unchanged.

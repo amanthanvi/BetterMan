@@ -118,6 +118,18 @@ async function checkDistro(client, { distro, minPageCount, expectedReleaseId }) 
     failures.push(`golden search ${golden.query} failed: ${error.message}`)
   }
 
+  // #464: run against the deployed corpus as well as the seeded regression fixture.
+  if (distro === 'debian') {
+    for (const q of ['how do I extract a tarball', 'extract a tar archive', 'extract tarball', '--extract', '-xzf']) {
+      try {
+        const result = await client.query(api.queries.search, { distro, q, section: null, limit: 5, offset: 0 })
+        if (result.results[0]?.name !== 'tar' || result.results[0]?.section !== '1') failures.push(`golden search ${q} did not rank tar(1) first`)
+      } catch (error) {
+        failures.push(`golden search ${q} failed: ${error.message}`)
+      }
+    }
+  }
+
   let page = null
   try {
     // getManByNameAndSection returns { kind: 'page', data } or { kind: 'alias', ... }.

@@ -179,7 +179,7 @@ async function insertOptionFlags(
   args: {
     releaseId: Id<"datasetReleases">;
     pageId: Id<"manPages">;
-    page: { name: string; section: string };
+    page: { name: string; section: string; popularityScore?: number };
     rows: OptionFlagRow[];
   },
 ) {
@@ -190,6 +190,7 @@ async function insertOptionFlags(
       nameNorm: args.page.name.toLowerCase(),
       section: args.page.section,
       flag: row.flag,
+      popularityScore: args.page.popularityScore,
       anchorId: row.anchorId,
       flags: row.flags,
       ...(row.takesArgument ? { takesArgument: true } : {}),

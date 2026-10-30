@@ -38,6 +38,8 @@ const MAX_LEGACY_SECTION_SCAN = 5_000;
 const SITEMAP_CHUNK_ITEMS = 5_000;
 const MAX_RELATED = 50;
 const MAX_DESCRIPTION_HITS = 24;
+// Curated task vocabulary only: keep command names, flags and explain input literal.
+const TASK_SYNONYMS = new Map([["tarball", "tar archive"], ["tarballs", "tar archive"]]);
 const SEARCH_STOP_WORDS = new Set("a an and are as at be by can do does for from how i in is it of on or the to what when where which with".split(" "));
 
 function boundedInt(value: number, min: number, max: number): number {
@@ -498,9 +500,17 @@ async function optionFlagRowsFor(
     namePrefix: string | null;
     exactName?: boolean;
     take: number;
+    popular?: boolean;
   },
 ): Promise<Array<Doc<"manPageOptionFlags">>> {
   const { releaseId, section, flag, namePrefix } = args;
+  if (args.popular && namePrefix === null) {
+    return section === null
+      ? await ctx.db.query("manPageOptionFlags")
+        .withIndex("by_releaseId_and_flag_and_popularityScore", (q) => q.eq("releaseId", releaseId).eq("flag", flag)).order("desc").take(args.take)
+      : await ctx.db.query("manPageOptionFlags")
+        .withIndex("by_releaseId_and_section_and_flag_and_popularityScore", (q) => q.eq("releaseId", releaseId).eq("section", section).eq("flag", flag)).order("desc").take(args.take);
+  }
   const upper = namePrefix === null ? null : prefixUpperBound(namePrefix);
   const exactName = namePrefix !== null && args.exactName;
   if (section !== null) {
@@ -564,6 +574,32 @@ async function clusterHits(ctx: QueryCtx, releaseId: Id<"datasetReleases">, name
   for (const { rows } of groups.values()) {
     const hit = await optionHit(ctx, rows[0], 0);
     if (hit) { hit.highlights = [...new Set(rows.map((row) => row.flags))]; hits.push(hit); }
+  }
+  return hits;
+}
+
+/** Attribute a bare cluster within 26 reads, including the two release reads. */
+async function bareClusterHits(ctx: QueryCtx, releaseId: Id<"datasetReleases">, flag: string, section: string | null, popular: boolean): Promise<RankedHit[]> {
+  const letters = [...flag.slice(1)];
+  // shortcut: bounded first-flag candidates, add a precomputed cluster index if recall exceeds this budget.
+  const take = Math.floor(24 / (letters.length + 1));
+  const candidates = await optionFlagRowsFor(ctx, { releaseId, section, flag: `-${letters[0]}`, namePrefix: null, popular, take });
+  const hits: RankedHit[] = [];
+  for (const first of candidates) {
+    const rows = [first];
+    for (const letter of letters.slice(1)) {
+      const previous = rows[rows.length - 1];
+      if (previous.takesArgument ?? flagTakesArgument(previous.flags)) break;
+      const row = await ctx.db.query("manPageOptionFlags").withIndex("by_pageId_and_flag", (q) => q.eq("pageId", first.pageId).eq("flag", `-${letter}`)).first();
+      if (!row) break;
+      rows.push(row);
+    }
+    if (rows.length !== letters.length) continue;
+    const hit = await optionHit(ctx, first, 0);
+    if (hit) {
+      hit.highlights = [...new Set(rows.map((row) => row.flags))];
+      hits.push(hit);
+    }
   }
   return hits;
 }
@@ -662,7 +698,9 @@ async function textHits(
   // One-letter words ("ls -l") would prefix-match most phrases.
   const taskWords = contentWords.filter((word) => word.length > 1);
   if (queryNorm.includes(" ") && taskWords.length) {
-    for (const hit of await taskHits(ctx, { releaseId, section, queryText, contentWords: taskWords })) {
+    const taskQuery = queryNorm.replace(/\b[a-z]+\b/g, (word) => TASK_SYNONYMS.get(word) ?? word);
+    const expandedWords = [...new Set(taskWords.flatMap((word) => (TASK_SYNONYMS.get(word) ?? word).split(" ")))];
+    for (const hit of await taskHits(ctx, { releaseId, section, queryText: taskQuery, contentWords: expandedWords })) {
       const existing = ranked.get(hit.pageId!);
       if (!existing || existing.rank < hit.rank) ranked.set(hit.pageId!, hit);
     }
@@ -688,9 +726,8 @@ async function taskHits(
       return args.section === null ? base : base.eq("section", args.section);
     })
     .take(MAX_TASK_ROWS);
-  const hits: RankedHit[] = [];
+  const hits: Array<RankedHit & { popularityScore?: number }> = [];
   for (const [index, row] of rows.entries()) {
-    if (hits.length >= MAX_TASK_HITS) break;
     // The phrase sharing the most content words with the query is the evidence;
     // a phrase sharing none (only stop words matched) is not a task match.
     let best: { phrase: string; overlap: number } | null = null;
@@ -703,10 +740,12 @@ async function taskHits(
     hits.push({
       name: row.name, section: row.section, title: row.title, description: row.description,
       highlights: [], match: "task", taskPhrase: best.phrase, pageId: row.pageId,
+      popularityScore: row.popularityScore,
       rank: 2_000 + best.overlap * 100 - index,
     });
   }
-  return hits;
+  return hits.sort((a, b) => (b.popularityScore ?? 0) - (a.popularityScore ?? 0) || compareHits(a, b))
+    .slice(0, MAX_TASK_HITS).map((hit, index) => ({ ...hit, rank: 2_000 + MAX_TASK_HITS - index }));
 }
 
 // Names within two edits of `queryText`, for a lookup that found nothing.
@@ -844,10 +883,16 @@ export const search = query({
       const lookup = {
         releaseId: release._id, section, namePrefix: name,
         exactName: isNamedCluster, take: offset + limit + 1,
+        popular: release.indexablePageCount !== undefined,
       };
       let rows = await optionFlagRowsFor(ctx, { ...lookup, flag });
       if (!rows.length && flag.startsWith("--") && flag !== flag.toLowerCase()) {
         rows = await optionFlagRowsFor(ctx, { ...lookup, flag: flag.toLowerCase() });
+      }
+      if (!rows.length && name === null && /^-[a-zA-Z0-9]{2,8}$/.test(flag)) {
+        const hits = await bareClusterHits(ctx, release._id, flag, section, lookup.popular);
+        visible = hits.slice(offset, offset + limit);
+        hasMore = hits.length > offset + limit;
       }
       if (!rows.length && isNamedCluster) {
         const hits = await clusterHits(ctx, release._id, name!, flag, section);

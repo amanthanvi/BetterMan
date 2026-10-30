@@ -271,6 +271,7 @@ export default defineSchema({
     nameNorm: v.string(),
     section: v.string(),
     flag: v.string(),
+    popularityScore: v.optional(v.number()),
     anchorId: v.string(),
     // The option's flag text as written, for the result snippet.
     flags: v.string(),
@@ -279,6 +280,8 @@ export default defineSchema({
     excerpt: v.optional(v.string()),
   })
     .index("by_releaseId_and_flag_and_nameNorm", ["releaseId", "flag", "nameNorm"])
+    .index("by_releaseId_and_flag_and_popularityScore", ["releaseId", "flag", "popularityScore"])
+    .index("by_releaseId_and_section_and_flag_and_popularityScore", ["releaseId", "section", "flag", "popularityScore"])
     .index("by_pageId_and_flag", ["pageId", "flag"])
     .index("by_releaseId_and_section_and_flag_and_nameNorm", [
       "releaseId",
@@ -451,6 +454,7 @@ export default defineSchema({
     section: v.string(),
     title: v.string(),
     description: v.string(),
+    popularityScore: v.optional(v.number()),
     // The phrases, one per line.
     taskText: v.string(),
   }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
