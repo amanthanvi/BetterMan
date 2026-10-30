@@ -11,7 +11,7 @@ vi.mock('./convexClient', () => ({ getConvexClient: () => mocks }))
 import { fetchManByNameAndSectionOrAlias, fetchManMetaByNameAndSection } from './api'
 beforeEach(() => { vi.clearAllMocks(); mocks.args.length = 0; mocks.action.mockResolvedValue({ kind: 'page', data: {} }) })
 it('normalizes invalid selectors before the persistent cache and Convex arguments', async () => {
-  for (const pkg of ['../bad', 'UPPER', 'valid\n', 'x'.repeat(201), '', undefined]) {
+  for (const pkg of ['../bad', '_UPPER', 'valid\n', 'x'.repeat(201), '', undefined]) {
     await fetchManByNameAndSectionOrAlias({ distro:'debian', name:'tar', section:'1', pkg })
     expect(mocks.args.at(-1)).toEqual(['debian','tar','1',null,null])
     expect(mocks.action.mock.calls.at(-1)?.[1]).toEqual({distro:'debian',name:'tar',section:'1',reportRelease:true})

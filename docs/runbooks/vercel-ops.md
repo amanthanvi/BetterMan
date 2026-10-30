@@ -167,6 +167,33 @@ Also verify in a real browser:
 - Alias mismatch: inspect both the immutable deployment and both custom domains; the script attempts automatic rollback and must not declare success until their deployment IDs match.
 - Runtime errors: inspect Vercel runtime logs/errors and correlate the deployment ID before rolling back.
 
+## Provider query allowlist
+
+The shared `pkg` validator accepts 1–200 ASCII characters: an initial letter or
+number, then letters, numbers, `+`, `_`, `.`, or `-`. It preserves case; Debian,
+RPM, Arch and Alpine names share this bounded union. `lsb_release`,
+`SDL2_sound-devel` and `R` must reach provider lookup unchanged. Whitespace,
+slashes, control/non-ASCII characters and longer values are invalid. Keep these
+bounds when applying #469's query allowlist so provider selectors cannot expand
+cache keys through arbitrary query strings. The same validator serves HTML,
+plain text, metadata, API and OG routes.
+
+## Fedora stored-notice index deployment (#470)
+
+`licenses.by_storageId` is a new index on the existing `licenses` table. Optional
+`storageId` values do not exempt historical rows from index backfill. The Convex
+large-index check applies at **100,000 documents**. The live production row count
+could not be verified from this implementation worktree: the explicit cloud
+project selector returned an access denial; anonymous local codegen is not a
+production size measurement. Treat this as a deployment prerequisite.
+
+Before deploying #470, an authorized operator must check the live `licenses`
+row count in the Convex dashboard/system table-size query. At or above 100,000,
+follow the `confirm_large_indexes` procedure above for the reviewed current-main
+SHA (90-minute deploy budget), or stage the index in a separate reviewed rollout
+before deploying readers that use it. Automatic deploys retain the large-index
+check. No production deploy or confirmation was run by this task.
+
 ## Man page edge caching (C4, #406)
 
 Man pages (`/man/<name>`, `/man/<name>/<section>`) send `CDN-Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400` (misses `s-maxage=600`) and `Cache-Control: public, max-age=0, must-revalidate`. The proxy (`nextjs/proxy.ts`) rewrites each one to `…?__bm_release=<active release id>`, so a promotion changes the cache key within a minute. No project setting is needed for this: Vercel's CDN honours `CDN-Cache-Control` from functions. Verify it on the first preview deployment that carries the change, and after the first promotion:

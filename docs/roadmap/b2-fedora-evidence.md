@@ -126,7 +126,7 @@ disk including cache, in-flight RPMs and metadata. Quotas remain fail closed.
 Validation: ingest lint and **968 ingestion tests**, **126 ops tests**, explicit
 **12 dataset/deploy workflow tests**, **3,283 Convex tests**, Convex typecheck and
 local codegen on 3432/3433 with no generated drift, Python 3.14 pip packaging
-dry-run, frontend lint/grammar, production `pnpm next:build`, and **692 tests**. Large-notice tests cover exact
+dry-run, frontend lint/grammar, production `pnpm next:build`, and **699 tests**. Large-notice tests cover exact
 bytes, replay/failure cleanup, public reads, release deletion, orphan safety,
 gzip round-trip and no-gzip/q=0 redirects. PR guards run on the committed family
 diff. Full staging throughput, full-corpus notices and production promotion are
@@ -136,3 +136,13 @@ Review follow-up: the Fedora RPM and primary/filelists parsers run only after
 whole-file SHA256 verification in `download`; malformed unverified bodies are
 rejected at that boundary before any parser, including cached bodies. They do
 not use Alpine's parser callback and have no equivalent parse-error fallback gap.
+
+Review follow-up: provider selectors now preserve uppercase, underscores and
+single-character names, bounded to 1–200 ASCII characters with initial alphanumeric
+and subsequent alphanumeric/`+_.-`. API route and cached Convex lookup regressions
+cover `lsb_release`, `SDL2_sound-devel`, `SDL_sound-devel` and `R` unchanged.
+`licenses.by_storageId` backfills an existing table; optional storage IDs do not
+avoid that cost. Production count inspection was denied by the explicit cloud
+project selector, so it is not claimed verified. Before deploy, the lead must
+check the count and use reviewed `confirm_large_indexes` at 100,000+ rows, as
+documented in the Vercel runbook. Local codegen is not evidence of cloud size.

@@ -524,11 +524,11 @@ describe('bounded on-demand portability details', () => {
   })
 })
 
-it('passes explicit package selection through the page API', async () => {
+it.each(['alternate', 'lsb_release', 'SDL2_sound-devel', 'R'])('passes package selection %s unchanged through the page API', async pkg => {
   apiMocks.fetchManByNameAndSectionOrAlias.mockResolvedValue({ kind: 'page', data: { page: { name: 'shared', section: '1' } } })
-  const response = await GET(request('/api/v1/man/shared/1?pkg=alternate'), { params: Promise.resolve({ path: ['v1', 'man', 'shared', '1'] }) })
+  const response = await GET(request(`/api/v1/man/shared/1?pkg=${pkg}`), { params: Promise.resolve({ path: ['v1', 'man', 'shared', '1'] }) })
   expect(response.status).toBe(200)
-  expect(apiMocks.fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'shared', section: '1', pkg: 'alternate' })
+  expect(apiMocks.fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'shared', section: '1', pkg })
 })
 
 it.each([true, false, undefined])('keeps legacy JSON indexing and marks only explicit long-tail payloads noindex: %s', async indexable => {
