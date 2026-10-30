@@ -171,3 +171,9 @@ bound to the original index-set identity. It transferred **zero bytes**; this is
 checkpoint/export verification, not a new download-throughput measurement. The
 240/300-minute, under-6-GB full-run plan remains a staging projection. Local pin
 proposals stay ignored/uncommitted; they are not the lead's reviewed staging pins.
+
+Final main integration: see [combined evidence](b2-integration-evidence.md).
+1,020 ingestion / 3,287 Convex / 861 frontend / 131 ops / 13 workflow tests pass,
+with codegen no drift, pip dry-run and all guards. Production Next build and all
+17 man-query/short-URL E2E tests pass on the final stack. Prior native acquisition
+measurements and the 240/300-minute, under-6-GB staging projection are unchanged.
