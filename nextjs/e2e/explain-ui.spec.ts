@@ -45,13 +45,13 @@ test('explain: a flag cluster splits into individually selectable flags, one def
     await expect(card).toBeVisible({ timeout: 500 })
   }).toPass()
   await expect(page).not.toHaveURL(/#x-/)
-  await expect(card).toContainText('Do not ignore entries starting with .')
+  await expect(card).toContainText('Do not ignore entries starting with a dot.')
   await expect(card).not.toContainText('long listing format')
   await expect(card.getByRole('link', { name: 'ls(1) · -a' })).toHaveAttribute('href', '/man/ls/1#opt-all')
 
   // Another flag replaces it; the card stays pinned while the notes scroll.
   await cluster.getByRole('link', { name: '-h', exact: true }).click()
-  await expect(card).toContainText('print sizes like 1K')
+  await expect(card).toContainText('Print sizes in human-readable form.')
   await expect(card).not.toContainText('Do not ignore')
   await page.mouse.wheel(0, 600)
   await expect(card).toBeInViewport()
@@ -107,12 +107,27 @@ test('explain on a phone: a very long token wraps in its note and its card', asy
 test('explain: each flag is linked to its exact definition and carries portability cells', async ({ page }) => {
   await page.goto(LS)
   const notes = page.getByRole('list', { name: 'Definitions' })
-  await expect(notes.getByRole('link', { name: 'ls(1) · -l' })).toHaveAttribute('href', '/man/ls/1#opt-l')
+  await expect(notes.getByRole('link', { name: 'ls(1) · -l' })).toHaveAttribute('href', '/man/ls/1#opt-long')
   await expect(notes.getByRole('link', { name: 'ls(1) · --color' })).toHaveAttribute('href', '/man/ls/1#opt-color')
   const note = notes.getByRole('listitem').filter({ hasText: 'Use a long listing format.' })
   await expect(note.getByRole('img', { name: /GNU\/Linux.*FreeBSD.*macOS/ })).toHaveCount(1)
   await expect(page.getByText('The cells show availability, not identical behavior.')).toBeVisible()
   await expect(page.getByText('Unmarked flags exist on all three')).toHaveCount(0)
+})
+
+test('explain: flag links land on their exact definitions in the man page renderer', async ({ page }) => {
+  // A cluster's flag, from the definition list, onto /man (plain server HTML).
+  await page.goto(LS)
+  await page.getByRole('list', { name: 'Definitions' }).getByRole('link', { name: 'ls(1) · -a' }).click()
+  await expect(page).toHaveURL(/\/man\/ls\/1#opt-all$/)
+  await expect(page.locator('dt#opt-all')).toBeInViewport()
+  await expect(page.locator('dt#opt-all')).toContainText('-a')
+
+  // A single flag of tar, the seeded tar(1)'s only option.
+  await page.goto('/explain?cmd=' + encodeURIComponent('tar -c build/'))
+  await page.getByRole('list', { name: 'Definitions' }).getByRole('link', { name: 'tar(1) · -c' }).click()
+  await expect(page).toHaveURL(/\/man\/tar\/1#opt-create$/)
+  await expect(page.locator('dt#opt-create')).toBeInViewport()
 })
 
 test('explain: the safety note shows only the engine’s fixed fact', async ({ page }) => {

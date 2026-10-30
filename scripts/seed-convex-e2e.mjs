@@ -238,32 +238,7 @@ function makePages(distro) {
     name: 'foo::bar', section: '3pm', title: 'foo::bar(3pm)', description: 'Perl module route fixture',
     toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Perl module documentation.' }] }],
   })
-  // Switch-only flags for explain's cluster splitting (`ls -lah`); --color is GNU only.
-  const lsOptions = [
-    { flags: '-a, --all', description: 'Do not ignore entries starting with .', anchorId: 'opt-all' },
-    { flags: '-h, --human-readable', description: 'With -l, print sizes like 1K 234M 2G.', anchorId: 'opt-human-readable' },
-    { flags: '-l', description: 'Use a long listing format.', anchorId: 'opt-l' },
-    ...(distro === 'freebsd' || distro === 'macos' ? [] : [{ flags: '--color', description: 'Colorize the output.', anchorId: 'opt-color' }]),
-  ].map((option) => ({ argument: null, ...option }))
-  const ls = page({
-    name: 'ls', section: '1', title: 'ls(1)', description: 'list directory contents',
-    toc: [{ id: 'options', title: 'OPTIONS', level: 2 }],
-    blocks: [
-      { type: 'heading', id: 'options', level: 2, text: 'OPTIONS' },
-      {
-        type: 'definition_list',
-        items: lsOptions.map((option) => ({
-          id: option.anchorId,
-          termInlines: [{ type: 'code', text: option.flags }],
-          definitionBlocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: option.description }] }],
-        })),
-      },
-    ],
-    synopsis: ['ls [OPTION]... [FILE]...'],
-    options: lsOptions,
-    sourcePackage: distro === 'freebsd' || distro === 'macos' ? null : 'coreutils',
-  })
-  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl, ls]
+  const pages = [gzip, tar, printf1, printf3, openssl, evp, bash, perl]
   // Linux only, so FreeBSD and macOS have a page another distro carries.
   if (distro !== 'freebsd' && distro !== 'macos') {
     pages.push(
