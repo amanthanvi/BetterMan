@@ -447,22 +447,23 @@ it.each([false, true])("unscored full Debian cannot insert/replace a prod pointe
     await expect(t.mutation(internal.ingest.promoteActiveReleases, {
       ...promotion, expectedDatasetReleaseId: { debian: "different" },
     })).rejects.toThrow("STAGING_RELEASE_CONFLICT");
-    await expect(t.mutation(internal.ingest.promoteActiveReleases, {
+    expect(await t.mutation(internal.ingest.promoteActiveReleases, {
       ...promotion, expectedDatasetReleaseId: { debian: "unscored-archive" },
-    })).rejects.toThrow("FULL_DEBIAN_TIER_REQUIRED");
+    })).toEqual({ promoted: [], skipped: [{ distro: "debian", datasetReleaseId: "unscored-archive", reason: "FULL_DEBIAN_TIER_REQUIRED" }] });
   }
   expect(await t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod")).take(10)))
     .toEqual(before);
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
 });
 
-it("rolls back sibling promotions when an unscored full-Debian source fails the tier gate", async () => {
+it.each([["ubuntu", "debian"], ["debian", "ubuntu"]] as const)("skips unscored full Debian while promoting siblings (%s then %s)", async (first, second) => {
   const t = convexTest(schema, modules);
   for (const distro of ["ubuntu", "debian"] as const) {
     const old = await t.mutation(internal.ingest.createRelease, releaseInput(`previous-${distro}`, distro));
     await pointRelease(t, old.releaseId, "prod");
     const next = await t.mutation(internal.ingest.createRelease, {
-      ...releaseInput(`next-${distro}`, distro), packageManifest: distro === "debian" ? debianManifest : null,
+      // Even with the same acquisition marker, Ubuntu is outside the Debian gates.
+      ...releaseInput(`next-${distro}`, distro), packageManifest: debianManifest,
     });
     await t.run(ctx => ctx.db.patch(next.releaseId, { sealed: true, manifestVerified: true, relatedMetadataCompletedVersion: 0 }));
     await pointRelease(t, next.releaseId, "staging");
@@ -470,7 +471,15 @@ it("rolls back sibling promotions when an unscored full-Debian source fails the 
   const pointers = () => t.run(ctx => ctx.db.query("activeReleases").withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "prod")).take(10));
   const before = await pointers();
   await expect(t.mutation(internal.ingest.promoteActiveReleases, {
-    fromStage: "staging", toStage: "prod", distros: ["ubuntu", "debian"], activatedAt: "now", allowFullDebian: true,
-  })).rejects.toThrow("FULL_DEBIAN_TIER_REQUIRED");
+    fromStage: "staging", toStage: "prod", distros: [first, second], activatedAt: "now",
+    expectedDatasetReleaseId: { ubuntu: "next-ubuntu", debian: "different" },
+  })).rejects.toThrow("STAGING_RELEASE_CONFLICT");
   expect(await pointers()).toEqual(before);
+  expect(await t.mutation(internal.ingest.promoteActiveReleases, {
+    fromStage: "staging", toStage: "prod", distros: [first, second], activatedAt: "now",
+    expectedDatasetReleaseId: { ubuntu: "next-ubuntu", debian: "next-debian" },
+  })).toEqual({ promoted: [{ distro: "ubuntu", datasetReleaseId: "next-ubuntu" }], skipped: [{ distro: "debian", datasetReleaseId: "next-debian", reason: "FULL_DEBIAN_TIER_REQUIRED" }] });
+  const after = await pointers();
+  expect(after.find(p => p.distro === "debian")).toEqual(before.find(p => p.distro === "debian"));
+  expect(after.find(p => p.distro === "ubuntu")).toMatchObject({ datasetReleaseId: "next-ubuntu" });
 });

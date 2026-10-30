@@ -282,6 +282,15 @@ describe('answers from another release than the proxy key', () => {
 })
 
 describe('/man/<name>', () => {
+  it.each([undefined, true, false])('renders picker robots from the existing name resolution (%s)', async indexable => {
+    lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'ambiguous', indexable, options: [{ section: '3', description: 'library' }, { section: '3pm', description: 'module' }] }, servedRelease: release.datasetReleaseId })
+    const result = await nameProps(context({ name: 'library' }).ctx)
+    const { head } = propsOf(result) as { head: ManHeadData }
+    expect(renderToStaticMarkup(<ManHeadTags {...head} />).includes('<meta name="robots" content="noindex"/>')).toBe(indexable === false)
+    expect(lookup.resolveManName).toHaveBeenCalledTimes(1)
+    expect(lookup.lookupManPage).not.toHaveBeenCalled()
+  })
+
   it('redirects to the only section and renders a picker for several', async () => {
     lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
     await expect(nameProps(context({ name: 'tar' }, { distro: 'ubuntu' }).ctx)).resolves.toEqual({ redirect: { destination: '/man/tar/1?distro=ubuntu', permanent: false } })

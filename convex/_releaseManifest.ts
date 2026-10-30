@@ -13,7 +13,7 @@ export function releaseAcquisition(manifest: unknown): "deb-extraction" | undefi
 
 // An owner authorization may lift the spend hold, never the required B4 tier.
 export function fullDebianTierMissing(release: Doc<"datasetReleases">, stage: "prod" | "staging"): boolean {
-  return stage === "prod" && release.acquisition === "deb-extraction" && release.indexablePageCount === undefined;
+  return stage === "prod" && release.distro === "debian" && release.acquisition === "deb-extraction" && release.indexablePageCount === undefined;
 }
 
 export function fullDebianPromotionHeld(release: Doc<"datasetReleases">, stage: "prod" | "staging", allowFullDebian?: boolean): boolean {

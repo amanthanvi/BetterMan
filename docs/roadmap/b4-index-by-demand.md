@@ -59,7 +59,10 @@ legacy releases have no computed tier and retain all-page indexing and sitemaps.
 HTML, JSON and text. `page.indexable` and `page.popularityScore` are plain data
 consumed by C4's server-HTML renderer. The metadata query also exposes
 `indexable`. Canonical HTML emits `robots: noindex` only for the long tail and
-omits robots meta for indexable or unscored pages; text GET/HEAD
+omits robots meta for indexable or unscored pages. The section picker uses an
+aggregate flag computed from the same name-resolution page read: it is noindex
+only when the release is scored and none of the listed sections are indexable.
+No extra reads are needed. Text GET/HEAD
 sets `X-Robots-Tag` and an HTML canonical Link; OG follows the tier; JSON APIs
 carry `noindex, follow` only for explicitly nonindexable page payloads. Legacy
 JSON retains main's headers. Package-qualified alternate providers in scored
@@ -125,9 +128,11 @@ Full-Debian opt-in and its separate owner authorization remain required.
    Both direct activation and stage promotion check persisted
    `acquisition: "deb-extraction"` and `indexablePageCount` inside the mutation
    that inserts/replaces the prod pointer, next to the existing owner hold.
-   Missing tier data throws **`FULL_DEBIAN_TIER_REQUIRED`** (HTTP 409) even when
-   `allowFullDebian` is true. Workflow, HTTP and CLI inputs cannot lift this gate.
-   A failed multi-distro promotion rolls back the entire transaction. The v5
+   Missing tier data blocks the pointer even when `allowFullDebian` is true.
+   Direct activation throws **`FULL_DEBIAN_TIER_REQUIRED`** (HTTP 409); stage
+   promotion returns that reason in its per-distro `skipped` array (HTTP 200),
+   so other eligible distros still promote. Workflow, HTTP and CLI inputs cannot
+   lift the gate. A CAS mismatch still rolls back the entire transaction. The v5
    full-Debian run started on 614714a6 may finish/activate staging, but can never
    reach prod; ingest a fresh scored release to replace it. There is no mutable
    backfill of a sealed release. A scored full-Debian release still requires
@@ -228,34 +233,40 @@ A separate 115,000-page synthetic test yields 38,334 tier members with dense
 
 The lead's rollout correction preserves legacy indexability and moves the hard
 safety gate to full-Debian promotion. Revision checks and the final head are
-recorded in the PR. After the Pages Router port, validation passed: 3,263 Convex
-tests and typecheck; 615 Next unit tests, lint, grammar and build; 139 E2E tests
-(including scored/legacy serving, man 404s and sitemaps); 123 ops tests. Earlier
-v7 validation also passed 880 ingestion tests; the port changes no ingest fields.
+recorded in the PR. After the review fixes and #450/#451 rebase, validation passed:
+3,267 Convex tests and typecheck; 645 Next unit tests, lint, grammar and build;
+145 E2E tests (including scored/legacy serving, man 404s and sitemaps);
+123 ops tests. Earlier v7 validation also passed 880 ingestion tests; these review fixes change no
+ingest fields.
 Performance budgets passed, measuring 4 calls / 26 documents / 1 storage read
-for the man page.
-The local backend used
-isolated ports 3416/3417. No budgets, runner configuration or shared
+for the man page. The local backend used isolated ports 3416/3417. No budgets, runner configuration or shared
 infrastructure were changed.
 
 ### Merge dependencies
 
-Rebased onto main b8b7b1ac, including [#443](https://github.com/amanthanvi/BetterMan/pull/443),
-#444's hydration signal and #449's plain server HTML man renderer. Contract
-**v7** carries both the complete B4 upload
+Rebased onto main 7dbf8861, including [#443](https://github.com/amanthanvi/BetterMan/pull/443),
+#444's hydration signal, #449's plain server HTML man renderer and #450's
+In brief/options changes, plus #451's composer/previews/tables. Contract **v7**
+carries both the complete B4 upload
 payload and #443's fixed-staging promotion-source read, `expectedDatasetReleaseId`
 CAS map, `expected_release_ids` dispatch behavior and exact-version promotion
 header fence. Version 6 promotion requests are rejected before pointer writes.
 The B4 tier-required workflow skip applies only after source verification and
 pinned-ID comparison reach the actual promote request: a mismatched operator
 pin stays `STAGING_RELEASE_CONFLICT`, with no request/skip output. Matching pins
-may get the clean replacement-required skip; the server refuses every pointer
-write, including owner-authorized ones.
+may get the clean replacement-required skip; the server never writes the
+unscored full-Debian pointer, including with owner authorization. Both tier and
+owner gates apply only to Debian with persisted `deb-extraction` acquisition.
+Batch promotion skips that distro and can promote eligible siblings, while a
+CAS mismatch still rolls back all writes. The workflow validates the skipped
+distro and release ID before reporting success; the older 409 response remains
+supported during deployment skew.
 
 #442's generated-layer and `refresh_page` changes are retained. B4 uses #449's
 Pages Router `ManHeadTags`/`isIndexable` hook and preserves its release-key checks
 for pages, aliases, misses and name resolution. No deleted App Router man page
-is restored. Later #450–#451 changes must retain this signal and cache isolation.
+is restored. #450 and #451 are retained with their fixtures; robots and cache
+isolation remain intact.
 Do not merge this PR as part of this task. The post-November-1-run merge gate
 remains in force.
 

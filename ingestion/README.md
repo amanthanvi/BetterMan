@@ -466,8 +466,10 @@ for thresholds, monthly evaluation, `BETTERMAN_PLAUSIBLE_COUNTS`, deployment
 ordering and the required fresh v7 ingestion before full-Debian promotion.
 
 Existing unscored prod releases retain all-page indexing and sitemaps. Full-Debian
-releases without a tier may activate staging but fail prod activation/promotion
-with `FULL_DEBIAN_TIER_REQUIRED`, including with owner authorization. The in-flight
+releases without a tier may activate staging but cannot enter prod, including
+with owner authorization. Direct prod activation returns HTTP 409
+`FULL_DEBIAN_TIER_REQUIRED`; promotion skips Debian with that reason while
+allowing eligible siblings to promote. The in-flight
 v5 full-Debian release needs a fresh scored replacement. B4 uses ingest v7,
 retaining #443's CAS request, fixed-source read, header fence and dispatch pins
 alongside demand fields.
