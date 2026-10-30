@@ -42,8 +42,10 @@ class ConvexContractError(RuntimeError):
 # until GET /ingest/contract advertises the same schema version, functions,
 # declaration counts, and activate-pending flag. Alignment test:
 # tests/test_ingest_contract.py. v6 retains v5 uploads and adds verified
-# promotion-source reads and compare-and-swap promotion.
-REQUIRED_SCHEMA_VERSION = 6
+# promotion-source reads and compare-and-swap promotion. v7 adds content
+# locales: translated releases, per-locale promotion behind the translated
+# hold, and the optional stored-page documentedVersion (#395).
+REQUIRED_SCHEMA_VERSION = 7
 REQUIRED_FUNCTIONS = (
     "ingest.createRelease",
     "ingest.insertStoredPages",

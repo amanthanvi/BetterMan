@@ -43,6 +43,11 @@ def _build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--debian-full", action="store_true", help="Opt in to full Debian archive ingestion"
     )
+    ingest.add_argument(
+        "--debian-translation",
+        choices=["de", "fr", "es", "pt-BR", "ja", "ru"],
+        help="Opt in to one language's translated Debian manuals (staging only)",
+    )
     ingest.add_argument("--in-container", action="store_true", help=argparse.SUPPRESS)
 
     activation = sub.add_parser(
@@ -88,17 +93,33 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "ingest":
-        if (
-            args.debian_full
-            and os.environ.get("BETTERMAN_DATASET_STAGE", "staging").strip().lower() == "prod"
-        ):
+        opt_in = "--debian-translation" if args.debian_translation else "--debian-full"
+        if (args.debian_full or args.debian_translation) and os.environ.get(
+            "BETTERMAN_DATASET_STAGE", "staging"
+        ).strip().lower() == "prod":
             _log(
                 "ingest_error",
-                error="--debian-full cannot use stage prod; ingest to staging "
+                error=f"{opt_in} cannot use stage prod; ingest to staging "
                 "and use the gated promotion workflow",
             )
             return 2
+        if args.debian_translation and (args.distro != "debian" or args.debian_full):
+            _log(
+                "ingest_error",
+                error="--debian-translation needs --distro debian and its own run, "
+                "not --debian-full",
+            )
+            return 2
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
+        if args.debian_translation and not args.in_container:
+            return _run_ingest(
+                sample=args.sample,
+                activate=activate,
+                distro="debian",
+                image_ref="deb-archives",
+                image_digest="pinned",
+                translation=args.debian_translation,
+            )
         if (
             args.distro == "debian"
             and args.debian_full
@@ -165,6 +186,7 @@ def _run_ingest(
     image_ref: str,
     image_digest: str,
     archive_mode: bool = False,
+    translation: str | None = None,
 ) -> int:
     convex_url = os.environ.get("CONVEX_HTTP_URL") or os.environ.get("CONVEX_URL")
     ingest_secret = os.environ.get("CONVEX_INGEST_SECRET")
@@ -182,6 +204,12 @@ def _run_ingest(
             from ingestion.debian_publish import ingest_debian
 
             ingest_function = ingest_debian
+        if translation:
+            from functools import partial
+
+            from ingestion.debian_translations import ingest_debian_translation
+
+            ingest_function = partial(ingest_debian_translation, locale=translation)
         result = ingest_function(
             sample=sample,
             activate=activate,

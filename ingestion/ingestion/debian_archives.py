@@ -15,8 +15,10 @@ from pathlib import Path
 
 from ingestion.debian_indexes import (
     BINARY_PATH,
+    LOCALIZED_MAN_PATH,
     MAN_PATH,
     Package,
+    localized_manual,
     manual_registered,
     require_private_package,
     safe_path,
@@ -137,8 +139,14 @@ def postinst_from_archive(archive: Path) -> str:
     return ""
 
 
-def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[tuple]:
-    """Stream past unrelated members; write only man sources and copyrights."""
+def extract(
+    archive: Path, package: Package, root: Path, *, quota=None, localized_roots=frozenset()
+) -> list[tuple]:
+    """Stream past unrelated members; write only man sources and copyrights.
+
+    Translated roots (usr/share/man/<lang>/) are kept only when requested, so
+    English workspaces and their receipts are unchanged.
+    """
     require_private_package(package)
     files = root / "files"
     files.mkdir(parents=True, exist_ok=True)
@@ -172,7 +180,9 @@ def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[
             if not raw_path.startswith(DOC_ROOTS):
                 continue
             path = safe_path(member.name)
-            manual = manual_registered(package.name, path)
+            manual = manual_registered(package.name, path) or (
+                localized_manual(path, localized_roots) is not None
+            )
             notice = COPYRIGHT.fullmatch(path)
             if member.issym() or member.islnk():
                 if not manual and not notice and path.count("/") != 3:
@@ -328,7 +338,12 @@ class ArchiveStore:
             else:
                 resolved = posixpath.join(posixpath.dirname(path), target)
             resolved = safe_path(posixpath.normpath(resolved))
-            if not MAN_PATH.fullmatch(resolved):
+            localized = LOCALIZED_MAN_PATH.fullmatch(path)
+            if not (
+                MAN_PATH.fullmatch(resolved)
+                # A translation may include pages from its own language root.
+                or (localized and localized_manual(resolved, {localized[1]}))
+            ):
                 raise ValueError("Roff include escapes manual root")
             return self.resolve(owner, resolved, set(seen), details=with_details)
 
@@ -343,6 +358,15 @@ class ArchiveStore:
 
         data = checked_source(data, include=include)
         return (owner, path, data) if details else data
+
+    def localized_manuals(self, root: str):
+        for pkg, path in self.db.execute(
+            "SELECT pkg,path FROM entries WHERE path LIKE ? ORDER BY pkg,path",
+            (f"usr/share/man/{root}/%",),
+        ):
+            match = localized_manual(path, {root})
+            if match:
+                yield pkg, path, match[2].lower(), match[3].lower()
 
     def manuals(self):
         for pkg, path in self.db.execute("SELECT pkg,path FROM entries ORDER BY pkg,path"):

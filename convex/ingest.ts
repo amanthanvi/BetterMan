@@ -7,11 +7,12 @@ import { datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { scheduleTaskPhraseBackfill } from "./taskPhrases";
 import { scheduleDerivedBuild } from "./derived";
-import { fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
+import { fullDebianPromotionHeld, translatedPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { insertProvider, recordProviderUploads, refreshProviderPackages } from "./_providers";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
 import { insertSymbols, symbolInput } from './_symbols';
+import { DEFAULT_LOCALE, isContentLocale } from "./_locales";
 import {
   compactManPageSearchText,
   DATASET_STAGES,
@@ -89,6 +90,9 @@ const storedPageInput = v.object({
   hasParseWarnings: v.boolean(),
   extractorVersion: v.optional(v.number()),
   contentStorageId: v.id("_storage"),
+  // Translated pages only: the upstream version the translation documents,
+  // from its .TH source field. Drift notes compare it with English (#395).
+  documentedVersion: v.optional(v.string()),
   optionFlags: v.optional(v.array(optionFlagInput)),
   optionsSignature: v.optional(v.string()),
   symbols: v.optional(v.array(symbolInput)),
@@ -308,6 +312,7 @@ export const createRelease = internalMutation({
     licensePackages: v.optional(v.array(licensePackageInput)),
   },
   handler: async (ctx, args) => {
+    if (!isContentLocale(args.locale)) throw new Error("INVALID_RELEASE_LOCALE");
     const acquisition = args.packageManifest !== undefined ? releaseAcquisition(args.packageManifest) : args.acquisition;
     if (args.acquisition !== undefined && acquisition !== args.acquisition) throw new Error("INVALID_RELEASE_MANIFEST");
     const packages = args.licensePackages ?? [];
@@ -594,6 +599,8 @@ export const insertStoredPages = internalMutation({
         sourcePackageVersion: optionalString(page.sourcePackageVersion),
         contentSha256: page.contentSha256,
         hasParseWarnings: page.hasParseWarnings,
+        ...(release.locale !== DEFAULT_LOCALE && page.documentedVersion?.trim()
+          ? { documentedVersion: page.documentedVersion.trim().slice(0, 120) } : {}),
       });
       await refreshProviderPackages(ctx, release, page.name, page.section);
 
@@ -803,6 +810,7 @@ export const activateRelease = internalMutation({
     datasetReleaseId: v.string(),
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
+    allowTranslations: v.optional(v.boolean()),
   },
   returns: v.object({
     stage: datasetStageValidator,
@@ -819,6 +827,7 @@ export const activateRelease = internalMutation({
     if (release.pruning) throw new Error("RELEASE_PRUNING");
 
     if (fullDebianPromotionHeld(release, args.stage, args.allowFullDebian)) throw new Error("FULL_DEBIAN_PROMOTION_HELD");
+    if (translatedPromotionHeld(release, args.stage, args.allowTranslations)) throw new Error("TRANSLATED_PROMOTION_HELD");
 
     await verifyDeclaredManifest(ctx, release);
     if (!release.sealed) await ctx.db.patch(release._id, { sealed: true });
@@ -862,12 +871,16 @@ export const activateRelease = internalMutation({
       await ctx.db.insert("activeReleases", payload);
     }
 
-    if (args.stage === "prod") await scheduleDerivedBuild(ctx, release.locale);
-    // Task-phrase rows do not gate activation: until they finish, worded queries
-    // match fewer pages, and a stopped backfill shows in convex:task-check.
-    await scheduleTaskPhraseBackfill(ctx, release).catch((error: unknown) => {
-      if (!(error instanceof Error) || error.message !== "TASK_PHRASE_BACKFILL_FAILED") throw error;
-    });
+    // Derived corpus data and task phrases are English-only (#395): generated
+    // phrases are keyed by English content hashes, so a translation has none.
+    if (release.locale === DEFAULT_LOCALE) {
+      if (args.stage === "prod") await scheduleDerivedBuild(ctx, release.locale);
+      // Task-phrase rows do not gate activation: until they finish, worded queries
+      // match fewer pages, and a stopped backfill shows in convex:task-check.
+      await scheduleTaskPhraseBackfill(ctx, release).catch((error: unknown) => {
+        if (!(error instanceof Error) || error.message !== "TASK_PHRASE_BACKFILL_FAILED") throw error;
+      });
+    }
 
     return result;
   },
@@ -890,11 +903,12 @@ const expectedReleaseIdsValidator = v.object(Object.fromEntries(
 
 // Authenticated workflow preflight only. Staging never enters the public API.
 export const getPromotionSource = internalQuery({
-  args: { distro: distroValidator },
+  args: { distro: distroValidator, locale: v.optional(v.string()) },
   returns: v.object({ distro: distroValidator, datasetReleaseId: v.string() }),
-  handler: async (ctx, { distro }) => {
+  handler: async (ctx, { distro, locale = DEFAULT_LOCALE }) => {
+    if (!isContentLocale(locale)) throw new Error("INVALID_RELEASE_LOCALE");
     const source = await ctx.db.query("activeReleases")
-      .withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "staging").eq("locale", "en").eq("distro", distro))
+      .withIndex("by_stage_and_locale_and_distro", q => q.eq("stage", "staging").eq("locale", locale).eq("distro", distro))
       .unique();
     if (!source) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
     const release = await ctx.db.get(source.releaseId);
@@ -911,6 +925,9 @@ export const promoteActiveReleases = internalMutation({
     distros: v.array(distroValidator),
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
+    // One content locale per request; English when absent (#395).
+    locale: v.optional(v.string()),
+    allowTranslations: v.optional(v.boolean()),
     expectedDatasetReleaseId: v.optional(expectedReleaseIdsValidator),
   },
   returns: v.object({
@@ -918,6 +935,8 @@ export const promoteActiveReleases = internalMutation({
     skipped: v.optional(v.array(v.object({ distro: distroValidator, datasetReleaseId: v.string(), reason: v.string() }))),
   }),
   handler: async (ctx, args) => {
+    const locale = args.locale ?? DEFAULT_LOCALE;
+    if (!isContentLocale(locale)) throw new Error("INVALID_RELEASE_LOCALE");
     const promoted = [];
     const skipped = [];
     for (const [distro, expected] of Object.entries(args.expectedDatasetReleaseId ?? {})) {
@@ -930,7 +949,7 @@ export const promoteActiveReleases = internalMutation({
       const target = await ctx.db
         .query("activeReleases")
         .withIndex("by_stage_and_locale_and_distro", (q) =>
-          q.eq("stage", args.toStage).eq("locale", "en").eq("distro", distro),
+          q.eq("stage", args.toStage).eq("locale", locale).eq("distro", distro),
         )
         .unique();
       // A lost response can be retried after staging advances. Acknowledge the
@@ -940,7 +959,7 @@ export const promoteActiveReleases = internalMutation({
       const source = await ctx.db
         .query("activeReleases")
         .withIndex("by_stage_and_locale_and_distro", (q) =>
-          q.eq("stage", args.fromStage).eq("locale", "en").eq("distro", distro),
+          q.eq("stage", args.fromStage).eq("locale", locale).eq("distro", distro),
         )
         .unique();
       if (!alreadyPromoted && expected !== undefined && source?.datasetReleaseId !== expected) {
@@ -956,6 +975,10 @@ export const promoteActiveReleases = internalMutation({
       // preflight read or mirror URL would not enforce the release's hold.
       if (fullDebianPromotionHeld(release, args.toStage, args.allowFullDebian)) {
         skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "FULL_DEBIAN_PROMOTION_HELD" });
+        continue;
+      }
+      if (translatedPromotionHeld(release, args.toStage, args.allowTranslations)) {
+        skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "TRANSLATED_PROMOTION_HELD" });
         continue;
       }
       requirePromotableRelease(release);
@@ -990,7 +1013,7 @@ export const promoteActiveReleases = internalMutation({
       promoted.push({ distro, datasetReleaseId: candidate.datasetReleaseId });
     }
 
-    if (args.toStage === "prod" && promoted.length) await scheduleDerivedBuild(ctx, "en");
+    if (args.toStage === "prod" && promoted.length && locale === DEFAULT_LOCALE) await scheduleDerivedBuild(ctx, locale);
 
 
     return skipped.length ? { promoted, skipped } : { promoted };

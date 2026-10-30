@@ -4,6 +4,7 @@ Resolve protocol changes in convex/ingestContract.ts and convex_client.py togeth
 Contract v6 retains package batches, derived extractor provenance and packed
 signatures, stored-page symbols/optional arguments, and real/alias providers,
 adding verified promotion-source reads and compare-and-swap promotion.
+Contract v7 adds content locales and the translated-release promotion hold.
 Never resolve overlap by taking one branch's functions or payload fields.
 """
 

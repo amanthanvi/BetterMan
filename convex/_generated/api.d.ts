@@ -17,6 +17,7 @@ import type * as _explainBounds from "../_explainBounds.js";
 import type * as _generatedLayer from "../_generatedLayer.js";
 import type * as _ingestErrors from "../_ingestErrors.js";
 import type * as _legacyContent from "../_legacyContent.js";
+import type * as _locales from "../_locales.js";
 import type * as _manifestStorage from "../_manifestStorage.js";
 import type * as _optionFlags from "../_optionFlags.js";
 import type * as _providers from "../_providers.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   _generatedLayer: typeof _generatedLayer;
   _ingestErrors: typeof _ingestErrors;
   _legacyContent: typeof _legacyContent;
+  _locales: typeof _locales;
   _manifestStorage: typeof _manifestStorage;
   _optionFlags: typeof _optionFlags;
   _providers: typeof _providers;

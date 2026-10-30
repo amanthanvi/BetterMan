@@ -264,6 +264,25 @@ promotions. Setting it alone does not opt into full ingestion. Non-empty
 repository values other than exactly `1` emit a workflow warning and remain off. Empty
 values are treated as unset without warning; warnings never echo supplied values.
 
+### Translated manuals (#395)
+
+The `update-translations` workflow ingests Debian's translated manuals (de, fr,
+es, pt-BR, ja, ru) as one staging release per language. It is a no-op unless
+the repository variable `BETTERMAN_DEBIAN_TRANSLATIONS=1` (schedule) or the
+dispatch input `debian_translations: true` opts in, and it shares the
+`update-dataset` concurrency group. Each language is its own matrix leg with
+its own result artifact (`dataset-result-debian-<lang>`).
+
+Translated releases never reach prod by default. Convex holds them
+(`TRANSLATED_PROMOTION_HELD`) unless the promote request carries
+`allowTranslations`, which the workflow sends only with
+`debian_translations_promote: true` or `BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE=1`.
+They are archive extractions, so they also need `debian_full_promote: true`
+(or `BETTERMAN_DEBIAN_FULL_PROMOTE=1`). Promotion needs owner sign-off on the
+measured staging cost first. A promotion-only dispatch:
+`gh workflow run update-translations -f locale=de -f debian_translations_promote=true -f debian_full_promote=true`.
+A held promotion records `held: <reason>` and succeeds without moving prod.
+
 Archive payloads now try the regular Debian CDN before the pinned snapshot,
 with SHA256 and size still bound to the pinned Packages index. Metadata never
 uses the mutable mirror. Every CDN HTTP/transport/integrity failure is discarded

@@ -36,6 +36,21 @@ MAN_PATH = re.compile(
 )
 
 
+# Translated manuals (B3, #395): content locale -> exact archive root under
+# usr/share/man. The English MAN_PATH never matches these roots. Encoded
+# duplicates (fr.UTF-8, de.UTF-8, ja.UTF-8) hold 2-10 pages and are not read.
+TRANSLATION_ROOTS = {"de": "de", "fr": "fr", "es": "es", "pt-BR": "pt_BR", "ja": "ja", "ru": "ru"}
+LOCALIZED_MAN_PATH = re.compile(
+    r"^usr/share/man/(de|fr|es|pt_BR|ja|ru)"
+    r"/man[1-9][a-z0-9]*/([^/]+)\.([1-9][a-z0-9]*)(?i:\.(?:gz|xz|bz2|zst))?$"
+)
+
+
+def localized_manual(path: str, roots) -> re.Match | None:
+    match = LOCALIZED_MAN_PATH.fullmatch(path)
+    return match if match and match[1] in roots else None
+
+
 @cache
 def private_registrations():
     document = json.loads(PRIVATE_MANUALS_PATH.read_text())

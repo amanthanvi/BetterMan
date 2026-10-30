@@ -1,0 +1,221 @@
+name: update-translations
+
+# Translated Debian manuals (#395). Off by default: ingestion needs the
+# BETTERMAN_DEBIAN_TRANSLATIONS=1 variable (schedule) or the dispatch input,
+# and always lands in staging. Promotion needs its own authorization, and
+# Convex still holds translated releases out of prod without allowTranslations.
+
+on:
+  workflow_dispatch:
+    inputs:
+      locale:
+        description: Translated language to process
+        type: choice
+        required: false
+        default: all
+        # Keep choices aligned with LOCALES in scripts/translation-workflow.py.
+        options:
+          - all
+          - de
+          - fr
+          - es
+          - pt-BR
+          - ja
+          - ru
+      debian_translations:
+        description: Explicitly authorize translated Debian manual ingestion into staging (adds Convex storage)
+        type: boolean
+        required: false
+        default: false
+      debian_translations_promote:
+        description: Explicitly authorize promoting held translated staging releases (owner sign-off on measured cost)
+        type: boolean
+        required: false
+        default: false
+      debian_full_promote:
+        description: Also authorize the full-Debian archive hold that translated releases carry
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    # Monthly on the 1st at 11:00 UTC, after update-dataset; a no-op unless enabled.
+    - cron: "0 11 1 * *"
+
+# Shares the dataset group so translated and English writes never overlap.
+concurrency:
+  group: update-dataset
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BETTERMAN_WORKFLOW_EVENT: ${{ github.event_name }}
+  BETTERMAN_TRANSLATION_LOCALE: ${{ inputs.locale || 'all' }}
+  BETTERMAN_DEBIAN_TRANSLATIONS: ${{ vars.BETTERMAN_DEBIAN_TRANSLATIONS }}
+  BETTERMAN_DEBIAN_TRANSLATIONS_INPUT: ${{ inputs.debian_translations && 'true' || 'false' }}
+  BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE: ${{ vars.BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE }}
+  BETTERMAN_DEBIAN_TRANSLATIONS_PROMOTE_INPUT: ${{ inputs.debian_translations_promote && 'true' || 'false' }}
+  BETTERMAN_DEBIAN_FULL_PROMOTE: ${{ vars.BETTERMAN_DEBIAN_FULL_PROMOTE }}
+  BETTERMAN_DEBIAN_FULL_PROMOTE_INPUT: ${{ inputs.debian_full_promote && 'true' || 'false' }}
+  BETTERMAN_INGEST_SAMPLE: 'false'
+
+jobs:
+  plan:
+    name: Select languages
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      enabled: ${{ steps.plan.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select authorized languages and operations
+        id: plan
+        run: python3 scripts/translation-workflow.py plan
+
+  preflight:
+    name: Validate ingestion configuration
+    needs: [plan]
+    if: ${{ needs.plan.outputs.enabled == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 1
+    steps:
+      - name: Require protected Convex ingestion secrets
+        env:
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CONVEX_HTTP_URL:-}" || -z "${CONVEX_INGEST_SECRET:-}" ]]; then
+            echo "Missing production environment secrets BETTERMAN_CONVEX_HTTP_URL / BETTERMAN_CONVEX_INGEST_SECRET." >&2
+            exit 1
+          fi
+
+  translation:
+    name: Translation (${{ matrix.locale }})
+    needs: [preflight, plan]
+    if: ${{ needs.plan.outputs.enabled == 'true' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: ${{ matrix.timeout }}
+    steps:
+      - name: Reserve time for dataset reporting
+        id: activation_deadline
+        if: ${{ matrix.ingest }}
+        shell: bash
+        env:
+          BETTERMAN_JOB_TIMEOUT_MINUTES: ${{ matrix.timeout }}
+        run: echo "BETTERMAN_INGEST_DEADLINE_UNIX_SECONDS=$(( $(date +%s) + BETTERMAN_JOB_TIMEOUT_MINUTES * 60 - 180 ))" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: 3.14
+
+      # Secret-bearing job: 'auto' would enable the cache here.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        if: ${{ matrix.ingest }}
+        with:
+          enable-cache: false
+      - name: Install ingestion dependencies
+        id: dependencies
+        if: ${{ matrix.ingest }}
+        run: python3 scripts/translation-workflow.py run "debian-${LOCALE}" setup uv sync --frozen --project ingestion
+        env:
+          LOCALE: ${{ matrix.locale }}
+
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ matrix.ingest }}
+        with:
+          path: ${{ runner.temp }}/betterman-debian/archives/*.deb
+          key: debian-l10n-debs-${{ matrix.locale }}-ed56aac47e7911e65ee63aae8d67e29f20e023f840e49f8ed037043a33de138a
+
+      - name: Install Debian archive renderer
+        id: debian_renderer
+        if: ${{ matrix.ingest }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
+
+      - name: Ingest translated manuals to Convex staging
+        id: staging
+        if: ${{ matrix.ingest }}
+        env:
+          LOCALE: ${{ matrix.locale }}
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+          BETTERMAN_DATASET_STAGE: staging
+          BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
+          BETTERMAN_DEBIAN_WORKDIR: ${{ runner.temp }}/betterman-debian/workspace
+          BETTERMAN_DEBIAN_CACHE_DIR: ${{ runner.temp }}/betterman-debian/archives
+        run: |
+          python3 scripts/translation-workflow.py run "debian-${LOCALE}" ingest \
+            uv run --directory ingestion python -m ingestion.cli ingest --distro debian --debian-translation "${LOCALE}" --activate
+
+      - name: Promote this language's verified staging release (compare-and-swap)
+        id: promote
+        if: ${{ matrix.promote }}
+        env:
+          LOCALE: ${{ matrix.locale }}
+          CONVEX_HTTP_URL: ${{ secrets.BETTERMAN_CONVEX_HTTP_URL }}
+          CONVEX_INGEST_SECRET: ${{ secrets.BETTERMAN_CONVEX_INGEST_SECRET }}
+        run: python3 scripts/translation-workflow.py promote "${LOCALE}"
+
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ always() && matrix.ingest }}
+        with:
+          path: ${{ runner.temp }}/betterman-debian/archives/*.deb
+          key: debian-l10n-debs-${{ matrix.locale }}-ed56aac47e7911e65ee63aae8d67e29f20e023f840e49f8ed037043a33de138a
+
+      - name: Record language result
+        if: ${{ always() }}
+        env:
+          LOCALE: ${{ matrix.locale }}
+          BETTERMAN_JOB_STATUS: ${{ job.status }}
+          BETTERMAN_STEPS: ${{ toJSON(steps) }}
+        run: python3 scripts/translation-workflow.py finish "${LOCALE}"
+      - name: Upload sanitized language result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dataset-result-debian-${{ matrix.locale }}
+          path: dataset-results/debian-${{ matrix.locale }}.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 14
+
+  summary:
+    name: Translation summary
+    needs: [plan, preflight, translation]
+    if: ${{ always() && (needs.plan.outputs.enabled == 'true' || needs.plan.result == 'failure' || needs.plan.result == 'cancelled') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download language results
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: dataset-result-debian-*
+          path: dataset-results
+          merge-multiple: true
+      - name: Report all selected languages and fail on any failure
+        if: ${{ always() }}
+        env:
+          BETTERMAN_MATRIX: ${{ needs.plan.outputs.matrix }}
+          BETTERMAN_MATRIX_RESULT: ${{ needs.translation.result }}
+          BETTERMAN_PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          BETTERMAN_PLAN_RESULT: ${{ needs.plan.result }}
+        run: python3 scripts/translation-workflow.py summary

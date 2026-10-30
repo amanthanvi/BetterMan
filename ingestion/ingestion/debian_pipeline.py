@@ -100,6 +100,9 @@ def sample_packages(packages: list[Package], limit: int | None) -> list[Package]
 
 
 class Workspace:
+    # Translated manual roots to extract as well (B3, #395); English keeps none.
+    localized_roots: frozenset[str] = frozenset()
+
     def __init__(self, root: Path, *, limit: int | None = None):
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
@@ -108,8 +111,8 @@ class Workspace:
         if marker.exists() and marker.read_text() != fingerprint:
             raise ValueError("Workspace belongs to different archive pins")
         marker.write_text(fingerprint)
-        self.pins, self.all_manual_packages = catalog(self.root / "indexes")
-        self.packages = sample_packages(self.all_manual_packages, limit)
+        self.pins, self.all_manual_packages = self._catalog()
+        self.packages = self._sample(self.all_manual_packages, limit)
         selection_path = self.root / "selection.json"
         if selection_path.exists():
             selection = json.loads(selection_path.read_text())
@@ -169,6 +172,12 @@ class Workspace:
         self._inflight = set()
         self.missing: list[dict] = []
 
+    def _catalog(self):
+        return catalog(self.root / "indexes")
+
+    def _sample(self, packages, limit):
+        return sample_packages(packages, limit)
+
     def _acquire(self, package: Package):
         if package.size > 1024 * 1024 * 1024:
             raise ValueError("Package exceeds 1 GiB archive budget")
@@ -197,7 +206,13 @@ class Workspace:
             )
             downloaded = time.monotonic()
             archive.touch()
-            entries = extract(archive, package, self.root, quota=self.extracted_quota)
+            entries = extract(
+                archive,
+                package,
+                self.root,
+                quota=self.extracted_quota,
+                localized_roots=self.localized_roots,
+            )
             extracted = time.monotonic()
         finally:
             with self._disk_lock:

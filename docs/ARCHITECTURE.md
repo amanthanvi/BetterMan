@@ -52,7 +52,13 @@ deduplicating derived scheduler for failed work. Dispatches can pin inspected
 release IDs through concurrency-queue waits with `expected_release_ids`; a
 job-time source mismatch fails before promotion. Both paths retain the persisted
 full-Debian acquisition hold. Promotion requests carry the exact contract
-version header so old in-flight workflows fail before moving prod. The
+version header so old in-flight workflows fail before moving prod. Contract
+v7 adds content locales (#395): each translated language is its own release
+per distro (`locale` on the release and its `(stage, locale, distro)` pointer),
+promotion moves one locale per request, and a translated release reaches prod
+only with `allowTranslations` (`TRANSLATED_PROMOTION_HELD` otherwise; archive
+translations keep the full-Debian hold as well). Stored pages may carry the
+translation's `documentedVersion`. See [B3](roadmap/b3-translations.md). The
 generated layer advertises its own independent v2 contract.
 Large package provenance is stored in Convex file storage via a
 `releaseManifests` row. The release document contains counts, digests and lifecycle
