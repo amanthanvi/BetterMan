@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test'
 
-import { waitForInteractiveShell } from './shortcuts'
+import { seedRecentAndBookmark, waitForInteractiveShell } from './shortcuts'
 
 test('dashboard shortcuts and redirects preserve section intent', async ({ page }) => {
+  await seedRecentAndBookmark(page)
   await page.goto('/')
   await waitForInteractiveShell(page)
   await page.evaluate(() => {
@@ -23,6 +24,7 @@ test('dashboard shortcuts and redirects preserve section intent', async ({ page 
 })
 
 test('back to a hash route keeps a saved scroll position of zero', async ({ page }) => {
+  await seedRecentAndBookmark(page)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/#recent')
   await waitForInteractiveShell(page)
@@ -73,6 +75,7 @@ test('back to a hash route keeps a saved scroll position of zero', async ({ page
 })
 
 test('h after a same-route back still lands on the recent hash target', async ({ page }) => {
+  await seedRecentAndBookmark(page)
   await page.setViewportSize({ width: 1280, height: 300 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/man/tar/1')
@@ -94,6 +97,7 @@ test('h after a same-route back still lands on the recent hash target', async ({
 })
 
 test('mobile: header search opens the palette and bookmarks live on the home page', async ({ page }) => {
+  await seedRecentAndBookmark(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
 
@@ -102,4 +106,27 @@ test('mobile: header search opens the palette and bookmarks live on the home pag
   await expect(page.getByRole('combobox', { name: 'Command palette input' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('region', { name: 'Bookmarks' }).first()).toBeVisible()
+})
+
+test('home lists no recents or bookmarks until they exist, then only the ones that do', async ({ page }) => {
+  await page.goto('/')
+  await waitForInteractiveShell(page)
+  await expect(page.getByRole('region', { name: 'Recent' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Bookmarks' })).toHaveCount(0)
+  await expect(page.getByText('No recent pages')).toHaveCount(0)
+
+  // Opening a page records it; home then shows Recent, still without an empty Bookmarks.
+  await page.goto('/man/gzip/1')
+  await waitForInteractiveShell(page)
+  await page.goto('/')
+  await expect(page.getByRole('region', { name: 'Recent' })).toContainText('gzip(1)')
+  await expect(page.getByRole('region', { name: 'Bookmarks' })).toHaveCount(0)
+})
+
+test('an asked-for empty section explains how to fill it', async ({ page }) => {
+  await page.goto('/bookmarks')
+  await expect(page).toHaveURL(/\/#bookmarks$/)
+  const bookmarks = page.getByRole('region', { name: 'Bookmarks' })
+  await expect(bookmarks).toContainText('No bookmarks yet')
+  await expect(page.getByRole('region', { name: 'Recent' })).toHaveCount(0)
 })

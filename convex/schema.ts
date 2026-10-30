@@ -434,6 +434,36 @@ export default defineSchema({
     suppressed: v.optional(v.array(generatedPartNameValidator)),
   }).index("by_contentSha256", ["contentSha256"]),
 
+  // Task-phrase search (C5): one row per page whose content hash has generated
+  // task phrases, per release, so search filters to the active release and
+  // section before its result cap. Written when a release is activated (and by
+  // the deploy entrypoint) and whenever a generated record changes.
+  manPageTaskPhrases: defineTable({
+    releaseId: v.id("datasetReleases"),
+    pageId: v.id("manPages"),
+    contentSha256: v.string(),
+    name: v.string(),
+    section: v.string(),
+    title: v.string(),
+    description: v.string(),
+    // The phrases, one per line.
+    taskText: v.string(),
+  }).index("by_releaseId_and_pageId", ["releaseId", "pageId"])
+    .searchIndex("search_taskText", { searchField: "taskText", filterFields: ["releaseId", "section"] }),
+
+  // Progress of a release's task-phrase backfill; a version bump rebuilds.
+  taskPhraseBackfills: defineTable({
+    releaseId: v.id("datasetReleases"),
+    version: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    scanned: v.number(),
+    written: v.number(),
+    completedVersion: v.optional(v.number()),
+    jobId: v.optional(v.id("_scheduled_functions")),
+    attempts: v.number(),
+    updatedAt: v.number(),
+  }).index("by_releaseId", ["releaseId"]),
+
   rateLimitBuckets: defineTable({
     key: v.string(),
     count: v.number(),

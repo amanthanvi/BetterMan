@@ -1,0 +1,73 @@
+import type { TopHit as TopHitData } from '../../lib/api'
+import { BRIEF_SOURCE_LABELS } from '../../lib/docModel'
+import { manPageHref, withDistro, type Distro } from '../../lib/distro'
+
+const LINK = 'underline decoration-rule-2 underline-offset-[3px] hover:text-accent'
+
+/**
+ * The top hit's answer (fix 13): one worked example with its gloss and source,
+ * an "Explain this line" link (fix 14), then the key flags. BetterMan's voice,
+ * on the added tint. Every string is rendered as text (docs/generated-layer.md).
+ */
+export function TopHit({ top, urlDistro }: { top: TopHitData; urlDistro: Distro | null }) {
+  const { example } = top
+  return (
+    <div className="bm-added mt-2.5 px-4 py-3 text-sm max-sm:-mx-5 max-sm:px-5" data-bm-top-hit>
+      {example ? (
+        <>
+          {example.description ? <p className="text-ink">{example.description}</p> : null}
+          <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <code className="min-w-0 font-mono text-[0.9375rem] break-all text-ink">
+              <span className="text-ink-3 select-none" aria-hidden="true">
+                ${' '}
+              </span>
+              {example.command}
+            </code>
+            <span className="text-xs text-ink-3">
+              ·{' '}
+              {example.attribution ? (
+                <>
+                  <a href={example.attribution.url} className={LINK} rel="noreferrer" target="_blank">
+                    tldr-pages
+                  </a>
+                  ,{' '}
+                  <a href={example.attribution.licenseUrl} className={LINK} rel="license noreferrer" target="_blank" title={example.attribution.modified}>
+                    CC BY 4.0
+                  </a>
+                  , adapted
+                </>
+              ) : (
+                BRIEF_SOURCE_LABELS[example.source]
+              )}
+            </span>
+          </p>
+          <p className="mt-1.5">
+            <a href={withDistro(`/explain?cmd=${encodeURIComponent(example.command)}`, urlDistro)} className={`text-ink ${LINK}`}>
+              Explain this line
+            </a>
+          </p>
+        </>
+      ) : null}
+      {top.flags.length ? (
+        <ul aria-label={`Key flags of ${top.name}(${top.section})`} className={example ? 'mt-2.5 border-t border-rule pt-2.5' : ''}>
+          {top.flags.map((flag) => (
+            <li key={flag.anchorId} className="flex min-w-0 items-baseline gap-2.5">
+              <a href={manPageHref(top.name, top.section, urlDistro, flag.anchorId)} className="shrink-0 font-mono font-semibold text-ink no-underline hover:text-accent">
+                {flag.flag}
+              </a>
+              <span className="truncate text-ink-2">{flag.excerpt}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {top.package ? (
+        <p className="mt-2 text-xs text-ink-3">
+          Package{' '}
+          <a href={withDistro(`/pkg/${encodeURIComponent(top.package)}`, urlDistro)} aria-label={`Package ${top.package}`} className={`font-mono ${LINK}`}>
+            {top.package}
+          </a>
+        </p>
+      ) : null}
+    </div>
+  )
+}

@@ -170,6 +170,31 @@ Light is paper; dark is the same plate in warm ink on black.
   without generated examples shows its own EXAMPLES there. Generated and tldr
   text is rendered as text, never markup (`docs/generated-layer.md`).
 
+## Home and search
+
+Home is the search box. Typing replaces the URL with `/?q=…` (noindex) and the
+server renders up to eight results under the box, with the top hit and a link
+to all results; the tagline, Browse and the dashboard step aside. Without
+JavaScript the box submits to `/search`, and a full page load of `/?q=…` (a
+shared link) is sent there by the proxy (307), since home's loading skeleton
+would hide streamed results. The placeholder cycles through one of
+each thing the box takes, every 3.2s while the field is empty, and stays on the
+first under reduced motion. Recent and Bookmarks render only once they hold
+entries; an empty home has no empty sections. `/#recent` and `/#bookmarks` (the
+`h` key, `/history`, `/bookmarks`) still show the asked-for section, with a line
+saying how to fill it.
+
+Search has no display heading (the `h1` is visually hidden) and no running
+head. Like explain, `/search` sits outside the `(site)` group with no loading
+boundary, so its results are in the HTML without JavaScript. The section filter is the nine manual sections, without a listing read.
+`components/search/` holds the stateless `SearchResultsBody` and `ResultRow`,
+shared by both pages, and `TopHit`. The top hit, on the added tint inside the
+first row, leads with one worked example and its gloss, its source label (the
+tldr-pages link and CC BY 4.0, or "from EXAMPLES" / "generated · verified"),
+"Explain this line", then the key flags (verified example usage, most used
+first, each linked to its definition) and the package. A query that reads as a
+command line is offered to explain token by token.
+
 ## Explain
 
 `/explain?cmd=…` (`app/explain/page.tsx`) is server-rendered and complete
@@ -240,9 +265,13 @@ combinator.
   clipboard" / "Previous|Next match" / "Expand|Collapse sidebar" / "Load more
   results" / "Copy code block", table "Command-line options" (each flag its own
   exact text), select "Select distribution variant" (a real `<select>`), list
-  "Search results" with small-caps kind labels (`flag` for an option match;
-  `command`, `function`, `file format`, … by section), regions "Recent" /
-  "Bookmarks" / "Browse sections" / "In brief" / "Options" / "Command composer" /
+  "Search results" with small-caps kind labels (`task` for a task-phrase match,
+  `flag` for an option match, `directive` and the other symbol kinds;
+  `command`, `function`, `file format`, `concept`, … by section) and one line of
+  evidence per hit ("Task match: “…” · generated", the flags, or the defined
+  term), the top hit `[data-bm-top-hit]` with link "Explain this line", list
+  "Key flags of <name>(<section>)" and link "Package <name>", regions "Recent" /
+  "Bookmarks" (home, only once they have entries) / "Browse sections" / "In brief" / "Options" / "Command composer" /
   "Other distributions" / "Did you mean" (man page 404), complementaries "See
   also" / "Related commands", headings "Browse" and "Search the manual", TOC
   active link `aria-current="location"`, link "Report a problem" (man page

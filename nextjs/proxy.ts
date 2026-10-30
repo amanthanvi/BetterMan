@@ -115,7 +115,28 @@ async function manProxy(request: NextRequest, cspEnabled: boolean): Promise<Next
   return setSecurityHeaders(NextResponse.rewrite(target, { request: { headers: requestHeaders } }), csp)
 }
 
+/**
+ * Home keeps a typed query in `/?q=` for its inline results, which arrive as
+ * client (RSC) navigations. A full document load of that URL, such as a shared
+ * link or a reader without JavaScript, would stream behind home's loading
+ * skeleton; the search page renders the same results in the HTML instead.
+ */
+function homeQueryRedirect(request: NextRequest): NextResponse | null {
+  const { pathname, searchParams } = request.nextUrl
+  if (pathname !== '/' || !searchParams.get('q')?.trim()) return null
+  // Client navigations are fetches, not documents; any of these marks one.
+  const headers = request.headers
+  const clientFetch = headers.has('rsc') || headers.has('next-router-state-tree') || searchParams.has('_rsc') ||
+    headers.get('sec-fetch-dest') === 'empty'
+  if (clientFetch) return null
+  const target = request.nextUrl.clone()
+  target.pathname = '/search'
+  return NextResponse.redirect(target, 307)
+}
+
 export async function proxy(request: NextRequest) {
+  const redirect = homeQueryRedirect(request)
+  if (redirect) return setSecurityHeaders(redirect, null)
   const cspEnabled = process.env.CSP_ENABLED !== 'false'
   if (isManHtmlPath(request.nextUrl.pathname)) return await manProxy(request, cspEnabled)
 

@@ -54,6 +54,9 @@ export const upsertRecords = internalMutation({
         inserted += 1;
       }
     }
+    // Task-phrase search rows follow the generated part, release by release.
+    const taskHashes = args.records.filter((record) => record.generated).map((record) => record.contentSha256);
+    if (taskHashes.length) await ctx.scheduler.runAfter(0, internal.taskPhrases.syncHashes, { contentSha256s: taskHashes });
     // B7 ranks most-used flags from these counts; hand them over by hash.
     const usageHashes = args.records.filter((record) => record.page || record.tldr).map((record) => record.contentSha256);
     if (usageHashes.length) {
@@ -212,6 +215,9 @@ export const suppressParts = internalMutation({
       await ctx.db.insert("manPageGenerated", {
         contentSha256: args.contentSha256, suppressed, updatedAt: new Date().toISOString(),
       });
+    }
+    if (args.parts.includes("generated")) {
+      await ctx.scheduler.runAfter(0, internal.taskPhrases.syncHashes, { contentSha256s: [args.contentSha256] });
     }
     // Removed page or tldr examples no longer count toward B7's ranking.
     if (args.parts.some((part) => part === "page" || part === "tldr")) {

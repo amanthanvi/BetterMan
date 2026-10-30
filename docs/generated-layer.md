@@ -59,9 +59,38 @@ markup. A test stores `<img src=x onerror=...>` and reads it back as the same
 inert string.
 
 The summary is one plain-English sentence. Task phrases are three to five
-lowercase search phrases such as "extract a tar.gz file". Search (#397) will
-index them. Both are generated text and carry the generated mark wherever they
-appear.
+lowercase search phrases such as "extract a tar.gz file". Both are generated
+text and carry the generated mark wherever they appear.
+
+**Task-phrase search (C5).** Search does not query this content-hash table.
+`manPageTaskPhrases` (`convex/taskPhrases.ts`) holds one row per page, per
+release, whose hash has generated task phrases: the page's name, section,
+title and description, and the phrases one per line. Its `search_taskText`
+search index filters on `releaseId` and `section`, so a worded query reads at
+most eight rows, all from the active release (and section), before its cap,
+and no page read follows. Pages in later releases, other distros or staging
+cannot crowd it out. A phrase must share a content word of two letters or more
+with the query, not only stop words; at most three task hits are kept, each
+citing the phrase it matched.
+
+Two idempotent writers keep the rows current. `upsertRecords` and
+`suppressParts` schedule `taskPhrases.syncHashes` for the affected hashes,
+which updates every page with that hash in every release (256 pages per run,
+then it continues). Activating a release, and every deploy
+(`taskPhrases:backfillActiveReleases` in `deploy.yml`, after the Convex deploy),
+schedules or joins that release's backfill over all its pages (100 per batch).
+Progress, the cursor and the scheduled job live in `taskPhraseBackfills`, so a
+failed batch resumes from its cursor (three attempts, then
+`TASK_PHRASE_BACKFILL_FAILED`). `pnpm convex:task-check --prod` (also in the
+ops-status workflow) reads `taskPhrases:status` and exits nonzero until every
+active release is complete, naming any failed release. Activation never waits
+for it. Until a release's backfill completes, worded queries match only the
+pages whose rows exist, and every other search result is unchanged; a
+`TASK_PHRASE_VERSION` bump rebuilds every release.
+With `brief: true` (the search page and home only), search also returns the
+first hit's first brief example and up to six key flags from the page's
+verified flag usage, with spellings of one option merged: one page, one
+generated-layer and at most twelve option reads.
 
 ## Provenance
 

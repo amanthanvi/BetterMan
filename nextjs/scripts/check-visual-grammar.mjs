@@ -46,6 +46,7 @@ export const ADDED_FILES = new Set([
   'components/man/ManPageBrief.tsx',
   'components/man/ManPageFooterSections.tsx',
   'components/explain/ExplainVoice.tsx', // the reading and the safety note
+  'components/search/TopHit.tsx', // the top hit's example and key flags
 ])
 
 // The only red fill: the 2px contents marker beside the active heading.

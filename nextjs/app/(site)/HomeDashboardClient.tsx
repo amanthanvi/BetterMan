@@ -67,6 +67,23 @@ export function HomeDashboardClient() {
   const { urlDistro } = useDistro()
   const [recentPages, setRecentPages] = useState<RecentPageItem[]>([])
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
+  // /#recent and /#bookmarks (the h key, /history, /bookmarks, app shortcuts) ask for a
+  // section by name; an asked-for empty section says how to fill it rather than vanish.
+  const [asked, setAsked] = useState<'recent' | 'bookmarks' | null>(null)
+
+  useEffect(() => {
+    const read = () => {
+      const hash = window.location.hash.slice(1)
+      setAsked(hash === 'recent' || hash === 'bookmarks' ? hash : null)
+    }
+    read()
+    window.addEventListener('hashchange', read)
+    window.addEventListener('popstate', read)
+    return () => {
+      window.removeEventListener('hashchange', read)
+      window.removeEventListener('popstate', read)
+    }
+  }, [])
 
   useEffect(() => {
     const read = () => {
@@ -98,11 +115,19 @@ export function HomeDashboardClient() {
     }
   }, [])
 
+  // Recents and bookmarks appear once they exist; an empty home has no empty sections.
+  if (!recentPages.length && !bookmarks.length && !asked) return null
+
   return (
     <div className="mt-14 grid gap-10 sm:grid-cols-2 sm:gap-8">
-      <section id="recent" aria-label="Recent" className="min-w-0">
-        <ManSectionLabel as="h2">Recent</ManSectionLabel>
-        {recentPages.length ? (
+      {recentPages.length || asked === 'recent' ? (
+        <section id="recent" aria-label="Recent" className="min-w-0">
+          <ManSectionLabel as="h2">Recent</ManSectionLabel>
+          {recentPages.length ? null : (
+            <EmptyState title="No recent pages" className="mt-1">
+              Pages you open are listed here.
+            </EmptyState>
+          )}
           <ul className={LIST}>
             {recentPages.map((it) => (
               <li key={`${it.name}:${it.section}:${it.at}`} className={ROW}>
@@ -110,16 +135,17 @@ export function HomeDashboardClient() {
               </li>
             ))}
           </ul>
-        ) : (
-          <EmptyState title="No recent pages" className="mt-1">
-            Pages you open are listed here.
-          </EmptyState>
-        )}
-      </section>
+        </section>
+      ) : null}
 
-      <section id="bookmarks" aria-label="Bookmarks" className="min-w-0">
-        <ManSectionLabel as="h2">Bookmarks</ManSectionLabel>
-        {bookmarks.length ? (
+      {bookmarks.length || asked === 'bookmarks' ? (
+        <section id="bookmarks" aria-label="Bookmarks" className="min-w-0">
+          <ManSectionLabel as="h2">Bookmarks</ManSectionLabel>
+          {bookmarks.length ? null : (
+            <EmptyState title="No bookmarks yet" className="mt-1">
+              Press <Kbd>m</Kbd> on a page to keep it here.
+            </EmptyState>
+          )}
           <ul className={LIST}>
             {bookmarks.map((it) => (
               <li key={`${it.name}:${it.section}:${it.addedAt}`} className={`group/row ${ROW}`}>
@@ -135,12 +161,8 @@ export function HomeDashboardClient() {
               </li>
             ))}
           </ul>
-        ) : (
-          <EmptyState title="No bookmarks yet" className="mt-1">
-            Press <Kbd>m</Kbd> on a page to keep it here.
-          </EmptyState>
-        )}
-      </section>
+        </section>
+      ) : null}
     </div>
   )
 }

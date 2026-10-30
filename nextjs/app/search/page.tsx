@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
-import { listSections, search, withDistroFallback } from '../../../lib/api'
-import type { Distro } from '../../../lib/distro'
-import { explicitDistro, getFirst, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+import { search, withDistroFallback } from '../../lib/api'
+import { sectionLabel } from '../../components/man/RunningHead'
+import type { Distro } from '../../lib/distro'
+import { explicitDistro, getFirst, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { SearchPageInput } from './SearchPageInput'
 import { SearchResultsClient } from './SearchResultsClient'
+
+const SECTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 function buildSearchHref(opts: { q: string; section: string; urlDistro: Distro | null }) {
   const params = new URLSearchParams()
@@ -36,37 +39,22 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const q = getFirst(sp.q)?.trim().slice(0, 120) ?? ''
   const section = getFirst(sp.section)?.trim() || ''
 
-  const { distro, data } = await withDistroFallback(requestedDistro, async (activeDistro) => {
-    const sectionsPromise = listSections(activeDistro)
-    const initialPromise = q
-      ? search({
-          distro: activeDistro,
-          q,
-          section: section || undefined,
-          limit: 20,
-          offset: 0,
-        })
-      : Promise.resolve(null)
-
-    return Promise.all([sectionsPromise, initialPromise])
-  })
-  const [sections, initial] = data
+  const { distro, data: initial } = await withDistroFallback(requestedDistro, async (activeDistro) =>
+    q ? search({ distro: activeDistro, q, section: section || undefined, limit: 20, offset: 0, brief: true }) : null,
+  )
   const urlDistro = explicitDistro(sp)
-  const sectionPills = sections
-    .filter((s) => /^\d+$/.test(s.section))
-    .map((s) => ({ section: s.section, n: Number.parseInt(s.section, 10), label: s.label }))
-    .filter((s) => Number.isFinite(s.n))
-    .sort((a, b) => a.n - b.n)
-    .slice(0, 9)
+  // The nine manual sections, without a per-view listing read; an empty one simply finds nothing.
+  const sectionPills = SECTIONS.map((n) => ({ section: n, label: sectionLabel(n) }))
 
   const sectionLinkClass = (active: boolean) =>
     active ? 'font-semibold text-ink no-underline' : 'text-ink-2 no-underline hover:text-accent'
 
   return (
     <div className="mx-auto max-w-[46rem] pt-10">
-      <h1 className="font-serif text-2xl font-semibold tracking-[-0.01em]">Search the manual</h1>
+      {/* No display heading on search (fix 9): the field is the page's title. */}
+      <h1 className="sr-only">Search the manual</h1>
 
-      <form className="mt-6" action="/search" method="get" role="search" aria-label="Search man pages">
+      <form action="/search" method="get" role="search" aria-label="Search man pages">
         <SearchPageInput initialQ={q} section={section} />
         {section ? <input type="hidden" name="section" value={section} /> : null}
         {urlDistro ? <input type="hidden" name="distro" value={urlDistro} /> : null}

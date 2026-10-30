@@ -11,9 +11,10 @@ test('ops-status stays a manual, read-only production check', () => {
   // The deploy key reaches only the status step, after dependencies are installed.
   const steps = workflow.split('\n      - ')
   const withSecret = steps.filter((step) => step.includes('secrets.'))
-  assert.equal(withSecret.length, 1)
+  assert.equal(withSecret.length, 2)
   assert.match(withSecret[0], /^name: Derived data status\n[\s\S]*secrets\.CONVEX_DEPLOY_KEY[\s\S]*run: pnpm convex:derived-check --prod\n?$/)
-  assert.ok(steps.indexOf(withSecret[0]) === steps.length - 1, 'the secret step runs last')
+  assert.match(withSecret[1], /^name: Task phrase status\n[\s\S]*secrets\.CONVEX_DEPLOY_KEY[\s\S]*run: pnpm convex:task-check --prod\n?$/)
+  assert.ok(steps.indexOf(withSecret[0]) === steps.length - 2 && steps.indexOf(withSecret[1]) === steps.length - 1, 'the secret steps run last')
   // Same gate as prune-releases.yml: verify installed tooling before the key is exposed.
   const provenance = steps.findIndex((step) => step.startsWith('name: Verify trusted tooling provenance\n        run: pnpm deps:provenance\n'))
   assert.ok(provenance > 0 && provenance < steps.indexOf(withSecret[0]), 'provenance is verified before the secret step')

@@ -115,3 +115,23 @@ it.each(['/man/tar/1', '/man/tar'])('runs for man page prefetches as well: %s', 
 it.each(['/', '/apiary', '/api-docs', '/assets-guide', '/man/api/3', '/tar', '/tar.1', '/2/open', '/tar/-x', '/opensearch.xml'])('sets CSP on pages: %s', (url) => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true)
 })
+
+it('sends a full load of a home query to the search page, but keeps client navigations inline', async () => {
+  const status = async (url: string, headers: Record<string, string> = {}) => (await proxy(new NextRequest(url, { headers }))).status
+  const full = await proxy(new NextRequest('https://betterman.sh/?q=tar&distro=fedora'))
+  expect(full.status).toBe(307)
+  expect(full.headers.get('location')).toBe('https://betterman.sh/search?q=tar&distro=fedora')
+  expect(full.headers.get('x-content-type-options')).toBe('nosniff')
+  expect(await status('https://betterman.sh/?q=tar', { rsc: '1' })).toBe(200)
+  expect(await status('https://betterman.sh/?q=tar', { 'sec-fetch-dest': 'empty' })).toBe(200)
+  expect(await status('https://betterman.sh/?q=tar&_rsc=abc')).toBe(200)
+  expect(await status('https://betterman.sh/?q=tar', { 'sec-fetch-dest': 'document' })).toBe(307)
+  expect(await status('https://betterman.sh/?q=')).toBe(200)
+  expect(await status('https://betterman.sh/')).toBe(200)
+})
+
+it.each(['/explain?cmd=tar%20-x', '/search?q=tar'])('keeps the nonce CSP on %s', async (url) => {
+  vi.stubEnv('NODE_ENV', 'production')
+  const csp = (await proxy(new NextRequest(`https://betterman.sh${url}`))).headers.get('content-security-policy')!
+  expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/)
+})

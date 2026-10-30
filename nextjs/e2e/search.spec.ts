@@ -49,12 +49,66 @@ test('search: citations resolve the exact section without correction copy', asyn
   await expect(page.getByText('Did you mean:', { exact: false })).toHaveCount(0)
 })
 
-test('search: unsupported questions give guidance without an unrelated answer', async ({ page }) => {
-  await page.goto('/search?q=how%20do%20I%20extract%20a%20tarball')
-  await expect(page.getByText('No results for', { exact: false })).toBeVisible()
-  await expect(page.getByText('natural-language questions are not supported yet', { exact: false })).toBeVisible()
-  await expect(page.getByRole('list', { name: 'Search results' })).toHaveCount(0)
+test('search: a task in plain words finds the page by its task phrase and offers to explain the example', async ({ page }) => {
+  await page.goto('/search?q=how%20do%20I%20create%20a%20tarball')
+  const first = page.getByRole('list', { name: 'Search results' }).getByRole('listitem').first()
+  await expect(first.getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
+  await expect(first.getByText('task', { exact: true })).toBeVisible()
+  await expect(first.getByText('Task match: “create a tar archive”')).toBeVisible()
   await expect(page.getByText('Did you mean:', { exact: false })).toHaveCount(0)
+
+  const explain = first.getByRole('link', { name: 'Explain this line' })
+  await expect(explain).toHaveAttribute('href', '/explain?cmd=' + encodeURIComponent('tar -cf archive.tar ./my-folder'))
+  await explain.click()
+  await expect(page).toHaveURL(/\/explain\?cmd=tar/)
+  await expect(page.getByLabel('Command line to explain')).toHaveValue('tar -cf archive.tar ./my-folder')
+  await expect(page.getByRole('list', { name: 'Definitions' }).getByRole('link', { name: 'tar(1) · -c' })).toHaveAttribute('href', '/man/tar/1#opt-create')
+})
+
+test('search: the top hit leads with one sourced example and its gloss, then the key flags', async ({ page }) => {
+  await page.goto('/search?q=tar')
+  const top = page.locator('[data-bm-top-hit]')
+  await expect(top).toHaveCount(1)
+  await expect(page.getByRole('list', { name: 'Search results' }).getByRole('listitem').first().locator('[data-bm-top-hit]')).toHaveCount(1)
+  // The seeded record's first example is the manual's own; its tldr example's attribution is unit-tested.
+  await expect(top).toContainText('Create an archive from a folder')
+  await expect(top).toContainText('tar -cf archive.tar ./my-folder')
+  await expect(top).toContainText('from EXAMPLES')
+  const flags = top.getByRole('list', { name: 'Key flags of tar(1)' })
+  // -c (EXAMPLES) and --create (tldr) are one option: shown once.
+  await expect(flags.getByRole('link')).toHaveCount(1)
+  await expect(flags.getByRole('link')).toHaveAttribute('href', '/man/tar/1#opt-create')
+  await expect(flags).toContainText('Create a new archive.')
+  // The example comes before the flags.
+  const [example, flagList] = await Promise.all([top.getByText('tar -cf archive.tar').boundingBox(), flags.boundingBox()])
+  expect(example!.y).toBeLessThan(flagList!.y)
+  await expect(top.getByRole('link', { name: 'Package tar' })).toHaveAttribute('href', '/pkg/tar')
+})
+
+test('search: a pasted command line is offered to explain', async ({ page }) => {
+  await page.goto('/search?q=' + encodeURIComponent('ls -lah --color'))
+  await expect(page.getByRole('link', { name: 'ls -lah --color', exact: true })).toHaveAttribute('href', '/explain?cmd=ls%20-lah%20--color')
+})
+
+test('search: a worded query with no match gives guidance without an unrelated answer', async ({ page }) => {
+  await page.goto('/search?q=how%20do%20I%20unzip%20a%20moon')
+  await expect(page.getByText('No results for', { exact: false })).toBeVisible()
+  await expect(page.getByText('or a task in plain words', { exact: false })).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Search results' })).toHaveCount(0)
+})
+
+test.describe('search without JavaScript', () => {
+  test.use({ javaScriptEnabled: false })
+
+  test('search: results, evidence and the top hit are in the HTML', async ({ page }) => {
+    await page.goto('/search?q=tar')
+    await expect(page.getByRole('list', { name: 'Search results' }).getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
+    await expect(page.locator('[data-bm-top-hit]')).toContainText('Explain this line')
+    // A query nothing has cached yet: the page awaits its results rather than streaming a skeleton.
+    await page.goto(`/search?q=archiving&section=1&n=${Date.now()}`)
+    await expect(page.getByRole('status', { name: /Loading/ })).toHaveCount(0)
+    await expect(page.getByRole('list', { name: 'Search results' }).getByRole('link', { name: 'tar(1)', exact: true })).toBeVisible()
+  })
 })
 
 test('search: load more disables when all results are loaded', async ({ page }) => {
