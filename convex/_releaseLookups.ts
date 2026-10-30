@@ -16,6 +16,19 @@ export async function activeRelease(
   return await ctx.db.get(active.releaseId);
 }
 
+/** The active pointer alone (one document): its releaseId and datasetReleaseId, without the release. */
+export async function activePointer(
+  ctx: QueryCtx,
+  args: { stage: DatasetStage; distro: Distro; locale: string },
+): Promise<Doc<"activeReleases"> | null> {
+  return await ctx.db
+    .query("activeReleases")
+    .withIndex("by_stage_and_locale_and_distro", (q) =>
+      q.eq("stage", args.stage).eq("locale", args.locale).eq("distro", args.distro),
+    )
+    .unique();
+}
+
 export async function requireActiveRelease(
   ctx: QueryCtx,
   args: { stage: DatasetStage; distro: Distro; locale?: string },

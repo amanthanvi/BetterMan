@@ -384,3 +384,46 @@ for (const distro of ['debian', 'ubuntu', 'fedora', 'freebsd', 'macos']) {
     await sleep(200)
   }
 }
+
+// Translated manuals (#395): German tar(1) on Debian. Translated releases never
+// activate straight to prod; this goes through staging and the explicitly
+// authorized promotion, the same hold the dataset workflow faces.
+{
+  const datasetReleaseId = `e2e-debian-de-${Date.now()}`
+  const tar = page({
+    name: 'tar', section: '1', title: 'tar(1)', description: 'ein Archivierungsprogramm', sourcePackage: 'manpages-de', sourcePackageVersion: '4.27.0-1',
+    toc: [{ id: 'BESCHREIBUNG', title: 'BESCHREIBUNG', level: 2 }],
+    blocks: [
+      { type: 'heading', id: 'BESCHREIBUNG', level: 2, text: 'BESCHREIBUNG' },
+      { type: 'paragraph', inlines: [{ type: 'text', text: 'GNU tar speichert viele Dateien zusammen in einem einzigen Archiv.' }] },
+    ],
+  })
+  await post('/ingest/release', {
+    datasetReleaseId, locale: 'de', distro: 'debian', imageRef: 'e2e', imageDigest: 'e2e', ingestedAt: now,
+    packageManifest: { packages: [] }, pageCount: 2, packageBatches: [], aliasCount: 1, licenseCount: 0,
+    sectionTotals: [{ section: '1', total: 2 }], licensePackages: [],
+  })
+  // A German-only page: no English route, so no English link or English hreflang.
+  const onlyGerman = page({
+    name: 'nur-de', section: '1', title: 'nur-de(1)', description: 'nur auf Deutsch', sourcePackage: 'manpages-de',
+    toc: [], blocks: [{ type: 'paragraph', inlines: [{ type: 'text', text: 'Diese Seite gibt es nur auf Deutsch.' }] }],
+  })
+  await post('/ingest/pages/storage', { datasetReleaseId, pages: [{ ...tar, documentedVersion: 'GNU tar 1.34' }, onlyGerman] })
+  await post('/ingest/aliases', { datasetReleaseId, aliases: [{ name: 'gtar', section: '1', targetName: 'tar', targetSection: '1' }] })
+  const deadline = Date.now() + 300_000
+  while (true) {
+    const result = await post('/ingest/activate', { stage: 'staging', datasetReleaseId, activatedAt: now })
+    if (result.pending === false) break
+    if (Date.now() >= deadline) throw new Error('Translated seed activation timed out')
+    await sleep(200)
+  }
+  if (stage === 'prod') {
+    const res = await fetch(`${baseUrl}/ingest/promote`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json', 'X-BetterMan-Ingest-Contract': contractVersion },
+      body: JSON.stringify({ fromStage: 'staging', toStage: 'prod', distros: ['debian'], locale: 'de', allowTranslations: true, activatedAt: now, expectedDatasetReleaseId: { debian: datasetReleaseId } }),
+    })
+    const promoted = await res.json()
+    if (!res.ok || promoted.promoted?.[0]?.datasetReleaseId !== datasetReleaseId) throw new Error(`Translated seed promotion failed: ${res.status}`)
+  }
+}

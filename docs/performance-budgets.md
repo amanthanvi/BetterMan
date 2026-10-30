@@ -282,3 +282,14 @@ one different document and one identical hash. The default disclosure must
 contain both links; the alternate must render its own content and noindex
 metadata. Their cold function/document/blob, HTML and client-byte metrics are
 budgeted separately. Existing metric policies and baselines are preserved.
+
+## Translated page cases
+
+B3 (#395) adds `manTranslated` (`/man/bash/1?lang=de`) and
+`manTranslationFallback` (`/man/bash/1?lang=fr`) from the same corpus plus a
+German release with bash(1) and a French release without it. Each must render
+cold through the proxy: the German page with `lang="de"`, its note and its
+`hreflang` set; the fallback as English with the missing-translation note and
+`noindex`. Both measure 4 calls and 1 storage read, at 15 and 29 documents.
+The fixture hash changed for these rows only; every existing baseline and
+tolerance is unchanged.

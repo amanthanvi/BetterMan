@@ -19,7 +19,12 @@ const { chromium } = require('@playwright/test')
 const nextBin = require.resolve('next/dist/bin/next')
 const budgetPath = resolve(root, 'perf-budgets.json')
 const output = resolve(root, '.perf-results')
-const routes = { home: '/', man: '/man/bash/1', manProviders: '/man/bash/1', manAlternate: '/man/bash/1?pkg=alternate-shell', search: '/search?q=tar', section: '/section/1' }
+const routes = {
+  home: '/', man: '/man/bash/1', manProviders: '/man/bash/1', manAlternate: '/man/bash/1?pkg=alternate-shell',
+  // Translated manuals (#395): the language's own page, and English when the language lacks the route.
+  manTranslated: '/man/bash/1?lang=de', manTranslationFallback: '/man/bash/1?lang=fr',
+  search: '/search?q=tar', section: '/section/1',
+}
 const args = process.argv.slice(2)
 assert.ok(args.length === 0 || (args.length === 1 && ['--record', '--stress'].includes(args[0])) ||
   (args.length === 2 && args[0] === '--record-from'), 'Usage: pnpm perf:check [--record | --record-from measurements.json | --stress]')
@@ -176,7 +181,7 @@ async function sample(url, name, { cost = false, cpuRate = 4, fontDelayMs = 0, c
 try {
   process.env.RATE_LIMIT_TAG_KEY = 'perf-fixture-only'
   vite = await createViteServer({ configFile: false, logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
-  const { createFixture, createProviderFixture, createSearchFixture, createExplainFixture, createExplainMultiFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
+  const { createFixture, createProviderFixture, createTranslationFixture, createSearchFixture, createExplainFixture, createExplainMultiFixture, createDerivedResponseFixture } = await vite.ssrLoadModule('/scripts/perf-fixture.ts')
   let fixture = await createFixture(() => metrics.calls++)
   metrics = { calls: 0, documents: 0, storageReads: 0 }
   const runtime = globalThis.Convex
@@ -227,7 +232,10 @@ try {
       const value = await fixture[method](makeFunctionReference(path), jsonToConvex(args[0]))
       if (path.startsWith('content:getMan') && value?.kind === 'page') {
         const alternate = value.data.providers && value.data.page.sourcePackage !== value.data.providers.defaultPackage
-        if (alternate) {
+        // Translated pages (#395) have no derived snapshot: B7 is English-only.
+        if (value.data.page.locale !== 'en') {
+          assert.equal(value.data.derived, undefined, 'Translated pages carry no derived metadata')
+        } else if (alternate) {
           assert.equal(value.data.page.indexable, false, 'Alternate provider rows stay noindex')
           assert.equal(value.data.derived, undefined, 'Alternates must not borrow canonical derived metadata')
         } else {
@@ -261,7 +269,8 @@ try {
     await rm(resolve(root, 'nextjs/.next/cache/fetch-cache'), { recursive: true, force: true })
     next = startNext(['start', '-H', '127.0.0.1', '-p', new URL(baseUrl).port])
     await ready(baseUrl)
-    fixture = await (['manProviders', 'manAlternate'].includes(name) ? createProviderFixture : createFixture)(() => metrics.calls++)
+    fixture = await (['manProviders', 'manAlternate'].includes(name) ? createProviderFixture
+      : ['manTranslated', 'manTranslationFallback'].includes(name) ? createTranslationFixture : createFixture)(() => metrics.calls++)
     metrics = { calls: 0, documents: 0, storageReads: 0 }
     manDataBytes = 0
     manDerivedBytes = 0
@@ -274,6 +283,15 @@ try {
       assertNoManStreaming(html)
       assert.ok(html.includes('data-bm-providers') && html.includes('?pkg=alternate-shell') && html.includes('?pkg=same-shell'), 'Provider choices must be rendered')
       if (name === 'manAlternate') assert.ok(html.includes('Alternate shell provider documentation.') && html.includes('<meta name="robots" content="noindex"'), 'The alternate provider must render its own noindex content')
+    }
+    if (name === 'manTranslated') {
+      assertNoManStreaming(html)
+      assert.ok(html.includes('lang="de" data-bm-manual-text') && html.includes('Übersetzte Handbuchseite (de).') && html.includes('data-bm-translation="translated"'), 'The German page must render in German')
+      assert.ok(/hreflang="de"/i.test(html) && /hreflang="x-default"/i.test(html), 'The German page must carry its hreflang set')
+    }
+    if (name === 'manTranslationFallback') {
+      assertNoManStreaming(html)
+      assert.ok(html.includes('data-bm-translation="missing"') && html.includes('<meta name="robots" content="noindex"') && !html.includes('Übersetzte'), 'A missing translation must render English, noindex, with the note')
     }
     assert.ok(html.includes(name.startsWith('man') ? 'GNU Bourne-Again SHell' : name === 'home' ? 'Unix manual pages' : 'tar01'), `${name} fixture was not rendered`)
     assert.ok(!html.includes('NEXT_HTTP_ERROR_FALLBACK') && !html.includes('"digest"'), `${name} streamed an error`)
@@ -291,7 +309,8 @@ try {
     let jsBytes = 0, jsGzipBytes = 0
     for (const chunk of chunks) {
       // Next's chunks, or the man page script that next.config.ts builds into public/_bm.
-      const manScript = /^\/_bm\/man\.[0-9a-f]{16}\.js$/.test(chunk)
+      // B9 (#475) builds one man script per UI language: man.<hash>.js (English) or man.<lang>.<hash>.js.
+      const manScript = /^\/_bm\/man\.(?:[a-zA-Z]{2}(?:-[A-Z]{2})?\.)?[0-9a-f]{16}\.js$/.test(chunk)
       assert.ok(manScript || (chunk.startsWith('/_next/static/') && chunk.endsWith('.js')), `Non-build script: ${chunk}`)
       const base = manScript ? resolve(root, 'nextjs/public/_bm') : resolve(root, 'nextjs/.next/static')
       const file = manScript ? resolve(base, chunk.slice('/_bm/'.length)) : resolve(root, 'nextjs/.next', chunk.slice('/_next/'.length))

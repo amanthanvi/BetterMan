@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { decodeSummary, publicSummary } from "./_derivedEncoding";
 import { readProviderPackages } from "./_providers";
 import { variantGroups } from "./_derivedModel";
+import { CONTENT_LOCALES, DEFAULT_LOCALE, isContentLocale } from "./_locales";
 import {
   action,
   internalAction,
@@ -22,6 +23,7 @@ import {
 } from "./schema";
 import {
   type DatasetStage,
+  type Distro,
   type ManPageContentPayload,
   normalizeName,
   normalizeSection,
@@ -36,6 +38,7 @@ import {
   type StoredContentFields,
 } from "./_legacyContent";
 import {
+  activePointer,
   pageByNameAndSection,
   requireActiveRelease,
   resolvePageByName,
@@ -544,11 +547,83 @@ export const getManByNameAndSectionReadModel = internalQuery({
     name: v.string(),
     section: v.string(),
     pkg: v.optional(v.string()),
+    locale: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (args.locale !== undefined && !isContentLocale(args.locale)) throw new Error("ACTIVE_RELEASE_NOT_FOUND");
+    const english = await requireActiveRelease(ctx, { stage: args.stage, distro: args.distro });
+    if (!args.locale || args.locale === DEFAULT_LOCALE) return await readRoute(ctx, args, english);
+    return await readTranslatedRoute(ctx, { ...args, locale: args.locale }, english);
+  },
+});
+
+/** The distro's languages whose active release has the route, English included; one pointer and one lookup each. */
+async function routeLanguages(ctx: QueryCtx, args: { stage: DatasetStage; distro: Distro; name: string; section: string }, known: Map<string, boolean>) {
+  const languages: string[] = [];
+  for (const locale of CONTENT_LOCALES) {
+    let has = known.get(locale);
+    if (has === undefined) {
+      const pointer = await ctx.db.query("activeReleases")
+        .withIndex("by_stage_and_locale_and_distro", (q) => q.eq("stage", args.stage).eq("locale", locale).eq("distro", args.distro)).unique();
+      has = Boolean(pointer && await pageByNameAndSection(ctx, { releaseId: pointer.releaseId, name: args.name, section: args.section }));
+    }
+    if (has) languages.push(locale);
+  }
+  return languages;
+}
+
+/**
+ * `?lang=` (#395) in one query: the language's page or `.so` alias, else the
+ * English outcome with a confirmed miss (`translatedReleaseId` null when the
+ * distro has no release in the language). A translated page also says whether
+ * English has the route and which languages do, for its hreflang set.
+ */
+async function readTranslatedRoute(
+  ctx: QueryCtx,
+  args: { stage: DatasetStage; distro: Distro; name: string; section: string; pkg?: string; locale: string },
+  english: Doc<"datasetReleases">,
+) {
+  // Translated releases have no providers: a package choice is English's alone.
+  if (args.pkg) return await readRoute(ctx, args, english);
+  // The pointer alone answers a miss; the release document is read only for a page.
+  const pointer = await activePointer(ctx, { stage: args.stage, distro: args.distro, locale: args.locale });
+  const name = normalizeName(args.name);
+  const section = normalizeSection(args.section);
+  if (pointer) {
+    const page = await pageByNameAndSection(ctx, { releaseId: pointer.releaseId, name, section });
+    const translated = page ? await ctx.db.get(pointer.releaseId) : null;
+    const data = page && translated ? await pageReadModel(ctx, { stage: args.stage, release: translated, page }) : null;
+    if (data) {
+      // English counts only with the page itself: an English `.so` alias only
+      // redirects, so it is neither the English original nor an alternate.
+      const englishPage = await pageByNameAndSection(ctx, { releaseId: english._id, name, section });
+      const englishHasRoute = Boolean(englishPage);
+      // Index by demand (#445) marks long-tail English pages noindex; alternates never point at those.
+      const englishIndexable = englishPage ? (englishPage as { indexable?: unknown }).indexable !== false : false;
+      const languages = await routeLanguages(ctx, { ...args, name, section }, new Map([[DEFAULT_LOCALE, englishHasRoute], [args.locale, true]]));
+      return { kind: "page" as const, data, translation: {
+        state: "translated" as const, locale: args.locale, englishReleaseId: english.datasetReleaseId, englishHasRoute, englishIndexable, languages,
+      } };
+    }
+    const target = page ? null : await aliasTarget(ctx, { releaseId: pointer.releaseId, name, section });
+    if (target) {
+      return { kind: "alias" as const, ...target, datasetReleaseId: pointer.datasetReleaseId, translation: {
+        state: "translated" as const, locale: args.locale, englishReleaseId: english.datasetReleaseId,
+      } };
+    }
+  }
+  const outcome = await readRoute(ctx, args, english);
+  return { ...outcome, translation: { state: "missing" as const, locale: args.locale, translatedReleaseId: pointer?.datasetReleaseId ?? null } };
+}
+
+/** One release's outcome for a route: a page, a provider page, an alias or a miss. */
+async function readRoute(
+  ctx: QueryCtx,
+  args: { stage: DatasetStage; name: string; section: string; pkg?: string },
+  release: Doc<"datasetReleases">,
+) {
     const name = normalizeName(args.name);
     const section = normalizeSection(args.section);
-    const release = await requireActiveRelease(ctx, args);
     // Every outcome names the release it read, so a caller can tell whether it
     // may cache the answer under the release it expected.
     const notFound = { kind: "not_found" as const, datasetReleaseId: release.datasetReleaseId };
@@ -603,8 +678,7 @@ export const getManByNameAndSectionReadModel = internalQuery({
     const data = await pageReadModel(ctx, { stage: args.stage, release, page });
     if (!data) return notFound;
     return { kind: "page" as const, data };
-  },
-});
+}
 
 export async function resolveContent(
   ctx: { storage: { get: (id: Id<"_storage">) => Promise<Blob | null> } },
@@ -649,6 +723,8 @@ export const getManByNameAndSection = action({
     pkg: v.optional(v.string()),
     /** Misses answer `{ kind: "not_found", datasetReleaseId }` instead of null, so callers can key caches on the serving release. */
     reportRelease: v.optional(v.boolean()),
+    /** A content language (#395); English when absent. The page comes from that language's release. */
+    locale: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<unknown> => {
     const { reportRelease, ...lookup } = args;
@@ -656,16 +732,19 @@ export const getManByNameAndSection = action({
       ...lookup,
       stage: PUBLIC_DATASET_STAGE,
     });
+    // `?lang=` outcomes say which language answered and how (#395).
+    const translation = "translation" in result ? { translation: result.translation } : {};
     // Older callers, still live during a deploy, read a miss as null.
-    if (result.kind === "not_found") return reportRelease ? result : null;
+    if (result.kind === "not_found") return reportRelease ? { ...result, ...translation } : null;
     if (result.kind === "alias") {
-      return { kind: "alias" as const, name: result.name, section: result.section, ...(result.pkg ? { pkg: result.pkg } : {}), datasetReleaseId: result.datasetReleaseId };
+      return { kind: "alias" as const, name: result.name, section: result.section, ...(result.pkg ? { pkg: result.pkg } : {}), datasetReleaseId: result.datasetReleaseId, ...translation };
     }
 
     const content = await resolveContent(ctx, result.data.content);
-    if (!content) return reportRelease ? { kind: "not_found" as const, datasetReleaseId: result.data.release.datasetReleaseId } : null;
+    if (!content) return reportRelease ? { kind: "not_found" as const, datasetReleaseId: result.data.release.datasetReleaseId, ...translation } : null;
 
     return {
+      ...translation,
       kind: "page" as const,
       data: pageResponse(result.data.release, result.data.page, content, result.data.variants, {
         derived: result.data.derived, brief: result.data.brief, providers: result.data.providers,

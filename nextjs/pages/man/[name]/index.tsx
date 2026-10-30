@@ -8,11 +8,11 @@ import { RunningHead } from '../../../components/man/RunningHead'
 import type { AmbiguousPageResponse } from '../../../lib/docModel'
 import { canonicalWithDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 import { manI18n, manT, type ManI18n } from '../../../lib/i18n/page'
-import { withLang } from '../../../lib/i18n/locales'
+import { setLang, translatedLang, withLang } from '../../../lib/i18n/locales'
 import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
 import { manMiss, resolveManName, type ManMiss } from '../../../lib/manLookup'
 import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
-import { RELEASE_PARAM, trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
+import { RELEASE_PARAM, trustedRelease, trustedTranslation, type ReleaseInfo } from '../../../lib/manRelease'
 import { packageName } from '../../../lib/packageName'
 import { getPublicOrigin } from '../../../lib/public-origin'
 
@@ -45,7 +45,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const t = manT(i18n)
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
-  const resolved = await resolveManName(name, distro, releaseKey)
+  const resolved = await resolveManName(name, distro, releaseKey, trustedTranslation(req.headers))
   // Shared under the proxy's release key only when that release answered (see pages/man/[name]/[section].tsx).
   const keyed = Boolean(releaseKey) && resolved.servedRelease === releaseKey
   if (!resolved.result) {
@@ -61,6 +61,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
     let destination = withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, urlDistro, urlLang)
     const pkg = result.kind === 'alias' ? packageName(result.pkg) : selectedPackage
     if (pkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}`
+    // The content language (#395) goes with the redirect even when the UI language is not public yet.
+    const contentLang = translatedLang(firstQuery(query.lang))
+    if (contentLang) destination = setLang(destination, contentLang)
     // A requested package is proven only by the page it leads to, so its answer stays private.
     setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
     return { redirect: { destination, permanent: false } }

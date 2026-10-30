@@ -23,6 +23,7 @@ import {
   type Suggestion,
 } from '@/lib/api'
 import { canonicalWithDistro, normalizeDistro, type Distro } from '@/lib/distro'
+import { translatedLang } from '@/lib/i18n/locales'
 import { getPublicOrigin } from '@/lib/public-origin'
 import { isRateLimited } from '@/lib/rateLimit'
 import { nonHtmlSecurityHeaders } from '@/lib/securityHeaders'
@@ -181,7 +182,8 @@ async function handleGet(req: NextRequest, path: string[], metrics: ServerTiming
       const section = first(req.nextUrl.searchParams.get('section'))
       const limited = await measure(metrics, 'rate_limit', () => enforceRateLimit(req, 'search'))
       if (limited) return limited
-      const result = await measure(metrics, 'convex_search', () => search({ distro, q, section, limit, offset }))
+      const lang = translatedLang(req.nextUrl.searchParams.get('lang'))
+      const result = await measure(metrics, 'convex_search', () => search({ distro, q, section, limit, offset, ...(lang ? { lang } : {}) }))
       return cachedJson(result, SEARCH_CACHE_SECONDS)
     }
 

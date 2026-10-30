@@ -82,7 +82,8 @@ function Evidence({ r, q, t }: { r: SearchResult; q: string; t: ClientT }) {
 }
 
 export function ResultRow({ r, q, urlDistro, urlLang, top, t }: { r: SearchResult; q: string; urlDistro: Distro | null; urlLang: Lang | null; top?: TopHitData | null; t: ClientT }) {
-  const href = manPageHref(r.name, r.section, urlDistro, r.anchorId, urlLang)
+  // A translated hit (#395) opens its language's page, even before that language's UI is public.
+  const href = manPageHref(r.name, r.section, urlDistro, r.anchorId, (r.locale as Lang | undefined) ?? urlLang)
   return (
     <li className="grid gap-x-4 gap-y-0.5 border-t border-rule py-3.5 sm:grid-cols-[6.5rem_minmax(0,1fr)]">
       <span className="small-caps text-[0.9375rem] leading-[1.6] text-ink-3">{resultKind(r, t)}</span>

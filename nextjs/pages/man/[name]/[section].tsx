@@ -15,8 +15,9 @@ import { manCanonicalPath } from '../../../lib/manCanonical'
 import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
 import { manOption, shareFlag, withShareFlag } from '../../../lib/manShare'
 import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
-import { lookupManPage, manMiss, type ManMiss } from '../../../lib/manLookup'
-import { RELEASE_PARAM, trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
+import { LANGS, setLang } from '../../../lib/i18n/locales'
+import { lookupManPage, manMiss, type ManMiss, type TranslationOutcome } from '../../../lib/manLookup'
+import { RELEASE_PARAM, trustedRelease, trustedTranslation, type ReleaseInfo } from '../../../lib/manRelease'
 import { isIndexable } from '../../../lib/manRobots'
 import { truncateOgText } from '../../../lib/og/input'
 import { OG_SIZE } from '../../../lib/og/size'
@@ -50,6 +51,7 @@ type PageProps = {
   portabilityMode: 'glyph' | 'text'
   portabilityToggleHref: string
   i18n: ManI18n
+  translation: TranslationOutcome | null
 }
 
 type MissProps = { kind: 'miss'; head: ManHeadData; miss: ManMiss; release: ReleaseInfo | null; i18n: ManI18n }
@@ -64,14 +66,19 @@ function printParts(page: ManPageResponse['page'], servedDistro: Distro, release
   return { head: [title, sectionLabel(page.section, t, servedDistro), title], foot: [edition, [DISTRO_LABEL[servedDistro], day].filter(Boolean).join(' · ')] }
 }
 
-function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | null, origin: string, flag: string | null, release: ReleaseInfo | null, t: ServerT, localized: boolean): ManHeadData {
+function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | null, origin: string, flag: string | null, release: ReleaseInfo | null, t: ServerT, localized: boolean, translation: TranslationOutcome | null): ManHeadData {
   const { page } = data
   const path = `/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`
   const citation = `${page.name}(${page.section})`
   const title = `${citation} — BetterMan`
   const description = page.description || page.title || t('{citation} man page.', { citation })
-  const canonical = manCanonicalPath(data, servedDistro, pkg)
-  const ogPath = canonical.replace(path, `${path}/og`)
+  const english = manCanonicalPath(data, servedDistro, pkg)
+  // A translated manual (#395) is its own canonical URL beside English. Anything
+  // else under `?lang=` (B9's localized UI around English, or the English fallback
+  // for a missing translation) canonicalizes to English.
+  const translated = translation?.state === 'translated' ? translation.lang : null
+  const canonical = translated ? setLang(english, translated) : english
+  const ogPath = english.replace(path, `${path}/og`)
   // `?flag=` shares one option: its card and its definition, under the page's canonical URL.
   const option = flag ? manOption(data.content.options, flag) : null
   const share = option
@@ -97,11 +104,26 @@ function pageHead(data: ManPageResponse, servedDistro: Distro, pkg: string | nul
     ogImage: share.image,
     ...(option ? { share: { title: share.title, description: share.description } } : {}),
     jsonLd: { id: `bm-jsonld:${page.id}`, json },
-    // Until B3 ships translated manuals (#395), a localized-UI page is the English manual under translated chrome:
-    // its canonical is the English URL (above) and search engines get no duplicate (docs/i18n.md).
-    noindex: !isIndexable(page) || localized,
+    // B9's rule: an English manual under localized chrome is a duplicate of the English URL (docs/i18n.md).
+    // B3's rule (#395): a translated manual is its own page, indexable like its English page.
+    noindex: !isIndexable(page) || (translated ? false : localized || translation?.state === 'missing'),
     print: printParts(page, servedDistro, release, t),
+    ...(translation?.state === 'translated' ? { alternates: routeAlternates(origin, english, translation) } : {}),
   }
+}
+
+/**
+ * A translated page's hreflang set (#395): every language with the route, the
+ * same set its sitemap entry lists (lib/translationSitemap.ts). English and
+ * x-default appear only when English has the page itself and is indexable.
+ */
+function routeAlternates(origin: string, english: string, translation: Extract<TranslationOutcome, { state: 'translated' }>) {
+  const withEnglish = translation.englishHasRoute && translation.englishIndexable
+  return [
+    ...LANGS.filter((code) => translation.languages.includes(code) && (code !== 'en' || withEnglish))
+      .map((code) => ({ hrefLang: code, href: `${origin}${setLang(english, code)}` })),
+    ...(withEnglish ? [{ hrefLang: 'x-default', href: `${origin}${english}` }] : []),
+  ]
 }
 
 /** This page's URL with only `keep` of its parameters, spelled as lib/manQuery.ts expects. */
@@ -131,7 +153,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const { urlLang } = i18n
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
-  const found = await lookupManPage({ name, section, distro, ...(pkg ? { pkg } : {}), ...(releaseKey ? { release: releaseKey } : {}) })
+  const translationKey = trustedTranslation(req.headers)
+  const found = await lookupManPage({ name, section, distro, ...(pkg ? { pkg } : {}), ...(releaseKey ? { release: releaseKey } : {}), ...(translationKey ? { translation: translationKey } : {}) })
 
   // Shared under the proxy's release key only when that release answered: within the
   // proxy's TTL after a promotion (or a rollback) the two can differ, for misses and
@@ -154,6 +177,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
     let destination = withDistro(`/man/${encodeURIComponent(found.name)}/${encodeURIComponent(found.section)}`, urlDistro, urlLang)
     const targetPkg = packageName(found.pkg)
     if (targetPkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(targetPkg)}`
+    // A translated alias keeps its language even when the UI language is not public yet.
+    if (found.lang) destination = setLang(destination, found.lang)
     setManCache(res, unproven ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
     // Browsers cache a 308, so only an explicit `?distro=` gets one; a bare URL
     // resolved the alias on Debian's current release, which can change.
@@ -172,7 +197,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   return {
     props: {
       kind: 'page',
-      head: pageHead(found.data, found.distro, pkg, origin, flag, release, manT(i18n), urlLang !== null && urlLang !== 'en'),
+      head: pageHead(found.data, found.distro, pkg, origin, flag, release, manT(i18n), urlLang !== null && urlLang !== 'en', found.translation ?? null),
       data: found.data,
       related: found.related,
       servedDistro: found.distro,
@@ -182,6 +207,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
       portabilityMode,
       portabilityToggleHref: portabilityToggle(name, section, query, portabilityMode),
       i18n,
+      translation: found.translation ?? null,
     },
   }
 }
@@ -199,7 +225,7 @@ export default function ManPageRoute(props: Props) {
     )
   }
 
-  const { data, related, servedDistro, urlDistro, release, reportHref, portabilityMode, portabilityToggleHref, i18n } = props
+  const { data, related, servedDistro, urlDistro, release, reportHref, portabilityMode, portabilityToggleHref, i18n, translation } = props
   return (
     <>
       <ManShell urlDistro={urlDistro} release={release} i18n={i18n} t={t}>
@@ -218,6 +244,7 @@ export default function ManPageRoute(props: Props) {
           reportHref={reportHref}
           urlLang={i18n.urlLang}
           t={t}
+          translation={translation ?? undefined}
         />
       </ManShell>
       <ManScript i18n={i18n} />

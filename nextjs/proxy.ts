@@ -2,13 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { DISTRO_COOKIE, normalizeDistro } from './lib/distro'
 import { resolvePublicLang } from './lib/i18n/gate'
-import { DEFAULT_LANG, LANG_COOKIE, LANG_PARAM, type Lang } from './lib/i18n/locales'
+import { DEFAULT_LANG, LANG_COOKIE, LANG_PARAM, translatedLang, type Lang } from './lib/i18n/locales'
 import { LANG_HEADER } from './lib/i18n/request'
 import { translationFixHref } from './lib/i18n/fix'
 import { LANG_SWITCH_PATH, FIX_PATH, pathInLang, safeLocalPath } from './lib/i18n/switch'
 import { manBootScriptHash } from './lib/manBoot'
 import { normalizeManQuery } from './lib/manQuery'
-import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, UNKNOWN_RELEASE, type ReleaseInfo } from './lib/manRelease'
+import { encodeReleaseHeader, RELEASE_HEADER, RELEASE_PARAM, RELEASE_TOKEN_HEADER, releaseToken, servingRelease, servingReleases, TRANSLATION_HEADER, translationKey, UNKNOWN_RELEASE, type ReleaseInfo, type TranslationInfo } from './lib/manRelease'
 
 function createNonce(): string {
   return btoa(crypto.randomUUID())
@@ -78,16 +78,20 @@ function isLoopback(request: NextRequest): boolean {
 // Ask Convex at most this long for the active release; past it the page renders under an unknown key.
 const RELEASE_LOOKUP_TIMEOUT_MS = 1500
 
-async function releaseWithin(distro: Parameters<typeof servingRelease>[0]): Promise<ReleaseInfo | null> {
+async function within<T, F>(lookup: Promise<T>, fallback: F): Promise<T | F> {
   let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), RELEASE_LOOKUP_TIMEOUT_MS)
+  const timeout = new Promise<F>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), RELEASE_LOOKUP_TIMEOUT_MS)
   })
   try {
-    return await Promise.race([servingRelease(distro), timeout])
+    return await Promise.race([lookup, timeout])
   } finally {
     clearTimeout(timer)
   }
+}
+
+async function releaseWithin(distro: Parameters<typeof servingRelease>[0]): Promise<ReleaseInfo | null> {
+  return await within(servingRelease(distro), null)
 }
 
 /**
@@ -151,16 +155,24 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false)
     return setSecurityHeaders(response, csp)
   }
 
-  const release = await releaseWithin(explicit ?? 'debian')
+  // `?lang=` (#395) keys on the language's release too: its page, or English with a note.
+  const lang = text ? null : translatedLang(url.searchParams.get(LANG_PARAM))
+  const releases = lang ? await within(servingReleases(explicit ?? 'debian', lang), undefined) : undefined
+  const release = lang ? releases?.release ?? null : await releaseWithin(explicit ?? 'debian')
+  const translation: TranslationInfo | null = lang
+    ? { lang, datasetReleaseId: releases?.translation ?? null, known: releases !== undefined }
+    : null
   const requestHeaders = new Headers(request.headers)
   requestHeaders.delete(RELEASE_HEADER)
   requestHeaders.delete(RELEASE_TOKEN_HEADER)
+  requestHeaders.delete(TRANSLATION_HEADER)
   requestHeaders.set(RELEASE_HEADER, release ? encodeReleaseHeader(release) : UNKNOWN_RELEASE)
+  if (translation) requestHeaders.set(TRANSLATION_HEADER, JSON.stringify(translation))
   // Proves to the renderer that this proxy, not the client, set the release.
   requestHeaders.set(RELEASE_TOKEN_HEADER, releaseToken())
   if (isLoopback(request)) return setSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }), csp)
   const target = url.clone()
-  target.searchParams.set(RELEASE_PARAM, release?.datasetReleaseId ?? UNKNOWN_RELEASE)
+  target.searchParams.set(RELEASE_PARAM, `${release?.datasetReleaseId ?? UNKNOWN_RELEASE}${translation ? translationKey(translation) : ''}`)
   return setSecurityHeaders(NextResponse.rewrite(target, { request: { headers: requestHeaders } }), csp)
 }
 

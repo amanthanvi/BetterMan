@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixture": "scripts/perf-fixture.ts v12: cached package providers alongside unchanged browser corpus",
+  "fixture": "scripts/perf-fixture.ts v13: cached package providers and translated releases (#395) alongside unchanged browser corpus",
   "profile": "Chromium, 1280x800, device scale 1, light, reduced motion, 4x CPU, no network throttle, cold browser, warm data cache; median of 5; 5s observation after network idle",
   "metrics": {
     "home.htmlBytes": {
@@ -691,6 +691,66 @@
       "baseline": 18851,
       "relative": 0.02,
       "absolute": 0
+    },
+    "manTranslated.htmlBytes": {
+      "baseline": 53411,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslated.calls": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslated.documents": {
+      "baseline": 15,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslated.storageReads": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslated.jsBytes": {
+      "baseline": 65327,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslated.jsGzipBytes": {
+      "baseline": 21635,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslationFallback.htmlBytes": {
+      "baseline": 56457,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslationFallback.calls": {
+      "baseline": 4,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslationFallback.documents": {
+      "baseline": 29,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslationFallback.storageReads": {
+      "baseline": 1,
+      "relative": 0,
+      "absolute": 0
+    },
+    "manTranslationFallback.jsBytes": {
+      "baseline": 65506,
+      "relative": 0.02,
+      "absolute": 0
+    },
+    "manTranslationFallback.jsGzipBytes": {
+      "baseline": 21639,
+      "relative": 0.02,
+      "absolute": 0
     }
   },
   "sourceHead": "a67c36ed74fa210f84ea5425132285990ed5cb5e",
@@ -700,7 +760,7 @@
     "convex": "1.48.0",
     "convexTest": "0.0.60"
   },
-  "fixtureSha256": "824493fd477dd1ed442ee0f1c095a8aa864933d12b91f3be42d7acaa931e358f",
+  "fixtureSha256": "4ee7a6aa0a6485ed61ccbc219e1e0175caeb4514942383ea2216ba2e8eac9dda",
   "labBaseline": {
     "platform": "linux",
     "samplesPerRoute": 3,

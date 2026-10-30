@@ -233,4 +233,9 @@ export const server: Record<ServerKey, string> = {
   '{link} with this explainer on GitHub.': '{link}, связанной с этим пояснением, на GitHub.',
   'Kernel Interfaces': 'Интерфейсы ядра',
   'Miscellaneous Information': 'Разные сведения',
+  '{language} translation shipped by {distro} in {package}.': 'Перевод ({language}) из {distro}, пакет {package}.',
+  '{language} translation shipped by {distro}.': 'Перевод ({language}) из {distro}.',
+  'English original': 'Английский оригинал',
+  '{distro} ships no {language} translation of {citation}; this is the English page.': 'В {distro} нет перевода {citation} ({language}); это английская страница.',
+  'BetterMan has no {language} manuals for {distro} yet; this is the English page.': 'В BetterMan пока нет страниц руководства ({language}) для {distro}; это английская страница.',
 }
