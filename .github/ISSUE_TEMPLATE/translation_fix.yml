@@ -1,0 +1,52 @@
+name: Translation fix
+description: A string in a translated BetterMan interface reads wrongly
+title: "[Translation]: "
+labels:
+  - translation
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping. This is for BetterMan's own interface text (menus, labels, notes). The manual pages themselves are upstream text and are not translated here.
+
+  - type: input
+    id: locale
+    attributes:
+      label: Language
+      description: The language code from the page's `?lang=` parameter.
+      placeholder: de, fr, es, pt-BR, ja or ru
+    validations:
+      required: true
+
+  - type: input
+    id: key
+    attributes:
+      label: English text of the string
+      description: The English text of the message (for example `Skip to content`), if you know it. Otherwise quote the text below and we will find it.
+      placeholder: Skip to content
+    validations:
+      required: false
+
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: Where you saw the text.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current text
+      description: The text as it appears now.
+    validations:
+      required: false
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested text
+      description: How it should read, and why if it is not obvious. Man pages in your language are a good reference for terminology.
+    validations:
+      required: true

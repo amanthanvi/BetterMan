@@ -2,6 +2,7 @@ import type { PageDerivedResponse } from '../../convex/_derivedEncoding'
 
 import type { BlockNode, BriefExample, ManPageBrief, OptionItem } from './docModel'
 import type { ExampleSnippet } from './examples'
+import type { T } from './i18n/translate'
 
 /**
  * What In brief shows, from data that may be missing: most of the corpus has no
@@ -9,7 +10,8 @@ import type { ExampleSnippet } from './examples'
  * whole section is omitted when nothing is there (FINAL-DIRECTION fix 5).
  */
 export type BriefFlag = { flag: string; anchorId: string; argument: string | null; gloss: string }
-export type BriefFlagGroup = { label: string | null; flags: BriefFlag[] }
+/** `label` is a catalog key: a group of modes, then the flags that combine with them. */
+export type BriefFlagGroup = { label: 'One mode' | 'Then add' | null; flags: BriefFlag[] }
 export type BriefView = {
   summary: string | null
   examples: BriefExample[]
@@ -123,8 +125,8 @@ export function commandSegments(command: string, placeholders: number[][] | unde
 const SYSTEM_NAMES = ['GNU/Linux', 'FreeBSD', 'macOS']
 
 /** `?portability=text`: the cells as words, for readers who prefer them to the glyph. */
-export function portabilityWords(codes: string): string {
-  if (codes === 'aaa') return 'on all three'
+export function portabilityWords(codes: string, t: T<'on all three' | 'not on {systems}' | 'differs on {systems}' | 'unknown on {systems}'>): string {
+  if (codes === 'aaa') return t('on all three')
   const absent: string[] = []
   const differs: string[] = []
   const unknown: string[] = []
@@ -134,9 +136,10 @@ export function portabilityWords(codes: string): string {
     else if (code === 'd' || code === 'n' || code === 'i') differs.push(name)
     else if (code !== 'a') unknown.push(name)
   })
+  const list = (items: string[], type: 'conjunction' | 'disjunction') => new Intl.ListFormat(t.lang, { style: 'long', type }).format(items)
   const parts: string[] = []
-  if (absent.length) parts.push(`not on ${absent.join(' or ')}`)
-  if (differs.length) parts.push(`differs on ${differs.join(' and ')}`)
-  if (unknown.length) parts.push(`unknown on ${unknown.join(' and ')}`)
+  if (absent.length) parts.push(t('not on {systems}', { systems: list(absent, 'disjunction') }))
+  if (differs.length) parts.push(t('differs on {systems}', { systems: list(differs, 'conjunction') }))
+  if (unknown.length) parts.push(t('unknown on {systems}', { systems: list(unknown, 'conjunction') }))
   return parts.join('; ')
 }

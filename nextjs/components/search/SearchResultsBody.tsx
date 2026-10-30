@@ -6,37 +6,32 @@ import type { ConceptLink, ConceptMatch } from '../../lib/concepts'
 import { withDistro, type Distro } from '../../lib/distro'
 import { looksLikeCommandLine } from '../../lib/explain'
 import { ConceptRow } from './ConceptRow'
+import type { Lang } from '../../lib/i18n/locales'
+import { tRich } from '../../lib/i18n/rich'
+import type { ClientT } from '../../lib/i18n/server'
 import { ResultRow } from './ResultRow'
 
-function DidYouMean({ suggestions, urlDistro }: { suggestions: string[]; urlDistro: Distro | null }) {
-  return (
-    <>
-      Did you mean:{' '}
-      {suggestions.map((s, idx) => (
-        <span key={s}>
-          {idx ? ', ' : ''}
-          <Link href={withDistro(`/search?q=${encodeURIComponent(s)}`, urlDistro)} className="font-mono underline">
-            {s}
-          </Link>
-        </span>
-      ))}
-      ?
-    </>
-  )
+function DidYouMean({ suggestions, urlDistro, urlLang, t }: { suggestions: string[]; urlDistro: Distro | null; urlLang: Lang | null; t: ClientT }) {
+  const list = suggestions.map((s, idx) => (
+    <span key={s}>
+      {idx ? ', ' : ''}
+      <Link href={withDistro(`/search?q=${encodeURIComponent(s)}`, urlDistro, urlLang)} className="font-mono underline">
+        {s}
+      </Link>
+    </span>
+  ))
+  return <>{tRich(t, 'Did you mean: {list}?', { list })}</>
 }
 
 /** A pasted command line gets a way to its explanation before any results. */
-function ExplainOffer({ q, urlDistro }: { q: string; urlDistro: Distro | null }) {
+function ExplainOffer({ q, urlDistro, urlLang, t }: { q: string; urlDistro: Distro | null; urlLang: Lang | null; t: ClientT }) {
   if (!looksLikeCommandLine(q)) return null
-  return (
-    <p className="mb-4 text-sm text-ink-2">
-      Explain{' '}
-      <a href={withDistro(`/explain?cmd=${encodeURIComponent(q)}`, urlDistro)} className="font-mono text-ink underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
-        {q}
-      </a>{' '}
-      token by token
-    </p>
+  const command = (
+    <a href={withDistro(`/explain?cmd=${encodeURIComponent(q)}`, urlDistro, urlLang)} className="font-mono text-ink underline decoration-rule-2 underline-offset-[3px] hover:text-accent">
+      {q}
+    </a>
   )
+  return <p className="mb-4 text-sm text-ink-2">{tRich(t, 'Explain {command} token by token', { command })}</p>
 }
 
 /**
@@ -51,6 +46,8 @@ export function SearchResultsBody({
   top,
   urlDistro,
   concepts = [],
+  urlLang,
+  t,
   footer,
 }: {
   q: string
@@ -61,6 +58,8 @@ export function SearchResultsBody({
   urlDistro: Distro | null
   /** BetterMan explainers the query names (lib/concepts.ts matchConcepts). */
   concepts?: (ConceptLink & Partial<Pick<ConceptMatch, 'via'>>)[]
+  urlLang: Lang | null
+  t: ClientT
   footer?: ReactNode
 }) {
   // Explainers explain the manual's section 7 pages, so another section filter leaves them out.
@@ -76,11 +75,11 @@ export function SearchResultsBody({
     return (
       <div className="mt-10">
         <h2 className="mb-3 font-serif text-xl">
-          Results for <q>{q}</q>
+          {tRich(t, 'Results for {query}', { query: <q>{q}</q> })}
         </h2>
-        <ol aria-label="Search results" className="border-b border-rule">
+        <ol aria-label={t('Search results')} className="border-b border-rule">
           {conceptRows.map((concept) => (
-            <ConceptRow key={concept.slug} concept={concept} urlDistro={urlDistro} />
+            <ConceptRow key={concept.slug} concept={concept} urlDistro={urlDistro} t={t} />
           ))}
         </ol>
       </div>
@@ -89,19 +88,15 @@ export function SearchResultsBody({
   if (!results.length) {
     return (
       <div className="mt-10 text-sm text-ink-2">
-        <ExplainOffer q={q} urlDistro={urlDistro} />
-        <p className="font-serif text-lg text-ink">
-          No results for <q className="font-mono text-base">{q}</q>.
-        </p>
-        {q.trim().includes(' ') ? (
-          <span> Search command names, flags, words from a page’s description, or a task in plain words, such as “extract a tarball”.</span>
-        ) : null}
+        <ExplainOffer q={q} urlDistro={urlDistro} urlLang={urlLang} t={t} />
+        <p className="font-serif text-lg text-ink">{tRich(t, 'No results for {query}.', { query: <q className="font-mono text-base">{q}</q> })}</p>
+        {q.trim().includes(' ') ? <span> {t('Search command names, flags, words from a page’s description, or a task in plain words, such as “extract a tarball”.')}</span> : null}
         {q.includes('.') || q.includes('_') ? null : (
-          <span> Names with dots or underscores are searched as written, like <span className="font-mono">ssh_config</span>.</span>
+          <span> {tRich(t, 'Names with dots or underscores are searched as written, like {example}.', { example: <span className="font-mono">ssh_config</span> })}</span>
         )}
         {suggestions.length ? (
           <div className="mt-3">
-            <DidYouMean suggestions={suggestions} urlDistro={urlDistro} />
+            <DidYouMean suggestions={suggestions} urlDistro={urlDistro} urlLang={urlLang} t={t} />
           </div>
         ) : null}
       </div>
@@ -111,23 +106,23 @@ export function SearchResultsBody({
   const leads = top && top.name === first.name && top.section === first.section ? top : null
   return (
     <div className="mt-10">
-      <ExplainOffer q={q} urlDistro={urlDistro} />
+      <ExplainOffer q={q} urlDistro={urlDistro} urlLang={urlLang} t={t} />
       {suggestions.length ? (
         <div className="mb-4 text-sm text-ink-2">
-          <DidYouMean suggestions={suggestions} urlDistro={urlDistro} />
+          <DidYouMean suggestions={suggestions} urlDistro={urlDistro} urlLang={urlLang} t={t} />
         </div>
       ) : null}
       <h2 className="mb-3 font-serif text-xl">
-        Results for <q>{q}</q>
-        {section ? <span className="ml-2 font-sans text-sm text-ink-3">section {section}</span> : null}
-        {first.match === 'task' ? <span className="ml-2 font-sans text-sm text-ink-3">read as a task</span> : null}
+        {tRich(t, 'Results for {query}', { query: <q>{q}</q> })}
+        {section ? <span className="ml-2 font-sans text-sm text-ink-3">{t('section {section}', { section })}</span> : null}
+        {first.match === 'task' ? <span className="ml-2 font-sans text-sm text-ink-3">{t('read as a task')}</span> : null}
       </h2>
-      <ol aria-label="Search results" className="border-b border-rule">
+      <ol aria-label={t('Search results')} className="border-b border-rule">
         {results.map((r, index) => (
           <Fragment key={`${r.name}:${r.section}`}>
-            <ResultRow r={r} q={q} urlDistro={urlDistro} top={index === 0 ? leads : null} />
+            <ResultRow r={r} q={q} urlDistro={urlDistro} urlLang={urlLang} t={t} top={index === 0 ? leads : null} />
             {/* An explainer follows the first hit, so the top hit still leads. */}
-            {index === 0 ? conceptRows.map((concept) => <ConceptRow key={concept.slug} concept={concept} urlDistro={urlDistro} />) : null}
+            {index === 0 ? conceptRows.map((concept) => <ConceptRow key={concept.slug} concept={concept} urlDistro={urlDistro} t={t} />) : null}
           </Fragment>
         ))}
       </ol>

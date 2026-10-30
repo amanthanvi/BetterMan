@@ -1,4 +1,5 @@
 import { BUTTON, h } from './dom'
+import { t, tn } from './i18n'
 
 /**
  * Live reference tables, such as ascii(7): a row lookup that marks and scrolls to
@@ -27,10 +28,10 @@ function liven(wrapper: HTMLElement, table: HTMLTableElement, index: number) {
   const body = table.tBodies[0]
   if (!body) return
   const original = [...body.rows]
-  const label = `table ${index + 1}`
-  const input = h('input', { type: 'search', class: 'bm-field max-w-56 py-1 text-sm', placeholder: 'Find a row', 'aria-label': `Find a row in ${label}`, autocomplete: 'off', spellcheck: 'false' })
+  const label = t('table {n}', { n: index + 1 })
+  const input = h('input', { type: 'search', class: 'bm-field max-w-56 py-1 text-sm', placeholder: t('Find a row'), 'aria-label': t('Find a row in {table}', { table: label }), autocomplete: 'off', spellcheck: 'false' })
   const count = h('span', { class: 'text-xs text-ink-3 tabular-nums', 'aria-live': 'polite' })
-  const reset = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.ghost}`, hidden: true }, 'Original order')
+  const reset = h('button', { type: 'button', class: `${BUTTON.base} ${BUTTON.sm} ${BUTTON.ghost}`, hidden: true }, t('Original order'))
   wrapper.before(h('div', { class: 'bm-js mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-sans', 'data-bm-table-tools': true }, input, count, reset))
 
   let matches: HTMLTableRowElement[] = []
@@ -47,7 +48,7 @@ function liven(wrapper: HTMLElement, table: HTMLTableElement, index: number) {
     }
     matches = [...body.rows].filter((row) => row.hasAttribute('data-bm-row-match'))
     at = 0
-    count.textContent = needle ? `${matches.length} ${matches.length === 1 ? 'row' : 'rows'}` : ''
+    count.textContent = needle ? tn('{count, plural, one {# row} other {# rows}}', matches.length, `${matches.length} ${matches.length === 1 ? 'row' : 'rows'}`) : ''
     focusMatch()
   })
   input.addEventListener('keydown', (e) => {
@@ -69,7 +70,7 @@ function liven(wrapper: HTMLElement, table: HTMLTableElement, index: number) {
     matches = [...body.rows].filter((row) => row.hasAttribute('data-bm-row-match'))
   }
   headers.forEach((th, column) => {
-    const button = h('button', { type: 'button', class: 'font-semibold text-inherit underline decoration-rule-2 underline-offset-2 hover:text-accent', title: 'Sort by this column' })
+    const button = h('button', { type: 'button', class: 'font-semibold text-inherit underline decoration-rule-2 underline-offset-2 hover:text-accent', title: t('Sort by this column') })
     button.append(...th.childNodes)
     th.replaceChildren(button)
     th.setAttribute('aria-sort', 'none')

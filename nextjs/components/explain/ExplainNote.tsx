@@ -1,5 +1,6 @@
 import type { PortabilityCells } from '../../lib/api'
-import type { NumberedToken } from '../../lib/explain'
+import { tokenLabel, type NumberedToken } from '../../lib/explain'
+import type { ServerT } from '../../lib/i18n/server'
 import { PortabilityGlyph } from '../man/PortabilityGlyph'
 
 /**
@@ -7,7 +8,7 @@ import { PortabilityGlyph } from '../man/PortabilityGlyph'
  * manual's own excerpt and the source it was matched in. Shared by the numbered
  * list and the definition card, so both say exactly the same thing.
  */
-export function ExplainNote({ token, portability }: { token: NumberedToken; portability?: PortabilityCells | null }) {
+export function ExplainNote({ token, portability, t }: { token: NumberedToken; portability?: PortabilityCells | null; t: ServerT }) {
   const codes = token.kind === 'option' && token.anchor ? portability?.cells[token.anchor] : undefined
   const excerpt = token.excerpt || (token.shell?.excerpt ?? '')
   return (
@@ -16,12 +17,12 @@ export function ExplainNote({ token, portability }: { token: NumberedToken; port
         <span className="bm-xn-n">{token.n}</span>
         {/* A token can be any length (a 200-character path): it wraps anywhere rather than overflow. */}
         <code className="min-w-0 max-w-full font-mono text-[1.0625rem] font-semibold [overflow-wrap:anywhere]">{token.kind === 'option' ? token.value : token.text}</code>
-        <span className="small-caps text-[0.9375rem] text-ink-3">{token.label}</span>
-        {codes && portability ? <PortabilityGlyph codes={codes} systems={portability.systems} always /> : null}
+        <span className="small-caps text-[0.9375rem] text-ink-3">{tokenLabel(token, t)}</span>
+        {codes && portability ? <PortabilityGlyph codes={codes} systems={portability.systems} always t={t} /> : null}
       </p>
       {excerpt ? <p className="mt-1.5 font-serif text-[1.0625rem] leading-[1.58] text-ink [overflow-wrap:anywhere]">{excerpt}</p> : null}
       {token.kind === 'unknown' ? (
-        <p className="mt-1.5 font-serif text-[1.0625rem] italic text-ink-2">No manual definition was matched for this token.</p>
+        <p className="mt-1.5 font-serif text-[1.0625rem] italic text-ink-2">{t('No manual definition was matched for this token.')}</p>
       ) : null}
       {token.href && token.source ? (
         <p className="mt-1.5 text-xs">

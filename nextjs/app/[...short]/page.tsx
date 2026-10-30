@@ -2,7 +2,7 @@ import { notFound, permanentRedirect, redirect } from 'next/navigation'
 
 import { search, withDistroFallback } from '../../lib/api'
 import { withDistro } from '../../lib/distro'
-import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
+import { explicitDistro, explicitLang, resolveRequestDistro, type SearchParams } from '../../lib/requestContext'
 import { normalizeManQuery } from '../../lib/manQuery'
 import { shareFlag, withShareFlag } from '../../lib/manShare'
 import { manPath, parseShortUrl, type ShortUrl } from '../../lib/shortUrl'
@@ -45,7 +45,8 @@ function manQueryString(path: string, sp: SearchParams): string {
 // page (or its section picker), which settles its own status.
 async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: SearchParams): Promise<string> {
   const urlDistro = explicitDistro(sp)
-  const pageHref = withDistro(manPath(target.name, target.section), urlDistro)
+  const urlLang = explicitLang(sp)
+  const pageHref = withDistro(manPath(target.name, target.section), urlDistro, urlLang)
   const found = await withDistroFallback(await resolveRequestDistro(sp), (activeDistro) =>
     search({
       distro: activeDistro,
@@ -60,7 +61,7 @@ async function optionHref(target: Extract<ShortUrl, { kind: 'option' }>, sp: Sea
     (result) => result.match === 'option' && result.anchorId && result.name.toLowerCase() === target.name,
   )
   if (!hit) return pageHref
-  const page = withDistro(manPath(target.name, hit.section), urlDistro)
+  const page = withDistro(manPath(target.name, hit.section), urlDistro, urlLang)
   const flag = shareFlag(target.flag)
   return `${flag ? withShareFlag(page, flag) : page}#${hit.anchorId}`
 }

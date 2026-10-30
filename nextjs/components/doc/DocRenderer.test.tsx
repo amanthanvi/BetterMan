@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest'
 
 import type { BlockNode, InlineNode } from '../../lib/docModel'
 import { DocRenderer } from './DocRenderer'
+import { tServer } from '../../lib/i18n/testing'
 
 const paragraph = (...inlines: InlineNode[]): BlockNode[] => [{ type: 'paragraph', inlines }]
 const text = (value: string): InlineNode => ({ type: 'text', text: value })
-const render = (blocks: BlockNode[]) => renderToStaticMarkup(<DocRenderer blocks={blocks} urlDistro={null} />)
+const render = (blocks: BlockNode[]) => renderToStaticMarkup(<DocRenderer blocks={blocks} urlDistro={null} urlLang={null} t={tServer} />)
 
 describe('DocRenderer plain-text URLs', () => {
   it('links validated URLs in text and table cells as external links', () => {
@@ -49,7 +50,7 @@ describe('DocRenderer printed addresses', () => {
 describe('DocRenderer cross-references', () => {
   const xref = paragraph({ type: 'link', linkType: 'internal', href: '/man/gzip/1', inlines: [text('gzip(1)')] })
   const hrefFor = (urlDistro: 'debian' | 'ubuntu' | null) =>
-    renderToStaticMarkup(<DocRenderer blocks={xref} urlDistro={urlDistro} />).match(/href="([^"]+)"/)?.[1]
+    renderToStaticMarkup(<DocRenderer blocks={xref} urlDistro={urlDistro} urlLang={null} t={tServer} />).match(/href="([^"]+)"/)?.[1]
 
   it("carries the page URL's distro, Debian included, and stays bare on a bare page", () => {
     expect(hrefFor(null)).toBe('/man/gzip/1')

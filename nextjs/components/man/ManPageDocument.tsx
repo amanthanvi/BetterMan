@@ -5,6 +5,8 @@ import { conceptsForPage } from '../../lib/concepts'
 import { DISTRO_LABEL, type Distro } from '../../lib/distro'
 import type { ManPage, ManPageBrief, ManPageContent, ManPageResponse, ManPageVariant } from '../../lib/docModel'
 import { extractExamples } from '../../lib/examples'
+import type { Lang } from '../../lib/i18n/locales'
+import type { ServerT } from '../../lib/i18n/server'
 import { briefView, modeAnchors } from '../../lib/manBrief'
 import { ChevronDownIcon } from '../icons'
 import { defaultCodeLanguage } from '../doc/CodeBlock'
@@ -40,6 +42,8 @@ export function ManPageDocument({
   portabilityMode = 'glyph',
   portabilityToggleHref,
   reportHref,
+  urlLang,
+  t,
 }: {
   page: ManPage
   content: ManPageContent
@@ -59,6 +63,8 @@ export function ManPageDocument({
   portabilityToggleHref?: string
   /** A prefilled GitHub issue for this page, built with the public origin. */
   reportHref: string
+  urlLang: Lang | null
+  t: ServerT
 }) {
   const inBrief = briefView({
     brief,
@@ -83,7 +89,7 @@ export function ManPageDocument({
   return (
     <div data-bm-manual data-bm-page-name={page.name} data-bm-page-section={page.section} data-bm-page-description={page.description || page.title}>
       {/* Under 400px the title already carries name(section); the head would only crowd it. */}
-      <RunningHead title={title} label={sectionLabel(page.section)} className="max-[25rem]:hidden" />
+      <RunningHead title={title} label={sectionLabel(page.section, t, servedDistro)} className="max-[25rem]:hidden" />
 
       <div data-bm-layout className={`mt-9 ${hasToc ? `lg:grid lg:items-start lg:gap-16 ${SIDEBAR_OPEN_COLUMNS}` : ''}`}>
         {hasToc ? (
@@ -93,18 +99,18 @@ export function ManPageDocument({
                 <div data-bm-sidebar-open>
                   <div className="flex items-center justify-between gap-3 pl-3.5">
                     <ManSectionLabel as="h2" className="text-sm">
-                      Contents
+                      {t('Contents')}
                     </ManSectionLabel>
-                    <IconButton variant="ghost" size="sm" data-bm-action="collapse-sidebar" aria-label="Collapse sidebar" title="Collapse (b)" className="bm-js">
+                    <IconButton variant="ghost" size="sm" data-bm-action="collapse-sidebar" aria-label={t('Collapse sidebar')} title={t('Collapse (b)')} className="bm-js">
                       <ChevronDownIcon className="size-3.5 rotate-90" />
                     </IconButton>
                   </div>
                   <div className="mt-2">
-                    <Toc items={body.toc} activeId={body.toc[0]?.id ?? null} showTitle={false} />
+                    <Toc items={body.toc} activeId={body.toc[0]?.id ?? null} showTitle={false} t={t} />
                   </div>
                 </div>
                 <div data-bm-sidebar-closed hidden>
-                  <IconButton variant="ghost" size="sm" data-bm-action="expand-sidebar" aria-label="Expand sidebar" title="Expand (b)">
+                  <IconButton variant="ghost" size="sm" data-bm-action="expand-sidebar" aria-label={t('Expand sidebar')} title={t('Expand (b)')}>
                     <ChevronDownIcon className="size-3.5 -rotate-90" />
                   </IconButton>
                 </div>
@@ -114,10 +120,10 @@ export function ManPageDocument({
         ) : null}
 
         <div className="mx-auto w-full min-w-0 max-w-[var(--bm-reading-column-width)] lg:mx-0">
-          <ManPageHeaderCard page={page} synopsis={content.synopsis} variants={variants} providers={providers} distro={servedDistro} hasToc={hasToc} />
+          <ManPageHeaderCard page={page} synopsis={content.synopsis} variants={variants} providers={providers} distro={servedDistro} hasToc={hasToc} urlLang={urlLang} t={t} />
 
           <article className="mt-10">
-            {inBrief ? <ManPageBriefSection view={inBrief} /> : null}
+            {inBrief ? <ManPageBriefSection view={inBrief} t={t} /> : null}
 
             <ManPageOptionsSection
               portability={derived ? { portability: derived.portability, stale: derived.stale } : undefined}
@@ -128,13 +134,16 @@ export function ManPageDocument({
               options={content.options}
               rowIds={optionRows}
               locators={locators}
+              t={t}
             />
 
-            <DocRenderer blocks={body.blocks} urlDistro={urlDistro} codeLanguage={codeLanguage} sectionNumbers={numbers} />
+            <DocRenderer blocks={body.blocks} urlDistro={urlDistro} urlLang={urlLang} codeLanguage={codeLanguage} sectionNumbers={numbers} t={t} />
 
             <ManPageFooterSections
               reportHref={reportHref}
               urlDistro={urlDistro}
+              urlLang={urlLang}
+              t={t}
               seeAlso={content.seeAlso}
               relatedItems={relatedItems}
               derived={derived}
