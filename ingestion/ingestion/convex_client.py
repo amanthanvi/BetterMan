@@ -354,3 +354,4 @@ class ConvexIngestClient:
                 raise error from cause
             logger.warning("Convex ingest %s attempt %d failed, retrying: %s", path, attempt, error)
             time.sleep(_RETRY_BACKOFF_SECONDS * attempt)
+        raise AssertionError("the last attempt always returns or raises")
