@@ -11,3 +11,4 @@ Snapshot: 20261001T000000Z, trixie main, amd64.
 | mailx.postinst | bsd-mailx 8.1.2-0.20220412cvs-1.1 | `c4c4503ba360f9d2e701c1f96f138a1659780b866984863c6f81ec770b266df3` |
 | java.postinst | openjdk-21-jre-headless 21.0.12.1+1-1~deb13u1 | `e95f36193e45464ac758e5436f940bf3eaecc77de67188275a42104f58aa7674` |
 | xz.postinst | xz-utils 5.8.1-1+deb13u1 | `9e0a39d95373afdaad3c9dfaab3c8b0beb9a2c4654e6be10b4bcf458509a3217` |
+| postgresql.postinst | postgresql-client-17 17.11-0+deb13u1 | `9d8558f8dd57c8e92e218a20698383575d53742ca3f9e7c2b7fe5f246d5216ae` |

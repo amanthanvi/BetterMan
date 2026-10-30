@@ -30,6 +30,7 @@ def workspace(tmp_path):
     obj.available = {p.name: p for p in obj.packages}
     obj.acquired = set(obj.available)
     obj.missing = []
+    obj.archive_fallbacks = 0
     obj.owners = obj.store.db
     obj.owners.execute("CREATE TABLE owners(path TEXT,pkg TEXT)")
     for pkg in obj.packages:
@@ -165,6 +166,68 @@ def test_release_uses_sha256_not_md5_and_sampling_is_stable():
         list(reversed(packages)), 2
     )
     assert pipeline.sample_packages(packages, 2)[0].name == "gawk"
+
+
+@pytest.mark.parametrize(
+    "root",
+    [
+        "usr/share/postgresql/17",
+        "usr/share/firebird/3.0",
+        "usr/share/groovy",
+        "usr/share/icedtea-web",
+        "usr/share/librarian-puppet",
+        "usr/share/scala-2.11",
+    ],
+)
+def test_private_alternatives_manuals_are_selected_and_extracted(tmp_path, monkeypatch, root):
+    import tarfile
+
+    path = f"{root}/man/man1/psql.1.gz"
+    assert indexes.MAN_PATH.fullmatch(path)
+    assert not indexes.MAN_PATH.fullmatch(f"{root}/man/fr/man1/psql.1.gz")
+    monkeypatch.setattr(
+        indexes,
+        "private_registrations",
+        lambda: {
+            "packages": {
+                "postgresql-client-17": {
+                    "archiveSha256": "a" * 64,
+                    "paths": {
+                        path.replace("psql", name) for name in ["psql", "pg_dump", "createdb"]
+                    },
+                }
+            }
+        },
+    )
+    tar_bytes = io.BytesIO()
+    with tarfile.open(fileobj=tar_bytes, mode="w") as tar:
+        for name in ["psql", "pg_dump", "createdb", "unregistered"]:
+            member = tarfile.TarInfo(path.replace("psql", name))
+            payload = f".TH {name.upper()} 1\n.SH NAME\n{name} - fixture\n".encode()
+            member.size = len(payload)
+            tar.addfile(member, io.BytesIO(payload))
+
+    def ar_member(name, data):
+        return (
+            f"{name:<16}{0:<12}{0:<6}{0:<6}{'100644':<8}{len(data):<10}`\n".encode()
+            + data
+            + (b"\n" if len(data) % 2 else b"")
+        )
+
+    archive = tmp_path / "postgresql.deb"
+    archive.write_bytes(
+        b"!<arch>\n"
+        + ar_member("debian-binary", b"2.0\n")
+        + ar_member("data.tar", tar_bytes.getvalue())
+    )
+    pkg = Package("postgresql-client-17", "17", "pool/main/p/pg.deb", "a" * 64, 1)
+    store = ArchiveStore(tmp_path)
+    try:
+        store.add(pkg, extract(archive, pkg, tmp_path))
+        assert {row[2] for row in store.manuals()} == {"psql", "pg_dump", "createdb"}
+        assert b"PSQL" in store.resolve(pkg.name, path)
+    finally:
+        store.db.close()
 
 
 def test_archive_publisher_uses_bounded_pipeline_and_declares_every_provider(
@@ -303,6 +366,53 @@ def test_catalog_verifies_release_contents_packages_and_popcon(tmp_path, monkeyp
     artifacts["Release"] += b"changed"
     (tmp_path / "indexes" / "Release").unlink()
     with pytest.raises(ValueError, match="SHA256"):
+        indexes.catalog(tmp_path / "indexes")
+
+
+def test_catalog_refuses_private_manuals_without_an_audit_for_the_release(tmp_path, monkeypatch):
+    import gzip
+    import json
+    import lzma
+
+    counts = gzip.compress(b"postgresql-client-17\t42\n", mtime=0)
+    (tmp_path / "popcon.gz").write_bytes(counts)
+    artifacts = {
+        "main/Contents-all.gz": gzip.compress(
+            b"usr/share/postgresql/17/man/man1/psql.1.gz database/postgresql-client-17\n",
+            mtime=0,
+        ),
+        "main/Contents-amd64.gz": gzip.compress(b"", mtime=0),
+        "main/binary-amd64/Packages.xz": lzma.compress(
+            b"Package: postgresql-client-17\nVersion: 1\n"
+            + b"Filename: pool/main/p/postgresql-client-17.deb\nSHA256: "
+            + b"a" * 64
+            + b"\nSize: 100\n\n"
+        ),
+    }
+    release = "SHA256:\n" + "".join(
+        f" {hashlib.sha256(data).hexdigest()} {len(data)} {name}\n"
+        for name, data in artifacts.items()
+    )
+    artifacts["Release"] = release.encode()
+    pins = tmp_path / "pins.json"
+    # A Release other than the one the private-manual registrations were audited for.
+    pins.write_text(
+        json.dumps(
+            {
+                "mirror": "https://example.test/snapshot",
+                "suite": "trixie",
+                "releaseSha256": hashlib.sha256(release.encode()).hexdigest(),
+                "popcon": {"file": "popcon.gz", "sha256": hashlib.sha256(counts).hexdigest()},
+            }
+        )
+    )
+    monkeypatch.setattr(indexes, "PINS", pins)
+    monkeypatch.setattr(
+        indexes,
+        "urlopen",
+        lambda req, **_: io.BytesIO(artifacts[req.full_url.split("/dists/trixie/")[1]]),
+    )
+    with pytest.raises(ValueError, match="need an audit for this Release"):
         indexes.catalog(tmp_path / "indexes")
 
 
@@ -545,13 +655,209 @@ def test_acquisition_deduplicates_manual_and_runtime_control_selections(
     obj = archive_workspace
     obj.acquired.clear()
     obj.downloaded = 0
+    obj.cache = obj.root
     seen = []
 
     def acquire(pkg):
         seen.append(pkg.name)
-        return pkg, [], 0
+        return pkg, [], 0, 0, 0, 0
 
     monkeypatch.setattr(obj, "_acquire", acquire)
     pkg = obj.packages[0]
     obj.acquire([pkg, pkg], workers=2)
     assert seen == [pkg.name]
+
+    seen.clear()
+    obj.acquired.clear()
+    cached = obj.packages[-1]
+    (obj.cache / f"{cached.sha256}.deb").write_bytes(b"checked by download, not scheduling")
+    obj.acquire(obj.packages, workers=1)
+    assert seen[0] == cached.name
+
+
+def test_command_audit_replays_gate_and_reports_every_curated_entry(archive_workspace, monkeypatch):
+    from ingestion import package_set
+    from scripts.check_debian_archives import audit_command_pages
+
+    obj = archive_workspace
+    obj.pins = {"releaseSha256": "a" * 64}
+    obj.all_manual_packages = obj.packages
+    obj.curated_packages = []
+    monkeypatch.setattr(package_set, "FULL_PACKAGE_SET_DEBIAN", ["gawk", "gcc", "manpages"])
+    report = audit_command_pages(obj, workers=1)
+    assert [(row["package"], row["status"]) for row in report["commands"]] == [
+        ("gawk", "present"),
+        ("gcc", "excluded"),
+        ("manpages", "non-command"),
+    ]
+    assert "non-free" in report["commands"][1]["reason"]
+    assert not report["parseFailures"] and not report["unresolvedSources"]
+
+
+def test_acquisition_keeps_worker_busy_when_an_earlier_archive_is_slow(
+    archive_workspace, monkeypatch
+):
+    import threading
+
+    obj = archive_workspace
+    obj.acquired.clear()
+    obj.downloaded = 0
+    obj.cache = obj.root
+    third_started = threading.Event()
+    first, _second, third = obj.packages
+
+    def acquire(pkg):
+        if pkg == first:
+            assert third_started.wait(2), "a finished worker was idle behind the first download"
+        if pkg == third:
+            third_started.set()
+        return pkg, [], 0, 0, 0, 0
+
+    monkeypatch.setattr(obj, "_acquire", acquire)
+    obj.acquire(obj.packages, workers=2)
+    assert obj.acquired == {p.name for p in obj.packages}
+
+
+def test_audited_private_registration_allowlists_exclude_unregistered_pages():
+    registrations = indexes.private_registrations()["packages"]
+    assert sum(len(item["paths"]) for item in registrations.values()) == 329
+    assert not indexes.manual_registered(
+        "firebird3.0-utils", "usr/share/firebird/3.0/man/man1/fb_config.1.gz"
+    )
+    assert indexes.manual_registered("firebird-dev", "usr/share/man/man1/fb_config.1.gz")
+    for name in ["groovyConsole", "groovydoc", "groovysh", "java2groovy", "startGroovy"]:
+        assert not indexes.manual_registered("groovy", f"usr/share/groovy/man/man1/{name}.1.gz")
+    assert {Path(p).name for p in registrations["groovy"]["paths"]} == {
+        "groovy.1.gz",
+        "groovyc.1.gz",
+        "grape.1.gz",
+    }
+    with pytest.raises(ValueError, match="registrations.*SHA256"):
+        indexes.require_private_package(Package("groovy", "1", "pool/main/g.deb", "a" * 64, 1))
+
+
+def test_command_owner_gate_accepts_dependencies_and_virtual_providers_but_rejects_wrong_owner(
+    archive_workspace,
+    monkeypatch,
+):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    obj = archive_workspace
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["postgresql-client"])
+    base = obj.packages[0]
+    obj.available = {
+        "postgresql-client": replace(base, name="postgresql-client", depends=("client-runtime",)),
+        "client-runtime": replace(base, name="client-runtime", depends=("postgresql-client-17",)),
+        "postgresql-client-17": replace(
+            base, name="postgresql-client-17", provides=("postgresql-client",)
+        ),
+    }
+    obj.alias_providers = []
+    page = SimpleNamespace(name="psql", section="1", source_package="postgresql-client-17")
+    assert obj.require_command_owners([page]) == {"postgresql-client": "postgresql-client-17"}
+    del obj.available["postgresql-client"]
+    assert obj.require_command_owners([page]) == {"postgresql-client": "postgresql-client-17"}
+    page.source_package = "9base"
+    with pytest.raises(RuntimeError, match="wrong command-page owner.*psql"):
+        obj.require_command_owners([page])
+
+
+def test_wrong_owner_blocks_archive_publish_before_upload(archive_workspace, monkeypatch):
+    from ingestion import ingest_runner
+    from ingestion.debian_publish import publish_workspace
+
+    obj = archive_workspace
+    obj.pins = {"releaseSha256": "a" * 64}
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
+    monkeypatch.setitem(ingest_runner._COMMAND_PAGES, "gawk", ("shared", "1"))
+
+    class Client:
+        def post(self, *_args):
+            pytest.fail("wrong owner must fail before upload")
+
+    with pytest.raises(RuntimeError, match="wrong command-page owner.*shared"):
+        publish_workspace(obj, Client(), activate=False, dataset_stage="staging", git_sha="test")
+
+
+def test_debian_relationship_names_ignore_versions_and_arch_qualifiers():
+    assert indexes.relationship_names("foo:any (>= 1), bar:native | baz (= 2), virtual (= 1)") == (
+        "foo",
+        "bar",
+        "baz",
+        "virtual",
+    )
+
+
+def test_command_owner_gate_prefers_exact_section_to_plan9_suffix(archive_workspace, monkeypatch):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    obj = archive_workspace
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["coreutils"])
+    obj.available["coreutils"] = replace(obj.packages[0], name="coreutils")
+    obj.alias_providers = []
+    standard = SimpleNamespace(name="ls", section="1", source_package="coreutils")
+    plan9 = SimpleNamespace(name="ls", section="1plan9", source_package="9base")
+    assert obj.require_command_owners([standard, plan9]) == {"coreutils": "coreutils"}
+    with pytest.raises(RuntimeError, match="wrong command-page owner.*ls"):
+        obj.require_command_owners([plan9])
+
+
+def test_command_owner_gate_preserves_explicit_mount_companion(archive_workspace, monkeypatch):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    obj = archive_workspace
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["util-linux"])
+    obj.available["util-linux"] = replace(obj.packages[0], name="util-linux")
+    obj.alias_providers = []
+    page = SimpleNamespace(name="mount", section="8", source_package="mount")
+    assert obj.require_command_owners([page]) == {"util-linux": "mount"}
+
+
+@pytest.mark.parametrize(
+    "requested,name,wrong_owner",
+    [
+        ("coreutils", "ls", "9base"),
+        ("grep", "grep", "9base"),
+        ("sed", "sed", "9base"),
+        ("make", "make", "make-guile"),
+    ],
+)
+def test_unrelated_command_provider_cannot_satisfy_curated_gate(
+    archive_workspace,
+    monkeypatch,
+    requested,
+    name,
+    wrong_owner,
+):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    obj = archive_workspace
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", [requested])
+    obj.available[requested] = replace(obj.packages[0], name=requested)
+    # Providing the requested name is not enough (make-guile Provides make in the pin).
+    obj.available[wrong_owner] = replace(obj.packages[0], name=wrong_owner, provides=(requested,))
+    obj.alias_providers = []
+    with pytest.raises(RuntimeError, match="wrong command-page owner"):
+        obj.require_command_owners(
+            [SimpleNamespace(name=name, section="1", source_package=wrong_owner)]
+        )
+
+
+def test_acquisition_summary_counts_archive_fallbacks(archive_workspace, monkeypatch, caplog):
+    import json
+    import logging
+
+    obj = archive_workspace
+    obj.acquired.clear()
+    obj.downloaded = 0
+    obj.cache = obj.root
+    monkeypatch.setattr(obj, "_acquire", lambda pkg: (pkg, [], 1, 0, 0, 1))
+    caplog.set_level(logging.INFO, logger="betterman.ingestion")
+    obj.acquire(obj.packages[:2], workers=2)
+    summary = json.loads(caplog.records[-1].message)
+    assert summary["event"] == "deb_acquisition_complete"
+    assert summary["archiveFallbacks"] == obj.archive_fallbacks == 2

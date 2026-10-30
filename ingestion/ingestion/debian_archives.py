@@ -13,12 +13,31 @@ import tarfile
 import threading
 from pathlib import Path
 
-from ingestion.debian_indexes import BINARY_PATH, MAN_PATH, Package, safe_path
+from ingestion.debian_indexes import (
+    BINARY_PATH,
+    MAN_PATH,
+    Package,
+    manual_registered,
+    require_private_package,
+    safe_path,
+)
 from ingestion.mandoc_parser import is_so_stub
 from ingestion.util import sha256_hex
 
 MAX_SOURCE_BYTES = 16 * 1024 * 1024
 COPYRIGHT = re.compile(r"^usr/share/doc/[^/]+/copyright(?:\.gz)?$")
+DOC_ROOTS = (
+    "usr/share/man/",
+    "usr/share/doc/",
+    "usr/lib/jvm/",
+    "usr/share/postgresql/",
+    "usr/share/firebird/",
+    "usr/share/groovy/",
+    "usr/share/icedtea-web/",
+    "usr/share/librarian-puppet/",
+    "usr/share/scala-",
+)
+EXTRACTOR_VERSION = 5
 
 
 class ExtractedQuota:
@@ -120,6 +139,7 @@ def postinst_from_archive(archive: Path) -> str:
 
 def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[tuple]:
     """Stream past unrelated members; write only man sources and copyrights."""
+    require_private_package(package)
     files = root / "files"
     files.mkdir(parents=True, exist_ok=True)
     quota = quota or ExtractedQuota(files)
@@ -149,10 +169,10 @@ def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[
                 elif member.isfile():
                     entries.append((package.name, path, "binary-file", None, None))
                 continue
-            if not raw_path.startswith(("usr/share/man/", "usr/share/doc/", "usr/lib/jvm/")):
+            if not raw_path.startswith(DOC_ROOTS):
                 continue
             path = safe_path(member.name)
-            manual = MAN_PATH.fullmatch(path)
+            manual = manual_registered(package.name, path)
             notice = COPYRIGHT.fullmatch(path)
             if member.issym() or member.islnk():
                 if not manual and not notice and path.count("/") != 3:
@@ -163,7 +183,7 @@ def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[
                 elif member.issym():
                     target = posixpath.join(posixpath.dirname(path), target)
                 target = safe_path(posixpath.normpath(target))
-                if not target.startswith(("usr/share/man/", "usr/share/doc/", "usr/lib/jvm/")):
+                if not target.startswith(DOC_ROOTS):
                     # Debian docs may link examples to /etc or alternatives.
                     # Keep no filesystem link and never read outside the store.
                     if manual or notice:
@@ -227,14 +247,15 @@ class ArchiveStore:
             self.db.execute("DELETE FROM entries WHERE pkg=?", (package.name,))
             self.db.executemany("INSERT OR REPLACE INTO entries VALUES (?,?,?,?,?)", entries)
             self.db.execute(
-                "INSERT OR REPLACE INTO receipts VALUES (?,?,?)", (package.name, package.sha256, 3)
+                "INSERT OR REPLACE INTO receipts VALUES (?,?,?)",
+                (package.name, package.sha256, EXTRACTOR_VERSION),
             )
 
     def complete(self, package: Package):
         receipt = self.db.execute(
             "SELECT digest,version FROM receipts WHERE pkg=?", (package.name,)
         ).fetchone()
-        return receipt == (package.sha256, 3) and all(
+        return receipt == (package.sha256, EXTRACTOR_VERSION) and all(
             Path(row[0]).is_file()
             for row in self.db.execute(
                 "SELECT file FROM entries WHERE pkg=? AND file IS NOT NULL", (package.name,)
@@ -326,5 +347,5 @@ class ArchiveStore:
     def manuals(self):
         for pkg, path in self.db.execute("SELECT pkg,path FROM entries ORDER BY pkg,path"):
             match = MAN_PATH.fullmatch(path)
-            if match:
+            if match and manual_registered(pkg, path):
                 yield pkg, path, match.group(1).lower(), match.group(2).lower()

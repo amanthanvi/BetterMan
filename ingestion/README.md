@@ -239,8 +239,18 @@ raw values are never printed.
 `data/debian-trixie.json` pins snapshot, suite/component/architecture and the
 Release SHA256. Verified Release SHA256/size entries bind Contents-all,
 Contents-amd64 and Packages.xz, which bind every archive filename/version/size/SHA256.
-English root manuals and the OpenJDK archive manual root are selected. The curated
-package pass also captures runtime postinst data when a command's manual lives
+English root manuals and the existing OpenJDK roots are selected. Other private
+roots (PostgreSQL, Firebird, Groovy, IcedTea-Web, librarian-puppet and Scala)
+require a per-package path in `data/debian-private-manuals.json`. This audited
+allowlist records the pinned Release/archive/control-script hashes and paths
+registered by literal manual slaves or the modeled PostgreSQL/Groovy/IcedTea
+helpers. Both selection and extraction enforce it; a new Release or package
+hash requires an updated audit. A root regex alone never authorizes these pages.
+The list contains 329 paths across nine packages: PostgreSQL 295, Firebird 24,
+Groovy 3, IcedTea-Web 1, librarian-puppet 1 and Scala 5. Unregistered Firebird
+`fb_config` and five Groovy pages are excluded; the public `fb_config(1)` stays
+owned by `firebird-dev`. Nothing is installed and no maintainer script executes.
+The curated package pass also captures runtime postinst data when a command's manual lives
 in another package (vim/vim-tiny and vim-common) or is absent (G++). These runtime
 packages must participate in elections even without owning a manual in Contents.
 Nothing is installed.
@@ -316,7 +326,13 @@ stay on the existing tables.
 Copyright files are resolved from the selected archives and every published
 provider's package, including linked doc directories. Missing/blank or oversized
 notices block publishing and are never truncated. Required curated command pages
-and the two-percent parse/unresolved-source gate still apply.
+and the two-percent parse/unresolved-source gate still apply. Archive publishing
+also requires each actual canonical/alias owner to be the requested package, a
+transitive Depends/Pre-Depends dependency, or a provider. The existing explicit
+`util-linux` → `mount` companion request from `apt_install` remains accepted;
+other diagnostic owner hints grant no authority. Exact sections take precedence
+over suffixes such as `ls(1plan9)`. Wrong ownership blocks before any upload and
+is not covered by the missing-page escape hatch.
 
 ### Acquisition checkpoints and runner measurements
 
@@ -334,11 +350,28 @@ and partial files, replacements and concurrent writes. Reservations happen befor
 writes under one shared lock. `BETTERMAN_DEBIAN_EXTRACTED_MAX_BYTES` can lower
 this to at least 16 MiB, but cannot raise it past 4 GiB. Exhaustion stops acquisition
 with completed receipts retained. Free-space checks remain an additional guard.
-Every cache hit is rehashed and size-checked. There are at most two downloads per
-pipeline. Each file gets eight attempts with exponential backoff and jitter,
-up to minutes, honoring Retry-After on 429/503 and respecting the job deadline.
-A Retry-After over fifteen minutes stops with the checkpoint retained rather
-than retrying early. Integrity failures do not retry or publish bad bytes.
+Every cache hit is rehashed and size-checked. Restored archives are consumed
+before fresh downloads can evict them. Release, Contents and Packages still
+come only from the pinned snapshot. Archive payloads try `deb.debian.org` first,
+bound to the pinned Packages SHA256 and size. On the CDN leg, any HTTP error,
+transport failure, checksum mismatch, oversized body or cleanly truncated body
+is discarded before switching immediately to the pinned snapshot. A CDN
+Retry-After (including values over fifteen minutes) does not delay another host.
+The snapshot leg stays fail-closed on integrity errors and retains the bounded
+Retry-After/backoff policy for retryable transport/HTTP failures. It never
+publishes invalid bytes. There remain two workers, eight total attempts per
+file, and the absolute job deadline.
+
+Set `BETTERMAN_DEBIAN_CDN=0` to disable the CDN leg entirely; unset/empty or `1`
+uses CDN-first. Other values fail before acquisition. This affects both normal
+full imports and `--download-only`. The workflow benchmark uses that same
+Workspace acquisition code and defaults to CDN-first; no workflow variable was
+changed. Its report includes `cdnEnabled` and `archiveFallbacks`. Each fallback
+logs only `deb_archive_fallback` and a bounded reason code (no URL/body), and
+progress/completion summaries count fallbacks. Redirects are HTTPS-only and
+same-host on `deb.debian.org` or `snapshot.debian.org`, including snapshot's
+`/file/<sha1>` redirects. The downloader's User-Agent includes the published
+project contact address.
 
 The workflow restores and saves only verified `.deb` files under one stable
 `debian-debs-<Release SHA256>` key, without run IDs or broad restore prefixes.
@@ -367,6 +400,22 @@ cannot be combined with upload and never creates a Convex client.
 `--audit-alternatives` extends the fixed sample with the competing providers
 listed in the evidence, elects routes, and audits renderable sources against the
 roff checks. It also performs no Convex writes and records every rejection.
+
+`--audit-command-pages` scans the complete verified Contents catalog, acquires
+all curated command owners plus supported private-root packages, replays
+parsing and the exact publish command gate, verifies provider copyrights, and
+writes `command-pages-audit.json`. It creates no Convex client. Every curated
+package is reported as present, excluded with its reason, or non-command.
+Use a dedicated workdir (the `--packages` value must match on workspace reuse):
+
+```bash
+pnpm ingest:debian-benchmark --workdir /absolute/path/to/audit --packages 1 --audit-command-pages
+```
+
+Acquisition progress separates elapsed time from summed download/extraction
+worker seconds and reports cache hits. It collects completed tasks first to
+keep both workers occupied; parser ordering is unchanged. Parse, metadata,
+pages, aliases, licenses and activation emit phase timings for runner audits.
 
 The workflow's `debian_download_only: true` dispatch runs that acquisition-only
 mode for 2,000 packages in a separate job with no production environment or Convex
