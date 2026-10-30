@@ -412,6 +412,7 @@ combinator.
   are its links), list "Definitions" (items `#x-<n>`), region "Definition" with
   button "Close definition", complementary "Safety note". Labels may render in
   small caps; name matching is case-insensitive.
+- **Language:** the interface language is `?lang=` (`en` default; `de fr es pt-BR ja ru` once reviewed), carried by in-app links like `?distro=`. A footer `nav` "Language" switches it, as plain links the proxy answers (`/-/lang/<code>` remembers the choice in a cookie); it renders only once a second language is public. Localized pages are `noindex` with the English canonical. Accessible names above are the English ones; each language has its own (`docs/i18n.md`), and a visible control label stays inside its `aria-label`.
 - **Robustness:** scrollable `<pre>` and table wrappers take `tabindex="0"`
   with a label; lists hold only `<li>`; no interactive element nests another;
   controls that need JavaScript are hidden without it.

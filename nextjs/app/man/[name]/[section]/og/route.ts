@@ -15,6 +15,7 @@ import { servingRelease } from '../../../../../lib/manRelease'
 import { parseReleaseId, releaseDay } from '../../../../../lib/release'
 import { decodeManParam } from '../../../../../lib/shortUrl'
 import { nonHtmlSecurityHeaders } from '../../../../../lib/securityHeaders'
+import { tEnglish } from '../../../../../lib/i18n/english'
 
 type CardData = { page: ManPage; option?: OgCardInput['option']; generated?: OgCardInput['generated'] }
 
@@ -86,7 +87,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
   const response = await ogCard({
     name: data.page.name,
     section: data.page.section,
-    label: sectionLabel(section),
+    label: sectionLabel(section, tEnglish, distro),
     description: data.option ? undefined : data.page.description || (data.generated ? undefined : data.page.title),
     ...(data.option ? { option: data.option } : {}),
     ...(data.generated ? { generated: data.generated } : {}),

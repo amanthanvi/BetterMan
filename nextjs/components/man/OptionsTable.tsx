@@ -1,5 +1,6 @@
 import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
 import type { OptionItem } from '../../lib/docModel'
+import type { ServerT } from '../../lib/i18n/server'
 
 import { portabilityWords } from '../../lib/manBrief'
 import { parseOptionTerms } from './find'
@@ -23,6 +24,7 @@ export function OptionsTable({
   portabilityMode = 'glyph',
   newIn,
   modes,
+  t,
 }: {
   options: OptionItem[]
   /** Row anchor per `anchorId`, distinct from the body definition's id. */
@@ -37,16 +39,17 @@ export function OptionsTable({
   newIn?: PageDerivedResponse['newIn']
   /** Options defined under the page's modes heading, for the composer's conflict warning. */
   modes?: ReadonlySet<string>
+  t: ServerT
 }) {
   const portabilityByAnchor = new Map(portability?.rows ?? [])
   const newInByAnchor = new Map((newIn ?? []).map((mark) => [mark.anchorId, mark]))
   return (
-    <table className="w-full border-collapse text-left" aria-label="Command-line options">
+    <table className="w-full border-collapse text-left" aria-label={t('Command-line options')}>
       <thead className="sr-only">
         <tr>
-          <th scope="col">Option</th>
-          <th scope="col">Description</th>
-          <th scope="col">Section</th>
+          <th scope="col">{t('Option')}</th>
+          <th scope="col">{t('Description')}</th>
+          <th scope="col">{t('Section')}</th>
         </tr>
       </thead>
       <tbody>
@@ -80,11 +83,11 @@ export function OptionsTable({
                 </a>
                 {portability && codes ? (
                   portabilityMode === 'text' ? (
-                    codes === 'aaa' ? null : <span className="ml-2 text-xs text-ink-3">{portabilityWords(codes)}</span>
+                    codes === 'aaa' ? null : <span className="ml-2 text-xs text-ink-3">{portabilityWords(codes, t)}</span>
                   ) : (
                     <>
                       {' '}
-                      <PortabilityGlyph codes={codes} systems={portability.systems} />
+                      <PortabilityGlyph codes={codes} systems={portability.systems} t={t} />
                     </>
                   )
                 ) : null}
@@ -93,18 +96,18 @@ export function OptionsTable({
                   type="button"
                   data-bm-action="compose"
                   aria-pressed="false"
-                  aria-label={`Add ${splitFlags(opt.flags)[0]} to the command`}
+                  aria-label={t('Add {flag} to the command', { flag: splitFlags(opt.flags)[0] })}
                   className="bm-js ml-2 align-baseline text-xs text-ink-3 underline decoration-rule-2 underline-offset-2 opacity-0 hover:text-accent focus-visible:opacity-100 group-hover/opt:opacity-100 group-focus-within/opt:opacity-100 group-data-[bm-revealed]/opt:opacity-100"
                 >
-                  add
+                  {t('add')}
                 </button>
                 {/* A picked flag is marked on its term; the control itself still shows only on hover, focus or tap. */}
                 <span data-bm-composed-mark className="bm-js ml-2 hidden whitespace-nowrap text-xs text-accent group-data-[bm-composed]/opt:inline">
-                  in command
+                  {t('in command')}
                 </span>
                 {newInByAnchor.has(opt.anchorId) ? (
-                  <span className="ml-2 whitespace-nowrap text-xs text-ink-3" title="Not in this page’s previous release">
-                    new{newInByAnchor.get(opt.anchorId)!.packageVersion ? ` in ${newInByAnchor.get(opt.anchorId)!.packageVersion}` : ''}
+                  <span className="ml-2 whitespace-nowrap text-xs text-ink-3" title={t('Not in this page’s previous release')}>
+                    {newInByAnchor.get(opt.anchorId)!.packageVersion ? t('new in {version}', { version: newInByAnchor.get(opt.anchorId)!.packageVersion! }) : t('new')}
                   </span>
                 ) : null}
               </td>

@@ -3,17 +3,21 @@ import { redirect } from 'next/navigation'
 
 import { LicensesClient } from './LicensesClient'
 import { FastApiError, fetchLicenses, withDistroFallback } from '../../../lib/api'
-import { explicitDistro, resolveRequestDistro, type SearchParams } from '../../../lib/requestContext'
+import { withDistro } from '../../../lib/distro'
+import { localizedSeo } from '../../../lib/i18n/seo'
+import { getI18n } from '../../../lib/i18n/server'
+import { explicitDistro, explicitLang, resolveRequestDistro, resolveRequestLang, type SearchParams } from '../../../lib/requestContext'
 
-export function generateMetadata(): Metadata {
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
+  const sp = await searchParams
+  const { t, lang } = await getI18n(resolveRequestLang(sp))
+  const title = t('{title} — BetterMan', { title: t('Licenses') })
+  const description = t('Attribution and license notices for the current BetterMan dataset release.')
   return {
-    title: 'Licenses — BetterMan',
-    description: 'Attribution and license notices for the current BetterMan dataset release.',
-    openGraph: {
-      title: 'Licenses — BetterMan',
-      description: 'Attribution and license notices for the current BetterMan dataset release.',
-      type: 'website',
-    },
+    title,
+    description,
+    openGraph: { title, description, type: 'website' },
+    ...localizedSeo(lang, withDistro('/licenses', explicitDistro(sp))),
   }
 }
 
@@ -31,7 +35,7 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
       // (site)/loading.tsx may already have streamed HTTP 200. Next then emits
       // a client/meta redirect; before streaming it returns HTTP 307. This is
       // request recovery, not a permanent URL move. Carry only URL state (#417).
-      redirect(urlDistro ? `/licenses?distro=${urlDistro}` : '/licenses')
+      redirect(withDistro('/licenses', urlDistro, explicitLang(sp)))
     }
     throw error
   })

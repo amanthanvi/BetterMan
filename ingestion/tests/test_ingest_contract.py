@@ -29,7 +29,7 @@ def test_required_contract_matches_convex_source():
     assert functions is not None
     assert counts is not None
     assert pending is not None
-    assert int(version.group(1)) == REQUIRED_SCHEMA_VERSION
+    assert int(version.group(1)) == REQUIRED_SCHEMA_VERSION == 8
     assert re.findall(r'"([^"]+)"', functions.group(1)) == list(REQUIRED_FUNCTIONS)
     assert re.findall(r'"([^"]+)"', counts.group(1)) == list(REQUIRED_DECLARATION_COUNTS)
     assert pending.group(1) == "true"

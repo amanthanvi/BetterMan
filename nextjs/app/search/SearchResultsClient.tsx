@@ -7,9 +7,14 @@ import type { SearchResponse, SearchResult } from '../../lib/api'
 import type { ConceptLink } from '../../lib/concepts'
 import { withDistro, type Distro } from '../../lib/distro'
 import { useDistro } from '../../components/state/distro'
+import { useLang } from '../../components/state/lang'
+import { tRich } from '../../lib/i18n/rich'
 import { SearchResultsBody } from '../../components/search/SearchResultsBody'
 
 export { resultKind } from '../../components/search/ResultRow'
+
+/** Queries the empty search page suggests: a name, a name, a task. They are typed, so they stay as written. */
+const EXAMPLE_QUERIES = ['tar', 'ssh', 'copy files'] as const
 
 async function fetchMore(opts: {
   distro: Distro
@@ -69,6 +74,7 @@ export function SearchResultsClient({
   concepts?: ConceptLink[]
 }) {
   const { urlDistro } = useDistro()
+  const { t, tn, urlLang } = useLang()
   const [results, setResults] = useState<SearchResult[]>(() => initial?.results ?? [])
   const [hasMore, setHasMore] = useState<boolean>(() => initial?.hasMore ?? false)
   const [loading, setLoading] = useState(false)
@@ -110,37 +116,25 @@ export function SearchResultsClient({
       })
     } catch (e) {
       if (epoch !== requestEpochRef.current) return
-      setError(e instanceof Error ? e.message : 'Failed to load more')
+      setError(e instanceof Error ? e.message : t('Failed to load more'))
     } finally {
       if (epoch === requestEpochRef.current) setLoading(false)
     }
-  }, [distro, loading, q, results.length, section])
+  }, [distro, loading, q, results.length, section, t])
 
   if (!q) {
     return (
       <p className="mt-10 text-sm text-ink-2">
-        Search by command name or by what it does. Try{' '}
-        <Link
-          href={withDistro(`/search?q=${encodeURIComponent('tar')}`, urlDistro)}
-          className="font-mono underline"
-        >
-          tar
-        </Link>
-        ,{' '}
-        <Link
-          href={withDistro(`/search?q=${encodeURIComponent('ssh')}`, urlDistro)}
-          className="font-mono underline"
-        >
-          ssh
-        </Link>
-        ,{' '}
-        <Link
-          href={withDistro(`/search?q=${encodeURIComponent('copy files')}`, urlDistro)}
-          className="font-mono underline"
-        >
-          copy files
-        </Link>
-        .
+        {tRich(t, 'Search by command name or by what it does. Try {examples}.', {
+          examples: EXAMPLE_QUERIES.map((example, index) => (
+            <span key={example}>
+              {index ? ', ' : null}
+              <Link href={withDistro(`/search?q=${encodeURIComponent(example)}`, urlDistro, urlLang)} className="font-mono underline">
+                {example}
+              </Link>
+            </span>
+          )),
+        })}
       </p>
     )
   }
@@ -156,11 +150,13 @@ export function SearchResultsClient({
       top={initial?.top ?? null}
       urlDistro={urlDistro}
       concepts={concepts}
+      urlLang={urlLang}
+      t={t}
       footer={
         <>
           <div className="mt-5 flex items-baseline justify-between gap-3">
             <div className="text-xs text-ink-3" aria-live="polite">
-              {results.length.toLocaleString()} results loaded
+              {tn('{count, plural, one {# result loaded} other {# results loaded}}', results.length, `${results.length.toLocaleString()} results loaded`)}
             </div>
             <button
               type="button"
@@ -169,13 +165,13 @@ export function SearchResultsClient({
               disabled={!canLoadMore || loading}
               aria-label={
                 loading
-                  ? 'Load more results, Loading'
+                  ? t('Load more results, Loading')
                   : hasMore
-                    ? 'Load more results'
-                    : 'Load more results, All results loaded'
+                    ? t('Load more results')
+                    : t('Load more results, All results loaded')
               }
             >
-              {loading ? 'Loading…' : hasMore ? 'Load more' : 'All results loaded'}
+              {loading ? t('Loading…') : hasMore ? t('Load more') : t('All results loaded')}
             </button>
           </div>
 

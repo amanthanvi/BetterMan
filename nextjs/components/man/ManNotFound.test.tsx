@@ -3,19 +3,20 @@ import { describe, expect, it } from 'vitest'
 
 import type { ManMiss } from '../../lib/manLookup'
 import { ManNotFound, manMiss } from './ManNotFound'
+import { tServer } from '../../lib/i18n/testing'
 
 const miss: ManMiss = { name: 'ta', section: null, distro: 'debian', urlDistro: null, suggestions: [], distros: [], limited: false, answeredByKey: true }
 
 describe('manMiss', () => {
   it('says what man-db says', () => {
-    expect(manMiss('foo', null)).toEqual({ command: 'man foo', message: 'No manual entry for foo' })
-    expect(manMiss('tar', '9')).toEqual({ command: 'man 9 tar', message: 'No manual entry for tar in section 9' })
+    expect(manMiss('foo', null, tServer)).toEqual({ command: 'man foo', message: 'No manual entry for foo' })
+    expect(manMiss('tar', '9', tServer)).toEqual({ command: 'man 9 tar', message: 'No manual entry for tar in section 9' })
   })
 })
 
 describe('ManNotFound', () => {
   it('answers in man’s voice and links to search', () => {
-    const html = renderToStaticMarkup(<ManNotFound miss={{ ...miss, section: '9' }} />)
+    const html = renderToStaticMarkup(<ManNotFound miss={{ ...miss, section: '9' }} urlLang={null} t={tServer} />)
     expect(html).toContain('$ man 9 ta')
     expect(html).toMatch(/<h1[^>]*>No manual entry for ta in section 9<\/h1>/)
     expect(html).toContain('href="/search?q=ta"')
@@ -27,6 +28,8 @@ describe('ManNotFound', () => {
   it('lists suggestions and the other distros that have the page', () => {
     const html = renderToStaticMarkup(
       <ManNotFound
+        urlLang={null}
+        t={tServer}
         miss={{
           ...miss,
           section: '1',
@@ -45,7 +48,7 @@ describe('ManNotFound', () => {
   })
 
   it('keeps the URL distro on the search link and explains the macOS subset', () => {
-    const html = renderToStaticMarkup(<ManNotFound miss={{ ...miss, distro: 'macos', urlDistro: 'macos' }} />)
+    const html = renderToStaticMarkup(<ManNotFound miss={{ ...miss, distro: 'macos', urlDistro: 'macos' }} urlLang={null} t={tServer} />)
     expect(html).toMatch(/<h1[^>]*>No manual entry for ta<\/h1>/)
     expect(html).toContain('href="/search?q=ta&amp;distro=macos"')
     expect(html).toContain('BetterMan carries only the BSD-licensed subset of the manual pages macOS ships')

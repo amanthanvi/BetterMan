@@ -3,9 +3,13 @@ import { Fragment, type ReactNode } from 'react'
 import { withDistro, type Distro } from '../../lib/distro'
 import type { BlockNode, InlineNode } from '../../lib/docModel'
 import { findExternalUrls } from '../../lib/externalUrls'
+import type { Lang } from '../../lib/i18n/locales'
+import type { ServerT } from '../../lib/i18n/server'
 import { CodeBlock, type CodeLanguage } from './CodeBlock'
 
 type RenderCtx = {
+  urlLang: Lang | null
+  t: ServerT
   codeLanguage?: CodeLanguage
   sectionNumbers?: ReadonlyMap<string, string>
 }
@@ -18,18 +22,23 @@ type RenderCtx = {
 export function DocRenderer({
   blocks,
   urlDistro,
+  urlLang,
   codeLanguage,
   sectionNumbers,
+  t,
 }: {
   blocks: BlockNode[]
   /** The page URL's own `?distro=`, which internal links carry; null for a bare URL. */
   urlDistro: Distro | null
+  /** The page URL's own `?lang=`, carried by internal links too. */
+  urlLang: Lang | null
   /** Highlighting for code blocks the parser gave no language. */
   codeLanguage?: CodeLanguage
   /** Hanging numbers per heading id, from `sectionNumbers()`. */
   sectionNumbers?: ReadonlyMap<string, string>
+  t: ServerT
 }) {
-  const ctx: RenderCtx = { codeLanguage, sectionNumbers }
+  const ctx: RenderCtx = { urlLang, t, codeLanguage, sectionNumbers }
 
   // The typography is `.bm-manual` in globals.css; blocks render as plain elements.
   // Long pages only: `.bm-doc > *` in globals.css gives each top-level block
@@ -155,13 +164,14 @@ function BlockView({ block, ctx, urlDistro }: { block: BlockNode; ctx: RenderCtx
           text={block.text}
           languageHint={block.languageHint ?? undefined}
           defaultLanguage={ctx.codeLanguage}
+          t={ctx.t}
         />
       )
 
     case 'table':
       return (
         // Wide tables scroll sideways, so the scroller takes keyboard focus.
-        <div className="bm-tbl" tabIndex={0} role="group" aria-label="Table">
+        <div className="bm-tbl" tabIndex={0} role="group" aria-label={ctx.t('Table')}>
           <table>
             <thead>
               <tr>
@@ -219,14 +229,14 @@ function renderInlines(inlines: InlineNode[], ctx: RenderCtx, urlDistro: Distro 
         }
         if (inline.linkType === 'unresolved') {
           return (
-            <span key={idx} className="bm-unresolved" title="Not available in this dataset">
+            <span key={idx} className="bm-unresolved" title={ctx.t('Not available in this dataset')}>
               {renderInlines(inline.inlines, ctx, urlDistro, false)}
-              <span className="sr-only"> (not available)</span>
+              <span className="sr-only">{ctx.t(' (not available)')}</span>
             </span>
           )
         }
         return (
-          <a key={idx} href={inline.href.startsWith('/') ? withDistro(inline.href, urlDistro) : inline.href}>
+          <a key={idx} href={inline.href.startsWith('/') ? withDistro(inline.href, urlDistro, ctx.urlLang) : inline.href}>
             {renderInlines(inline.inlines, ctx, urlDistro, false)}
           </a>
         )

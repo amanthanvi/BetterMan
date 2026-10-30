@@ -8,6 +8,7 @@ import type { BlockNode, OptionItem } from '../../lib/docModel'
 import { DocRenderer } from '../doc/DocRenderer'
 import { OptionsTable } from './OptionsTable'
 import { collectBlockIds, optionRowIds } from './optionAnchors'
+import { tServer } from '../../lib/i18n/testing'
 
 const dir = join(__dirname, '../doc/__fixtures__')
 const goldens = readdirSync(dir)
@@ -19,8 +20,8 @@ function renderedIds(options: OptionItem[], blocks: BlockNode[]): string[] {
   const rowIds = optionRowIds(options, collectBlockIds(blocks))
   const html = renderToStaticMarkup(
     <>
-      <OptionsTable options={options} rowIds={rowIds} />
-      <DocRenderer blocks={blocks} urlDistro={null} />
+      <OptionsTable options={options} rowIds={rowIds} t={tServer} />
+      <DocRenderer blocks={blocks} urlDistro={null} urlLang={null} t={tServer} />
     </>,
   )
   return [...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])

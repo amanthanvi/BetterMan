@@ -1,11 +1,14 @@
 'use client'
 
+import { useT } from '../state/lang'
+
 /**
  * The command line, as typed: a wrapping field so a long pipeline stays whole
  * on a phone. Enter explains; Shift+Enter is never needed because explain does
  * not model multi-line input. Without JavaScript the Explain button submits.
  */
 export function ExplainInput({ initial, maxLength }: { initial: string; maxLength: number }) {
+  const t = useT()
   return (
     <textarea
       name="cmd"
@@ -18,8 +21,8 @@ export function ExplainInput({ initial, maxLength }: { initial: string; maxLengt
       autoCorrect="off"
       spellCheck={false}
       autoFocus={!initial}
-      placeholder="Paste a command line"
-      aria-label="Command line to explain"
+      placeholder={t('Paste a command line')}
+      aria-label={t('Command line to explain')}
       data-bm-page-search
       onKeyDown={(event) => {
         if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return

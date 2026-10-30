@@ -117,7 +117,7 @@
       "absolute": 0
     },
     "search.jsGzipBytes": {
-      "baseline": 171381,
+      "baseline": 171890,
       "relative": 0.02,
       "absolute": 0
     },
@@ -633,7 +633,7 @@
       "absolute": 0
     },
     "manProviders.htmlBytes": {
-      "baseline": 55690,
+      "baseline": 55915,
       "relative": 0.02,
       "absolute": 0
     },
@@ -663,7 +663,7 @@
       "absolute": 0
     },
     "manAlternate.htmlBytes": {
-      "baseline": 51896,
+      "baseline": 52265,
       "relative": 0.02,
       "absolute": 0
     },

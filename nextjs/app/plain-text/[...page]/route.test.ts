@@ -196,6 +196,16 @@ it('keeps alternate robots and omits a noindex canonical on a release-mismatched
   expect(res.headers.get('x-robots-tag')).toBe('noindex')
 })
 
+it.each([true, false, undefined])('carries tier robots on text GET and HEAD: %s', async indexable => {
+  vi.mocked(fetchManByNameAndSectionOrAlias).mockResolvedValue({ kind: 'page', data: { ...manual, page: { ...manual.page, indexable } } })
+  for (const method of [GET, HEAD]) {
+    const res = await method(req(), ctx())
+    expect(res.status).toBe(200)
+    expect(res.headers.get('x-robots-tag')).toBe(indexable === false ? 'noindex' : null)
+    expect(res.headers.get('link')).toBe(indexable === false ? null : '<https://betterman.sh/man/tar/1>; rel="canonical"')
+  }
+})
+
 it.each(['?zz=1', '?distro=ubuntu&distro=fedora', '?pkg=Bad_Name'])('answers a query the proxy would have redirected (%s) privately', async (query) => {
   const res = await GET(req(query), ctx())
   expect(res.headers.get('cache-control')).toBe('private, no-store')

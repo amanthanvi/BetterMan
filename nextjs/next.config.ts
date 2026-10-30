@@ -72,11 +72,11 @@ const nextConfig: NextConfig = {
 export default async function config(phase: string): Promise<NextConfig> {
   if (phase !== PHASE_PRODUCTION_BUILD && phase !== PHASE_DEVELOPMENT_SERVER) return nextConfig
   const { buildManClient, watchManClient } = await import('./scripts/build-man-client.mjs')
-  const script = phase === PHASE_PRODUCTION_BUILD ? await buildManClient(__dirname) : await watchManClient(__dirname)
+  const scripts = phase === PHASE_PRODUCTION_BUILD ? await buildManClient(__dirname) : await watchManClient(__dirname)
   // A per-build secret the proxy hands the man page renderer with the release (lib/manRelease.ts).
   // Only server code reads it, so it is never part of a client bundle.
   const releaseToken = randomBytes(32).toString('base64url')
-  return { ...nextConfig, env: { ...nextConfig.env, BM_MAN_SCRIPT: script, BM_RELEASE_TOKEN: releaseToken } }
+  return { ...nextConfig, env: { ...nextConfig.env, BM_MAN_SCRIPT: scripts.en, BM_MAN_SCRIPTS: JSON.stringify(scripts), BM_RELEASE_TOKEN: releaseToken } }
 }
 
 export { nextConfig }

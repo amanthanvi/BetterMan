@@ -1,3 +1,5 @@
+import type { ServerT } from '../../lib/i18n/server'
+
 export type ManHeadData = {
   title: string
   description: string | null
@@ -31,7 +33,9 @@ export function printPageCss({ head, foot }: NonNullable<ManHeadData['print']>):
 }
 
 /** Every man page route returns its head as `pageProps.head`; pages/_document.tsx renders it. */
-export const MISSING_MAN_HEAD: ManHeadData = { title: 'Not found — BetterMan', description: null, canonical: null, ogImage: null, jsonLd: null, noindex: true }
+export function missingManHead(t: ServerT): ManHeadData {
+  return { title: t('{title} — BetterMan', { title: t('Not found') }), description: null, canonical: null, ogImage: null, jsonLd: null, noindex: true }
+}
 
 /**
  * The man pages' <head> metadata, which the App Router's metadata API writes
