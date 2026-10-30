@@ -876,6 +876,40 @@ def test_acquisition_summary_counts_archive_fallbacks(archive_workspace, monkeyp
 
 
 @pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("allowed_wins", [False, True])
+def test_published_real_page_owner_excludes_competing_provider(
+    archive_workspace, tmp_path, monkeypatch, reverse, allowed_wins
+):
+    from dataclasses import replace
+
+    from ingestion.ingest_runner import _COMMAND_PAGES, _PageSpool
+
+    obj = archive_workspace
+    obj.available["gawk"] = replace(obj.available["gawk"], depends=("provider-high",))
+    obj.available["provider-low"] = replace(
+        obj.available["provider-low"], installed=1 if allowed_wins else 1000
+    )
+    obj.packages = [obj.available[p.name] for p in obj.packages]
+    if reverse:
+        obj.packages.reverse()
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["gawk"])
+    monkeypatch.setitem(_COMMAND_PAGES, "gawk", ("shared", "1"))
+    with _PageSpool(tmp_path / "competing-pages.sqlite3") as spool:
+        providers, failures = pipeline.parse_workspace(obj, spool, workers=1)
+        assert not failures
+        pages = [p for p in spool.refs() if (p.name, p.section) == ("shared", "1")]
+        winner = "provider-high" if allowed_wins else "provider-low"
+        assert {p.source_package for p in pages} == {"provider-high", "provider-low"}
+        assert [p.source_package for p in pages if p.page_id not in providers] == [winner]
+        assert obj.published_route_owners[("shared", "1")] == winner
+        if allowed_wins:
+            assert obj.require_command_owners() == {"gawk": "provider-high"}
+        else:
+            with pytest.raises(RuntimeError, match="wrong command-page owner.*shared"):
+                obj.require_command_owners()
+
+
+@pytest.mark.parametrize("reverse", [False, True])
 def test_published_nc_owner_uses_elected_alias_target_in_both_provider_orders(
     archive_workspace,
     tmp_path,
@@ -889,6 +923,10 @@ def test_published_nc_owner_uses_elected_alias_target_in_both_provider_orders(
 
     obj = archive_workspace
     obj.store.db.execute("DELETE FROM entries WHERE kind='control'")
+    obj.store.db.execute(
+        "INSERT INTO entries SELECT pkg,replace(path,'shared.1.gz','nc_openbsd.1.gz'),"
+        "kind,target,file FROM entries WHERE pkg='provider-high' AND path LIKE '%shared.1.gz'"
+    )
     mapping = {"provider-low": "netcat-traditional", "provider-high": "netcat-openbsd"}
     for old, name in mapping.items():
         obj.store.db.execute("UPDATE entries SET pkg=? WHERE pkg=?", (name, old))
@@ -902,9 +940,11 @@ def test_published_nc_owner_uses_elected_alias_target_in_both_provider_orders(
         obj.available[name] = metadata
         script = tmp_path / f"{name}.postinst"
         priority = 10 if name == "netcat-traditional" else 50
+        target_name = "shared" if name == "netcat-traditional" else "nc_openbsd"
         script.write_text(
             "update-alternatives --install /usr/bin/nc nc /usr/bin/shared "
-            f"{priority} --slave /usr/share/man/man1/nc.1 nc.1 /usr/share/man/man1/shared.1\n"
+            f"{priority} --slave /usr/share/man/man1/nc.1 nc.1 "
+            f"/usr/share/man/man1/{target_name}.1\n"
         )
         obj.store.db.execute(
             "INSERT INTO entries VALUES (?,?,?,NULL,?)",
@@ -924,8 +964,56 @@ def test_published_nc_owner_uses_elected_alias_target_in_both_provider_orders(
         assert {a["sourcePackage"] for a in offers} == set(names)
         elected = next(a for a in offers if not a["providerOnly"])
         assert elected["targetPackage"] == "netcat-traditional"
+        assert obj.published_route_owners[("nc_openbsd", "1")] == "netcat-openbsd"
+        assert any(
+            p.name == "nc_openbsd" and p.source_package == "netcat-openbsd" for p in spool.refs()
+        )
+        openbsd = next(a for a in offers if a["sourcePackage"] == "netcat-openbsd")
+        assert openbsd["providerOnly"]
+        assert (openbsd["targetName"], openbsd["targetSection"], openbsd["targetPackage"]) == (
+            "nc_openbsd",
+            "1",
+            "netcat-openbsd",
+        )
         obj.alias_providers = list(reversed(offers)) if reverse else offers
         assert obj.require_command_owners() == {"netcat-openbsd": "netcat-traditional"}
+
+    from ingestion.debian_publish import publish_workspace
+
+    obj.pins = {
+        "mirror": "https://example.test",
+        "releaseSha256": "a" * 64,
+        "acquisition": "deb-extraction",
+    }
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
+    calls = []
+
+    class Client:
+        def post(self, path, payload):
+            calls.append((path, payload))
+            return {}
+
+    publish_workspace(
+        obj, Client(), activate=False, dataset_stage="staging", git_sha="test", sample=True
+    )
+    assert any(
+        p["name"] == "nc_openbsd"
+        and p["sourcePackage"] == "netcat-openbsd"
+        and not p.get("providerOnly")
+        for path, payload in calls
+        if path == "/ingest/pages/storage"
+        for p in payload["pages"]
+    )
+    assert any(
+        a["name"] == "nc"
+        and a["sourcePackage"] == "netcat-openbsd"
+        and a["providerOnly"]
+        and a["targetName"] == "nc_openbsd"
+        and a["targetPackage"] == "netcat-openbsd"
+        for path, payload in calls
+        if path == "/ingest/aliases"
+        for a in payload["aliases"]
+    )
 
 
 def test_published_alias_owner_is_its_served_target_package(
@@ -956,3 +1044,61 @@ def test_published_alias_owner_is_its_served_target_package(
         assert obj.route_winners[("gawk", "1")][0] == "provider-high"
         assert obj.published_route_owners[("gawk", "1")] == "provider-low"
         assert obj.require_command_owners() == {"gawk": "provider-low"}
+
+
+@pytest.mark.parametrize("alias_route_page", [False, True])
+def test_alias_owner_requires_its_exact_target_to_parse(
+    archive_workspace, tmp_path, monkeypatch, alias_route_page
+):
+    from dataclasses import replace
+
+    from ingestion.ingest_runner import _PageSpool, _require_command_pages
+
+    obj = archive_workspace
+    obj.store.db.execute("DELETE FROM entries WHERE kind='control' OR pkg='gawk'")
+    if alias_route_page:
+        obj.store.db.execute(
+            "INSERT INTO entries SELECT pkg,replace(path,'shared.1.gz','GAWK.1.gz'),"
+            "kind,target,file FROM entries WHERE pkg='provider-low' AND path LIKE '%shared.1.gz'"
+        )
+    script = tmp_path / "failed-target.postinst"
+    script.write_text(
+        "update-alternatives --install /usr/share/man/man1/gawk.1 gawk.1 "
+        "/usr/share/man/man1/shared.1 10\n"
+    )
+    obj.store.db.execute(
+        "INSERT INTO entries VALUES (?,?,?,NULL,?)",
+        ("provider-high", "@control/postinst", "control", str(script)),
+    )
+    obj.available["gawk"] = replace(obj.available["gawk"], depends=("provider-high",))
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["gawk"])
+    sources = obj.sources
+
+    def fail_target():
+        for pkg, path, name, section, alias, raw in sources():
+            if (pkg, name, section, alias) == ("provider-high", "shared", "1", False):
+                raw = b".so unavailable.1\n"
+            yield pkg, path, name, section, alias, raw
+
+    monkeypatch.setattr(obj, "sources", fail_target)
+    with _PageSpool(tmp_path / "failed-target-pages.sqlite3") as spool:
+        providers, failures = pipeline.parse_workspace(obj, spool, workers=1)
+        assert len(failures) == 1 and failures[0]["package"] == "provider-high"
+        assert obj.published_route_owners[("shared", "1")] == "provider-low"
+        assert not any(a.name == "gawk" for a in obj.aliases)
+        assert all(a["providerOnly"] for a in obj.alias_providers if a["name"] == "gawk")
+        if alias_route_page:
+            assert obj.published_route_owners[("gawk", "1")] == "provider-low"
+            with pytest.raises(RuntimeError, match="wrong command-page owner.*gawk"):
+                obj.require_command_owners()
+            return
+        assert ("gawk", "1") not in obj.published_route_owners
+        assert obj.require_command_owners() == {}
+        with pytest.raises(RuntimeError, match="missing package-set command pages: gawk"):
+            _require_command_pages(
+                distro="debian",
+                requested=["gawk"],
+                pages=[p for p in spool.refs() if p.page_id not in providers],
+                aliases=obj.aliases,
+                sample=False,
+            )

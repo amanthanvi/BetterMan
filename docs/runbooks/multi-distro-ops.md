@@ -235,6 +235,13 @@ before the owner authorizes a separate promotion-only dispatch (`ingest: false`,
 `promote: true`, **`debian_full_promote: true`**, and
 `expected_release_ids: {"debian":"<inspected-full-release-id>"}`). Supplying the
 saved ID prevents a queued dispatch from adopting a later staging activation.
+
+**Before approving full-Debian promotion:** nc(1) switches from netcat-openbsd
+to netcat-traditional under the documented default-installed-provider policy.
+The OpenBSD manual stays reachable at `/man/nc_openbsd/1` and through the
+explicit provider entry `/man/nc/1?pkg=netcat-openbsd`. Verify these entries in
+the inspected release; see [the nc owner audit](../roadmap/b1-debian-nc-owner.md).
+
 The authorization input defaults
 false. Routine promote-only recovery without that input skips an actual
 full-Debian staging pointer, logs `Skipping held full-Debian staging release`,

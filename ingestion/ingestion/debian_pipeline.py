@@ -674,10 +674,15 @@ def parse_workspace(workspace: Workspace, spool: _PageSpool, *, workers=4):
                 failed.append({"package": item.package, "path": item.path, "error": str(exc)})
     refs = list(spool.refs())
     canonical = {(p.name, p.section): p for p in refs if p.page_id not in providers}
+    parsed_targets = {(p.name, p.section, p.source_package) for p in refs}
     by_route = {}
     for item in workspace.alias_candidates:
         key = (item["name"], item["section"])
-        if workspace.route_winners[key] == (item["sourcePackage"], item["sourcePath"], True):
+        # A different package's page cannot stand in for a failed alias target.
+        if (
+            workspace.route_winners[key] == (item["sourcePackage"], item["sourcePath"], True)
+            and (item["targetName"], item["targetSection"], item["targetPackage"]) in parsed_targets
+        ):
             by_route.setdefault(key, item)
     aliases = _resolve_aliases(
         aliases=[
