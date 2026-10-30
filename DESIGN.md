@@ -330,6 +330,27 @@ the numbered definitions and the safety note.
   its edge, the one red in the note): "Before you run this" and the engine's
   fixed facts verbatim. The page adds no claim (`docs/explain-contract.md`).
 
+## Concept explainers
+
+`/concept/<slug>` (`app/concept/[slug]/page.tsx`, B8 #400) is BetterMan's own
+plain-English text over a section 7 page, server-rendered and complete without
+JavaScript. A running head (Concept · title · BetterMan), the title in the
+serif, the summary as a sans lede, then "The manual's page": the section 7
+citations in large serif, first, because the manual is the authority. The
+explainer itself (article "Explainer") is sans on paper with a provenance line
+("BetterMan's own explainer, not text from the manual. Generated · model,
+date"), mono for anything typed; citations in it link to the manual. Sources
+list each cited page with its package, distros and the sections read; Related
+pages follow. Only approved explainers render (`nextjs/content/concepts/README.md`);
+a build with `BETTERMAN_CONCEPT_DRAFTS=1` shows drafts with a red "not
+published" note and `noindex`.
+
+On a man page that references a concept, one quiet line closes the footer, nav
+"Concepts" (`[data-bm-concepts]`): "Concepts: signals · globbing". It sits
+beside "Report a problem", never in the manual text and never as a card. In
+search, an explainer is a row with the kind `concept`, evidence "BetterMan
+explainer · on signal(7)", after the first result.
+
 ## Component vocabulary
 
 `components/ui/`: `Button` (outline = underlined text, ghost = quiet ink,
@@ -379,7 +400,9 @@ combinator.
   "Key flags of <name>(<section>)" and link "Package <name>", regions "Recent" /
   "Bookmarks" (home, only once they have entries) / "Browse sections" / "In brief" / "Options" / "Command composer" /
   "Other distributions" / "Did you mean" (man page 404), complementaries "See
-  also" / "Related commands", headings "Browse" and "Search the manual", TOC
+  also" / "Related commands", nav "Concepts" (man page footer, only when the
+  page references a published explainer), on a concept page regions "The
+  manual's page" / "Sources" and article "Explainer", headings "Browse" and "Search the manual", TOC
   active link `aria-current="location"`, link "Report a problem" (man page
   footer), and on explain: search form "Explain a command line", textbox
   "Command line to explain", region "Reading", list "Tokens" (a cluster's flags

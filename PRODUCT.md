@@ -27,7 +27,7 @@ BetterMan 2 aims, in order, to be the default lookup, a daily-driver tool, and a
 - Playwright e2e specs in `nextjs/e2e/` are the behavioral contract (semantic roles, aria-labels, `data-bm-*` hooks); reading prefs bind via `body[data-bm-*]` attributes.
 - Convex is the runtime data source, read server-side only; read-cost frugality is an active goal — no client subscriptions.
 - Zero-account product: all personalization stays in localStorage/cookies.
-- No runtime LLM. Generated text (summaries, gap-fill examples, task phrases, concept explainers) is built at ingest. It is labeled with model and date, and generated examples are checked flag by flag against the page's options table.
+- No runtime LLM. Generated text (summaries, gap-fill examples, task phrases) is built at ingest; concept explainers are reviewed files committed to the repository and bundled at build time. All of it is labeled with model and date, generated examples are checked flag by flag against the page's options table, and explainers publish only after a model panel and the owner have read them.
 
 ## Brand commitments (decided 2026-10-27)
 
@@ -51,4 +51,4 @@ web
 
 ## Open decisions
 
-- How concepts surface on a man page (a footer line plus search, or hover/tap cards) is decided from bake-off drafts.
+- None at present. Concept surfacing was settled by the owner: a quiet footer line plus search, with no cards inside the manual text (B8, #400).

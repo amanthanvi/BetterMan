@@ -1,0 +1,6166 @@
+{
+ "concepts": [
+  {
+   "slug": "boot",
+   "title": "The boot process",
+   "term": "boot process",
+   "summary": "What happens between power-on and a login prompt, from firmware and boot loader to the kernel, the initramfs and the first process.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "bootup",
+      "section": "7"
+     },
+     "package": "systemd 257.13-1~deb13u1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora"
+     ],
+     "sections": "DESCRIPTION; SYSTEM MANAGER BOOTUP"
+    },
+    {
+     "page": {
+      "name": "boot",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "arch",
+      "alpine"
+     ],
+     "sections": "Hardware; OS loader; Kernel; Root user-space process; Boot scripts"
+    }
+   ],
+   "related": [
+    {
+     "name": "systemd",
+     "section": "1"
+    },
+    {
+     "name": "init",
+     "section": "1"
+    },
+    {
+     "name": "systemctl",
+     "section": "1"
+    },
+    {
+     "name": "bootparam",
+     "section": "7"
+    },
+    {
+     "name": "kernel-command-line",
+     "section": "7"
+    },
+    {
+     "name": "systemd.special",
+     "section": "7"
+    },
+    {
+     "name": "systemd.target",
+     "section": "5"
+    }
+   ],
+   "aliases": [
+    "boot",
+    "booting",
+    "bootup",
+    "startup",
+    "boot sequence",
+    "init",
+    "initramfs",
+    "initrd",
+    "boot loader",
+    "bootloader",
+    "runlevel",
+    "default.target"
+   ],
+   "references": [
+    {
+     "name": "bootup",
+     "section": "7"
+    },
+    {
+     "name": "boot",
+     "section": "7"
+    },
+    {
+     "name": "bootparam",
+     "section": "7"
+    },
+    {
+     "name": "kernel-command-line",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 254,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Booting a Linux system passes control along a short chain of programs."
+      }
+     ]
+    },
+    {
+     "type": "ol",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "After power-on, the "
+       },
+       {
+        "t": "em",
+        "v": "firmware"
+       },
+       {
+        "t": "text",
+        "v": " does minimal hardware set-up and hands control to a "
+       },
+       {
+        "t": "em",
+        "v": "boot loader"
+       },
+       {
+        "t": "text",
+        "v": ", such as GRUB or systemd-boot, on a storage device or the network. On EFI systems the firmware can also load the kernel directly."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "The boot loader loads the "
+       },
+       {
+        "t": "em",
+        "v": "kernel"
+       },
+       {
+        "t": "text",
+        "v": ", and usually an "
+       },
+       {
+        "t": "em",
+        "v": "initramfs"
+       },
+       {
+        "t": "text",
+        "v": ", into memory. It can pass the kernel parameters, such as which file system is the root; "
+       },
+       {
+        "t": "man",
+        "name": "bootparam",
+        "section": "7"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "man",
+        "name": "kernel-command-line",
+        "section": "7"
+       },
+       {
+        "t": "text",
+        "v": " list them."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "The kernel initializes the hardware drivers and unpacks the initramfs, a compressed archive that serves as a temporary root file system. Its job is to find and mount the real root file system. The older name "
+       },
+       {
+        "t": "em",
+        "v": "initrd"
+       },
+       {
+        "t": "text",
+        "v": " is still used for it."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "The kernel then starts the first user-space process, which has PID 1. Traditionally this runs "
+       },
+       {
+        "t": "code",
+        "v": "/sbin/init"
+       },
+       {
+        "t": "text",
+        "v": "; on many current distributions it is "
+       },
+       {
+        "t": "man",
+        "name": "systemd",
+        "section": "1"
+       },
+       {
+        "t": "text",
+        "v": ", the system manager."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "The system manager mounts the remaining file systems and starts the configured services."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "On systemd systems the last step is organized into "
+      },
+      {
+       "t": "em",
+       "v": "targets"
+      },
+      {
+       "t": "text",
+       "v": ": named stages such as "
+      },
+      {
+       "t": "code",
+       "v": "basic.target"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "multi-user.target"
+      },
+      {
+       "t": "text",
+       "v": ". At boot, systemd starts everything "
+      },
+      {
+       "t": "code",
+       "v": "default.target"
+      },
+      {
+       "t": "text",
+       "v": " depends on, which is usually an alias for "
+      },
+      {
+       "t": "code",
+       "v": "graphical.target"
+      },
+      {
+       "t": "text",
+       "v": " or "
+      },
+      {
+       "t": "code",
+       "v": "multi-user.target"
+      },
+      {
+       "t": "text",
+       "v": ". The work runs in parallel, so the order is not fixed beyond the dependencies."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Older System V systems use "
+      },
+      {
+       "t": "em",
+       "v": "run levels"
+      },
+      {
+       "t": "text",
+       "v": " instead. init reads "
+      },
+      {
+       "t": "code",
+       "v": "/etc/inittab"
+      },
+      {
+       "t": "text",
+       "v": " and runs start and stop scripts from "
+      },
+      {
+       "t": "code",
+       "v": "/etc/init.d"
+      },
+      {
+       "t": "text",
+       "v": " in the order set by links in "
+      },
+      {
+       "t": "code",
+       "v": "/etc/rc?.d"
+      },
+      {
+       "t": "text",
+       "v": ". Shutdown runs the chain in reverse: services stop, file systems are unmounted, and the machine powers off."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "capabilities",
+   "title": "Capabilities",
+   "term": "capabilities",
+   "summary": "How Linux splits the superuser's power into separate privileges, such as binding to a low port, that can be granted one at a time.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "capabilities",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION; Capabilities list; Thread capability sets; File capabilities; Capabilities and execution of programs by root; NOTES"
+    }
+   ],
+   "related": [
+    {
+     "name": "getcap",
+     "section": "8"
+    },
+    {
+     "name": "setcap",
+     "section": "8"
+    },
+    {
+     "name": "capsh",
+     "section": "1"
+    },
+    {
+     "name": "setpriv",
+     "section": "1"
+    },
+    {
+     "name": "credentials",
+     "section": "7"
+    },
+    {
+     "name": "user_namespaces",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "capability",
+    "linux capabilities",
+    "cap_net_bind_service",
+    "cap_sys_admin",
+    "cap_net_raw",
+    "setcap",
+    "file capabilities"
+   ],
+   "references": [
+    {
+     "name": "capabilities",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 225,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Traditional Unix has two kinds of process: privileged ones, whose effective user ID is 0 (root), which bypass every kernel permission check, and everyone else, who are checked in full. Linux splits root's power into separate units called capabilities, which can be granted and dropped one at a time."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A few examples from the list in "
+      },
+      {
+       "t": "man",
+       "name": "capabilities",
+       "section": "7"
+      },
+      {
+       "t": "text",
+       "v": ":"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "CAP_NET_BIND_SERVICE"
+       },
+       {
+        "t": "text",
+        "v": " binds a socket to a port below 1024."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "CAP_CHOWN"
+       },
+       {
+        "t": "text",
+        "v": " makes arbitrary changes to a file's owner and group."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "CAP_DAC_OVERRIDE"
+       },
+       {
+        "t": "text",
+        "v": " bypasses file read, write and execute permission checks."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "CAP_KILL"
+       },
+       {
+        "t": "text",
+        "v": " bypasses the permission checks for sending "
+       },
+       {
+        "t": "concept",
+        "slug": "signals",
+        "v": "signals"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "CAP_SYS_ADMIN"
+       },
+       {
+        "t": "text",
+        "v": " covers a long, overloaded list of administration tasks, such as mounting file systems."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Each thread holds several sets of capabilities. The "
+      },
+      {
+       "t": "em",
+       "v": "effective"
+      },
+      {
+       "t": "text",
+       "v": " set is what the kernel checks; the "
+      },
+      {
+       "t": "em",
+       "v": "permitted"
+      },
+      {
+       "t": "text",
+       "v": " set limits what may become effective; a capability dropped from the permitted set cannot be taken back without running a privileged program. Other sets decide what survives running a new program."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "An executable file can carry capabilities too, stored in an extended attribute and set with "
+      },
+      {
+       "t": "man",
+       "name": "setcap",
+       "section": "8"
+      },
+      {
+       "t": "text",
+       "v": ". That lets a program do one privileged thing, such as listen on port 80, without running as root; "
+      },
+      {
+       "t": "man",
+       "name": "getcap",
+       "section": "8"
+      },
+      {
+       "t": "text",
+       "v": " shows a file's capabilities. By default the kernel still treats root specially: a process running as root that starts a program gets every capability not removed from its "
+      },
+      {
+       "t": "em",
+       "v": "bounding"
+      },
+      {
+       "t": "text",
+       "v": " set."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Capabilities are specific to Linux."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "cgroups",
+   "title": "Control groups (cgroups)",
+   "term": "cgroups",
+   "summary": "How Linux organizes processes into a hierarchy of groups whose CPU, memory and other resource use can be limited and measured.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "cgroups",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION; Terminology; Cgroups version 1 and version 2; Creating cgroups and moving processes; CGROUPS VERSION 2; Cgroups v2 controllers; Cgroups v2 subtree control; FILES"
+    }
+   ],
+   "related": [
+    {
+     "name": "systemd-cgls",
+     "section": "1"
+    },
+    {
+     "name": "systemd-run",
+     "section": "1"
+    },
+    {
+     "name": "systemd.resource-control",
+     "section": "5"
+    },
+    {
+     "name": "cgroup_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "namespaces",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "cgroup",
+    "cgroups",
+    "control group",
+    "control groups",
+    "cgroup v2",
+    "cgroups v2",
+    "resource limits",
+    "cgroupfs"
+   ],
+   "references": [
+    {
+     "name": "cgroups",
+     "section": "7"
+    },
+    {
+     "name": "cgroup_namespaces",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 251,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Control groups, usually called cgroups, let the kernel organize processes into a tree of groups and then limit and measure the resources each group uses: CPU time, memory, I/O, the number of processes, and more."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The parts that do the limiting are "
+      },
+      {
+       "t": "em",
+       "v": "controllers"
+      },
+      {
+       "t": "text",
+       "v": ", such as "
+      },
+      {
+       "t": "code",
+       "v": "cpu"
+      },
+      {
+       "t": "text",
+       "v": ", "
+      },
+      {
+       "t": "code",
+       "v": "memory"
+      },
+      {
+       "t": "text",
+       "v": ", "
+      },
+      {
+       "t": "code",
+       "v": "io"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "pids"
+      },
+      {
+       "t": "text",
+       "v": ". A limit set on a group applies to everything beneath it in the tree, and a child group cannot exceed its parent's limit."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "There are two versions. Version 1 let each controller have its own separate hierarchy. Version 2, official since Linux 4.5, puts every controller in one unified hierarchy, and is meant to replace version 1, which remains for compatibility."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Cgroups are managed through a file system, normally mounted under "
+      },
+      {
+       "t": "code",
+       "v": "/sys/fs/cgroup"
+      },
+      {
+       "t": "text",
+       "v": ":"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "Each group is a directory, and making a subdirectory creates a child group."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "Writing a PID into a group's "
+       },
+       {
+        "t": "code",
+        "v": "cgroup.procs"
+       },
+       {
+        "t": "text",
+        "v": " file moves that process, with all its threads, into the group. A process is in exactly one group of a hierarchy at a time, and a child starts in its parent's group."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "In version 2, "
+       },
+       {
+        "t": "code",
+        "v": "cgroup.subtree_control"
+       },
+       {
+        "t": "text",
+        "v": " chooses which controllers are active for a group's children."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/proc/<pid>/cgroup"
+       },
+       {
+        "t": "text",
+        "v": " shows which group a process is in."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "On many systems, "
+      },
+      {
+       "t": "man",
+       "name": "systemd",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " mounts this file system at boot and uses cgroups to track services and user sessions, so its resource settings are often where you set limits. Cgroups decide how much of a resource a group may use; "
+      },
+      {
+       "t": "concept",
+       "slug": "namespaces",
+       "v": "namespaces"
+      },
+      {
+       "t": "text",
+       "v": ", their usual partner in containers, decide what it can see."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Cgroups are specific to Linux."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "character-encoding",
+   "title": "Character encoding and UTF-8",
+   "term": "UTF-8",
+   "summary": "How text is stored as bytes, from 7-bit ASCII through the ISO 8859 sets to UTF-8, and why one byte is not always one character.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "utf-8",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION; Properties; Encoding; Application notes; Security"
+    },
+    {
+     "page": {
+      "name": "charsets",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "ASCII; ISO/IEC 8859; Unicode"
+    },
+    {
+     "page": {
+      "name": "ascii",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine",
+      "freebsd",
+      "macos"
+     ],
+     "sections": "DESCRIPTION"
+    }
+   ],
+   "related": [
+    {
+     "name": "iconv",
+     "section": "1"
+    },
+    {
+     "name": "locale",
+     "section": "1"
+    },
+    {
+     "name": "unicode",
+     "section": "7"
+    },
+    {
+     "name": "locale",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "utf8",
+    "utf-8",
+    "unicode",
+    "ascii",
+    "encoding",
+    "character encoding",
+    "charset",
+    "charsets",
+    "character set",
+    "latin-1",
+    "iso-8859-1"
+   ],
+   "references": [
+    {
+     "name": "utf-8",
+     "section": "7"
+    },
+    {
+     "name": "utf8",
+     "section": "7"
+    },
+    {
+     "name": "charsets",
+     "section": "7"
+    },
+    {
+     "name": "ascii",
+     "section": "7"
+    },
+    {
+     "name": "unicode",
+     "section": "7"
+    },
+    {
+     "name": "iso_8859-1",
+     "section": "7"
+    },
+    {
+     "name": "latin1",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 253,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Text in a file is a sequence of bytes; an "
+      },
+      {
+       "t": "em",
+       "v": "encoding"
+      },
+      {
+       "t": "text",
+       "v": " says which bytes stand for which characters."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "ASCII is the original 7-bit code: 128 characters covering English letters, digits, punctuation and control codes such as newline and tab. "
+      },
+      {
+       "t": "man",
+       "name": "ascii",
+       "section": "7"
+      },
+      {
+       "t": "text",
+       "v": " has the full table in octal, decimal and hexadecimal. The ISO/IEC 8859 family, such as Latin-1, kept ASCII as the lower half and used the upper half for the letters of one group of languages at a time."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Unicode aims to give every character in every language its own number, and UTF-8 is the common way to store it on Unix-like systems:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "ASCII characters are stored as the same single bytes, so a pure ASCII file is already valid UTF-8."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "Every other character takes two to four bytes, all of them 0x80 or above, so no byte inside a multibyte character can be mistaken for "
+       },
+       {
+        "t": "code",
+        "v": "/"
+       },
+       {
+        "t": "text",
+        "v": " or the null byte. The copyright sign © is stored as "
+       },
+       {
+        "t": "code",
+        "v": "0xc2 0xa9"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "The first byte tells how long the sequence is, so a reader can resynchronize after damaged data."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Programs learn the encoding from the "
+      },
+      {
+       "t": "concept",
+       "slug": "locale",
+       "v": "locale"
+      },
+      {
+       "t": "text",
+       "v": "; a UTF-8 locale is selected with a setting such as "
+      },
+      {
+       "t": "code",
+       "v": "LANG=en_GB.UTF-8"
+      },
+      {
+       "t": "text",
+       "v": ". In a UTF-8 locale a single byte is not necessarily a single character, and one character does not always take one column on screen: wide East Asian characters take two, and combining marks take none."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Each character must use its shortest encoding, and programs must reject longer forms, which could slip a "
+      },
+      {
+       "t": "code",
+       "v": "/"
+      },
+      {
+       "t": "text",
+       "v": " past checks for the ASCII byte."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "credentials",
+   "title": "Process and user IDs",
+   "term": "process and user IDs",
+   "summary": "The numbers that identify a process, its parent, its job and session, and the user and group whose permissions it runs with.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "credentials",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "Process ID (PID); Parent process ID (PPID); Process group ID and session ID; User and group identifiers"
+    }
+   ],
+   "related": [
+    {
+     "name": "id",
+     "section": "1"
+    },
+    {
+     "name": "ps",
+     "section": "1"
+    },
+    {
+     "name": "kill",
+     "section": "1"
+    },
+    {
+     "name": "getpid",
+     "section": "2"
+    },
+    {
+     "name": "getuid",
+     "section": "2"
+    },
+    {
+     "name": "setuid",
+     "section": "2"
+    },
+    {
+     "name": "execve",
+     "section": "2"
+    },
+    {
+     "name": "capabilities",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "pid",
+    "ppid",
+    "uid",
+    "gid",
+    "euid",
+    "user id",
+    "group id",
+    "process id",
+    "process group",
+    "session",
+    "setuid",
+    "set-user-id",
+    "real user id",
+    "effective user id"
+   ],
+   "references": [
+    {
+     "name": "credentials",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 239,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Every process carries a set of numbers that say which process it is and whose permissions it uses."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The "
+      },
+      {
+       "t": "em",
+       "v": "process ID"
+      },
+      {
+       "t": "text",
+       "v": " (PID) is assigned when the process is created and stays the same when it runs a new program. The "
+      },
+      {
+       "t": "em",
+       "v": "parent process ID"
+      },
+      {
+       "t": "text",
+       "v": " (PPID) names the process that created it. Commands such as "
+      },
+      {
+       "t": "man",
+       "name": "kill",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " use PIDs to name their targets."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Processes are also grouped for job control. The shell puts the processes of one command or pipeline into a "
+      },
+      {
+       "t": "em",
+       "v": "process group"
+      },
+      {
+       "t": "text",
+       "v": ", or job: "
+      },
+      {
+       "t": "code",
+       "v": "ls | wc"
+      },
+      {
+       "t": "text",
+       "v": " is one job of two processes. Process groups belong to a "
+      },
+      {
+       "t": "em",
+       "v": "session"
+      },
+      {
+       "t": "text",
+       "v": ", which shares one controlling terminal. Only the foreground job may read from the terminal; a background job that tries is sent the "
+      },
+      {
+       "t": "code",
+       "v": "SIGTTIN"
+      },
+      {
+       "t": "text",
+       "v": " "
+      },
+      {
+       "t": "concept",
+       "slug": "signals",
+       "v": "signal"
+      },
+      {
+       "t": "text",
+       "v": " and stops."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A process also has user and group IDs:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "The "
+       },
+       {
+        "t": "em",
+        "v": "real"
+       },
+       {
+        "t": "text",
+        "v": " user and group ID say who owns the process."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "The "
+       },
+       {
+        "t": "em",
+        "v": "effective"
+       },
+       {
+        "t": "text",
+        "v": " IDs decide its permissions. They usually equal the real IDs, but running a set-user-ID program, such as one installed to run as root, changes the effective user ID to the file's owner."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "The "
+       },
+       {
+        "t": "em",
+        "v": "saved"
+       },
+       {
+        "t": "text",
+        "v": " set-user-ID keeps a copy, so such a program can drop its privileges and take them back."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "Supplementary"
+       },
+       {
+        "t": "text",
+        "v": " group IDs add the other groups the user belongs to."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "On Linux, file access is checked against separate filesystem IDs, which normally follow the effective IDs. A child inherits all of these IDs from its parent. "
+      },
+      {
+       "t": "man",
+       "name": "id",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " prints the IDs of your shell."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "environment",
+   "title": "Environment variables",
+   "term": "environment variables",
+   "summary": "The name=value strings every process inherits, such as PATH, HOME and LANG, and how to set them.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "environ",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine",
+      "freebsd",
+      "macos"
+     ],
+     "sections": "DESCRIPTION; NOTES; BUGS"
+    }
+   ],
+   "related": [
+    {
+     "name": "env",
+     "section": "1"
+    },
+    {
+     "name": "printenv",
+     "section": "1"
+    },
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "bash",
+     "section": "1"
+    },
+    {
+     "name": "getenv",
+     "section": "3"
+    },
+    {
+     "name": "setenv",
+     "section": "3"
+    },
+    {
+     "name": "execve",
+     "section": "2"
+    }
+   ],
+   "aliases": [
+    "environment",
+    "environment variable",
+    "env var",
+    "env vars",
+    "environ",
+    "path variable"
+   ],
+   "references": [
+    {
+     "name": "environ",
+     "section": "7"
+    }
+   ],
+   "headings": [
+    "ENVIRONMENT"
+   ],
+   "pages": [],
+   "words": 217,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Every process carries an "
+      },
+      {
+       "t": "em",
+       "v": "environment"
+      },
+      {
+       "t": "text",
+       "v": ": a list of strings of the form "
+      },
+      {
+       "t": "code",
+       "v": "name=value"
+      },
+      {
+       "t": "text",
+       "v": ". A new process gets a copy of its parent's environment, so variables set in your shell reach the programs you start from it. Names are case-sensitive and cannot contain "
+      },
+      {
+       "t": "code",
+       "v": "="
+      },
+      {
+       "t": "text",
+       "v": "."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "In a Bourne-style shell, "
+      },
+      {
+       "t": "code",
+       "v": "export NAME=value"
+      },
+      {
+       "t": "text",
+       "v": " puts a variable into the environment of every command run afterwards, while "
+      },
+      {
+       "t": "code",
+       "v": "NAME=value command"
+      },
+      {
+       "t": "text",
+       "v": " sets it for that one command only. "
+      },
+      {
+       "t": "man",
+       "name": "env",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "man",
+       "name": "printenv",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " show the current environment."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Variables you will meet everywhere:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "PATH"
+       },
+       {
+        "t": "text",
+        "v": ", the colon-separated list of directories searched, in order, for a command given without a slash."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "HOME"
+       },
+       {
+        "t": "text",
+        "v": ", "
+       },
+       {
+        "t": "code",
+        "v": "USER"
+       },
+       {
+        "t": "text",
+        "v": ", "
+       },
+       {
+        "t": "code",
+        "v": "LOGNAME"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "SHELL"
+       },
+       {
+        "t": "text",
+        "v": ", set at login from the user database."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "LANG"
+       },
+       {
+        "t": "text",
+        "v": " and the "
+       },
+       {
+        "t": "code",
+        "v": "LC_*"
+       },
+       {
+        "t": "text",
+        "v": " variables, which choose the "
+       },
+       {
+        "t": "concept",
+        "slug": "locale",
+        "v": "locale"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "TERM"
+       },
+       {
+        "t": "text",
+        "v": ", the terminal type output is prepared for."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "PAGER"
+       },
+       {
+        "t": "text",
+        "v": ", "
+       },
+       {
+        "t": "code",
+        "v": "EDITOR"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "VISUAL"
+       },
+       {
+        "t": "text",
+        "v": ", the programs other tools launch for you."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "TMPDIR"
+       },
+       {
+        "t": "text",
+        "v": ", the directory many programs use for temporary files."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Many manual pages have an ENVIRONMENT section listing the variables that program reads; the list in "
+      },
+      {
+       "t": "man",
+       "name": "environ",
+       "section": "7"
+      },
+      {
+       "t": "text",
+       "v": " covers only common ones."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The environment is input a program did not choose, so treat it with care: unusual values of variables such as "
+      },
+      {
+       "t": "code",
+       "v": "IFS"
+      },
+      {
+       "t": "text",
+       "v": " or "
+      },
+      {
+       "t": "code",
+       "v": "LD_LIBRARY_PATH"
+      },
+      {
+       "t": "text",
+       "v": " have tricked system commands into misbehaving. An empty entry in "
+      },
+      {
+       "t": "code",
+       "v": "PATH"
+      },
+      {
+       "t": "text",
+       "v": ", or a leading or trailing colon, means the current directory; this legacy feature is deprecated."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "exit-status",
+   "title": "Exit status",
+   "term": "exit status",
+   "summary": "The number from 0 to 255 every command returns, where 0 means success, and how the shell tests it with $?, &&, || and if.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "bash",
+      "section": "1"
+     },
+     "package": "bash 5.2.37-2+b10",
+     "distros": [
+      "debian"
+     ],
+     "sections": "EXIT STATUS; SHELL GRAMMAR (Pipelines; Lists)"
+    },
+    {
+     "page": {
+      "name": "grep",
+      "section": "1"
+     },
+     "package": "grep 3.11-4",
+     "distros": [
+      "debian"
+     ],
+     "sections": "EXIT STATUS"
+    }
+   ],
+   "related": [
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "true",
+     "section": "1"
+    },
+    {
+     "name": "false",
+     "section": "1"
+    },
+    {
+     "name": "test",
+     "section": "1"
+    },
+    {
+     "name": "exit",
+     "section": "3"
+    },
+    {
+     "name": "wait",
+     "section": "2"
+    },
+    {
+     "name": "signal",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "exit code",
+    "exit codes",
+    "exit status",
+    "exit statuses",
+    "return code",
+    "return value",
+    "return status",
+    "$?",
+    "status code"
+   ],
+   "references": [],
+   "headings": [
+    "EXIT STATUS",
+    "EXIT CODES"
+   ],
+   "pages": [
+    {
+     "name": "bash",
+     "section": "1"
+    },
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "dash",
+     "section": "1"
+    }
+   ],
+   "words": 217,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Every command finishes with an "
+      },
+      {
+       "t": "em",
+       "v": "exit status"
+      },
+      {
+       "t": "text",
+       "v": ", a number from 0 to 255. Zero means success; any other value means failure. Many manual pages have an EXIT STATUS section that says what their nonzero values mean, and they differ from program to program: "
+      },
+      {
+       "t": "man",
+       "name": "grep",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": ", for example, uses 1 for \"no lines selected\" and 2 for an error."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The shell keeps the status of the last command in "
+      },
+      {
+       "t": "code",
+       "v": "$?"
+      },
+      {
+       "t": "text",
+       "v": ", and uses it to decide what runs next:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "cmd1 && cmd2"
+       },
+       {
+        "t": "text",
+        "v": " runs "
+       },
+       {
+        "t": "code",
+        "v": "cmd2"
+       },
+       {
+        "t": "text",
+        "v": " only if "
+       },
+       {
+        "t": "code",
+        "v": "cmd1"
+       },
+       {
+        "t": "text",
+        "v": " succeeded."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "cmd1 || cmd2"
+       },
+       {
+        "t": "text",
+        "v": " runs "
+       },
+       {
+        "t": "code",
+        "v": "cmd2"
+       },
+       {
+        "t": "text",
+        "v": " only if "
+       },
+       {
+        "t": "code",
+        "v": "cmd1"
+       },
+       {
+        "t": "text",
+        "v": " failed."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "if"
+       },
+       {
+        "t": "text",
+        "v": ", "
+       },
+       {
+        "t": "code",
+        "v": "while"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "until"
+       },
+       {
+        "t": "text",
+        "v": " test a command's status, not a value."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A few values have fixed meanings in "
+      },
+      {
+       "t": "man",
+       "name": "bash",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": ":"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "127: the command was not found."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "126: the command was found but could not be executed."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "128 + "
+       },
+       {
+        "t": "em",
+        "v": "N"
+       },
+       {
+        "t": "text",
+        "v": ": the command was killed by "
+       },
+       {
+        "t": "concept",
+        "slug": "signals",
+        "v": "signal"
+       },
+       {
+        "t": "text",
+        "v": " "
+       },
+       {
+        "t": "em",
+        "v": "N"
+       },
+       {
+        "t": "text",
+        "v": ", so 130 usually means it was interrupted by "
+       },
+       {
+        "t": "code",
+        "v": "SIGINT"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "2: a shell builtin was used incorrectly."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Because the shell gives values above 125 these special meanings, a program's own failure codes are clearest below 126."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A "
+      },
+      {
+       "t": "concept",
+       "slug": "pipelines",
+       "v": "pipeline"
+      },
+      {
+       "t": "text",
+       "v": " returns the status of its last command, unless the "
+      },
+      {
+       "t": "code",
+       "v": "pipefail"
+      },
+      {
+       "t": "text",
+       "v": " option is set; "
+      },
+      {
+       "t": "code",
+       "v": "!"
+      },
+      {
+       "t": "text",
+       "v": " in front of a command inverts its status. A script ends with the status of the last command it ran, or with the value given to "
+      },
+      {
+       "t": "code",
+       "v": "exit"
+      },
+      {
+       "t": "text",
+       "v": "."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "filesystem-hierarchy",
+   "title": "The file system hierarchy",
+   "term": "file system hierarchy",
+   "summary": "What the standard top-level directories such as /etc, /usr, /var and /tmp are for.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "hier",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine",
+      "freebsd",
+      "macos"
+     ],
+     "sections": "DESCRIPTION"
+    },
+    {
+     "page": {
+      "name": "file-hierarchy",
+      "section": "7"
+     },
+     "package": "systemd 257.13-1~deb13u1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora"
+     ],
+     "sections": "DESCRIPTION"
+    }
+   ],
+   "related": [
+    {
+     "name": "systemd-path",
+     "section": "1"
+    },
+    {
+     "name": "mount",
+     "section": "8"
+    },
+    {
+     "name": "proc",
+     "section": "5"
+    }
+   ],
+   "aliases": [
+    "hier",
+    "fhs",
+    "filesystem hierarchy",
+    "file hierarchy",
+    "directory layout",
+    "directory structure",
+    "/etc",
+    "/usr",
+    "/var",
+    "/usr/local",
+    "/tmp"
+   ],
+   "references": [
+    {
+     "name": "hier",
+     "section": "7"
+    },
+    {
+     "name": "file-hierarchy",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 226,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Unix-like systems arrange their files in one tree that starts at "
+      },
+      {
+       "t": "code",
+       "v": "/"
+      },
+      {
+       "t": "text",
+       "v": ", and most of them follow the same plan for its top-level directories. "
+      },
+      {
+       "t": "man",
+       "name": "hier",
+       "section": "7"
+      },
+      {
+       "t": "text",
+       "v": " describes it for Linux:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "/etc"
+       },
+       {
+        "t": "text",
+        "v": ", configuration files local to the machine."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/bin"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "/sbin"
+       },
+       {
+        "t": "text",
+        "v": ", programs needed to bring the system up or repair it; "
+       },
+       {
+        "t": "code",
+        "v": "/sbin"
+       },
+       {
+        "t": "text",
+        "v": " holds those normal users seldom run."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/usr"
+       },
+       {
+        "t": "text",
+        "v": ", shareable, read-only data: "
+       },
+       {
+        "t": "code",
+        "v": "/usr/bin"
+       },
+       {
+        "t": "text",
+        "v": " is the main home of programs, "
+       },
+       {
+        "t": "code",
+        "v": "/usr/lib"
+       },
+       {
+        "t": "text",
+        "v": " of libraries, "
+       },
+       {
+        "t": "code",
+        "v": "/usr/share"
+       },
+       {
+        "t": "text",
+        "v": " of architecture-independent data such as manual pages, and "
+       },
+       {
+        "t": "code",
+        "v": "/usr/include"
+       },
+       {
+        "t": "text",
+        "v": " of C headers."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/usr/local"
+       },
+       {
+        "t": "text",
+        "v": ", programs installed locally by the site rather than by the distribution, with its own "
+       },
+       {
+        "t": "code",
+        "v": "bin"
+       },
+       {
+        "t": "text",
+        "v": ", "
+       },
+       {
+        "t": "code",
+        "v": "lib"
+       },
+       {
+        "t": "text",
+        "v": ", "
+       },
+       {
+        "t": "code",
+        "v": "etc"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "man"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/var"
+       },
+       {
+        "t": "text",
+        "v": ", files that change in size: logs in "
+       },
+       {
+        "t": "code",
+        "v": "/var/log"
+       },
+       {
+        "t": "text",
+        "v": ", program state in "
+       },
+       {
+        "t": "code",
+        "v": "/var/lib"
+       },
+       {
+        "t": "text",
+        "v": ", caches in "
+       },
+       {
+        "t": "code",
+        "v": "/var/cache"
+       },
+       {
+        "t": "text",
+        "v": ", queues in "
+       },
+       {
+        "t": "code",
+        "v": "/var/spool"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/tmp"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "/var/tmp"
+       },
+       {
+        "t": "text",
+        "v": ", temporary files; anything in "
+       },
+       {
+        "t": "code",
+        "v": "/tmp"
+       },
+       {
+        "t": "text",
+        "v": " may be deleted without notice, for example at boot."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/home"
+       },
+       {
+        "t": "text",
+        "v": ", users' home directories, and "
+       },
+       {
+        "t": "code",
+        "v": "/root"
+       },
+       {
+        "t": "text",
+        "v": ", the root user's."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/dev"
+       },
+       {
+        "t": "text",
+        "v": ", device files; "
+       },
+       {
+        "t": "code",
+        "v": "/proc"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "/sys"
+       },
+       {
+        "t": "text",
+        "v": ", file systems through which the kernel reports on processes and itself."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "/boot"
+       },
+       {
+        "t": "text",
+        "v": ", the boot loader's static files; "
+       },
+       {
+        "t": "code",
+        "v": "/mnt"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "/media"
+       },
+       {
+        "t": "text",
+        "v": ", mount points for temporary and removable file systems; "
+       },
+       {
+        "t": "code",
+        "v": "/opt"
+       },
+       {
+        "t": "text",
+        "v": ", add-on packages; "
+       },
+       {
+        "t": "code",
+        "v": "/srv"
+       },
+       {
+        "t": "text",
+        "v": ", data this system serves."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The exact rules differ between systems. On systems that use systemd, "
+      },
+      {
+       "t": "man",
+       "name": "file-hierarchy",
+       "section": "7"
+      },
+      {
+       "t": "text",
+       "v": " points to the current specification, and "
+      },
+      {
+       "t": "man",
+       "name": "systemd-path",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " answers where a given kind of file belongs. FreeBSD and macOS have "
+      },
+      {
+       "t": "man",
+       "name": "hier",
+       "section": "7"
+      },
+      {
+       "t": "text",
+       "v": " pages of their own."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "globbing",
+   "title": "Globbing",
+   "term": "globbing",
+   "summary": "How wildcard patterns such as *.txt expand into the list of matching file names.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "glob",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "Wildcard matching; Pathnames; Empty lists; NOTES (Regular expressions; Character classes and internationalization)"
+    }
+   ],
+   "related": [
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "bash",
+     "section": "1"
+    },
+    {
+     "name": "glob",
+     "section": "3"
+    },
+    {
+     "name": "fnmatch",
+     "section": "3"
+    },
+    {
+     "name": "regex",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "glob",
+    "globs",
+    "wildcard",
+    "wildcards",
+    "wildcard pattern",
+    "pathname expansion",
+    "filename expansion"
+   ],
+   "references": [
+    {
+     "name": "glob",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 226,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Globbing turns a wildcard pattern into the list of path names that match it. Your shell does it before the command runs, so "
+      },
+      {
+       "t": "code",
+       "v": "rm *.tmp"
+      },
+      {
+       "t": "text",
+       "v": " hands "
+      },
+      {
+       "t": "man",
+       "name": "rm",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " the actual file names, not the pattern. Programs can do the same with "
+      },
+      {
+       "t": "man",
+       "name": "glob",
+       "section": "3"
+      },
+      {
+       "t": "text",
+       "v": "."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A word is a pattern if it contains "
+      },
+      {
+       "t": "code",
+       "v": "?"
+      },
+      {
+       "t": "text",
+       "v": ", "
+      },
+      {
+       "t": "code",
+       "v": "*"
+      },
+      {
+       "t": "text",
+       "v": " or "
+      },
+      {
+       "t": "code",
+       "v": "["
+      },
+      {
+       "t": "text",
+       "v": ":"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "?"
+       },
+       {
+        "t": "text",
+        "v": " matches any single character."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "*"
+       },
+       {
+        "t": "text",
+        "v": " matches any string, including the empty string."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "[abc]"
+       },
+       {
+        "t": "text",
+        "v": " matches one of the listed characters, and "
+       },
+       {
+        "t": "code",
+        "v": "[a-z]"
+       },
+       {
+        "t": "text",
+        "v": " one character in a range. "
+       },
+       {
+        "t": "code",
+        "v": "[!abc]"
+       },
+       {
+        "t": "text",
+        "v": " matches any character that is "
+       },
+       {
+        "t": "em",
+        "v": "not"
+       },
+       {
+        "t": "text",
+        "v": " listed."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "To use one of these characters literally, put a backslash in front of it or quote it."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Two rules catch people out. A "
+      },
+      {
+       "t": "code",
+       "v": "/"
+      },
+      {
+       "t": "text",
+       "v": " is never matched by a wildcard: each part of a path is matched separately, so "
+      },
+      {
+       "t": "code",
+       "v": "*/*.c"
+      },
+      {
+       "t": "text",
+       "v": " looks exactly one directory down. A name that starts with a dot must be matched explicitly, so "
+      },
+      {
+       "t": "code",
+       "v": "*"
+      },
+      {
+       "t": "text",
+       "v": " skips "
+      },
+      {
+       "t": "code",
+       "v": ".profile"
+      },
+      {
+       "t": "text",
+       "v": " and other hidden files."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "When nothing matches, POSIX leaves the pattern unchanged, and the command receives the literal "
+      },
+      {
+       "t": "code",
+       "v": "*.gif"
+      },
+      {
+       "t": "text",
+       "v": ". In bash, "
+      },
+      {
+       "t": "code",
+       "v": "shopt -s nullglob"
+      },
+      {
+       "t": "text",
+       "v": " makes an unmatched pattern expand to nothing instead."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Wildcards are not "
+      },
+      {
+       "t": "concept",
+       "slug": "regular-expressions",
+       "v": "regular expressions"
+      },
+      {
+       "t": "text",
+       "v": ". They match file names, not text, and the symbols differ: in a regular expression "
+      },
+      {
+       "t": "code",
+       "v": "*"
+      },
+      {
+       "t": "text",
+       "v": " means \"zero or more of the preceding thing\". Inside brackets, prefer named classes such as "
+      },
+      {
+       "t": "code",
+       "v": "[[:lower:]]"
+      },
+      {
+       "t": "text",
+       "v": " to ranges like "
+      },
+      {
+       "t": "code",
+       "v": "[a-z]"
+      },
+      {
+       "t": "text",
+       "v": ", whose meaning depends on the locale."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "inodes",
+   "title": "Inodes and file modes",
+   "term": "inodes",
+   "summary": "The record behind every file name, holding its type, owner, permission bits, size, link count and timestamps.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "inode",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION (inode fields; the file type and mode); NOTES"
+    }
+   ],
+   "related": [
+    {
+     "name": "stat",
+     "section": "1"
+    },
+    {
+     "name": "ls",
+     "section": "1"
+    },
+    {
+     "name": "chmod",
+     "section": "1"
+    },
+    {
+     "name": "chown",
+     "section": "1"
+    },
+    {
+     "name": "stat",
+     "section": "2"
+    },
+    {
+     "name": "statx",
+     "section": "2"
+    },
+    {
+     "name": "symlink",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "inode",
+    "inode number",
+    "file mode",
+    "file modes",
+    "permissions",
+    "file permissions",
+    "permission bits",
+    "setgid",
+    "sticky bit",
+    "mtime",
+    "ctime",
+    "atime"
+   ],
+   "references": [
+    {
+     "name": "inode",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 256,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Each file has an "
+      },
+      {
+       "t": "em",
+       "v": "inode"
+      },
+      {
+       "t": "text",
+       "v": ", a record of everything about it except its name. Directory entries map names to inode numbers, and a file can have several names ("
+      },
+      {
+       "t": "concept",
+       "slug": "symbolic-links",
+       "v": "hard links"
+      },
+      {
+       "t": "text",
+       "v": ") that all lead to one inode. Inode numbers are unique only within one file system, which is why hard links cannot cross file systems. "
+      },
+      {
+       "t": "man",
+       "name": "stat",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " shows what a file's inode holds."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "An inode records:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "the file type and mode;"
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "the link count, the number of hard links;"
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "the owning user and group;"
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "the size in bytes and the blocks allocated;"
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "timestamps: last access ("
+       },
+       {
+        "t": "em",
+        "v": "atime"
+       },
+       {
+        "t": "text",
+        "v": "), last modification of the contents ("
+       },
+       {
+        "t": "em",
+        "v": "mtime"
+       },
+       {
+        "t": "text",
+        "v": "), and last status change ("
+       },
+       {
+        "t": "em",
+        "v": "ctime"
+       },
+       {
+        "t": "text",
+        "v": "), which changes whenever the inode itself changes, such as a new owner or mode. Some systems also keep a creation time."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The type says what the file is: a regular file, directory, symbolic link, character or block device, FIFO or socket. The mode holds the permission bits you set with "
+      },
+      {
+       "t": "man",
+       "name": "chmod",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": ", written in octal. Read is 4, write 2 and execute 1, and there is one digit each for the owner, the group and everyone else, so "
+      },
+      {
+       "t": "code",
+       "v": "0640"
+      },
+      {
+       "t": "text",
+       "v": " lets the owner read and write, the group read, and others nothing."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Three more bits sit in front. "
+      },
+      {
+       "t": "em",
+       "v": "Set-user-ID"
+      },
+      {
+       "t": "text",
+       "v": " (4000) and "
+      },
+      {
+       "t": "em",
+       "v": "set-group-ID"
+      },
+      {
+       "t": "text",
+       "v": " (2000) on a program make it run with the file's user or group ID. Set-group-ID on a directory makes new files there take the directory's group. The "
+      },
+      {
+       "t": "em",
+       "v": "sticky"
+      },
+      {
+       "t": "text",
+       "v": " bit (1000) on a directory lets only a file's owner, the directory's owner or a privileged process rename or delete files in it."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "locale",
+   "title": "Locale",
+   "term": "locale",
+   "summary": "The language and cultural settings, chosen by LANG and the LC_* variables, that change messages, sorting, character handling, numbers and dates.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "locale",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION (the LC_* categories and how the default locale is determined); FILES"
+    },
+    {
+     "page": {
+      "name": "environ",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine",
+      "freebsd",
+      "macos"
+     ],
+     "sections": "LANG"
+    },
+    {
+     "page": {
+      "name": "bash",
+      "section": "1"
+     },
+     "package": "bash 5.2.37-2+b10",
+     "distros": [
+      "debian"
+     ],
+     "sections": "Pattern Matching"
+    }
+   ],
+   "related": [
+    {
+     "name": "locale",
+     "section": "1"
+    },
+    {
+     "name": "localedef",
+     "section": "1"
+    },
+    {
+     "name": "setlocale",
+     "section": "3"
+    },
+    {
+     "name": "locale",
+     "section": "5"
+    },
+    {
+     "name": "environ",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "locales",
+    "lang",
+    "lc_all",
+    "lc_ctype",
+    "lc_collate",
+    "lc_messages",
+    "lc_time",
+    "lc_numeric",
+    "localization",
+    "internationalization"
+   ],
+   "references": [
+    {
+     "name": "locale",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 200,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A locale is a set of language and cultural rules: the language of messages, how bytes are read as characters, how strings sort, and how numbers, money, dates and times are written. The same command can sort, match or print differently under two locales."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The rules come in categories, each of which can be set on its own:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "LC_CTYPE"
+       },
+       {
+        "t": "text",
+        "v": ", how bytes become characters and which characters are letters, digits or upper case."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "LC_COLLATE"
+       },
+       {
+        "t": "text",
+        "v": ", the sorting order, which also shapes ranges such as "
+       },
+       {
+        "t": "code",
+        "v": "[a-z]"
+       },
+       {
+        "t": "text",
+        "v": " in "
+       },
+       {
+        "t": "concept",
+        "slug": "globbing",
+        "v": "wildcards"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "concept",
+        "slug": "regular-expressions",
+        "v": "regular expressions"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "LC_MESSAGES"
+       },
+       {
+        "t": "text",
+        "v": ", the language of messages and of yes/no answers."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "LC_NUMERIC"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "code",
+        "v": "LC_MONETARY"
+       },
+       {
+        "t": "text",
+        "v": ", such as the decimal point or comma."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "LC_TIME"
+       },
+       {
+        "t": "text",
+        "v": ", how dates and times are formatted."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A program that asks for the default locale picks each category from the "
+      },
+      {
+       "t": "concept",
+       "slug": "environment",
+       "v": "environment"
+      },
+      {
+       "t": "text",
+       "v": " in this order: "
+      },
+      {
+       "t": "code",
+       "v": "LC_ALL"
+      },
+      {
+       "t": "text",
+       "v": " if it is set, then the variable named after the category (for example "
+      },
+      {
+       "t": "code",
+       "v": "LC_TIME"
+      },
+      {
+       "t": "text",
+       "v": "), then "
+      },
+      {
+       "t": "code",
+       "v": "LANG"
+      },
+      {
+       "t": "text",
+       "v": ". So "
+      },
+      {
+       "t": "code",
+       "v": "LANG"
+      },
+      {
+       "t": "text",
+       "v": " sets a default, a single "
+      },
+      {
+       "t": "code",
+       "v": "LC_*"
+      },
+      {
+       "t": "text",
+       "v": " variable overrides one category, and "
+      },
+      {
+       "t": "code",
+       "v": "LC_ALL"
+      },
+      {
+       "t": "text",
+       "v": " overrides everything."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Locale names look like "
+      },
+      {
+       "t": "code",
+       "v": "en_GB.UTF-8"
+      },
+      {
+       "t": "text",
+       "v": ", and compiled locale data usually lives in "
+      },
+      {
+       "t": "code",
+       "v": "/usr/lib/locale"
+      },
+      {
+       "t": "text",
+       "v": ". "
+      },
+      {
+       "t": "man",
+       "name": "locale",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " shows the current settings. Setting "
+      },
+      {
+       "t": "code",
+       "v": "LC_ALL=C"
+      },
+      {
+       "t": "text",
+       "v": " asks for the traditional behaviour; "
+      },
+      {
+       "t": "man",
+       "name": "bash",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": ", for example, suggests it to make "
+      },
+      {
+       "t": "code",
+       "v": "[a-d]"
+      },
+      {
+       "t": "text",
+       "v": " mean exactly "
+      },
+      {
+       "t": "code",
+       "v": "[abcd]"
+      },
+      {
+       "t": "text",
+       "v": "."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "namespaces",
+   "title": "Namespaces",
+   "term": "namespaces",
+   "summary": "How Linux gives a group of processes its own isolated view of a global resource, such as process IDs, mounts or the network; the basis of containers.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "namespaces",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION; Namespace types; The namespaces API; The /proc/pid/ns/ directory"
+    },
+    {
+     "page": {
+      "name": "pid_namespaces",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION; The namespace init process"
+    },
+    {
+     "page": {
+      "name": "user_namespaces",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION; Nested namespaces, namespace membership"
+    }
+   ],
+   "related": [
+    {
+     "name": "unshare",
+     "section": "1"
+    },
+    {
+     "name": "nsenter",
+     "section": "1"
+    },
+    {
+     "name": "lsns",
+     "section": "8"
+    },
+    {
+     "name": "clone",
+     "section": "2"
+    },
+    {
+     "name": "setns",
+     "section": "2"
+    },
+    {
+     "name": "unshare",
+     "section": "2"
+    },
+    {
+     "name": "cgroups",
+     "section": "7"
+    },
+    {
+     "name": "user_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "pid_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "network_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "mount_namespaces",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "namespace",
+    "linux namespaces",
+    "container",
+    "containers",
+    "pid namespace",
+    "network namespace",
+    "mount namespace",
+    "user namespace"
+   ],
+   "references": [
+    {
+     "name": "namespaces",
+     "section": "7"
+    },
+    {
+     "name": "user_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "pid_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "network_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "mount_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "uts_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "ipc_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "cgroup_namespaces",
+     "section": "7"
+    },
+    {
+     "name": "time_namespaces",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 239,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A namespace wraps a global system resource so that the processes inside it appear to have their own private copy. Changes made inside are visible to the other members of the namespace and invisible to everyone else. Combining several namespaces is how containers are built."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Linux has eight types, each isolating one resource:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "em",
+        "v": "Mount"
+       },
+       {
+        "t": "text",
+        "v": ": the mount points, so a process can see a different file tree."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "PID"
+       },
+       {
+        "t": "text",
+        "v": ": process IDs; numbering starts again at 1 inside, and the first process becomes that namespace's init."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "Network"
+       },
+       {
+        "t": "text",
+        "v": ": network devices, stacks and ports."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "UTS"
+       },
+       {
+        "t": "text",
+        "v": ": the host name and NIS domain name."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "IPC"
+       },
+       {
+        "t": "text",
+        "v": ": System V IPC objects and POSIX message queues."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "User"
+       },
+       {
+        "t": "text",
+        "v": ": user and group IDs and capabilities, so a process can have user ID 0 inside while it is an ordinary user outside."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "Cgroup"
+       },
+       {
+        "t": "text",
+        "v": ": the root directory of the "
+       },
+       {
+        "t": "concept",
+        "slug": "cgroups",
+        "v": "control group"
+       },
+       {
+        "t": "text",
+        "v": " hierarchy."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "Time"
+       },
+       {
+        "t": "text",
+        "v": ": the boot-time and monotonic clocks."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Every process belongs to one namespace of each type, and a child starts in its parent's. "
+      },
+      {
+       "t": "man",
+       "name": "unshare",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " runs a program in new namespaces, and "
+      },
+      {
+       "t": "man",
+       "name": "nsenter",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " runs one inside the namespaces of an existing process; "
+      },
+      {
+       "t": "man",
+       "name": "lsns",
+       "section": "8"
+      },
+      {
+       "t": "text",
+       "v": " lists them. Each process's namespaces appear as links under "
+      },
+      {
+       "t": "code",
+       "v": "/proc/<pid>/ns/"
+      },
+      {
+       "t": "text",
+       "v": ", and two processes share a namespace when those links point to the same object."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Creating most namespaces needs the "
+      },
+      {
+       "t": "code",
+       "v": "CAP_SYS_ADMIN"
+      },
+      {
+       "t": "text",
+       "v": " "
+      },
+      {
+       "t": "concept",
+       "slug": "capabilities",
+       "v": "capability"
+      },
+      {
+       "t": "text",
+       "v": ", since the creator can then change resources other processes will see. User namespaces are the exception: since Linux 3.8, any user may create one."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Namespaces are specific to Linux."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "path-resolution",
+   "title": "Path resolution and permissions",
+   "term": "path resolution",
+   "summary": "How the kernel turns a path such as ../etc/passwd into a file, step by step, and which permission bits it checks on the way.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "path_resolution",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "Step 1; Step 2; Step 3; . and ..; Mount points; Trailing slashes; Permissions; Bypassing permission checks"
+    }
+   ],
+   "related": [
+    {
+     "name": "namei",
+     "section": "1"
+    },
+    {
+     "name": "realpath",
+     "section": "1"
+    },
+    {
+     "name": "chmod",
+     "section": "1"
+    },
+    {
+     "name": "chroot",
+     "section": "2"
+    },
+    {
+     "name": "stat",
+     "section": "2"
+    },
+    {
+     "name": "credentials",
+     "section": "7"
+    },
+    {
+     "name": "symlink",
+     "section": "7"
+    },
+    {
+     "name": "capabilities",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "path",
+    "paths",
+    "pathname",
+    "pathnames",
+    "absolute path",
+    "relative path",
+    "permission denied",
+    "eacces",
+    "enoent",
+    "enotdir",
+    "search permission"
+   ],
+   "references": [
+    {
+     "name": "path_resolution",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 253,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Whenever a program names a file, the kernel resolves the path one component at a time."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A path that starts with "
+      },
+      {
+       "t": "code",
+       "v": "/"
+      },
+      {
+       "t": "text",
+       "v": " is "
+      },
+      {
+       "t": "em",
+       "v": "absolute"
+      },
+      {
+       "t": "text",
+       "v": " and starts at the process's root directory, usually the root of the file system. Any other path is "
+      },
+      {
+       "t": "em",
+       "v": "relative"
+      },
+      {
+       "t": "text",
+       "v": " and starts at the current working directory. Both are inherited from the parent process."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Each component except the last must be a directory or a "
+      },
+      {
+       "t": "concept",
+       "slug": "symbolic-links",
+       "v": "symbolic link"
+      },
+      {
+       "t": "text",
+       "v": " to one. A symbolic link is resolved on the way, up to 40 of them per path on Linux. The familiar errors come from this walk:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "ENOENT"
+       },
+       {
+        "t": "text",
+        "v": ", \"No such file or directory\": a component does not exist."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "ENOTDIR"
+       },
+       {
+        "t": "text",
+        "v": ", \"Not a directory\": a component in the middle is something else."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "EACCES"
+       },
+       {
+        "t": "text",
+        "v": ", \"Permission denied\": the process may not search a directory on the path."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Every directory has "
+      },
+      {
+       "t": "code",
+       "v": "."
+      },
+      {
+       "t": "text",
+       "v": ", itself, and "
+      },
+      {
+       "t": "code",
+       "v": ".."
+      },
+      {
+       "t": "text",
+       "v": ", its parent; "
+      },
+      {
+       "t": "code",
+       "v": "/.."
+      },
+      {
+       "t": "text",
+       "v": " is "
+      },
+      {
+       "t": "code",
+       "v": "/"
+      },
+      {
+       "t": "text",
+       "v": ". A trailing slash insists that the last component is a directory."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Permission bits come in three groups of three: read, write and execute. The kernel uses the owner's group if the process's effective user ID owns the file, the group's if the file's group is one of the process's groups, and otherwise the last. For a directory, "
+      },
+      {
+       "t": "em",
+       "v": "execute"
+      },
+      {
+       "t": "text",
+       "v": " means permission to search it, which is why a directory you cannot search blocks every path through it."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Root traditionally bypasses these checks. On Linux that power comes from the "
+      },
+      {
+       "t": "concept",
+       "slug": "capabilities",
+       "v": "capabilities"
+      },
+      {
+       "t": "text",
+       "v": " "
+      },
+      {
+       "t": "code",
+       "v": "CAP_DAC_OVERRIDE"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "CAP_DAC_READ_SEARCH"
+      },
+      {
+       "t": "text",
+       "v": "; even so, a file is executable only if at least one of its execute bits is set."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "pipelines",
+   "title": "Pipes and pipelines",
+   "term": "pipes",
+   "summary": "How cmd1 | cmd2 connects one command's output to the next one's input, and what pipes and FIFOs are underneath.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "bash",
+      "section": "1"
+     },
+     "package": "bash 5.2.37-2+b10",
+     "distros": [
+      "debian"
+     ],
+     "sections": "SHELL GRAMMAR (Pipelines)"
+    },
+    {
+     "page": {
+      "name": "pipe",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION; I/O on pipes and FIFOs; Pipe capacity"
+    },
+    {
+     "page": {
+      "name": "fifo",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION"
+    }
+   ],
+   "related": [
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "mkfifo",
+     "section": "1"
+    },
+    {
+     "name": "tee",
+     "section": "1"
+    },
+    {
+     "name": "xargs",
+     "section": "1"
+    },
+    {
+     "name": "pipe",
+     "section": "2"
+    },
+    {
+     "name": "mkfifo",
+     "section": "3"
+    }
+   ],
+   "aliases": [
+    "pipe",
+    "pipes",
+    "pipeline",
+    "pipelines",
+    "piping",
+    "named pipe",
+    "named pipes",
+    "fifo",
+    "fifos",
+    "pipefail",
+    "sigpipe"
+   ],
+   "references": [
+    {
+     "name": "pipe",
+     "section": "7"
+    },
+    {
+     "name": "fifo",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [
+    {
+     "name": "bash",
+     "section": "1"
+    },
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "dash",
+     "section": "1"
+    }
+   ],
+   "words": 245,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A pipeline is a sequence of commands joined by "
+      },
+      {
+       "t": "code",
+       "v": "|"
+      },
+      {
+       "t": "text",
+       "v": ". In "
+      },
+      {
+       "t": "code",
+       "v": "ps ax | grep ssh"
+      },
+      {
+       "t": "text",
+       "v": ", the standard output of "
+      },
+      {
+       "t": "man",
+       "name": "ps",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " is connected through a pipe to the standard input of "
+      },
+      {
+       "t": "man",
+       "name": "grep",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": ". Each command of the pipeline runs in its own process, and the shell waits for all of them to finish."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A few details from "
+      },
+      {
+       "t": "man",
+       "name": "bash",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": ":"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "|&"
+       },
+       {
+        "t": "text",
+        "v": " sends standard error through the pipe too; it is short for "
+       },
+       {
+        "t": "code",
+        "v": "2>&1 |"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "The pipeline's "
+       },
+       {
+        "t": "concept",
+        "slug": "exit-status",
+        "v": "exit status"
+       },
+       {
+        "t": "text",
+        "v": " is that of the "
+       },
+       {
+        "t": "em",
+        "v": "last"
+       },
+       {
+        "t": "text",
+        "v": " command, so an earlier failure goes unnoticed. With "
+       },
+       {
+        "t": "code",
+        "v": "set -o pipefail"
+       },
+       {
+        "t": "text",
+        "v": " it is the status of the last command that failed, or zero if all succeeded."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "!"
+       },
+       {
+        "t": "text",
+        "v": " before a pipeline inverts its exit status."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Underneath, a pipe is a one-way channel inside the kernel: bytes written to one end are read from the other, as a plain byte stream with no message boundaries. A pipe holds a limited amount of data (on Linux, 16 pages by default: 65,536 bytes with 4 KiB pages); a writer that fills it waits until the reader catches up, and a reader of an empty pipe waits for data. When every writer has closed its end, the reader sees end-of-file. When every reader has gone, a writer receives the "
+      },
+      {
+       "t": "code",
+       "v": "SIGPIPE"
+      },
+      {
+       "t": "text",
+       "v": " "
+      },
+      {
+       "t": "concept",
+       "slug": "signals",
+       "v": "signal"
+      },
+      {
+       "t": "text",
+       "v": ", which by default ends it; this is how "
+      },
+      {
+       "t": "code",
+       "v": "yes | head -1"
+      },
+      {
+       "t": "text",
+       "v": " stops."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A FIFO, or "
+      },
+      {
+       "t": "em",
+       "v": "named pipe"
+      },
+      {
+       "t": "text",
+       "v": ", works the same way but has a name in the file system, so unrelated processes can use it. "
+      },
+      {
+       "t": "man",
+       "name": "mkfifo",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " creates one."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "quoting",
+   "title": "Quoting in the shell",
+   "term": "quoting",
+   "summary": "How backslashes, single quotes and double quotes stop the shell from treating spaces, $, * and other characters as special.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "bash",
+      "section": "1"
+     },
+     "package": "bash 5.2.37-2+b10",
+     "distros": [
+      "debian"
+     ],
+     "sections": "DEFINITIONS; QUOTING; EXPANSION (Word Splitting; Pathname Expansion; Quote Removal)"
+    }
+   ],
+   "related": [
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "dash",
+     "section": "1"
+    },
+    {
+     "name": "printf",
+     "section": "1"
+    },
+    {
+     "name": "echo",
+     "section": "1"
+    }
+   ],
+   "aliases": [
+    "quote",
+    "quotes",
+    "single quotes",
+    "double quotes",
+    "escaping",
+    "escape",
+    "backslash",
+    "word splitting",
+    "ifs"
+   ],
+   "references": [],
+   "headings": [],
+   "pages": [
+    {
+     "name": "bash",
+     "section": "1"
+    },
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "dash",
+     "section": "1"
+    }
+   ],
+   "words": 241,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The shell gives many characters a special meaning. Spaces and tabs separate words; "
+      },
+      {
+       "t": "code",
+       "v": "| & ; ( ) < >"
+      },
+      {
+       "t": "text",
+       "v": " build pipelines, lists and "
+      },
+      {
+       "t": "concept",
+       "slug": "redirection",
+       "v": "redirections"
+      },
+      {
+       "t": "text",
+       "v": "; "
+      },
+      {
+       "t": "code",
+       "v": "$"
+      },
+      {
+       "t": "text",
+       "v": " starts an expansion; "
+      },
+      {
+       "t": "code",
+       "v": "*"
+      },
+      {
+       "t": "text",
+       "v": ", "
+      },
+      {
+       "t": "code",
+       "v": "?"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "["
+      },
+      {
+       "t": "text",
+       "v": " are "
+      },
+      {
+       "t": "concept",
+       "slug": "globbing",
+       "v": "wildcards"
+      },
+      {
+       "t": "text",
+       "v": ". Quoting turns that meaning off so a character stands for itself."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "There are three ways to quote:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "A "
+       },
+       {
+        "t": "em",
+        "v": "backslash"
+       },
+       {
+        "t": "text",
+        "v": " keeps the next character literal: "
+       },
+       {
+        "t": "code",
+        "v": "\\*"
+       },
+       {
+        "t": "text",
+        "v": " is a plain asterisk. A backslash at the end of a line joins it to the next."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "Single quotes"
+       },
+       {
+        "t": "text",
+        "v": " keep everything inside literal, with no exceptions. A single quote cannot appear inside single quotes, not even after a backslash."
+       }
+      ],
+      [
+       {
+        "t": "em",
+        "v": "Double quotes"
+       },
+       {
+        "t": "text",
+        "v": " keep everything literal except "
+       },
+       {
+        "t": "code",
+        "v": "$"
+       },
+       {
+        "t": "text",
+        "v": ", the backquote and "
+       },
+       {
+        "t": "code",
+        "v": "\\"
+       },
+       {
+        "t": "text",
+        "v": ", so variables and command substitutions still expand: "
+       },
+       {
+        "t": "code",
+        "v": "\"$HOME/My Files\""
+       },
+       {
+        "t": "text",
+        "v": " is one word. Inside them a backslash escapes only "
+       },
+       {
+        "t": "code",
+        "v": "$"
+       },
+       {
+        "t": "text",
+        "v": ", the backquote, "
+       },
+       {
+        "t": "code",
+        "v": "\""
+       },
+       {
+        "t": "text",
+        "v": ", "
+       },
+       {
+        "t": "code",
+        "v": "\\"
+       },
+       {
+        "t": "text",
+        "v": " and a newline."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Quoting matters most around expansions. After the shell expands an unquoted "
+      },
+      {
+       "t": "code",
+       "v": "$var"
+      },
+      {
+       "t": "text",
+       "v": " or "
+      },
+      {
+       "t": "code",
+       "v": "$(command)"
+      },
+      {
+       "t": "text",
+       "v": ", it splits the result into separate words at spaces, tabs and newlines (the characters in "
+      },
+      {
+       "t": "code",
+       "v": "IFS"
+      },
+      {
+       "t": "text",
+       "v": ") and then expands any wildcards in them. Double quotes prevent both, so "
+      },
+      {
+       "t": "code",
+       "v": "rm \"$file\""
+      },
+      {
+       "t": "text",
+       "v": " removes one file even if its name contains spaces, while "
+      },
+      {
+       "t": "code",
+       "v": "rm $file"
+      },
+      {
+       "t": "text",
+       "v": " might remove several."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "An empty pair of quotes, "
+      },
+      {
+       "t": "code",
+       "v": "\"\""
+      },
+      {
+       "t": "text",
+       "v": " or "
+      },
+      {
+       "t": "code",
+       "v": "''"
+      },
+      {
+       "t": "text",
+       "v": ", passes an empty argument. Once expansion is done, the shell removes the quote characters themselves; the command never sees them. In bash, "
+      },
+      {
+       "t": "code",
+       "v": "$'...'"
+      },
+      {
+       "t": "text",
+       "v": " is a further form in which backslash escapes such as "
+      },
+      {
+       "t": "code",
+       "v": "\\n"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "\\t"
+      },
+      {
+       "t": "text",
+       "v": " are decoded."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "redirection",
+   "title": "Redirection",
+   "term": "redirection",
+   "summary": "How the shell points a command's standard input, output and error at files or at each other with <, >, >>, 2>&1 and here documents.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "bash",
+      "section": "1"
+     },
+     "package": "bash 5.2.37-2+b10",
+     "distros": [
+      "debian"
+     ],
+     "sections": "REDIRECTION (Redirecting Input; Redirecting Output; Appending Redirected Output; Redirecting Standard Output and Standard Error; Here Documents; Here Strings)"
+    }
+   ],
+   "related": [
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "tee",
+     "section": "1"
+    },
+    {
+     "name": "cat",
+     "section": "1"
+    },
+    {
+     "name": "dup2",
+     "section": "2"
+    },
+    {
+     "name": "open",
+     "section": "2"
+    },
+    {
+     "name": "stdin",
+     "section": "3"
+    }
+   ],
+   "aliases": [
+    "redirect",
+    "redirects",
+    "redirections",
+    "io redirection",
+    "i/o redirection",
+    "stdin",
+    "stdout",
+    "stderr",
+    "standard input",
+    "standard output",
+    "standard error",
+    "2>&1",
+    "here document",
+    "heredoc",
+    "here string",
+    "file descriptor",
+    "file descriptors"
+   ],
+   "references": [],
+   "headings": [],
+   "pages": [
+    {
+     "name": "bash",
+     "section": "1"
+    },
+    {
+     "name": "sh",
+     "section": "1"
+    },
+    {
+     "name": "dash",
+     "section": "1"
+    }
+   ],
+   "words": 244,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Every command starts with three open file descriptors: 0, "
+      },
+      {
+       "t": "em",
+       "v": "standard input"
+      },
+      {
+       "t": "text",
+       "v": "; 1, "
+      },
+      {
+       "t": "em",
+       "v": "standard output"
+      },
+      {
+       "t": "text",
+       "v": "; and 2, "
+      },
+      {
+       "t": "em",
+       "v": "standard error"
+      },
+      {
+       "t": "text",
+       "v": ". Normally all three are your terminal. Redirection, written on the command line and carried out by the shell before the command runs, points them somewhere else."
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "< file"
+       },
+       {
+        "t": "text",
+        "v": " reads standard input from "
+       },
+       {
+        "t": "code",
+        "v": "file"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "> file"
+       },
+       {
+        "t": "text",
+        "v": " writes standard output to "
+       },
+       {
+        "t": "code",
+        "v": "file"
+       },
+       {
+        "t": "text",
+        "v": ", creating it or emptying it first. With "
+       },
+       {
+        "t": "code",
+        "v": "set -o noclobber"
+       },
+       {
+        "t": "text",
+        "v": ", "
+       },
+       {
+        "t": "code",
+        "v": ">"
+       },
+       {
+        "t": "text",
+        "v": " refuses to overwrite an existing file."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": ">> file"
+       },
+       {
+        "t": "text",
+        "v": " appends to "
+       },
+       {
+        "t": "code",
+        "v": "file"
+       },
+       {
+        "t": "text",
+        "v": " instead."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "2> file"
+       },
+       {
+        "t": "text",
+        "v": " sends standard error to "
+       },
+       {
+        "t": "code",
+        "v": "file"
+       },
+       {
+        "t": "text",
+        "v": "; any descriptor number can go in front of the operator."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "2>&1"
+       },
+       {
+        "t": "text",
+        "v": " makes descriptor 2 a copy of descriptor 1, so errors go wherever output is going at that moment."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "&> file"
+       },
+       {
+        "t": "text",
+        "v": ", in bash, sends both output and error to "
+       },
+       {
+        "t": "code",
+        "v": "file"
+       },
+       {
+        "t": "text",
+        "v": "; it means the same as "
+       },
+       {
+        "t": "code",
+        "v": "> file 2>&1"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Redirections are processed from left to right, so order matters: "
+      },
+      {
+       "t": "code",
+       "v": "ls > dirlist 2>&1"
+      },
+      {
+       "t": "text",
+       "v": " puts both output and errors in "
+      },
+      {
+       "t": "code",
+       "v": "dirlist"
+      },
+      {
+       "t": "text",
+       "v": ", but "
+      },
+      {
+       "t": "code",
+       "v": "ls 2>&1 > dirlist"
+      },
+      {
+       "t": "text",
+       "v": " sends errors to where output pointed "
+      },
+      {
+       "t": "em",
+       "v": "before"
+      },
+      {
+       "t": "text",
+       "v": " it was redirected, usually the terminal."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A "
+      },
+      {
+       "t": "em",
+       "v": "here document"
+      },
+      {
+       "t": "text",
+       "v": " feeds lines from the script itself to a command:"
+      }
+     ]
+    },
+    {
+     "type": "pre",
+     "text": "cat <<END\nHello, $USER\nEND"
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The lines up to the delimiter become standard input. Variables in them are expanded unless the delimiter word is quoted, as in "
+      },
+      {
+       "t": "code",
+       "v": "<<'END'"
+      },
+      {
+       "t": "text",
+       "v": ". In bash, "
+      },
+      {
+       "t": "code",
+       "v": "<<< word"
+      },
+      {
+       "t": "text",
+       "v": " passes a single string instead."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A "
+      },
+      {
+       "t": "concept",
+       "slug": "pipelines",
+       "v": "pipeline"
+      },
+      {
+       "t": "text",
+       "v": " is the other way to connect commands: it joins one command's output to the next one's input directly."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "regular-expressions",
+   "title": "Regular expressions",
+   "term": "regular expressions",
+   "summary": "The pattern language grep, sed and many other tools use to match text, in its basic and extended forms.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "regex",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "DESCRIPTION"
+    },
+    {
+     "page": {
+      "name": "re_format",
+      "section": "7"
+     },
+     "package": null,
+     "distros": [
+      "freebsd",
+      "macos"
+     ],
+     "sections": "DESCRIPTION"
+    }
+   ],
+   "related": [
+    {
+     "name": "grep",
+     "section": "1"
+    },
+    {
+     "name": "sed",
+     "section": "1"
+    },
+    {
+     "name": "awk",
+     "section": "1"
+    },
+    {
+     "name": "regex",
+     "section": "3"
+    },
+    {
+     "name": "glob",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "regex",
+    "regexp",
+    "regexps",
+    "regular expression",
+    "ere",
+    "bre",
+    "extended regular expressions",
+    "basic regular expressions"
+   ],
+   "references": [
+    {
+     "name": "regex",
+     "section": "7"
+    },
+    {
+     "name": "re_format",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 229,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A regular expression (RE) is a pattern that describes text. "
+      },
+      {
+       "t": "man",
+       "name": "grep",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " prints the lines that match one, "
+      },
+      {
+       "t": "man",
+       "name": "sed",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " edits them, and many other tools accept them. POSIX defines two dialects: "
+      },
+      {
+       "t": "em",
+       "v": "extended"
+      },
+      {
+       "t": "text",
+       "v": " REs, roughly those of "
+      },
+      {
+       "t": "man",
+       "name": "egrep",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " or "
+      },
+      {
+       "t": "code",
+       "v": "grep -E"
+      },
+      {
+       "t": "text",
+       "v": ", and "
+      },
+      {
+       "t": "em",
+       "v": "basic"
+      },
+      {
+       "t": "text",
+       "v": " REs, the older form that "
+      },
+      {
+       "t": "man",
+       "name": "grep",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "man",
+       "name": "sed",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " use unless told otherwise."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The building blocks of an extended RE:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "An ordinary character matches itself; "
+       },
+       {
+        "t": "code",
+        "v": "."
+       },
+       {
+        "t": "text",
+        "v": " matches any single character."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "^"
+       },
+       {
+        "t": "text",
+        "v": " matches at the start of a line and "
+       },
+       {
+        "t": "code",
+        "v": "$"
+       },
+       {
+        "t": "text",
+        "v": " at the end."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "[abc]"
+       },
+       {
+        "t": "text",
+        "v": " matches one listed character, "
+       },
+       {
+        "t": "code",
+        "v": "[^abc]"
+       },
+       {
+        "t": "text",
+        "v": " any character not listed, and "
+       },
+       {
+        "t": "code",
+        "v": "[[:digit:]]"
+       },
+       {
+        "t": "text",
+        "v": " any character in a named class."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "After an item, "
+       },
+       {
+        "t": "code",
+        "v": "*"
+       },
+       {
+        "t": "text",
+        "v": " means zero or more, "
+       },
+       {
+        "t": "code",
+        "v": "+"
+       },
+       {
+        "t": "text",
+        "v": " one or more, "
+       },
+       {
+        "t": "code",
+        "v": "?"
+       },
+       {
+        "t": "text",
+        "v": " zero or one, and "
+       },
+       {
+        "t": "code",
+        "v": "{2,4}"
+       },
+       {
+        "t": "text",
+        "v": " between two and four."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "(...)"
+       },
+       {
+        "t": "text",
+        "v": " groups, and "
+       },
+       {
+        "t": "code",
+        "v": "|"
+       },
+       {
+        "t": "text",
+        "v": " separates alternatives: "
+       },
+       {
+        "t": "code",
+        "v": "(cat|dog)s?"
+       },
+       {
+        "t": "text",
+        "v": "."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "A backslash makes a special character ordinary: "
+       },
+       {
+        "t": "code",
+        "v": "\\."
+       },
+       {
+        "t": "text",
+        "v": " matches a dot."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "In a basic RE, "
+      },
+      {
+       "t": "code",
+       "v": "+"
+      },
+      {
+       "t": "text",
+       "v": ", "
+      },
+      {
+       "t": "code",
+       "v": "?"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "|"
+      },
+      {
+       "t": "text",
+       "v": " are ordinary characters, and grouping and bounds are written "
+      },
+      {
+       "t": "code",
+       "v": "\\(...\\)"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "\\{...\\}"
+      },
+      {
+       "t": "text",
+       "v": ". Basic REs add back references: "
+      },
+      {
+       "t": "code",
+       "v": "\\1"
+      },
+      {
+       "t": "text",
+       "v": " matches the same text the first group matched."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "When several matches are possible, the one that starts earliest wins, and of those the longest. Ranges such as "
+      },
+      {
+       "t": "code",
+       "v": "[a-z]"
+      },
+      {
+       "t": "text",
+       "v": " depend on the locale's collating order, so named classes are the portable choice. Some programs extend this syntax; their own manual pages say how. File-name wildcards look similar but follow different rules; see "
+      },
+      {
+       "t": "concept",
+       "slug": "globbing",
+       "v": "globbing"
+      },
+      {
+       "t": "text",
+       "v": "."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "scheduling",
+   "title": "CPU scheduling and nice values",
+   "term": "scheduling",
+   "summary": "How Linux decides which thread runs next, what a nice value changes, and what the real-time policies are.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "sched",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "Scheduling policies; SCHED_FIFO; SCHED_RR; SCHED_OTHER; The nice value; SCHED_BATCH; SCHED_IDLE; The autogroup feature; The nice value and group scheduling"
+    }
+   ],
+   "related": [
+    {
+     "name": "nice",
+     "section": "1"
+    },
+    {
+     "name": "renice",
+     "section": "1"
+    },
+    {
+     "name": "chrt",
+     "section": "1"
+    },
+    {
+     "name": "taskset",
+     "section": "1"
+    },
+    {
+     "name": "nice",
+     "section": "2"
+    },
+    {
+     "name": "setpriority",
+     "section": "2"
+    },
+    {
+     "name": "sched_setscheduler",
+     "section": "2"
+    }
+   ],
+   "aliases": [
+    "sched",
+    "scheduler",
+    "nice",
+    "nice value",
+    "niceness",
+    "renice",
+    "priority",
+    "process priority",
+    "cpu priority",
+    "real-time",
+    "realtime",
+    "sched_fifo",
+    "sched_rr",
+    "chrt"
+   ],
+   "references": [
+    {
+     "name": "sched",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 249,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The scheduler is the part of the kernel that decides which runnable thread gets the CPU next. Each thread has a "
+      },
+      {
+       "t": "em",
+       "v": "scheduling policy"
+      },
+      {
+       "t": "text",
+       "v": ", and that policy decides how much its priority and nice value count."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Most threads use the normal time-sharing policy, "
+      },
+      {
+       "t": "code",
+       "v": "SCHED_OTHER"
+      },
+      {
+       "t": "text",
+       "v": ". Among those, the "
+      },
+      {
+       "t": "em",
+       "v": "nice value"
+      },
+      {
+       "t": "text",
+       "v": " sets the share of CPU time: it runs from -20, the highest priority, to +19, the lowest, and 0 is the default. On current Linux each step of difference makes the scheduler favour the higher-priority process by a factor of 1.25. "
+      },
+      {
+       "t": "man",
+       "name": "nice",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " starts a command with a different nice value, and "
+      },
+      {
+       "t": "man",
+       "name": "renice",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " changes a running one. An unprivileged process can make itself nicer, but how far it may raise its priority is limited by "
+      },
+      {
+       "t": "code",
+       "v": "RLIMIT_NICE"
+      },
+      {
+       "t": "text",
+       "v": "."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Two related policies sit beside it. "
+      },
+      {
+       "t": "code",
+       "v": "SCHED_BATCH"
+      },
+      {
+       "t": "text",
+       "v": " is for noninteractive, CPU-intensive work, and "
+      },
+      {
+       "t": "code",
+       "v": "SCHED_IDLE"
+      },
+      {
+       "t": "text",
+       "v": " is for jobs that should run only when nothing else wants the CPU, lower even than nice +19."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "The "
+      },
+      {
+       "t": "em",
+       "v": "real-time"
+      },
+      {
+       "t": "text",
+       "v": " policies, "
+      },
+      {
+       "t": "code",
+       "v": "SCHED_FIFO"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "SCHED_RR"
+      },
+      {
+       "t": "text",
+       "v": ", use a static priority from 1 to 99 and always run before normal threads. A "
+      },
+      {
+       "t": "code",
+       "v": "SCHED_FIFO"
+      },
+      {
+       "t": "text",
+       "v": " thread keeps the CPU until it blocks, yields, or is preempted by a higher priority; "
+      },
+      {
+       "t": "code",
+       "v": "SCHED_RR"
+      },
+      {
+       "t": "text",
+       "v": " adds a time slice. A runaway real-time thread can starve the whole system, so their use is limited by privileges and resource limits. "
+      },
+      {
+       "t": "man",
+       "name": "chrt",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " sets these policies."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "One surprise: many distributions enable "
+      },
+      {
+       "t": "em",
+       "v": "autogrouping"
+      },
+      {
+       "t": "text",
+       "v": ", which groups the processes of a session, typically one terminal window. A nice value then only competes with processes in the same group."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "signals",
+   "title": "Signals",
+   "term": "signals",
+   "summary": "How the kernel or another program tells a process to stop, pause, continue or quit, and what happens by default.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "signal",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine"
+     ],
+     "sections": "Signal dispositions; Sending a signal; Signal mask and pending signals; Standard signals; Queueing and delivery semantics for standard signals"
+    },
+    {
+     "page": {
+      "name": "bash",
+      "section": "1"
+     },
+     "package": "bash 5.2.37-2+b10",
+     "distros": [
+      "debian"
+     ],
+     "sections": "SIGNALS; JOB CONTROL"
+    }
+   ],
+   "related": [
+    {
+     "name": "kill",
+     "section": "1"
+    },
+    {
+     "name": "pkill",
+     "section": "1"
+    },
+    {
+     "name": "kill",
+     "section": "2"
+    },
+    {
+     "name": "sigaction",
+     "section": "2"
+    },
+    {
+     "name": "signal",
+     "section": "2"
+    },
+    {
+     "name": "sigprocmask",
+     "section": "2"
+    }
+   ],
+   "aliases": [
+    "signal",
+    "sigterm",
+    "sigkill",
+    "sigint",
+    "sighup",
+    "sigstop",
+    "sigpipe",
+    "signal handler"
+   ],
+   "references": [
+    {
+     "name": "signal",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 236,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A signal is a short notification delivered to a process. The kernel sends some itself, such as "
+      },
+      {
+       "t": "code",
+       "v": "SIGSEGV"
+      },
+      {
+       "t": "text",
+       "v": " after an invalid memory reference; others are sent by a program, for example with "
+      },
+      {
+       "t": "man",
+       "name": "kill",
+       "section": "2"
+      },
+      {
+       "t": "text",
+       "v": ", or by you with "
+      },
+      {
+       "t": "man",
+       "name": "kill",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": "."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Each signal has a "
+      },
+      {
+       "t": "em",
+       "v": "disposition"
+      },
+      {
+       "t": "text",
+       "v": " that decides what happens when it arrives. The default action is one of five: terminate the process, terminate it and dump core, ignore the signal, stop (pause) the process, or continue a stopped one. A program can change the disposition with "
+      },
+      {
+       "t": "man",
+       "name": "sigaction",
+       "section": "2"
+      },
+      {
+       "t": "text",
+       "v": ": keep the default, ignore the signal, or catch it in a handler of its own. "
+      },
+      {
+       "t": "code",
+       "v": "SIGKILL"
+      },
+      {
+       "t": "text",
+       "v": " and "
+      },
+      {
+       "t": "code",
+       "v": "SIGSTOP"
+      },
+      {
+       "t": "text",
+       "v": " are the exceptions; they cannot be caught, blocked or ignored."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "Signals you meet most often:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "code",
+        "v": "SIGINT"
+       },
+       {
+        "t": "text",
+        "v": ", interrupt from the keyboard (usually Ctrl-C), and "
+       },
+       {
+        "t": "code",
+        "v": "SIGTERM"
+       },
+       {
+        "t": "text",
+        "v": ", a termination request. Both terminate by default, but a program may catch them and clean up first."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "SIGKILL"
+       },
+       {
+        "t": "text",
+        "v": " always ends the process."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "SIGHUP"
+       },
+       {
+        "t": "text",
+        "v": ", a hangup on the controlling terminal or the death of the controlling process."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "SIGTSTP"
+       },
+       {
+        "t": "text",
+        "v": ", stop typed at the terminal (usually Ctrl-Z), and "
+       },
+       {
+        "t": "code",
+        "v": "SIGSTOP"
+       },
+       {
+        "t": "text",
+        "v": " pause a process; "
+       },
+       {
+        "t": "code",
+        "v": "SIGCONT"
+       },
+       {
+        "t": "text",
+        "v": " lets it continue."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "SIGPIPE"
+       },
+       {
+        "t": "text",
+        "v": ", a write to a pipe that has no readers."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A process can also "
+      },
+      {
+       "t": "em",
+       "v": "block"
+      },
+      {
+       "t": "text",
+       "v": " a signal. A blocked signal stays pending until it is unblocked, and standard signals do not queue: several copies that arrive while blocked are delivered once. Signal numbers differ between architectures, so names are the portable way to refer to them."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "symbolic-links",
+   "title": "Symbolic and hard links",
+   "term": "symbolic links",
+   "summary": "The difference between a hard link, another name for the same file, and a symbolic link, a file that holds a path, and which commands follow them.",
+   "status": "pending-owner",
+   "generatedBy": "claude-opus-5-5",
+   "generatedOn": "2026-10-30",
+   "panelReview": null,
+   "sources": [
+    {
+     "page": {
+      "name": "symlink",
+      "section": "7"
+     },
+     "package": "manpages 6.9.1-1",
+     "distros": [
+      "debian",
+      "ubuntu",
+      "fedora",
+      "arch",
+      "alpine",
+      "freebsd",
+      "macos"
+     ],
+     "sections": "DESCRIPTION; Symbolic link ownership, permissions, and timestamps; Commands not traversing a file tree; Commands traversing a file tree"
+    }
+   ],
+   "related": [
+    {
+     "name": "ln",
+     "section": "1"
+    },
+    {
+     "name": "readlink",
+     "section": "1"
+    },
+    {
+     "name": "namei",
+     "section": "1"
+    },
+    {
+     "name": "ls",
+     "section": "1"
+    },
+    {
+     "name": "find",
+     "section": "1"
+    },
+    {
+     "name": "symlink",
+     "section": "2"
+    },
+    {
+     "name": "lstat",
+     "section": "2"
+    },
+    {
+     "name": "inode",
+     "section": "7"
+    },
+    {
+     "name": "path_resolution",
+     "section": "7"
+    }
+   ],
+   "aliases": [
+    "symlink",
+    "symlinks",
+    "symbolic link",
+    "soft link",
+    "soft links",
+    "hard link",
+    "hard links",
+    "dangling link",
+    "ln -s"
+   ],
+   "references": [
+    {
+     "name": "symlink",
+     "section": "7"
+    }
+   ],
+   "headings": [],
+   "pages": [],
+   "words": 251,
+   "body": [
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A "
+      },
+      {
+       "t": "em",
+       "v": "hard link"
+      },
+      {
+       "t": "text",
+       "v": " is a name for a file. Every hard link to a file refers to the same "
+      },
+      {
+       "t": "concept",
+       "slug": "inodes",
+       "v": "inode"
+      },
+      {
+       "t": "text",
+       "v": ", so all of them are equally the file: there is no original and copy, and a change made through one name shows through all of them. Hard links cannot refer to directories."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A "
+      },
+      {
+       "t": "em",
+       "v": "symbolic link"
+      },
+      {
+       "t": "text",
+       "v": " is a small file whose contents are a path name. It points to a name, not to the file underneath, so it can refer to a directory or to another file system. The target need not exist; a link to a missing path is called "
+      },
+      {
+       "t": "em",
+       "v": "dangling"
+      },
+      {
+       "t": "text",
+       "v": ". "
+      },
+      {
+       "t": "man",
+       "name": "ln",
+       "section": "1"
+      },
+      {
+       "t": "text",
+       "v": " makes a hard link, and "
+      },
+      {
+       "t": "code",
+       "v": "ln -s"
+      },
+      {
+       "t": "text",
+       "v": " a symbolic one."
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "When a command meets a symbolic link it either "
+      },
+      {
+       "t": "em",
+       "v": "follows"
+      },
+      {
+       "t": "text",
+       "v": " it and acts on the target, or acts on the link itself:"
+      }
+     ]
+    },
+    {
+     "type": "ul",
+     "items": [
+      [
+       {
+        "t": "text",
+        "v": "Links in the directory part of a path, such as "
+       },
+       {
+        "t": "code",
+        "v": "a"
+       },
+       {
+        "t": "text",
+        "v": " in "
+       },
+       {
+        "t": "code",
+        "v": "a/b"
+       },
+       {
+        "t": "text",
+        "v": ", are always followed."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "A command given a link as an argument usually follows it: "
+       },
+       {
+        "t": "code",
+        "v": "cat slink"
+       },
+       {
+        "t": "text",
+        "v": " prints the target's contents. "
+       },
+       {
+        "t": "man",
+        "name": "mv",
+        "section": "1"
+       },
+       {
+        "t": "text",
+        "v": " and "
+       },
+       {
+        "t": "man",
+        "name": "rm",
+        "section": "1"
+       },
+       {
+        "t": "text",
+        "v": " are exceptions; they rename or delete the link itself, and nothing else."
+       }
+      ],
+      [
+       {
+        "t": "code",
+        "v": "chown -h"
+       },
+       {
+        "t": "text",
+        "v": " changes the link itself rather than its target."
+       }
+      ],
+      [
+       {
+        "t": "text",
+        "v": "Commands that walk a tree, such as "
+       },
+       {
+        "t": "code",
+        "v": "chown -R"
+       },
+       {
+        "t": "text",
+        "v": " or "
+       },
+       {
+        "t": "man",
+        "name": "find",
+        "section": "1"
+       },
+       {
+        "t": "text",
+        "v": ", do not follow links to directories by default. "
+       },
+       {
+        "t": "code",
+        "v": "-H"
+       },
+       {
+        "t": "text",
+        "v": " follows those named on the command line and "
+       },
+       {
+        "t": "code",
+        "v": "-L"
+       },
+       {
+        "t": "text",
+        "v": " follows every one; "
+       },
+       {
+        "t": "code",
+        "v": "-P"
+       },
+       {
+        "t": "text",
+        "v": " restores the default."
+       }
+      ]
+     ]
+    },
+    {
+     "type": "p",
+     "inlines": [
+      {
+       "t": "text",
+       "v": "A link that names its target by a relative path is resolved from the link's own directory, so moving it can break it."
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

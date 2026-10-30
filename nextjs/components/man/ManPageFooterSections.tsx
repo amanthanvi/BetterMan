@@ -1,4 +1,7 @@
+import { Fragment } from 'react'
+
 import type { PageDerivedResponse } from '../../../convex/_derivedEncoding'
+import type { ConceptLink } from '../../lib/concepts'
 import type { ManPageContent } from '../../lib/docModel'
 import type { SectionPage } from '../../lib/api'
 import { withDistro, type Distro } from '../../lib/distro'
@@ -9,6 +12,7 @@ export function ManPageFooterSections({
   seeAlso,
   relatedItems,
   derived,
+  concepts = [],
   hasParseWarnings = false,
 }: {
   reportHref: string
@@ -16,6 +20,8 @@ export function ManPageFooterSections({
   seeAlso?: ManPageContent['seeAlso']
   relatedItems: SectionPage[]
   derived?: Pick<PageDerivedResponse, 'referencedBy' | 'family' | 'package'>
+  /** Published concept explainers this page references (lib/concepts.ts). */
+  concepts?: Pick<ConceptLink, 'slug' | 'term' | 'summary'>[]
   hasParseWarnings?: boolean
 }) {
   const seeAlsoItems = (seeAlso ?? []).slice(0, 24)
@@ -115,6 +121,20 @@ export function ManPageFooterSections({
       ) : null}
 
       <div className="mt-8 space-y-1 text-xs text-ink-3 print:hidden">
+        {/* A quiet line, outside the manual's text: BetterMan's explainers for concepts this page relies on. */}
+        {concepts.length ? (
+          <nav aria-label="Concepts" data-bm-concepts className="text-sm text-ink-2">
+            Concepts:{' '}
+            {concepts.map((concept, index) => (
+              <Fragment key={concept.slug}>
+                {index ? <span aria-hidden="true"> · </span> : null}
+                <a href={withDistro(`/concept/${encodeURIComponent(concept.slug)}`, urlDistro)} title={concept.summary} className="underline">
+                  {concept.term}
+                </a>
+              </Fragment>
+            ))}
+          </nav>
+        ) : null}
         {hasParseWarnings ? <p>mandoc reported formatting warnings for this page. Some structure may be lost.</p> : null}
         <p>
           <a href={reportHref} target="_blank" rel="noopener noreferrer" className="underline">
