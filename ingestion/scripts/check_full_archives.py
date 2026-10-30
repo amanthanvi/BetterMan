@@ -103,6 +103,7 @@ def measure(root, distro, limit, curated=False, largest=False):
             "samplePackages": len(workspace.packages),
             "acquiredPackages": len(workspace.acquired),
             "downloadedBytes": workspace.downloaded,
+            "archiveFallbacks": workspace.archive_fallbacks,
             "indexSeconds": indexed - started,
             "acquireSeconds": acquired - indexed,
             "parseSeconds": parsed - acquired,

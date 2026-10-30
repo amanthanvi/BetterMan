@@ -18,6 +18,7 @@ All notable changes to BetterMan are documented here.
 - Preserve case, underscores and single-character distro package selectors through provider lookups, retaining the 200-character ASCII cache-key bound (#394).
 
 - Ingestion: send Ubuntu promotion authorization only to backends advertising its acquisition capability, and reject unsupported explicit authorization (#394).
+- Ingestion: acquire pinned Arch indexes and packages CDN-first with checksum-verified archive fallback and bounded failure reasons (#394).
 
 - Ingestion: isolate B2's exact v8 contract from B4 v7 and translations v9 (#394).
 - Add opt-in full Arch package extraction with independent staging and promotion holds (#394).

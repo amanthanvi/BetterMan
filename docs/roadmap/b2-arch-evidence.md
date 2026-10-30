@@ -1,6 +1,7 @@
 # B2 Arch archive extraction
 
 Arch family of #394, stacked on Fedora #470 / Ubuntu #467 / pending v7 #445.
+B2 uses exact v8 across all four families; translations follow as v9.
 Merge/deploy after #445's November 1 window. No shared data, configuration,
 secret or repository-variable change, workflow dispatch or merge occurred.
 The lead supplies independent review and staging measurement after merge;
@@ -24,8 +25,11 @@ identities and noncontiguous/incomplete metadata fail closed. English public and
 OpenJDK manual paths select **3,714 packages / 18,459,361,278 archive bytes**.
 There are **70,994 indexed English routes / 71,802 source rows**.
 
-Every archive is acquired from its pinned date/repository URL and checksum/size
-verified, including cache reuse. Python 3.14 streams the zstd/xz tar payload through
+Files databases and packages try `https://geo.mirror.pkgbuild.com` first, then
+the pinned date/repository URL at `archive.archlinux.org`. Both legs and cache
+reuse require the same pinned SHA256 and size. Any integrity/size/HTTP/transport
+error switches to the archive; telemetry records fixed reason tags without URLs
+or response text. Current CDN metadata that differs from the pin falls back too. Python 3.14 streams the zstd/xz tar payload through
 the shared selective reader. `.INSTALL`, packaged binaries and other scripts
 never execute. Only manual/license data is retained; links are references in
 SQLite, never filesystem links. The B1 parser, store-only includes/aliases,
@@ -113,11 +117,34 @@ path. The 270-minute/under-10-GB runner plan above stays conservative.
 record each pin-file digest, distinguishing the original pinned-index acquisition
 from the later exact include repair. The index/package hashes did not change.
 
-Validation: `pnpm ingest:lint`; **974 ingestion tests**; **126 ops tests**;
+Validation: `pnpm ingest:lint`; **990 ingestion tests**; **126 ops tests**;
 explicit dataset/deploy workflow tests (**12 passed**); Convex typecheck and
-**3,284 tests**; isolated local codegen on 3432/3433 with no generated drift;
+**3,285 tests**; isolated local codegen on 3432/3433 with no generated drift;
 Python 3.14 pip install dry-run; frontend lint, grammar and **692 tests**.
 The oversized-archive concurrency test proves large archives do not overlap;
 the include regression proves only an exact pinned malformed target is repaired.
 PR whitespace, mixed-config, performance-policy, public-API and Proof guards run
 on the committed family diff. No full cloud import or promotion was attempted.
+
+Review trace: Arch package and files-database parsers run only after whole-file
+SHA256 verification. A malformed unverified response is rejected before tar
+parsing; it cannot escape the fallback callback as Alpine previously did.
+
+## CDN-first review follow-up
+
+A separate empty cache and fresh indexes acquired **33 packages / 170,330,327
+bytes in 20.49 s**, versus the original archive-only 24.35 s. Index acquisition/
+parsing took **20.36 s**, parsing **68.86 s**; **6,842 pages / 7,484 aliases**,
+all 28 owners, zero failures/unresolved. Fourteen package versions were absent
+from the current CDN and fell back on HTTP 404. All three current files databases
+differed in size from the immutable pins (two short bodies, one oversize), so they
+also fell back and verified against the original digests. These are bounded reason
+tags, not response text. See [cold report](b2-arch-cdn-measurements.json).
+
+Byte-scaled acquisition now projects **37.01 minutes locally** (including the
+package fallbacks), about **111 minutes at 3x**, within the retained 135-minute
+acquisition allowance. Keep the **270/300-minute, under-10-GB** full CI plan;
+this sample improves its margin without claiming full cloud completion. Future
+CDN retention and mirror throughput can change the fallback mix. Arch parser
+regressions cover both CDN and fallback integrity, corrupt-cache replacement,
+all HTTP status classes through the shared downloader, and bounded reasons.

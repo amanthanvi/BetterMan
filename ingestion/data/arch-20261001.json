@@ -1,6 +1,7 @@
 {
   "acquisition": "arch-pkg-extraction",
   "mirror": "https://archive.archlinux.org/repos/2026/10/01",
+  "cdn": "https://geo.mirror.pkgbuild.com",
   "architecture": "x86_64",
   "releaseSha256": "0769988b76ab1bb2f7a52fd6865eab8e452a4533d8e131297bc36617f110911b",
   "popcon": {

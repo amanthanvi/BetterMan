@@ -49,7 +49,13 @@ def catalog(root: Path, pins_path: Path):
     for repo in pins["repositories"]:
         path = root / f"{repo['name']}.files"
         relative = f"{repo['name']}/os/x86_64/{repo['name']}.files"
-        download(f"{pins['mirror']}/{relative}", path, repo["sha256"], repo["size"])
+        download(
+            f"{pins.get('cdn', pins['mirror'])}/{relative}",
+            path,
+            repo["sha256"],
+            repo["size"],
+            fallback_url=f"{pins['mirror']}/{relative}" if pins.get("cdn") else None,
+        )
         pending = {}
         with tarfile.open(path, mode="r|*") as archive:
             for member in archive:
