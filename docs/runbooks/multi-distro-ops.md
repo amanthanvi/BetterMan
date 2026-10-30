@@ -157,20 +157,20 @@ In BetterMan, the Arch ingest path handles this automatically (see `ingestion/in
 ## Deploy and activation recovery
 
 Do not deploy Convex during an `update-docs` / `update-dataset` run. Wait for all
-isolated distro matrix legs to finish before deploying. Contract **v6** retains
-v5 uploads and adds verified-source reads and CAS promotion. Both ingestion and
-every promotion path call `require_deployed_contract()` and reject either an
-older or newer version before writes. Promotion additionally requires
-`X-BetterMan-Ingest-Contract: 6`: new Convex rejects old in-flight workflow calls
-without the header as `409 INGEST_CONTRACT_MISMATCH`, before moving pointers.
-New workflow code against v5 fails its preflight; if Convex rolls back between
-preflight and POST, v5's validator rejects the unknown CAS field as an invalid
-payload before any mutation writes. There is no unconditional fallback.
-Vercel can lag the Convex deploy because this exchange goes directly to Convex.
-An old ingest already past its preflight may finish compatible uploads or
-staging activation, but cannot promote through the v6 HTTP fence. Do not deploy
-during the live full-Debian run (including run `40957721036`); let it finish,
-deploy Convex v6, then use a fresh matching promotion-only dispatch if needed.
+isolated distro matrix legs to finish before deploying. Contracts go v7 (index
+by demand, #445), v8 (B2 full extractions) and **v9** (translated manuals,
+#395). Versions match exactly, both ways: ingestion and every promotion path
+call `require_deployed_contract()`, which rejects any other advertised version
+or contract shape before writes, and **every** release-contract route (release,
+license-packages, pages, pages/storage, aliases, licenses, activate,
+promotion-source and promote) requires `X-BetterMan-Ingest-Contract: 9`. Convex
+rejects a missing or different header as `409 INGEST_CONTRACT_MISMATCH` before
+any read or write, so an old in-flight workflow stops at its next request
+instead of writing or moving pointers. The generated layer keeps its own
+contract. There is no unconditional fallback. Vercel can lag the Convex deploy
+because this exchange goes directly to Convex. Do not deploy during a live
+dataset run; let it finish, deploy Convex, then use a fresh matching dispatch
+(an interrupted upload re-ingests under a new release ID).
 Once the workflow and deployment
 have settled, use the matching client. If upload was incomplete, re-ingest under
 a new release ID; if upload and sealing completed, resume activation of that ID

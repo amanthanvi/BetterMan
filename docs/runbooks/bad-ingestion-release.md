@@ -73,7 +73,8 @@ waits in the concurrency queue; omitting it only captures staging at job time.
 The partial map pins Debian; the other six distros still capture current
 verified staging unless you supply their inspected IDs too.
 
-The workflow checks contract v6, reads and verifies the staging ID through the
+The workflow checks contract v9 (the exact version, sent as
+`X-BetterMan-Ingest-Contract` on every release-contract request), reads and verifies the staging ID through the
 authenticated promotion-source endpoint, fails the distro job if it differs
 from the supplied saved ID, and passes that saved ID as
 `expectedDatasetReleaseId: {"debian": "<saved-rollback-id>"}` with the required
