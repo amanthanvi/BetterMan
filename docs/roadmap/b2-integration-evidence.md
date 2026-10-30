@@ -78,3 +78,21 @@ A source context matching Docker COPY inputs, with its own offline frozen pnpm
 install (no external node_modules links), passes the complete Next build and
 typecheck. Docker is not installed locally; this does not claim a full image build.
 Application, ingest, Convex and deploy-guard behavior is unchanged by the COPY.
+
+## Latest P1 follow-up
+
+#470 now proves selectors from the release-cached default provider set before any
+provider lookup; alias answers include registered choices. Explicit HTML requests
+consume the page limiter first; invented selectors cause no provider calls/cache
+entries, and their private misses skip typo reads. The index checker compares
+immutable target/parent Git schemas for every table, with no editable policy or
+baseline. New tables pass; additions/changes on existing tables need confirmation;
+malformed input fails even confirmed. Details and requested-head schema audits,
+including #465's squash-merge versus literal-parent distinction, are in
+[b2-fedora-evidence.md](b2-fedora-evidence.md).
+
+Shared production E2E (providers, man-query, short URLs): 22 pass. Cold man/default
+remain 4 calls/26 docs/1 storage read. Alternate is 7/31/2 vs 4/11/1 (+3/+20/+1),
+for default proof and early limiting. Two perf runs reproduce this; unchanged
+performance budget fails only those three alternate metrics. The lead must review
+this bounded cold cost. No budget, tolerance or harness changes were made.

@@ -177,3 +177,17 @@ Final main integration: see [combined evidence](b2-integration-evidence.md).
 with codegen no drift, pip dry-run and all guards. Production Next build and all
 17 man-query/short-URL E2E tests pass on the final stack. Prior native acquisition
 measurements and the 240/300-minute, under-6-GB staging projection are unchanged.
+
+## Latest P1 stack re-check
+
+Restacked on #470's bounded default-first provider proof/early page limiter and
+immutable target-parent schema preflight. Implementation commits replayed
+unchanged; historical-worklog conflicts preserve the current record and separate
+integration evidence. 1,020 ingestion / 869 frontend / 3,287 Convex / 127 ops /
+13 dataset-deploy workflow tests pass. Lint/grammar/typecheck/public-API/pip and
+isolated codegen (no generated drift) pass. Shared production provider/query/short
+URL E2E is 22 passing tests. The measured alternate cold read cost is 7/31/2 vs
+4/11/1, while standard/default stay 4/26/1; the unchanged performance check fails
+those three alternate limits. See Fedora/integration evidence for the tradeoff
+and schema audits. Native Alpine samples and the 240/300-minute, <6 GB projection
+are unchanged; staging measurement, reviewed pins and owner sign-off remain.
