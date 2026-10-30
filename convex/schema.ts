@@ -160,6 +160,7 @@ export default defineSchema({
     title: v.string(),
     description: v.string(),
     sourcePath: v.string(),
+    providerPackages: v.optional(v.array(v.string())),
     sourcePackage: v.optional(v.string()),
     sourcePackageVersion: v.optional(v.string()),
     contentSha256: v.string(),

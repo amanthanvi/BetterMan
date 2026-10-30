@@ -118,6 +118,7 @@ Light is paper; dark is the same plate in warm ink on black.
 - **Header.** `name(section)` in 56px serif with the section in old-style
   figures, the description as an italic lede, then the system picker, source
   package (mono) and the page actions, then SYNOPSIS in mono.
+- **Providers.** When several packages ship the page, a native `<details data-bm-providers>` opens with “Provided by <package>”. Its “Package providers” list links to each `?pkg=` manual, marks the shown package with `aria-current="page"`, and names the release’s default policy. It works without JavaScript; a single provider adds no disclosure.
 - **The manual** (`.bm-manual`, styled in `globals.css`; `DocRenderer` emits
   plain elements). Serif at the reading-prefs size (default 18px/1.62), hyphenated,
   old-style proportional figures. `h2` in semibold small caps, `h3` italic.

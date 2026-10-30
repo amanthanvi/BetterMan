@@ -1,6 +1,6 @@
 import type { Distro } from '../../lib/distro'
-import { DISTRO_LABEL, DISTRO_ORDER, normalizeDistro } from '../../lib/distro'
-import type { ManPage, ManPageVariant } from '../../lib/docModel'
+import { canonicalWithDistro, DISTRO_LABEL, DISTRO_ORDER, normalizeDistro } from '../../lib/distro'
+import type { ManPage, ManPageResponse, ManPageVariant } from '../../lib/docModel'
 import { ACTION_CLASS } from '../ui/action'
 import { ManSectionLabel } from './RunningHead'
 
@@ -23,12 +23,14 @@ export function ManPageHeaderCard({
   page,
   synopsis,
   variants,
+  providers,
   distro,
   hasToc,
 }: {
   page: ManPage
   synopsis?: string[] | null
   variants: ManPageVariant[]
+  providers?: ManPageResponse['providers']
   distro: Distro
   hasToc: boolean
 }) {
@@ -78,7 +80,7 @@ export function ManPageHeaderCard({
           <span className="text-ink">{DISTRO_LABEL[distro]}</span>
         )}
 
-        {page.sourcePackage ? (
+        {page.sourcePackage && (!providers || providers.packages.length < 2) ? (
           <span className="min-w-0 max-w-full break-words font-mono text-xs" title="Source package">
             {page.sourcePackage}
             {page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : null}
@@ -124,6 +126,32 @@ export function ManPageHeaderCard({
           </button>
         </div>
       </div>
+
+      {providers && providers.packages.length > 1 ? (
+        <details className="mt-3 text-sm text-ink-2" data-bm-providers>
+          <summary className="w-fit cursor-pointer hover:text-accent">
+            Provided by <span className="font-mono text-xs">{page.sourcePackage}{page.sourcePackageVersion ? ` ${page.sourcePackageVersion}` : null}</span>
+          </summary>
+          <p className="mt-2">
+            {providers.policy === 'debian'
+              ? 'Debian default: installation priority, then most installed. Exact ties keep the curated preference.'
+              : 'Curated default: the package selected for this release.'}
+          </p>
+          <ul aria-label="Package providers" className="mt-2 space-y-1">
+            {providers.packages.map((pkg) => (
+              <li key={pkg}>
+                <a
+                  href={`${canonicalWithDistro(`/man/${encodeURIComponent(page.name)}/${encodeURIComponent(page.section)}`, distro)}${distro === 'debian' ? '?' : '&'}pkg=${encodeURIComponent(pkg)}`}
+                  aria-current={pkg === page.sourcePackage ? 'page' : undefined}
+                  className="font-mono text-xs text-ink underline decoration-rule-2 underline-offset-4 hover:text-accent"
+                >{pkg}</a>
+                {pkg === providers.defaultPackage ? ' · default' : null}
+                {pkg === page.sourcePackage ? ' · shown' : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
 
       {synopsis?.length ? (
         <div className="mt-9">

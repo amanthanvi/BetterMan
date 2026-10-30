@@ -167,6 +167,7 @@ it.each(['foo%253A%253Abar', 'foo%ZZ'])('rejects malformed or doubly encoded tex
 it('selects an explicit package provider and preserves it through short-route redirects', async () => {
   const res = await GET(req('?pkg=alternate'), ctx())
   expect(res.status).toBe(200)
+  expect(res.headers.get('link')).toBe('<https://betterman.sh/man/tar/1?pkg=alternate>; rel="canonical"')
   expect(fetchManByNameAndSectionOrAlias).toHaveBeenCalledWith({ distro: 'debian', name: 'tar', section: '1', pkg: 'alternate', release: 'test' })
   const redirect = await GET(req('?pkg=alternate'), ctx(['tar']))
   expect(redirect.headers.get('location')).toBe('/man/tar/1.txt?pkg=alternate')

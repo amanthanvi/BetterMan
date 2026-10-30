@@ -3,6 +3,7 @@ import { convexTest } from "convex-test";
 import { afterEach, expect, it, vi } from "vitest";
 import schema from "./schema";
 import { api, internal } from "./_generated/api";
+import { readProviderPackages } from "./_providers";
 import { requireMutableBlob } from "./_releaseIntegrity";
 const modules = import.meta.glob("./**/*.ts");
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
@@ -12,7 +13,7 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
   const t = convexTest(schema, modules);
   await t.mutation(internal.ingest.createRelease, { datasetReleaseId: "providers", locale: "en", distro: "debian",
     imageRef: "snapshot", imageDigest: "pinned", ingestedAt: "now", packageManifest: null,
-    pageCount: 1, providerCount: 2, aliasCount: 0, licenseCount: 0, packageBatches: [],
+    pageCount: 1, providerCount: 3, aliasCount: 0, licenseCount: 0, packageBatches: [],
     sectionTotals: [{ section: "1", total: 1 }],
   });
   const page = (id: string, providerOnly = false) => ({
@@ -35,11 +36,27 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
   const activate = () => t.mutation(internal.ingest.activateRelease, { datasetReleaseId: "providers", stage: "prod", activatedAt: "now" });
   await expect(activate()).rejects.toThrow("RELEASE_MANIFEST_INCOMPLETE");
   expect((await upload([page("case-b", true)])).status).toBe(200);
+  await t.mutation(internal.ingest.insertAliases, { datasetReleaseId: "providers", aliases: [{
+    name: "shared", section: "1", sourcePackage: "stub", sourcePath: "man1/shared.1",
+    targetName: "shared", targetSection: "1", targetPackage: "popular", providerOnly: true,
+  }] });
   expect(await activate()).toMatchObject({ pending: true });
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   expect(await activate()).toMatchObject({ pending: false });
+  expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "stub" }))
+    .toMatchObject({ kind: "alias", name: "shared", section: "1", pkg: "popular" });
+  await t.run(async ctx => {
+    const canonical = (await ctx.db.query("manPages").take(1))[0];
+    expect(canonical.providerPackages).toEqual(["alternate", "popular", "stub"]);
+    const release = (await ctx.db.get(canonical.releaseId))!;
+    const query = vi.spyOn(ctx.db, "query");
+    expect(await readProviderPackages(ctx, release, "shared", "1", canonical)).toEqual(["alternate", "popular", "stub"]);
+    expect(query).not.toHaveBeenCalled(); // Cached collisions add zero document reads.
+    query.mockRestore();
+    expect(await readProviderPackages(ctx, release, "shared", "1", { ...canonical, providerPackages: undefined })).toEqual(["alternate", "popular", "stub"]);
+  });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1" }))
-    .toMatchObject({ kind: "page", data: { page: { sourcePackage: "popular", description: "canonical" } } });
+    .toMatchObject({ kind: "page", data: { page: { sourcePackage: "popular", description: "canonical" }, providers: { packages: ["alternate", "popular", "stub"], defaultPackage: "popular", policy: "curated" } } });
   await t.run(async ctx => {
     for (const [contentSha256, summary] of [["canonical", "Canonical brief"], ["case-A", "Alternate brief"]]) {
       await ctx.db.insert("manPageGenerated", { contentSha256, updatedAt: "now", generated: {
@@ -49,7 +66,7 @@ it("preserves every provider, seals only complete uploads, and isolates canonica
     }
   });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "alternate" }))
-    .toMatchObject({ kind: "page", data: { brief: { summary: "Alternate brief" } } });
+    .toMatchObject({ kind: "page", data: { brief: { summary: "Alternate brief" }, providers: { packages: ["alternate", "popular", "stub"], defaultPackage: "popular" } } });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1" }))
     .toMatchObject({ kind: "page", data: { brief: { summary: "Canonical brief" } } });
   expect(await t.action(api.content.getManByNameAndSection, { distro: "debian", name: "shared", section: "1", pkg: "alternate" }))

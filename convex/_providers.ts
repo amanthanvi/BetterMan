@@ -1,11 +1,36 @@
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 type Provider = {
   externalId: string; name: string; section: string; sourcePackage: string | null;
   sourcePackageVersion: string | null; sourcePath: string; title: string; description: string;
   contentSha256: string; hasParseWarnings: boolean; contentStorageId: Id<"_storage">;
 };
+
+export async function readProviderPackages(ctx: QueryCtx, release: Doc<"datasetReleases">,
+  name: string, section: string, page: Doc<"manPages"> | null): Promise<string[]> {
+  if (page?.providerPackages) return page.providerPackages;
+  const limit = release.providerCount ?? 0;
+  if (!limit) return [];
+  const [real, aliases] = await Promise.all([
+    ctx.db.query("manPageProviders").withIndex("by_releaseId_and_route_and_package_and_path", q =>
+      q.eq("releaseId", release._id).eq("name", name).eq("section", section)).take(limit),
+    ctx.db.query("manPageAliasProviders").withIndex("by_releaseId_and_route_and_package_and_path", q =>
+      q.eq("releaseId", release._id).eq("name", name).eq("section", section)).take(limit),
+  ]);
+  return [...new Set([page?.sourcePackage, ...real.map(p => p.sourcePackage), ...aliases.map(p => p.sourcePackage)]
+    .filter((pkg): pkg is string => Boolean(pkg)))].sort();
+}
+
+/** Cache only package names during upload, so collisions add no page-view document reads. */
+export async function refreshProviderPackages(ctx: MutationCtx, release: Doc<"datasetReleases">, name: string, section: string) {
+  if (!release.providerCount) return;
+  const page = await ctx.db.query("manPages").withIndex("by_releaseId_and_name_and_section", q =>
+    q.eq("releaseId", release._id).eq("name", name).eq("section", section)).unique();
+  if (!page) return; // The canonical upload will collect providers that arrived first.
+  const packages = await readProviderPackages(ctx, release, name, section, { ...page, providerPackages: undefined });
+  await ctx.db.patch(page._id, { providerPackages: packages });
+}
 
 export async function insertProvider(ctx: MutationCtx, release: Doc<"datasetReleases">,
   page: Provider, immutable: boolean, createBlob: () => Promise<Id<"manPageContentBlobs">>) {
@@ -37,6 +62,7 @@ export async function insertProvider(ctx: MutationCtx, release: Doc<"datasetRele
     title: page.title, description: page.description, contentSha256: page.contentSha256,
     hasParseWarnings: page.hasParseWarnings, blobId: await createBlob(),
   });
+  await refreshProviderPackages(ctx, release, page.name, page.section);
   return true;
 }
 

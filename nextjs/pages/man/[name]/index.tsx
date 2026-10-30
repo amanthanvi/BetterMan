@@ -24,6 +24,7 @@ type PickerProps = {
   options: AmbiguousPageResponse['options']
   urlDistro: Distro | null
   release: ReleaseInfo | null
+  pkg: string | null
 }
 
 type Props = PickerProps | { kind: 'miss'; head: ManHeadData; miss: ManMiss; release: ReleaseInfo | null }
@@ -32,6 +33,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const name = String(params?.name ?? '')
   const urlDistro = normalizeDistro(firstQuery(query.distro))
   const distro = urlDistro ?? 'debian'
+  const selectedPackage = packageName(firstQuery(query.pkg))
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
   const resolved = await resolveManName(name, distro, releaseKey)
@@ -48,7 +50,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   if (result.kind !== 'ambiguous') {
     // 307, not 308: the target depends on which sections the current release has.
     let destination = withDistro(`/man/${encodeURIComponent(result.name)}/${encodeURIComponent(result.section)}`, urlDistro)
-    const pkg = result.kind === 'alias' ? packageName(result.pkg) : undefined
+    const pkg = selectedPackage ?? (result.kind === 'alias' ? packageName(result.pkg) : undefined)
     if (pkg) destination += `${destination.includes('?') ? '&' : '?'}pkg=${encodeURIComponent(pkg)}`
     setManCache(res, MAN_PAGE_CACHE, { keyed })
     return { redirect: { destination, permanent: false } }
@@ -58,6 +60,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   return {
     props: {
       kind: 'picker',
+      pkg: selectedPackage ?? null,
       head: {
         title: `${name} — Choose section — BetterMan`,
         description: `Multiple man page sections match “${name}”. Choose a section to continue.`,
@@ -86,7 +89,7 @@ export default function ManNameRoute(props: Props) {
     )
   }
 
-  const { name, options, urlDistro, release } = props
+  const { name, options, urlDistro, release, pkg } = props
   return (
     <>
       <ManShell urlDistro={urlDistro} release={release}>
@@ -98,7 +101,7 @@ export default function ManNameRoute(props: Props) {
           <ul className="mt-8 font-serif text-md">
             {options.map((opt) => (
               <li key={opt.section} className="border-t border-rule py-2.5">
-                <a href={withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, urlDistro)} className="no-underline hover:text-accent">
+                <a href={`${withDistro(`/man/${encodeURIComponent(name)}/${encodeURIComponent(opt.section)}`, urlDistro)}${pkg ? `${urlDistro ? '&' : '?'}pkg=${encodeURIComponent(pkg)}` : ''}`} className="no-underline hover:text-accent">
                   <b className="font-semibold">{name}</b>({opt.section})
                 </a>{' '}
                 <span className="text-ink-2">{opt.description}</span>

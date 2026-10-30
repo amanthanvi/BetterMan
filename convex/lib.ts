@@ -97,13 +97,15 @@ export function releasePackageManifest(release: Doc<"datasetReleases">): unknown
   return parseJsonField(release.packageManifestJson);
 }
 
+export type ManProviders = { packages: string[]; defaultPackage: string | null; policy: 'debian' | 'curated' };
+
 export function pageResponse(
   release: Doc<"datasetReleases">,
   page: Pick<Doc<"manPages">, "externalId" | "name" | "section" | "title" | "description" | "sourcePackage" | "sourcePackageVersion" | "hasParseWarnings">,
   content: ManPageContentPayload,
   variants: Array<{ distro: string; datasetReleaseId: string; contentSha256: string }>,
   // Enrichment beside the upstream content, each part optional and independent.
-  extras: { derived?: PageDerivedResponse | null; brief?: ManPageBrief | null } = {},
+  extras: { derived?: PageDerivedResponse | null; brief?: ManPageBrief | null; providers?: ManProviders | null } = {},
 ) {
   const doc = parseJsonField(content.docJson);
   const contentPayload: Record<string, unknown> =
@@ -133,6 +135,7 @@ export function pageResponse(
     variants,
     ...(extras.derived ? { derived: extras.derived } : {}),
     brief: extras.brief ?? null,
+    providers: extras.providers ?? null,
   };
 }
 

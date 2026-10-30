@@ -6,6 +6,8 @@ All notable changes to BetterMan are documented here.
 
 - Man pages: isolate plain-text manuals and redirects by dataset release across promotions and rollbacks (#452).
 - CI: the e2e job fails when the committed `convex/_generated` differs from what `npx convex dev` generates, so a Convex upgrade or a new Convex module cannot merge with stale generated code. The AI guideline files under `convex/_generated/ai/` are not compared.
+- Add a keyboard-accessible, no-JavaScript package provider switch on colliding manual pages, with distinct provider canonicals.
+
 - Ingestion: reject archive aliases whose exact package target failed to parse, cover canonical versus provider ownership through the real parser, and document the full-Debian nc provider switch before promotion (#393).
 - Ingestion: the distro containers and the FreeBSD job can install the ingestion package again. Since `ingestion/data/` was added (#436), `pip install` found two top-level packages and stopped, which would have failed every curated distro's ingest. The package is now named explicitly, and CI checks that pip can install it.
 - Security: the `zod` 3.22.4 that the pinned Vercel CLI's backend and Python builders use resolves to 4.6.7, since no 3.x release fixes GHSA-mrhx-c7xc-m3w5; those builders parse Python manifests identically under both. The `ip-address` under `sigstore`, which `deps:provenance` uses, resolves to 10.7.5 (GHSA-rxp7-6hxx-x8q5). Scorecard's Vulnerabilities check had reported both.
