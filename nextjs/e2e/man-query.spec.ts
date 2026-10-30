@@ -38,10 +38,37 @@ test('man query: a flag the page does not define is dropped by a private 307; on
   expect(shared.headers()['cache-control']).not.toContain('no-store')
 })
 
-test('man query: a made-up package answers privately', async ({ request }) => {
-  const res = await request.get('/man/tar/1?pkg=made-up-package', { maxRedirects: 0 })
-  expect(res.status()).toBe(404)
-  expect(res.headers()['cache-control']).toBe('private, no-store')
+test('man query: a made-up package answers privately on every HTML and text form', async ({ request }) => {
+  const nonce = `${Date.now()}`
+  for (const pkg of [`random1-${nonce}`, `random2-${nonce}`, 'no-such-package']) {
+    for (const [path, status] of [
+      [`/man/tar/1?pkg=${pkg}`, 404],
+      [`/man/tar?pkg=${pkg}`, 307],
+      [`/man/tar/1.txt?pkg=${pkg}`, 404],
+      [`/tar.txt?pkg=${pkg}`, 308],
+      [`/tar.1.txt?pkg=${pkg}`, 404],
+      [`/man/tar/1/og?pkg=${pkg}`, 404],
+    ] as const) {
+      const res = await request.get(path, { maxRedirects: 0 })
+      expect(res.status(), path).toBe(status)
+      expect(res.headers()['cache-control'] ?? '', path).toMatch(/private|no-store/)
+      expect(res.headers()['cache-control'] ?? '', path).not.toMatch(/public|s-maxage/)
+    }
+  }
+})
+
+test('man query: share images hold to the allowlist too', async ({ request }) => {
+  expect(await hop(request, '/man/tar/1/og?zz=1')).toEqual({ status: 308, location: '/man/tar/1/og', cache: 'private, no-store' })
+  expect(await hop(request, '/man/tar/1/og?distro=junk&flag=-c')).toEqual({ status: 308, location: '/man/tar/1/og?flag=-c', cache: 'private, no-store' })
+  expect((await hop(request, '/man/tar/1/og?flag=-c')).cache).toBe('public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
+})
+
+test('man query: a request with a bare _rsc renders privately', async ({ request }) => {
+  for (const path of ['/man/tar/1?_rsc=abc', '/man/tar?_rsc=abc', '/man/tar/1.txt?_rsc=abc', '/man/tar/1/og?_rsc=abc']) {
+    const res = await request.get(path, { maxRedirects: 0 })
+    expect(res.headers()['cache-control'], path).toBe('private, no-store')
+    expect(res.headers()['cdn-cache-control'], path).toBeUndefined()
+  }
 })
 
 test('man query: canonical URLs render, and the reader still lands on the option', async ({ page, request }) => {

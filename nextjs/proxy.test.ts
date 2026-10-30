@@ -173,6 +173,8 @@ describe('man page query allowlist', () => {
     ['/man/tar?flag=-x&distro=arch', '/man/tar?distro=arch'],
     ['/man/tar/1.txt?zz=1', '/man/tar/1.txt'],
     ['/tar.1.txt?distro=ubuntu&x=1', '/tar.1.txt?distro=ubuntu'],
+    ['/man/tar/1/og?zz=1', '/man/tar/1/og'],
+    ['/man/tar/1/og?distro=junk&flag=-x&portability=text', '/man/tar/1/og?flag=-x'],
   ])('redirects %s to %s, privately and before any release lookup', async (path, location) => {
     const response = await proxy(new NextRequest(`https://betterman.sh${path}`, { headers: { cookie: 'bm-distro=fedora' } }))
     expect(response.status).toBe(308)
@@ -202,6 +204,10 @@ describe('man page query allowlist', () => {
     const response = await proxy(new NextRequest(`https://betterman.sh${path}`, { headers: { rsc: '1', 'next-router-prefetch': '1' } }))
     expect(response.status).toBe(308)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('passes a canonical share image query', async () => {
+    expect((await proxy(new NextRequest('https://betterman.sh/man/tar/1/og?distro=ubuntu&flag=-x'))).status).toBe(200)
   })
 
   it('passes a real client fetch, whose `_rsc` Next has already removed', async () => {

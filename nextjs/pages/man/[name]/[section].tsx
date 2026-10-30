@@ -10,7 +10,7 @@ import type { SectionPage } from '../../../lib/api'
 import { DISTRO_LABEL, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 import type { ManPageResponse } from '../../../lib/docModel'
 import { manCanonicalPath } from '../../../lib/manCanonical'
-import { isManQuery } from '../../../lib/manQuery'
+import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
 import { manOption, shareFlag, withShareFlag } from '../../../lib/manShare'
 import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
 import { lookupManPage, manMiss, type ManMiss } from '../../../lib/manLookup'
@@ -130,8 +130,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   // `?pkg=` and `?flag=` are well formed by now (proxy.ts, lib/manQuery.ts), but only a
   // page that has the package and the option makes them a variant worth sharing: any
   // other answer to them is private, so made-up values never fill the CDN.
-  const unproven = Boolean(firstQuery(query.pkg) || firstQuery(query.flag)) ||
-    !isManQuery('/man/_/_', query, ['name', 'section', RELEASE_PARAM])
+  const offList = !isManQuery('/man/_/_', query, ['name', 'section', RELEASE_PARAM]) || hasBareRsc(req.url, req.headers)
+  const unproven = Boolean(firstQuery(query.pkg) || firstQuery(query.flag)) || offList
 
   if (found.kind === 'miss') {
     const miss = await manMiss({ name, section, distro, urlDistro, headers: requestHeaders(req.headers), ...(releaseKey ? { release: releaseKey } : {}) })
@@ -158,7 +158,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
 
   const origin = getPublicOrigin({ headers: requestHeaders(req.headers) })
   const { page } = found.data
-  setManCache(res, isManQuery('/man/_/_', query, ['name', 'section', RELEASE_PARAM]) ? MAN_PAGE_CACHE : MAN_PRIVATE_CACHE, { keyed })
+  setManCache(res, offList ? MAN_PRIVATE_CACHE : MAN_PAGE_CACHE, { keyed })
   return {
     props: {
       kind: 'page',

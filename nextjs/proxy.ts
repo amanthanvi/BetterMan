@@ -81,6 +81,24 @@ async function releaseWithin(distro: Parameters<typeof servingRelease>[0]): Prom
 }
 
 /**
+ * One cache entry per meaning: anything outside the man URL query allowlist
+ * (lib/manQuery.ts) is redirected away before it can render or key the CDN,
+ * whatever the request's headers. Next has already dropped a client fetch's
+ * `_rsc` and decoded unreserved escapes (`%2D` is `-`) by now, so a real client
+ * fetch passes, and the release-keyed rewrite is built from the canonical query.
+ */
+function manQueryRedirect(request: NextRequest, csp: string | null): NextResponse | null {
+  const url = request.nextUrl
+  const canonical = normalizeManQuery(url.pathname, url.search)
+  if (canonical === null) return null
+  const target = url.clone()
+  target.search = canonical
+  const response = NextResponse.redirect(target, 308)
+  response.headers.set('Cache-Control', 'private, no-store')
+  return setSecurityHeaders(response, csp)
+}
+
+/**
  * Man pages are cached at the edge (see pages/man), so their HTML never depends
  * on a cookie. A bare URL serves Debian; a reader whose default distro is another
  * one is sent to the explicit URL, privately. Explicit URLs, and bare ones without
@@ -94,19 +112,8 @@ async function manProxy(request: NextRequest, cspEnabled: boolean, text = false)
     ? buildCsp([`'nonce-${createNonce()}'`], { strictDynamic: true })
     : buildCsp([await manBootScriptHash()], { strictDynamic: false }) : null
 
-  // One cache entry per meaning: anything outside the man page query allowlist
-  // (lib/manQuery.ts) is redirected away before it can render or key the CDN,
-  // whatever the request's headers. Next has already dropped a client fetch's
-  // `_rsc` and decoded unreserved escapes (`%2D` is `-`) by now, so a real client
-  // fetch passes, and the release-keyed rewrite is built from the canonical query.
-  const canonical = normalizeManQuery(url.pathname, url.search)
-  if (canonical !== null) {
-    const target = url.clone()
-    target.search = canonical
-    const response = NextResponse.redirect(target, 308)
-    response.headers.set('Cache-Control', 'private, no-store')
-    return setSecurityHeaders(response, csp)
-  }
+  const redirect = manQueryRedirect(request, csp)
+  if (redirect) return redirect
 
   if (!text && !explicit && preferred && preferred !== 'debian') {
     const target = url.clone()
@@ -158,6 +165,12 @@ export async function proxy(request: NextRequest) {
   // Keep root concrete .txt routes in sync with the afterFiles rewrites in next.config.ts.
   if (/^\/man\/[^/]+\/[^/]+\.txt$/.test(path) || (/^\/[^/]+\.txt$/.test(path) && path !== '/robots.txt')) {
     return await manProxy(request, cspEnabled, true)
+  }
+
+  // Share images are cached for a day, so their query is held to the allowlist too.
+  if (/^\/man\/[^/]+\/[^/]+\/og$/.test(path)) {
+    const imageRedirect = manQueryRedirect(request, null)
+    if (imageRedirect) return imageRedirect
   }
 
   if (!cspEnabled) return setSecurityHeaders(NextResponse.next(), null)

@@ -66,8 +66,10 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
     query[key] = values.length === 1 ? values[0]! : values
   }
   const canonicalQuery = isManQuery('/man/_/_.txt', query, [RELEASE_PARAM])
-  const cacheHeaders = (answered: string | null): HeadersInit =>
-    release && answered === release && canonicalQuery ? {} : { 'Cache-Control': 'private, no-store' }
+  // `?pkg=` is proven only by the page it names: a redirect, an alias or a picker that
+  // carries it stays private, so made-up package names never fill the CDN.
+  const cacheHeaders = (answered: string | null, proven: boolean): HeadersInit =>
+    release && answered === release && canonicalQuery && (proven || !pkg) ? {} : { 'Cache-Control': 'private, no-store' }
   if (await isRateLimited(request.headers, 'page')) return text('Too many requests\n', 429)
 
   try {
@@ -76,7 +78,7 @@ export async function GET(request: Request, ctx: Context): Promise<Response> {
         ? await fetchManResolve({ distro, name: name.toLowerCase(), release: lookupRelease })
         : await fetchManByNameAndSectionOrAlias({ distro, name, section: section.toLowerCase(), release: lookupRelease, ...(pkg ? { pkg } : {}) }),
     )
-    const headers = cacheHeaders(servedRelease(data))
+    const headers = cacheHeaders(servedRelease(data), data.kind === 'page' && 'data' in data)
     if (data.kind === 'ambiguous') {
       return text(`Multiple sections match ${name}. Choose a plain-text page:\n${data.options.map((option) => textHref(`${manPath(name, option.section)}.txt`)).join('\n')}\n`, 409)
     }

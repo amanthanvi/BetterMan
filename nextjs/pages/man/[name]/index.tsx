@@ -9,7 +9,7 @@ import type { AmbiguousPageResponse } from '../../../lib/docModel'
 import { canonicalWithDistro, normalizeDistro, withDistro, type Distro } from '../../../lib/distro'
 import { MAN_MISS_CACHE, MAN_PAGE_CACHE, MAN_PRIVATE_CACHE, setManCache } from '../../../lib/manCache'
 import { manMiss, resolveManName, type ManMiss } from '../../../lib/manLookup'
-import { isManQuery } from '../../../lib/manQuery'
+import { hasBareRsc, isManQuery } from '../../../lib/manQuery'
 import { RELEASE_PARAM, trustedRelease, type ReleaseInfo } from '../../../lib/manRelease'
 import { packageName } from '../../../lib/packageName'
 import { getPublicOrigin } from '../../../lib/public-origin'
@@ -36,7 +36,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ params, qu
   const distro = urlDistro ?? 'debian'
   const selectedPackage = packageName(firstQuery(query.pkg))
   // Anything the proxy would have redirected (lib/manQuery.ts) is answered privately.
-  const unproven = Boolean(firstQuery(query.pkg)) || !isManQuery('/man/_', query, ['name', RELEASE_PARAM])
+  const unproven = Boolean(firstQuery(query.pkg)) || !isManQuery('/man/_', query, ['name', RELEASE_PARAM]) || hasBareRsc(req.url, req.headers)
   const release = trustedRelease(req.headers)
   const releaseKey = release?.datasetReleaseId
   const resolved = await resolveManName(name, distro, releaseKey)

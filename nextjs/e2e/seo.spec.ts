@@ -107,9 +107,15 @@ test('seo: a shared flag link unfurls as that option’s card, under the page’
   expect(card.headers()['content-type']).toBe('image/png')
   expect(card.headers()['cache-control']).toBe('public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
 
-  // A flag the page does not define, or anything that is not one flag, has no card.
-  for (const flag of ['-Q', 'create', '--create=x']) {
-    expect((await request.get(`/man/tar/1/og?flag=${encodeURIComponent(flag)}`)).status(), flag).toBe(404)
+  // A flag the page does not define has no card, privately; anything that is not one flag
+  // is dropped by the query allowlist before the route.
+  const missing = await request.get('/man/tar/1/og?flag=-Q', { maxRedirects: 0 })
+  expect(missing.status()).toBe(404)
+  expect(missing.headers()['cache-control']).toBe('private, no-store')
+  for (const flag of ['create', '--create=x']) {
+    const res = await request.get(`/man/tar/1/og?flag=${encodeURIComponent(flag)}`, { maxRedirects: 0 })
+    expect(res.status(), flag).toBe(308)
+    expect(res.headers()['location'], flag).toBe('/man/tar/1/og')
   }
   await page.goto('/man/tar/1?flag=-Q')
   await expect(ogImage).toHaveAttribute('content', /\/man\/tar\/1\/og$/)

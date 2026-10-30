@@ -31,6 +31,7 @@ export const MAN_LANGUAGES: readonly string[] = ['de', 'fr', 'es', 'pt-BR', 'ja'
 /** Which parameters each kind of man page URL reads. */
 export function manQueryParams(pathname: string): readonly ManQueryParam[] | null {
   if (/^\/man\/[^/]+\/[^/]+\.txt$/.test(pathname) || /^\/[^/]+\.txt$/.test(pathname)) return ['distro', 'pkg', 'lang']
+  if (/^\/man\/[^/]+\/[^/]+\/og$/.test(pathname)) return ['distro', 'pkg', 'flag']
   if (/^\/man\/[^/]+\/[^/]+$/.test(pathname)) return ['distro', 'pkg', 'portability', 'flag', 'lang']
   if (/^\/man\/[^/]+$/.test(pathname)) return ['distro', 'pkg', 'lang']
   return null
@@ -82,4 +83,16 @@ export function isManQuery(pathname: string, query: Record<string, string | stri
     if (typeof value !== 'string' || !(allowed as readonly string[]).includes(key)) return false
     return MAN_QUERY[key as ManQueryParam](value)
   })
+}
+
+/**
+ * True when a request arrived with Next's `_rsc` cache-busting parameter but no `rsc`
+ * header: not a client fetch, so nothing Next will answer specially. Next strips `_rsc`
+ * from the parsed query and from the proxy's URL, but a Pages Router renderer still
+ * sees it in `req.url`, so such a request is answered privately rather than cached
+ * under a URL the CDN may key apart.
+ */
+export function hasBareRsc(url: string | undefined, headers: Record<string, string | string[] | undefined>): boolean {
+  if (!url || headers.rsc !== undefined) return false
+  return new URL(url, 'http://localhost').searchParams.has('_rsc')
 }

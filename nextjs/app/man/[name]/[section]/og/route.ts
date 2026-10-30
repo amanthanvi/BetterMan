@@ -7,6 +7,7 @@ import { FastApiError, fetchManByNameAndSectionOrAlias, fetchManMetaByNameAndSec
 import { sectionLabel } from '../../../../../components/man/RunningHead'
 import { DISTRO_LABEL, normalizeDistro, type Distro } from '../../../../../lib/distro'
 import type { ManPage } from '../../../../../lib/docModel'
+import { isManQuery } from '../../../../../lib/manQuery'
 import { manOption, SHARE_FLAG_PARAM, shareFlag } from '../../../../../lib/manShare'
 import { isValidManImageParams } from '../../../../../lib/og/input'
 import { isRateLimited } from '../../../../../lib/rateLimit'
@@ -17,10 +18,17 @@ import { nonHtmlSecurityHeaders } from '../../../../../lib/securityHeaders'
 
 type CardData = { page: ManPage; option?: OgCardInput['option']; generated?: OgCardInput['generated'] }
 
+/** No page, package or option to draw: the answer depends on the release, so it is a private 404. */
+class NoCard extends Error {}
+
+function noCard(): Response {
+  return new Response(null, { status: 404, headers: { ...nonHtmlSecurityHeaders(), 'Cache-Control': 'private, no-store' } })
+}
+
 /** The whole page, for a flag's option or a generated summary; an alias has neither. */
 async function fullPage(distro: Distro, name: string, section: string, pkg: string | null) {
   const found = await fetchManByNameAndSectionOrAlias({ distro, name, section, ...(pkg ? { pkg } : {}) })
-  if (found.kind !== 'page') notFound()
+  if (found.kind !== 'page') throw new NoCard()
   return found.data
 }
 
@@ -28,7 +36,7 @@ async function cardData(distro: Distro, name: string, section: string, pkg: stri
   if (flag) {
     const data = await fullPage(distro, name, section, pkg)
     const option = manOption(data.content.options, flag)
-    if (!option) notFound()
+    if (!option) throw new NoCard()
     return { page: data.page, option: { flags: option.flags, argument: option.argument, description: option.description } }
   }
   const { page } = await fetchManMetaByNameAndSection({ distro, name, section, ...(pkg ? { pkg } : {}) })
@@ -66,14 +74,14 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
 
   const requestedDistro = normalizeDistro(params.get('distro')) ?? 'debian'
   const pkg = packageName(params.get('pkg')) ?? null
-  const { distro, data } = await (async () => {
-    try {
-      return await withDistroFallback(requestedDistro, (distro) => cardData(distro, name, section, pkg, flag))
-    } catch (err) {
-      if (err instanceof FastApiError && err.status === 404) notFound()
-      throw err
-    }
-  })()
+  let found: Awaited<ReturnType<typeof withDistroFallback<CardData>>>
+  try {
+    found = await withDistroFallback(requestedDistro, (distro) => cardData(distro, name, section, pkg, flag))
+  } catch (err) {
+    if (err instanceof NoCard || (err instanceof FastApiError && err.status === 404)) return noCard()
+    throw err
+  }
+  const { distro, data } = found
 
   const response = await ogCard({
     name: data.page.name,
@@ -87,7 +95,15 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
   })
   // Cards change only with a dataset release. A day fresh, then served stale
   // while the CDN refreshes, bounds how long an old card outlives a release.
-  response.headers.set('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800')
+  // Anything the proxy would have redirected (lib/manQuery.ts) is answered privately.
+  const query: Record<string, string | string[]> = {}
+  for (const key of new Set(params.keys())) {
+    const values = params.getAll(key)
+    query[key] = values.length === 1 ? values[0]! : values
+  }
+  response.headers.set('Cache-Control', isManQuery('/man/_/_/og', query, [])
+    ? 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800'
+    : 'private, no-store')
   if (!isIndexable(data.page)) response.headers.set('X-Robots-Tag', 'noindex')
   return response
 }

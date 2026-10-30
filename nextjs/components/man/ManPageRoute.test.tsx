@@ -95,6 +95,37 @@ it('answers privately a query the proxy would have redirected, should one reach 
   expect(picker.res.headers['cache-control']).toBe('private, no-store')
 })
 
+it.each(['random1', 'random2', 'no-such-package'])('keeps every HTML answer to the made-up package %s private, name-only and with a section', async (pkg) => {
+  lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
+  const page = context({ name: 'tar', section: '1' }, { pkg })
+  await pageProps(page.ctx)
+  expect(page.res.statusCode).toBe(404)
+  expect(page.res.headers['cache-control']).toBe('private, no-store')
+
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
+  const name = context({ name: 'tar' }, { pkg })
+  await expect(nameProps(name.ctx)).resolves.toEqual({ redirect: { destination: `/man/tar/1?pkg=${pkg}`, permanent: false } })
+  expect(name.res.headers['cache-control']).toBe('private, no-store')
+})
+
+it('answers a request that arrived with a bare _rsc privately, on both man renderers', async () => {
+  const bare = context({ name: 'tar', section: '1' })
+  ;(bare.ctx.req as unknown as { url: string }).url = '/man/tar/1?_rsc=abc'
+  await pageProps(bare.ctx)
+  expect(bare.res.headers['cache-control']).toBe('private, no-store')
+
+  const client = context({ name: 'tar', section: '1' }, {}, { rsc: '1' })
+  ;(client.ctx.req as unknown as { url: string }).url = '/man/tar/1?_rsc=abc'
+  await pageProps(client.ctx)
+  expect(client.res.headers['cdn-cache-control']).toBe('public, s-maxage=3600, stale-while-revalidate=86400')
+
+  lookup.resolveManName.mockResolvedValue({ distro: 'debian', result: { kind: 'page', name: 'tar', section: '1' }, servedRelease: '2026-10-28+debian' })
+  const name = context({ name: 'tar' })
+  ;(name.ctx.req as unknown as { url: string }).url = '/man/tar?_rsc=abc'
+  await nameProps(name.ctx)
+  expect(name.res.headers['cache-control']).toBe('private, no-store')
+})
+
 it('keeps every answer to an unproven package or flag out of the CDN', async () => {
   lookup.lookupManPage.mockResolvedValue({ kind: 'miss', servedRelease: '2026-10-28+debian' })
   for (const query of [{ pkg: 'made-up' }, { flag: '-x' }, {}] as Record<string, string>[]) {

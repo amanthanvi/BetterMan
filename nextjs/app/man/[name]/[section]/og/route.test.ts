@@ -115,10 +115,19 @@ describe('man page share image route', () => {
     expect(ogCard).not.toHaveBeenCalled()
   })
 
-  it('does not render missing pages', async () => {
+  it('answers a missing page with a private 404', async () => {
     apiMocks.withDistroFallback.mockRejectedValueOnce(new apiMocks.FastApiError(404, 'PAGE_NOT_FOUND', 'Page not found'))
-    await expect(get('missing', '1')).rejects.toThrow('NEXT_NOT_FOUND')
+    const response = await get('missing', '1')
+    expect(response.status).toBe(404)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(ogCard).not.toHaveBeenCalled()
+  })
+
+  it.each(['random1', 'random2', 'no-such-package'])('answers the made-up package %s with a private 404', async (pkg) => {
+    apiMocks.withDistroFallback.mockRejectedValueOnce(new apiMocks.FastApiError(404, 'PAGE_NOT_FOUND', 'Page not found'))
+    const response = await get('bash', '1', `?pkg=${pkg}`)
+    expect(response.status).toBe(404)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
   })
 
   it('does not turn backend failures into missing images', async () => {
@@ -173,7 +182,14 @@ describe('man page share image route', () => {
     }))
   })
 
-  it.each(['-q', 'command', '--command=STRING', '-c x'])('does not render a flag card for %s', async (flag) => {
+  it('answers a flag the page does not define with a private 404', async () => {
+    const response = await get('bash', '1', '?flag=-q')
+    expect(response.status).toBe(404)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(ogCard).not.toHaveBeenCalled()
+  })
+
+  it.each(['command', '--command=STRING', '-c x'])('does not render a flag card for %s', async (flag) => {
     await expect(get('bash', '1', `?flag=${encodeURIComponent(flag)}`)).rejects.toThrow('NEXT_NOT_FOUND')
     expect(ogCard).not.toHaveBeenCalled()
   })
@@ -237,4 +253,9 @@ it('loads metadata from the explicit package provider', async () => {
   const response = await get('foo::bar', '3pm', '?pkg=alternate')
   expect(response.status).toBe(200)
   expect(apiMocks.fetchManMetaByNameAndSection).toHaveBeenCalledWith({ distro: 'debian', name: 'foo::bar', section: '3pm', pkg: 'alternate' })
+})
+
+it.each(['?zz=1', '?distro=junk', '?flag=-c&flag=--command', '?_rsc=abc'])('answers an image query the proxy would have redirected (%s) privately', async (search) => {
+  const response = await get('bash', '1', search)
+  expect(response.headers.get('Cache-Control')).toBe('private, no-store')
 })

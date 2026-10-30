@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { manQueryParams, normalizeManQuery } from './manQuery'
+import { hasBareRsc, manQueryParams, normalizeManQuery } from './manQuery'
 
 const PAGE = '/man/tar/1'
 
@@ -68,9 +68,20 @@ describe('man page query allowlist', () => {
     expect(manQueryParams('/man/tar')).toEqual(['distro', 'pkg', 'lang'])
     expect(manQueryParams('/man/tar/1.txt')).toEqual(['distro', 'pkg', 'lang'])
     expect(manQueryParams('/tar.1.txt')).toEqual(['distro', 'pkg', 'lang'])
+    expect(manQueryParams('/man/tar/1/og')).toEqual(['distro', 'pkg', 'flag'])
+    expect(normalizeManQuery('/man/tar/1/og', '?flag=-x&portability=text&zz=1')).toBe('?flag=-x')
     expect(manQueryParams('/search')).toBeNull()
     expect(normalizeManQuery('/man/tar', '?flag=-x&portability=text&distro=ubuntu')).toBe('?distro=ubuntu')
     expect(normalizeManQuery('/tar.txt', '?distro=ubuntu&x=1')).toBe('?distro=ubuntu')
     expect(normalizeManQuery('/search', '?q=tar&zz=1')).toBeNull()
+  })
+})
+
+describe('a bare _rsc', () => {
+  it('is one without the rsc header', () => {
+    expect(hasBareRsc('/man/tar/1?_rsc=abc', {})).toBe(true)
+    expect(hasBareRsc('/man/tar/1?_rsc=abc', { rsc: '1' })).toBe(false)
+    expect(hasBareRsc('/man/tar/1?distro=ubuntu', {})).toBe(false)
+    expect(hasBareRsc(undefined, {})).toBe(false)
   })
 })
