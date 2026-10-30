@@ -30,6 +30,7 @@ def workspace(tmp_path):
     obj.available = {p.name: p for p in obj.packages}
     obj.acquired = set(obj.available)
     obj.missing = []
+    obj.archive_fallbacks = 0
     obj.owners = obj.store.db
     obj.owners.execute("CREATE TABLE owners(path TEXT,pkg TEXT)")
     for pkg in obj.packages:
@@ -178,15 +179,29 @@ def test_release_uses_sha256_not_md5_and_sampling_is_stable():
         "usr/share/scala-2.11",
     ],
 )
-def test_private_alternatives_manuals_are_selected_and_extracted(tmp_path, root):
+def test_private_alternatives_manuals_are_selected_and_extracted(tmp_path, monkeypatch, root):
     import tarfile
 
     path = f"{root}/man/man1/psql.1.gz"
     assert indexes.MAN_PATH.fullmatch(path)
     assert not indexes.MAN_PATH.fullmatch(f"{root}/man/fr/man1/psql.1.gz")
+    monkeypatch.setattr(
+        indexes,
+        "private_registrations",
+        lambda: {
+            "packages": {
+                "postgresql-client-17": {
+                    "archiveSha256": "a" * 64,
+                    "paths": {
+                        path.replace("psql", name) for name in ["psql", "pg_dump", "createdb"]
+                    },
+                }
+            }
+        },
+    )
     tar_bytes = io.BytesIO()
     with tarfile.open(fileobj=tar_bytes, mode="w") as tar:
-        for name in ["psql", "pg_dump", "createdb"]:
+        for name in ["psql", "pg_dump", "createdb", "unregistered"]:
             member = tarfile.TarInfo(path.replace("psql", name))
             payload = f".TH {name.upper()} 1\n.SH NAME\n{name} - fixture\n".encode()
             member.size = len(payload)
@@ -598,7 +613,7 @@ def test_acquisition_deduplicates_manual_and_runtime_control_selections(
 
     def acquire(pkg):
         seen.append(pkg.name)
-        return pkg, [], 0, 0, 0
+        return pkg, [], 0, 0, 0, 0
 
     monkeypatch.setattr(obj, "_acquire", acquire)
     pkg = obj.packages[0]
@@ -649,8 +664,151 @@ def test_acquisition_keeps_worker_busy_when_an_earlier_archive_is_slow(
             assert third_started.wait(2), "a finished worker was idle behind the first download"
         if pkg == third:
             third_started.set()
-        return pkg, [], 0, 0, 0
+        return pkg, [], 0, 0, 0, 0
 
     monkeypatch.setattr(obj, "_acquire", acquire)
     obj.acquire(obj.packages, workers=2)
     assert obj.acquired == {p.name for p in obj.packages}
+
+
+def test_audited_private_registration_allowlists_exclude_unregistered_pages():
+    registrations = indexes.private_registrations()["packages"]
+    assert sum(len(item["paths"]) for item in registrations.values()) == 329
+    assert not indexes.manual_registered(
+        "firebird3.0-utils", "usr/share/firebird/3.0/man/man1/fb_config.1.gz"
+    )
+    assert indexes.manual_registered("firebird-dev", "usr/share/man/man1/fb_config.1.gz")
+    for name in ["groovyConsole", "groovydoc", "groovysh", "java2groovy", "startGroovy"]:
+        assert not indexes.manual_registered("groovy", f"usr/share/groovy/man/man1/{name}.1.gz")
+    assert {Path(p).name for p in registrations["groovy"]["paths"]} == {
+        "groovy.1.gz",
+        "groovyc.1.gz",
+        "grape.1.gz",
+    }
+    with pytest.raises(ValueError, match="registrations.*SHA256"):
+        indexes.require_private_package(Package("groovy", "1", "pool/main/g.deb", "a" * 64, 1))
+
+
+def test_command_owner_gate_accepts_dependencies_and_virtual_providers_but_rejects_wrong_owner(
+    archive_workspace,
+    monkeypatch,
+):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    obj = archive_workspace
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["postgresql-client"])
+    base = obj.packages[0]
+    obj.available = {
+        "postgresql-client": replace(base, name="postgresql-client", depends=("client-runtime",)),
+        "client-runtime": replace(base, name="client-runtime", depends=("postgresql-client-17",)),
+        "postgresql-client-17": replace(
+            base, name="postgresql-client-17", provides=("postgresql-client",)
+        ),
+    }
+    obj.alias_providers = []
+    page = SimpleNamespace(name="psql", section="1", source_package="postgresql-client-17")
+    assert obj.require_command_owners([page]) == {"postgresql-client": "postgresql-client-17"}
+    del obj.available["postgresql-client"]
+    assert obj.require_command_owners([page]) == {"postgresql-client": "postgresql-client-17"}
+    page.source_package = "9base"
+    with pytest.raises(RuntimeError, match="wrong command-page owner.*psql"):
+        obj.require_command_owners([page])
+
+
+def test_wrong_owner_blocks_archive_publish_before_upload(archive_workspace, monkeypatch):
+    from ingestion import ingest_runner
+    from ingestion.debian_publish import publish_workspace
+
+    obj = archive_workspace
+    obj.pins = {"releaseSha256": "a" * 64}
+    monkeypatch.setenv("BETTERMAN_INGEST_WORKERS", "1")
+    monkeypatch.setitem(ingest_runner._COMMAND_PAGES, "gawk", ("shared", "1"))
+
+    class Client:
+        def post(self, *_args):
+            pytest.fail("wrong owner must fail before upload")
+
+    with pytest.raises(RuntimeError, match="wrong command-page owner.*shared"):
+        publish_workspace(obj, Client(), activate=False, dataset_stage="staging", git_sha="test")
+
+
+def test_debian_relationship_names_ignore_versions_and_arch_qualifiers():
+    assert indexes.relationship_names("foo:any (>= 1), bar:native | baz (= 2), virtual (= 1)") == (
+        "foo",
+        "bar",
+        "baz",
+        "virtual",
+    )
+
+
+def test_command_owner_gate_prefers_exact_section_to_plan9_suffix(archive_workspace, monkeypatch):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    obj = archive_workspace
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["coreutils"])
+    obj.available["coreutils"] = replace(obj.packages[0], name="coreutils")
+    obj.alias_providers = []
+    standard = SimpleNamespace(name="ls", section="1", source_package="coreutils")
+    plan9 = SimpleNamespace(name="ls", section="1plan9", source_package="9base")
+    assert obj.require_command_owners([standard, plan9]) == {"coreutils": "coreutils"}
+    with pytest.raises(RuntimeError, match="wrong command-page owner.*ls"):
+        obj.require_command_owners([plan9])
+
+
+def test_command_owner_gate_preserves_explicit_mount_companion(archive_workspace, monkeypatch):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    obj = archive_workspace
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", ["util-linux"])
+    obj.available["util-linux"] = replace(obj.packages[0], name="util-linux")
+    obj.alias_providers = []
+    page = SimpleNamespace(name="mount", section="8", source_package="mount")
+    assert obj.require_command_owners([page]) == {"util-linux": "mount"}
+
+
+@pytest.mark.parametrize(
+    "requested,name,wrong_owner",
+    [
+        ("coreutils", "ls", "9base"),
+        ("grep", "grep", "9base"),
+        ("sed", "sed", "9base"),
+        ("make", "make", "make-guile"),
+    ],
+)
+def test_unrelated_command_provider_cannot_satisfy_curated_gate(
+    archive_workspace,
+    monkeypatch,
+    requested,
+    name,
+    wrong_owner,
+):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    obj = archive_workspace
+    monkeypatch.setattr(pipeline, "FULL_PACKAGE_SET_DEBIAN", [requested])
+    obj.available[requested] = replace(obj.packages[0], name=requested)
+    obj.alias_providers = []
+    with pytest.raises(RuntimeError, match="wrong command-page owner"):
+        obj.require_command_owners(
+            [SimpleNamespace(name=name, section="1", source_package=wrong_owner)]
+        )
+
+
+def test_acquisition_summary_counts_archive_fallbacks(archive_workspace, monkeypatch, caplog):
+    import json
+    import logging
+
+    obj = archive_workspace
+    obj.acquired.clear()
+    obj.downloaded = 0
+    obj.cache = obj.root
+    monkeypatch.setattr(obj, "_acquire", lambda pkg: (pkg, [], 1, 0, 0, 1))
+    caplog.set_level(logging.INFO, logger="betterman.ingestion")
+    obj.acquire(obj.packages[:2], workers=2)
+    summary = json.loads(caplog.records[-1].message)
+    assert summary["event"] == "deb_acquisition_complete"
+    assert summary["archiveFallbacks"] == obj.archive_fallbacks == 2

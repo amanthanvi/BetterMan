@@ -6,8 +6,10 @@ import email.utils
 import gzip
 import hashlib
 import json
+import logging
 import lzma
 import math
+import os
 import random
 import re
 import sqlite3
@@ -15,21 +17,80 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import cache
 from http.client import HTTPException
 from pathlib import Path, PurePosixPath
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 PINS = Path(__file__).resolve().parents[1] / "data" / "debian-trixie.json"
+PRIVATE_MANUALS_PATH = PINS.with_name("debian-private-manuals.json")
 BINARY_PATH = re.compile(r"^(?:(?:usr/)?s?bin/[^/]+|usr/lib/llvm-[^/]+/bin/[^/]+)$")
 MAN_PATH = re.compile(
-    # These private English roots are registered under unchanged basenames by
-    # their postinst data. Retain the sources directly, without running helpers.
+    # Candidate roots only; manual_registered enforces audited registrations.
     r"^(?:usr/share/man|usr/lib/jvm/[^/]+/man|usr/share/"
     r"(?:postgresql/[0-9]+|firebird/[0-9]+\.[0-9]+|groovy|icedtea-web|librarian-puppet|scala-[0-9]+\.[0-9]+)/man)"
     r"/man[1-9][a-z0-9]*/([^/]+)\.([1-9][a-z0-9]*)(?:\.(?:gz|xz|bz2|zst))?$",
     re.IGNORECASE,
 )
+
+
+@cache
+def private_registrations():
+    document = json.loads(PRIVATE_MANUALS_PATH.read_text())
+    for entry in document["packages"].values():
+        entry["paths"] = frozenset(entry["paths"])
+    return document
+
+
+def manual_registered(package: str, path: str) -> bool:
+    if not MAN_PATH.fullmatch(path):
+        return False
+    if path.startswith(("usr/share/man/", "usr/lib/jvm/")):
+        return True
+    return path in private_registrations()["packages"].get(package, {}).get("paths", ())
+
+
+def require_private_package(package):
+    registration = private_registrations()["packages"].get(package.name)
+    if registration and package.sha256 != registration["archiveSha256"]:
+        raise ValueError("Private-manual registrations do not match pinned package SHA256")
+
+
+def relationship_names(value: str) -> tuple[str, ...]:
+    # Versions and architecture qualifiers do not change the owning package name.
+    return tuple(dict.fromkeys(re.findall(r"(?:^|[,|])\s*([a-z0-9][a-z0-9+.-]*)", value)))
+
+
+class DebianRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        before, after = urlsplit(req.full_url), urlsplit(newurl)
+        if (
+            after.scheme != "https"
+            or after.hostname != before.hostname
+            or after.hostname not in {"deb.debian.org", "snapshot.debian.org"}
+            or after.netloc not in {before.hostname, f"{before.hostname}:443"}
+        ):
+            raise HTTPError(req.full_url, code, "HTTPS redirect policy rejected", None, None)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def urlopen(request, *, timeout):
+    return build_opener(DebianRedirects()).open(request, timeout=timeout)
+
+
+class DownloadIntegrityError(ValueError):
+    def __init__(self, reason):
+        self.reason = reason
+        super().__init__(f"SHA256/size mismatch: {reason}")
+
+
+def debian_cdn_enabled():
+    value = os.environ.get("BETTERMAN_DEBIAN_CDN", "1") or "1"
+    if value not in {"0", "1"}:
+        raise ValueError("BETTERMAN_DEBIAN_CDN must be 0 or 1")
+    return value == "1"
 
 
 @dataclass(frozen=True)
@@ -41,6 +102,8 @@ class Package:
     size: int
     installed: int = 0
     priority: str = "optional"
+    depends: tuple[str, ...] = ()
+    provides: tuple[str, ...] = ()
 
     def __post_init__(self):
         if not re.fullmatch(r"[a-z0-9][a-z0-9+.-]*", self.name) or not self.version.strip():
@@ -76,18 +139,26 @@ def _download_once(url: str, destination: Path, digest: str, size: int | None = 
     try:
         with (
             urlopen(
-                Request(url, headers={"User-Agent": "BetterMan-ingestion/1"}), timeout=90
+                Request(
+                    url,
+                    headers={
+                        "User-Agent": "BetterMan-ingestion/1 (+mailto:aman_thanvi@outlook.com)"
+                    },
+                ),
+                timeout=90,
             ) as response,
             temporary.open("wb") as output,
         ):
             while chunk := response.read(256 * 1024):
                 count += len(chunk)
                 if count > (size if size is not None else 2 * 1024 * 1024):
-                    raise ValueError("Download exceeds declared size")
+                    raise DownloadIntegrityError("oversize")
                 checksum.update(chunk)
                 output.write(chunk)
-        if checksum.hexdigest() != digest or (size is not None and count != size):
-            raise ValueError(f"SHA256/size mismatch: {destination.name}")
+        if size is not None and count != size:
+            raise DownloadIntegrityError("short_body")
+        if checksum.hexdigest() != digest:
+            raise DownloadIntegrityError("checksum")
         temporary.replace(destination)
         return count
     finally:
@@ -95,13 +166,38 @@ def _download_once(url: str, destination: Path, digest: str, size: int | None = 
 
 
 def download(
-    url: str, destination: Path, digest: str, size: int | None = None, *, fallback_url=None
+    url: str,
+    destination: Path,
+    digest: str,
+    size: int | None = None,
+    *,
+    fallback_url=None,
+    on_fallback=None,
 ) -> int:
+    def switch(reason):
+        logging.getLogger("betterman.ingestion").warning(
+            json.dumps({"event": "deb_archive_fallback", "reason": reason})
+        )
+        if on_fallback is not None:
+            on_fallback(reason)
+
     for attempt in range(8):
+        from ingestion.convex_client import ingest_activation_deadline
+
+        deadline = ingest_activation_deadline()
+        if deadline is not None and time.time() >= deadline:
+            raise RuntimeError("Job deadline exhausted during Debian download")
         try:
             return _download_once(url, destination, digest, size)
+        except DownloadIntegrityError as exc:
+            if not fallback_url:
+                raise
+            switch(exc.reason)
+            url, fallback_url = fallback_url, None
+            continue
         except HTTPError as exc:
-            if fallback_url and exc.code in {404, 410}:
+            if fallback_url:
+                switch(f"http_{exc.code}" if 100 <= exc.code <= 599 else "http_error")
                 exc.close()
                 url, fallback_url = fallback_url, None
                 continue
@@ -110,11 +206,13 @@ def download(
             retry_after = exc.headers.get("Retry-After", "") if exc.headers else ""
             exc.close()
         except (URLError, TimeoutError, ConnectionError, OSError, HTTPException):
+            if fallback_url:
+                switch("transport")
+                url, fallback_url = fallback_url, None
+                continue
             if attempt == 7:
                 raise
             retry_after = ""
-        if fallback_url:
-            url, fallback_url = fallback_url, None
         delay = min(180, 5 * 2**attempt) + random.uniform(0, 3)
         try:
             advertised = float(retry_after)
@@ -206,7 +304,18 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
             for line in lines:
                 fields = line.rstrip().rsplit(None, 1)
                 if len(fields) == 2 and MAN_PATH.fullmatch(fields[0]):
-                    selected.update(owner.rsplit("/", 1)[-1] for owner in fields[1].split(","))
+                    if (
+                        not fields[0].startswith(("usr/share/man/", "usr/lib/jvm/"))
+                        and pins["releaseSha256"] != private_registrations()["releaseSha256"]
+                    ):
+                        raise ValueError(
+                            "Private-manual registrations need an audit for this Release"
+                        )
+                    selected.update(
+                        owner.rsplit("/", 1)[-1]
+                        for owner in fields[1].split(",")
+                        if manual_registered(owner.rsplit("/", 1)[-1], fields[0])
+                    )
                 if len(fields) == 2 and (
                     MAN_PATH.fullmatch(fields[0])
                     or BINARY_PATH.fullmatch(fields[0])
@@ -245,6 +354,8 @@ def catalog(root: Path) -> tuple[dict, list[Package]]:
                     record.get("Priority", "optional"),
                 )
             )
+    for package in packages:
+        require_private_package(package)
     missing = selected - {package.name for package in packages}
     if missing:
         raise ValueError(f"Contents packages missing from Packages: {sorted(missing)[:10]}")
@@ -262,6 +373,8 @@ def available_packages(root: Path, counts: dict[str, int]) -> dict[str, Package]
                 int(record["Size"]),
                 counts.get(record["Package"], 0),
                 record.get("Priority", "optional"),
+                relationship_names(record.get("Pre-Depends", "") + "," + record.get("Depends", "")),
+                relationship_names(record.get("Provides", "")),
             )
             for record in records(lines)
         }

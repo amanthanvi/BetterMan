@@ -4414,5 +4414,1044 @@
       "archiveCacheHits": 0
     },
     "selectionSha256": "c303858e5373adc82471695e2dd741b535882ccfd2d0fb7a9e595bf046a86203"
-  }
+  },
+  "reviewCorrections": {
+    "curatedAudit": {
+      "scope": "complete pinned Contents-all/amd64 and curated-owner archive parse; no upload",
+      "releaseSha256": "ed56aac47e7911e65ee63aae8d67e29f20e023f840e49f8ed037043a33de138a",
+      "fullManualPackages": 17323,
+      "acquiredPackages": 65,
+      "privateManualPackages": [
+        "firebird3.0-utils",
+        "firebird4.0-utils",
+        "groovy",
+        "icedtea-netx",
+        "librarian-puppet",
+        "postgresql-17",
+        "postgresql-client-17",
+        "postgresql-doc-17",
+        "scala"
+      ],
+      "verifiedLicenses": 53,
+      "verifiedCommandOwners": {
+        "groff": "groff-base",
+        "bash": "bash",
+        "coreutils": "coreutils",
+        "util-linux": "mount",
+        "findutils": "findutils",
+        "grep": "grep",
+        "sed": "sed",
+        "gawk": "gawk",
+        "curl": "curl",
+        "wget": "wget",
+        "openssh-client": "openssh-client",
+        "rsync": "rsync",
+        "netcat-openbsd": "netcat-openbsd",
+        "tar": "tar",
+        "systemd": "systemd",
+        "vim": "vim-common",
+        "less": "less",
+        "git": "git-man",
+        "make": "make",
+        "nginx": "nginx",
+        "apache2": "apache2-bin",
+        "openssl": "openssl",
+        "python3": "python3-minimal",
+        "perl": "perl-base",
+        "iproute2": "iproute2",
+        "procps": "procps",
+        "postgresql-client": "postgresql-client-17",
+        "default-mysql-client": "mariadb-client-core"
+      },
+      "commands": [
+        {
+          "package": "manpages",
+          "status": "non-command"
+        },
+        {
+          "package": "manpages-dev",
+          "status": "non-command"
+        },
+        {
+          "package": "groff",
+          "name": "groff",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "groff-base",
+              "path": "usr/share/man/man1/groff.1.gz"
+            }
+          ],
+          "resolvedOwner": "groff-base",
+          "resolvedPath": "usr/share/man/man1/groff.1.gz"
+        },
+        {
+          "package": "bash",
+          "name": "bash",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "bash",
+              "path": "usr/share/man/man1/bash.1.gz"
+            }
+          ],
+          "resolvedOwner": "bash",
+          "resolvedPath": "usr/share/man/man1/bash.1.gz"
+        },
+        {
+          "package": "coreutils",
+          "name": "ls",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "coreutils",
+              "path": "usr/share/man/man1/ls.1.gz"
+            },
+            {
+              "package": "9base",
+              "path": "usr/share/man/man1/ls.1plan9.gz"
+            }
+          ],
+          "resolvedOwner": "coreutils",
+          "resolvedPath": "usr/share/man/man1/ls.1.gz"
+        },
+        {
+          "package": "util-linux",
+          "name": "mount",
+          "section": "8",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "mount",
+              "path": "usr/share/man/man8/mount.8.gz"
+            }
+          ],
+          "resolvedOwner": "mount",
+          "resolvedPath": "usr/share/man/man8/mount.8.gz"
+        },
+        {
+          "package": "findutils",
+          "name": "find",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "findutils",
+              "path": "usr/share/man/man1/find.1.gz"
+            }
+          ],
+          "resolvedOwner": "findutils",
+          "resolvedPath": "usr/share/man/man1/find.1.gz"
+        },
+        {
+          "package": "grep",
+          "name": "grep",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "grep",
+              "path": "usr/share/man/man1/grep.1.gz"
+            },
+            {
+              "package": "9base",
+              "path": "usr/share/man/man1/grep.1plan9.gz"
+            }
+          ],
+          "resolvedOwner": "grep",
+          "resolvedPath": "usr/share/man/man1/grep.1.gz"
+        },
+        {
+          "package": "sed",
+          "name": "sed",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "sed",
+              "path": "usr/share/man/man1/sed.1.gz"
+            },
+            {
+              "package": "9base",
+              "path": "usr/share/man/man1/sed.1plan9.gz"
+            }
+          ],
+          "resolvedOwner": "sed",
+          "resolvedPath": "usr/share/man/man1/sed.1.gz"
+        },
+        {
+          "package": "gawk",
+          "name": "gawk",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "gawk",
+              "path": "usr/share/man/man1/gawk.1.gz"
+            }
+          ],
+          "resolvedOwner": "gawk",
+          "resolvedPath": "usr/share/man/man1/gawk.1.gz"
+        },
+        {
+          "package": "curl",
+          "name": "curl",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "curl",
+              "path": "usr/share/man/man1/curl.1.gz"
+            }
+          ],
+          "resolvedOwner": "curl",
+          "resolvedPath": "usr/share/man/man1/curl.1.gz"
+        },
+        {
+          "package": "wget",
+          "name": "wget",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "wget",
+              "path": "usr/share/man/man1/wget.1.gz"
+            }
+          ],
+          "resolvedOwner": "wget",
+          "resolvedPath": "usr/share/man/man1/wget.1.gz"
+        },
+        {
+          "package": "openssh-client",
+          "name": "ssh_config",
+          "section": "5",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "openssh-client",
+              "path": "usr/share/man/man5/ssh_config.5.gz"
+            }
+          ],
+          "resolvedOwner": "openssh-client",
+          "resolvedPath": "usr/share/man/man5/ssh_config.5.gz"
+        },
+        {
+          "package": "rsync",
+          "name": "rsync",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "rsync",
+              "path": "usr/share/man/man1/rsync.1.gz"
+            }
+          ],
+          "resolvedOwner": "rsync",
+          "resolvedPath": "usr/share/man/man1/rsync.1.gz"
+        },
+        {
+          "package": "netcat-openbsd",
+          "name": "nc",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [],
+          "resolvedOwner": "netcat-openbsd",
+          "resolvedPath": "usr/share/man/man1/nc_openbsd.1.gz"
+        },
+        {
+          "package": "tar",
+          "name": "tar",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "tar",
+              "path": "usr/share/man/man1/tar.1.gz"
+            }
+          ],
+          "resolvedOwner": "tar",
+          "resolvedPath": "usr/share/man/man1/tar.1.gz"
+        },
+        {
+          "package": "systemd",
+          "name": "systemd",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "systemd",
+              "path": "usr/share/man/man1/systemd.1.gz"
+            }
+          ],
+          "resolvedOwner": "systemd",
+          "resolvedPath": "usr/share/man/man1/systemd.1.gz"
+        },
+        {
+          "package": "vim",
+          "name": "vim",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "vim-common",
+              "path": "usr/share/man/man1/vim.1.gz"
+            }
+          ],
+          "resolvedOwner": "vim-common",
+          "resolvedPath": "usr/share/man/man1/vim.1.gz"
+        },
+        {
+          "package": "less",
+          "name": "less",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "less",
+              "path": "usr/share/man/man1/less.1.gz"
+            }
+          ],
+          "resolvedOwner": "less",
+          "resolvedPath": "usr/share/man/man1/less.1.gz"
+        },
+        {
+          "package": "git",
+          "name": "git",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "git-man",
+              "path": "usr/share/man/man1/git.1.gz"
+            }
+          ],
+          "resolvedOwner": "git-man",
+          "resolvedPath": "usr/share/man/man1/git.1.gz"
+        },
+        {
+          "package": "make",
+          "name": "make",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "make",
+              "path": "usr/share/man/man1/make.1.gz"
+            },
+            {
+              "package": "make-guile",
+              "path": "usr/share/man/man1/make.1.gz"
+            }
+          ],
+          "resolvedOwner": "make",
+          "resolvedPath": "usr/share/man/man1/make.1.gz"
+        },
+        {
+          "package": "gcc",
+          "name": "gcc",
+          "section": "1",
+          "status": "excluded",
+          "reason": "gcc(1) is in gcc-14-doc in non-free, outside the selected main packages",
+          "catalogSources": [],
+          "resolvedOwner": null,
+          "resolvedPath": null
+        },
+        {
+          "package": "gdb",
+          "name": "gdb",
+          "section": "1",
+          "status": "excluded",
+          "reason": "gdb(1) is in gdb-doc in non-free, outside the selected main packages",
+          "catalogSources": [],
+          "resolvedOwner": null,
+          "resolvedPath": null
+        },
+        {
+          "package": "nginx",
+          "name": "nginx",
+          "section": "8",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "nginx",
+              "path": "usr/share/man/man8/nginx.8.gz"
+            }
+          ],
+          "resolvedOwner": "nginx",
+          "resolvedPath": "usr/share/man/man8/nginx.8.gz"
+        },
+        {
+          "package": "apache2",
+          "name": "apache2",
+          "section": "8",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "apache2-bin",
+              "path": "usr/share/man/man8/apache2.8.gz"
+            }
+          ],
+          "resolvedOwner": "apache2-bin",
+          "resolvedPath": "usr/share/man/man8/apache2.8.gz"
+        },
+        {
+          "package": "openssl",
+          "name": "openssl",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "openssl",
+              "path": "usr/share/man/man1/openssl.1ssl.gz"
+            }
+          ],
+          "resolvedOwner": "openssl",
+          "resolvedPath": "usr/share/man/man1/openssl.1ssl.gz"
+        },
+        {
+          "package": "libssl-dev",
+          "status": "non-command"
+        },
+        {
+          "package": "python3",
+          "name": "python3",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "python3-minimal",
+              "path": "usr/share/man/man1/python3.1.gz"
+            }
+          ],
+          "resolvedOwner": "python3-minimal",
+          "resolvedPath": "usr/share/man/man1/python3.1.gz"
+        },
+        {
+          "package": "perl",
+          "name": "perl",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "perl-base",
+              "path": "usr/share/man/man1/perl.1.gz"
+            }
+          ],
+          "resolvedOwner": "perl-base",
+          "resolvedPath": "usr/share/man/man1/perl.1.gz"
+        },
+        {
+          "package": "iproute2",
+          "name": "ip",
+          "section": "8",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "iproute2",
+              "path": "usr/share/man/man8/ip.8.gz"
+            }
+          ],
+          "resolvedOwner": "iproute2",
+          "resolvedPath": "usr/share/man/man8/ip.8.gz"
+        },
+        {
+          "package": "procps",
+          "name": "ps",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "procps",
+              "path": "usr/share/man/man1/ps.1.gz"
+            }
+          ],
+          "resolvedOwner": "procps",
+          "resolvedPath": "usr/share/man/man1/ps.1.gz"
+        },
+        {
+          "package": "postgresql-client",
+          "name": "psql",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "postgresql-client-17",
+              "path": "usr/share/postgresql/17/man/man1/psql.1.gz"
+            }
+          ],
+          "resolvedOwner": "postgresql-client-17",
+          "resolvedPath": "usr/share/postgresql/17/man/man1/psql.1.gz"
+        },
+        {
+          "package": "default-mysql-client",
+          "name": "mysql",
+          "section": "1",
+          "status": "present",
+          "reason": null,
+          "catalogSources": [
+            {
+              "package": "mariadb-client-core",
+              "path": "usr/share/man/man1/mysql.1.gz"
+            }
+          ],
+          "resolvedOwner": "mariadb-client-core",
+          "resolvedPath": "usr/share/man/man1/mysql.1.gz"
+        }
+      ],
+      "parseFailures": [],
+      "unresolvedSources": [],
+      "registeredPrivateManualPathCount": 329,
+      "registrationPathsFile": "ingestion/data/debian-private-manuals.json"
+    },
+    "routeComparison": {
+      "mainHead": "7dbf8861c379bcb891fd209ef42bdcf5abf580f9",
+      "scope": "complete verified Contents selects public competitors; source elections over all acquired curated/private/competitor archives, not a full archive parse",
+      "auditedPackages": [
+        "9base",
+        "apache2",
+        "apache2-bin",
+        "bash",
+        "coreutils",
+        "cpp-x86-64-linux-gnu",
+        "curl",
+        "default-mysql-client",
+        "findutils",
+        "firebird-dev",
+        "firebird3.0-common-doc",
+        "firebird3.0-utils",
+        "firebird4.0-common-doc",
+        "firebird4.0-utils",
+        "g++",
+        "g++-14",
+        "g++-14-x86-64-linux-gnu",
+        "gawk",
+        "gcc",
+        "gcc-14",
+        "gcc-14-base",
+        "gcc-14-x86-64-linux-gnu",
+        "gdb",
+        "git",
+        "git-man",
+        "grep",
+        "groff",
+        "groff-base",
+        "groovy",
+        "icedtea-netx",
+        "iproute2",
+        "less",
+        "librarian-puppet",
+        "libssl-dev",
+        "make",
+        "make-guile",
+        "manpages",
+        "manpages-dev",
+        "mariadb-client-core",
+        "mount",
+        "netcat-openbsd",
+        "nginx",
+        "openssh-client",
+        "openssl",
+        "perl",
+        "perl-base",
+        "postgresql-17",
+        "postgresql-client",
+        "postgresql-client-17",
+        "postgresql-doc-17",
+        "procps",
+        "python3",
+        "python3-minimal",
+        "python3.13",
+        "python3.13-minimal",
+        "rsync",
+        "scala",
+        "sed",
+        "systemd",
+        "tar",
+        "util-linux",
+        "vim",
+        "vim-common",
+        "vim-tiny",
+        "wget"
+      ],
+      "removed": [],
+      "changed": [],
+      "fbConfig": {
+        "name": "fb_config",
+        "section": "1",
+        "package": "firebird-dev",
+        "path": "usr/share/man/man1/fb_config.1.gz",
+        "alias": false
+      },
+      "excludedGroovyRoutes": {
+        "groovysh": {
+          "main": "absent",
+          "updated": "absent"
+        },
+        "groovyconsole": {
+          "main": "absent",
+          "updated": "absent"
+        },
+        "groovydoc": {
+          "main": "absent",
+          "updated": "absent"
+        },
+        "java2groovy": {
+          "main": "absent",
+          "updated": "absent"
+        },
+        "startgroovy": {
+          "main": "absent",
+          "updated": "absent"
+        }
+      },
+      "firebirdWinners": [
+        {
+          "name": "fb_lock_print",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/fb_lock_print.1.gz",
+          "alias": false
+        },
+        {
+          "name": "fbguard",
+          "section": "8",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man8/fbguard.8.gz",
+          "alias": false
+        },
+        {
+          "name": "fbstat",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/fbstat.1.gz",
+          "alias": false
+        },
+        {
+          "name": "fbsvcmgr",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/fbsvcmgr.1.gz",
+          "alias": false
+        },
+        {
+          "name": "fbtracemgr",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/fbtracemgr.1.gz",
+          "alias": false
+        },
+        {
+          "name": "firebird",
+          "section": "8",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man8/firebird.8.gz",
+          "alias": false
+        },
+        {
+          "name": "gbak",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/gbak.1.gz",
+          "alias": false
+        },
+        {
+          "name": "gfix",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/gfix.1.gz",
+          "alias": false
+        },
+        {
+          "name": "gpre",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/gpre.1.gz",
+          "alias": false
+        },
+        {
+          "name": "gsec",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/gsec.1.gz",
+          "alias": false
+        },
+        {
+          "name": "isql-fb",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/isql-fb.1.gz",
+          "alias": false
+        },
+        {
+          "name": "nbackup",
+          "section": "1",
+          "package": "firebird3.0-utils",
+          "path": "usr/share/firebird/3.0/man/man1/nbackup.1.gz",
+          "alias": false
+        }
+      ],
+      "addedRouteOwners": {
+        "abort(7)": "postgresql-client-17",
+        "alter_aggregate(7)": "postgresql-client-17",
+        "alter_collation(7)": "postgresql-client-17",
+        "alter_conversion(7)": "postgresql-client-17",
+        "alter_database(7)": "postgresql-client-17",
+        "alter_default_privileges(7)": "postgresql-client-17",
+        "alter_domain(7)": "postgresql-client-17",
+        "alter_event_trigger(7)": "postgresql-client-17",
+        "alter_extension(7)": "postgresql-client-17",
+        "alter_foreign_data_wrapper(7)": "postgresql-client-17",
+        "alter_foreign_table(7)": "postgresql-client-17",
+        "alter_function(7)": "postgresql-client-17",
+        "alter_group(7)": "postgresql-client-17",
+        "alter_index(7)": "postgresql-client-17",
+        "alter_language(7)": "postgresql-client-17",
+        "alter_large_object(7)": "postgresql-client-17",
+        "alter_materialized_view(7)": "postgresql-client-17",
+        "alter_operator(7)": "postgresql-client-17",
+        "alter_operator_class(7)": "postgresql-client-17",
+        "alter_operator_family(7)": "postgresql-client-17",
+        "alter_policy(7)": "postgresql-client-17",
+        "alter_procedure(7)": "postgresql-client-17",
+        "alter_publication(7)": "postgresql-client-17",
+        "alter_role(7)": "postgresql-client-17",
+        "alter_routine(7)": "postgresql-client-17",
+        "alter_rule(7)": "postgresql-client-17",
+        "alter_schema(7)": "postgresql-client-17",
+        "alter_sequence(7)": "postgresql-client-17",
+        "alter_server(7)": "postgresql-client-17",
+        "alter_statistics(7)": "postgresql-client-17",
+        "alter_subscription(7)": "postgresql-client-17",
+        "alter_system(7)": "postgresql-client-17",
+        "alter_table(7)": "postgresql-client-17",
+        "alter_tablespace(7)": "postgresql-client-17",
+        "alter_text_search_configuration(7)": "postgresql-client-17",
+        "alter_text_search_dictionary(7)": "postgresql-client-17",
+        "alter_text_search_parser(7)": "postgresql-client-17",
+        "alter_text_search_template(7)": "postgresql-client-17",
+        "alter_trigger(7)": "postgresql-client-17",
+        "alter_type(7)": "postgresql-client-17",
+        "alter_user(7)": "postgresql-client-17",
+        "alter_user_mapping(7)": "postgresql-client-17",
+        "alter_view(7)": "postgresql-client-17",
+        "analyze(7)": "postgresql-client-17",
+        "begin(7)": "postgresql-client-17",
+        "call(7)": "postgresql-client-17",
+        "checkpoint(7)": "postgresql-client-17",
+        "close(7)": "postgresql-client-17",
+        "cluster(7)": "postgresql-client-17",
+        "clusterdb(1)": "postgresql-client-17",
+        "comment(7)": "postgresql-client-17",
+        "commit(7)": "postgresql-client-17",
+        "commit_prepared(7)": "postgresql-client-17",
+        "copy(7)": "postgresql-client-17",
+        "create_access_method(7)": "postgresql-client-17",
+        "create_aggregate(7)": "postgresql-client-17",
+        "create_cast(7)": "postgresql-client-17",
+        "create_collation(7)": "postgresql-client-17",
+        "create_conversion(7)": "postgresql-client-17",
+        "create_database(7)": "postgresql-client-17",
+        "create_domain(7)": "postgresql-client-17",
+        "create_event_trigger(7)": "postgresql-client-17",
+        "create_extension(7)": "postgresql-client-17",
+        "create_foreign_data_wrapper(7)": "postgresql-client-17",
+        "create_foreign_table(7)": "postgresql-client-17",
+        "create_function(7)": "postgresql-client-17",
+        "create_group(7)": "postgresql-client-17",
+        "create_index(7)": "postgresql-client-17",
+        "create_language(7)": "postgresql-client-17",
+        "create_materialized_view(7)": "postgresql-client-17",
+        "create_operator(7)": "postgresql-client-17",
+        "create_operator_class(7)": "postgresql-client-17",
+        "create_operator_family(7)": "postgresql-client-17",
+        "create_policy(7)": "postgresql-client-17",
+        "create_procedure(7)": "postgresql-client-17",
+        "create_publication(7)": "postgresql-client-17",
+        "create_role(7)": "postgresql-client-17",
+        "create_rule(7)": "postgresql-client-17",
+        "create_schema(7)": "postgresql-client-17",
+        "create_sequence(7)": "postgresql-client-17",
+        "create_server(7)": "postgresql-client-17",
+        "create_statistics(7)": "postgresql-client-17",
+        "create_subscription(7)": "postgresql-client-17",
+        "create_table(7)": "postgresql-client-17",
+        "create_table_as(7)": "postgresql-client-17",
+        "create_tablespace(7)": "postgresql-client-17",
+        "create_text_search_configuration(7)": "postgresql-client-17",
+        "create_text_search_dictionary(7)": "postgresql-client-17",
+        "create_text_search_parser(7)": "postgresql-client-17",
+        "create_text_search_template(7)": "postgresql-client-17",
+        "create_transform(7)": "postgresql-client-17",
+        "create_trigger(7)": "postgresql-client-17",
+        "create_type(7)": "postgresql-client-17",
+        "create_user(7)": "postgresql-client-17",
+        "create_user_mapping(7)": "postgresql-client-17",
+        "create_view(7)": "postgresql-client-17",
+        "createdb(1)": "postgresql-client-17",
+        "createuser(1)": "postgresql-client-17",
+        "dblink(3)": "postgresql-doc-17",
+        "dblink_build_sql_delete(3)": "postgresql-doc-17",
+        "dblink_build_sql_insert(3)": "postgresql-doc-17",
+        "dblink_build_sql_update(3)": "postgresql-doc-17",
+        "dblink_cancel_query(3)": "postgresql-doc-17",
+        "dblink_close(3)": "postgresql-doc-17",
+        "dblink_connect(3)": "postgresql-doc-17",
+        "dblink_connect_u(3)": "postgresql-doc-17",
+        "dblink_disconnect(3)": "postgresql-doc-17",
+        "dblink_error_message(3)": "postgresql-doc-17",
+        "dblink_exec(3)": "postgresql-doc-17",
+        "dblink_fetch(3)": "postgresql-doc-17",
+        "dblink_get_connections(3)": "postgresql-doc-17",
+        "dblink_get_notify(3)": "postgresql-doc-17",
+        "dblink_get_pkey(3)": "postgresql-doc-17",
+        "dblink_get_result(3)": "postgresql-doc-17",
+        "dblink_is_busy(3)": "postgresql-doc-17",
+        "dblink_open(3)": "postgresql-doc-17",
+        "dblink_send_query(3)": "postgresql-doc-17",
+        "deallocate(7)": "postgresql-client-17",
+        "declare(7)": "postgresql-client-17",
+        "delete(7)": "postgresql-client-17",
+        "discard(7)": "postgresql-client-17",
+        "do(7)": "postgresql-client-17",
+        "drop_access_method(7)": "postgresql-client-17",
+        "drop_aggregate(7)": "postgresql-client-17",
+        "drop_cast(7)": "postgresql-client-17",
+        "drop_collation(7)": "postgresql-client-17",
+        "drop_conversion(7)": "postgresql-client-17",
+        "drop_database(7)": "postgresql-client-17",
+        "drop_domain(7)": "postgresql-client-17",
+        "drop_event_trigger(7)": "postgresql-client-17",
+        "drop_extension(7)": "postgresql-client-17",
+        "drop_foreign_data_wrapper(7)": "postgresql-client-17",
+        "drop_foreign_table(7)": "postgresql-client-17",
+        "drop_function(7)": "postgresql-client-17",
+        "drop_group(7)": "postgresql-client-17",
+        "drop_index(7)": "postgresql-client-17",
+        "drop_language(7)": "postgresql-client-17",
+        "drop_materialized_view(7)": "postgresql-client-17",
+        "drop_operator(7)": "postgresql-client-17",
+        "drop_operator_class(7)": "postgresql-client-17",
+        "drop_operator_family(7)": "postgresql-client-17",
+        "drop_owned(7)": "postgresql-client-17",
+        "drop_policy(7)": "postgresql-client-17",
+        "drop_procedure(7)": "postgresql-client-17",
+        "drop_publication(7)": "postgresql-client-17",
+        "drop_role(7)": "postgresql-client-17",
+        "drop_routine(7)": "postgresql-client-17",
+        "drop_rule(7)": "postgresql-client-17",
+        "drop_schema(7)": "postgresql-client-17",
+        "drop_sequence(7)": "postgresql-client-17",
+        "drop_server(7)": "postgresql-client-17",
+        "drop_statistics(7)": "postgresql-client-17",
+        "drop_subscription(7)": "postgresql-client-17",
+        "drop_table(7)": "postgresql-client-17",
+        "drop_tablespace(7)": "postgresql-client-17",
+        "drop_text_search_configuration(7)": "postgresql-client-17",
+        "drop_text_search_dictionary(7)": "postgresql-client-17",
+        "drop_text_search_parser(7)": "postgresql-client-17",
+        "drop_text_search_template(7)": "postgresql-client-17",
+        "drop_transform(7)": "postgresql-client-17",
+        "drop_trigger(7)": "postgresql-client-17",
+        "drop_type(7)": "postgresql-client-17",
+        "drop_user(7)": "postgresql-client-17",
+        "drop_user_mapping(7)": "postgresql-client-17",
+        "drop_view(7)": "postgresql-client-17",
+        "dropdb(1)": "postgresql-client-17",
+        "dropuser(1)": "postgresql-client-17",
+        "end(7)": "postgresql-client-17",
+        "execute(7)": "postgresql-client-17",
+        "explain(7)": "postgresql-client-17",
+        "fb_lock_print(1)": "firebird3.0-utils",
+        "fbguard(8)": "firebird3.0-utils",
+        "fbstat(1)": "firebird3.0-utils",
+        "fbsvcmgr(1)": "firebird3.0-utils",
+        "fbtracemgr(1)": "firebird3.0-utils",
+        "fetch(7)": "postgresql-client-17",
+        "firebird(8)": "firebird3.0-utils",
+        "fsc(1)": "scala",
+        "gbak(1)": "firebird3.0-utils",
+        "gfix(1)": "firebird3.0-utils",
+        "gpre(1)": "firebird3.0-utils",
+        "grant(7)": "postgresql-client-17",
+        "grape(1)": "groovy",
+        "groovy(1)": "groovy",
+        "groovyc(1)": "groovy",
+        "gsec(1)": "firebird3.0-utils",
+        "import_foreign_schema(7)": "postgresql-client-17",
+        "initdb(1)": "postgresql-17",
+        "insert(7)": "postgresql-client-17",
+        "isql-fb(1)": "firebird3.0-utils",
+        "javaws(1)": "icedtea-netx",
+        "librarian-puppet(1)": "librarian-puppet",
+        "listen(7)": "postgresql-client-17",
+        "load(7)": "postgresql-client-17",
+        "lock(7)": "postgresql-client-17",
+        "merge(7)": "postgresql-client-17",
+        "move(7)": "postgresql-client-17",
+        "nbackup(1)": "firebird3.0-utils",
+        "notify(7)": "postgresql-client-17",
+        "oid2name(1)": "postgresql-17",
+        "pg_amcheck(1)": "postgresql-client-17",
+        "pg_archivecleanup(1)": "postgresql-17",
+        "pg_basebackup(1)": "postgresql-client-17",
+        "pg_checksums(1)": "postgresql-17",
+        "pg_combinebackup(1)": "postgresql-client-17",
+        "pg_controldata(1)": "postgresql-17",
+        "pg_createsubscriber(1)": "postgresql-17",
+        "pg_ctl(1)": "postgresql-17",
+        "pg_dump(1)": "postgresql-client-17",
+        "pg_dumpall(1)": "postgresql-client-17",
+        "pg_isready(1)": "postgresql-client-17",
+        "pg_receivewal(1)": "postgresql-client-17",
+        "pg_recvlogical(1)": "postgresql-client-17",
+        "pg_resetwal(1)": "postgresql-17",
+        "pg_restore(1)": "postgresql-client-17",
+        "pg_rewind(1)": "postgresql-17",
+        "pg_test_fsync(1)": "postgresql-17",
+        "pg_test_timing(1)": "postgresql-17",
+        "pg_upgrade(1)": "postgresql-17",
+        "pg_verifybackup(1)": "postgresql-client-17",
+        "pg_waldump(1)": "postgresql-17",
+        "pg_walsummary(1)": "postgresql-17",
+        "pgbench(1)": "postgresql-17",
+        "postgres(1)": "postgresql-17",
+        "prepare(7)": "postgresql-client-17",
+        "prepare_transaction(7)": "postgresql-client-17",
+        "psql(1)": "postgresql-client-17",
+        "reassign_owned(7)": "postgresql-client-17",
+        "refresh_materialized_view(7)": "postgresql-client-17",
+        "reindex(7)": "postgresql-client-17",
+        "reindexdb(1)": "postgresql-client-17",
+        "release_savepoint(7)": "postgresql-client-17",
+        "reset(7)": "postgresql-client-17",
+        "revoke(7)": "postgresql-client-17",
+        "rollback(7)": "postgresql-client-17",
+        "rollback_prepared(7)": "postgresql-client-17",
+        "rollback_to_savepoint(7)": "postgresql-client-17",
+        "savepoint(7)": "postgresql-client-17",
+        "scala(1)": "scala",
+        "scalac(1)": "scala",
+        "scaladoc(1)": "scala",
+        "scalap(1)": "scala",
+        "security_label(7)": "postgresql-client-17",
+        "select(7)": "postgresql-client-17",
+        "select_into(7)": "postgresql-client-17",
+        "set(7)": "postgresql-client-17",
+        "set_constraints(7)": "postgresql-client-17",
+        "set_role(7)": "postgresql-client-17",
+        "set_session_authorization(7)": "postgresql-client-17",
+        "set_transaction(7)": "postgresql-client-17",
+        "show(7)": "postgresql-client-17",
+        "spi_commit(3)": "postgresql-doc-17",
+        "spi_commit_and_chain(3)": "postgresql-doc-17",
+        "spi_connect(3)": "postgresql-doc-17",
+        "spi_connect_ext(3)": "postgresql-doc-17",
+        "spi_copytuple(3)": "postgresql-doc-17",
+        "spi_cursor_close(3)": "postgresql-doc-17",
+        "spi_cursor_fetch(3)": "postgresql-doc-17",
+        "spi_cursor_find(3)": "postgresql-doc-17",
+        "spi_cursor_move(3)": "postgresql-doc-17",
+        "spi_cursor_open(3)": "postgresql-doc-17",
+        "spi_cursor_open_with_args(3)": "postgresql-doc-17",
+        "spi_cursor_open_with_paramlist(3)": "postgresql-doc-17",
+        "spi_cursor_parse_open(3)": "postgresql-doc-17",
+        "spi_exec(3)": "postgresql-doc-17",
+        "spi_execp(3)": "postgresql-doc-17",
+        "spi_execute(3)": "postgresql-doc-17",
+        "spi_execute_extended(3)": "postgresql-doc-17",
+        "spi_execute_plan(3)": "postgresql-doc-17",
+        "spi_execute_plan_extended(3)": "postgresql-doc-17",
+        "spi_execute_plan_with_paramlist(3)": "postgresql-doc-17",
+        "spi_execute_with_args(3)": "postgresql-doc-17",
+        "spi_finish(3)": "postgresql-doc-17",
+        "spi_fname(3)": "postgresql-doc-17",
+        "spi_fnumber(3)": "postgresql-doc-17",
+        "spi_freeplan(3)": "postgresql-doc-17",
+        "spi_freetuple(3)": "postgresql-doc-17",
+        "spi_freetuptable(3)": "postgresql-doc-17",
+        "spi_getargcount(3)": "postgresql-doc-17",
+        "spi_getargtypeid(3)": "postgresql-doc-17",
+        "spi_getbinval(3)": "postgresql-doc-17",
+        "spi_getnspname(3)": "postgresql-doc-17",
+        "spi_getrelname(3)": "postgresql-doc-17",
+        "spi_gettype(3)": "postgresql-doc-17",
+        "spi_gettypeid(3)": "postgresql-doc-17",
+        "spi_getvalue(3)": "postgresql-doc-17",
+        "spi_is_cursor_plan(3)": "postgresql-doc-17",
+        "spi_keepplan(3)": "postgresql-doc-17",
+        "spi_modifytuple(3)": "postgresql-doc-17",
+        "spi_palloc(3)": "postgresql-doc-17",
+        "spi_pfree(3)": "postgresql-doc-17",
+        "spi_prepare(3)": "postgresql-doc-17",
+        "spi_prepare_cursor(3)": "postgresql-doc-17",
+        "spi_prepare_extended(3)": "postgresql-doc-17",
+        "spi_prepare_params(3)": "postgresql-doc-17",
+        "spi_register_relation(3)": "postgresql-doc-17",
+        "spi_register_trigger_data(3)": "postgresql-doc-17",
+        "spi_repalloc(3)": "postgresql-doc-17",
+        "spi_result_code_string(3)": "postgresql-doc-17",
+        "spi_returntuple(3)": "postgresql-doc-17",
+        "spi_rollback(3)": "postgresql-doc-17",
+        "spi_rollback_and_chain(3)": "postgresql-doc-17",
+        "spi_saveplan(3)": "postgresql-doc-17",
+        "spi_scroll_cursor_fetch(3)": "postgresql-doc-17",
+        "spi_scroll_cursor_move(3)": "postgresql-doc-17",
+        "spi_start_transaction(3)": "postgresql-doc-17",
+        "spi_unregister_relation(3)": "postgresql-doc-17",
+        "start_transaction(7)": "postgresql-client-17",
+        "table(7)": "postgresql-client-17",
+        "truncate(7)": "postgresql-client-17",
+        "unlisten(7)": "postgresql-client-17",
+        "update(7)": "postgresql-client-17",
+        "vacuum(7)": "postgresql-client-17",
+        "vacuumdb(1)": "postgresql-client-17",
+        "vacuumlo(1)": "postgresql-17",
+        "values(7)": "postgresql-client-17",
+        "with(7)": "postgresql-client-17"
+      },
+      "addedRouteCount": 317
+    },
+    "downloadOnlySmoke": {
+      "packages": 1,
+      "downloadedBytes": 53144928,
+      "cachedPackages": 0,
+      "archiveFallbacks": 0,
+      "cdnEnabled": true,
+      "seconds": 15.655517208040692
+    },
+    "registrationFile": "ingestion/data/debian-private-manuals.json",
+    "registeredPaths": 329,
+    "normalizedPrivateRoutes": 317
+  },
+  "currentCuratedAuditKey": "reviewCorrections.curatedAudit"
 }

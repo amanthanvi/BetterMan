@@ -6,6 +6,7 @@ import json
 import time
 from pathlib import Path
 
+from ingestion.debian_indexes import debian_cdn_enabled
 from ingestion.debian_pipeline import benchmark
 
 
@@ -30,6 +31,7 @@ def audit_command_pages(workspace, *, workers=2):
     expected = {p: _COMMAND_PAGES[p] for p in FULL_PACKAGE_SET_DEBIAN if p in _COMMAND_PAGES}
     sources = {route: [] for route in expected.values()}
     private_packages = set()
+    private_routes = set()
     for path, pkg in workspace.owners.execute("SELECT path,pkg FROM owners ORDER BY path,pkg"):
         match = MAN_PATH.fullmatch(path)
         route = (match[1].lower(), match[2][:1]) if match else None
@@ -37,8 +39,14 @@ def audit_command_pages(workspace, *, workers=2):
             sources[route].append({"package": pkg, "path": path})
         if match and path.startswith("usr/share/") and not path.startswith("usr/share/man/"):
             private_packages.add(pkg)
+            private_routes.add((match[1].lower(), match[2].lower()))
     selected = set(FULL_PACKAGE_SET_DEBIAN) | set(_COMMAND_PAGE_OWNERS["debian"].values())
     selected |= private_packages
+    # Include all public competitors for the private routes, including fb_config.
+    for path, pkg in workspace.owners.execute("SELECT path,pkg FROM owners"):
+        match = MAN_PATH.fullmatch(path)
+        if match and (match[1].lower(), match[2].lower()) in private_routes:
+            selected.add(pkg)
     selected.update(source["package"] for items in sources.values() for source in items)
     workspace.packages = [
         workspace.available[n] for n in sorted(selected) if n in workspace.available
@@ -93,7 +101,8 @@ def audit_command_pages(workspace, *, workers=2):
                         "resolvedPath": winner[1] if winner else None,
                     }
                 )
-            # Exercise exactly the publish gate; never enable its escape hatch.
+            # Exercise exactly the publish gates; never enable their escape hatch.
+            verified_owners = workspace.require_command_owners(canonical)
             _require_command_pages(
                 distro="debian",
                 requested=FULL_PACKAGE_SET_DEBIAN,
@@ -107,7 +116,13 @@ def audit_command_pages(workspace, *, workers=2):
         "fullManualPackages": len(workspace.all_manual_packages),
         "acquiredPackages": len(workspace.acquired),
         "privateManualPackages": sorted(private_packages),
+        "registeredPrivateManualPaths": [
+            {"package": pkg, "path": path, "name": name, "section": section}
+            for pkg, path, name, section in workspace.store.manuals()
+            if pkg in private_packages and not path.startswith("usr/share/man/")
+        ],
         "verifiedLicenses": len(license_packages),
+        "verifiedCommandOwners": verified_owners,
         "commands": report,
         "parseFailures": failures,
         "unresolvedSources": workspace.missing,
@@ -384,6 +399,8 @@ def main():
             "packages": len(workspace.packages),
             "downloadedBytes": workspace.downloaded,
             "cachedPackages": workspace.cached_packages,
+            "archiveFallbacks": workspace.archive_fallbacks,
+            "cdnEnabled": debian_cdn_enabled(),
             "seconds": time.monotonic() - started,
         }
         (args.workdir / "download-only.json").write_text(json.dumps(report, indent=2) + "\n")

@@ -13,7 +13,14 @@ import tarfile
 import threading
 from pathlib import Path
 
-from ingestion.debian_indexes import BINARY_PATH, MAN_PATH, Package, safe_path
+from ingestion.debian_indexes import (
+    BINARY_PATH,
+    MAN_PATH,
+    Package,
+    manual_registered,
+    require_private_package,
+    safe_path,
+)
 from ingestion.mandoc_parser import is_so_stub
 from ingestion.util import sha256_hex
 
@@ -30,7 +37,7 @@ DOC_ROOTS = (
     "usr/share/librarian-puppet/",
     "usr/share/scala-",
 )
-EXTRACTOR_VERSION = 4
+EXTRACTOR_VERSION = 5
 
 
 class ExtractedQuota:
@@ -132,6 +139,7 @@ def postinst_from_archive(archive: Path) -> str:
 
 def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[tuple]:
     """Stream past unrelated members; write only man sources and copyrights."""
+    require_private_package(package)
     files = root / "files"
     files.mkdir(parents=True, exist_ok=True)
     quota = quota or ExtractedQuota(files)
@@ -164,7 +172,7 @@ def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[
             if not raw_path.startswith(DOC_ROOTS):
                 continue
             path = safe_path(member.name)
-            manual = MAN_PATH.fullmatch(path)
+            manual = manual_registered(package.name, path)
             notice = COPYRIGHT.fullmatch(path)
             if member.issym() or member.islnk():
                 if not manual and not notice and path.count("/") != 3:
@@ -339,5 +347,5 @@ class ArchiveStore:
     def manuals(self):
         for pkg, path in self.db.execute("SELECT pkg,path FROM entries ORDER BY pkg,path"):
             match = MAN_PATH.fullmatch(path)
-            if match:
+            if match and manual_registered(pkg, path):
                 yield pkg, path, match.group(1).lower(), match.group(2).lower()

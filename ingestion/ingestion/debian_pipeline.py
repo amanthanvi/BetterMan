@@ -27,6 +27,7 @@ from ingestion.debian_indexes import (
     Package,
     available_packages,
     catalog,
+    debian_cdn_enabled,
     download,
     popularity,
 )
@@ -145,6 +146,7 @@ class Workspace:
                 self.store.db.execute("DELETE FROM receipts WHERE pkg=?", (name,))
         self.cached_packages = len(self.acquired)
         self.downloaded = 0
+        self.archive_fallbacks = 0
         self.cache = Path(
             os.environ.get("BETTERMAN_DEBIAN_CACHE_DIR", str(self.root.parent / "archives"))
         ).resolve()
@@ -168,6 +170,9 @@ class Workspace:
         if package.size > 1024 * 1024 * 1024:
             raise ValueError("Package exceeds 1 GiB archive budget")
         require_job_budget("acquisition")
+        cdn = debian_cdn_enabled()
+        snapshot_url = f"{self.pins['mirror']}/{package.filename}"
+        fallbacks = []
         with self._disk_lock:
             if (
                 shutil.disk_usage(self.root).free
@@ -180,11 +185,12 @@ class Workspace:
         try:
             started = time.monotonic()
             size = download(
-                f"https://deb.debian.org/debian/{package.filename}",
+                f"https://deb.debian.org/debian/{package.filename}" if cdn else snapshot_url,
                 archive,
                 package.sha256,
                 package.size,
-                fallback_url=f"{self.pins['mirror']}/{package.filename}",
+                fallback_url=snapshot_url if cdn else None,
+                on_fallback=fallbacks.append,
             )
             downloaded = time.monotonic()
             archive.touch()
@@ -195,7 +201,7 @@ class Workspace:
                 self._reserved -= package.size
                 self._inflight.discard(f"{package.sha256}.deb")
                 self._evict_archives()
-        return package, entries, size, downloaded - started, extracted - downloaded
+        return package, entries, size, downloaded - started, extracted - downloaded, len(fallbacks)
 
     def _evict_archives(self):
         # Called under the disk lock. In-flight archives are excluded; complete
@@ -222,17 +228,19 @@ class Workspace:
         pending.sort(key=lambda p: not (self.cache / f"{p.sha256}.deb").is_file())
         started = time.monotonic()
         download_seconds = extract_seconds = 0
-        cache_hits = 0
+        cache_hits = fallback_count = 0
         with ThreadPoolExecutor(max_workers=workers) as executor:
             remaining = iter(pending)
             futures = {executor.submit(self._acquire, p) for p in islice(remaining, workers)}
             while futures:
                 done, futures = wait(futures, return_when=FIRST_COMPLETED)
                 for future in done:
-                    package, entries, size, fetched, extracted = future.result()
+                    package, entries, size, fetched, extracted, fallbacks = future.result()
                     download_seconds += fetched
                     extract_seconds += extracted
                     cache_hits += size == 0
+                    fallback_count += fallbacks
+                    self.archive_fallbacks += fallbacks
                     self.store.add(package, entries)
                     self.acquired.add(package.name)
                     self.downloaded += size
@@ -246,6 +254,7 @@ class Workspace:
                                     "extractWorkerSeconds": round(extract_seconds, 3),
                                     "elapsedSeconds": round(time.monotonic() - started, 3),
                                     "archiveCacheHits": cache_hits,
+                                    "archiveFallbacks": fallback_count,
                                 }
                             )
                         )
@@ -261,6 +270,7 @@ class Workspace:
                     "extractWorkerSeconds": round(extract_seconds, 3),
                     "elapsedSeconds": round(time.monotonic() - started, 3),
                     "archiveCacheHits": cache_hits,
+                    "archiveFallbacks": fallback_count,
                 }
             )
         )
@@ -353,6 +363,51 @@ class Workspace:
             not preferred,
             package,
         )
+
+    def require_command_owners(self, pages):
+        from ingestion.ingest_runner import _COMMAND_PAGE_EXCLUSIONS, _COMMAND_PAGES
+
+        providers = {}
+        for package in self.available.values():
+            for name in package.provides:
+                providers.setdefault(name, set()).add(package.name)
+        routes = [(page.name, page.section, page.source_package) for page in pages]
+        routes.extend(
+            (a["name"], a["section"], a["sourcePackage"])
+            for a in self.alias_providers
+            if not a["providerOnly"]
+        )
+        actual = {}
+        # Prefer the exact section before suffixed variants such as 1plan9/1ssl.
+        for name, section, owner in sorted(routes, key=lambda row: (row[0], len(row[1]), row[1])):
+            actual.setdefault((name, section[:1]), owner)
+        result = {}
+        for requested in FULL_PACKAGE_SET_DEBIAN:
+            if requested not in _COMMAND_PAGES or requested in _COMMAND_PAGE_EXCLUSIONS["debian"]:
+                continue
+            name, section = _COMMAND_PAGES[requested]
+            if (name, section) not in actual:
+                continue  # The existing missing-page gate reports absent routes.
+            allowed, pending = set(), [requested]
+            # Match apt_install's explicit companion request; mount is not a util-linux dependency.
+            if requested == "util-linux":
+                pending.append("mount")
+            while pending:
+                current = pending.pop()
+                if current in allowed:
+                    continue
+                allowed.add(current)
+                pending.extend(providers.get(current, ()))
+                if current in self.available:
+                    pending.extend(self.available[current].depends)
+            owner = actual[(name, section)]
+            if owner not in allowed:
+                raise RuntimeError(
+                    f"publish blocked: wrong command-page owner for {name}({section}): "
+                    f"{owner} is not {requested} or its dependency/provider"
+                )
+            result[requested] = owner
+        return result
 
     def sources(self):
         selected = {p.name for p in self.packages} | {
@@ -670,6 +725,8 @@ def benchmark(root: Path, *, limit=2000, workers=4) -> dict:
         licensed = time.monotonic()
         report = {
             "samplePackages": len(workspace.packages),
+            "archiveFallbacks": workspace.archive_fallbacks,
+            "cdnEnabled": debian_cdn_enabled(),
             "dependencyPackages": len(workspace.acquired) - len(workspace.packages),
             "fullPackages": len(workspace.all_manual_packages),
             "fullDownloadBytes": sum(p.size for p in workspace.all_manual_packages),

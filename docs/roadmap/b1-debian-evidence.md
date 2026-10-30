@@ -55,16 +55,17 @@ read as data; nothing was installed, sourced or executed.
 The shared MAN_PATH filter excluded this root at catalog selection, extraction,
 and source enumeration. The static alternatives reader also cannot interpret
 this sourced `dpkg`/`sed` helper. The fix retains the actual versioned English
-manuals directly, under their existing basenames, as for OpenJDK. This restores
+manuals under their existing basenames, gated by per-package registration
+allowlists bound to the pinned archive hashes. This restores
 psql, pg_dump, pg_restore, createdb and the rest without inventing shell evaluation.
 The complete Contents private-root audit also found basename-preserving
 alternatives in Firebird 3/4, Groovy, IcedTea-Web, librarian-puppet and Scala;
-their verified postinst text establishes the additional narrow roots. All nine
+their verified postinst text establishes the additional per-package path lists. All nine
 newly supported private-root packages were acquired and parsed locally. Other
 private documentation/example roots were not indiscriminately imported.
 
 The catalog grows from 17,314 to **17,323 packages / 18,443,518,580 archive bytes**.
-Extractor receipt version 4 invalidates old incomplete selections; this is a
+Extractor receipt version 5 invalidates old incomplete selections; this is a
 local checkpoint version, **not an ingest contract bump**. The publish gate
 already accepts a route supplied by a dependency/virtual provider. Regression
 coverage proves that behavior for PostgreSQL and MySQL; the gate was not relaxed.
@@ -77,8 +78,8 @@ workflow configuration.
 `--audit-command-pages` scans both complete, Release-verified Contents indexes,
 acquires every curated command's candidate owners and supported private roots,
 replays the real parser/aliases and exact publish gate, and verifies provider
-copyrights. The audit acquired 65 packages including dependencies and verified
-52 provider notices through the publish encoding/size check, with **zero parse
+copyrights. The updated audit acquired 65 packages including dependencies and verified
+53 provider notices through the publish encoding/size check, with **zero parse
 failures and zero unresolved sources**.
 This is a full catalog/curated-command audit, not a full 17,323-archive replay.
 
@@ -101,6 +102,57 @@ pnpm ingest:debian-benchmark --workdir ../.cache/debian/command-audit --packages
 The workdir argument is relative to `ingestion/`. Reusing a workspace requires
 the same `--packages` value; the audit replaces its in-memory sample selection
 with the required owners. It does not instantiate a Convex client.
+
+### Independent-review corrections
+
+The registration audit now allows **329 private paths / 317 normalized routes**,
+with the same **17,323-package catalog**. The previous root-wide policy admitted
+335 paths. It incorrectly included Firebird 3's unregistered `fb_config(1)` and
+Groovy's `groovysh`, `groovyconsole`, `groovydoc`, `java2groovy`, and `startgroovy`.
+The path list in `ingestion/data/debian-private-manuals.json` is derived from
+literal alternatives masters/slaves, Groovy's first literal loop, IcedTea's tool
+loop, and PostgreSQL's `_link_manpages` enumeration. Archive SHA checks bind the
+list to the audited scripts; a new Release/archive needs a fresh audit. No
+maintainer code executes. Local extraction receipts advance to v5 so old
+root-wide entries cannot survive a resume.
+
+Against main `7dbf8861`, the bounded source-election replay finds **317 added
+routes, zero removed routes and zero changed existing winners**. The complete
+verified Contents indexes selected every public competitor for private route
+names, then the audited archives' source elections were replayed with main's
+manual-root filter and the corrected filter. This compares the affected source
+elections; it is not a full 17,323-archive parse. `fb_config(1)` stays with
+`firebird-dev`; all five unregistered Groovy routes remain absent as on main.
+The original optional-provider policy remains: Firebird 3's higher pinned
+popcon wins its 11 shared manual slaves plus the `firebird(8)` master (12 routes).
+The independent-review request explicitly permitted leaving this policy intact.
+
+All **28 curated command owners** now pass a publish preflight against actual
+canonical/alias owners and the pinned Depends/Pre-Depends/Provides graph. The
+existing explicit `util-linux` → `mount` companion request is preserved (mount
+is not a util-linux dependency); other hints do not authorize an owner. An exact
+section is preferred before suffixes, so `ls(1plan9)` cannot shadow the ownership
+check for `ls(1)`. 9base's ls/grep/sed and make-guile's make fail wrong-owner
+regressions. The full curated/private/public-competitor audit verifies **53
+notices**, with **zero parse failures or unresolved sources** and no new command
+exclusions.
+
+All five reported CDN failure shapes have regression coverage: wrong bytes of
+the right size, oversize, clean truncation, HTTP 403, and HTTP 503 with one-hour
+Retry-After. They switch immediately, discard the partial body, and revalidate
+snapshot; the same shapes on snapshot remain fail-closed. HTTPS redirects are
+restricted to the same expected host, and the User-Agent includes the public
+project contact. Fallback events expose only a bounded reason code and summaries
+count them. `BETTERMAN_DEBIAN_CDN=0` skips the CDN leg; default `1` also governs
+the existing workflow's `--download-only` path without any workflow change.
+
+A fresh-cache smoke through that exact CLI transferred **53,144,928 bytes** in
+**15.66 s including metadata/setup**, reporting `cdnEnabled: true`,
+`archiveFallbacks: 0`, and no restored extraction receipts. This is a small local
+smoke, not a new 2,000-package or runner speed measurement. The operator will
+run the existing 2,000-package download-only job on the final head, against the
+operator-reported 1,194-second snapshot checkpoint. Historical local timing and
+cloud-runtime projections below remain labeled separately.
 
 ### Where the production time went
 
@@ -126,9 +178,11 @@ cache hits. Parse and publish phase events identify the remaining work.
 
 Archive payloads now use the Debian CDN first, **only with the pinned Packages
 SHA256 and size**. Release, Contents and Packages still come from snapshot.
-404/410 falls back immediately; transient transport/429/5xx errors switch to
-snapshot after the original backoff and Retry-After. Integrity failures stop
-immediately. Eight total attempts, the absolute deadline, 1 GiB per archive,
+All CDN HTTP/transport/integrity failures discard the response and switch
+immediately to snapshot without applying the CDN Retry-After. Snapshot integrity
+failures stop immediately; retryable snapshot failures keep bounded backoff and
+Retry-After. `BETTERMAN_DEBIAN_CDN=0` disables CDN entirely. Fallback events log
+bounded reason codes only and acquisition summaries count them. Eight total attempts, the absolute deadline, 1 GiB per archive,
 two concurrent workers, 2 GiB retained cache and 4 GiB extracted-file ceiling
 remain. Restored cache entries run first so earlier fresh downloads cannot
 evict them before use. The 18.44 GB corpus cannot fit in that cache; it remains

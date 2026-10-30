@@ -87,6 +87,7 @@ def publish_workspace(
         if not canonical or failed / total > 0.02:
             raise RuntimeError(f"Archive parse gate failed: {failed}/{total} sources")
         if not sample:
+            workspace.require_command_owners(canonical)
             _require_command_pages(
                 distro="debian",
                 requested=FULL_PACKAGE_SET_DEBIAN,

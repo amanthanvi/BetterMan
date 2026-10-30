@@ -259,8 +259,13 @@ values are treated as unset without warning; warnings never echo supplied values
 
 Archive payloads now try the regular Debian CDN before the pinned snapshot,
 with SHA256 and size still bound to the pinned Packages index. Metadata never
-uses the mutable mirror. Missing payloads fall back immediately; transient errors
-retain backoff/Retry-After, and integrity mismatches fail closed. Restored cached
+uses the mutable mirror. Every CDN HTTP/transport/integrity failure is discarded
+before immediately switching hosts; CDN Retry-After does not delay snapshot.
+Snapshot failures retain the fail-closed checksum and bounded retry policy.
+Set `BETTERMAN_DEBIAN_CDN=0` to use only snapshot; the default is `1` (CDN-first)
+for both imports and the download-only job. Benchmark reports expose
+`cdnEnabled` and `archiveFallbacks`; fallback events contain reason codes only.
+Restored cached
 archives are consumed first. The checksum cache and extracted-file limits are
 unchanged. Before a full retry, the no-upload `--audit-command-pages` benchmark
 mode can check every curated command against the full catalog and acquired
