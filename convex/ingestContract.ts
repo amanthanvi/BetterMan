@@ -4,11 +4,13 @@
 // ingestion/tests/test_ingest_contract.py (no duplicate version expectation).
 // v7 retains v6 verified promotion-source reads and CAS, adding per-page
 // indexable/popularityScore and declared indexablePageCount to v5 uploads.
+// B2 (based on pending v7) adds distro-specific acquisition and promotion holds.
 
 export const INGEST_CONTRACT_SCHEMA_VERSION = 7;
 
 export const INGEST_CONTRACT = {
   schemaVersion: INGEST_CONTRACT_SCHEMA_VERSION,
+  acquisitions: ["deb-extraction", "ubuntu-deb-extraction"],
   functions: [
     "ingest.createRelease",
     "ingest.insertStoredPages",

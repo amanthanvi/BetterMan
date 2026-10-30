@@ -34,7 +34,8 @@
 		"ingest:run": "cd ingestion && uv run python -m ingestion.cli ingest",
 		"derived:benchmark": "node scripts/benchmark-derived.mjs",
 		"convex:derived-check": "node scripts/check-derived-data.mjs",
-		"convex:task-check": "node scripts/check-task-phrases.mjs"
+		"convex:task-check": "node scripts/check-task-phrases.mjs",
+		"ingest:full-benchmark": "cd ingestion && uv run python -m scripts.check_full_archives"
 	},
 	"dependencies": {
 		"convex": "^1.48.0"

@@ -4,11 +4,17 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 export const MAX_MANIFEST_SECTIONS = 256;
 
 // Persist acquisition identity independently of the mirror and large manifest.
-export function releaseAcquisition(manifest: unknown): "deb-extraction" | undefined {
+export function releaseAcquisition(manifest: unknown): Doc<"datasetReleases">["acquisition"] {
   const acquisition = manifest && typeof manifest === "object" && "acquisition" in manifest
     ? manifest.acquisition : undefined;
-  if (acquisition !== undefined && acquisition !== "deb-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
+  if (acquisition !== undefined && acquisition !== "deb-extraction" && acquisition !== "ubuntu-deb-extraction") throw new Error("INVALID_RELEASE_MANIFEST");
   return acquisition;
+}
+
+export function fullArchivePromotionReason(release: Doc<"datasetReleases">, stage: "prod" | "staging", allowFullUbuntu?: boolean): string | undefined {
+  if (stage !== "prod" || release.acquisition !== "ubuntu-deb-extraction") return;
+  if (release.indexablePageCount === undefined) return "FULL_UBUNTU_TIER_REQUIRED";
+  if (allowFullUbuntu !== true) return "FULL_UBUNTU_PROMOTION_HELD";
 }
 
 // An owner authorization may lift the spend hold, never the required B4 tier.

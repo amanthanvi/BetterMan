@@ -58,6 +58,16 @@ on:
         type: boolean
         required: false
         default: false
+      ubuntu_full:
+        description: Explicitly authorize full Ubuntu archive ingestion to staging
+        type: boolean
+        required: false
+        default: false
+      ubuntu_full_promote:
+        description: Explicitly authorize promotion of a held full Ubuntu staging release
+        type: boolean
+        required: false
+        default: false
       debian_download_only:
         description: Download-only Debian benchmark; no Convex, upload, activation or promotion
         type: boolean
@@ -88,6 +98,10 @@ permissions:
 # workflow_dispatch choices above aligned with its LINUX and BSD lists.
 
 env:
+  BETTERMAN_UBUNTU_FULL: ${{ vars.BETTERMAN_UBUNTU_FULL }}
+  BETTERMAN_UBUNTU_FULL_INPUT: ${{ inputs.ubuntu_full && 'true' || 'false' }}
+  BETTERMAN_UBUNTU_FULL_PROMOTE: ${{ vars.BETTERMAN_UBUNTU_FULL_PROMOTE }}
+  BETTERMAN_UBUNTU_FULL_PROMOTE_INPUT: ${{ inputs.ubuntu_full_promote && 'true' || 'false' }}
   BETTERMAN_DEBIAN_FULL: ${{ vars.BETTERMAN_DEBIAN_FULL }}
   BETTERMAN_DEBIAN_FULL_INPUT: ${{ inputs.debian_full && 'true' || 'false' }}
   BETTERMAN_DEBIAN_FULL_PROMOTE: ${{ vars.BETTERMAN_DEBIAN_FULL_PROMOTE }}
@@ -310,6 +324,11 @@ jobs:
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_debian }}
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
 
+      - name: Install Ubuntu archive renderer
+        id: ubuntu_renderer
+        if: ${{ needs.plan.outputs.ingest == 'true' && matrix.full_ubuntu }}
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends mandoc
+
       - name: Ingest to Convex staging
         id: staging
         if: ${{ needs.plan.outputs.ingest == 'true' && matrix.distro != 'freebsd' }}
@@ -321,6 +340,9 @@ jobs:
           BETTERMAN_INGEST_SAMPLE: ${{ inputs.sample && 'true' || 'false' }}
           BETTERMAN_INGEST_GIT_SHA: ${{ github.sha }}
           BETTERMAN_DEBIAN_FULL_SELECTED: ${{ matrix.full_debian }}
+          BETTERMAN_UBUNTU_FULL_SELECTED: ${{ matrix.full_ubuntu }}
+          BETTERMAN_UBUNTU_WORKDIR: ${{ runner.temp }}/betterman-ubuntu/workspace
+          BETTERMAN_UBUNTU_CACHE_DIR: ${{ runner.temp }}/betterman-ubuntu/archives
           BETTERMAN_DEBIAN_WORKDIR: ${{ runner.temp }}/betterman-debian/workspace
           BETTERMAN_DEBIAN_CACHE_DIR: ${{ runner.temp }}/betterman-debian/archives
         shell: bash
@@ -332,6 +354,9 @@ jobs:
           fi
           if [[ "${BETTERMAN_DEBIAN_FULL_SELECTED}" == "true" ]]; then
             ingest_args+=(--debian-full)
+          fi
+          if [[ "${BETTERMAN_UBUNTU_FULL_SELECTED}" == "true" ]]; then
+            ingest_args+=(--ubuntu-full)
           fi
           python3 scripts/dataset-workflow.py run "${DISTRO}" ingest \
             uv run --directory ingestion python -m ingestion.cli ingest --distro "${DISTRO}" "${ingest_args[@]}"

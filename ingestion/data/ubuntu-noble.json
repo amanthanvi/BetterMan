@@ -1,0 +1,38 @@
+{
+  "acquisition": "ubuntu-deb-extraction",
+  "mirror": "https://snapshot.ubuntu.com/ubuntu/20261001T000000Z",
+  "suite": "noble",
+  "component": "main",
+  "architecture": "amd64",
+  "releaseSha256": "26758a13cecfaff9ff274d31ea9a4633674a999bd130c09f6ecd66a4b8071184",
+  "popcon": {
+    "url": "https://popcon.debian.org/by_inst",
+    "acquiredAt": "2026-10-29",
+    "sourceSha256": "60d469b43fbb00fed5a1e1c67d9136bb3b6590bec64dd47cc9321616f1cb8a91",
+    "file": "popcon-by-inst.tsv.gz",
+    "sha256": "8e2cc98280beacff1ac62b434380a00d5ebbc79800cf51845f1fc46d6db1750a",
+    "format": "package tab installed-count; normalized from rank/name/inst columns of by_inst"
+  },
+  "distro": "ubuntu",
+  "cdn": "https://archive.ubuntu.com/ubuntu",
+  "components": [
+    "main",
+    "universe"
+  ],
+  "contents": [
+    "Contents-amd64.gz"
+  ],
+  "privateManuals": "ubuntu-private-manuals.json",
+  "popularitySource": "Debian by_inst exact-name proxy; Ubuntu popcon is defunct",
+  "privateManualsSha256": "1fde8d82a37cfa8133fa0eeed198c7af927f3427c8de24585e8386cb74bd534b",
+  "sourceTargets": {
+    "usr/share/doc/libssl3/copyright": [
+      "libssl3t64",
+      "usr/share/doc/libssl3t64/copyright"
+    ],
+    "usr/share/man/man1/kadmin.1": [
+      "krb5-user",
+      "usr/share/man/man1/kadmin.mit.1"
+    ]
+  }
+}

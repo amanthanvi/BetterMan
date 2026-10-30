@@ -3,11 +3,11 @@ import { persistOptionSignature, persistPackedSignature } from "./_derivedInputs
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { contentChunks, splitContentFields, type ContentField, type ContentJsonKind } from "./_legacyContent";
-import { datasetStageValidator, distroValidator } from "./schema";
+import { acquisitionValidator, datasetStageValidator, distroValidator } from "./schema";
 import { scheduleRelatedMetadataBackfill } from "./related";
 import { scheduleTaskPhraseBackfill } from "./taskPhrases";
 import { scheduleDerivedBuild } from "./derived";
-import { fullDebianTierMissing, fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
+import { fullArchivePromotionReason, fullDebianTierMissing, fullDebianPromotionHeld, releaseAcquisition, recordOtherUploads, recordPageUploads, validateReleaseDeclaration, validateManifestSections, validManifestCount, verifyDeclaredManifest } from "./_releaseManifest";
 import { insertProvider, recordProviderUploads, refreshProviderPackages } from "./_providers";
 import { serializeStoredPayload, storedPayloadDigest } from "./_storedPayload";
 import { MAX_OPTION_FLAG_ROWS_PER_PAGE, optionFlagRows, type OptionFlagRow } from "./_optionFlags";
@@ -314,7 +314,7 @@ export const createRelease = internalMutation({
     packageManifest: v.optional(v.any()),
     packageManifestStorageId: v.optional(v.id("_storage")),
     packageManifestDigest: v.optional(v.string()),
-    acquisition: v.optional(v.literal("deb-extraction")),
+    acquisition: v.optional(acquisitionValidator),
     packageBatches: v.optional(v.array(v.object({ digest: v.string(), count: v.number(), licenseCount: v.number() }))),
     providerCount: v.optional(v.number()),
     pageCount: v.number(),
@@ -328,6 +328,7 @@ export const createRelease = internalMutation({
   handler: async (ctx, args) => {
     if (args.indexablePageCount !== undefined && (!validManifestCount(args.indexablePageCount) || args.indexablePageCount > args.pageCount)) throw new Error("INVALID_INDEX_POLICY");
     const acquisition = args.packageManifest !== undefined ? releaseAcquisition(args.packageManifest) : args.acquisition;
+    if (acquisition === "ubuntu-deb-extraction" && args.distro !== "ubuntu") throw new Error("INVALID_RELEASE_MANIFEST");
     if (args.acquisition !== undefined && acquisition !== args.acquisition) throw new Error("INVALID_RELEASE_MANIFEST");
     const packages = args.licensePackages ?? [];
     if (args.providerCount !== undefined && (!validManifestCount(args.providerCount) || args.packageBatches === undefined)) throw new Error("INVALID_RELEASE_MANIFEST");
@@ -835,6 +836,7 @@ export const activateRelease = internalMutation({
     datasetReleaseId: v.string(),
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
+    allowFullUbuntu: v.optional(v.boolean()),
   },
   returns: v.object({
     stage: datasetStageValidator,
@@ -849,6 +851,9 @@ export const activateRelease = internalMutation({
       .unique();
     if (!release) throw new Error("RELEASE_NOT_FOUND");
     if (release.pruning) throw new Error("RELEASE_PRUNING");
+
+    const archiveHold = fullArchivePromotionReason(release, args.stage, args.allowFullUbuntu);
+    if (archiveHold) throw new Error(archiveHold);
 
     if (fullDebianTierMissing(release, args.stage)) throw new Error("FULL_DEBIAN_TIER_REQUIRED");
     if (fullDebianPromotionHeld(release, args.stage, args.allowFullDebian)) throw new Error("FULL_DEBIAN_PROMOTION_HELD");
@@ -944,6 +949,7 @@ export const promoteActiveReleases = internalMutation({
     distros: v.array(distroValidator),
     activatedAt: v.string(),
     allowFullDebian: v.optional(v.boolean()),
+    allowFullUbuntu: v.optional(v.boolean()),
     expectedDatasetReleaseId: v.optional(expectedReleaseIdsValidator),
   },
   returns: v.object({
@@ -987,6 +993,11 @@ export const promoteActiveReleases = internalMutation({
       if (!release) throw new Error("RELEASE_NOT_FOUND");
       // Check persisted acquisition identity in the pointer transaction; a
       // preflight read or mirror URL would not enforce the release's hold.
+      const archiveHold = fullArchivePromotionReason(release, args.toStage, args.allowFullUbuntu);
+      if (archiveHold) {
+        skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: archiveHold });
+        continue;
+      }
       if (fullDebianTierMissing(release, args.toStage)) {
         skipped.push({ distro, datasetReleaseId: candidate.datasetReleaseId, reason: "FULL_DEBIAN_TIER_REQUIRED" });
         continue;

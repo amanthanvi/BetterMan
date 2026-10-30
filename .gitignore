@@ -33,3 +33,7 @@ venv/
 
 # Resumable verified Debian acquisition
 .cache/debian/
+
+# Full-distro rehearsal artifacts and verified acquisition
+.cache/b2/
+.cache/ubuntu/

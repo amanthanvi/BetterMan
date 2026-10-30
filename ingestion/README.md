@@ -473,3 +473,30 @@ allowing eligible siblings to promote. The in-flight
 v5 full-Debian release needs a fresh scored replacement. B4 uses ingest v7,
 retaining #443's CAS request, fixed-source read, header fence and dispatch pins
 alongside demand fields.
+
+## Full Ubuntu from archives (B2)
+
+`pnpm ingest:run --distro ubuntu --ubuntu-full` reuses B1's bounded extraction
+without installing packages. Python 3.14 and host mandoc are required. Noble's
+main/universe Release, Contents, Packages and every archive are pinned and
+checksum verified. Ubuntu has its own audited private-manual paths and uses
+Debian's pinned exact-name popcon counts as a proxy because Ubuntu popcon is defunct.
+
+Cron opt-in: `BETTERMAN_UBUNTU_FULL=1`. Dispatch opt-in: `ubuntu_full: true`.
+Both default off. Promotion independently requires `ubuntu_full_promote: true`
+or `BETTERMAN_UBUNTU_FULL_PROMOTE=1`, plus `promote: true`; persisted
+`ubuntu-deb-extraction` is held server-side otherwise. HTTP activation cannot
+bypass it, and unscored full releases cannot promote. This family extends #445's
+pending v7 and must land after that deployment. No shared workflow is dispatched
+by implementation work.
+
+No-upload rehearsal, with a fresh explicit workdir (relative to ingestion/):
+
+```bash
+pnpm ingest:full-benchmark --distro ubuntu --workdir ../.cache/b2/ubuntu-audit --packages 50 --curated
+```
+
+Use `--packages 200` without `--curated` for a deterministic package sample.
+The curated mode discovers competitors using the complete verified Contents
+and checks elected command owners, aliases and notices before reporting success.
+See [Ubuntu evidence and runner projections](../docs/roadmap/b2-ubuntu-evidence.md).

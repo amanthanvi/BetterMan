@@ -137,9 +137,11 @@ def postinst_from_archive(archive: Path) -> str:
     return ""
 
 
-def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[tuple]:
+def extract(
+    archive: Path, package: Package, root: Path, *, quota=None, registrations=None
+) -> list[tuple]:
     """Stream past unrelated members; write only man sources and copyrights."""
-    require_private_package(package)
+    require_private_package(package, registrations)
     files = root / "files"
     files.mkdir(parents=True, exist_ok=True)
     quota = quota or ExtractedQuota(files)
@@ -172,7 +174,7 @@ def extract(archive: Path, package: Package, root: Path, *, quota=None) -> list[
             if not raw_path.startswith(DOC_ROOTS):
                 continue
             path = safe_path(member.name)
-            manual = manual_registered(package.name, path)
+            manual = manual_registered(package.name, path, registrations)
             notice = COPYRIGHT.fullmatch(path)
             if member.issym() or member.islnk():
                 if not manual and not notice and path.count("/") != 3:
@@ -226,8 +228,9 @@ def source_bytes(path: Path) -> bytes:
 
 
 class ArchiveStore:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, *, registrations=None):
         self.root = root
+        self.registrations = registrations
         self.db = sqlite3.connect(root / "archives.sqlite3")
         self.db.execute("PRAGMA cache_size=-8192")
         self.db.executescript("""
@@ -347,5 +350,5 @@ class ArchiveStore:
     def manuals(self):
         for pkg, path in self.db.execute("SELECT pkg,path FROM entries ORDER BY pkg,path"):
             match = MAN_PATH.fullmatch(path)
-            if match and manual_registered(pkg, path):
+            if match and manual_registered(pkg, path, self.registrations):
                 yield pkg, path, match.group(1).lower(), match.group(2).lower()

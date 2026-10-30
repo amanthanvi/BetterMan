@@ -25,7 +25,7 @@ from ingestion.ingest_runner import (
     _upload_pages,
     _upload_worker_count,
 )
-from ingestion.package_set import FULL_PACKAGE_SET_DEBIAN
+from ingestion.package_set import FULL_PACKAGE_SET_BY_DISTRO
 from ingestion.popularity import PopularityPolicy
 
 
@@ -36,6 +36,7 @@ def ingest_debian(
     ingest_secret: str,
     dataset_stage: str,
     git_sha: str,
+    distro: str = "debian",
     **_kwargs,
 ) -> IngestResult:
     import shutil
@@ -44,17 +45,22 @@ def ingest_debian(
     if sys.version_info < (3, 14) or not shutil.which("mandoc"):
         raise RuntimeError("Debian archive ingestion requires Python 3.14 and mandoc")
     client = ConvexIngestClient(convex_url, ingest_secret)
-    client.require_deployed_contract()  # Before acquisition or any writes.
+    contract = client.require_deployed_contract()  # Before acquisition or any writes.
+    if distro == "ubuntu" and "ubuntu-deb-extraction" not in contract.get("acquisitions", []):
+        raise RuntimeError("Deploy B2's v7 Ubuntu acquisition support before full ingestion")
     import os
 
     from ingestion.debian_indexes import PINS
     from ingestion.util import sha256_hex
 
-    base = Path(__file__).resolve().parents[2] / ".cache" / "debian"
-    root = Path(os.environ.get("BETTERMAN_DEBIAN_WORKDIR", str(base / "workspaces")))
+    if dataset_stage != "staging":
+        raise ValueError("Full imports require staging and gated promotion")
+    base = Path(__file__).resolve().parents[2] / ".cache" / distro
+    root = Path(os.environ.get(f"BETTERMAN_{distro.upper()}_WORKDIR", str(base / "workspaces")))
+    pins = PINS if distro == "debian" else PINS.with_name("ubuntu-noble.json")
     # A different lock cannot reuse extracted state, even in the same runner path.
-    root = root / sha256_hex(PINS.read_bytes())
-    workspace = Workspace(root)
+    root = root / sha256_hex(pins.read_bytes())
+    workspace = Workspace(root, distro=distro)
     workspace.acquire()
     return publish_workspace(
         workspace, client, activate=activate, dataset_stage=dataset_stage, git_sha=git_sha
@@ -72,6 +78,7 @@ def publish_workspace(
 ) -> IngestResult:
     import time
 
+    distro = workspace.distro
     workspace.timings = {}
     started = time.monotonic()
     with (
@@ -90,14 +97,14 @@ def publish_workspace(
         if not sample:
             workspace.require_command_owners()
             _require_command_pages(
-                distro="debian",
-                requested=FULL_PACKAGE_SET_DEBIAN,
+                distro=distro,
+                requested=FULL_PACKAGE_SET_BY_DISTRO[distro],
                 pages=canonical,
                 aliases=workspace.aliases,
                 sample=False,
             )
         release_id = _build_dataset_release_id(
-            git_sha=git_sha, mandoc_version="host", distro="debian"
+            git_sha=git_sha, mandoc_version="host", distro=distro
         )
         licenses = _LicenseSpool(spool.connection)
         used = {p.name for p in workspace.packages} | {
@@ -116,9 +123,9 @@ def publish_workspace(
             "imageRef": workspace.pins["mirror"],
             "imageDigest": workspace.pins["releaseSha256"],
             "arch": "amd64",
-            "distro": "debian",
+            "distro": distro,
             "pins": workspace.pins,
-            "popularitySource": "popcon by_inst installed",
+            "popularitySource": workspace.pins.get("popularitySource", "popcon by_inst installed"),
             "alternatives": "postinst priority, popcon, package/path; curated awk/vi/nc policy",
             "alternativesSkipped": workspace.alternatives_skipped,
             "packages": [
@@ -139,7 +146,7 @@ def publish_workspace(
         batches = [declarations[i : i + 200] for i in range(0, len(declarations), 200)]
         # Check every notice before creating the release; never truncate.
         for _item in _iter_license_items(
-            licenses=licenses, distro="debian", dataset_release_id=release_id
+            licenses=licenses, distro=distro, dataset_release_id=release_id
         ):
             pass
         workspace.timings["metadataSeconds"] = (
@@ -157,7 +164,7 @@ def publish_workspace(
             {
                 "datasetReleaseId": release_id,
                 "locale": "en",
-                "distro": "debian",
+                "distro": distro,
                 "imageRef": workspace.pins["mirror"],
                 "imageDigest": workspace.pins["releaseSha256"],
                 "ingestedAt": iso_utc_now(),
@@ -225,7 +232,7 @@ def publish_workspace(
         license_started = time.monotonic()
         pending = []
         for notice in _iter_license_items(
-            licenses=licenses, distro="debian", dataset_release_id=release_id
+            licenses=licenses, distro=distro, dataset_release_id=release_id
         ):
             require_job_budget("license upload")
             if pending and (

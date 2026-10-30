@@ -43,6 +43,9 @@ def _build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--debian-full", action="store_true", help="Opt in to full Debian archive ingestion"
     )
+    ingest.add_argument(
+        "--ubuntu-full", action="store_true", help="Opt in to full Ubuntu archive ingestion"
+    )
     ingest.add_argument("--in-container", action="store_true", help=argparse.SUPPRESS)
 
     activation = sub.add_parser(
@@ -88,27 +91,29 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "ingest":
-        if (
-            args.debian_full
-            and os.environ.get("BETTERMAN_DATASET_STAGE", "staging").strip().lower() == "prod"
-        ):
+        full = args.debian_full or args.ubuntu_full
+        if args.debian_full and args.distro != "debian":
+            parser.error("--debian-full requires --distro debian")
+        if args.ubuntu_full and args.distro != "ubuntu":
+            parser.error("--ubuntu-full requires --distro ubuntu")
+        if full and os.environ.get("BETTERMAN_DATASET_STAGE", "staging").strip().lower() == "prod":
             _log(
                 "ingest_error",
-                error="--debian-full cannot use stage prod; ingest to staging "
+                error="full archive ingestion cannot use stage prod; ingest to staging "
                 "and use the gated promotion workflow",
             )
             return 2
         activate = bool(args.activate) if args.activate is not None else (not args.sample)
         if (
-            args.distro == "debian"
-            and args.debian_full
+            args.distro in {"debian", "ubuntu"}
+            and full
             and not args.sample
             and not args.in_container
         ):
             return _run_ingest(
                 sample=False,
                 activate=activate,
-                distro="debian",
+                distro=args.distro,
                 image_ref="deb-archives",
                 image_digest="pinned",
                 archive_mode=True,

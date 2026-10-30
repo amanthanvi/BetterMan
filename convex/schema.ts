@@ -23,6 +23,8 @@ export const datasetStageValidator = v.union(
   v.literal("prod"),
 );
 
+export const acquisitionValidator = v.union(v.literal("deb-extraction"), v.literal("ubuntu-deb-extraction"));
+
 // Convex functions deploy before the frontend. Keep accepting the legacy field
 // so the previous frontend and historical rollbacks remain compatible; public
 // handlers ignore it and resolve PUBLIC_DATASET_STAGE instead.
@@ -42,7 +44,7 @@ export default defineSchema({
     distro: distroValidator,
     imageRef: v.string(),
     imageDigest: v.string(),
-    acquisition: v.optional(v.literal("deb-extraction")),
+    acquisition: v.optional(acquisitionValidator),
     ingestedAt: v.string(),
     packageManifestJson: v.optional(v.string()),
     shardedPageUploads: v.optional(v.boolean()),
