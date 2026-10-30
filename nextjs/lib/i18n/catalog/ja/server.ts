@@ -238,7 +238,7 @@ export const server: Record<ServerKey, string> = {
   'English original': '英語の原文',
   '{distro} ships no {language} translation of {citation}; this is the English page.': '{distro} には {citation} の翻訳（{language}）がありません。英語のページを表示しています。',
   'BetterMan has no {language} manuals for {distro} yet; this is the English page.': 'BetterMan には {distro} の{language}のマニュアルがまだありません。英語のページを表示しています。',
-  'This translation documents {documented}; English documents {english}.': 'この翻訳は {documented} を説明しています。英語のページは {english} を説明しています。',
+  'This translation documents {documented}; English documents {english}.': 'この翻訳はバージョン {documented} を説明しています。英語のページはバージョン {english} を説明しています。',
   'Not in this translation:': 'この翻訳にないもの：',
   '{count, plural, other {and # more}}': '{count, plural, other {ほか # 件}}',
 }

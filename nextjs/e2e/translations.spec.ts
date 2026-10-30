@@ -35,7 +35,7 @@ test('translations: a page English lacks names only the languages that have it',
 test('translations: a translation that lags English says so in one line with the missing options', async ({ page }) => {
   await page.goto('/man/tar/1?lang=de')
   const drift = page.locator('[data-bm-translation-drift]')
-  await expect(drift).toContainText('Diese Übersetzung beschreibt 1.34; die englische Seite beschreibt 1.35.')
+  await expect(drift).toContainText('Diese Übersetzung beschreibt die Version 1.34; die englische Seite beschreibt die Version 1.35.')
   await expect(drift).toContainText('Fehlt in dieser Übersetzung:')
   await expect(drift.locator('code')).toHaveText(['--create', '-c'])
   await page.goto('/man/tar/1')
