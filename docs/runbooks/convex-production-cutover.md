@@ -39,7 +39,7 @@ npx convex deploy --typecheck enable
 npx convex env set --deployment prod CONVEX_INGEST_SECRET "$CONVEX_INGEST_SECRET"
 ```
 
-From Convex 1.47, a non-interactive `convex deploy`, including the one in the `deploy-vercel` workflow, exits 1 instead of asking for confirmation when the push adds or enables an index that has to backfill at least 100,000 documents, because the push would block until the backfill finishes. A table with a row per man page can pass that size. Add such an index with `{ staged: true }` (`.index(name, fields, { staged: true })`), deploy, wait for the backfill, then drop `staged` and deploy again. `--skip-large-indexes-check` skips the confirmation and also the large-index deletion check, so do not add it to the workflow.
+From Convex 1.47, a non-interactive `convex deploy`, including the one in the `deploy-vercel` workflow, exits 1 instead of asking for confirmation when the push adds or enables an index that has to backfill at least 100,000 documents, because the push would block until the backfill finishes. A table with a row per man page can pass that size. Add such an index with `{ staged: true }` (`.index(name, fields, { staged: true })`), deploy, wait for the backfill, then drop `staged` and deploy again. Automatic deploys keep that check. To build such an index during a deploy instead, run `deploy-vercel` manually with `confirm_large_indexes` checked, which passes `--skip-large-indexes-check`; that flag also skips the large-index deletion check, and the deploy waits for the backfill.
 
 If the hosting pipeline builds the app through Convex deploy, pass the URL into the build:
 
